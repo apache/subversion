@@ -35,6 +35,7 @@
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_repos_private.h"
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -1423,6 +1424,22 @@ svn_ra_local__get_deleted_rev(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+svn_ra_local__obliterate_path_rev(svn_ra_session_t *session,
+                                  svn_revnum_t revision,
+                                  const char *path,
+                                  apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+
+  SVN_ERR(svn_repos__obliterate_path_rev(sess->repos,
+                                         revision,
+                                         path,
+                                         pool));
+
+  return SVN_NO_ERROR;
+}
+
 /*----------------------------------------------------------------*/
 
 static const svn_version_t *
@@ -1469,7 +1486,8 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__replay,
   svn_ra_local__has_capability,
   svn_ra_local__replay_range,
-  svn_ra_local__get_deleted_rev
+  svn_ra_local__get_deleted_rev,
+  svn_ra_local__obliterate_path_rev
 };
 
 

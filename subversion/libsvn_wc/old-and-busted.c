@@ -33,6 +33,7 @@
 #include "wc.h"
 #include "adm_files.h"
 #include "entries.h"
+#include "lock.h"
 
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
@@ -1070,7 +1071,7 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
    entries in ENTRIES.  Use SCRATCH_POOL for temporary allocations and
    RESULT_POOL for the returned entries.  */
 static svn_error_t *
-parse_entries_xml(const char *path,
+parse_entries_xml(const char *dir_abspath,
                   apr_hash_t *entries,
                   const char *buf,
                   apr_size_t size,
@@ -1100,7 +1101,7 @@ parse_entries_xml(const char *path,
   SVN_ERR_W(svn_xml_parse(svn_parser, buf, size, TRUE),
             apr_psprintf(scratch_pool,
                          _("XML parser failed in '%s'"),
-                         svn_dirent_local_style(path, scratch_pool)));
+                         svn_dirent_local_style(dir_abspath, scratch_pool)));
 
   svn_pool_destroy(accum.scratch_pool);
 
@@ -1205,7 +1206,7 @@ resolve_to_defaults(apr_hash_t *entries,
    SCRATCH_POOL.  */
 svn_error_t *
 svn_wc__read_entries_old(apr_hash_t **entries,
-                         const char *path,
+                         const char *dir_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -1219,7 +1220,7 @@ svn_wc__read_entries_old(apr_hash_t **entries,
   *entries = apr_hash_make(result_pool);
 
   /* Open the entries file. */
-  SVN_ERR(svn_wc__open_adm_stream(&stream, path, SVN_WC__ADM_ENTRIES,
+  SVN_ERR(svn_wc__open_adm_stream(&stream, dir_abspath, SVN_WC__ADM_ENTRIES,
                                   scratch_pool, scratch_pool));
   SVN_ERR(svn_string_from_stream(&buf, stream, scratch_pool, scratch_pool));
 
@@ -1230,7 +1231,7 @@ svn_wc__read_entries_old(apr_hash_t **entries,
   /* If the first byte of the file is not a digit, then it is probably in XML
      format. */
   if (curp != endp && !svn_ctype_isdigit(*curp))
-    SVN_ERR(parse_entries_xml(path, *entries, buf->data, buf->len,
+    SVN_ERR(parse_entries_xml(dir_abspath, *entries, buf->data, buf->len,
                               result_pool, scratch_pool));
   else
     {
@@ -1241,12 +1242,13 @@ svn_wc__read_entries_old(apr_hash_t **entries,
          original format pre-upgrade. */
       SVN_ERR(read_val(&val, &curp, endp));
       if (val)
-        entries_format = (apr_off_t)apr_strtoi64(val, NULL, 0);
+        entries_format = (int)apr_strtoi64(val, NULL, 0);
       else
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("Invalid version line in entries file "
                                    "of '%s'"),
-                                 svn_dirent_local_style(path, scratch_pool));
+                                 svn_dirent_local_style(dir_abspath,
+                                                        scratch_pool));
       entryno = 1;
 
       while (curp != endp)
@@ -1270,7 +1272,7 @@ svn_wc__read_entries_old(apr_hash_t **entries,
                                      _("Error at entry %d in entries file for "
                                        "'%s':"),
                                      entryno,
-                                     svn_dirent_local_style(path,
+                                     svn_dirent_local_style(dir_abspath,
                                                             scratch_pool));
 
           ++curp;
@@ -1282,4 +1284,80 @@ svn_wc__read_entries_old(apr_hash_t **entries,
 
   /* Fill in any implied fields. */
   return resolve_to_defaults(*entries, result_pool);
+}
+
+
+/* For non-directory PATHs full entry information is obtained by reading
+ * the entries for the parent directory of PATH and then extracting PATH's
+ * entry.  If PATH is a directory then only abrieviated information is
+ * available in the parent directory, more complete information is
+ * available by reading the entries for PATH itself.
+ *
+ * Note: There is one bit of information about directories that is only
+ * available in the parent directory, that is the "deleted" state.  If PATH
+ * is a versioned directory then the "deleted" state information will not
+ * be returned in ENTRY.  This means some bits of the code (e.g. revert)
+ * need to obtain it by directly extracting the directory entry from the
+ * parent directory's entries.  I wonder if this function should handle
+ * that?
+ */
+svn_error_t *
+svn_wc_entry(const svn_wc_entry_t **entry,
+             const char *path,
+             svn_wc_adm_access_t *adm_access,
+             svn_boolean_t show_hidden,
+             apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_error_t *err;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  err = svn_wc__get_entry(entry,
+                          svn_wc__adm_get_db(adm_access),
+                          local_abspath,
+                          TRUE /* allow_unversioned */,
+                          svn_node_unknown,
+                          FALSE /* need_parent_stub */,
+                          svn_wc_adm_access_pool(adm_access), pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          /* Even though we said ALLOW_UNVERSIONED == TRUE, this error can
+             happen when the requested node is a directory, but that
+             directory is not found. We'll go ahead and return the stub.
+
+             So: fall through to clear the error.  */
+        }
+      else if (err->apr_err == SVN_ERR_WC_MISSING)
+        {
+          /* This can happen when we ask about a subdir's node, but both
+             the subdirectory and its parent are missing metadata. This
+             can happen during (say) the diff process against the repository
+             where a node *does* exist, and it looks for the same locally.
+
+             See diff_tests 36 -- diff_added_subtree()
+
+             We'll just say the entry does not exist, and fall through to
+             clear this error.  */
+          *entry = NULL;
+        }
+      else if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
+        return svn_error_return(err);
+
+      /* We got the parent stub instead of the real entry. Fine.  */
+      svn_error_clear(err);
+    }
+  
+  if (!show_hidden && *entry != NULL)
+    {
+      svn_boolean_t hidden;
+
+      SVN_ERR(svn_wc__entry_is_hidden(&hidden, *entry));
+      if (hidden)
+        *entry = NULL;
+    }
+
+  return SVN_NO_ERROR;
 }

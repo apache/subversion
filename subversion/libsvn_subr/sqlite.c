@@ -69,6 +69,7 @@ struct svn_sqlite__stmt_t
 {
   sqlite3_stmt *s3stmt;
   svn_sqlite__db_t *db;
+  svn_boolean_t needs_reset;
 };
 
 
@@ -125,6 +126,10 @@ svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                                 db->result_pool));
 
   *stmt = db->prepared_stmts[stmt_idx];
+
+  if ((*stmt)->needs_reset);
+    return svn_error_return(svn_sqlite__reset(*stmt));
+
   return SVN_NO_ERROR;
 }
 
@@ -134,6 +139,7 @@ svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
 {
   *stmt = apr_palloc(result_pool, sizeof(**stmt));
   (*stmt)->db = db;
+  (*stmt)->needs_reset = FALSE;
 
   SQLITE_ERR(sqlite3_prepare_v2(db->db3, text, -1, &(*stmt)->s3stmt, NULL), db);
 
@@ -188,6 +194,7 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt)
     }
 
   *got_row = (sqlite_result == SQLITE_ROW);
+  stmt->needs_reset = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -203,6 +210,18 @@ svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt)
 
   return svn_error_return(svn_sqlite__reset(stmt));
 }
+
+svn_error_t *
+svn_sqlite__update(int *affected_rows, svn_sqlite__stmt_t *stmt)
+{
+  SVN_ERR(step_with_expectation(stmt, FALSE));
+
+  if (affected_rows)
+    *affected_rows = sqlite3_changes(stmt->db->db3);
+
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
+
 
 static svn_error_t *
 vbindf(svn_sqlite__stmt_t *stmt, const char *fmt, va_list ap)
@@ -341,19 +360,9 @@ svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
   const char *csum_str;
 
   if (checksum == NULL)
-    {
-      csum_str = NULL;
-    }
+    csum_str = NULL;
   else
-    {
-      const char *ckind_str;
-
-      ckind_str = (checksum->kind == svn_checksum_md5 ? "$md5 $" : "$sha1$");
-      csum_str = apr_pstrcat(scratch_pool,
-                             ckind_str,
-                             svn_checksum_to_cstring(checksum, scratch_pool),
-                             NULL);
-    }
+    csum_str = svn_checksum_serialize(checksum, scratch_pool, scratch_pool);
 
   return svn_error_return(svn_sqlite__bind_text(stmt, slot, csum_str));
 }
@@ -440,14 +449,15 @@ svn_sqlite__column_properties(apr_hash_t **props,
       return SVN_NO_ERROR;
     }
 
-  return svn_error_return(svn_skel__parse_proplist(
-                            props,
-                            svn_skel__parse(val, len, scratch_pool),
-                            result_pool));
+  SVN_ERR(svn_skel__parse_proplist(props,
+                                   svn_skel__parse(val, len, scratch_pool),
+                                   result_pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_sqlite__column_checksum(svn_checksum_t **checksum,
+svn_sqlite__column_checksum(const svn_checksum_t **checksum,
                             svn_sqlite__stmt_t *stmt, int column,
                             apr_pool_t *result_pool)
 {
@@ -456,16 +466,8 @@ svn_sqlite__column_checksum(svn_checksum_t **checksum,
   if (digest == NULL)
     *checksum = NULL;
   else
-    {
-      svn_checksum_kind_t ckind;
-
-      /* "$md5 $..." or "$sha1$..." */
-      SVN_ERR_ASSERT(strlen(digest) > 6);
-
-      ckind = (digest[1] == 'm' ? svn_checksum_md5 : svn_checksum_sha1);
-      SVN_ERR(svn_checksum_parse_hex(checksum, ckind,
-                                     digest + 6, result_pool));
-    }
+    SVN_ERR(svn_checksum_deserialize(checksum, digest,
+                                     result_pool, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -489,6 +491,7 @@ svn_sqlite__reset(svn_sqlite__stmt_t *stmt)
 {
   SQLITE_ERR(sqlite3_reset(stmt->s3stmt), stmt->db);
   SQLITE_ERR(sqlite3_clear_bindings(stmt->s3stmt), stmt->db);
+  stmt->needs_reset = FALSE;
   return SVN_NO_ERROR;
 }
 
@@ -812,7 +815,7 @@ svn_sqlite__get_schema_version(int *version,
   return SVN_NO_ERROR;
 }
 
-/* APR cleanup function used to close the database when its pool is destoryed.
+/* APR cleanup function used to close the database when its pool is destroyed.
    DATA should be the svn_sqlite__db_t handle for the database. */
 static apr_status_t
 close_apr(void *data)
@@ -883,6 +886,13 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  ### Maybe switch to NORMAL(1) when we use larger transaction
                      scopes */
               "PRAGMA synchronous=OFF;"));
+
+#if SQLITE_VERSION_AT_LEAST(3,6,19) && defined(SVN_DEBUG)
+  /* When running in debug mode, enable the checking of foreign key
+     constraints.  This has possible performance implications, so we don't
+     bother to do it for production...for now. */
+  SVN_ERR(exec_sql(*db, "PRAGMA foreign_keys=ON;"));
+#endif
 
   /* Validate the schema, upgrading if necessary. */
   SVN_ERR(check_format(*db, latest_schema, upgrade_sql, scratch_pool));

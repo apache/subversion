@@ -254,7 +254,7 @@ svn_client_status5(svn_revnum_t *result_rev,
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
 
   if (result_rev)
-    *result_rev = SVN_INVALID_REVNUM;;
+    *result_rev = SVN_INVALID_REVNUM;
 
   sb.real_status_func = status_func;
   sb.real_status_baton = status_baton;
@@ -370,11 +370,11 @@ svn_client_status5(svn_revnum_t *result_rev,
                                     dir_abspath, target_basename,
                                     depth, get_all,
                                     no_ignore, ignores, tweak_status, &sb,
-                                    ctx->cancel_func, ctx->cancel_baton,
                                     ignore_externals ? svn_cl__store_externals
                                                      : NULL,
                                     ignore_externals ? &externals_store
                                                      : NULL,
+                                    ctx->cancel_func, ctx->cancel_baton,
                                     pool, pool));
 
       /* Open a repository session to the URL. */
@@ -471,11 +471,11 @@ svn_client_status5(svn_revnum_t *result_rev,
       err = svn_wc_walk_status(ctx->wc_ctx, target_abspath,
                                depth, get_all, no_ignore, ignores,
                                tweak_status, &sb,
-                               ctx->cancel_func, ctx->cancel_baton,
                                ignore_externals ? svn_cl__store_externals
                                                 : NULL,
                                ignore_externals ? &externals_store
                                                 : NULL,
+                               ctx->cancel_func, ctx->cancel_baton,
                                pool);
 
       if (err && err->apr_err == SVN_ERR_WC_MISSING)

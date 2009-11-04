@@ -108,7 +108,7 @@ extern "C" {
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 14
+#define SVN_WC__VERSION 15
 
 
 /* A version <= this doesn't have property caching in the entries file. */
@@ -232,6 +232,7 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
 #define SVN_WC__ADM_LOG                 "log"
 #define SVN_WC__ADM_KILLME              "KILLME"
+#define SVN_WC__ADM_PRISTINE            "pristine"
 
 /* The basename of the ".prej" file, if a directory ever has property
    conflicts.  This .prej file will appear *within* the conflicted
@@ -451,9 +452,9 @@ svn_wc__internal_get_ancestry(const char **url,
 svn_error_t *
 svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             const char *local_abspath,
-                            const char *uuid,
                             const char *url,
-                            const char *repos,
+                            const char *repos_root_url,
+                            const char *repos_uuid,
                             svn_revnum_t revision,
                             svn_depth_t depth,
                             apr_pool_t *scratch_pool);
@@ -506,15 +507,6 @@ svn_wc__internal_resolved_conflict(svn_wc__db_t *db,
                                    void *notify_baton,
                                    apr_pool_t *scratch_pool);
 
-/* Library-internal version of svn_wc_locked2(). */
-svn_error_t *
-svn_wc__internal_locked(svn_boolean_t *locked_here,
-                        svn_boolean_t *locked,
-                        svn_wc__db_t *db,
-                        const char *local_abspath,
-                        apr_pool_t *scratch_pool);
-
-
 
 svn_error_t *
 svn_wc__internal_is_replaced(svn_boolean_t *replaced,
@@ -544,13 +536,23 @@ svn_wc__upgrade_sdb(int *result_format,
                     apr_pool_t *scratch_pool);
 
 
-/* Like svn_wc_is_wc_root(), but also, if KIND is not null, set *KIND to
- * the versioned node kind of PATH, or to svn_node_file if PATH is
- * unversioned.
+/* Checks whether a node is a working copy root or switched.
+ *
+ * If LOCAL_ABSPATH is the root of a working copy set WC_ROOT to TRUE,
+ * otherwise to FALSE.
+ *
+ * If LOCAL_ABSPATH is switched against its parent in the same working copy
+ * set *SWITCHED to TRUE, otherwise to FALSE. SWITCHED can be set to NULL
+ * if the result is not important.
+ *
+ * If KIND is not null *KIND is set to the node type of LOCAL_ABSPATH
+ *
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_wc__check_wc_root(svn_boolean_t *wc_root,
-                      svn_node_kind_t *kind,
+                      svn_wc__db_kind_t *kind,
+                      svn_boolean_t *switched,
                       svn_wc__db_t *db,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool);

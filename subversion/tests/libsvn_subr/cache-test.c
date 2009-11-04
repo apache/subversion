@@ -37,10 +37,11 @@
 /* Implements svn_cache__dup_func_t */
 static svn_error_t *
 dup_revnum(void **out,
-           void *in,
+           const void *in,
            apr_pool_t *pool)
 {
-  svn_revnum_t *in_rn = in, *duped = apr_palloc(pool, sizeof(*duped));
+  const svn_revnum_t *in_rn = in;
+  svn_revnum_t *duped = apr_palloc(pool, sizeof(*duped));
 
   *duped = *in_rn;
 

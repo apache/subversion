@@ -3331,7 +3331,7 @@ wc_entry_callbacks2_found_entry(const char *path,
   svn_error_t *err = SVN_NO_ERROR;
   VALUE callbacks, rb_pool;
 
-  svn_swig_rb_from_baton((VALUE)walk_baton, &callbacks, &rb_pool);;
+  svn_swig_rb_from_baton((VALUE)walk_baton, &callbacks, &rb_pool);
 
   if (!NIL_P(callbacks)) {
     callback_baton_t cbb;
@@ -3355,7 +3355,7 @@ wc_entry_callbacks2_handle_error(const char *path,
 {
   VALUE callbacks, rb_pool;
 
-  svn_swig_rb_from_baton((VALUE)walk_baton, &callbacks, &rb_pool);;
+  svn_swig_rb_from_baton((VALUE)walk_baton, &callbacks, &rb_pool);
 
   if (!NIL_P(callbacks)) {
     callback_baton_t cbb;

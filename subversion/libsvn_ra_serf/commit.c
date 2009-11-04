@@ -284,14 +284,18 @@ handle_checkout(serf_request_t *request,
       serf_bucket_t *hdrs;
       apr_uri_t uri;
       const char *location;
+      apr_status_t status;
 
       hdrs = serf_bucket_response_get_headers(response);
       location = serf_bucket_headers_get(hdrs, "Location");
       if (!location)
-        {
-          SVN_ERR_MALFUNCTION();
-        }
-      apr_uri_parse(pool, location, &uri);
+        return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, err,
+                                _("No Location header received"));
+
+      status = apr_uri_parse(pool, location, &uri);
+
+      if (status)
+        err = svn_error_compose_create(svn_error_wrap_apr(status, NULL), err);
 
       ctx->resource_url = svn_uri_canonicalize(uri.path, ctx->pool);
     }
@@ -482,13 +486,33 @@ get_version_url(const char **checked_in_url,
     {
       svn_ra_serf__propfind_context_t *propfind_ctx;
       apr_hash_t *props;
+      const char *propfind_url;
 
       props = apr_hash_make(pool);
 
       propfind_ctx = NULL;
-      svn_ra_serf__deliver_props(&propfind_ctx, props, session,
-                                 conn, session->repos_url.path,
-                                 base_revision, "0",
+      if (SVN_IS_VALID_REVNUM(base_revision))
+        {
+          const char *bc_url, *bc_relpath;
+          
+          /* mod_dav_svn can't handle the "Label:" header that
+             svn_ra_serf__deliver_props() is going to try to use for
+             this lookup, so we'll do things the hard(er) way, by
+             looking up the version URL from a resource in the
+             baseline collection. */
+          SVN_ERR(svn_ra_serf__get_baseline_info(&bc_url, &bc_relpath,
+                                                 session, conn,
+                                                 session->repos_url.path,
+                                                 base_revision, NULL, pool));
+          propfind_url = svn_path_url_add_component2(bc_url, bc_relpath, pool);
+        }
+      else
+        {
+          propfind_url = session->repos_url.path;
+        }
+
+      svn_ra_serf__deliver_props(&propfind_ctx, props, session, conn,
+                                 propfind_url, base_revision, "0",
                                  checked_in_props, FALSE, NULL, pool);
 
       SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, session, pool));
@@ -496,7 +520,7 @@ get_version_url(const char **checked_in_url,
       /* We wouldn't get here if the url wasn't found (404), so the checked-in
          property should have been set. */
       root_checkout =
-          svn_ra_serf__get_ver_prop(props, session->repos_url.path,
+          svn_ra_serf__get_ver_prop(props, propfind_url,
                                     base_revision, "DAV:", "checked-in");
 
       if (!root_checkout)
@@ -1750,8 +1774,6 @@ apply_textdelta(void *file_baton,
   file_context_t *ctx = file_baton;
   const svn_ra_callbacks2_t *wc_callbacks;
   void *wc_callback_baton;
-  const char *tempfile_name;
-  svn_checksum_t *checksum;
 
   /* Store the stream in a temporary file; we'll give it to serf when we
    * close this file.
@@ -1764,17 +1786,9 @@ apply_textdelta(void *file_baton,
   wc_callbacks = ctx->commit->session->wc_callbacks;
   wc_callback_baton = ctx->commit->session->wc_callback_baton;
 
-  /* Avoid temp file name collisions by requesting unique temp file name
-     based on the checksum of CTX->NAME. */
-  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, ctx->name,
-                       strlen(ctx->name), ctx->pool));
-  tempfile_name = apr_psprintf(ctx->pool, "tempfile.%s",
-                               svn_checksum_to_cstring_display(checksum,
-                                                               ctx->pool));
-  SVN_ERR(svn_io_open_uniquely_named(&ctx->svndiff, NULL, NULL,
-                                     tempfile_name, ".tmp",
-                                     svn_io_file_del_on_pool_cleanup,
-                                     ctx->pool, ctx->pool));
+  SVN_ERR(svn_io_open_unique_file3(&ctx->svndiff, NULL, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   ctx->pool, ctx->pool));
 
   ctx->stream = svn_stream_create(ctx, pool);
   svn_stream_set_write(ctx->stream, svndiff_stream_write);

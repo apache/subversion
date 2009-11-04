@@ -390,8 +390,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                    &this_lock,
                                    db, this_abspath, iterpool, iterpool));
 
-      /* First check the depth */
-      if (this_depth == svn_depth_exclude)
+      /* First check for exclusion */
+      if (this_status == svn_wc__db_status_excluded)
         {
           if (honor_depth_exclude)
             {
@@ -753,11 +753,8 @@ find_base_rev(svn_revnum_t *base_rev,
     }
   else if (status == svn_wc__db_status_deleted)
     {
-      const char *base_del_abspath, *moved_to_abspath;
       const char *work_del_abspath;
-      svn_boolean_t replaced;
-      SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, &replaced,
-                                       &moved_to_abspath, &work_del_abspath,
+       SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL, &work_del_abspath,
                                        db, local_abspath, pool, pool));
 
       if (work_del_abspath != NULL)
@@ -836,9 +833,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       target_depth = svn_depth_unknown;
       target_lock = NULL;
     }
-
-  if (target_depth == svn_depth_exclude)
-    status = svn_wc__db_status_excluded;
 
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, local_abspath, pool));
@@ -981,11 +975,11 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
 
       if (repos_relpath)
         {
-          const char *parent_abspath, *basename;
+          const char *parent_abspath, *base;
           svn_wc__db_status_t parent_status;
           const char *parent_repos_relpath;
 
-          svn_dirent_split(local_abspath, &parent_abspath, &basename, pool);
+          svn_dirent_split(local_abspath, &parent_abspath, &base, pool);
 
           /* We can assume a file is in the same repository as its parent
              directory, so we only look at the relpath. */
@@ -1017,10 +1011,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
           if (err)
             goto abort_report;
 
-          /* Split PATH into parent PDIR and basename BNAME. */
-
           if (strcmp(repos_relpath,
-                     svn_relpath_join(parent_repos_relpath, basename, pool)) != 0)
+                     svn_relpath_join(parent_repos_relpath, base, pool)) != 0)
             {
               /* This file is disjoint with respect to its parent
                  directory.  Since we are looking at the actual target of
@@ -1148,7 +1140,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
   svn_txdelta_window_handler_t handler;
   void *wh_baton;
   const char *base_digest_hex;
-  svn_checksum_t *expected_checksum = NULL;
+  const svn_checksum_t *expected_checksum = NULL;
   svn_checksum_t *verify_checksum = NULL;
   svn_checksum_t *local_checksum;
   svn_error_t *err;
@@ -1223,16 +1215,19 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
       else
         {
           svn_stream_t *p_stream;
+          svn_checksum_t *p_checksum;
 
           /* ### we should ALREADY have the checksum for pristine. */
           SVN_ERR(svn_wc__get_pristine_contents(&p_stream, db, local_abspath,
                                                scratch_pool, scratch_pool));
-          p_stream = svn_stream_checksummed2(p_stream, &expected_checksum,
+          p_stream = svn_stream_checksummed2(p_stream, &p_checksum,
                                              NULL, svn_checksum_md5, TRUE,
                                              scratch_pool);
 
           /* Closing this will cause a full read/checksum. */
           SVN_ERR(svn_stream_close(p_stream));
+
+          expected_checksum = p_checksum;
         }
 
       /* apply_textdelta() is working against a base with this checksum */

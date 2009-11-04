@@ -127,7 +127,7 @@ compare_and_verify(svn_boolean_t *modified_p,
       svn_checksum_t *checksum;
       svn_stream_t *v_stream;  /* versioned_file */
       svn_stream_t *b_stream;  /* base_file */
-      svn_checksum_t *node_checksum;
+      const svn_checksum_t *node_checksum;
 
       SVN_ERR(svn_stream_open_readonly(&b_stream, base_file_abspath,
                                        scratch_pool, scratch_pool));

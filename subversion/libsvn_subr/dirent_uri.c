@@ -112,8 +112,7 @@ local_style(path_type_t type, const char *path, apr_pool_t *pool)
         break;
       case type_uri:
       default:
-        path = svn_uri_canonicalize(path, pool);
-        break;
+        return apr_pstrdup(pool, path);
     }
 
   /* Internally, Subversion represents the current directory with the
@@ -810,17 +809,6 @@ svn_relpath_local_style(const char *dirent,
   return local_style(type_relpath, dirent, pool);
 }
 
-const char *
-svn_uri_internal_style(const char *uri, apr_pool_t *pool)
-{
-  return internal_style(type_uri, uri, pool);
-}
-
-const char *
-svn_uri_local_style(const char *uri, apr_pool_t *pool)
-{
-  return local_style(type_uri, uri, pool);
-}
 
 /* We decided against using apr_filepath_root here because of the negative
    performance impact (creating a pool and converting strings ). */
@@ -1573,19 +1561,19 @@ svn_dirent_get_absolute(const char **pabsolute,
 const char *
 svn_uri_canonicalize(const char *uri, apr_pool_t *pool)
 {
-  return canonicalize(type_uri, uri, pool);;
+  return canonicalize(type_uri, uri, pool);
 }
 
 const char *
 svn_relpath_canonicalize(const char *relpath, apr_pool_t *pool)
 {
-  return canonicalize(type_relpath, relpath, pool);;
+  return canonicalize(type_relpath, relpath, pool);
 }
 
 const char *
 svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool)
 {
-  const char *dst = canonicalize(type_dirent, dirent, pool);;
+  const char *dst = canonicalize(type_dirent, dirent, pool);
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Handle a specific case on Windows where path == "X:/". Here we have to

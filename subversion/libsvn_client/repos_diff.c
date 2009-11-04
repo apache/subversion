@@ -322,9 +322,9 @@ get_dirprops_from_ra(struct dir_baton *b, svn_revnum_t base_revision)
 
 
 /* Return in *LOCAL_DIR_ABSPATH the absolute path for the directory PATH by
-   searching the access baton set of ADM_ACCESS.  If ADM_ACCESS is NULL
-   then *PATH_ACCESS will be NULL.  If LENIENT is TRUE then failure to find
-   an access baton will not return an error but will set *PATH_ACCESS to
+   searching the access baton set of ADM_ACCESS.  If ADM_ACCESS is NULL then
+   *LOCAL_DIR_ABSPATH will be NULL.  If LENIENT is TRUE then failure to find
+   an access baton will not return an error but will set *LOCAL_DIR_ABSPATH to
    NULL instead. */
 static svn_error_t *
 get_dir_abspath(const char **local_dir_abspath,
@@ -1157,19 +1157,12 @@ svn_client__get_diff_editor(const char *target,
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(subpool);
   struct edit_baton *eb = apr_palloc(subpool, sizeof(*eb));
+  const char *target_abspath;
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
   eb->target = target;
-  if (wc_ctx)
-    {
-      const char *target_abspath;
-      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
-      SVN_ERR(svn_wc__adm_retrieve_from_context(&(eb->adm_access), wc_ctx,
-                                                target_abspath, pool));
-    }
-  else
-    {
-      eb->adm_access = NULL;
-    }
+  SVN_ERR(svn_wc__adm_retrieve_from_context(&(eb->adm_access), wc_ctx,
+                                            target_abspath, pool));
   eb->diff_callbacks = diff_callbacks;
   eb->diff_cmd_baton = diff_cmd_baton;
   eb->dry_run = dry_run;

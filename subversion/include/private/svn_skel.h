@@ -156,6 +156,13 @@ void svn_skel__prepend_str(const char *value,
                            apr_pool_t *result_pool);
 
 
+/* Parse SKEL as an integer. SCRATCH_POOL is used for temporary memory.
+   NOTE: this function assumes the input is valid -- there is no way to
+   return an error.  */
+apr_int64_t svn_skel__parse_int(const svn_skel_t *skel,
+                                apr_pool_t *scratch_pool);
+
+
 /* Return a string whose contents are a concrete representation of
    SKEL.  Allocate the string from POOL.  */
 svn_stringbuf_t *svn_skel__unparse(const svn_skel_t *skel, apr_pool_t *pool);
@@ -171,12 +178,11 @@ int svn_skel__list_length(const svn_skel_t *skel);
 
 /* Parse a `PROPLIST' SKEL into a regular hash of properties,
    *PROPLIST_P, which has const char * property names, and
-   svn_string_t * values, or NULL if SKEL contains no properties.  Use
-   POOL for all allocations.  */
+   svn_string_t * values. Use RESULT_POOL for all allocations.  */
 svn_error_t *
 svn_skel__parse_proplist(apr_hash_t **proplist_p,
                          const svn_skel_t *skel,
-                         apr_pool_t *pool);
+                         apr_pool_t *result_pool);
 
 /* Unparse a PROPLIST hash (which has const char * property names and
    svn_stringbuf_t * values) into a `PROPLIST' skel *SKEL_P.  Use POOL

@@ -120,8 +120,8 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                              FALSE /* no_ignore */,
                              NULL  /* ignore_patterns */,
                              analyze_status, &sb,
-                             cancel_func, cancel_baton,
                              NULL, NULL,
+                             cancel_func, cancel_baton,
                              scratch_pool));
 
 
@@ -142,6 +142,14 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
             result->switched = TRUE;
         }
     }
+
+  /* ### 1.6+: If result->sparse_checkout is FALSE the answer is not final
+         We can still have excluded nodes!
+         
+     ### TODO: Check every node below local_abspath for excluded
+
+     ### BH: What about absent? You don't know if you have a complete tree
+             without checking for absent too */
 
   return SVN_NO_ERROR;
 }

@@ -174,6 +174,37 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                              _("Directory '%s' has no URL"),
                              svn_dirent_local_style(anchor, pool));
 
+    /* We may need to crop the tree if the depth is sticky */
+  if (depth_is_sticky && depth < svn_depth_infinity)
+    {
+      svn_node_kind_t target_kind;
+
+      if (depth == svn_depth_exclude)
+        {
+          SVN_ERR(svn_wc_exclude(ctx->wc_ctx,
+                                 local_abspath,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 ctx->notify_func2, ctx->notify_baton2,
+                                 pool));
+
+          /* Target excluded, we are done now */
+
+          if (close_adm_access)
+            SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+
+          return SVN_NO_ERROR;
+        }
+
+      SVN_ERR(svn_wc__node_get_kind(&target_kind, ctx->wc_ctx,
+                                    local_abspath, TRUE, pool));
+
+      if (target_kind == svn_node_dir)
+        SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, local_abspath, depth,
+                                  ctx->cancel_func, ctx->cancel_baton,
+                                  ctx->notify_func2, ctx->notify_baton2,
+                                  pool));
+    }
+
   /* Open an RA session to 'source' URL */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
                                            &switch_rev_url,
@@ -191,23 +222,6 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
          "is not the same repository as\n"
          "'%s'"), url, source_root);
 
-  /* We may need to crop the tree if the depth is sticky */
-  if (depth_is_sticky && depth < svn_depth_infinity)
-    {
-      const char *target_abspath;
-      svn_node_kind_t target_kind;
-
-      SVN_ERR(svn_dirent_get_absolute(&target_abspath, path, pool));
-      SVN_ERR(svn_wc__node_get_kind(&target_kind, ctx->wc_ctx,
-                                    target_abspath, TRUE, pool));
-
-      if (target_kind == svn_node_dir)
-        SVN_ERR(svn_wc_crop_tree2(ctx->wc_ctx, target_abspath, depth,
-                                  ctx->notify_func2, ctx->notify_baton2,
-                                  ctx->cancel_func, ctx->cancel_baton,
-                                  pool));
-    }
-
   SVN_ERR(svn_ra_reparent(ra_session, url, pool));
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
@@ -221,12 +235,13 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                     target, switch_rev_url, use_commit_times,
                                     depth,
                                     depth_is_sticky, allow_unver_obstructions,
-                                    ctx->notify_func2, ctx->notify_baton2,
-                                    ctx->cancel_func, ctx->cancel_baton,
+                                    diff3_cmd, preserved_exts,
+                                    NULL, NULL,
                                     ctx->conflict_func, ctx->conflict_baton,
                                     svn_client__external_info_gatherer, &efb,
-                                    NULL, NULL,
-                                    diff3_cmd, preserved_exts, pool, pool));
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    ctx->notify_func2, ctx->notify_baton2,
+                                    pool, pool));
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */

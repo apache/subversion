@@ -63,6 +63,51 @@ svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
                                 apr_pool_t *scratch_pool);
 
 
+/* Handle the old "KILLME" concept -- perform the actual deletion of a
+   subdir (or just its admin area) during post-commit processing of a
+   deleted subdir.  */
+svn_error_t *
+svn_wc__wq_add_killme(svn_wc__db_t *db,
+                      const char *adm_abspath,
+                      svn_boolean_t adm_only,
+                      apr_pool_t *scratch_pool);
+
+
+/* ### temporary compat for mapping the old loggy into workqueue space.  */
+svn_error_t *
+svn_wc__wq_add_loggy(svn_wc__db_t *db,
+                     const char *adm_abspath,
+                     const svn_stringbuf_t *log_content,
+                     apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   svn_revnum_t new_revision,
+                                   svn_boolean_t no_unlock,
+                                   apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__wq_add_postcommit(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          svn_revnum_t new_revision,
+                          apr_time_t new_date,
+                          const char *new_author,
+                          const svn_checksum_t *new_checksum,
+                          apr_hash_t *new_dav_cache,
+                          svn_boolean_t keep_changelist,
+                          apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__wq_add_install_properties(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_hash_t *pristine_props,
+                                  apr_hash_t *actual_props,
+                                  svn_boolean_t force_base_install,
+                                  apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

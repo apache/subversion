@@ -71,6 +71,7 @@ fubar* = tarfile=si
 foobar.lha = lhafile=da;lzhfile=niet
 spacetest = abc = def ; ghi = ; = j
 escapetest = myval=;;;;val;myprop=p
+quotetest = svn:keywords="Author Date Id Rev URL";
 * = auto=oui
 ''' % (enable_flag and 'yes' or 'no')
 
@@ -135,7 +136,8 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
                'fubar.tar',
                'foobar.lha',
                'spacetest',
-               'escapetest']
+               'escapetest',
+               'quotetest']
   for filename in filenames:
     svntest.main.file_write(os.path.join(files_dir, filename),
                             'foo\nbar\nbaz\n')
@@ -178,6 +180,9 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
     check_proplist(filename, {'auto':'oui', 'abc':'def', 'ghi':''})
     filename = os.path.join(files_wc_dir, 'escapetest')
     check_proplist(filename, {'auto':'oui', 'myval':';;val', 'myprop':'p'})
+    filename = os.path.join(files_wc_dir, 'quotetest')
+    check_proplist(filename, {'auto':'oui',
+                              'svn:keywords': 'Author Date Id Rev URL'})
   else:
     for filename in filenames:
       check_proplist(os.path.join(files_wc_dir, filename), {})

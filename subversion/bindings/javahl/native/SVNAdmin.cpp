@@ -69,7 +69,7 @@ void SVNAdmin::create(const char *path, bool disableFsyncCommits,
     configPath = svn_path_internal_style(configPath, requestPool.pool());
   svn_repos_t *repos;
   apr_hash_t *config;
-  apr_hash_t *fs_config = apr_hash_make (requestPool.pool());;
+  apr_hash_t *fs_config = apr_hash_make (requestPool.pool());
 
   apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
                 APR_HASH_KEY_STRING,

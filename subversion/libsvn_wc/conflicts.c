@@ -55,9 +55,6 @@
 
 struct svn_wc_conflict_t
 {
-  /* Pool conflict is allocated in */
-  apr_pool_t *pool;
-
   /* ### kind + property name are the primary keys of a conflict */
   /* The kind of conflict recorded */
   svn_wc_conflict_kind_t kind;
@@ -75,27 +72,18 @@ conflict_alloc(svn_wc_conflict_t **conflict, apr_pool_t *result_pool)
 {
   svn_wc_conflict_t *c = apr_pcalloc(result_pool, sizeof(*c));
 
-  c->pool = result_pool;
-
   *conflict = c;
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_wc_conflict_dup(svn_wc_conflict_t** duplicate,
-                    svn_wc_conflict_t* base,
+svn_wc_conflict_dup(svn_wc_conflict_t **duplicate,
+                    const svn_wc_conflict_t *base,
                     apr_pool_t *result_pool)
 {
   svn_wc_conflict_t *c;
-  if (result_pool == base->pool)
-    {
-      /* No need to duplicate; base has the same liftime and its inner
-         values can't change */
-      *duplicate = base;
-      return SVN_NO_ERROR;
-    }
-  
+
   SVN_ERR(conflict_alloc(&c, result_pool));
 
   c->kind = base->kind;
@@ -338,7 +326,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
           {
             if (conflict_old && conflict_working && conflict_new)
               {
-                apr_file_t *tmp_f;
+                const char *temp_dir;
                 svn_stream_t *tmp_stream;
                 svn_diff_t *diff;
                 svn_diff_conflict_display_style_t style =
@@ -346,12 +334,13 @@ resolve_conflict_on_node(svn_wc__db_t *db,
                   ? svn_diff_conflict_display_latest
                   : svn_diff_conflict_display_modified;
 
-                SVN_ERR(svn_wc_create_tmp_file2(&tmp_f,
-                                                &auto_resolve_src,
-                                                conflict_dir_abspath,
-                                                svn_io_file_del_none,
-                                                pool));
-                tmp_stream = svn_stream_from_aprfile2(tmp_f, FALSE, pool);
+                SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db,
+                                                       conflict_dir_abspath,
+                                                       pool, pool));
+                SVN_ERR(svn_stream_open_unique(&tmp_stream,
+                                               &auto_resolve_src,
+                                               temp_dir, svn_io_file_del_none,
+                                               pool, pool));
                 SVN_ERR(svn_diff_file_diff3_2(&diff,
                                               conflict_old,
                                               conflict_working,
@@ -693,6 +682,11 @@ svn_wc__internal_resolved_conflict(svn_wc__db_t *db,
                                    void *notify_baton,
                                    apr_pool_t *scratch_pool)
 {
+  /* When the implementation still used the entry walker, depth
+     unknown was translated to infinity. */
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
   return svn_error_return(
     recursive_resolve_conflict(db,
                                local_abspath,
