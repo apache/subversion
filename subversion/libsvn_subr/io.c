@@ -3651,7 +3651,7 @@ svn_io_file_perms_set(const char *fname, apr_fileperms_t perms,
 
   status = apr_file_perms_set(fname_apr, perms);
   if (status)
-    return svn_error_wrap_apr(status, _("Can't set permissions of '%s'"),
+    return svn_error_wrap_apr(status, _("Can't set permissions on '%s'"),
                               fname);
   else
     return SVN_NO_ERROR;
