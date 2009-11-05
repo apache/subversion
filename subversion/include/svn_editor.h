@@ -132,7 +132,7 @@ extern "C" {
  *    svn_editor_t's callback baton and scratch pool that the callback
  *    functions receive, as well as a cancellation callback and baton
  *    (see "Cancellation" below).
- * 
+ *
  * - @b Set callbacks: The receiver calls svn_editor_setcb_many() or a
  *    succession of the other svn_editor_setcb_*() functions to tell @c
  *    svn_editor_t which functions to call when driven by the various
@@ -228,7 +228,7 @@ extern "C" {
  *   first of them has to be either svn_editor_set_props() or
  *   svn_editor_add_file().
  *
- * - svn_editor_delete() must not be used to replace a path -- i.e. 
+ * - svn_editor_delete() must not be used to replace a path -- i.e.
  *   svn_editor_delete() must not be followed by an svn_editor_add_*() on
  *   the same path, nor by an svn_editor_copy() or svn_editor_move() with
  *   the same path as the copy/move target.
@@ -239,14 +239,14 @@ extern "C" {
  *   replaced node, like node kind, etc.
  *   @todo say which function(s) to use.
  *
- * - svn_editor_delete() must not be used to move a path -- i.e. 
+ * - svn_editor_delete() must not be used to move a path -- i.e.
  *   svn_editor_delete() must not delete the source path of a previous
  *   svn_editor_copy() call. Instead, svn_editor_move() must be used.
  *
  * - One of svn_editor_complete() or svn_editor_abort() must be called
  *   exactly once, which must be the final call the driver invokes.
  *   Invoking svn_editor_complete() must imply that the set of changes has
- *   been transmitted completely and without errors, and invoking 
+ *   been transmitted completely and without errors, and invoking
  *   svn_editor_abort() must imply that the transformation was not completed
  *   successfully.
  *
@@ -259,9 +259,9 @@ extern "C" {
  * return, except for the following pairs, where a change must be completed
  * when receiving the second callback in each pair:
  *  - svn_editor_add_file() and svn_editor_set_text()
- *  - svn_editor_set_props() (if @a complete is FALSE) and 
+ *  - svn_editor_set_props() (if @a complete is FALSE) and
  *    svn_editor_set_text() (if the node is a file)
- *  - svn_editor_set_props() (if @a complete is FALSE) and 
+ *  - svn_editor_set_props() (if @a complete is FALSE) and
  *    svn_editor_set_target() (if the node is a symbolic link)
  *
  * This restriction is not recursive -- a directory's children may remain
@@ -304,7 +304,7 @@ extern "C" {
  * live only until svn_editor_create() returns.
  * \n\n
  *
- * <h3>Cancellation</h3> 
+ * <h3>Cancellation</h3>
  * To allow graceful interruption by external events (like a user abort),
  * svn_editor_create() can be passed an @c svn_cancel_func_t that is
  * polled every time the driver invokes a callback, just before the
@@ -321,7 +321,7 @@ extern "C" {
  * The cancellation function and baton are typically provided by the client
  * context.
  *
- * 
+ *
  * ### TODO @todo anything missing? -- allow text and prop change to follow
  * a move or copy. -- set_text() vs. apply_text_delta()? -- If a
  * set_props/set_text/set_target/copy/move/delete in a merge source is

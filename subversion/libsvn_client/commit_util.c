@@ -796,7 +796,7 @@ harvest_committables(apr_hash_t *committables,
                                                             ctx->wc_ctx,
                                                             this_abspath,
                                                             iterpool));
-                  
+
                   if (obstructed)
                     {
                       /* A missing, schedule-delete child dir is
@@ -1366,7 +1366,7 @@ do_item_commit(void **dir_baton,
 
               SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx, local_abspath,
                                        SVN_PROP_MIME_TYPE, pool, pool));
-            
+
               if (propval)
                 notify->mime_type = propval->data;
             }

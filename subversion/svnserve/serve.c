@@ -1818,7 +1818,7 @@ static svn_error_t *log_receiver(void *baton,
           SVN_ERR(svn_ra_svn_write_tuple(
                       conn, pool, "cw(?cr)(cbb)",
                       path,
-                      action, 
+                      action,
                       change->copyfrom_path,
                       change->copyfrom_rev,
                       svn_node_kind_to_word(change->node_kind),

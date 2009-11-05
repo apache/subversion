@@ -726,7 +726,7 @@ def dump_tree_script__crawler(n, subtree="", stream=sys.stdout):
 
   for child in n.children or []:
     count += dump_tree_script__crawler(child, subtree, stream)
-  
+
   return count
 
 

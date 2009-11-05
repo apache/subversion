@@ -49,7 +49,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
       lock = core.svn_lock_create(core.Pool())
       lock.token = 'http://svnbook.org/nightly/en/svn.advanced.locking.html'
-      
+
       wc.add_lock(readme_path, lock, self.wc)
       self.assertEqual(True, wc.adm_locked(self.wc))
       self.assertEqual(True, wc.locked(self.path))

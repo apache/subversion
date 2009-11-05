@@ -59,8 +59,8 @@
    that file to LOCAL_ABSPATH with possible translations/expansions.  If
    USE_COMMIT_TIMES is set, then set working file's timestamp to
    last-commit-time.  Either way, set entry-timestamp to match that of
-   the working file when all is finished. 
-   
+   the working file when all is finished.
+
    Not that a valid access baton with a write lock to the directory of
    LOCAL_ABSPATH must be available in DB.*/
 static svn_error_t *
@@ -170,13 +170,13 @@ restore_file(svn_wc__db_t *db,
 
 /* Try to restore LOCAL_ABSPATH of node type KIND and if successfull,
    notify that the node is restored.  Use DB for accessing the working copy.
-   If USE_COMMIT_TIMES is set, then set working file's timestamp to 
+   If USE_COMMIT_TIMES is set, then set working file's timestamp to
    last-commit-time.
 
    Set RESTORED to TRUE if the node is successfull restored. RESTORED will
    be FALSE if restoring this node is not supported.
 
-   This function does all temporary allocations in SCRATCH_POOL 
+   This function does all temporary allocations in SCRATCH_POOL
  */
 static svn_error_t *
 restore_node(svn_boolean_t *restored,
@@ -370,7 +370,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
       svn_depth_t this_depth;
       svn_wc__db_lock_t *this_lock;
       svn_boolean_t this_shadows_base, this_switched, replaced = FALSE;
-      
+
 
       /* Clear the iteration subpool here because the loop has a bunch
          of 'continue' jump statements. */
@@ -489,7 +489,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
       /* Is the entry on disk? */
       if (apr_hash_get(dirents, child, APR_HASH_KEY_STRING) == NULL)
         {
-          svn_boolean_t missing = FALSE; 
+          svn_boolean_t missing = FALSE;
           if (restore_files && this_status != svn_wc__db_status_deleted
                             && !replaced)
             {
@@ -725,7 +725,7 @@ find_base_rev(svn_revnum_t *base_rev,
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, base_rev, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, 
+                               NULL, NULL, NULL, NULL, NULL, NULL,
                                &base_shadowed, NULL, NULL,
                                db, local_abspath, pool, pool));
 
@@ -993,7 +993,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
           if (err)
             goto abort_report;
 
-          if (!parent_repos_relpath && 
+          if (!parent_repos_relpath &&
               parent_status == svn_wc__db_status_added)
             {
               err = svn_wc__db_scan_addition(NULL, NULL,
@@ -1291,7 +1291,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 
       {
         const char *text_base;
-        
+
         SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
                                        scratch_pool));
 
@@ -1363,10 +1363,10 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
     {
       const svn_prop_t *p = &APR_ARRAY_IDX(propmods, i, svn_prop_t);
       if (kind == svn_wc__db_kind_file)
-        SVN_ERR(editor->change_file_prop(baton, p->name, p->value, 
+        SVN_ERR(editor->change_file_prop(baton, p->name, p->value,
                                          scratch_pool));
       else
-        SVN_ERR(editor->change_dir_prop(baton, p->name, p->value, 
+        SVN_ERR(editor->change_dir_prop(baton, p->name, p->value,
                                         scratch_pool));
     }
 

@@ -206,63 +206,53 @@ Contents
                                        ...
        ...
 
-   ########################################################################
-   #                                                                      #
-   #     ############################################################     #
-   #     ###                                                      ###     #
-   #     ###  THIS IS NOT YET FULLY IMPLEMENTED, SEE ISSUE #2843  ###     #
-   #     ###                                                      ###     #
-   #     ############################################################     #
-   #                                                                      #
-   # svn up --set-depth=empty Awc/B/E                                     #
-   #                                                                      #
-   #     Remove everything under E, but leave E as an empty directory     #
-   #     since B is depth-infinity.                                       #
-   #                                                                      #
-   #     Awc/.svn/entries                this_dir    depth-infinity       #
-   #                                     B                                #
-   #                                     D                                #
-   #     Awc/B/.svn/entries              this_dir    depth-infinity       #
-   #                                     ...                              #
-   #     Awc/B/E/.svn/entries            this_dir    depth-empty          #
-   #     ...                                                              #
-   #                                                                      #
-   # svn up --set-depth=empty Awc/D                                       #
-   #                                                                      #
-   #     Remove everything under D, and D itself since A is depth-empty.  #
-   #                                                                      #
-   #     Awc/.svn/entries                this_dir    depth-empty          #
-   #                                     B                                #
-   #                                                                      #
-   # svn up Awc/D                                                         #
-   #                                                                      #
-   #     Bring D back at depth-infinity.                                  #
-   #                                                                      #
-   #     Awc/.svn/entries                this_dir    depth-empty          #
-   #                                     ...                              #
-   #     Awc/D/.svn/entries              this_dir    depth-infinity       #
-   #                                     ...                              #
-   #     ...                                                              #
-   #                                                                      #
-   # svn up --set-depth=immediates Awc                                    #
-   #                                                                      #
-   #     Bring in everything that's missing (C/ and mu) and empty all     #
-   #     subdirectories (and set their this_dir to depth-empty).          #
-   #                                                                      #
-   #     Awc/.svn/entries                this_dir    depth-immediates     #
-   #                                     B                                #
-   #                                     C                                #
-   #     Awc/B/.svn/entries              this_dir    depth-empty          #
-   #     Awc/C/.svn/entries              this_dir    depth-empty          #
-   #     ...                                                              #
-   #                                                                      #
-   # svn up --set-depth=files Awc                                         #
-   #                                                                      #
-   #     Remove every subdirectories under Awc. but leave the files.      #
-   #                                                                      #
-   #     Awc/.svn/entries                this_dir    depth-files          #
-   #                                                                      #
-   ########################################################################
+   svn up --set-depth=empty Awc/B/E
+
+       Remove everything under E, but leave E as an empty directory
+       since B is depth-infinity.
+
+       Awc/.svn/entries                this_dir    depth-infinity
+                                       B
+                                       D
+       Awc/B/.svn/entries              this_dir    depth-infinity
+                                       ...
+       Awc/B/E/.svn/entries            this_dir    depth-empty
+       ...
+
+   svn up --set-depth=empty Awc/D
+
+       Remove everything under D, and D itself since A is depth-empty.
+
+       Awc/.svn/entries                this_dir    depth-empty
+                                       B
+
+   svn up Awc/D
+
+       Bring D back at depth-infinity.
+
+       Awc/.svn/entries                this_dir    depth-empty
+                                       ...
+       Awc/D/.svn/entries              this_dir    depth-infinity
+                                       ...
+       ...
+
+   svn up --set-depth=immediates Awc
+
+       Bring in everything that's missing (C/ and mu) and empty all
+       subdirectories (and set their this_dir to depth-empty).
+
+       Awc/.svn/entries                this_dir    depth-immediates
+                                       B
+                                       C
+       Awc/B/.svn/entries              this_dir    depth-empty
+       Awc/C/.svn/entries              this_dir    depth-empty
+       ...
+
+   svn up --set-depth=files Awc
+
+       Remove every subdirectories under Awc. but leave the files.
+
+       Awc/.svn/entries                this_dir    depth-files
 
 
 4. Implementation Strategy

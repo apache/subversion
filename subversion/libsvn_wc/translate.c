@@ -187,7 +187,7 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_abspath));
   SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
                                 scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL, 
+  SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL,
                                scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__get_special(&special, db, versioned_abspath, scratch_pool));
 
@@ -263,8 +263,8 @@ svn_wc_translated_file3(const char **xlated_abspath,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  return svn_wc__internal_translated_file(xlated_abspath, src, wc_ctx->db, 
-                                          versioned_abspath, flags, 
+  return svn_wc__internal_translated_file(xlated_abspath, src, wc_ctx->db,
+                                          versioned_abspath, flags,
                                           result_pool,scratch_pool);
 }
 

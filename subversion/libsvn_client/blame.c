@@ -693,14 +693,14 @@ svn_client_blame5(const char *target,
           SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, target_abspath, pool,
                                     pool));
           SVN_ERR(svn_stream_open_readonly(&wcfile, target, pool, pool));
-          
+
           keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
                                   APR_HASH_KEY_STRING);
 
           if (keywords)
             SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, NULL, NULL,
                                               0, NULL, pool));
-  
+
           wcfile = svn_subst_stream_translated(wcfile, "\n", TRUE, kw, FALSE,
                                                pool);
 

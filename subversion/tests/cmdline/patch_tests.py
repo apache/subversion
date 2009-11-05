@@ -3,9 +3,9 @@
 #
 #  patch_tests.py:  some basic patch tests
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 #    Licensed to the Subversion Corporation (SVN Corp.) under one
 #    or more contributor license agreements.  See the NOTICE file
@@ -253,7 +253,7 @@ def patch_unidiff_absolute_paths(sbox):
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
-  
+
   lambda_path = os.path.join(os.path.sep, 'A', 'B', 'lambda')
   expected_output = [
     'U    %s\n' % os.path.join('A', 'B', 'E', 'alpha'),
@@ -445,7 +445,7 @@ def patch_unidiff_offset(sbox):
     "agent below as soon as possible for the immediate release of your\n",
     "winnings with the below details.\n",
   ]
-  
+
   iota_contents = [
     "iota\n",
     "iota\n",

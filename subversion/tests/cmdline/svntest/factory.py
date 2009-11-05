@@ -49,7 +49,7 @@
 #
 # (3) Run the test, paste the output back into your new test,
 #     replacing the factory call.
-#  
+#
 #  $ ./foo_tests.py my_new_test
 #  OR
 #  $ ./foo_tests.py my_new_test > new_test.snippet
@@ -62,7 +62,7 @@
 #     that it uses:
 #     import os, shutil
 #     from svntest import main, wc, actions, verify
-#     
+#
 #     Be aware that you have to paste the result back to the .py file.
 #
 #     Be more aware that you have to read every single line and understand
@@ -86,10 +86,10 @@
 # Or you can first do stuff to your sbox and then call factory on it.
 # Factory will notice if the sbox has already been built and calls
 # sbox.build() only if you didn't already.
-# 
+#
 # You can also have any number of factory.make() calls scattered
 # around "real" test code.
-# 
+#
 # Note that you can pass a prev_status and prev_disk to factory, to make
 # the expected_* trees re-use a pre-existing one in the test, entirely
 # for code beauty :P (has to match the wc_dir you will be using next).
@@ -155,7 +155,7 @@
 #   to fix factory.py to not mistake the arg for something different.
 #   You usually just need to tweak some parameters to args2svntest() to
 #   achieve correct expansion.)
-# 
+#
 # - If you want to use a second (or Nth) working copy, just supply any
 #   working copy wildcard with any made-up suffix, e.g. like this:
 #     'svn st wc_dir_2' or 'svn info $WC_2'
@@ -175,7 +175,7 @@
 #                                 os.path.join(wc_dir_2, 'iota'),
 #                                 "more")
 #
-#   
+#
 # URLs
 # Factory currently knows only one repository, thus only one repos root.
 # The wildcards you can use for it are:
@@ -201,7 +201,7 @@
 #   Some subcommands are parsed specially, others by a catch-all default
 #   parser (cmd_svn()), see switch().
 #     'svn commit', 'svn commit --force', 'svn ci wc_dir_2'
-#     'svn copy url/A url/X' 
+#     'svn copy url/A url/X'
 #
 # - "echo contents > file"     (replace)
 #   "echo contents >> file"    (append)
@@ -275,7 +275,7 @@ class TestFactory:
 
   def __init__(self, sbox, prev_status=None, prev_disk=None):
     self.sbox = sbox
-    
+
     # The input lines and their translations.
     # Each translation usually has multiple output lines ('\n' characters).
     self.lines = []       #  [ ['in1', 'out1'], ['in2', 'out'], ...
@@ -302,7 +302,7 @@ class TestFactory:
     # These are path variables like "A_D = os.path.join(wc_dir, 'A', 'D')".
     # The original wc_dir and url vars are not kept here.
     self.vars = {}
-    
+
     # An optimized list kept up-to-date by variable additions
     self.sorted_vars_by_pathlen = []
 
@@ -376,7 +376,7 @@ class TestFactory:
           print(line[1])
       raise
 
-  
+
   def print_script(self, stream=sys.stdout):
     "Output the resulting script of the preceding make() call"
     if self.lines is not None:
@@ -415,7 +415,7 @@ class TestFactory:
 
     if first == 'svn':
       second = args[1]
-  
+
       if second == 'add':
         return self.cmd_svn(args[1:], False, self.keep_args_of)
 
@@ -498,7 +498,7 @@ class TestFactory:
       py += pychdir
       py += ("actions.run_and_verify_svn2('OUTPUT', " +
              "[], expected_stderr, " + str(code))
-    
+
     if len(pyargs) > 0:
       py += ", " + ", ".join(pyargs)
     py += ")\n"
@@ -523,7 +523,7 @@ class TestFactory:
     "Runs svn status, looks what happened and writes the script for it."
     pyargs, runargs, do_chdir, targets = self.args2svntest(
                                   status_args, True, self.keep_args_of, 0)
-    
+
     py = ""
 
     for target in targets:
@@ -594,7 +594,7 @@ class TestFactory:
 
     pyargs, runargs, do_chdir, targets = self.args2svntest(
                                   update_args, True, self.keep_args_of, 0)
-     
+
     wc = self.get_first_wc(targets)
     pychdir = self.chdir(do_chdir, wc)
 
@@ -639,7 +639,7 @@ class TestFactory:
 
     # Sort out the targets. We need one URL and one dir, in that order.
     if len(targets) < 2:
-      raise Failure("Sorry, I'm currently enforcing two targets for svn " + 
+      raise Failure("Sorry, I'm currently enforcing two targets for svn " +
                     "checkout. If you want to supply less, remove this " +
                     "check and implement whatever seems appropriate.")
     # We need this separate for the call to run_and_verify_checkout()
@@ -720,7 +720,7 @@ class TestFactory:
         pyargs = []
         for arg in runargs:
           pyargs += [ self.str2svntest(arg) ]
-        
+
     return self.cmd_svn_standard_run(pyargs, runargs, do_chdir,
                                      self.get_first_wc(targets))
 
@@ -762,7 +762,7 @@ class TestFactory:
                     " ".join(echo_args))
 
     target = self.path2svntest(target_arg)
-    
+
     if replace:
       main.file_write(target.runarg, contents)
       py = "main.file_write("
@@ -852,7 +852,7 @@ class TestFactory:
 
 
   # End of "shell" command handling functions.
- 
+
 
 
   # Internal helpers:
@@ -1021,14 +1021,14 @@ class TestFactory:
     """Compose a listing of variable names to be expanded in script output.
     This is intended to be stored in self.sorted_vars_by_pathlen."""
     list = []
-    
+
     for dict in [self.vars, self.other_wc_dirs]:
       for name in dict:
         runpath = dict[name][1]
         strlen = len(runpath)
         item = [strlen, name, runpath]
         bisect.insort(list, item)
-      
+
     return list
 
 
@@ -1060,7 +1060,7 @@ class TestFactory:
     for item in list:
       names += [item[1]]
     return names
-    
+
 
   def str2svntest(self, str):
     "Like str2py(), but replaces any known paths with variable names."
@@ -1081,7 +1081,7 @@ class TestFactory:
 
     str = replace(str, self.sbox.wc_dir, 'wc_dir', quote)
     str = replace(str, self.sbox.repo_url, 'url', quote)
-      
+
     # now remove trailing null-str adds:
     #   '' + url_A_C + ''
     str = str.replace("'' + ",'').replace(" + ''",'')
@@ -1170,7 +1170,7 @@ class TestFactory:
         tweak += [ [key, None] ]
       elif left.props[key] != right.props[key]:
         tweak += [ [key, right.props[key]] ]
-        
+
     for key in right.props:
       if key not in left.props:
         tweak += [ [key, right.props[key]] ]
@@ -1180,7 +1180,7 @@ class TestFactory:
         tweak += [ [key, None] ]
       elif left.atts[key] != right.atts[key]:
         tweak += [ [key, right.atts[key]] ]
-        
+
     for key in right.atts:
       if key not in left.atts:
         tweak += [ [key, right.atts[key]] ]
@@ -1385,7 +1385,7 @@ class TestFactory:
             py += ", " + mod2py(mod)
           py += ")\n"
     return py
-      
+
 
   def path2svntest(self, path, argnr=None):
     """Given an input argument, do one hell of a path expansion on it.
@@ -1426,7 +1426,7 @@ class TestFactory:
           # The first path element starts with "wc_dir" (or similar),
           # but it has more attached to it. Like "wc_dir.2" or "wc_dir_other"
           # Record a new wc dir name.
-          
+
           # try to figure out a nice suffix to pass to sbox.
           # (it will create a new dir called sbox.wc_dir + '.' + suffix)
           suffix = ''
@@ -1454,7 +1454,7 @@ class TestFactory:
           # found a match, no need to loop further, but still process
           # the path further.
           break
-    
+
     if len(path) < 1 or path == pathsep:
       if is_url:
         self.used_url = True
@@ -1529,7 +1529,7 @@ class TestFactory:
     if len(pathelements) > 0:
       py += ", '" + "', '".join(pathelements) + "'"
     py += ')'
-    
+
     wc_dir_real_path = wc.realpath
     run = os.path.join(wc_dir_real_path, *pathelements)
 
@@ -1549,7 +1549,7 @@ class TestFactory:
     if len(pathelements) > 0:
       py += " + " + str2py(joined)
     self.used_url = True
-    
+
     run = self.sbox.repo_url + joined
 
     value = [py, run]
@@ -1585,7 +1585,7 @@ class TestFactory:
     keep_first_count: Don't expand the first N non-option args. This is used
           to preserve e.g. the token 'update' in '[svn] update wc_dir'
           (the 'svn' is usually split off before this function is called).
-    
+
     drop_with_arg: list of string tokens that are commandline options with
           following argument which we want to drop from the list of args
           (e.g. -m message).
@@ -1652,7 +1652,7 @@ class TestFactory:
         targets += [ target ]
 
       i += 1
-    
+
     if not target_supplied and append_wc_dir_if_missing:
       # add a simple wc_dir target
       self.used_wc_dir = True
@@ -1737,7 +1737,7 @@ def wrap_each_line(str, ii, si, blw):
 
 
 # Other miscellaneous helpers
- 
+
 def sh2str(string):
   "un-escapes away /x sequences"
   if string is None:
@@ -1752,7 +1752,7 @@ def get_quote_style(str):
 
   found = str.find("'")
   found2 = str.find('"')
-  
+
   # If found == found2, both must be -1, so nothing was found.
   if found != found2:
     # If a quote was found

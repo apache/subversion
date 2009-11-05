@@ -220,6 +220,12 @@ SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   dir_conf_t *conf = config;
 
+  /* Since SVNMasterURI requires mod_proxy's handler
+   * (r->handler = "proxy-server" in mirror.c), make sure it is present.
+   */
+  if (ap_find_linked_module("mod_proxy.c") == NULL)
+    return "module mod_proxy not loaded, required for SVNMasterURI";
+
   conf->master_uri = apr_pstrdup(cmd->pool, arg1);
 
   return NULL;

@@ -423,7 +423,7 @@ releases).
    the new storage system.
 
 When svn detects an old working copy, then it will error out and
-request that the user run "svn cleanup" to upgrade their working copy
+request that the user run "svn upgrade" to upgrade their working copy
 to the new format.
 
 The metadata location is determined at one of two points:

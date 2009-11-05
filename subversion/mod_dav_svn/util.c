@@ -604,7 +604,7 @@ dav_svn__error_response_tag(request_rec *r,
                apr_xml_quote_string(r->pool, err->desc, 0));
 
   ap_rputs("</D:error>" DEBUG_CR, r);
-  
+
   /* the response has been sent. */
   /*
    * ### Use of DONE obviates logging..!

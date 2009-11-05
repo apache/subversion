@@ -30,7 +30,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Stores the context information related to Digest authentication. 
+/* Stores the context information related to Digest authentication.
    The context is per connection. */
 typedef struct
 {

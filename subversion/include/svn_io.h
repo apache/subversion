@@ -1027,7 +1027,7 @@ svn_error_t *
 svn_stream_close(svn_stream_t *stream);
 
 /** Reset a generic stream back to its origin. E.g. On a file this would be
- * implemented as a seek to position 0).  This function returns a 
+ * implemented as a seek to position 0).  This function returns a
  * @a SVN_ERR_STREAM_RESET_NOT_SUPPORTED error when the stream doesn't
  * implement resetting.
  *
@@ -1035,6 +1035,20 @@ svn_stream_close(svn_stream_t *stream);
  */
 svn_error_t *
 svn_stream_reset(svn_stream_t *stream);
+
+
+/** Return a writable stream which, when written to, writes to both of the
+ * underlying streams.  Both of these streams will be closed upon closure of
+ * the returned stream; use svn_stream_disown() if this is not the desired
+ * behavior.  One or both of @a out1 and @a out2 may be @c NULL.  If both are
+ * @c NULL, @c NULL is returned.
+ *
+ * @since New in 1.7.
+ */
+svn_stream_t *
+svn_stream_tee(svn_stream_t *out1,
+               svn_stream_t *out2,
+               apr_pool_t *pool);
 
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through

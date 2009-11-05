@@ -169,7 +169,7 @@ svn_client_blame4(const char *target,
                   apr_pool_t *pool)
 {
   struct blame_receiver_wrapper_baton2 baton;
-  
+
   baton.receiver = receiver;
   baton.baton = receiver_baton;
 
@@ -1786,7 +1786,7 @@ svn_client_url_from_path(const char **url,
                          apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
-  
+
   SVN_ERR(svn_client_create_context(&ctx, pool));
 
   return svn_client_url_from_path2(url, path_or_url, ctx, pool, pool);

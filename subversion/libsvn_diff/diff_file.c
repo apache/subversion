@@ -363,7 +363,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
                                  curp, file_baton->options);
 
       file_token->norm_offset = file_token->offset;
-      if (file_token->length == 0) 
+      if (file_token->length == 0)
         /* move past leading ignored characters */
         file_token->norm_offset += (c - curp);
 

@@ -1778,7 +1778,7 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
 
       else if (! to_val) /* delete an existing property */
         SVN_ERR(apply_single_prop_delete(is_normal ? state : NULL, &conflict,
-                                         db, local_abspath, 
+                                         db, local_abspath,
                                          left_version, right_version,
                                          is_dir,
                                          working_props,

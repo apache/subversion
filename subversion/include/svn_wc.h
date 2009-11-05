@@ -186,7 +186,7 @@ typedef struct svn_wc_context_t svn_wc_context_t;
  * The context will be allocated in @a result_pool, and will use @a
  * result_pool for any internal allocations requiring the same longevity as
  * the context.  The context will be automatically destroyed, and its
- * resources released, when @a result_pool is cleared, or it may be manually 
+ * resources released, when @a result_pool is cleared, or it may be manually
  * destroyed by invoking svn_wc_context_destroy().
  *
  * Use @a scratch_pool for temporary allocations.  It may be cleared
@@ -514,7 +514,7 @@ svn_error_t *
 svn_wc_adm_close2(svn_wc_adm_access_t *adm_access,
                   apr_pool_t *scratch_pool);
 
-/** 
+/**
  * Similar to svn_wc_adm_close2(), but with the internal pool of @a adm_access
  * used for temporary allocations.
  *
@@ -1204,7 +1204,7 @@ typedef struct svn_wc_notify_t {
   const char *prop_name;
 
   /** If @c action is #svn_wc_notify_blame_revision, contains a list of
-   * revision properties for the specified revision 
+   * revision properties for the specified revision
    * @since New in 1.6 */
   apr_hash_t *rev_props;
 
@@ -1582,7 +1582,7 @@ svn_wc_get_conflict_marker_files(const char **older_abspath,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 
-/** Retrieves the origin of the conflict recorded in @a conflict, as it 
+/** Retrieves the origin of the conflict recorded in @a conflict, as it
  * applies to @a local_abspath in @a wc_ctx.
  *
  * For text and property conflicts older is the BASE version, left the MINE
@@ -2110,7 +2110,7 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func2_t)(
 
 
 /** Similar to #svn_wc_conflict_resolver_func2_t, but using
- * #svn_wc_conflict_description_t instead of 
+ * #svn_wc_conflict_description_t instead of
  * #svn_wc_conflict_description2_t
  *
  * @since New in 1.5.
@@ -3763,7 +3763,7 @@ typedef void (*svn_wc_status_func_t)(void *baton,
 /**
  * Walk the working copy status of @a local_abspath using @a wc_ctx, by
  * creating #svn_wc_status2_t structures and sending these through
- * @a status_func / @a status_baton. 
+ * @a status_func / @a status_baton.
  *
  *  * Assuming the target is a directory, then:
  *
@@ -4150,7 +4150,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 /**
  * Similar to svn_wc_delete4, but uses an access baton and relative path
  * instead of a working copy context and absolute path. @a adm_access
- * must hold a write lock for the parent of @a local_abspath. 
+ * must hold a write lock for the parent of @a local_abspath.
  *
  * @c delete_unversioned will always be set to TRUE.
  *
@@ -4201,7 +4201,7 @@ svn_wc_delete(const char *path,
 
 /**
  * Put @a local_abspath under version control by adding an entry in its
- * parent, and if @a local_abspath is a directory, adding an 
+ * parent, and if @a local_abspath is a directory, adding an
  * administrative area.  The new node and anything under it is scheduled
  * for addition to the repository.  @a wc_ctx should hold a write lock
  * for the parent directory of @a local_abspath.  If @a local_abspath is
@@ -4328,7 +4328,7 @@ svn_wc_add(const char *path,
 
 /** Add a file to a working copy at @a local_abspath, obtaining the
  *text-base's contents from @a new_base_contents, the wc file's
- * content from @a new_contents, its base properties from @a 
+ * content from @a new_contents, its base properties from @a
  * new_base_props and wc properties from @a new_props. Use @a wc_ctx
  * for accessing the working copy.
  *
@@ -4509,7 +4509,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * Assuming @a local_abspath is under version control or a tree conflict
  * victime and in a state of conflict, then take @a local_abspath *out*
  * of this state.  If @a resolve_text is TRUE then any text conflict is
- * resolved, if @a resolve_tree is TRUE then any tree conflicts are 
+ * resolved, if @a resolve_tree is TRUE then any tree conflicts are
  * resolved. If @a resolve_prop is set to "" all property conflicts are
  * resolved, if it is set to any other string value, conflicts on that
  * specific property are resolved and when resolve_prop is NULL, no
@@ -4529,11 +4529,11 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * #svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status, which is the pre-1.5 behavior.
  *
- * #svn_wc_conflict_choose_theirs_conflict and 
+ * #svn_wc_conflict_choose_theirs_conflict and
  * #svn_wc_conflict_choose_mine_conflict are not legal for binary
  * files or properties.
  *
- * @a wc_ctx is a working copy context, with a write lock, for @a 
+ * @a wc_ctx is a working copy context, with a write lock, for @a
  * local_abspath.
  *
  * Needless to say, this function doesn't touch conflict markers or
@@ -5088,7 +5088,7 @@ svn_wc_get_actual_target2(const char **anchor,
 
 /** Similar to svn_wc_get_actual_target2(), but without the wc context, and
  * with a absolute path.
- * 
+ *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
@@ -5196,7 +5196,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           apr_pool_t *scratch_pool);
 
 /** Similar to svn_wc_get_update_editor4, but uses access batons and relative
- * path instead of a working copy context-abspath pair and 
+ * path instead of a working copy context-abspath pair and
  * svn_wc_traversal_info_t instead of an externals callback.
  *
  * If @a ti is non-NULL, record traversal info in @a ti, for use by
@@ -5206,7 +5206,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
  * released when the editor driver calls @c close_edit.
  *
  * @since New in 1.5.
- * @deprecated Provided for backward compatibility with the 1.6 API. 
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -5385,7 +5385,7 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
  * released when the editor driver calls @c close_edit.
  *
  * @since New in 1.5.
- * @deprecated Provided for backward compatibility with the 1.6 API. 
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -6086,13 +6086,13 @@ typedef enum svn_wc_merge_outcome_t
 } svn_wc_merge_outcome_t;
 
 /** Given absolute paths to three fulltexts, merge the differences between
- * @a left_abspath and @a right_abspath into @a target_abspath. 
+ * @a left_abspath and @a right_abspath into @a target_abspath.
  * It may help to know that @a left_abspath, @a right_abspath and @a
  * target_abspath correspond to "OLDER", "YOURS", and "MINE",
  * respectively, in the diff3 documentation.)  Use @a scratch_pool for any
  * temporary allocation.
  *
- * @a wc_ctx should contain a write lock for the directory containing @a 
+ * @a wc_ctx should contain a write lock for the directory containing @a
  * merge_target.
  *
  * This function assumes that @a left_abspath and @a right_abspath are
@@ -6129,7 +6129,7 @@ typedef enum svn_wc_merge_outcome_t
  *     values will be used.)
  *
  *   * Copy @a left_abspath, @a right_abspath, and the original @a
- *     target_abspath to unique names in the same directory as @a 
+ *     target_abspath to unique names in the same directory as @a
  *     merge_target, ending with the suffixes ".LEFT_LABEL", ".RIGHT_LABEL",
  *     and ".TARGET_LABEL" respectively.
  *
@@ -6345,7 +6345,7 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
 
 /** Given a @a path to a wc file, return a stream to the @a contents of
  * the pristine copy of the file.  Use @a wc_ctx to access the working
- * copy.This is needed so clients can do diffs.  If the WC has no 
+ * copy.This is needed so clients can do diffs.  If the WC has no
  * text-base, return a @c NULL instead of a stream.
  *
  * @since New in 1.7. */
@@ -6385,7 +6385,7 @@ svn_wc_get_pristine_copy_path(const char *path,
 /**
  * Recurse from @a local_abspath, cleaning up unfinished log business.  Perform
  * any temporary allocations in @a scratch_pool.  Any working copy locks under
- * @a local_path will be taken over and then cleared by this function.  
+ * @a local_path will be taken over and then cleared by this function.
  *
  * WARNING: there is no mechanism that will protect locks that are still being
  * used.
@@ -6720,7 +6720,7 @@ svn_wc_create_tmp_file(apr_file_t **fp,
 
 /** Set @a xlated_abspath to a translated copy of @a src
  * or to @a src itself if no translation is necessary.
- * That is, if @a versioned_abspath's properties indicate newline conversion 
+ * That is, if @a versioned_abspath's properties indicate newline conversion
  * or keyword expansion, point @a *xlated_abspath to a copy of @a src
  * whose newlines and keywords are converted using the translation
  * as requested by @a flags.
@@ -6748,7 +6748,7 @@ svn_wc_create_tmp_file(apr_file_t **fp,
  * If an error is returned, the effect on @a *xlated_abspath is undefined.
  *
  * @since New in 1.7.
- */ 
+ */
 svn_error_t *
 svn_wc_translated_file3(const char **xlated_abspath,
                         const char *src,
@@ -6906,8 +6906,8 @@ svn_wc_transmit_text_deltas(const char *path,
                             apr_pool_t *pool);
 
 
-/** Given a @a local_abspath, transmit all local property 
- * modifications using the appropriate @a editor method (in conjunction 
+/** Given a @a local_abspath, transmit all local property
+ * modifications using the appropriate @a editor method (in conjunction
  * with @a baton). Use @a scratch_pool for any temporary allocation.
  *
  * @since New in 1.7.
@@ -7007,7 +7007,7 @@ svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
 /**
  * Similar to svn_wc_add_lock2(), but with a #svn_wc_adm_access_t /
  * relative path parameter pair.
- * 
+ *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  * @since New in 1.2.
  */
@@ -7193,7 +7193,7 @@ svn_wc_set_changelist(const char *path,
  * check children and crop them appropriately according to @a depth.
  *
  * Returns immediately with an #SVN_ERR_UNSUPPORTED_FEATURE error if @a
- * target is not a directory, or if @a depth is not restrictive 
+ * target is not a directory, or if @a depth is not restrictive
  * (e.g., #svn_depth_infinity).
  *
  * @a wc_ctx contains a tree lock, for the local path to the working copy

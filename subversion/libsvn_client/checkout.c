@@ -75,7 +75,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   /* Sanity check.  Without these, the checkout is meaningless. */
   SVN_ERR_ASSERT(path != NULL);
   SVN_ERR_ASSERT(url != NULL);
-  
+
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Fulfill the docstring promise of svn_client_checkout: */

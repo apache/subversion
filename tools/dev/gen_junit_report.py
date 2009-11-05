@@ -6,7 +6,7 @@ gen_junit_report.py -- The script is to generate the junit report for
 Subversion tests.  The script uses the log file, tests.log created by
 "make check" process. It parses the log file and generate the junit
 files for each test separately in the specified output directory. The
-script can take --log-file and --output-dir arguments.  
+script can take --log-file and --output-dir arguments.
 """
 
 import sys
@@ -35,7 +35,7 @@ def start_testsuite(test_name):
     """start testsuite. The value for the attributes are replaced later
     when the junit file handling is concluded"""
     sub_test_name = test_name.replace('.', '-')
-    start = """<testsuite time="ELAPSED_%s" tests="TOTAL_%s" name="%s" 
+    start = """<testsuite time="ELAPSED_%s" tests="TOTAL_%s" name="%s"
     failures="FAIL_%s" errors="FAIL_%s" skipped="SKIP_%s">""" % \
     (test_name, test_name, sub_test_name, test_name, test_name, test_name)
     return start
@@ -163,7 +163,7 @@ def main():
             test_name = line.split(' ')[1]
             # replace '.' in test name with '_' to avoid confusing class
             # name in test result displayed in the CI user interface
-            test_name.replace('.', '_') 
+            test_name.replace('.', '_')
             count[test_name] = {
               'pass' : 0,
               'skip' : 0,
@@ -203,7 +203,7 @@ def main():
             count[test_name]['elapsed'] = secs_taken
 
             junit_str = update_stat(test_name, junit, count)
-            test_junit_file = os.path.join(output_dir, 
+            test_junit_file = os.path.join(output_dir,
                                            "%s.junit.xml" % test_name)
             w_fp = open (test_junit_file, 'w')
             w_fp.writelines(junit_str)
