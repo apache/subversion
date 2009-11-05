@@ -175,8 +175,9 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
     filename = os.path.join(files_wc_dir, 'spacetest')
     check_proplist(filename, ['auto : oui', 'abc : def', 'ghi :'], config_dir)
     filename = os.path.join(files_wc_dir, 'quotetest')
-    check_proplist(filename, {'auto':'oui',
-                              'svn:keywords': 'Author Date Id Rev URL'})
+    check_proplist(filename, ['auto : oui',
+                              'svn:keywords : Author Date Id Rev URL'],
+                              config_dir)
   else:
     for filename in filenames:
       check_proplist(os.path.join(files_wc_dir, filename), [], config_dir)
