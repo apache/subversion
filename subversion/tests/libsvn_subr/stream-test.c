@@ -443,6 +443,27 @@ test_stream_line_filter_and_transformer(apr_pool_t *pool)
 
 }
 
+static svn_error_t *
+test_stream_tee(apr_pool_t *pool)
+{
+  svn_stringbuf_t *test_bytes = generate_test_bytes(100, pool);
+  svn_stringbuf_t *output_buf1 = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *output_buf2 = svn_stringbuf_create("", pool);
+  svn_stream_t *source_stream = svn_stream_from_stringbuf(test_bytes, pool);
+  svn_stream_t *output_stream1 = svn_stream_from_stringbuf(output_buf1, pool);
+  svn_stream_t *output_stream2 = svn_stream_from_stringbuf(output_buf2, pool);
+  svn_stream_t *tee_stream;
+
+  tee_stream = svn_stream_tee(output_stream1, output_stream2, pool);
+  SVN_ERR(svn_stream_copy3(source_stream, tee_stream, NULL, NULL, pool));
+
+  if (!svn_stringbuf_compare(output_buf1, output_buf2))
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Duplicated streams did not match.");
+
+  return SVN_NO_ERROR;
+}
+
 
 
 
@@ -463,5 +484,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test stream line transforming"),
     SVN_TEST_PASS2(test_stream_line_filter_and_transformer,
                    "test stream line filtering and transforming"),
+    SVN_TEST_PASS2(test_stream_tee,
+                   "test 'tee' streams"),
     SVN_TEST_NULL
   };
