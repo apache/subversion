@@ -4356,7 +4356,8 @@ test_list = [ None,
               path_move_and_copy_between_wcs_2475,
               path_copy_in_repo_2475,
               XFail(commit_copy_depth_empty),
-              copy_below_copy
+              copy_below_copy,
+              XFail(move_below_move)
              ]
 
 if __name__ == '__main__':
