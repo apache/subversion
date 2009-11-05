@@ -125,9 +125,8 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
           const char *mergeinfo_path;
 
           /* Fetch any existing (explicit) mergeinfo. */
-          SVN_ERR(svn_client__path_relative_to_session(&mergeinfo_path,
-                                                       ra_session, src_url,
-                                                       pool));
+          SVN_ERR(svn_ra_get_path_relative_to_session(ra_session, &mergeinfo_path,
+                                                      src_url, pool));
           SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
                                                   mergeinfo_path, src_revnum,
                                                   svn_mergeinfo_inherited,
