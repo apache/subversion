@@ -185,7 +185,7 @@ organize_lock_targets(const char **common_parent_url,
 
   /* All targets must be either urls or paths */
 
-  url_mode = ((targets->nelts >= 1) && 
+  url_mode = ((targets->nelts >= 1) &&
               svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)));
 
   /* Get the common parent and all paths */

@@ -2296,10 +2296,10 @@ def info_excluded(sbox):
   #     D         A
   #     % svn info A
   #     A:  (Not a versioned resource)
-  #     
+  #
   #     ..\..\..\subversion\svn\info-cmd.c:562: (apr_err=200000)
   #     svn: A problem occurred; see other errors for details
-  # 
+  #
   # It should acknowledge the existence (in the repos) of ./A and print some
   # info about it, like it does if '--set-depth empty' is used instead.
 

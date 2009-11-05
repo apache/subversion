@@ -1474,7 +1474,7 @@ svn_fs_base__miscellaneous_get(const char **val,
 
   mga.key = key;
   mga.val = val;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_miscellaneous_get, &mga, 
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_miscellaneous_get, &mga,
                                  FALSE, scratch_pool));
   if (*val)
     *val = apr_pstrdup(pool, *val);

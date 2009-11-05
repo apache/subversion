@@ -1547,7 +1547,7 @@ main(int argc, const char *argv[])
         break;
       case opt_config_options:
         if (!opt_state.config_options)
-          opt_state.config_options = 
+          opt_state.config_options =
                    apr_array_make(pool, 1, sizeof(svn_cmdline__config_argument_t*));
 
         err = svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool);

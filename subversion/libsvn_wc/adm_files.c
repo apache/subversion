@@ -302,7 +302,7 @@ svn_wc__get_revert_contents(svn_stream_t **contents,
                             apr_pool_t *scratch_pool)
 {
   const char *revert_base;
-  
+
   SVN_ERR(svn_wc__text_revert_path(&revert_base, db, local_abspath,
                                    scratch_pool));
 

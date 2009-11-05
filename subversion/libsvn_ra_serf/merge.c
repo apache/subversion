@@ -329,7 +329,7 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
               checked_in_str.len = strlen(checked_in);
 
               SVN_ERR(ctx->session->wc_callbacks->push_wc_prop(
-                ctx->session->wc_callback_baton, href, 
+                ctx->session->wc_callback_baton, href,
                 SVN_RA_SERF__WC_CHECKED_IN_URL, &checked_in_str, info->pool));
             }
         }

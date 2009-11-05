@@ -49,7 +49,7 @@ def validate_added_extensions(repos_path, txn_name, extensions, action):
     kind = fs.check_path(txn_root, path)
     if kind != core.svn_node_file:
       continue
-    
+
     # If this was a newly added (without history) file ...
     if ((change.change_kind == fs.path_change_replace) \
         or (change.change_kind == fs.path_change_add)):
@@ -72,7 +72,7 @@ def usage_and_exit(errmsg=None):
   if errmsg:
     stream.write("ERROR: " + errmsg + "\n")
   sys.exit(errmsg and 1 or 0)
-    
+
 def main():
   argc = len(sys.argv)
   if argc < 5:

@@ -144,7 +144,7 @@ strip_path(const char **result, const char *path, int strip_count,
   int i;
   apr_array_header_t *components;
   apr_array_header_t *stripped;
-  
+
   components = svn_path_decompose(path, scratch_pool);
   if (strip_count >= components->nelts)
     return svn_error_createf(SVN_ERR_CLIENT_PATCH_BAD_STRIP_COUNT, NULL,
@@ -298,7 +298,7 @@ check_local_mods(svn_boolean_t *local_mods,
 
 /* Attempt to initialize a patch TARGET structure for a target file
  * described by PATCH.
- * Use client context CTX to send notifiations and retrieve WC_CTX. 
+ * Use client context CTX to send notifiations and retrieve WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
  * Upon success, allocate the patch target structure in RESULT_POOL.
@@ -455,7 +455,7 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
     *matched = lines_matched;
   else if (target->eof)
     *matched = FALSE;
-  
+
   svn_stream_reset(hunk->original_text);
   SVN_ERR(svn_io_file_seek(target->file, APR_SET, &pos, pool));
   target->eof = FALSE;
@@ -539,7 +539,7 @@ determine_hunk_line(svn_linenum_t *line, patch_target_t *target,
   hunk_start = hunk->original_start == 0 ? 1 : hunk->original_start;
 
   /* Scan forward towards the hunk's line and look for a line where the
-   * hunk matches, in case there are local changes in the target which 
+   * hunk matches, in case there are local changes in the target which
    * cause the hunk to match early. */
   SVN_ERR(scan_for_match(&early_match, &early_matched_line, target, hunk,
                          FALSE, hunk_start, pool));
@@ -927,7 +927,7 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
            * creating an empty file manually is not exactly hard either. */
           target->deleted = (target->kind != svn_node_none);
         }
-      
+
       if (target->deleted)
         {
           if (! dry_run)
@@ -966,7 +966,7 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
                        * Suppress notification, we'll do that later.
                        * Also suppress cancellation. */
                       SVN_ERR(svn_io_copy_file(target->patched_path,
-                                               target->abs_path, FALSE, pool)); 
+                                               target->abs_path, FALSE, pool));
                       SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->abs_path,
                                           svn_depth_infinity,
                                           NULL, SVN_INVALID_REVNUM,

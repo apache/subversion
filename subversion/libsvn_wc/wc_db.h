@@ -171,7 +171,7 @@ typedef enum {
 
     /* The node has been added (potentially obscuring a delete or move of
        the BASE node; see BASE_SHADOWED param). The text will be marked as
-       modified, and if properties exist, they will be marked as modified. 
+       modified, and if properties exist, they will be marked as modified.
 
        In many cases svn_wc__db_status_added means any of added, moved-here
        or copied-here. See individual functions for clarification and
@@ -361,7 +361,7 @@ svn_wc__db_close(svn_wc__db_t *db);
  * "incomplete" because we don't know its children. Contrary, if the
  * INITIAL_REV is zero, then this directory should represent the root and
  * we know it has no children, so the node is complete.
- * 
+ *
  * DEPTH is the initial depth of the working copy, it must be a definite
  * depth, not svn_depth_unknown.
  *
@@ -819,7 +819,7 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
 
 
 /* ### get a tempdir to drop files for later installation. */
-/* ### dlr: Why is a less specific temp dir insufficient? 
+/* ### dlr: Why is a less specific temp dir insufficient?
    ###  bh: See svn_wc__db_pristine_install() */
 svn_error_t *
 svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
@@ -889,7 +889,7 @@ svn_wc__db_repos_ensure(apr_int64_t *repos_id,
                         const char *repos_root_url,
                         const char *repos_uuid,
                         apr_pool_t *scratch_pool);
-                        
+
 
 /** @} */
 
@@ -1232,7 +1232,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
    ### comes first, or always comes first after any result params, or
    ### whatever.
    ### BH: 'db' is the first argument after the output arguments, the next
-   ### is always 'local_abspath'. Next are other input arguments. Result 
+   ### is always 'local_abspath'. Next are other input arguments. Result
    ### and scratch pool are last.
 
    ### note that @a base_shadowed can be derived. if the status specifies
@@ -1298,7 +1298,7 @@ svn_wc__db_read_prop(const svn_string_t **propval,
    the ACTUAL node, then the WORKING node, and finally the BASE node for
    properties.  PROPS maps property names of type "const char *" to values
    of type "const svn_string_t *".
-   
+
    Allocate PROPS in RESULT_POOL and do temporary allocations
    in SCRATCH_POOL. */
 svn_error_t *
@@ -1313,7 +1313,7 @@ svn_wc__db_read_props(apr_hash_t **props,
    the WORKING node, and then the BASE node for properties.  PROPS maps
    property names of type "const char *" to values of type
    "const svn_string_t *".
-   
+
    Allocate PROPS in RESULT_POOL and do temporary allocations
    in SCRATCH_POOL. */
 svn_error_t *
@@ -1325,7 +1325,7 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
 
 /* Read into CHILDREN the basenames of the immediate children of
    LOCAL_ABSPATH in DB.
-   
+
    Allocate *CHILDREN in RESULT_POOL and do temporary allocations in
    SCRATCH_POOL.
 
@@ -1720,7 +1720,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
-                         
+
 
 /** @} */
 

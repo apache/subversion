@@ -951,7 +951,7 @@ class IncludeDependencyInfo:
                  self._domain["apr.swg"][0]: '%',
                  fname: '%' }
         for h in self._deps[fname].keys():
-          if (_is_public_include(h) 
+          if (_is_public_include(h)
               or h == os.path.join('subversion', 'include', 'private',
                                     'svn_debug.h')):
             hdrs[_swig_include_wrapper(h)] = '%'

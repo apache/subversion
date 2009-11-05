@@ -131,12 +131,12 @@ get_type_of_intersection(const svn_merge_range_t *r1,
 {
   SVN_ERR_ASSERT(r1);
   SVN_ERR_ASSERT(r2);
-  
+
   /* Why not use SVN_IS_VALID_REVNUM here?  Because revision 0
      is described START = -1, END = 0.  See svn_merge_range_t. */
   SVN_ERR_ASSERT(r1->start >= -1);
   SVN_ERR_ASSERT(r2->start >= -1);
-  
+
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(r1->end));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(r2->end));
   SVN_ERR_ASSERT(r1->start < r1->end);
@@ -283,10 +283,10 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
              intersect but have differing inheritability.  Check for the
              first case as that is easy to handle. */
           intersection_type_t intersection_type;
-          
+
           SVN_ERR(get_type_of_intersection(new_range, lastrange,
                                            &intersection_type));
-              
+
               switch (intersection_type)
                 {
                   case svn__no_intersection:
@@ -338,7 +338,7 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
                         r2->start = r1->end;
                       else
                         r1->end = r2->start;
-                      
+
                       /* Push everything back onto RANGELIST. */
                       APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r1;
                       APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = r2;

@@ -153,7 +153,7 @@ svn_path_basename(const char *path, apr_pool_t *pool);
  *
  * The returned dirname will be allocated in @a pool.
  *
- * New code should use either svn_dirent_dirname() (for local paths) or 
+ * New code should use either svn_dirent_dirname() (for local paths) or
  * svn_uri_dirname() (for urls and repository paths).
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.

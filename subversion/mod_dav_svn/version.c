@@ -212,7 +212,7 @@ get_option(const dav_resource *resource,
         }
 
       /* Got repository UUID? */
-      if ((serr = svn_fs_get_uuid(resource->info->repos->fs, 
+      if ((serr = svn_fs_get_uuid(resource->info->repos->fs,
                                   &uuid, resource->pool)))
         {
           return dav_svn__convert_err

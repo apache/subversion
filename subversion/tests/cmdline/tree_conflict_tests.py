@@ -755,7 +755,7 @@ def keep_local_del_tc_inside(sbox):
   run_and_verify_update(wc_dir,
                         expected_output, expected_disk, expected_status,
                         None, None, None, None, None, 1,
-                        wc_dir)  
+                        wc_dir)
 
   # Delete A/C with --keep-local, in effect disarming the tree-conflicts.
   run_and_verify_svn(None,
@@ -850,7 +850,7 @@ def force_del_tc_inside(sbox):
   run_and_verify_update(wc_dir,
                         expected_output, expected_disk, expected_status,
                         None, None, None, None, None, 1,
-                        wc_dir)  
+                        wc_dir)
 
   # Delete A/C with --force, in effect disarming the tree-conflicts.
   run_and_verify_svn(None,
@@ -864,7 +864,7 @@ def force_del_tc_inside(sbox):
   expected_status.tweak('A/C', status='D ')
   expected_status.tweak('A/C/dir', status='! ', copied=None, wc_rev=None)
   expected_status.tweak('A/C/file', status='! ', copied=None, wc_rev=None)
-  
+
   run_and_verify_status(wc_dir, expected_status)
 
   # Commit, remove the "disarmed" tree-conflict.
@@ -941,7 +941,7 @@ def keep_local_del_tc_is_target(sbox):
   run_and_verify_update(wc_dir,
                         expected_output, expected_disk, expected_status,
                         None, None, None, None, None, 1,
-                        wc_dir)  
+                        wc_dir)
 
   # Delete nodes with --keep-local, in effect disarming the tree-conflicts.
   run_and_verify_svn(None,
@@ -1030,7 +1030,7 @@ def force_del_tc_is_target(sbox):
   run_and_verify_update(wc_dir,
                         expected_output, expected_disk, expected_status,
                         None, None, None, None, None, 1,
-                        wc_dir)  
+                        wc_dir)
 
   # Delete nodes with --force, in effect disarming the tree-conflicts.
   run_and_verify_svn(None,
@@ -1098,7 +1098,7 @@ def query_absent_tree_conflicted_dir(sbox):
   run_and_verify_update(wc_dir,
                         expected_output, expected_disk, expected_status,
                         None, None, None, None, None, 1,
-                        wc_dir)  
+                        wc_dir)
 
   # Delete A/C with --keep-local, in effect disarming the tree-conflict.
   run_and_verify_svn(None,

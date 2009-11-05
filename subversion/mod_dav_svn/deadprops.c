@@ -121,7 +121,7 @@ get_value(dav_db *db, const dav_prop_name *name, svn_string_t **pvalue)
 
         HTTP v2:
           transaction resource ('txn')             -> txn prop change
-          revision resource ('rev')                -> rev prop change 
+          revision resource ('rev')                -> rev prop change
           transaction root resource ('txr')        -> node prop change
 
      [*] This is a violation of the DeltaV spec (### see issue #916).
@@ -136,7 +136,7 @@ get_value(dav_db *db, const dav_prop_name *name, svn_string_t **pvalue)
       else
         serr = svn_repos_fs_revision_prop(pvalue,
                                           db->resource->info-> repos->repos,
-                                          db->resource->info->root.rev, 
+                                          db->resource->info->root.rev,
                                           propname, db->authz_read_func,
                                           db->authz_read_baton, db->p);
     }
@@ -194,7 +194,7 @@ save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
 
         HTTP v2:
           transaction resource ('txn')             -> txn prop change
-          revision resource ('rev')                -> rev prop change 
+          revision resource ('rev')                -> rev prop change
           transaction root resource ('txr')        -> node prop change
 
      [*] This is a violation of the DeltaV spec (### see issue #916).
@@ -218,7 +218,7 @@ save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
                                                db->authz_read_func,
                                                db->authz_read_baton,
                                                resource->pool);
-          
+
           /* Tell the logging subsystem about the revprop change. */
           dav_svn__operational_log(resource->info,
                                    svn_log__change_rev_prop(

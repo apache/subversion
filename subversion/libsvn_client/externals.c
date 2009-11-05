@@ -557,7 +557,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
       /* "//schema-relative" and in some cases "///schema-relative".
          This last format is supported on file:// schema relative. */
       url = apr_pstrcat(
-                        pool, 
+                        pool,
                         url[2] == '/' ? "///" : "//",
                         svn_relpath_canonicalize(url+2, pool),
                         NULL);
@@ -947,7 +947,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
 
       if (ib->ctx->notify_func2)
         {
-          svn_wc_notify_t *notify = 
+          svn_wc_notify_t *notify =
               svn_wc_create_notify(remove_target_abspath,
                                    svn_wc_notify_update_external_removed,
                                    ib->iter_pool);

@@ -621,7 +621,7 @@ svn_sqlite__read_schema_version(int *version,
 static svn_error_t *
 check_format(svn_sqlite__db_t *db,
              int latest_schema,
-             const char * const *upgrade_sql, 
+             const char * const *upgrade_sql,
              apr_pool_t *scratch_pool)
 {
   int current_schema;
@@ -871,7 +871,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   sqlite3_trace((*db)->db3, sqlite_tracer, (*db)->db3);
 #endif
 
-  SVN_ERR(exec_sql(*db, 
+  SVN_ERR(exec_sql(*db,
               "PRAGMA case_sensitive_like=1;"
               /* Disable synchronization to disable the explicit disk flushes
                  that make Sqlite up to 50 times slower; especially on small

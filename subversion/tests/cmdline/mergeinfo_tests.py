@@ -166,9 +166,9 @@ def non_inheritable_mergeinfo(sbox):
   A_COPY_path   = os.path.join(wc_dir, "A_COPY")
   D_COPY_path   = os.path.join(wc_dir, "A_COPY", "D")
   rho_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
-  
+
   # Update the WC, then merge r4 from A to A_COPY and r6 from A to A_COPY
-  # at --depth empty and commit the merges as r7.  
+  # at --depth empty and commit the merges as r7.
   svntest.actions.run_and_verify_svn(None, ["At revision 6.\n"], [], 'up',
                                      wc_dir)
   expected_status.tweak(wc_rev=6)
@@ -238,8 +238,8 @@ def recursive_mergeinfo(sbox):
   A2_path         = os.path.join(wc_dir, "A2")
   nu_path         = os.path.join(wc_dir, "A2", "B", "F", "nu")
   nu_COPY_path    = os.path.join(wc_dir, "A_COPY", "B", "F", "nu")
-  nu2_path        = os.path.join(wc_dir, "A2", "C", "nu2") 
-  
+  nu2_path        = os.path.join(wc_dir, "A2", "C", "nu2")
+
   # Rename A to A2 in r7.
   svntest.actions.run_and_verify_svn(None, ["At revision 6.\n"], [], 'up', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -266,7 +266,7 @@ def recursive_mergeinfo(sbox):
                                      [], [], 'merge', '-c4', '--depth', 'empty',
                                      sbox.repo_url + '/A2',
                                      A_COPY_path)
-  
+
   # Merge r6 from A2/D/H to A_COPY/D/H
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output([[6]], 'U    ' +
@@ -284,12 +284,12 @@ def recursive_mergeinfo(sbox):
                                      [], 'merge', '-c5',
                                      sbox.repo_url + '/A2',
                                      A_COPY_path)
- 
+
   # Reverse merge -r5 from A2/C to A_COPY/C leaving empty mergeinfo on
   # A_COPY/C.
   svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-c-5',
                                      sbox.repo_url + '/A2/C', C_COPY_path)
-  
+
   # Merge r8 from A2/B/F to A_COPY/B/F
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output([[8]], 'A    ' +
@@ -299,7 +299,7 @@ def recursive_mergeinfo(sbox):
                                      sbox.repo_url + '/A2/B/F',
                                      F_COPY_path)
 
-  # Commit everything this far as r9  
+  # Commit everything this far as r9
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', wc_dir, '-m', 'Many merges')
   svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [], 'up',
@@ -344,7 +344,7 @@ def recursive_mergeinfo(sbox):
                                            A_COPY_path,
                                            '--show-revs', 'merged',
                                            '--depth', 'infinity')
-  
+
 ########################################################################
 # Run the tests
 

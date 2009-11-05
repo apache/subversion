@@ -277,7 +277,7 @@ start_log(svn_ra_serf__xml_parser_t *parser,
         {
           info = push_state(parser, log_ctx, DELETED_PATH);
           info->tmp_path->action = 'D';
-          
+
           SVN_ERR(read_changed_path_attributes(info->tmp_path, attrs));
         }
       else if (strcmp(name.name, "modified-path") == 0)

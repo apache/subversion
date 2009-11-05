@@ -137,7 +137,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     svn_ra_serf__init_kerb_connection,
     svn_ra_serf__handle_kerb_auth,
     svn_ra_serf__setup_request_kerb_auth,
-    svn_ra_serf__validate_response_kerb_auth,    
+    svn_ra_serf__validate_response_kerb_auth,
   },
 #endif /* SVN_RA_SERF_HAVE_GSSAPI */
 
@@ -281,7 +281,7 @@ handle_auth_header(void *baton,
         }
     }
 
-  /* If a matching protocol handler was found, we can stop iterating 
+  /* If a matching protocol handler was found, we can stop iterating
      over the response headers - so return a non-0 value. */
   return proto_found;
 }

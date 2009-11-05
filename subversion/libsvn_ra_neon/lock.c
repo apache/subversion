@@ -276,7 +276,7 @@ do_lock(svn_lock_t **lock,
      " <D:locktype><D:write /></D:locktype>" DEBUG_CR
      "%s" /* maybe owner */
      "</D:lockinfo>",
-     comment ? apr_pstrcat(pool, 
+     comment ? apr_pstrcat(pool,
                            "<D:owner>",
                            apr_xml_quote_string(pool, comment, 0),
                            "</D:owner>",

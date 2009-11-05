@@ -118,7 +118,7 @@ add_file_or_directory(const char *file_or_directory,
                                     "<S:add-%s name=\"%s\" "
                                     "copyfrom-path=\"%s\" "
                                     "copyfrom-rev=\"%ld\"/>" DEBUG_CR,
-                                    file_or_directory, qname, 
+                                    file_or_directory, qname,
                                     qcopy, copyfrom_rev));
 
   return SVN_NO_ERROR;

@@ -160,7 +160,7 @@ read_str(const char **result,
 
 /* This is wrapper around read_str() (which see for details); it
    simply asks svn_path_is_canonical() of the string it reads,
-   returning an error if the test fails. 
+   returning an error if the test fails.
    ### It seems this is only called for entrynames now
    */
 static svn_error_t *
@@ -1349,7 +1349,7 @@ svn_wc_entry(const svn_wc_entry_t **entry,
       /* We got the parent stub instead of the real entry. Fine.  */
       svn_error_clear(err);
     }
-  
+
   if (!show_hidden && *entry != NULL)
     {
       svn_boolean_t hidden;

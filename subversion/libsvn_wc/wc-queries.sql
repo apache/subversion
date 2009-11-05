@@ -163,7 +163,7 @@ delete from lock
 where repos_id = ?1 and repos_relpath = ?2;
 
 -- STMT_CLEAR_BASE_RECURSIVE_DAV_CACHE
-update base_node set dav_cache = ?4
+update base_node set dav_cache = null
 where dav_cache is not null and wc_id = ?1 and
   (local_relpath = ?2 or
    local_relpath like ?3 escape '#');

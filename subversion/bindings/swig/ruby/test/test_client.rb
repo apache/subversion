@@ -2292,7 +2292,7 @@ class SvnClientTest < Test::Unit::TestCase
       assert_equal({changelist2=>[path2].map{|f| File.expand_path(f)}}, yield(ctx, changelist2))
       assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)}}, yield(ctx, [changelist1]))
       assert_equal({changelist2=>[path2].map{|f| File.expand_path(f)}}, yield(ctx, [changelist2]))
-      assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)},changelist2=>[path2].map{|f| File.expand_path(f)},nil=>[@wc_path].map{|f| File.expand_path(f)}}, 
+      assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)},changelist2=>[path2].map{|f| File.expand_path(f)},nil=>[@wc_path].map{|f| File.expand_path(f)}},
 		   yield(ctx, nil))
       assert_equal({}, yield(ctx, []))
       assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)},changelist2=>[path2].map{|f| File.expand_path(f)}},

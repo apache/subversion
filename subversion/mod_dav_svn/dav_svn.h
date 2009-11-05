@@ -381,14 +381,14 @@ const char *dav_svn__get_txn_root_stub(request_rec *r);
 /* Create a new transaction based on HEAD in REPOS, setting *PTXN_NAME
    to the name of that transaction.  Use POOL for allocations. */
 dav_error *
-dav_svn__create_txn(const dav_svn_repos *repos, 
+dav_svn__create_txn(const dav_svn_repos *repos,
                     const char **ptxn_name,
                     apr_pool_t *pool);
 
 /* If it exists, abort the transaction named TXN_NAME from REPOS.  Use
    POOL for allocations. */
 dav_error *
-dav_svn__abort_txn(const dav_svn_repos *repos, 
+dav_svn__abort_txn(const dav_svn_repos *repos,
                    const char *txn_name,
                    apr_pool_t *pool);
 
@@ -870,7 +870,7 @@ dav_svn__final_flush_or_error(request_rec *r, apr_bucket_brigade *bb,
 
 /* Send a "standardized" DAV error response based on the ERR's
  * namespace and tag.
- * 
+ *
  * NOTE:  This was copied pretty much directory from mod_dav's
  * dav_error_response_tag() function which is, sadly, not public.
  */

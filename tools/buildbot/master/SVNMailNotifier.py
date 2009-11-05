@@ -25,9 +25,9 @@ class SVNMailNotifier(MailNotifier):
         """
         @type  body: string
         @param body: a string to be used as the body of the message.
-        
+
         @type  replytoaddr: string
-        @param replytoaddr: the email address to be used in the 'Reply-To' header.        
+        @param replytoaddr: the email address to be used in the 'Reply-To' header.
         """
 
         self.body = body
@@ -37,7 +37,7 @@ class SVNMailNotifier(MailNotifier):
         MailNotifier.__init__(self, fromaddr, mode, categories, builders,
                               addLogs, relayhost, subject, lookup, extraRecipients,
                               sendToInterestedUsers)
-        
+
     def buildMessage(self, name, build, results):
         if self.mode == "all":
             intro = "The Buildbot has finished a build of %s.\n" % name
@@ -45,10 +45,10 @@ class SVNMailNotifier(MailNotifier):
             intro = "The Buildbot has detected a failed build of %s.\n" % name
         else:
             intro = "The Buildbot has detected a new failure of %s.\n" % name
-        
+
         # buildurl
         buildurl = self.status.getURLForThing(build)
-# lgo: url's are already quoted now. 
+# lgo: url's are already quoted now.
 #       if buildurl:
 #            buildurl = urllib.quote(buildurl, '/:')
 
@@ -79,10 +79,10 @@ class SVNMailNotifier(MailNotifier):
                 source += "HEAD"
             if ss.patch is not None:
                 source += " (plus patch)"
-           
-        # actual buildslave 
+
+        # actual buildslave
         buildslave = build.getSlavename()
-        
+
         # TODO: maybe display changes here? or in an attachment?
 
         # status
@@ -106,7 +106,7 @@ class SVNMailNotifier(MailNotifier):
             log = build.getLogs()[-1]
             laststep = log.getStep().getName()
             lastlog = log.getText()
-            
+
             # only give me the last lines of the log files.
             lines = re.split('\n', lastlog)
             lastlog = ''
@@ -135,7 +135,7 @@ class SVNMailNotifier(MailNotifier):
                              'laststep': laststep,
                              'lastlog': lastlog,
                              }
-                             
+
         haveAttachments = False
         if ss.patch or self.addLogs:
             haveAttachments = True

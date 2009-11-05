@@ -297,7 +297,7 @@ svn_fs_base__change_rev_prop(svn_fs_t *fs,
   args.rev = rev;
   args.name = name;
   args.value = value;
-  return svn_fs_base__retry_txn(fs, txn_body_change_rev_prop, &args, 
+  return svn_fs_base__retry_txn(fs, txn_body_change_rev_prop, &args,
                                 TRUE, pool);
 }
 

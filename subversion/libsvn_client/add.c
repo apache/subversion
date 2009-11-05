@@ -734,7 +734,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
                                    pool, pool));
 
   /* ### BH: This looks unnecessary, because the hash is not used and
-         you can't rely on hash ordering but it fails our tests if I 
+         you can't rely on hash ordering but it fails our tests if I
          remove it. The qsort() below determines the final ordering. */
   SVN_ERR(svn_hash_from_cstring_keys(&targets_hash, targets, pool));
   SVN_ERR(svn_hash_keys(&targets, targets_hash, pool));

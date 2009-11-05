@@ -679,9 +679,9 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   external_urls = list(external_url_for.values())
 
   # The external_urls contains some examples of relative urls that are
-  # ambiguous with these local test paths, so we have to use the 
+  # ambiguous with these local test paths, so we have to use the
   # <url> <path> ordering here to check the local path validator.
-  
+
   externals_value_1 = external_urls.pop() + " ../foo\n"
   if not external_urls: external_urls = list(external_url_for.values())
   externals_value_2 = external_urls.pop() + " foo/bar/../baz\n"
@@ -1321,7 +1321,7 @@ def switch_relative_external(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   repo_url = sbox.repo_url
-  
+
   # Create a relative external in A/D on ../B
   A_path = os.path.join(wc_dir, 'A')
   A_copy_path = os.path.join(wc_dir, 'A_copy')
@@ -1335,9 +1335,9 @@ def switch_relative_external(sbox):
                                      '--quiet', wc_dir)
 
   # Update our working copy, and create a "branch" (A => A_copy)
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', 
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
                                      '--quiet', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', 
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      '--quiet', A_path, A_copy_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg',
@@ -1345,7 +1345,7 @@ def switch_relative_external(sbox):
 
   # Okay.  We now want to switch A to A_copy, which *should* cause
   # A/D/ext to point to the URL for A_copy/D/ext.
-  svntest.actions.run_and_verify_svn(None, None, [], 'sw', 
+  svntest.actions.run_and_verify_svn(None, None, [], 'sw',
                                      '--quiet', A_copy_url, A_path)
 
   expected_infos = [

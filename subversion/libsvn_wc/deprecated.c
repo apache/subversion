@@ -443,7 +443,7 @@ svn_wc_transmit_prop_deltas(const char *path,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  SVN_ERR(svn_wc_transmit_prop_deltas2(wc_ctx, local_abspath, editor, baton, 
+  SVN_ERR(svn_wc_transmit_prop_deltas2(wc_ctx, local_abspath, editor, baton,
                                        pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
@@ -978,7 +978,7 @@ svn_wc_remove_lock(const char *path,
   SVN_ERR(svn_wc_remove_lock2(wc_ctx, local_abspath, pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
-  
+
 }
 
 svn_error_t *
@@ -2819,7 +2819,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                                     allow_unver_obstructions,
                                     diff3_cmd,
                                     preserved_exts,
-                                    NULL, NULL, 
+                                    NULL, NULL,
                                     conflict_func, conflict_baton,
                                     external_func, eb,
                                     cancel_func, cancel_baton,
@@ -3101,7 +3101,7 @@ svn_wc_translated_file2(const char **xlated_path,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  SVN_ERR(svn_wc_translated_file3(xlated_path, src, wc_ctx, versioned_abspath, 
+  SVN_ERR(svn_wc_translated_file3(xlated_path, src, wc_ctx, versioned_abspath,
                                   flags, pool, pool));
   if (! svn_dirent_is_absolute(versioned_file))
     {
@@ -3237,7 +3237,7 @@ svn_wc_cleanup2(const char *path,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
 
-  SVN_ERR(svn_wc_cleanup3(wc_ctx, local_abspath, cancel_func, 
+  SVN_ERR(svn_wc_cleanup3(wc_ctx, local_abspath, cancel_func,
                           cancel_baton, pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
