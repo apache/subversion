@@ -180,6 +180,8 @@ svn_client__path_relative_to_root(const char **rel_path,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
+  /* ### TODO: Rework this to use svn_ra_get_path_relative_to_root(). */
+
   SVN_ERR_ASSERT(repos_root != NULL || ra_session != NULL);
 
   /* If we have a WC path... */
