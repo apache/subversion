@@ -170,6 +170,20 @@ Candidate changes for 1.5.8:
    Votes:
      +1: stylesen
 
+ * r40200, r40201
+   Provide examples for specifying an auto-prop value for the svn:keywords
+   property which contains several fields separated by whitespace.
+   Also tolerate (but don't advertise) quotes around property values in
+   auto-props specifications.
+   Justification:
+     The current behaviour can be misleading and is not well documented.
+     Users can easily create bogus property values containing literal
+     quoting characters.
+   Notes:
+     There is a backport branch at ^/branches/1.5.x-r40200
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
 
