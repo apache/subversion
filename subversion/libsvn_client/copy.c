@@ -597,13 +597,13 @@ path_driver_cb_func(void **dir_baton,
 }
 
 
-/* Starting with the path DIR relative to the root of RA_SESSION, work up
- * through DIR's parents until an existing node is found. Push each
- * nonexistent path onto the array NEW_DIRS, allocating in POOL.
- * Raise an error if the existing node is not a directory.
- *
- * ### The multiple requests for HEAD revision (SVN_INVALID_REVNUM) make
- * this implementation susceptible to race conditions. */
+/* Starting with the path DIR relative to the RA_SESSION's session
+   URL, work up through DIR's parents until an existing node is found.
+   Push each nonexistent path onto the array NEW_DIRS, allocating in
+   POOL.  Raise an error if the existing node is not a directory.
+
+   ### Multiple requests for HEAD (SVN_INVALID_REVNUM) make this
+   ### implementation susceptible to race conditions.  */
 static svn_error_t *
 find_absent_parents1(svn_ra_session_t *ra_session,
                      const char *dir,
@@ -629,22 +629,23 @@ find_absent_parents1(svn_ra_session_t *ra_session,
 
   if (kind != svn_node_dir)
     return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                _("Path '%s' already exists, but is not a directory"),
-                dir);
+                             _("Path '%s' already exists, but is not a "
+                               "directory"), dir);
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
-/* Starting with the URL *TOP_DST_URL which is also the root of RA_SESSION,
- * work up through its parents until an existing node is found. Push each
- * nonexistent URL onto the array NEW_DIRS, allocating in POOL.
- * Raise an error if the existing node is not a directory.
- *
- * Set *TOP_DST_URL and the RA session's root to the existing node's URL.
- *
- * ### The multiple requests for HEAD revision (SVN_INVALID_REVNUM) make
- * this implementation susceptible to race conditions. */
+/* Starting with the URL *TOP_DST_URL which is also the root of
+   RA_SESSION, work up through its parents until an existing node is
+   found. Push each nonexistent URL onto the array NEW_DIRS,
+   allocating in POOL.  Raise an error if the existing node is not a
+   directory.
+ 
+   Set *TOP_DST_URL and the RA session's root to the existing node's URL.
+  
+   ### Multiple requests for HEAD (SVN_INVALID_REVNUM) make this
+   ### implementation susceptible to race conditions.  */
 static svn_error_t *
 find_absent_parents2(svn_ra_session_t *ra_session,
                      const char **top_dst_url,
