@@ -421,6 +421,49 @@ svn_stream_empty(apr_pool_t *pool)
 }
 
 
+
+/*** Stream duplication support ***/
+struct baton_tee {
+  svn_stream_t *out1;
+  svn_stream_t *out2;
+};
+
+
+static svn_error_t *
+write_handler_tee(void *baton, const char *data, apr_size_t *len)
+{
+  struct baton_tee *bt = baton;
+
+  SVN_ERR(svn_stream_write(bt->out1, data, len));
+  SVN_ERR(svn_stream_write(bt->out2, data, len));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_stream_t *
+svn_stream_tee(svn_stream_t *out1,
+               svn_stream_t *out2,
+               apr_pool_t *pool)
+{
+  struct baton_tee *baton;
+  svn_stream_t *stream;
+
+  if (out1 == NULL)
+    return out2;
+
+  if (out2 == NULL)
+    return out1;
+
+  baton = apr_palloc(pool, sizeof(*baton));
+  baton->out1 = out1;
+  baton->out2 = out2;
+  stream = svn_stream_create(baton, pool);
+  svn_stream_set_write(stream, write_handler_tee);
+
+  return stream;
+}
+
 
 
 /*** Ownership detaching stream ***/
