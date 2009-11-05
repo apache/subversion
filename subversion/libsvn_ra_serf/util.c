@@ -1058,6 +1058,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   apr_status_t status;
   int xml_status;
   svn_ra_serf__xml_parser_t *ctx = baton;
+  svn_error_t *err;
 
   serf_bucket_response_status(response, &sl);
 
@@ -1083,10 +1084,11 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
             }
         }
 
-      SVN_ERR(svn_error_compose_create(
-          svn_ra_serf__handle_server_error(request, response, pool),
-          svn_ra_serf__handle_discard_body(request, response, NULL, pool)));
+      err = svn_ra_serf__handle_server_error(request, response, pool);
 
+      SVN_ERR(svn_error_compose_create(
+        svn_ra_serf__handle_discard_body(request, response, NULL, pool),
+        err));
       return SVN_NO_ERROR;
     }
 
