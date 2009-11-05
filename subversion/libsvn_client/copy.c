@@ -1436,8 +1436,8 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                                      svn_io_file_del_on_pool_cleanup, pool,
                                      pool));
 
-      SVN_ERR(svn_client__path_relative_to_session(&src_rel, ra_session,
-                                                   pair->src, pool));
+      SVN_ERR(svn_ra_get_path_relative_to_session(ra_session, &src_rel,
+                                                  pair->src, pool));
       SVN_ERR(svn_ra_get_file(ra_session, src_rel, src_revnum, fstream,
                               &real_rev, &new_props, pool));
       SVN_ERR(svn_stream_close(fstream));
@@ -1557,8 +1557,8 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       svn_pool_clear(iterpool);
 
       /* Next, make sure that the path exists in the repository. */
-      SVN_ERR(svn_client__path_relative_to_session(&src_rel, ra_session,
-                                                   pair->src, iterpool));
+      SVN_ERR(svn_ra_get_path_relative_to_session(ra_session, &src_rel,
+                                                  pair->src, iterpool));
       SVN_ERR(svn_ra_check_path(ra_session, src_rel, pair->src_revnum,
                                 &pair->src_kind, pool));
       if (pair->src_kind == svn_node_none)
