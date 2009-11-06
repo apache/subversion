@@ -198,5 +198,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r40400
+   Really fix issue #2580 on Win32.
+   Justification:
+     svn+ssh:// isn't usable on Windows in certain situations.
+   Notes:
+     Discussion on dev@: http://svn.haxx.se/dev/archive-2009-10/0438.shtml
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
