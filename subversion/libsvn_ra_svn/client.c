@@ -34,6 +34,7 @@
 
 #include "svn_types.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_error.h"
 #include "svn_time.h"
 #include "svn_path.h"
@@ -213,7 +214,7 @@ static svn_error_t *parse_lock(apr_array_header_t *list, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(list, pool, "ccc(?c)c(?c)", &(*lock)->path,
                                  &(*lock)->token, &(*lock)->owner,
                                  &(*lock)->comment, &cdate, &edate));
-  (*lock)->path = svn_path_canonicalize((*lock)->path, pool);
+  (*lock)->path = svn_uri_canonicalize((*lock)->path, pool);
   SVN_ERR(svn_time_from_cstring(&(*lock)->creation_date, cdate, pool));
   if (edate)
     SVN_ERR(svn_time_from_cstring(&(*lock)->expiration_date, edate, pool));
@@ -635,7 +636,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
 
   if (conn->repos_root)
     {
-      conn->repos_root = svn_path_canonicalize(conn->repos_root, pool);
+      conn->repos_root = svn_uri_canonicalize(conn->repos_root, pool);
       /* We should check that the returned string is a prefix of url, since
          that's the API guarantee, but this isn't true for 1.0 servers.
          Checking the length prevents client crashes. */
@@ -1087,7 +1088,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
       SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cwnbr(?c)(?c)",
                                      &name, &kind, &size, &has_props,
                                      &crev, &cdate, &cauthor));
-      name = svn_path_canonicalize(name, pool);
+      name = svn_uri_canonicalize(name, pool);
       dirent = apr_palloc(pool, sizeof(*dirent));
       dirent->kind = svn_node_kind_from_word(kind);
       dirent->size = size;/* FIXME: svn_filesize_t */
@@ -1400,9 +1401,9 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                                              &cpath, &action, &copy_path,
                                              &copy_rev, &kind_str,
                                              &text_mods, &prop_mods));
-              cpath = svn_path_canonicalize(cpath, iterpool);
+              cpath = svn_uri_canonicalize(cpath, iterpool);
               if (copy_path)
-                copy_path = svn_path_canonicalize(copy_path, iterpool);
+                copy_path = svn_uri_canonicalize(copy_path, iterpool);
               change = svn_log_changed_path2_create(iterpool);
               change->action = *action;
               change->copyfrom_path = copy_path;
@@ -1599,7 +1600,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
         {
           SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "rc",
                                          &revision, &ret_path));
-          ret_path = svn_path_canonicalize(ret_path, pool);
+          ret_path = svn_uri_canonicalize(ret_path, pool);
           apr_hash_set(*locations, apr_pmemdup(pool, &revision,
                                                sizeof(revision)),
                        sizeof(revision), ret_path);
@@ -1661,7 +1662,7 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     _("Expected valid revision range"));
           if (ret_path)
-            ret_path = svn_path_canonicalize(ret_path, iterpool);
+            ret_path = svn_uri_canonicalize(ret_path, iterpool);
           segment->path = ret_path;
           segment->range_start = range_start;
           segment->range_end = range_end;
@@ -1729,7 +1730,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, rev_pool,
                                      "crll?B", &p, &rev, &rev_proplist,
                                      &proplist, &merged_rev_param));
-      p = svn_path_canonicalize(p, rev_pool);
+      p = svn_uri_canonicalize(p, rev_pool);
       SVN_ERR(svn_ra_svn_parse_proplist(rev_proplist, rev_pool, &rev_props));
       SVN_ERR(parse_prop_diffs(proplist, rev_pool, &props));
       if (merged_rev_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
