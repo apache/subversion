@@ -253,13 +253,15 @@ process_one_revision(svn_fs_t *fs,
   apr_hash_t *paths_changed;
   apr_hash_index_t *hi;
 
-  SVN_DBG(("processing r%ld\n", revnum));
+  /* ### add --quiet */
+  SVN_ERR(svn_cmdline_printf(scratch_pool, "processing r%ld\n", revnum));
 
   /* Get the changed paths. */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, revnum, scratch_pool));
   SVN_ERR(svn_fs_paths_changed2(&paths_changed, rev_root, scratch_pool));
 
   /* Iterate them. */
+  /* ### use iterpool */
   for (hi = apr_hash_first(scratch_pool, paths_changed);
        hi; hi = apr_hash_next(hi))
     {
@@ -272,7 +274,8 @@ process_one_revision(svn_fs_t *fs,
 
       path = svn_apr_hash_index_key(hi);
       change = svn_apr_hash_index_val(hi);
-      SVN_DBG(("processing r%ld:%s\n", revnum, path));
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 "processing r%ld:%s\n", revnum, path));
 
       if (change->change_kind == svn_fs_path_change_delete)
         /* Can't ask for reps of PATH at REVNUM if the path no longer exists
