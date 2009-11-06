@@ -123,7 +123,7 @@ svn_cl__check_cancel(void *baton)
 
 static svn_cancel_func_t cancel_func = svn_cl__check_cancel;
 
-static void set_up_cancellation()
+static void set_up_cancellation(void)
 {
   /* Set up our cancellation support. */
   apr_signal(SIGINT, signal_handler);
@@ -210,7 +210,7 @@ static svn_error_t *record(apr_hash_t *records,
   key->offset = rep->offset;
 
   /* Update or create the value. */
-  if (value = apr_hash_get(records, key, sizeof(*key)))
+  if ((value = apr_hash_get(records, key, sizeof(*key))))
     {
       /* Paranoia. */
       SVN_ERR_ASSERT(value->sha1_checksum != NULL);
