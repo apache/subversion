@@ -48,7 +48,6 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_skel.h"
-#include "private/svn_debug.h"
 
 #define MAYBE_ALLOC(x,p) ((x) ? (x) : apr_pcalloc((p), sizeof(*(x))))
 

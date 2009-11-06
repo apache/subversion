@@ -869,6 +869,8 @@ AS_HELP_STRING([--enable-maintainer-mode],
 ])
 
 if test "$enable_debugging" = "yes" ; then
+  dnl svn_debug.h defines some functions and macros which are used in debug mode.
+  CPPFLAGS="$CPPFLAGS -include subversion/include/private/svn_debug.h"
   dnl At the moment, we don't want optimization, because we're
   dnl debugging.
   CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
