@@ -459,7 +459,7 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
   pos = 0;
   SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &pos, pool));
 
-  svn_stream_reset(hunk->original_text);
+  SVN_ERR(svn_stream_reset(hunk->original_text));
 
   lines_matched = FALSE;
   iterpool = svn_pool_create(pool);
@@ -486,7 +486,7 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
   else if (target->eof)
     *matched = FALSE;
 
-  svn_stream_reset(hunk->original_text);
+  SVN_ERR(svn_stream_reset(hunk->original_text));
   SVN_ERR(svn_io_file_seek(target->file, APR_SET, &pos, pool));
   target->eof = FALSE;
 
@@ -924,7 +924,7 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
           SVN_ERR(svn_stream_close(target->stream));
         }
 
-      /* Close the orignal and patched streams so that their content
+      /* Close the original and patched streams so that their content
        * is flushed to disk. This will also close the raw streams. */
       SVN_ERR(svn_stream_close(target->original));
       SVN_ERR(svn_stream_close(target->patched));
