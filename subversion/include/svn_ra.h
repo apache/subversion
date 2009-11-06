@@ -1337,7 +1337,7 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * If @a limit is non-zero only invoke @a receiver on the first @a limit
  * logs.
  *
- * If @a discover_changed_paths, then each call to receiver passes a
+ * If @a discover_changed_paths, then each call to @a receiver passes a
  * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths argument;
  * the hash's keys are all the paths committed in that revision.
  * Otherwise, each call to receiver passes NULL for @a changed_paths.
