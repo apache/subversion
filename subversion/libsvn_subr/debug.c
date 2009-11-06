@@ -30,6 +30,7 @@
 
 #include "private/svn_debug.h"
 
+#ifdef SVN_DEBUG
 
 /* This will be tweaked by the preamble code.  */
 static FILE * volatile debug_output = NULL;
@@ -77,3 +78,5 @@ svn_dbg__printf(const char *fmt, ...)
   (void) vfprintf(output, fmt, ap);
   va_end(ap);
 }
+
+#endif /* SVN_DEBUG */
