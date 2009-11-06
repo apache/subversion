@@ -284,10 +284,10 @@ wrapped_receiver(void *baton,
 
 static void
 wrap_pre_blame3_receiver(svn_client_blame_receiver_t *receiver,
-                   void **receiver_baton,
-                   apr_pool_t *pool)
+                         void **receiver_baton,
+                         apr_pool_t *pool)
 {
-  if (strlen(APR_EOL_STR) > 1)
+  if (sizeof(APR_EOL_STR) == 3)
     {
       struct wrapped_receiver_baton_s *b = apr_palloc(pool,sizeof(*b));
 
