@@ -121,7 +121,7 @@ Candidate changes:
  * r39614
    Support Berkeley DB 4.8.
    Votes:
-     +1: arfrever
+     +1: arfrever, dlr
 
  * r39692
    Fix issue #3498: Subversion password stores freeze Eclipse
@@ -205,7 +205,7 @@ Candidate changes:
    Notes:
      Discussion on dev@: http://svn.haxx.se/dev/archive-2009-10/0438.shtml
    Votes:
-     +1: stsp
+     +1: stsp, dlr
 
 Approved changes:
 =================
