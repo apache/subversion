@@ -257,7 +257,9 @@ def patch_unidiff_absolute_paths(sbox):
   lambda_path = os.path.join(os.path.sep, 'A', 'B', 'lambda')
   expected_output = [
     'U    %s\n' % os.path.join('A', 'B', 'E', 'alpha'),
-    'Skipped \'%s\'\n' % lambda_path
+    'Skipped \'%s\'\n' % lambda_path,
+    'Summary of conflicts:\n',
+    '  Skipped paths: 1\n'
   ]
 
   alpha_contents = "This is the file 'alpha'.\nWhoooo whooooo whoooooooo!\n"
