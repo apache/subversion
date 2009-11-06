@@ -23,19 +23,15 @@
 #ifndef SVN_DEBUG_H
 #define SVN_DEBUG_H
 
-/* Only available when SVN_DEBUG is defined (ie. svn developers). Note that
-   we do *not* provide replacement macros/functions for proper releases.
-   The debug stuff should be removed before a commit.
-
-   ### maybe we will eventually decide to allow certain debug stuff to
-   ### remain in the code. at that point, we can rejigger this header.  */
-#ifdef SVN_DEBUG
-
-#include "svn_types.h"
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+#ifndef SVN_DEBUG
+#error svn_debug.h cannot be included in non-debug mode
+#endif
 
 /*
  * The primary macro defined by this header is SVN_DBG(). It helps by
@@ -84,5 +80,4 @@ svn_dbg__printf(const char *fmt, ...)
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_DEBUG */
 #endif /* SVN_DEBUG_H */

@@ -36,10 +36,6 @@
 #include "private/svn_skel.h"
 #include "private/svn_token.h"
 
-#ifdef SQLITE3_DEBUG
-#include "private/svn_debug.h"
-#endif
-
 #ifdef SVN_SQLITE_INLINE
 /* Include sqlite3 inline, making all symbols private. */
   #define SQLITE_API static
@@ -49,6 +45,10 @@
 #endif
 
 #ifdef SQLITE3_DEBUG
+#ifndef SVN_DEBUG
+#error SQLITE3_DEBUG can be used only in debug mode
+#endif
+
 /* An sqlite query execution callback. */
 static void
 sqlite_tracer(void *data, const char *sql)

@@ -61,7 +61,6 @@
 #include "workqueue.h"
 
 #include "svn_private_config.h"
-#include "private/svn_debug.h"
 
 /* #define TEST_DB_PROPS */
 
