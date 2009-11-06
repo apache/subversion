@@ -51,7 +51,6 @@ usage(apr_pool_t *pool)
   svn_error_clear(svn_cmdline_fprintf
                   (stderr, pool,
                    _("Type 'svn-rep-sharing-stats --help' for usage.\n")));
-  exit(1);
 }
 
 
