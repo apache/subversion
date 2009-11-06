@@ -36,6 +36,9 @@
 #include "private/svn_skel.h"
 #include "private/svn_token.h"
 
+#ifdef SQLITE3_DEBUG
+#include "private/svn_debug.h"
+#endif
 
 #ifdef SVN_SQLITE_INLINE
 /* Include sqlite3 inline, making all symbols private. */
