@@ -867,28 +867,53 @@ def authz_access_required_at_repo_root(sbox):
 
   sbox.build(create_wc = False)
 
-  write_authz_file(sbox, {'/': '* =', '/A': 'jrandom = rw',
+  write_authz_file(sbox, {'/': '* =',
+                          '/A': 'jrandom = rw',
                           '/A-copy': 'jrandom = rw'})
-
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   root_url = sbox.repo_url
-  A_url = root_url + '/A'
-  A_copy_url = root_url + '/A-copy'
-  B_url = root_url + '/A/B'
-  B_copy_url = root_url + '/A/B-copy'
 
-  # Should succeed
-  svntest.main.run_svn(None, 'cp', A_url, A_copy_url, '-m', 'logmsg')
+  # Do some copies and moves where the common parents of the single
+  # source and single destination is an unreadable root.
 
-  # Should succeed
-  svntest.main.run_svn(None, 'cp', B_url, B_copy_url, '-m', 'logmsg')
+  svntest.main.run_svn(None, 'cp', '-m', 'logmsg',
+                       root_url + '/A',
+                       root_url + '/A-copy')
+  svntest.main.run_svn(None, 'cp', '-m', 'logmsg',
+                       root_url + '/A/B',
+                       root_url + '/A/B-copy')
+  svntest.main.run_svn(None, 'mv', '-m', 'logmsg',
+                       root_url + '/A/B',
+                       root_url + '/A-copy/B-copy')
+  svntest.main.run_svn(None, 'mv', '-m', 'logmsg',
+                       root_url + '/A-copy/B-copy',
+                       root_url + '/A/B')
+  svntest.main.run_svn(None, 'rm', '-m', 'logmsg',
+                       root_url + '/A-copy',
+                       root_url + '/A/B-copy')
 
-  # Should succeed
-  svntest.main.run_svn(None, 'mv', A_url, A_copy_url, '-m', 'logmsg')
+  # Move the high-water-mark of readability down a level, and repeat.
 
-  # Should succeed
-  svntest.main.run_svn(None, 'mv', B_url, B_copy_url, '-m', 'logmsg')
+  write_authz_file(sbox, {'/': '* =',
+                          '/A/B': 'jrandom = rw',
+                          '/A/B-copy': 'jrandom = rw'})
+  
+  svntest.main.run_svn(None, 'cp', '-m', 'logmsg',
+                       root_url + '/A/B',
+                       root_url + '/A/B-copy')
+  svntest.main.run_svn(None, 'cp', '-m', 'logmsg',
+                       root_url + '/A/B/E',
+                       root_url + '/A/B/E-copy')
+  svntest.main.run_svn(None, 'mv', '-m', 'logmsg',
+                       root_url + '/A/B/E',
+                       root_url + '/A/B-copy/E-copy')
+  svntest.main.run_svn(None, 'mv', '-m', 'logmsg',
+                       root_url + '/A/B-copy/E-copy',
+                       root_url + '/A/B/E')
+  svntest.main.run_svn(None, 'rm', '-m', 'logmsg',
+                       root_url + '/A/B-copy',
+                       root_url + '/A/B/E-copy')
 
 ########################################################################
 # Run the tests
