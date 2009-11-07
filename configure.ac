@@ -998,6 +998,9 @@ if test "$RUBY" != "none"; then
   fi
 fi
 
+SWIG_PL_CPPFLAGS="`echo $CPPFLAGS | sed -e 's: -include subversion/include/private/svn_debug.h::'`"
+AC_SUBST(SWIG_PL_CPPFLAGS)
+
 SVN_CHECK_SWIG
 
 SVN_CHECK_CTYPESGEN
