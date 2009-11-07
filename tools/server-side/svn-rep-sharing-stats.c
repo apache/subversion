@@ -237,11 +237,14 @@ static svn_error_t *record(apr_hash_t *records,
  * If PROP_REPS or DATA_REPS is NULL, the respective kind of reps are not
  * tallied.
  *
+ * Print progress report to STDERR unless QUIET is true.
+ *
  * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 process_one_revision(svn_fs_t *fs,
                      svn_revnum_t revnum,
+                     svn_boolean_t quiet,
                      apr_hash_t *prop_reps,
                      apr_hash_t *data_reps,
                      apr_hash_t *both_reps,
@@ -252,8 +255,9 @@ process_one_revision(svn_fs_t *fs,
   apr_hash_t *paths_changed;
   apr_hash_index_t *hi;
 
-  /* ### add --quiet */
-  SVN_ERR(svn_cmdline_printf(scratch_pool, "processing r%ld\n", revnum));
+  if (! quiet)
+    SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                                "processing r%ld\n", revnum));
 
   /* Get the changed paths. */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, revnum, scratch_pool));
@@ -273,8 +277,9 @@ process_one_revision(svn_fs_t *fs,
 
       path = svn_apr_hash_index_key(hi);
       change = svn_apr_hash_index_val(hi);
-      SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                 "processing r%ld:%s\n", revnum, path));
+      if (! quiet)
+        SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                                    "processing r%ld:%s\n", revnum, path));
 
       if (change->change_kind == svn_fs_path_change_delete)
         /* Can't ask for reps of PATH at REVNUM if the path no longer exists
@@ -362,11 +367,12 @@ static svn_error_t *is_fs_fsfs(svn_fs_t *fs, apr_pool_t *scratch_pool)
 
 /* The core logic.  This function iterates the repository REPOS_PATH
  * and sends all the (DATA and/or PROP) reps in each revision for counting
- * by process_one_revision().
+ * by process_one_revision().  QUIET is passed to process_one_revision().
  */
 static svn_error_t *process(const char *repos_path,
                             svn_boolean_t prop,
                             svn_boolean_t data,
+                            svn_boolean_t quiet,
                             apr_pool_t *scratch_pool)
 {
   apr_hash_t *prop_reps = NULL;
@@ -398,7 +404,8 @@ static svn_error_t *process(const char *repos_path,
     {
       svn_pool_clear(iterpool);
       SVN_ERR(cancel_func(NULL));
-      SVN_ERR(process_one_revision(fs, rev, prop_reps, data_reps, both_reps,
+      SVN_ERR(process_one_revision(fs, rev, quiet,
+                                   prop_reps, data_reps, both_reps,
                                    scratch_pool, iterpool));
     }
   svn_pool_destroy(iterpool);
@@ -418,6 +425,7 @@ main(int argc, const char *argv[])
   apr_allocator_t *allocator;
   apr_pool_t *pool;
   svn_boolean_t prop = FALSE, data = FALSE;
+  svn_boolean_t quiet = FALSE;
   svn_error_t *err;
   apr_getopt_t *os;
   const apr_getopt_option_t options[] =
@@ -425,6 +433,7 @@ main(int argc, const char *argv[])
       {"data", OPT_DATA, 0, N_("display data reps stats")},
       {"prop", OPT_PROP, 0, N_("display prop reps stats")},
       {"both", OPT_BOTH, 0, N_("display combined (data+prop) reps stats")},
+      {"quiet", 'q', 0, N_("no progress (only errors) to stderr")},
       {"help", 'h', 0, N_("display this help")},
       {"version", OPT_VERSION, 0,
        N_("show program version information")},
@@ -483,6 +492,9 @@ main(int argc, const char *argv[])
           data = TRUE;
           prop = TRUE;
           break;
+        case 'q':
+          quiet = TRUE;
+          break;
         case 'h':
           help(options, pool);
           break;
@@ -512,7 +524,7 @@ main(int argc, const char *argv[])
   set_up_cancellation();
 
   /* Do something. */
-  SVN_INT_ERR(process(repos_path, prop, data, pool));
+  SVN_INT_ERR(process(repos_path, prop, data, quiet, pool));
 
   /* We're done. */
 
