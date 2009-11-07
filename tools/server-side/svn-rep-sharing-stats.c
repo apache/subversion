@@ -264,7 +264,7 @@ process_one_revision(svn_fs_t *fs,
   SVN_ERR(svn_fs_paths_changed2(&paths_changed, rev_root, scratch_pool));
 
   /* Iterate them. */
-  /* ### use iterpool */
+  /* ### use iterpool? */
   for (hi = apr_hash_first(scratch_pool, paths_changed);
        hi; hi = apr_hash_next(hi))
     {
