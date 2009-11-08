@@ -232,6 +232,7 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
 #define SVN_WC__ADM_LOG                 "log"
 #define SVN_WC__ADM_KILLME              "KILLME"
+#define SVN_WC__ADM_PRISTINE            "pristine"
 
 /* The basename of the ".prej" file, if a directory ever has property
    conflicts.  This .prej file will appear *within* the conflicted
@@ -451,9 +452,9 @@ svn_wc__internal_get_ancestry(const char **url,
 svn_error_t *
 svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             const char *local_abspath,
-                            const char *uuid,
                             const char *url,
-                            const char *repos,
+                            const char *repos_root_url,
+                            const char *repos_uuid,
                             svn_revnum_t revision,
                             svn_depth_t depth,
                             apr_pool_t *scratch_pool);
@@ -505,15 +506,6 @@ svn_wc__internal_resolved_conflict(svn_wc__db_t *db,
                                    svn_wc_notify_func2_t notify_func,
                                    void *notify_baton,
                                    apr_pool_t *scratch_pool);
-
-/* Library-internal version of svn_wc_locked2(). */
-svn_error_t *
-svn_wc__internal_locked(svn_boolean_t *locked_here,
-                        svn_boolean_t *locked,
-                        svn_wc__db_t *db,
-                        const char *local_abspath,
-                        apr_pool_t *scratch_pool);
-
 
 
 svn_error_t *

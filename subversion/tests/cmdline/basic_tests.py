@@ -198,9 +198,9 @@ def basic_update(sbox):
   # path, are skipped and do not raise an error
   xx_path = os.path.join(wc_dir, 'xx', 'xx')
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    "update xx/xx", 
-    ["Skipped '"+xx_path+"'\n", 
-    "Summary of conflicts:\n", 
+    "update xx/xx",
+    ["Skipped '"+xx_path+"'\n",
+    "Summary of conflicts:\n",
     "  Skipped paths: 1\n"], [], 'update', xx_path)
   exit_code, out, err = svntest.actions.run_and_verify_svn(
     "update xx/xx", [], [],
@@ -210,7 +210,7 @@ def basic_update(sbox):
   urls = ('http://localhost/a/b/c', 'http://localhost', 'svn://localhost')
   for url in urls:
     exit_code, out, err = svntest.actions.run_and_verify_svn(
-      "update " + url, 
+      "update " + url,
       ["Skipped '"+url+"'\n",
       "Summary of conflicts:\n",
       "  Skipped paths: 1\n"], [],
@@ -1854,17 +1854,17 @@ def delete_keep_local(sbox):
 
 def delete_keep_local_twice(sbox):
   'delete file and directory with --keep-local twice'
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   dir = os.path.join(wc_dir, 'dir')
-  
+
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', dir)
-  
+
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
-  
+
   if not os.path.isdir(dir):
     print('Directory was really deleted')
     raise svntest.Failure

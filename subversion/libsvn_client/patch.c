@@ -144,7 +144,7 @@ strip_path(const char **result, const char *path, int strip_count,
   int i;
   apr_array_header_t *components;
   apr_array_header_t *stripped;
-  
+
   components = svn_path_decompose(path, scratch_pool);
   if (strip_count >= components->nelts)
     return svn_error_createf(SVN_ERR_CLIENT_PATCH_BAD_STRIP_COUNT, NULL,
@@ -187,7 +187,37 @@ resolve_target_path(patch_target_t *target,
   const char *abs_wc_path;
   const char *stripped_path;
 
-  target->canon_path_from_patchfile = svn_dirent_canonicalize(
+#if '/' == SVN_PATH_LOCAL_SEPARATOR
+  /* Contrary to what one might expect, svn_dirent_internal_style() does not
+   * replace backslashes with slashes on UNIX. But it's quite possible that
+   * a patch generated on Windows uses backslashes as path separators.
+   * To apply such patches on UNIX, we need to normalise separators to '/'.
+   * Do a global search-replace if the path from the patch file contains
+   * only backslashes but no forward slashes. This may not be suitable in all
+   * situations, e.g. backslashes might be part of a filename with no leading
+   * directory components. But let's optimise for seamless interoperability
+   * between platforms rather than for people using weird filenames. */
+  {
+    const char *slash;
+    const char *backslash;
+
+    slash = strchr(path_from_patchfile, '/');
+    backslash = strchr(path_from_patchfile, '\\');
+    if (! slash && backslash)
+      {
+        char *p = apr_pstrdup(scratch_pool, path_from_patchfile);
+        path_from_patchfile = p;
+        while (*p)
+          {
+            if (*p == '\\')
+                  *p = '/';
+            p++;
+          }
+      }
+  }
+#endif
+
+  target->canon_path_from_patchfile = svn_dirent_internal_style(
                                         path_from_patchfile, result_pool);
   if (target->canon_path_from_patchfile[0] == '\0')
     {
@@ -298,7 +328,7 @@ check_local_mods(svn_boolean_t *local_mods,
 
 /* Attempt to initialize a patch TARGET structure for a target file
  * described by PATCH.
- * Use client context CTX to send notifiations and retrieve WC_CTX. 
+ * Use client context CTX to send notifiations and retrieve WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
  * Upon success, allocate the patch target structure in RESULT_POOL.
@@ -429,7 +459,7 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
   pos = 0;
   SVN_ERR(svn_io_file_seek(target->file, APR_CUR, &pos, pool));
 
-  svn_stream_reset(hunk->original_text);
+  SVN_ERR(svn_stream_reset(hunk->original_text));
 
   lines_matched = FALSE;
   iterpool = svn_pool_create(pool);
@@ -455,8 +485,8 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
     *matched = lines_matched;
   else if (target->eof)
     *matched = FALSE;
-  
-  svn_stream_reset(hunk->original_text);
+
+  SVN_ERR(svn_stream_reset(hunk->original_text));
   SVN_ERR(svn_io_file_seek(target->file, APR_SET, &pos, pool));
   target->eof = FALSE;
 
@@ -539,7 +569,7 @@ determine_hunk_line(svn_linenum_t *line, patch_target_t *target,
   hunk_start = hunk->original_start == 0 ? 1 : hunk->original_start;
 
   /* Scan forward towards the hunk's line and look for a line where the
-   * hunk matches, in case there are local changes in the target which 
+   * hunk matches, in case there are local changes in the target which
    * cause the hunk to match early. */
   SVN_ERR(scan_for_match(&early_match, &early_matched_line, target, hunk,
                          FALSE, hunk_start, pool));
@@ -894,7 +924,7 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
           SVN_ERR(svn_stream_close(target->stream));
         }
 
-      /* Close the orignal and patched streams so that their content
+      /* Close the original and patched streams so that their content
        * is flushed to disk. This will also close the raw streams. */
       SVN_ERR(svn_stream_close(target->original));
       SVN_ERR(svn_stream_close(target->patched));
@@ -927,7 +957,7 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
            * creating an empty file manually is not exactly hard either. */
           target->deleted = (target->kind != svn_node_none);
         }
-      
+
       if (target->deleted)
         {
           if (! dry_run)
@@ -966,7 +996,7 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
                        * Suppress notification, we'll do that later.
                        * Also suppress cancellation. */
                       SVN_ERR(svn_io_copy_file(target->patched_path,
-                                               target->abs_path, FALSE, pool)); 
+                                               target->abs_path, FALSE, pool));
                       SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->abs_path,
                                           svn_depth_infinity,
                                           NULL, SVN_INVALID_REVNUM,
@@ -1030,7 +1060,9 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
 }
 
 /* Apply all diffs in the patch file at PATCH_PATH to the working copy
- * at WC_PATH. ADM_ACCESS should hold a write lock to the working copy.
+ * at WC_PATH.
+ * TODO ### DRY_RUN ...
+ * TODO ### STRIP_COUNT ...
  * Use client context CTX to send notifiations.
  * Do all allocations in POOL.  */
 static svn_error_t *

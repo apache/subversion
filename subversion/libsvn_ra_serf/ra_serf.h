@@ -1437,7 +1437,7 @@ typedef svn_error_t *
                                   serf_bucket_t *hdrs_bkt);
 
 /**
- * This function will be called when a response is received, so that the 
+ * This function will be called when a response is received, so that the
  * protocol handler can validate the Authentication related response headers
  * (if needed).
  */

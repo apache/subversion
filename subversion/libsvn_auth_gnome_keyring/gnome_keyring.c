@@ -391,7 +391,7 @@ simple_gnome_keyring_first_creds(void **credentials,
         }
     }
   else
-    {  
+    {
       if (check_keyring_is_locked(default_keyring))
         {
           return svn_error_create(SVN_ERR_AUTHN_CREDS_UNAVAILABLE, NULL,
@@ -546,7 +546,7 @@ ssl_client_cert_pw_gnome_keyring_first_creds(void **credentials,
                                         default_keyring,
                                         unlock_prompt_baton,
                                         pool));
-            
+
           /* If keyring is locked give up and try the next provider. */
           if (! unlock_gnome_keyring(default_keyring, keyring_password, pool))
             return SVN_NO_ERROR;

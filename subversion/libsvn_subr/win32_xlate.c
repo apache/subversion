@@ -156,7 +156,7 @@ svn_subr__win32_xlate_open(win32_xlate_t **xlate_p, const char *topage,
   UINT from_page_id, to_page_id;
   apr_status_t apr_err = APR_SUCCESS;
   win32_xlate_t *xlate;
-  
+
   apr_err = get_page_id_from_name(&to_page_id, topage, pool);
   if (apr_err == APR_SUCCESS)
     apr_err = get_page_id_from_name(&from_page_id, frompage, pool);

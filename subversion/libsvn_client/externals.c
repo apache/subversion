@@ -557,7 +557,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
       /* "//schema-relative" and in some cases "///schema-relative".
          This last format is supported on file:// schema relative. */
       url = apr_pstrcat(
-                        pool, 
+                        pool,
                         url[2] == '/' ? "///" : "//",
                         svn_relpath_canonicalize(url+2, pool),
                         NULL);
@@ -776,13 +776,14 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                                                new_item->url, NULL,
                                                &(new_item->peg_revision),
                                                &(new_item->revision), ib->ctx,
-                                               ib->pool));
+                                               ib->iter_pool));
 
-      SVN_ERR(svn_ra_get_uuid2(ra_session, &ra_cache.repos_uuid, ib->pool));
+      SVN_ERR(svn_ra_get_uuid2(ra_session, &ra_cache.repos_uuid,
+                               ib->iter_pool));
       SVN_ERR(svn_ra_get_repos_root2(ra_session, &ra_cache.repos_root_url,
-                                     ib->pool));
+                                     ib->iter_pool));
       SVN_ERR(svn_ra_check_path(ra_session, "", ra_cache.ra_revnum, &kind,
-                                ib->pool));
+                                ib->iter_pool));
 
       if (svn_node_none == kind)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -946,7 +947,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
 
       if (ib->ctx->notify_func2)
         {
-          svn_wc_notify_t *notify = 
+          svn_wc_notify_t *notify =
               svn_wc_create_notify(remove_target_abspath,
                                    svn_wc_notify_update_external_removed,
                                    ib->iter_pool);

@@ -211,7 +211,7 @@ make_dir_baton(const char *path,
   dir_baton->skip = FALSE;
   dir_baton->pool = pool;
   dir_baton->path = apr_pstrdup(pool, path);
-  dir_baton->wcpath = svn_path_join(edit_baton->target, path, pool);
+  dir_baton->wcpath = svn_dirent_join(edit_baton->target, path, pool);
   dir_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
 
   return dir_baton;
@@ -237,7 +237,7 @@ make_file_baton(const char *path,
   file_baton->skip = FALSE;
   file_baton->pool = pool;
   file_baton->path = apr_pstrdup(pool, path);
-  file_baton->wcpath = svn_path_join(eb->target, path, pool);
+  file_baton->wcpath = svn_dirent_join(eb->target, path, pool);
   file_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
 
   return file_baton;
@@ -322,9 +322,9 @@ get_dirprops_from_ra(struct dir_baton *b, svn_revnum_t base_revision)
 
 
 /* Return in *LOCAL_DIR_ABSPATH the absolute path for the directory PATH by
-   searching the access baton set of ADM_ACCESS.  If ADM_ACCESS is NULL
-   then *PATH_ACCESS will be NULL.  If LENIENT is TRUE then failure to find
-   an access baton will not return an error but will set *PATH_ACCESS to
+   searching the access baton set of ADM_ACCESS.  If ADM_ACCESS is NULL then
+   *LOCAL_DIR_ABSPATH will be NULL.  If LENIENT is TRUE then failure to find
+   an access baton will not return an error but will set *LOCAL_DIR_ABSPATH to
    NULL instead. */
 static svn_error_t *
 get_dir_abspath(const char **local_dir_abspath,
@@ -483,7 +483,7 @@ delete_entry(const char *path,
           {
             SVN_ERR(eb->diff_callbacks->dir_deleted
                     (local_dir_abspath, &state, &tree_conflicted,
-                     svn_path_join(eb->target, path, pool),
+                     svn_dirent_join(eb->target, path, pool),
                      eb->diff_cmd_baton, pool));
             break;
           }
@@ -499,7 +499,7 @@ delete_entry(const char *path,
           if (eb->dry_run)
             {
               /* Remember what we _would've_ deleted (issue #2584). */
-              const char *wcpath = svn_path_join(eb->target, path, pb->pool);
+              const char *wcpath = svn_dirent_join(eb->target, path, pb->pool);
               apr_hash_set(svn_client__dry_run_deletions(eb->diff_cmd_baton),
                            wcpath, APR_HASH_KEY_STRING, wcpath);
 
@@ -514,7 +514,7 @@ delete_entry(const char *path,
     {
       const char* deleted_path;
       deleted_path_notify_t *dpn = apr_palloc(eb->pool, sizeof(*dpn));
-      deleted_path = svn_path_join(eb->target, path, eb->pool);
+      deleted_path = svn_dirent_join(eb->target, path, eb->pool);
       dpn->kind = kind;
       dpn->action = tree_conflicted ? svn_wc_notify_tree_conflict : action;
       dpn->state = state;
@@ -574,7 +574,7 @@ add_directory(const char *path,
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action;
       svn_node_kind_t kind = svn_node_dir;
-      
+
       /* Find out if a pending delete notification for this path is
        * still around. */
       dpn = apr_hash_get(eb->deleted_paths, b->wcpath, APR_HASH_KEY_STRING);
@@ -868,7 +868,7 @@ close_file(void *file_baton,
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action;
       svn_node_kind_t kind = svn_node_file;
-      
+
       /* Find out if a pending delete notification for this path is
        * still around. */
       dpn = apr_hash_get(eb->deleted_paths, b->wcpath, APR_HASH_KEY_STRING);
@@ -940,7 +940,7 @@ close_directory(void *dir_baton,
   if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
     {
       /* ### maybe try to stat the local b->wcpath? */
-      /* If the path doesn't exist, then send a 'skipped' notification. 
+      /* If the path doesn't exist, then send a 'skipped' notification.
          Don't notify added directories as they triggered notification
          in add_directory. */
       if (! b->added && eb->notify_func)
@@ -1157,19 +1157,12 @@ svn_client__get_diff_editor(const char *target,
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(subpool);
   struct edit_baton *eb = apr_palloc(subpool, sizeof(*eb));
+  const char *target_abspath;
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
   eb->target = target;
-  if (wc_ctx)
-    {
-      const char *target_abspath;
-      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
-      SVN_ERR(svn_wc__adm_retrieve_from_context(&(eb->adm_access), wc_ctx,
-                                                target_abspath, pool));
-    }
-  else
-    {
-      eb->adm_access = NULL;
-    }
+  SVN_ERR(svn_wc__adm_retrieve_from_context(&(eb->adm_access), wc_ctx,
+                                            target_abspath, pool));
   eb->diff_callbacks = diff_callbacks;
   eb->diff_cmd_baton = diff_cmd_baton;
   eb->dry_run = dry_run;

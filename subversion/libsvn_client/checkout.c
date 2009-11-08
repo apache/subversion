@@ -75,7 +75,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   /* Sanity check.  Without these, the checkout is meaningless. */
   SVN_ERR_ASSERT(path != NULL);
   SVN_ERR_ASSERT(url != NULL);
-  
+
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* Fulfill the docstring promise of svn_client_checkout: */
@@ -174,8 +174,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
             depth = svn_depth_infinity;
 
           /* Make the unversioned directory into a versioned one.  */
-          SVN_ERR(svn_wc_ensure_adm4(ctx->wc_ctx, local_abspath, uuid,
-                                     session_url, repos_root, revnum, depth,
+          SVN_ERR(svn_wc_ensure_adm4(ctx->wc_ctx, local_abspath, session_url,
+                                     repos_root, uuid, revnum, depth,
                                      pool));
           /* Have update fix the incompleteness. */
           err = svn_client__update_internal(result_rev, path, revision,

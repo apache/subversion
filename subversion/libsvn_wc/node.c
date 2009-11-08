@@ -53,7 +53,6 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
-#include "private/svn_debug.h"
 
 
 svn_error_t *
@@ -105,32 +104,68 @@ svn_error_t *
 svn_wc__node_get_repos_info(const char **repos_root_url,
                             const char **repos_uuid,
                             svn_wc_context_t *wc_ctx,
-                            const char * local_abspath,
+                            const char *local_abspath,
+                            svn_boolean_t scan_added,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  
-  err = svn_wc__db_read_info(NULL, NULL, NULL, NULL,
+  svn_wc__db_status_t status;
+
+  err = svn_wc__db_read_info(&status, NULL, NULL, NULL,
                              repos_root_url, repos_uuid,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
                              wc_ctx->db, local_abspath, result_pool,
                              scratch_pool);
-
-  if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
-            || err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
+  if (err)
     {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+          && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+        return svn_error_return(err);
+
+      /* This node is not versioned. Return NULL repos info.  */
       svn_error_clear(err);
-      err = SVN_NO_ERROR;
+
       if (repos_root_url)
         *repos_root_url = NULL;
       if (repos_uuid)
         *repos_uuid = NULL;
+      return SVN_NO_ERROR;
     }
 
-  return err;
+  if (scan_added
+      && (status == svn_wc__db_status_added
+          || status == svn_wc__db_status_obstructed_add))
+    {
+      /* We have an addition. scan_addition() will find the intended
+         repository location by scanning up the tree.  */
+      return svn_error_return(svn_wc__db_scan_addition(
+                                &status, NULL,
+                                NULL, repos_root_url, repos_uuid,
+                                NULL, NULL, NULL, NULL,
+                                wc_ctx->db, local_abspath,
+                                scratch_pool, scratch_pool));
+    }
+
+  /* If we didn't get repository information, and the status means we are
+     looking at an unchanged BASE node, then scan upwards for repos info.  */
+  if (((repos_root_url != NULL && *repos_root_url == NULL)
+       || (repos_uuid != NULL && *repos_uuid == NULL))
+      && (status == svn_wc__db_status_normal
+          || status == svn_wc__db_status_obstructed
+          || status == svn_wc__db_status_absent
+          || status == svn_wc__db_status_excluded
+          || status == svn_wc__db_status_not_present))
+    {
+      SVN_ERR(svn_wc__db_scan_base_repos(NULL, repos_root_url, repos_uuid,
+                                         wc_ctx->db, local_abspath,
+                                         result_pool, scratch_pool));
+    }
+  /* else maybe a deletion, or an addition w/ SCAN_ADDED==FALSE.  */
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -330,7 +365,7 @@ walker_helper(svn_wc__db_t *db,
     {
       const char *child_abspath;
       svn_wc__db_kind_t child_kind;
-      
+
       svn_pool_clear(iterpool);
 
       /* See if someone wants to cancel this operation. */
@@ -557,72 +592,55 @@ svn_error_t *
 svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                           svn_wc_context_t *wc_ctx,
                           const char *local_abspath,
-                          svn_boolean_t scan_added,
                           apr_pool_t *scratch_pool)
 {
-  while (TRUE)
+  svn_wc__db_status_t status;
+  svn_boolean_t base_shadowed;
+
+  SVN_ERR(svn_wc__db_read_info(&status,
+                               NULL, base_revision,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, &base_shadowed,
+                               NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  if (SVN_IS_VALID_REVNUM(*base_revision))
+    return SVN_NO_ERROR;
+
+  if (base_shadowed)
     {
-      svn_wc__db_status_t status;
-      svn_boolean_t base_shadowed;
-
-      SVN_ERR(svn_wc__db_read_info(&status,
-                                   NULL, base_revision,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, &base_shadowed,
-                                   NULL, NULL,
-                                   wc_ctx->db, local_abspath,
-                                   scratch_pool, scratch_pool));
-
-      if (SVN_IS_VALID_REVNUM(*base_revision))
-        return SVN_NO_ERROR;
-
-      /* First check if we have a base */
-      if (base_shadowed)
-        {
-          /* The node was replaced with something else. Look at the base */
-          return svn_error_return(
-              svn_wc__db_base_get_info(NULL, NULL, base_revision, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+      /* The node was replaced with something else. Look at the base.  */
+      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, base_revision,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
                                        NULL, NULL, NULL,
                                        wc_ctx->db, local_abspath,
                                        scratch_pool, scratch_pool));
-        }
+    }
 
-      if (!scan_added)
-        return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
+}
 
-      /* Ok, and now the fun begins */
+svn_error_t *
+svn_wc__node_get_lock_token(const char **lock_token,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_lock_t *lock;
 
-      if (status == svn_wc__db_status_added ||
-          status == svn_wc__db_status_obstructed_add)
-        {
-          /* We have an addition. Let's look at the root of the addition */
-          const char *check_abspath;
-          SVN_ERR(svn_wc__db_scan_addition(NULL, &check_abspath, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, NULL,
-                                           wc_ctx->db, local_abspath,
-                                           scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_info(NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, &lock,
+                               wc_ctx->db, local_abspath,
+                               result_pool, scratch_pool));
+  *lock_token = lock ? lock->token : NULL;
 
-          if (check_abspath != NULL &&
-              strcmp(check_abspath, local_abspath) != 0)
-            {
-              /* Check the root of the addition, it might be replaced */
-              local_abspath = check_abspath;
-            }
-          else
-            {
-              /* The parent was not replaced, check the parent to which this
-                 node was added */
-              SVN_ERR_ASSERT(!svn_dirent_is_root(local_abspath,
-                                                 strlen(local_abspath)));
-
-              local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-            }
-
-          continue; /* Restart at local_abspath */
-        }
-
-      return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL, NULL);
-  }
+  return SVN_NO_ERROR;
 }

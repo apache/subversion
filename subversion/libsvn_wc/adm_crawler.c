@@ -49,7 +49,6 @@
 #include "lock.h"
 
 #include "svn_private_config.h"
-#include "private/svn_debug.h"
 
 
 /* Helper for report_revisions_and_depths().
@@ -59,8 +58,8 @@
    that file to LOCAL_ABSPATH with possible translations/expansions.  If
    USE_COMMIT_TIMES is set, then set working file's timestamp to
    last-commit-time.  Either way, set entry-timestamp to match that of
-   the working file when all is finished. 
-   
+   the working file when all is finished.
+
    Not that a valid access baton with a write lock to the directory of
    LOCAL_ABSPATH must be available in DB.*/
 static svn_error_t *
@@ -170,13 +169,13 @@ restore_file(svn_wc__db_t *db,
 
 /* Try to restore LOCAL_ABSPATH of node type KIND and if successfull,
    notify that the node is restored.  Use DB for accessing the working copy.
-   If USE_COMMIT_TIMES is set, then set working file's timestamp to 
+   If USE_COMMIT_TIMES is set, then set working file's timestamp to
    last-commit-time.
 
    Set RESTORED to TRUE if the node is successfull restored. RESTORED will
    be FALSE if restoring this node is not supported.
 
-   This function does all temporary allocations in SCRATCH_POOL 
+   This function does all temporary allocations in SCRATCH_POOL
  */
 static svn_error_t *
 restore_node(svn_boolean_t *restored,
@@ -370,7 +369,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
       svn_depth_t this_depth;
       svn_wc__db_lock_t *this_lock;
       svn_boolean_t this_shadows_base, this_switched, replaced = FALSE;
-      
+
 
       /* Clear the iteration subpool here because the loop has a bunch
          of 'continue' jump statements. */
@@ -489,7 +488,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
       /* Is the entry on disk? */
       if (apr_hash_get(dirents, child, APR_HASH_KEY_STRING) == NULL)
         {
-          svn_boolean_t missing = FALSE; 
+          svn_boolean_t missing = FALSE;
           if (restore_files && this_status != svn_wc__db_status_deleted
                             && !replaced)
             {
@@ -725,7 +724,7 @@ find_base_rev(svn_revnum_t *base_rev,
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, base_rev, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, 
+                               NULL, NULL, NULL, NULL, NULL, NULL,
                                &base_shadowed, NULL, NULL,
                                db, local_abspath, pool, pool));
 
@@ -753,11 +752,8 @@ find_base_rev(svn_revnum_t *base_rev,
     }
   else if (status == svn_wc__db_status_deleted)
     {
-      const char *base_del_abspath, *moved_to_abspath;
       const char *work_del_abspath;
-      svn_boolean_t replaced;
-      SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, &replaced,
-                                       &moved_to_abspath, &work_del_abspath,
+       SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL, &work_del_abspath,
                                        db, local_abspath, pool, pool));
 
       if (work_del_abspath != NULL)
@@ -978,11 +974,11 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
 
       if (repos_relpath)
         {
-          const char *parent_abspath, *basename;
+          const char *parent_abspath, *base;
           svn_wc__db_status_t parent_status;
           const char *parent_repos_relpath;
 
-          svn_dirent_split(local_abspath, &parent_abspath, &basename, pool);
+          svn_dirent_split(local_abspath, &parent_abspath, &base, pool);
 
           /* We can assume a file is in the same repository as its parent
              directory, so we only look at the relpath. */
@@ -996,7 +992,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
           if (err)
             goto abort_report;
 
-          if (!parent_repos_relpath && 
+          if (!parent_repos_relpath &&
               parent_status == svn_wc__db_status_added)
             {
               err = svn_wc__db_scan_addition(NULL, NULL,
@@ -1014,10 +1010,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
           if (err)
             goto abort_report;
 
-          /* Split PATH into parent PDIR and basename BNAME. */
-
           if (strcmp(repos_relpath,
-                     svn_relpath_join(parent_repos_relpath, basename, pool)) != 0)
+                     svn_relpath_join(parent_repos_relpath, base, pool)) != 0)
             {
               /* This file is disjoint with respect to its parent
                  directory.  Since we are looking at the actual target of
@@ -1145,7 +1139,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
   svn_txdelta_window_handler_t handler;
   void *wh_baton;
   const char *base_digest_hex;
-  svn_checksum_t *expected_checksum = NULL;
+  const svn_checksum_t *expected_checksum = NULL;
   svn_checksum_t *verify_checksum = NULL;
   svn_checksum_t *local_checksum;
   svn_error_t *err;
@@ -1220,16 +1214,19 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
       else
         {
           svn_stream_t *p_stream;
+          svn_checksum_t *p_checksum;
 
           /* ### we should ALREADY have the checksum for pristine. */
           SVN_ERR(svn_wc__get_pristine_contents(&p_stream, db, local_abspath,
                                                scratch_pool, scratch_pool));
-          p_stream = svn_stream_checksummed2(p_stream, &expected_checksum,
+          p_stream = svn_stream_checksummed2(p_stream, &p_checksum,
                                              NULL, svn_checksum_md5, TRUE,
                                              scratch_pool);
 
           /* Closing this will cause a full read/checksum. */
           SVN_ERR(svn_stream_close(p_stream));
+
+          expected_checksum = p_checksum;
         }
 
       /* apply_textdelta() is working against a base with this checksum */
@@ -1293,7 +1290,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 
       {
         const char *text_base;
-        
+
         SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
                                        scratch_pool));
 
@@ -1365,10 +1362,10 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
     {
       const svn_prop_t *p = &APR_ARRAY_IDX(propmods, i, svn_prop_t);
       if (kind == svn_wc__db_kind_file)
-        SVN_ERR(editor->change_file_prop(baton, p->name, p->value, 
+        SVN_ERR(editor->change_file_prop(baton, p->name, p->value,
                                          scratch_pool));
       else
-        SVN_ERR(editor->change_dir_prop(baton, p->name, p->value, 
+        SVN_ERR(editor->change_dir_prop(baton, p->name, p->value,
                                         scratch_pool));
     }
 

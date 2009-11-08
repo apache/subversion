@@ -27,13 +27,13 @@ use XML::XPath;
 #-------------------------------------------------------------------------------
 # FUNCTION   cmn_IniDir
 # DOES       Returns the directory where the initialization file is. The
-#            dir is application directory of the current user 
+#            dir is application directory of the current user
 sub cmn_IniDir
 {
     my $DirAppData='';
-  
+
     # The registry is the safe way of retrieving the Application data directory,
-    # but we let the environment variable %APPDATA% have the priority. This 
+    # but we let the environment variable %APPDATA% have the priority. This
     # should work on every Win32 platform.
     if ($ENV{'APPDATA'})
       {
@@ -57,12 +57,12 @@ sub cmn_IniDir
 sub cmn_RegGetValue
 {
     use Win32::TieRegistry;
-  
+
     my ($Key, $Value) = @_;
-  
+
     # Replace back slashes with slashes
     $Key =~ s/\\/\//g;
-  
+
     # Do some filtering if the caller includes HKLM in stead of HKEY_LOCAL_MACHINE
     # or the Win32::TieRegistry shortcut LMachine and so on
     $Key =~ s/^HKCC/CConfig/;
@@ -72,7 +72,7 @@ sub cmn_RegGetValue
     $Key =~ s/^HKLM/LMachine/;
     $Key =~ s/^HKPD/PerfData/;
     $Key =~ s/^HKUS/Users/;
-  
+
     $Registry->Delimiter("/");
 
     return $Registry -> {"$Key//$Value"};
@@ -149,9 +149,9 @@ sub UpdateXMLFile
 	my $XMLNewValue = $_[2];
 	my $PINode = $_[3];
 	#my $XMLType = $_[3];
-	
+
 	my $xp = XML::XPath->new(filename=>$XMLFile);
-	
+
         if(!$PINode) {
 		$xp->setNodeText($XMLPath, $XMLNewValue);
 
@@ -175,9 +175,9 @@ sub UpdateXMLFile
 		foreach my $node ($nodeset->get_nodelist) {
 			$XMLOut = $XMLOut.XML::XPath::XMLParser::as_string( $node );
 		}
-		
+
 		$XMLOut =~ s/$OrigPI/$XMLNewValue /;
-		
+
 		open(MYFILE, '>'.$XMLFile);
 		print MYFILE "<?xml version=\"1.0\"?>\n"; #this is hard coded - ASSUMING that PI's are being handled for wxs files
 		print MYFILE $XMLOut;
@@ -193,8 +193,8 @@ sub MkDirP
     my $Dir=$_[0];
     my @SubPaths;
 
-    
-    
+
+
     if (! -e $Dir)
       {
         @SubPaths = split (/\\/, $Dir);
@@ -243,7 +243,7 @@ sub PathSetupOut
       {
         die "ERROR: Could not find $SetupOut in svn_dynamics.ini\n";
       }
-    
+
     return $SetupOut;
 }
 

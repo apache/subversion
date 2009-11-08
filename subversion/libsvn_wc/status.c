@@ -52,7 +52,6 @@
 #include "tree_conflicts.h"
 
 #include "private/svn_wc_private.h"
-#include "private/svn_debug.h"
 
 
 
@@ -179,7 +178,7 @@ struct dir_baton
   svn_boolean_t text_changed;
 
   /* Working copy status structures for children of this directory.
-     This hash maps const char * abspaths  to svn_wc_status2_t * 
+     This hash maps const char * abspaths  to svn_wc_status2_t *
      status items. */
   apr_hash_t *statii;
 
@@ -572,8 +571,8 @@ assemble_status(svn_wc_status2_t **status,
 #endif /* HAVE_SYMLINK */
 
       if (path_kind == svn_node_dir && entry->kind == svn_node_dir)
-        SVN_ERR(svn_wc__internal_locked(NULL, &locked_p, db, local_abspath,
-                                        scratch_pool));
+        SVN_ERR(svn_wc__db_wclocked(&locked_p, db, local_abspath,
+                                    scratch_pool));
     }
 
   /* 5. Easy out:  unless we're fetching -every- entry, don't bother
@@ -733,14 +732,14 @@ is_external_path(apr_hash_t *externals,
 }
 
 
-/* Assuming that NAME is unversioned, send a status structure
+/* Assuming that LOCAL_ABSPATH is unversioned, send a status structure
    for it through STATUS_FUNC/STATUS_BATON unless this path is being
    ignored.  This function should never be called on a versioned entry.
 
-   NAME is the basename of the unversioned file whose status is being
+   LOCAL_ABSPATH is the path to the unversioned file whose status is being
    requested.  PATH_KIND is the node kind of NAME as determined by the
    caller.  PATH_SPECIAL is the special status of the path, also determined
-   by the caller.  ADM_ACCESS is an access baton for the working copy path.
+   by the caller.
    PATTERNS points to a list of filename patterns which are marked as
    ignored.  None of these parameter may be NULL.  EXTERNALS is a hash
    of known externals definitions for this status run.
@@ -808,7 +807,7 @@ get_dir_status(const struct walk_status_baton *wb,
                apr_pool_t *scratch_pool);
 
 /* Handle LOCAL_ABSPATH (whose entry is ENTRY) as a directory entry
-   of the directory whose entry is DIR_ENTRY.  All other arguments 
+   of the directory whose entry is DIR_ENTRY.  All other arguments
    are the same as those passed to get_dir_status(), the function
    for which this one is a helper.  */
 static svn_error_t *
@@ -886,7 +885,7 @@ handle_externals(const struct walk_status_baton *wb,
       apr_array_header_t *ext_items;
       int i;
 
-      if (wb->external_func && 
+      if (wb->external_func &&
           svn_dirent_is_ancestor(wb->target_abspath, local_abspath))
         {
           SVN_ERR((wb->external_func)(wb->external_baton, local_abspath,
@@ -997,7 +996,7 @@ get_dir_status(const struct walk_status_baton *wb,
 
       conflicts = apr_hash_make(subpool);
       all_children = apr_hash_make(subpool);
-      
+
       apr_hash_set(all_children, selected, APR_HASH_KEY_STRING, selected);
 
       selected_abspath = svn_dirent_join(local_abspath, selected, iterpool);
@@ -1072,7 +1071,7 @@ get_dir_status(const struct walk_status_baton *wb,
                     {
                       svn_error_clear(err);
 
-                      /* Most likely the parent refers to a missing child; 
+                      /* Most likely the parent refers to a missing child;
                        * retrieve the stub stored in the parent */
 
                       err = svn_wc__get_entry(&entry, wb->db, node_abspath,
@@ -1100,7 +1099,7 @@ get_dir_status(const struct walk_status_baton *wb,
                                                 : svn_node_none,
                                        dirent_p ? dirent_p->special : FALSE,
                                        ignore_patterns,
-                                       depth == svn_depth_infinity 
+                                       depth == svn_depth_infinity
                                                            ? depth
                                                            : svn_depth_empty,
                                        get_all,
@@ -1110,7 +1109,7 @@ get_dir_status(const struct walk_status_baton *wb,
               continue;
             }
         }
-      
+
       if (apr_hash_get(conflicts, key, klen))
         {
           /* Tree conflict */
@@ -1837,7 +1836,7 @@ close_directory(void *dir_baton,
         {
           /* ### When we add directory locking, we need to find a
              ### directory lock here. */
-          SVN_ERR(tweak_statushash(pb, db, TRUE, eb->db, db->local_abspath, 
+          SVN_ERR(tweak_statushash(pb, db, TRUE, eb->db, db->local_abspath,
                                    TRUE, repos_text_status, repos_prop_status,
                                    SVN_INVALID_REVNUM, NULL, pool));
         }
@@ -2088,10 +2087,10 @@ close_edit(void *edit_baton,
                              eb->ignores,
                              eb->status_func,
                              eb->status_baton,
-                             eb->cancel_func,
-                             eb->cancel_baton,
                              eb->wb.external_func,
                              eb->wb.external_baton,
+                             eb->cancel_func,
+                             eb->cancel_baton,
                              pool));
 
   return SVN_NO_ERROR;
@@ -2115,10 +2114,10 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           const apr_array_header_t *ignore_patterns,
                           svn_wc_status_func4_t status_func,
                           void *status_baton,
-                          svn_cancel_func_t cancel_func,
-                          void *cancel_baton,
                           svn_wc_external_update_t external_func,
                           void *external_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
@@ -2141,8 +2140,8 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   eb->target_abspath    = svn_dirent_join(anchor_abspath, target_basename,
                                           result_pool);
 
-  
-  
+
+
   eb->target_basename   = apr_pstrdup(result_pool, target_basename);
   eb->root_opened       = FALSE;
 
@@ -2208,10 +2207,10 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                    const apr_array_header_t *ignore_patterns,
                    svn_wc_status_func4_t status_func,
                    void *status_baton,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
                    svn_wc_external_update_t external_func,
                    void *external_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind, local_kind;

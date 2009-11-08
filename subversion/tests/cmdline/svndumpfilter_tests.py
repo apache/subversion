@@ -141,29 +141,10 @@ def svndumpfilter_loses_mergeinfo(sbox):
                                      sbox.repo_url + '/branch1')
 
 
-def dumpfilter_with_targets(sbox):
-  "svndumpfilter --targets blah"
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2697. ##
-
-  test_create(sbox)
+def _simple_dumpfilter_test(sbox, dumpfile, *dumpargs):
   wc_dir = sbox.wc_dir
 
-  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
-                                   'svndumpfilter_tests_data',
-                                   'greek_tree.dump')
-  dumpfile = svntest.main.file_read(dumpfile_location)
-
-  (fd, targets_file) = tempfile.mkstemp(dir=svntest.main.temp_dir)
-  targets = open(targets_file, 'w')
-  targets.write('/A/D/H\n')
-  targets.write('/A/D/G\n')
-  targets.close()
-
-  filtered_output = filter_and_return_output(dumpfile, 'exclude', '/A/B/E',
-                                             '--targets', targets_file,
-                                             '--quiet')
-  os.close(fd)
-  os.remove(targets_file)
+  filtered_output = filter_and_return_output(dumpfile, '--quiet', *dumpargs)
 
   # Setup our expectations
   load_and_verify_dumpstream(sbox, [], [], None, filtered_output,
@@ -213,6 +194,43 @@ def dumpfilter_with_targets(sbox):
                                         expected_status)
 
 
+def dumpfilter_with_targets(sbox):
+  "svndumpfilter --targets blah"
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2697. ##
+
+  test_create(sbox)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'greek_tree.dump')
+  dumpfile = svntest.main.file_read(dumpfile_location)
+
+  (fd, targets_file) = tempfile.mkstemp(dir=svntest.main.temp_dir)
+  try:
+    targets = open(targets_file, 'w')
+    targets.write('/A/D/H\n')
+    targets.write('/A/D/G\n')
+    targets.close()
+    _simple_dumpfilter_test(sbox, dumpfile,
+                            'exclude', '/A/B/E', '--targets', targets_file)
+  finally:
+    os.close(fd)
+    os.remove(targets_file)
+
+
+def dumpfilter_with_patterns(sbox):
+  "svndumpfilter --pattern PATH_PREFIX"
+
+  test_create(sbox)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'greek_tree.dump')
+  dumpfile = svntest.main.file_read(dumpfile_location)
+  _simple_dumpfilter_test(sbox, dumpfile,
+                          'exclude', '--pattern', '/A/D/[GH]*', '/A/[B]/E*')
+
+
 ########################################################################
 # Run the tests
 
@@ -222,7 +240,8 @@ test_list = [ None,
               reflect_dropped_renumbered_revs,
               svndumpfilter_loses_mergeinfo,
               dumpfilter_with_targets,
-             ]
+              dumpfilter_with_patterns,
+              ]
 
 if __name__ == '__main__':
   svntest.main.run_tests(test_list)

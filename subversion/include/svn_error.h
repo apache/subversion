@@ -290,7 +290,7 @@ svn_handle_warning(FILE *stream,
 
 /**
  * A statement macro for returning error values.
- * 
+ *
  * This macro can be used when directly returning an error to ensure
  * that the call stack is recorded correctly.
  */

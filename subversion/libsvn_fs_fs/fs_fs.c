@@ -1128,7 +1128,7 @@ write_config(svn_fs_t *fs,
 "### The following parameter enables rep-sharing in the repository.  It can" NL
 "### be switched on and off at will, but for best space-saving results"      NL
 "### should be enabled consistently over the life of the repository."        NL
-"# " CONFIG_OPTION_ENABLE_REP_SHARING " = false"                             NL
+"# " CONFIG_OPTION_ENABLE_REP_SHARING " = true"                              NL
 
 ;
 #undef NL
@@ -1944,7 +1944,9 @@ read_rep_offsets(representation_t **rep_p,
   return SVN_NO_ERROR;
 }
 
-/* See svn_fs_fs__get_node_revision, which wraps this and adds another
+/* Get the node-revision for the node ID in FS.
+   Set *NODEREV_P to the new node-revision structure, allocated in POOL.
+   See svn_fs_fs__get_node_revision, which wraps this and adds another
    error. */
 static svn_error_t *
 get_node_revision_body(node_revision_t **noderev_p,
@@ -4058,7 +4060,7 @@ fetch_all_changes(apr_hash_t *changed_paths,
                 continue;
 
               /* If we come across a child of our path, remove it. */
-              if (svn_path_is_child(change->path, path, iterpool))
+              if (svn_dirent_is_child(change->path, path, iterpool))
                 apr_hash_set(changed_paths, path, klen, NULL);
             }
         }
@@ -5658,7 +5660,7 @@ verify_locks(svn_fs_t *fs,
       /* If this path has already been verified as part of a recursive
          check of one of its parents, no need to do it again.  */
       if (last_recursed
-          && svn_path_is_child(last_recursed->data, path, subpool))
+          && svn_dirent_is_child(last_recursed->data, path, subpool))
         continue;
 
       /* Fetch the change associated with our path.  */

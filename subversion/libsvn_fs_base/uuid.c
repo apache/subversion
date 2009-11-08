@@ -71,7 +71,7 @@ svn_fs_base__get_uuid(svn_fs_t *fs,
       args.uuid = uuid;
       SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_get_uuid, &args,
                                      FALSE, scratch_pool));
-      
+
       if (*uuid)
         {
           *uuid = apr_pstrdup(pool, *uuid);

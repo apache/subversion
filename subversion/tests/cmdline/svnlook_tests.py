@@ -571,12 +571,12 @@ def test_filesize(sbox):
     if len(filesize_output) != 1:
       raise svntest.Failure("'svnlook filesize' printed something other than "
                             "a single line of output.")
-    filesize = int(filesize_output[0].strip())    
+    filesize = int(filesize_output[0].strip())
     if filesize != cat_size:
       raise svntest.Failure("'svnlook filesize' and the counted length of "
                             "'svnlook cat's output differ for the path "
                             "'%s'." % (line))
-  
+
 ########################################################################
 # Run the tests
 

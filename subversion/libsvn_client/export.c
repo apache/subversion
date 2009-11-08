@@ -204,7 +204,7 @@ copy_one_versioned_file(const char *from_abspath,
   if (keywords)
     {
       svn_revnum_t changed_rev;
-      const char *fmt;
+      const char *suffix;
       const char *author;
 
       SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, NULL, &author,
@@ -217,17 +217,17 @@ copy_one_versioned_file(const char *from_abspath,
              to the revision number, and set the author to
              "(local)" since we can't always determine the
              current user's username */
-          fmt = "%ldM";
+          suffix = "M";
           author = _("(local)");
         }
       else
         {
-          fmt = "%ld";
+          suffix = "";
         }
 
       SVN_ERR(svn_subst_build_keywords2
               (&kw, keywords->data,
-               apr_psprintf(scratch_pool, fmt, changed_rev),
+               apr_psprintf(scratch_pool, "%ld%s", changed_rev, suffix),
                entry->url, tm, author, scratch_pool));
     }
 

@@ -130,6 +130,32 @@ svn_checksum_to_cstring(const svn_checksum_t *checksum,
                         apr_pool_t *pool);
 
 
+/** Return a serialized representation of @a checksum, allocated in
+ * @a result_pool. Temporary allocations are performed in @a scratch_pool.
+ *
+ * Note that @a checksum may not be NULL.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_checksum_serialize(const svn_checksum_t *checksum,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
+
+/** Return @a checksum from the serialized format at @a data. The checksum
+ * will be allocated in @a result_pool, with any temporary allocations
+ * performed in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_checksum_deserialize(const svn_checksum_t **checksum,
+                         const char *data,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
 /** Parse the hex representation @a hex of a checksum of kind @a kind and
  * set @a *checksum to the result, allocating in @a pool.
  *

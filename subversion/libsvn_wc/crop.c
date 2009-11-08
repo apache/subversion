@@ -319,10 +319,10 @@ svn_error_t *
 svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
                   const char *local_abspath,
                   svn_depth_t depth,
-                  svn_wc_notify_func2_t notify_func,
-                  void *notify_baton,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
+                  svn_wc_notify_func2_t notify_func,
+                  void *notify_baton,
                   apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;

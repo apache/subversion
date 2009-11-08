@@ -29,7 +29,11 @@
 # moves working copies between wc-1 and wc-ng.
 #
 
-import os, sys, tarfile, shutil
+import os
+import re
+import shutil
+import sys
+import tarfile
 
 import svntest
 
@@ -42,8 +46,9 @@ wc_is_too_old_regex = (".*Working copy format of '.*' is too old \(\d+\); " +
 
 
 def get_current_format():
-  ### parse this from libsvn_wc/wc.h
-  return 15
+  # Get current format from subversion/libsvn_wc/wc.h
+  format_file = open(os.path.join(os.path.dirname(__file__), "..", "..", "libsvn_wc", "wc.h")).read()
+  return int(re.search("\n#define SVN_WC__VERSION (\d+)\n", format_file).group(1))
 
 
 def replace_sbox_with_tarfile(sbox, tar_filename):

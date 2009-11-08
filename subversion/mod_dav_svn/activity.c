@@ -284,7 +284,7 @@ dav_svn__create_txn(const dav_svn_repos *repos,
 
 
 dav_error *
-dav_svn__abort_txn(const dav_svn_repos *repos, 
+dav_svn__abort_txn(const dav_svn_repos *repos,
                    const char *txn_name,
                    apr_pool_t *pool)
 {

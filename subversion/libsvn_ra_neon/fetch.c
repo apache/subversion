@@ -1196,7 +1196,7 @@ svn_error_t *svn_ra_neon__rev_proplist(svn_ra_session_t *session,
   if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
     {
       const char *url = apr_psprintf(pool, "%s/%ld", ras->rev_stub, rev);
-      SVN_ERR(svn_ra_neon__get_props_resource(&bln, ras, url, 
+      SVN_ERR(svn_ra_neon__get_props_resource(&bln, ras, url,
                                               NULL, NULL, pool));
     }
   else

@@ -1613,7 +1613,7 @@ svn_subst_translate_string(svn_string_t **new_value,
                                        NULL,  /* no keywords */
                                        FALSE, /* no expansion */
                                        scratch_pool));
-  
+
   *new_value = svn_string_create(val_utf8_lf, pool);
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;

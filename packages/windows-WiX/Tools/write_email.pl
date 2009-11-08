@@ -38,10 +38,10 @@ sub Main
 {
 	my $SvnVersion=&cmn_ValuePathfile('svn_version.ini', 'svn_version');
 
-	#get the MD5 checksum  
+	#get the MD5 checksum
 
 	my $binfile = '..\BuildSubversion\bin\Release\en-us\\'.'Setup-Subversion-'.$SvnVersion.'.msi';
-	
+
 	open(FILE, $binfile) or die "Can't open '$binfile': $!";
 	binmode(FILE);
 
@@ -50,7 +50,7 @@ sub Main
 		$md5->add($_);
 	}
 	close(FILE);
-	
+
 	#get the SHA1 checksum
 	open(FILESHA1, $binfile) or die "Can't open '$binfile': $!";
 	binmode(FILESHA1);
@@ -60,7 +60,7 @@ sub Main
 		$sha1->add($_);
 	}
 	close(FILESHA1);
-    
+
 	my $EmailFile = '..\BuildSubversion\bin\Release\en-us\email_content.txt';
 	open(MYFILE, '>'.$EmailFile);
 	print MYFILE "I am happy to announce the release of the Subversion ".$SvnVersion." win32 installer based on D.J. Heap's win32 binaries.\n\n";
@@ -71,11 +71,11 @@ sub Main
 
 	print MYFILE "MD5 checksum:\n";
 
-	print MYFILE $md5->hexdigest, " *Setup-Subversion-".$SvnVersion.".msi\n\n"; 
- 
+	print MYFILE $md5->hexdigest, " *Setup-Subversion-".$SvnVersion.".msi\n\n";
+
 	print MYFILE "SHA1 checksum:\n";
 
-	print MYFILE $sha1->hexdigest, "  Setup-Subversion-".$SvnVersion.".msi\n\n"; 
+	print MYFILE $sha1->hexdigest, "  Setup-Subversion-".$SvnVersion.".msi\n\n";
 
 	print MYFILE "PGP Signature:\n";
 	print MYFILE "(watch wrapping)\n\n";
@@ -87,7 +87,7 @@ sub Main
 	print MYFILE "Regards,\n\n";
 
 	print MYFILE "Troy Simpson\n";
-	
+
 	close(MYFILE);
 
 }

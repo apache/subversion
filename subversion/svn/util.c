@@ -1270,7 +1270,7 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
    * Otherwise show the complete URL, and if we can't, show dots. */
 
   if (node->repos_url &&
-      (wc_repos_root_URL == NULL || 
+      (wc_repos_root_URL == NULL ||
        strcmp(node->repos_url, wc_repos_root_URL) != 0))
     root_str = node->repos_url;
 

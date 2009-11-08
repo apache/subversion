@@ -1504,12 +1504,12 @@ def diff_renamed_file(sbox):
   # Repos->WC of the directory ignoring copyfrom
   exit_code, diff_output, err_output = svntest.main.run_svn(
     None, 'diff', '-r', '1', '--show-copies-as-adds', os.path.join('A', 'D'))
-  
+
   if check_diff_output(diff_output,
                        pi_path,
                        'D') :
     raise svntest.Failure
-  
+
   if check_diff_output(diff_output,
                        pi2_path,
                        'A') :
@@ -1816,7 +1816,7 @@ def diff_renamed_dir(sbox):
 
   # Check a repos->wc diff
   exit_code, diff_output, err_output = svntest.main.run_svn(
-    None, 'diff', os.path.join('A', 'D'))
+    None, 'diff', '--show-copies-as-adds', os.path.join('A', 'D'))
 
   if check_diff_output(diff_output,
                        os.path.join('A', 'D', 'G', 'pi'),
@@ -1989,7 +1989,7 @@ def diff_schedule_delete(sbox):
   ]
 
   expected_output_r1_base = make_diff_header("foo", "revision 0",
-                                                "revision 3") + [
+                                                "working copy") + [
   "@@ -0,0 +1,2 @@\n",
   "+xxx\n",
   "+yyy\n"
@@ -2192,8 +2192,7 @@ def diff_repos_wc_add_with_props(sbox):
 
   sbox.build()
 
-  diff_foo_r1_r3 = make_diff_header("foo", "revision 0",
-                                                "revision 3") + [
+  diff_foo = [
     "@@ -0,0 +1 @@\n",
     "+content\n",
     "\n",
@@ -2203,7 +2202,7 @@ def diff_repos_wc_add_with_props(sbox):
     "## -0,0 +1 ##\n",
     "+propvalue\n",
     ]
-  diff_X_r1_r3 = [
+  diff_X = [
     "\n",
     "Property changes on: X\n",
     "___________________________________________________________________\n",
@@ -2211,7 +2210,7 @@ def diff_repos_wc_add_with_props(sbox):
     "## -0,0 +1 ##\n",
     "+propvalue\n",
     ]
-  diff_bar_r1_r3 = make_diff_header("X/bar", "revision 0", "revision 3") + [
+  diff_X_bar = [
     "@@ -0,0 +1 @@\n",
     "+content\n",
     "\n",
@@ -2222,8 +2221,17 @@ def diff_repos_wc_add_with_props(sbox):
     "+propvalue\n",
     ]
 
-  expected_output_r1_r3 = diff_X_r1_r3 + diff_bar_r1_r3 + diff_foo_r1_r3
-  expected_output_r1_r3_a = diff_foo_r1_r3 + diff_bar_r1_r3 + diff_X_r1_r3
+  diff_foo_r1_base = make_diff_header("foo", "revision 0",
+                                              "revision 3") + diff_foo
+  diff_foo_base_r3 = make_diff_header("foo", "revision 0",
+                                             "revision 3") + diff_foo
+  diff_X_bar_r1_base = make_diff_header("X/bar", "revision 0",
+                                                 "revision 3") + diff_X_bar
+  diff_X_bar_base_r3 = make_diff_header("X/bar", "revision 0",
+                                                 "revision 3") + diff_X_bar
+
+  expected_output_r1_base = diff_X + diff_X_bar_r1_base + diff_foo_r1_base
+  expected_output_base_r3 = diff_foo_base_r3 + diff_X_bar_base_r3 + diff_X
 
   os.chdir(sbox.wc_dir)
 
@@ -2246,9 +2254,9 @@ def diff_repos_wc_add_with_props(sbox):
 
   # Now, if we diff r1 to WORKING or BASE, we should see the content
   # addition for foo and X/bar, and property additions for all three.
-  svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
+  svntest.actions.run_and_verify_svn(None, expected_output_r1_base, [],
                                      'diff', '-r', '1')
-  svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
+  svntest.actions.run_and_verify_svn(None, expected_output_r1_base, [],
                                      'diff', '-r', '1:BASE')
 
   # Update the BASE and WORKING revisions to r1.
@@ -2256,7 +2264,7 @@ def diff_repos_wc_add_with_props(sbox):
                                      'up', '-r', '1')
 
   # If we diff BASE to r3, we should see the same output as above.
-  svntest.actions.run_and_verify_svn(None, expected_output_r1_r3_a, [],
+  svntest.actions.run_and_verify_svn(None, expected_output_base_r3, [],
                                      'diff', '-r', 'BASE:3')
 
 

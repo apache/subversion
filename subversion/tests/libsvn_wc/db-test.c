@@ -389,7 +389,7 @@ test_getting_info(apr_pool_t *pool)
   const char *changed_author;
   apr_time_t last_mod_time;
   svn_depth_t depth;
-  svn_checksum_t *checksum;
+  const svn_checksum_t *checksum;
   svn_filesize_t translated_size;
   const char *target;
   svn_wc__db_lock_t *lock;
@@ -613,6 +613,32 @@ validate_node(svn_wc__db_t *db,
                                    scratch_pool, scratch_pool));
   SVN_TEST_ASSERT(value != NULL && strcmp(value->data, relpath) == 0);
 
+  SVN_ERR(svn_wc__db_read_props(&props, db, path,
+                                scratch_pool, scratch_pool));
+  SVN_TEST_ASSERT(props != NULL);
+  value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+
+  SVN_ERR(svn_wc__db_read_pristine_props(&props, db, path,
+                                         scratch_pool, scratch_pool));
+  SVN_TEST_ASSERT(props != NULL);
+  value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+
+  /* Now add a property value and read it back (all on actual) */
+  apr_hash_set(props, "p999", APR_HASH_KEY_STRING, value);
+
+  SVN_ERR(svn_wc__db_op_set_props(db, path, props, scratch_pool));
+  SVN_ERR(svn_wc__db_read_props(&props, db, path,
+                                scratch_pool, scratch_pool));
+  SVN_TEST_ASSERT(props != NULL);
+  value = apr_hash_get(props, "p999", APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
+
+  if (status == svn_wc__db_status_normal)
+    SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, path, props, FALSE,
+                                                  scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -787,7 +813,7 @@ test_working_info(apr_pool_t *pool)
   const char *changed_author;
   apr_time_t last_mod_time;
   svn_depth_t depth;
-  svn_checksum_t *checksum;
+  const svn_checksum_t *checksum;
   svn_filesize_t translated_size;
   const char *target;
   const char *changelist;
@@ -876,7 +902,7 @@ test_pdh(apr_pool_t *pool)
             "sub/A/B/C/D", ROOT_ONE, UUID_ONE, 1,
             svn_wc__db_kind_file, svn_wc__db_status_absent,
             pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1208,7 +1234,7 @@ test_global_relocate(apr_pool_t *pool)
   const char *repos_relpath;
   const char *repos_root_url;
   const char *repos_uuid;
-  
+
   SVN_ERR(create_open(&db, &local_abspath,
                       "test_global_relocate", SVN_WC__VERSION,
                       svn_wc__db_openmode_readonly, pool));

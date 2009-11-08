@@ -319,6 +319,8 @@ upgrade_to_wcng(svn_wc__db_t *db,
   apr_hash_t *entries;
   const svn_wc_entry_t *this_dir;
   svn_sqlite__db_t *sdb;
+  apr_int64_t repos_id;
+  apr_int64_t wc_id;
 
   /* Don't try to mess with the WC if there are old log files left. */
 
@@ -358,7 +360,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
   this_dir = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
 
   /* Create an empty sqlite database for this directory. */
-  SVN_ERR(svn_wc__db_upgrade_begin(&sdb, dir_abspath,
+  SVN_ERR(svn_wc__db_upgrade_begin(&sdb, &repos_id, &wc_id, dir_abspath,
                                    this_dir->repos, this_dir->uuid,
                                    scratch_pool, scratch_pool));
 
@@ -370,7 +372,9 @@ upgrade_to_wcng(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_temp_reset_format(SVN_WC__VERSION, db, dir_abspath,
                                        scratch_pool));
   SVN_ERR(svn_wc__db_wclock_set(db, dir_abspath, scratch_pool));
-  SVN_ERR(svn_wc__entries_write_new(db, dir_abspath, entries, scratch_pool));
+  SVN_ERR(svn_wc__write_upgraded_entries(db, sdb, repos_id, wc_id,
+                                         dir_abspath, entries,
+                                         scratch_pool));
 
   SVN_ERR(svn_io_remove_file2(svn_wc__adm_child(dir_abspath,
                                                 SVN_WC__ADM_FORMAT,

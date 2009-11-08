@@ -648,7 +648,7 @@ svn_cmdline__parse_config_option(apr_array_header_t *config_options,
                 {
                   config_option->value = apr_pstrndup(pool, equals_sign + 1,
                                                       opt_arg + len - equals_sign - 1);
-                  APR_ARRAY_PUSH(config_options, svn_cmdline__config_argument_t *) 
+                  APR_ARRAY_PUSH(config_options, svn_cmdline__config_argument_t *)
                                        = config_option;
                   return SVN_NO_ERROR;
                 }
@@ -670,7 +670,7 @@ svn_cmdline__apply_config_options(apr_hash_t *config,
   for (i = 0; i < config_options->nelts; i++)
    {
      svn_config_t *cfg;
-     svn_cmdline__config_argument_t *arg = 
+     svn_cmdline__config_argument_t *arg =
                           APR_ARRAY_IDX(config_options, i,
                                         svn_cmdline__config_argument_t *);
 

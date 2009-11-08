@@ -229,7 +229,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
   {"record-only",   opt_record_only, 0,
-                    N_("mark revisions as merged (use with -r)")},
+                    N_("merge only mergeinfo differences")},
   {"old",           opt_old_cmd, 1, N_("use ARG as the older target")},
   {"new",           opt_new_cmd, 1, N_("use ARG as the newer target")},
   {"revprop",       opt_revprop, 0,
@@ -1547,7 +1547,7 @@ main(int argc, const char *argv[])
         break;
       case opt_config_options:
         if (!opt_state.config_options)
-          opt_state.config_options = 
+          opt_state.config_options =
                    apr_array_make(pool, 1, sizeof(svn_cmdline__config_argument_t*));
 
         err = svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool);

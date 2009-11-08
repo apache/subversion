@@ -1404,13 +1404,13 @@ def commit_multiple_wc_nested(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
-# Same as commit_multiple_wc_nested except that the two WCs are not nested. 
+# Same as commit_multiple_wc_nested except that the two WCs are not nested.
 def commit_multiple_wc(sbox):
   "commit from two working copies"
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   # Cleanup original wc
   svntest.sandbox._cleanup_test_path(wc_dir)
 
@@ -1465,7 +1465,7 @@ def commit_multiple_wc_multiple_repos(sbox):
   # Create another repository
   repo2, url2 = sbox.add_repo_path("repo2")
   svntest.main.copy_repos(sbox.repo_dir, repo2, 1, 1)
-  
+
   # Cleanup original wc
   svntest.sandbox._cleanup_test_path(wc_dir)
 
@@ -1504,7 +1504,7 @@ def commit_multiple_wc_multiple_repos(sbox):
   # Verify status unchanged
   svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
-  
+
 #----------------------------------------------------------------------
 
 def commit_nonrecursive(sbox):

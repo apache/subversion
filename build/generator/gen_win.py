@@ -896,7 +896,7 @@ class WinGeneratorBase(GeneratorBase):
 
     if not self.sqlite_inline:
       fakelibdirs.append(self.apath(self.sqlite_path, "lib"))
-      
+
     if self.sasl_path:
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if self.serf_lib:
@@ -1446,7 +1446,7 @@ class WinGeneratorBase(GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)"', txt, re.M)
 
     version = tuple(map(int, vermatch.groups()))
-    
+
 
     self.sqlite_version = '%d.%d.%d' % version
 

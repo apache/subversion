@@ -122,7 +122,7 @@ svn_opt__args_to_target_array(apr_array_header_t **targets_p,
 /**
  * Return a human-readable description of @a revision.  The result
  * will be allocated statically or from @a result_pool.
- * 
+ *
  * @since New in 1.7.
  */
 const char *

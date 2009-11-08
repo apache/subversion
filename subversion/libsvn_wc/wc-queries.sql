@@ -27,18 +27,16 @@
 /* these are used in wc_db.c  */
 
 -- STMT_SELECT_BASE_NODE
-select wc_id, local_relpath, repos_id, repos_relpath,
-  presence, kind, revnum, checksum, translated_size,
-  changed_rev, changed_date, changed_author, depth, symlink_target,
-  last_mod_time, properties
+select repos_id, repos_relpath, presence, kind, revnum, checksum,
+  translated_size, changed_rev, changed_date, changed_author, depth,
+  symlink_target, last_mod_time, properties
 from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_SELECT_BASE_NODE_WITH_LOCK
-select wc_id, local_relpath, base_node.repos_id, base_node.repos_relpath,
-  presence, kind, revnum, checksum, translated_size,
-  changed_rev, changed_date, changed_author, depth, symlink_target,
-  last_mod_time, properties,
+select base_node.repos_id, base_node.repos_relpath, presence, kind,
+  revnum, checksum, translated_size, changed_rev, changed_date,
+  changed_author, depth, symlink_target, last_mod_time, properties,
   lock_token, lock_owner, lock_comment, lock_date
 from base_node
 left outer join lock on base_node.repos_id = lock.repos_id
@@ -107,6 +105,14 @@ where wc_id = ?1 and local_relpath = ?2;
 select properties from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_SELECT_WORKING_PROPS
+select properties from working_node
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_SELECT_ACTUAL_PROPS
+select properties from actual_node
+where wc_id = ?1 and local_relpath = ?2;
+
 -- STMT_UPDATE_BASE_PROPS
 update base_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
@@ -119,22 +125,9 @@ where wc_id = ?1 and local_relpath = ?2;
 update actual_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
--- STMT_SELECT_ALL_PROPS
-select actual_node.properties, working_node.properties,
-  base_node.properties
-from base_node
-left outer join working_node on base_node.wc_id = working_node.wc_id
-  and base_node.local_relpath = working_node.local_relpath
-left outer join actual_node on base_node.wc_id = actual_node.wc_id
-  and base_node.local_relpath = actual_node.local_relpath
-where base_node.wc_id = ?1 and base_node.local_relpath = ?2;
-
--- STMT_SELECT_PRISTINE_PROPS
-select working_node.properties, base_node.properties
-from base_node
-left outer join working_node on base_node.wc_id = working_node.wc_id
-  and base_node.local_relpath = working_node.local_relpath
-where base_node.wc_id = ?1 and base_node.local_relpath = ?2;
+-- STMT_INSERT_ACTUAL_PROPS
+insert into actual_node (wc_id, local_relpath, parent_relpath, properties)
+values (?1, ?2, ?3, ?4);
 
 -- STMT_INSERT_LOCK
 insert or replace into lock
@@ -169,6 +162,12 @@ where wc_id = ?1 and local_relpath = ?2;
 delete from lock
 where repos_id = ?1 and repos_relpath = ?2;
 
+-- STMT_CLEAR_BASE_RECURSIVE_DAV_CACHE
+update base_node set dav_cache = null
+where dav_cache is not null and wc_id = ?1 and
+  (local_relpath = ?2 or
+   local_relpath like ?3 escape '#');
+
 -- STMT_UPDATE_BASE_RECURSIVE_REPO
 update base_node set repos_id = ?4
 where repos_id is not null and wc_id = ?1 and
@@ -196,6 +195,8 @@ update actual_node set tree_conflict_data = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_INSERT_ACTUAL_TREE_CONFLICTS
+/* tree conflicts are always recorded on the wcroot node, so the
+   parent_relpath will be null.  */
 insert into actual_node (
   wc_id, local_relpath, tree_conflict_data)
 values (?1, ?2, ?3);
@@ -206,8 +207,8 @@ where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_INSERT_ACTUAL_CHANGELIST
 insert into actual_node (
-  wc_id, local_relpath, /* ### parent_relpath, */ changelist)
-values (?1, ?2, ?3);
+  wc_id, local_relpath, changelist, parent_relpath)
+values (?1, ?2, ?3, ?4);
 
 -- STMT_RESET_ACTUAL_WITH_CHANGELIST
 REPLACE INTO actual_node (
@@ -333,15 +334,6 @@ insert or replace into actual_node (
   conflict_working, prop_reject, changelist, text_mod,
   tree_conflict_data)
 values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);
-
--- STMT_DELETE_ALL_WORKING
-delete from working_node;
-
--- STMT_DELETE_ALL_BASE
-delete from base_node;
-
--- STMT_DELETE_ALL_ACTUAL
-delete from actual_node;
 
 -- STMT_SELECT_KEEP_LOCAL_FLAG
 select keep_local from working_node

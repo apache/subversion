@@ -169,7 +169,7 @@ svn_client_blame4(const char *target,
                   apr_pool_t *pool)
 {
   struct blame_receiver_wrapper_baton2 baton;
-  
+
   baton.receiver = receiver;
   baton.baton = receiver_baton;
 
@@ -284,10 +284,10 @@ wrapped_receiver(void *baton,
 
 static void
 wrap_pre_blame3_receiver(svn_client_blame_receiver_t *receiver,
-                   void **receiver_baton,
-                   apr_pool_t *pool)
+                         void **receiver_baton,
+                         apr_pool_t *pool)
 {
-  if (strlen(APR_EOL_STR) > 1)
+  if (sizeof(APR_EOL_STR) == 3)
     {
       struct wrapped_receiver_baton_s *b = apr_palloc(pool,sizeof(*b));
 
@@ -635,10 +635,10 @@ svn_client_diff4(const apr_array_header_t *options,
                  apr_pool_t *pool)
 {
   return svn_client_diff5(options, path1, revision1, path2,
-                          revision2, NULL, depth,
+                          revision2, relative_to_dir, depth,
                           ignore_ancestry, no_diff_deleted, FALSE,
                           ignore_content_type, header_encoding,
-                          outfile, errfile, NULL, ctx, pool);
+                          outfile, errfile, changelists, ctx, pool);
 }
 
 svn_error_t *
@@ -728,7 +728,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
                               peg_revision,
                               start_revision,
                               end_revision,
-                              NULL,
+                              relative_to_dir,
                               depth,
                               ignore_ancestry,
                               no_diff_deleted,
@@ -737,7 +737,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
                               header_encoding,
                               outfile,
                               errfile,
-                              NULL,
+                              changelists,
                               ctx,
                               pool);
 }
@@ -1786,7 +1786,7 @@ svn_client_url_from_path(const char **url,
                          apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
-  
+
   SVN_ERR(svn_client_create_context(&ctx, pool));
 
   return svn_client_url_from_path2(url, path_or_url, ctx, pool, pool);

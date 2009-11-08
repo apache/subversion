@@ -45,7 +45,7 @@ static svn_boolean_t
 parse_offset(svn_linenum_t *offset, const char *number)
 {
   apr_int64_t parsed_offset;
-  
+
   errno = 0; /* clear errno for safety */
   parsed_offset = apr_atoi64(number);
   if (errno == ERANGE || parsed_offset < 0)
@@ -109,7 +109,7 @@ parse_hunk_header(const char *header, svn_hunk_t *hunk, apr_pool_t *pool)
   static const char * const atat = "@@";
   const char *p;
   svn_stringbuf_t *range;
-  
+
   p = header + strlen(atat);
   if (*p != ' ')
     /* No. */
@@ -167,21 +167,23 @@ parse_hunk_header(const char *header, svn_hunk_t *hunk, apr_pool_t *pool)
   return TRUE;
 }
 
-/* A stream line-filter which allows only original text from a hunk. */
+/* A stream line-filter which allows only original text from a hunk,
+ * and filters special lines (which start with a backslash). */
 static svn_error_t *
 original_line_filter(svn_boolean_t *filtered, const char *line, void *baton,
                      apr_pool_t *scratch_pool)
 {
-  *filtered = line[0] == '+';
+  *filtered = (line[0] == '+' || line[0] == '\\');
   return SVN_NO_ERROR;
 }
 
-/* A stream line-filter which allows only modified text from a hunk. */
+/* A stream line-filter which allows only modified text from a hunk,
+ * and filters special lines (which start with a backslash). */
 static svn_error_t *
 modified_line_filter(svn_boolean_t *filtered, const char *line, void *baton,
                      apr_pool_t *scratch_pool)
 {
-  *filtered = line[0] == '-';
+  *filtered = (line[0] == '-' || line[0] == '\\');
   return SVN_NO_ERROR;
 }
 
@@ -248,6 +250,12 @@ parse_next_hunk(svn_hunk_t **hunk,
       last_line = pos;
       SVN_ERR(svn_stream_readline(stream, &line, patch->eol_str, &eof,
                                   iterpool));
+
+      /* Lines starting with a backslash are comments, such as
+       * "\ No newline at end of file". */
+      if (line->data[0] == '\\')
+        continue;
+
       if (! eof)
         {
           /* Update line offset for next iteration.
@@ -266,7 +274,7 @@ parse_next_hunk(svn_hunk_t **hunk,
                * of the line just read is the hunk text's byte offset. */
               start = last_line;
             }
-          
+
           c = line->data[0];
           if (original_lines > 0 && (c == ' ' || c == '-'))
             {
@@ -295,7 +303,7 @@ parse_next_hunk(svn_hunk_t **hunk,
             }
         }
       else
-        { 
+        {
           if (starts_with(line->data, atat))
             {
               /* Looks like we have a hunk header, let's try to rip it apart. */
@@ -329,7 +337,7 @@ parse_next_hunk(svn_hunk_t **hunk,
                                                              start, end,
                                                              result_pool);
       svn_stream_set_line_filter_callback(original_text, original_line_filter);
-      svn_stream_set_line_transformer_callback(original_text, 
+      svn_stream_set_line_transformer_callback(original_text,
                                                remove_leading_char_transformer);
 
       /* Create a stream which returns the modified hunk text. */
@@ -339,7 +347,7 @@ parse_next_hunk(svn_hunk_t **hunk,
                                                              start, end,
                                                              result_pool);
       svn_stream_set_line_filter_callback(modified_text, modified_line_filter);
-      svn_stream_set_line_transformer_callback(modified_text, 
+      svn_stream_set_line_transformer_callback(modified_text,
                                                remove_leading_char_transformer);
       /* Set the hunk's texts. */
       (*hunk)->original_text = original_text;
@@ -352,7 +360,7 @@ parse_next_hunk(svn_hunk_t **hunk,
   return SVN_NO_ERROR;
 }
 
-/* 
+/*
  * Ensure that all streams which were opened for HUNK are closed.
  */
 static svn_error_t *

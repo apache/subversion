@@ -263,14 +263,6 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
-/* Set *REL_PATH to a relative path which, when URI-encoded and joined
-   with RA_SESSION's session url, will result in a string that matches URL. */
-svn_error_t *
-svn_client__path_relative_to_session(const char **rel_path,
-                                     svn_ra_session_t *ra_session,
-                                     const char *url,
-                                     apr_pool_t *pool);
-
 /* Ensure that RA_SESSION's session URL matches SESSION_URL,
    reparenting that session if necessary.  If reparenting occurs,
    store the previous session URL in *OLD_SESSION_URL (so that if the
@@ -653,8 +645,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    TARGET is a working-copy path, the base of the hierarchy to be
    compared.  It corresponds to the URL opened in RA_SESSION below.
 
-   If WC_CTX is not NULL, then it is a context for the working copy which
-   TARGET is located in.
+   WC_CTX is a context for the working copy.
 
    DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
    implement the file comparison function

@@ -5,7 +5,7 @@
 #   md5sums
 #
 # Note: this file is not guaranteed to work with Python 3.  In fact, it
-# probably doesn't.  Since the RM is really the only guy who uses and 
+# probably doesn't.  Since the RM is really the only guy who uses and
 # develops this script, and he currently has Python 2.x, let's forgo worrying
 # about Python 3 compatibility until it becomes a real problem.  It makes
 # the script simpler to develop and maintain.  -hkw

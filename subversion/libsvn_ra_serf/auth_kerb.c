@@ -34,9 +34,9 @@
 #include "auth_kerb.h"
 
 /** These functions implements Kerberos authentication, using GSS-API
- *  (RFC 2743). The message-exchange is documented in RFC 4559. 
- * 
- * Note: this implementation uses gssapi and only works on *nix. For 
+ *  (RFC 2743). The message-exchange is documented in RFC 4559.
+ *
+ * Note: this implementation uses gssapi and only works on *nix. For
  * the Windows Kerberos client check win32_auth_sspi.c.
  * ### TODO: Windows Kerberos client isn't implemented in ra_serf ATM.
  **/
@@ -58,10 +58,10 @@
  * - Authentication Server (AS): verifies users during login
  * - Ticket-Granting Server (TGS): issues proof of identity tickets
  * - HTTP server (S)
- * 
+ *
  * Steps:
  * 0. User logs in to the AS and receives a TGS ticket. On workstations
- * where the login program doesn't support Kerberos, the user can use 
+ * where the login program doesn't support Kerberos, the user can use
  * 'kinit'.
  *
  * 1. C  --> S:    GET
@@ -70,7 +70,7 @@
  *                 WWW-Authenticate: Negotiate
  *
  * -> Svn contacts the TGS to request a session key for the HTTP service
- *    @ target host. The returned session key is encrypted with the HTTP 
+ *    @ target host. The returned session key is encrypted with the HTTP
  *    service's secret key, so we can safely send it to the server.
  *
  * 2. C  --> S:    GET
@@ -78,7 +78,7 @@
  *                 gss_api_ctx->state = gss_api_auth_in_progress;
  *
  *    C <--  S:    200 OK
- *                 WWW-Authenticate: Negotiate <Base64 encoded server 
+ *                 WWW-Authenticate: Negotiate <Base64 encoded server
  *                                              authentication data>
  *
  * -> The server returned a key to proof itself to us. We check this key
@@ -93,7 +93,7 @@
  * be authenticated without needing to pass the WWW-Authenticate header.
  *
  * Note: Step 1 of the handshake will only happen on the first connection, once
- * we know the server requires Kerberos authentication, the initial requests 
+ * we know the server requires Kerberos authentication, the initial requests
  * on the other connections will include a session key, so we start  at
  * step 2 in the handshake.
  * ### TODO: Not implemented yet!

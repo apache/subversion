@@ -80,6 +80,34 @@ svn_wc__wq_add_loggy(svn_wc__db_t *db,
                      const svn_stringbuf_t *log_content,
                      apr_pool_t *scratch_pool);
 
+
+svn_error_t *
+svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   svn_revnum_t new_revision,
+                                   svn_boolean_t no_unlock,
+                                   apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__wq_add_postcommit(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          svn_revnum_t new_revision,
+                          apr_time_t new_date,
+                          const char *new_author,
+                          const svn_checksum_t *new_checksum,
+                          apr_hash_t *new_dav_cache,
+                          svn_boolean_t keep_changelist,
+                          apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__wq_add_install_properties(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_hash_t *pristine_props,
+                                  apr_hash_t *actual_props,
+                                  svn_boolean_t force_base_install,
+                                  apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

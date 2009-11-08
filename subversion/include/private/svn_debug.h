@@ -31,7 +31,7 @@
    ### remain in the code. at that point, we can rejigger this header.  */
 #ifdef SVN_DEBUG
 
-#include "svn_types.h"
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,7 +57,8 @@ extern "C" {
 void
 svn_dbg__preamble(const char *file, long line, FILE *output);
 void
-svn_dbg__printf(const char *fmt, ...);
+svn_dbg__printf(const char *fmt, ...)
+  __attribute__((format(printf, 1, 2)));
 
 
 /* Print to stdout. Edit this line if you need stderr.  */

@@ -1474,7 +1474,7 @@ svn_fs_base__miscellaneous_get(const char **val,
 
   mga.key = key;
   mga.val = val;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_miscellaneous_get, &mga, 
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_miscellaneous_get, &mga,
                                  FALSE, scratch_pool));
   if (*val)
     *val = apr_pstrdup(pool, *val);
@@ -2522,7 +2522,7 @@ verify_locks(const char *txn_name,
       /* If this path has already been verified as part of a recursive
          check of one of its parents, no need to do it again.  */
       if (last_recursed
-          && svn_path_is_child(last_recursed->data, path, subpool))
+          && svn_uri_is_child(last_recursed->data, path, subpool))
         continue;
 
       /* Fetch the change associated with our path.  */
@@ -4371,7 +4371,7 @@ txn_body_history_prev(void *baton, trail_t *trail)
       if (strcmp(path, copy_dst) == 0)
         remainder = "";
       else
-        remainder = svn_path_is_child(copy_dst, path, trail->pool);
+        remainder = svn_uri_is_child(copy_dst, path, trail->pool);
 
       if (remainder)
         {
@@ -4794,7 +4794,7 @@ prev_location(const char **prev_path,
   SVN_ERR(base_copied_from(&copy_src_rev, &copy_src_path,
                            copy_root, copy_path, pool));
   if (! strcmp(copy_path, path) == 0)
-    remainder = svn_path_is_child(copy_path, path, pool);
+    remainder = svn_uri_is_child(copy_path, path, pool);
   *prev_path = svn_uri_join(copy_src_path, remainder, pool);
   *prev_rev = copy_src_rev;
   return SVN_NO_ERROR;

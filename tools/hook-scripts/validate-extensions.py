@@ -49,7 +49,7 @@ def validate_added_extensions(repos_path, txn_name, extensions, action):
     kind = fs.check_path(txn_root, path)
     if kind != core.svn_node_file:
       continue
-    
+
     # If this was a newly added (without history) file ...
     if ((change.change_kind == fs.path_change_replace) \
         or (change.change_kind == fs.path_change_add)):
@@ -59,7 +59,7 @@ def validate_added_extensions(repos_path, txn_name, extensions, action):
         # ... then check it for a valid extension.
         base, ext = os.path.splitext(path)
         if ext:
-          ext = ext[1:]
+          ext = ext[1:].lower()
         if ((ext in extensions) and (action == 'deny')) \
            or ((ext not in extensions) and (action == 'allow')):
           sys.stderr.write("Path '%s' has an extension disallowed by server "
@@ -72,7 +72,7 @@ def usage_and_exit(errmsg=None):
   if errmsg:
     stream.write("ERROR: " + errmsg + "\n")
   sys.exit(errmsg and 1 or 0)
-    
+
 def main():
   argc = len(sys.argv)
   if argc < 5:
@@ -83,7 +83,7 @@ def main():
   if action not in ("allow", "deny"):
     usage_and_exit("Invalid action '%s'.  Expected either 'allow' or 'deny'."
                    % (action))
-  extensions = sys.argv[4:]
+  extensions = [x.lower() for x in sys.argv[4:]]
   validate_added_extensions(repos_path, txn_name, extensions, action)
 
 if __name__ == "__main__":
