@@ -28,7 +28,7 @@ my @ldpaths = ("$swig_builddir/perl/libsvn_swig_perl/.libs",
 my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
 my $apr_shlib_path_var = '@SVN_APR_SHLIB_PATH_VAR@';
-my $cppflags = '@SWIG_PL_CPPFLAGS@';
+my $cppflags = '@CPPFLAGS@';
 my $cflags = '@CFLAGS@';
 my $apr_cflags = '@SVN_APR_INCLUDES@';
 my $apu_cflags = '@SVN_APRUTIL_INCLUDES@';
