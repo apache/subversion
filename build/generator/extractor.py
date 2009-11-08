@@ -56,8 +56,6 @@ _filter_names = [
   'svn_auth_get_kwallet_ssl_client_cert_pw_provider',
   'svn_auth_gnome_keyring_version',
   'svn_auth_kwallet_version',
-  'svn_dbg__preamble',
-  'svn_dbg__printf',
   ]
 
 if __name__ == '__main__':

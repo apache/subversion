@@ -869,8 +869,6 @@ AS_HELP_STRING([--enable-maintainer-mode],
 ])
 
 if test "$enable_debugging" = "yes" ; then
-  dnl svn_debug.h defines some functions and macros which are used in debug mode.
-  CPPFLAGS="$CPPFLAGS -include subversion/include/private/svn_debug.h"
   dnl At the moment, we don't want optimization, because we're
   dnl debugging.
   CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-O[^ ]* //g'`"]
@@ -997,9 +995,6 @@ if test "$RUBY" != "none"; then
     AC_MSG_WARN([Upgrade to the official 1.8.2 release, or later])
   fi
 fi
-
-SWIG_PL_CPPFLAGS="`echo $CPPFLAGS | sed -e 's: -include subversion/include/private/svn_debug.h::'`"
-AC_SUBST(SWIG_PL_CPPFLAGS)
 
 SVN_CHECK_SWIG
 
