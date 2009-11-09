@@ -724,14 +724,19 @@ name or revision number)."
 	 " to save changes.\n\n")
 	(mapc (lambda (prop)
 		(let* ((value (cdr prop))
-		       (lines (split-string value "\n")))
-		  ;; split-string ignores single leading and trailing
-		  ;; delimiters, so add them explicitly
-		  (when (not (equal value ""))
-		    (when (equal (substring value 0 1) "\n")
-		      (setq lines (cons "" lines)))
-		    (when (equal (substring value -1) "\n")
-		      (setq lines (append lines (list "")))))
+		       (lines nil)
+		       (len (length value))
+		       (ofs 0))
+		  ;; Split value in lines - we can't use split-string because
+		  ;; its behaviour is not consistent across Emacs versions.
+		  (while (<= ofs len)
+		    (let* ((nl (or (string-match "\n" value ofs) len)))
+		      (setq lines (cons (substring value ofs nl) lines))
+		      (setq ofs (+ nl 1))))
+		  (setq lines (nreverse lines))
+		  ;; The lines list now contains one string per line, and
+		  ;; an empty list at the end if the string finished in a \n.
+
 		  (insert (car prop) ":")
 		  (if (> (length lines) 1)
 		      (progn
