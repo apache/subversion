@@ -1628,8 +1628,8 @@ get_node_uri(svn_revnum_t *revision,
              apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  *revision = SVN_INVALID_REVNUM;
   svn_boolean_t do_scan = FALSE;
+  *revision = SVN_INVALID_REVNUM;
 
   /* First cover all the cases that have a base present.
    * The only ones that lack a base are a add, copied, moved_here. (*not*
