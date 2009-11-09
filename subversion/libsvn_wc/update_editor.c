@@ -4315,17 +4315,15 @@ apply_textdelta(void *file_baton,
     }
 
   /* Open the text base for writing (this will get us a temporary file).  */
-  {
-    err = svn_wc__open_writable_base(&target, &hb->work_path,
-                                     fb->local_abspath,
-                                     replaced /* need_revert_base */,
-                                     handler_pool, pool);
-    if (err)
-      {
-        svn_pool_destroy(handler_pool);
-        return err;
-      }
-  }
+  err = svn_wc__open_writable_base(&target, &hb->work_path,
+                                   fb->local_abspath,
+                                   replaced /* need_revert_base */,
+                                   handler_pool, pool);
+  if (err)
+    {
+      svn_pool_destroy(handler_pool);
+      return svn_error_return(err);
+    }
 
   /* Prepare to apply the delta.  */
   svn_txdelta_apply(source, target,
