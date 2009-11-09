@@ -24,13 +24,12 @@
 /* These functions are only available to SVN developers and should never
    be used in release code. One of the reasons to avoid this code in release
    builds is that this code is not thread-safe. */
-#ifdef SVN_DEBUG
-
 #include <stdarg.h>
 
 #include "svn_types.h"
 
 #include "private/svn_debug.h"
+
 
 /* This will be tweaked by the preamble code.  */
 static FILE * volatile debug_output = NULL;
@@ -78,5 +77,3 @@ svn_dbg__printf(const char *fmt, ...)
   (void) vfprintf(output, fmt, ap);
   va_end(ap);
 }
-
-#endif /* SVN_DEBUG */
