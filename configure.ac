@@ -850,6 +850,9 @@ AS_HELP_STRING([--enable-maintainer-mode],
         CFLAGS_KEEP="$CFLAGS"
         AC_LANG_PUSH([C])
 
+        CFLAGS="-Wdeclaration-after-statement $CFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
+
         CFLAGS="-Wextra-tokens $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
