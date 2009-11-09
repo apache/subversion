@@ -116,6 +116,7 @@ def run_and_verify_status_no_server(wc_dir, expected_status):
     svvtest.tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
 
+
 def basic_upgrade(sbox):
   "basic upgrade behavior"
 

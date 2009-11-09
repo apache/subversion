@@ -1708,7 +1708,7 @@ get_node_uri(svn_revnum_t *revision,
  * the operation continued updating a deleted base tree.
  *
  * Tree conflict use cases are described in issue #2282 and in
- * notest/tree-conflicts/detection.txt.
+ * notes/tree-conflicts/detection.txt.
  */
 static svn_error_t *
 check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
