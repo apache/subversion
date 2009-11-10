@@ -145,7 +145,7 @@ svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
 
       /* Copy inherited mergeinfo into our output hash, adjusting the
          merge source as appropriate. */
-      path = svn_path_join(merge_source, rel_path, pool);
+      path = svn_uri_join(merge_source, rel_path, pool);
       copied_rangelist = svn_rangelist_dup(rangelist, pool);
       apr_hash_set(adjusted_mergeinfo, path, APR_HASH_KEY_STRING,
                    copied_rangelist);
@@ -222,9 +222,9 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
           /* No explicit mergeinfo on this path.  Look higher up the
              directory tree while keeping track of what we've walked. */
-          walk_relpath = svn_path_join(svn_dirent_basename(local_abspath,
-                                                           iterpool),
-                                       walk_relpath, result_pool);
+          walk_relpath = svn_relpath_join(svn_dirent_basename(local_abspath,
+                                                              iterpool),
+                                          walk_relpath, result_pool);
           local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
           SVN_ERR(svn_wc__node_get_base_rev(&parent_base_rev,
@@ -1587,7 +1587,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
           const char *source_url;
 
           source_url = svn_path_uri_encode(key, pool);
-          source_url = svn_path_join(repos_root, source_url + 1, pool);
+          source_url = svn_uri_join(repos_root, source_url + 1, pool);
           apr_hash_set(full_path_mergeinfo, source_url,
                        APR_HASH_KEY_STRING, val);
         }
