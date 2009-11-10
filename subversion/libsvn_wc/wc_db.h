@@ -105,13 +105,6 @@ extern "C" {
 /** Context data structure for interacting with the administrative data. */
 typedef struct svn_wc__db_t svn_wc__db_t;
 
-/** Pristine Directory Handle
- *
- * Handle for working with pristine files associated with a specific
- * directory on the local filesystem.
- */
-typedef struct svn_wc__db_pdh_t svn_wc__db_pdh_t;
-
 
 /**
  * Enumerated constants for how to open a WC datastore.
