@@ -396,10 +396,15 @@ struct handler_baton
 
   /* A calculated SHA-1, which we'll use for eventually writing the
      pristine. */
-  svn_checksum_t *sha1_actual_source_checksum;
+  svn_checksum_t *sha1_actual_checksum;
 
   /* The stream used to calculate the source checksums */
   svn_stream_t *source_checksum_stream;
+
+#ifdef SVN_EXPERIMENTAL
+  /* Where the pristine is before we can copy it into the correct location. */
+  const char *temp_pristine_abspath;
+#endif
 
   /* This is initialized to all zeroes when the baton is created, then
      populated with the MD5 digest of the resultant fulltext after the
@@ -961,6 +966,11 @@ struct file_baton
   /* Bump information for the directory this file lives in */
   struct bump_dir_info *bump_info;
 
+#ifdef SVN_EXPERIMENTAL
+  /* Where the pristine is before we can copy it into the correct location. */
+  const char *temp_pristine_abspath;
+#endif
+
   /* log accumulator; will be flushed and run in close_file(). */
   svn_stringbuf_t *log_accum;
 };
@@ -1079,6 +1089,10 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     {
       /* We failed to apply the delta; clean up the temporary file.  */
       svn_error_clear(svn_io_remove_file2(hb->work_path, TRUE, hb->pool));
+#ifdef SVN_EXPERIMENTAL
+      svn_error_clear(svn_io_remove_file2(hb->temp_pristine_abspath, TRUE,
+                                          hb->pool));
+#endif
     }
   else
     {
@@ -1088,6 +1102,13 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       /* ... and its checksum. */
       fb->md5_actual_checksum =
         svn_checksum__from_digest(hb->digest, svn_checksum_md5, fb->pool);
+
+#ifdef SVN_EXPERIMENTAL
+      fb->temp_pristine_abspath = apr_pstrdup(fb->pool,
+                                              hb->temp_pristine_abspath);
+#endif
+      fb->sha1_actual_checksum =
+        svn_checksum_dup(hb->sha1_actual_checksum, fb->pool);
     }
 
   svn_pool_destroy(hb->pool);
@@ -3395,6 +3416,39 @@ absent_directory(const char *path,
 }
 
 
+#ifdef SVN_EXPERIMENTAL
+static svn_error_t *
+get_pristine_tee_stream(svn_stream_t **tee_output_stream,
+                        const char **temp_pristine_abspath,
+                        svn_checksum_t **actual_checksum,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        svn_stream_t *output_stream,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  const char *pristine_tempdir;
+  svn_stream_t *pristine_temp;
+
+  SVN_ERR(svn_wc__db_pristine_get_tempdir(&pristine_tempdir, db,
+                                          local_abspath, scratch_pool,
+                                          scratch_pool));
+  SVN_ERR(svn_stream_open_unique(&pristine_temp, temp_pristine_abspath,
+                                 pristine_tempdir, svn_io_file_del_none,
+                                 result_pool, scratch_pool));
+  pristine_temp = svn_stream_checksummed2(pristine_temp, NULL,
+                                          actual_checksum,
+                                          svn_checksum_sha1, TRUE,
+                                          result_pool);
+
+  *tee_output_stream = svn_stream_tee(output_stream, pristine_temp,
+                                      result_pool);
+
+  return SVN_NO_ERROR;
+}
+#endif
+
+
 /* Beginning at DIR_ABSPATH (from repository with uuid DIR_REPOS_UUID and
    with repos_relpath dir_repos_relpath) within a working copy, search the
    working copy for an pre-existing versioned file which is exactly equal
@@ -3662,11 +3716,12 @@ add_file_with_history(const char *path,
                                 copied_stream,
                                 NULL, &tfb->md5_copied_base_checksum,
                                 svn_checksum_md5, FALSE, pool);
-
-  copied_stream = svn_stream_checksummed2(
-                                copied_stream,
-                                NULL, &tfb->sha1_copied_base_checksum,
-                                svn_checksum_sha1, FALSE, pool);
+#ifdef SVN_EXPERIMENTAL
+  SVN_ERR(get_pristine_tee_stream(&copied_stream, &tfb->temp_pristine_abspath,
+                                  &tfb->sha1_copied_base_checksum, db,
+                                  tfb->local_abspath, copied_stream,
+                                  pool, subpool));
+#endif
 
   if (src_local_abspath != NULL) /* Found a file to copy */
     {
@@ -4304,14 +4359,6 @@ apply_textdelta(void *file_baton,
                                             &hb->md5_actual_source_checksum,
                                             NULL, svn_checksum_md5,
                                             TRUE, handler_pool);
-
-      /* Wrap *that* checksum to calculate the sha1 */
-      hb->source_checksum_stream =
-                 source = svn_stream_checksummed2(
-                                            hb->source_checksum_stream,
-                                            &hb->sha1_actual_source_checksum,
-                                            NULL, svn_checksum_sha1,
-                                            TRUE, handler_pool);
     }
 
   /* Open the text base for writing (this will get us a temporary file).  */
@@ -4324,6 +4371,15 @@ apply_textdelta(void *file_baton,
       svn_pool_destroy(handler_pool);
       return svn_error_return(err);
     }
+
+#ifdef SVN_EXPERIMENTAL
+  /* Get a stream for writing our pristine temp.
+     ###: This is currently tee'd for compat. */
+  SVN_ERR(get_pristine_tee_stream(&target, &hb->temp_pristine_abspath,
+                                  &hb->sha1_actual_checksum,
+                                  fb->edit_baton->db, fb->local_abspath,
+                                  target, handler_pool, pool));
+#endif
 
   /* Prepare to apply the delta.  */
   svn_txdelta_apply(source, target,
@@ -5023,6 +5079,14 @@ close_file(void *file_baton,
             expected_hex_digest,
             svn_checksum_to_cstring_display(md5_actual_checksum, pool));
 
+#ifdef SVN_EXPERIMENTAL
+  /* If we had a text change, drop the pristine into it's proper place. */
+  if (fb->temp_pristine_abspath)
+    SVN_ERR(svn_wc__db_pristine_install(eb->db, fb->temp_pristine_abspath,
+                                        sha1_actual_checksum, pool));
+#endif
+
+  /* It's a small world, after all. */
   SVN_ERR(merge_file(&content_state, &prop_state, &lock_state,
                      &new_base_props, &new_actual_props, fb,
                      new_base_path, md5_actual_checksum, pool));
