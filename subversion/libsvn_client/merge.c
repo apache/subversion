@@ -6907,9 +6907,9 @@ record_mergeinfo_for_dir_merge(const svn_merge_range_t *merged_range,
           if (!child_repos_path)
             child_repos_path = "";
 
-          child_merge_src_canon_path = svn_path_join(mergeinfo_path,
-                                                     child_repos_path,
-                                                     iterpool);
+          child_merge_src_canon_path = svn_uri_join(mergeinfo_path,
+                                                    child_repos_path,
+                                                    iterpool);
           /* Filter any ranges from each child's natural history before
              setting mergeinfo describing the merge. */
           SVN_ERR(filter_natural_history_from_mergeinfo(
@@ -8620,10 +8620,10 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
       svn_pool_clear(iterpool);
 
       source_path = path + strlen(target_repos_rel_path);
-      if (source_path[0] == '/') /* Remove leading '/' for svn_path_join. */
+      if (source_path[0] == '/') /* Remove leading '/' for svn_uri_join. */
         source_path++;
-      source_path = svn_path_join(source_repos_rel_path, source_path,
-        iterpool);
+      source_path = svn_uri_join(source_repos_rel_path, source_path,
+                                 iterpool);
 
       /* Convert this target path's natural history into mergeinfo. */
       SVN_ERR(svn_client__mergeinfo_from_segments(&target_history_as_mergeinfo,
@@ -8759,10 +8759,10 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
           svn_pool_clear(iterpool);
 
           target_path = source_path + strlen(source_repos_rel_path);
-          if (target_path[0] == '/') /* Remove leading '/' for svn_path_join */
+          if (target_path[0] == '/') /* Remove leading '/' for svn_uri_join. */
             target_path++;
-          target_path = svn_path_join(target_repos_rel_path, target_path,
-                                      iterpool);
+          target_path = svn_uri_join(target_repos_rel_path, target_path,
+                                     iterpool);
 
           err = svn_client__repos_location_segments(&segments,
                                                     ra_session,
