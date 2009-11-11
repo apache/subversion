@@ -9,14 +9,9 @@ echo "========= autogen.sh"
 
 echo "========= configure"
 ./configure --enable-javahl --enable-maintainer-mode \
-            --with-neon=/usr/local \
-            --with-apxs=/home/hwright/dev/svn-buildbot/usr/bin/apxs \
             --without-berkeley-db \
-            --with-apr=/usr/local/apr \
-            --with-jdk=/usr/lib/jvm/java-6-sun-1.6.0.10 \
-            --with-junit=/usr/share/java/junit.jar \
-            --with-apr-util=/usr/local/apr \
-            --with-sqlite=/usr/local || exit $?
+            --with-jdk=/usr/lib/jvm/java-6-sun-1.6.0.16 \
+            --with-junit=/usr/share/java/junit.jar || exit $?
 
 echo "========= make"
 make || exit $?
