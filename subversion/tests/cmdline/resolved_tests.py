@@ -355,7 +355,7 @@ def theirs_conflict_in_subdir(sbox):
 test_list = [ None,
               resolved_on_wc_root,
               resolved_on_deleted_item,
-              XFail(theirs_conflict_in_subdir),
+              theirs_conflict_in_subdir,
              ]
 
 if __name__ == '__main__':
