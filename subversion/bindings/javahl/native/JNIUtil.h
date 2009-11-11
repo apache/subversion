@@ -33,7 +33,6 @@ struct apr_pool_t;
 struct svn_error;
 class JNIMutex;
 class SVNBase;
-class SVN::Pool;
 #include <jni.h>
 #include <fstream>
 #include <apr_time.h>
