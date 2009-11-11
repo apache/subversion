@@ -57,8 +57,8 @@ svn_cl__unlock(apr_getopt_t *os,
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
-  svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                       FALSE, FALSE, scratch_pool);
+  SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                               FALSE, FALSE, scratch_pool));
 
   SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
 

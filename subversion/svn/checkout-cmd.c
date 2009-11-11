@@ -113,8 +113,8 @@ svn_cl__checkout(apr_getopt_t *os,
     }
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, TRUE, FALSE,
-                         FALSE, pool);
+    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, TRUE,
+                                 FALSE, FALSE, pool));
 
   subpool = svn_pool_create(pool);
   for (i = 0; i < targets->nelts - 1; ++i)
