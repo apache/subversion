@@ -1,17 +1,22 @@
 /* changes-table.c : operations on the `changes' table
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -33,7 +38,7 @@
 #include "dbt.h"
 #include "changes-table.h"
 
-
+#include "private/svn_fs_util.h"
 #include "svn_private_config.h"
 
 
@@ -75,7 +80,7 @@ svn_fs_bdb__changes_add(svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT query, value;
-  skel_t *skel;
+  svn_skel_t *skel;
 
   /* Convert native type to skel. */
   SVN_ERR(svn_fs_base__unparse_change_skel(&skel, change, pool));
@@ -84,11 +89,9 @@ svn_fs_bdb__changes_add(svn_fs_t *fs,
   svn_fs_base__str_to_dbt(&query, key);
   svn_fs_base__skel_to_dbt(&value, skel, pool);
   svn_fs_base__trail_debug(trail, "changes", "put");
-  SVN_ERR(BDB_WRAP(fs, _("creating change"),
-                   bfd->changes->put(bfd->changes, trail->db_txn,
-                                     &query, &value, 0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("creating change"),
+                  bfd->changes->put(bfd->changes, trail->db_txn,
+                                    &query, &value, 0));
 }
 
 
@@ -107,7 +110,7 @@ svn_fs_bdb__changes_delete(svn_fs_t *fs,
                              svn_fs_base__str_to_dbt(&query, key), 0);
 
   /* If there're no changes for KEY, that is acceptable.  Any other
-     error should be propogated to the caller, though.  */
+     error should be propagated to the caller, though.  */
   if ((db_err) && (db_err != DB_NOTFOUND))
     {
       SVN_ERR(BDB_WRAP(fs, _("deleting changes"), db_err));
@@ -118,14 +121,14 @@ svn_fs_bdb__changes_delete(svn_fs_t *fs,
 
 
 /* Merge the internal-use-only CHANGE into a hash of public-FS
-   svn_fs_path_change_t CHANGES, collapsing multiple changes into a
+   svn_fs_path_change2_t CHANGES, collapsing multiple changes into a
    single succinct change per path. */
 static svn_error_t *
 fold_change(apr_hash_t *changes,
             const change_t *change)
 {
   apr_pool_t *pool = apr_hash_pool_get(changes);
-  svn_fs_path_change_t *old_change, *new_change;
+  svn_fs_path_change2_t *old_change, *new_change;
   const char *path;
 
   if ((old_change = apr_hash_get(changes, change->path, APR_HASH_KEY_STRING)))
@@ -219,12 +222,14 @@ fold_change(apr_hash_t *changes,
       /* This change is new to the hash, so make a new public change
          structure from the internal one (in the hash's pool), and dup
          the path into the hash's pool, too. */
-      new_change = apr_pcalloc(pool, sizeof(*new_change));
-      new_change->node_rev_id = svn_fs_base__id_copy(change->noderev_id,
-                                                     pool);
-      new_change->change_kind = change->kind;
+      new_change = svn_fs__path_change_create_internal(
+                       svn_fs_base__id_copy(change->noderev_id, pool),
+                       change->kind,
+                       pool);
       new_change->text_mod = change->text_mod;
       new_change->prop_mod = change->prop_mod;
+      new_change->node_kind = svn_node_unknown;
+      new_change->copyfrom_known = FALSE;
       path = apr_pstrdup(pool, change->path);
     }
 
@@ -267,15 +272,14 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
   while (! db_err)
     {
       change_t *change;
-      skel_t *result_skel;
+      svn_skel_t *result_skel;
 
       /* Clear the per-iteration subpool. */
       svn_pool_clear(subpool);
 
       /* RESULT now contains a change record associated with KEY.  We
          need to parse that skel into an change_t structure ...  */
-      result_skel = svn_fs_base__parse_skel(result.data, result.size,
-                                            subpool);
+      result_skel = svn_skel__parse(result.data, result.size, subpool);
       if (! result_skel)
         {
           err = svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -318,7 +322,7 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
                 continue;
 
               /* If we come across a child of our path, remove it. */
-              if (svn_path_is_child(change->path, hashkey, subpool))
+              if (svn_uri_is_child(change->path, hashkey, subpool))
                 apr_hash_set(changes, hashkey, klen, NULL);
             }
         }
@@ -346,7 +350,7 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
 
   /* If we had an error prior to closing the cursor, return the error. */
   if (err)
-    return err;
+    return svn_error_return(err);
 
   /* If our only error thus far was when we closed the cursor, return
      that error. */
@@ -390,11 +394,11 @@ svn_fs_bdb__changes_fetch_raw(apr_array_header_t **changes_p,
 
   while (! db_err)
     {
-      skel_t *result_skel;
+      svn_skel_t *result_skel;
 
       /* RESULT now contains a change record associated with KEY.  We
          need to parse that skel into an change_t structure ...  */
-      result_skel = svn_fs_base__parse_skel(result.data, result.size, pool);
+      result_skel = svn_skel__parse(result.data, result.size, pool);
       if (! result_skel)
         {
           err = svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -429,7 +433,7 @@ svn_fs_bdb__changes_fetch_raw(apr_array_header_t **changes_p,
 
   /* If we had an error prior to closing the cursor, return the error. */
   if (err)
-    return err;
+    return svn_error_return(err);
 
   /* If our only error thus far was when we closed the cursor, return
      that error. */

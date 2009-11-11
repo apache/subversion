@@ -18,7 +18,7 @@ use File::Path qw(rmtree);
 
 # do not use cleanup because it will fail, some files we
 # will not have write perms to.
-my $testpath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1, CLEANUP => 1);
+my $testpath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1, CLEANUP => 0);
 
 my $repospath = catdir($testpath,'repo');
 my $reposurl = 'file://' . (substr($repospath,0,1) ne '/' ? '/' : '')
@@ -179,9 +179,10 @@ is($ctx->info("$wcpath/dir1/new", undef, 'WORKING',
    undef,
    'info should return undef');
 
-isa_ok($ctx->info("$wcpath/dir1/newxyz", undef, 'WORKING', sub {}, 0),
-       '_p_svn_error_t',
+my $svn_error = $ctx->info("$wcpath/dir1/newxyz", undef, 'WORKING', sub {}, 0);
+isa_ok($svn_error, '_p_svn_error_t',
        'info should return _p_svn_error_t for a nonexistent file');
+$svn_error->clear(); #don't leak this 
 
 # test getting the log
 is($ctx->log("$reposurl/dir1/new",$current_rev,$current_rev,1,0,

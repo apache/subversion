@@ -1,0 +1,264 @@
+                                                                -*- Text -*-
+
+
+Content
+=======
+
+ * Context
+ * Issue description
+ * Pre-resolution state of affairs
+   - Single platform
+   - Multi-platform: Windows + MacOS X
+ * Proposed support library
+   - Assumptions
+   - Options
+ * Proposed normal form
+ * Possible solutions
+   - Normalization of path-input on MacOS X
+   - Normalization of path-input everywhere
+   - Comparison routines (client side)
+   - Comparison routines (everywhere)
+ * Short term (ie before 2.0) solution
+ * Long term solution (ie 2.0+)
+ * References
+
+
+Context
+=======
+
+Within Unicode, some characters - with diacritical marks - can be
+represented in 2 forms: Normal Form Composed (NFC) or Normal Form
+Decomposed (NFD).  A string of unicode characters can contain any
+mixture of both forms.
+
+This problem explicitly does not concern itself with invisible
+characters, spaces or other characters unlikely to be present in
+filenames.  Please note that this issue is explicitly excluding
+NFKC/NFKD (compatibility) normal forms, because they remove
+for example formatting (meaning they are lossy?).
+
+
+Because there are 2 forms for representing (some) characters in Unicode,
+it's possible to produce different sequences of codepoints meaning to
+indicate the same sequence of characters [1].  UTF-8, the internal
+Unicode encoding of choice for Subversion, encodes codepoints in (a
+series of) bytes (octets).  Because the sequences of codepoints specifying
+a character may differ, so may the resulting UTF-8.  Hence, we end up
+with more than one way to specify the same path.
+
+
+The following table specifies behaviour of OSes related to handling
+of Unicode filenames:
+
+
+          Accepts   Gives back    See
+MacOS X     *          NFD(*)     [2]
+Linux       *        <input>
+Windows     *        <input>
+Others      ?           ?
+
+*) There are some remarks to be made regarding full or partial
+  NFD here, but the essential thing is: If you send in NFC, don't
+  expect it back!
+
+
+Issue description
+=================
+
+From the above issue description, 2 problems follow:
+
+ 1) We can't generally depend on the OS to give us back the
+     exact filename we gave it
+ 2) The same filename may be encoded in different codepoints
+
+Issue #1 is mainly a client side issue, something which might be
+resolved in the client side libraries (client/subr/wc).
+
+Issue #2 is much broader than that, especially given the fact that
+we already have lots of populated repositories "out there": it means
+we cannot depend on a filename coming from the operating system - even
+though different from the one in the repository - to name a different
+file.  This has repository (ie. server-side) impact.
+
+
+Pre-resolution state of affairs
+===============================
+
+This section serves to describe the problems to be expected in different
+combinations of client/server OSes.  As indicated in the table in the
+context section, Linux and Windows are expected to behave equally. This
+section therefor leaves out the consideration of Linux as a separate
+system.
+
+The platforms below are strictly client side: the server side problems
+mentioned in the issue description section solely relates to the repository,
+which can be located at any server platform.
+
+
+Single platform
+---------------
+This can be multiple MacOSX machines or multiple Windows machines.  In this
+scenario, no interoperability problems are to be expected.
+
+
+Multi-platform: Windows + MacOSX
+--------------------------------
+Consider a file which contains one or more precomposed (NFC) characters
+being committed from Windows.  When the MacOSX developer updates, a
+file is written in NFC form, but as stated in the context section, Mac
+recodes that to NFD.  Now, when comparing what comes from the disk (NFD)
+with what's in the entries file (NFC), results in a missing file (the
+NFC encoded one) and an unversioned file (the NFD encoded one).  Both of
+these files look exactly the same to the person reading the Subversion
+output on the screen. [==> confusion!]
+
+Committing a file the other way around might be less problematic, since
+Windows is capable of storing NFD filenames.
+
+
+Proposed support library
+========================
+
+Assumptions
+-----------
+The main assumption is that we'll keep using APR for character set
+conversion, meaning that the recoding solution to choose would not need
+to provide any other functionality than recoding.
+
+Options
+-------
+There are 2 options (that I'm aware of [dionisos]) for choosing a library
+which supports the required functionality:
+
+1) ICU - International Component for Unicode [3]
+   a library with a very wide range of targeted functions, with a
+   memory footprint to match.  In order to be able to use it, we'd need
+   to trim this library down significantly.
+2) utf8proc - a library for processing UTF-8 encoded unicode strings
+   a library specifically targeted at a limited number of operations
+   to be performed on UTF-8 encoded strings.  It consists of 2 .c and
+   1 .h file, with a total source size of 1MB (compiled less than 0.5MB).
+
+From these 2, under the given assumption, it only makes sense to use
+utf8proc.
+
+
+Proposed normal form
+====================
+
+The proposed internal normal 'normal form' should be NFC, if only if it
+were because it's the most compact form of the two: when allocating memory
+to store a conversion result, it won't be necessary (ever) to allocate more
+than the size of the input buffer.
+
+This would give the maximum performance from utf8proc, which requires 2
+recoding runs when the buffer is too small: 1 to retrieve the required
+buffer size, the second to actually store the result.
+
+
+Possible solutions
+==================
+
+Several options are available for resolution of this problem, each
+with its pros and cons, to be outlined below.
+
+ 1) Normalization of (path) input on MacOSX
+    Since the Mac seems to be the only platform which mutilates its
+    pathname input to be NFD, this seems like a logical (low impact)
+    solution.
+ 2) Normalization of (path) input on all platforms
+    Since paths can't differ only in encoding if we standardize on
+    encoding, this seems like a logical (relatively low) impact solution.
+ 3) Normalization of path input in the client and server
+    On the server side, non-normalized paths may have become part
+    of the repository.  We can achieve full in-memory standardization
+    by converting any path coming from the repository as well as the
+    client.
+ 4) Client and server-side path comparison routines
+    Because paths read from the repository may be used to access said
+    repository, possibly by calculating hash values, paths from can't be
+    munged (repository-side).  To eliminate the effect, we acknowledge
+    we're not going to be 'clean': we'll always need path comparison
+    routines.
+
+
+Solution (1) has a very strong CON: it will break all pre-existing
+MacOSX-only workshops.  Consider a client which starts sending NFC
+encoded paths in an environment where all paths have been NFD encoded
+until that time - without proper support in the server.  This would
+result in commits with NFC encoded paths to files for which the path
+in the repository is NFD encoded: breakage.
+
+Solution (2) has the same problem as solution (1) on MacOSX, but
+on the upside it prevents new NFD paths from entering into the repository
+(for sufficiently broad definitions of 'client' [think mod_dav_svn]).
+
+As already stated, solution (3) may prevent paths from being found, if
+the retrieval mechanism is hash-based.  Meaning this could break any
+repository backend using hashing to store information about paths.
+(Don't we store locks in FSFS based on hashing?)
+
+Solution (4) defines no internal standard representation, assuming it's
+not possible to maintain a clean in-memory state, given all problems
+found in the earlier solutions.  Instead, it requires all path comparisons
+to be performed using special NFC/NFD encoding aware functions.
+
+
+Short term solution
+===================
+
+Because of our interoperability guarantees, the client and server
+should be considered separate universes, each of which can use its own
+(internal) solution.  However, the client should at all times use the
+exact path the server sent it.  The same applies the other way around.
+
+Given the above, the short term (before 2.0) solution should be to
+use path comparison routines as stated in solution (4).
+
+
+Long term solution
+==================
+
+The long term (2.0+) solution would be to use option (2), which ensures
+recoding of all input paths into the 'normal' normal form (NFC).  In that
+case, it'll no longer require the use of specialised path comparison
+routines (although that might still be desired for other design
+considerations).
+
+
+Short term solution implementation consequences
+===============================================
+
+As stated before, since we don't know whether the other side of the
+equation might be a pre-normalization-aware client or server until
+we break backward compat in 2.0, the client and server should be
+able to talk backward compatibly with a pre-NF-aware 'other side'.
+
+Hence, solving this problem means considering the client and the server
+separate universes, each of which can employ its own internal solution.
+
+
+Implementing option (4) means:
+
+ A. Comparing file names with entry paths using NFC/NFD aware comparison
+    functions. Then, when there's a match, *use the pathname from the
+    entries file* to communicate with the server; after all, the path
+    might have been added with a different encoding than we got back
+    from the disk.
+
+ B. Match working copy paths with entries-file paths using NFC/NFD aware
+    comparison functions. On a match, use the entries-file path to
+    communicate with the server.
+
+
+References
+==========
+
+1) UAX #15: Unicode normalization forms
+   http://unicode.org/reports/tr15/
+2) Apple Technical Q&A: Path encodings in VFS
+   http://developer.apple.com/qa/qa2001/qa1173.html
+3) ICU - International Component for Unicode
+   http://www-306.ibm.com/software/globalization/icu/index.jsp
+4) utf8proc - a library targeted at processing UTF-8 encoded unicode strings
+   http://www.flexiguided.de/publications.utf8proc.en.html

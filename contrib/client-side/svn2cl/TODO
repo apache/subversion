@@ -1,4 +1,3 @@
-* flag deleted files (<path action="D"...>)
 * support more xslt processors
 * group changes per autor per day
 * svn2rss?
@@ -7,3 +6,5 @@
 * fix awk magic to not break with spaces in repository names
 * find better names for options
 * create backup of previous changelog file
+* support specifying multiple --ignore-message-starting options
+* svn2cl --strip-prefix=/ doesn't work as expected

@@ -2,17 +2,22 @@
  * lock.c :  routines for managing lock states in the DAV server
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -20,6 +25,7 @@
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
+#include <apr_xml.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -239,6 +245,7 @@ do_lock(svn_lock_t **lock,
   svn_ra_neon__session_t *ras = session->priv;
   lock_baton_t *lrb = apr_pcalloc(pool, sizeof(*lrb));
   apr_hash_t *extra_headers;
+  svn_error_t *err = SVN_NO_ERROR;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component(ras->url->data, path, pool);
@@ -269,9 +276,12 @@ do_lock(svn_lock_t **lock,
      " <D:locktype><D:write /></D:locktype>" DEBUG_CR
      "%s" /* maybe owner */
      "</D:lockinfo>",
-     (comment
-      ? apr_psprintf(req->pool, " <D:owner>%s</D:owner>" DEBUG_CR, comment)
-      : ""));
+     comment ? apr_pstrcat(pool,
+                           "<D:owner>",
+                           apr_xml_quote_string(pool, comment, 0),
+                           "</D:owner>",
+                           NULL)
+             : "");
 
   extra_headers = apr_hash_make(req->pool);
   svn_ra_neon__set_header(extra_headers, "Depth", "0");
@@ -285,17 +295,19 @@ do_lock(svn_lock_t **lock,
     svn_ra_neon__set_header(extra_headers, SVN_DAV_VERSION_NAME_HEADER,
                             apr_psprintf(req->pool, "%ld", current_rev));
 
-  SVN_ERR(svn_ra_neon__request_dispatch(&code, req, extra_headers, body->data,
-                                        200, 0, pool));
+  err = svn_ra_neon__request_dispatch(&code, req, extra_headers, body->data,
+                                      200, 0, pool);
+  if (err)
+    goto cleanup;
 
   /*###FIXME: we never verified whether we have received back the type
     of lock we requested: was it shared/exclusive? was it write/otherwise?
     How many did we get back? Only one? */
-  SVN_ERR(lock_from_baton(lock, req, fs_path.data, lrb, pool));
+  err = lock_from_baton(lock, req, fs_path.data, lrb, pool);
 
+ cleanup:
   svn_ra_neon__request_destroy(req);
-
-  return SVN_NO_ERROR;
+  return err;
 }
 
 svn_error_t *
@@ -474,16 +486,15 @@ svn_ra_neon__unlock(svn_ra_session_t *session,
 
 
 svn_error_t *
-svn_ra_neon__get_lock(svn_ra_session_t *session,
-                      svn_lock_t **lock,
-                      const char *path,
-                      apr_pool_t *pool)
+svn_ra_neon__get_lock_internal(svn_ra_neon__session_t *ras,
+                               svn_lock_t **lock,
+                               const char *path,
+                               apr_pool_t *pool)
 {
   const char *url;
   svn_string_t fs_path;
   svn_error_t *err;
   ne_uri uri;
-  svn_ra_neon__session_t *ras = session->priv;
   lock_baton_t *lrb = apr_pcalloc(pool, sizeof(*lrb));
   svn_ra_neon__request_t *req;
   ne_xml_parser *lck_parser;
@@ -519,12 +530,29 @@ svn_ra_neon__get_lock(svn_ra_session_t *session,
   svn_ra_neon__set_header(extra_headers, "Content-Type",
                           "text/xml; charset=\"utf-8\"");
 
-  SVN_ERR_W(svn_ra_neon__request_dispatch(NULL, req, extra_headers, body,
-                                          200, 207, pool),
-            _("Failed to fetch lock information"));
+  err = svn_ra_neon__request_dispatch(NULL, req, extra_headers, body,
+                                      200, 207, pool);
+  if (err)
+    {
+      err = svn_error_quick_wrap(err, _("Failed to fetch lock information"));
+      goto cleanup;
+    }
+
   /*###FIXME We assume here we only got one lock response. The WebDAV
     spec makes no such guarantees. How to make sure we grab the one we need? */
-  SVN_ERR(lock_from_baton(lock, req, fs_path.data, lrb, pool));
+  err = lock_from_baton(lock, req, fs_path.data, lrb, pool);
 
-  return SVN_NO_ERROR;
+ cleanup:
+  svn_ra_neon__request_destroy(req);
+  return err;
+}
+
+
+svn_error_t *
+svn_ra_neon__get_lock(svn_ra_session_t *session,
+                      svn_lock_t **lock,
+                      const char *path,
+                      apr_pool_t *pool)
+{
+  return svn_ra_neon__get_lock_internal(session->priv, lock, path, pool);
 }

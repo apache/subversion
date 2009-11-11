@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  */
@@ -41,19 +46,31 @@ public class ConflictResult
      * Resolve the conflict by choosing the incoming (repository)
      * version of the object.
      */
-    public static final int chooseTheirs = 2;
+    public static final int chooseTheirsFull = 2;
 
     /**
      * Resolve the conflict by choosing own (local) version of the
      * object.
      */
-    public static final int chooseMine = 3;
+    public static final int chooseMineFull = 3;
+
+    /**
+     * Resolve the conflict by choosing the incoming (repository)
+     * version of the object (for conflicted hunks only).
+     */
+    public static final int chooseTheirsConflict = 4;
+
+    /**
+     * Resolve the conflict by choosing own (local) version of the
+     * object (for conflicted hunks only).
+     */
+    public static final int chooseMineConflict = 5;
 
     /**
      * Resolve the conflict by choosing the merged object
      * (potentially manually edited).
      */
-    public static final int chooseMerged = 4;
+    public static final int chooseMerged = 6;
 
     /**
      * A value corresponding to the

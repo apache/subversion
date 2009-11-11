@@ -4,17 +4,22 @@
  *
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -22,9 +27,9 @@
 
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
 #include <apr_lib.h>     /* for apr_isspace() */
-#include <apr_md5.h>
 #include <apr_fnmatch.h>
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
+#include "svn_ctype.h"
 
 
 
@@ -219,7 +224,8 @@ svn_string_find_char_backward(const svn_string_t *str, char ch)
 /* svn_stringbuf functions */
 
 static svn_stringbuf_t *
-create_stringbuf(char *data, apr_size_t size, apr_pool_t *pool)
+create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
+                 apr_pool_t *pool)
 {
   svn_stringbuf_t *new_string;
 
@@ -227,27 +233,38 @@ create_stringbuf(char *data, apr_size_t size, apr_pool_t *pool)
 
   new_string->data = data;
   new_string->len = size;
-  new_string->blocksize = size + 1; /* we know there is a null-term */
+  new_string->blocksize = blocksize;
   new_string->pool = pool;
 
   return new_string;
 }
 
 svn_stringbuf_t *
+svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
+{
+  char *data = apr_palloc(pool, ++blocksize); /* + space for '\0' */
+
+  data[0] = '\0';
+
+  /* wrap an svn_stringbuf_t around the new data buffer. */
+  return create_stringbuf(data, 0, blocksize, pool);
+}
+
+svn_stringbuf_t *
 svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
 {
-  char *data;
+  /* Ensure string buffer of size + 1 */
+  svn_stringbuf_t *strbuf = svn_stringbuf_create_ensure(size, pool);
 
-  data = apr_palloc(pool, size + 1);
-  memcpy(data, bytes, size);
+  memcpy(strbuf->data, bytes, size);
 
   /* Null termination is the convention -- even if we suspect the data
      to be binary, it's not up to us to decide, it's the caller's
      call.  Heck, that's why they call it the caller! */
-  data[size] = '\0';
+  strbuf->data[size] = '\0';
+  strbuf->len = size;
 
-  /* wrap an svn_stringbuf_t around the new data */
-  return create_stringbuf(data, size, pool);
+  return strbuf;
 }
 
 
@@ -269,9 +286,10 @@ svn_stringbuf_t *
 svn_stringbuf_createv(apr_pool_t *pool, const char *fmt, va_list ap)
 {
   char *data = apr_pvsprintf(pool, fmt, ap);
+  apr_size_t size = strlen(data);
 
   /* wrap an svn_stringbuf_t around the new data */
-  return create_stringbuf(data, strlen(data), pool);
+  return create_stringbuf(data, size, size + 1, pool);
 }
 
 
@@ -403,8 +421,6 @@ svn_stringbuf_appendcstr(svn_stringbuf_t *targetstr, const char *cstr)
 {
   svn_stringbuf_appendbytes(targetstr, cstr, strlen(cstr));
 }
-
-
 
 
 svn_stringbuf_t *
@@ -560,7 +576,7 @@ int svn_cstring_count_newlines(const char *msg)
 }
 
 char *
-svn_cstring_join(apr_array_header_t *strings,
+svn_cstring_join(const apr_array_header_t *strings,
                  const char *separator,
                  apr_pool_t *pool)
 {
@@ -575,4 +591,17 @@ svn_cstring_join(apr_array_header_t *strings,
       svn_stringbuf_appendbytes(new_str, separator, sep_len);
     }
   return new_str->data;
+}
+
+int
+svn_cstring_casecmp(const char *str1, const char *str2)
+{
+  for (;;)
+    {
+      const int a = *str1++;
+      const int b = *str2++;
+      const int cmp = svn_ctype_casecmp(a, b);
+      if (cmp || !a || !b)
+        return cmp;
+    }
 }

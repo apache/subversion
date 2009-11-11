@@ -14,7 +14,7 @@ AC_DEFUN(SVN_LIB_APR,
 
   AC_MSG_NOTICE([Apache Portable Runtime (APR) library configuration])
 
-  APR_FIND_APR("$abs_srcdir/apr", "$abs_builddir/apr", 1, [0 1])
+  APR_FIND_APR("$abs_srcdir/apr", "$abs_builddir/apr", 1, [1 0])
 
   if test $apr_found = "no"; then
     AC_MSG_WARN([APR not found])
@@ -59,10 +59,11 @@ AC_DEFUN(SVN_LIB_APR,
     AC_MSG_ERROR([apr-config --cflags failed])
   fi
 
-  LDFLAGS="$LDFLAGS `$apr_config --ldflags`"
+  apr_ldflags="`$apr_config --ldflags`"
   if test $? -ne 0; then
     AC_MSG_ERROR([apr-config --ldflags failed])
   fi
+  LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS($apr_ldflags)`"
 
   SVN_APR_INCLUDES="`$apr_config --includes`"
   if test $? -ne 0; then
@@ -74,17 +75,18 @@ AC_DEFUN(SVN_LIB_APR,
     AC_MSG_ERROR([apr-config --prefix failed])
   fi
 
-  dnl When APR stores the dependent libs in the .la file, we don't need 
-  dnl --libs.
-  SVN_APR_LIBS="`$apr_config --link-libtool --libs`"
-  if test $? -ne 0; then
-    AC_MSG_ERROR([apr-config --link-libtool --libs failed])
+  if test "$enable_all_static" = "yes"; then
+    SVN_APR_LIBS="`$apr_config --link-ld --libs`"
+    if test $? -ne 0; then
+      AC_MSG_ERROR([apr-config --link-ld --libs failed])
+    fi
+  else
+    SVN_APR_LIBS="`$apr_config --link-ld`"
+    if test $? -ne 0; then
+      AC_MSG_ERROR([apr-config --link-ld failed])
+    fi
   fi
-
-  SVN_APR_EXPORT_LIBS="`$apr_config --link-ld --libs`"
-  if test $? -ne 0; then
-    AC_MSG_ERROR([apr-config --link-ld --libs failed])
-  fi
+  SVN_APR_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($SVN_APR_LIBS)`"
 
   SVN_APR_SHLIB_PATH_VAR="`$apr_config --shlib-path-var`"
   if test $? -ne 0; then
@@ -94,7 +96,6 @@ AC_DEFUN(SVN_LIB_APR,
   AC_SUBST(SVN_APR_PREFIX)
   AC_SUBST(SVN_APR_INCLUDES)
   AC_SUBST(SVN_APR_LIBS)
-  AC_SUBST(SVN_APR_EXPORT_LIBS)
   AC_SUBST(SVN_APR_SHLIB_PATH_VAR)
 ])
 
@@ -111,7 +112,7 @@ AC_DEFUN(SVN_DOWNLOAD_APR,
   echo "get it with SVN and put it in a subdirectory of this source:"
   echo ""
   echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr/branches/0.9.x \\"
+  echo "    http://svn.apache.org/repos/asf/apr/apr/branches/1.2.x \\"
   echo "    apr"
   echo ""
   echo "Run that right here in the top level of the Subversion tree."
@@ -124,7 +125,7 @@ AC_DEFUN(SVN_DOWNLOAD_APR,
   echo "getting both from SVN with:"
   echo ""
   echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/0.9.x \\"
+  echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/1.2.x \\"
   echo "    apr-util"
   echo ""
   AC_MSG_ERROR([no suitable apr found])

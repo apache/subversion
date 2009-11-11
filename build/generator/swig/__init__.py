@@ -2,9 +2,17 @@
 # generator.swig: Base class for SWIG-related generators
 #
 
-import shutil, ConfigParser, re, os
+import os
+import re
+import shutil
 import generator.util.executable as _exec
 from generator.gen_base import _collect_paths
+try:
+  # Python >=3.0
+  import configparser
+except ImportError:
+  # Python <3.0
+  import ConfigParser as configparser
 
 class Generator:
   """Base class for SWIG-related generators"""
@@ -15,7 +23,7 @@ class Generator:
     """Read build.conf"""
 
     # Now read and parse build.conf
-    parser = ConfigParser.ConfigParser()
+    parser = configparser.ConfigParser()
     parser.read(conf)
 
     # Read configuration options
@@ -32,14 +40,14 @@ class Generator:
     # Calculate SWIG paths
     self.swig_path = swig_path
     try:
-      self.swig_libdir = _exec.output("%s -swiglib" % self.swig_path, strip=1)
+      self.swig_libdir = _exec.output([self.swig_path, "-swiglib"], strip=1)
     except AssertionError:
       pass
 
   def version(self):
     """Get the version number of SWIG"""
     try:
-      swig_version = _exec.output("%s -version" % self.swig_path)
+      swig_version = _exec.output([self.swig_path, "-version"])
       m = re.search("Version (\d+).(\d+).(\d+)", swig_version)
       if m:
         return int(

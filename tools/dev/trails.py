@@ -3,6 +3,12 @@
 ## See the usage() function for operating instructions. ##
 
 import re
+try:
+  # Python >=2.6
+  from functools import reduce
+except ImportError:
+  # Python <2.6
+  pass
 import sys
 import operator
 
@@ -65,7 +71,9 @@ def output_summary(trails, outfile):
 
 
 # custom compare function
-def _freqtable_cmp((a, b), (c, d)):
+def _freqtable_cmp(a_b, c_d):
+  (a, b) = a_b
+  (c, d) = c_d
   c = cmp(d, b)
   if not c:
     c = cmp(a, c)
@@ -81,7 +89,7 @@ def list_frequencies(list):
   for item in list:
     counter[item] = counter.get(item, 0) + 1
 
-  frequencies = counter.items()
+  frequencies = list(counter.items())
   frequencies.sort(_freqtable_cmp)
 
   return frequencies

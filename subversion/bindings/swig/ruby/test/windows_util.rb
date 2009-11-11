@@ -4,7 +4,9 @@ require 'fileutils'
 module SvnTestUtil
   module Windows
     module Svnserve
-      SERVICE_NAME = 'test-svn-server'
+      def service_name
+        "test-svn-server--port-#{@svnserve_port}"
+      end
 
       class << self
         def escape_value(value)
@@ -17,9 +19,9 @@ module SvnTestUtil
         args = args.collect do |key, value|
           "#{key}= #{Svnserve.escape_value(value)}"
         end.join(" ")
-        result = `sc #{command} #{SERVICE_NAME} #{args}`
+        result = `sc #{command} #{service_name} #{args}`
         if result.match(/FAILED/)
-          raise "Failed to #{command} #{SERVICE_NAME}: #{args}"
+          raise "Failed to #{command} #{service_name}: #{args}"
         end
         /^\s*STATE\s*:\s\d+\s*(.*?)\s*$/ =~ result
         $1
@@ -44,7 +46,7 @@ module SvnTestUtil
       end
 
       def setup_svnserve
-        @svnserve_port = @svnserve_ports.first
+        @svnserve_port = @svnserve_ports.last
         @repos_svnserve_uri = "svn://#{@svnserve_host}:#{@svnserve_port}"
         grant_everyone_full_access(@full_repos_path)
 
@@ -53,7 +55,7 @@ module SvnTestUtil
           service_control('stop') unless service_stopped?
           service_control('delete') if service_exists?
 
-          svnserve_dir = File.expand_path(File.join(@base_dir, "svnserve"))
+          svnserve_dir = File.expand_path("svnserve")
           FileUtils.mkdir_p(svnserve_dir)
           at_exit do
             service_control('stop') unless service_stopped?
@@ -65,9 +67,19 @@ module SvnTestUtil
             service_control('delete') if service_exists?
             FileUtils.rm_rf(svnserve_dir)
           end
-          targets = %w(svnserve.exe libsvn_subr-1.dll libsvn_repos-1.dll
+
+          config = SetupEnvironment.gen_make_opts
+          apr_version_include = Pathname.new(config["--with-apr"])  +
+              'include' + 'apr_version.h'
+          %r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)' =~ apr_version_include.read
+          apr_major_version = $1 == '0' ? '' : "-#{$1}"
+
+          targets = %W(svnserve.exe libsvn_subr-1.dll libsvn_repos-1.dll
                        libsvn_fs-1.dll libsvn_delta-1.dll
-                       libaprutil.dll libapr.dll sqlite3.dll)
+                       libaprutil#{apr_major_version}.dll
+                       libapr#{apr_major_version}.dll
+                       libapriconv#{apr_major_version}.dll
+                       sqlite3.dll libdb44.dll libdb44d.dll)
           ENV["PATH"].split(";").each do |path|
             found_targets = []
             targets.each do |target|
@@ -80,6 +92,9 @@ module SvnTestUtil
             targets -= found_targets
             break if targets.empty?
           end
+          # Remove optional targets instead of raising below.  If they are really
+          # needed, svnserve won't start anyway.
+          targets -= %W[libapriconv#{apr_major_version}.dll sqlite3.dll]
           unless targets.empty?
             raise "can't find libraries to work svnserve: #{targets.join(' ')}"
           end
@@ -99,7 +114,7 @@ module SvnTestUtil
           user = ENV["USERNAME"] || Etc.getlogin
           service_control('create',
                           [["binPath", "#{svnserve_path} #{args.join(' ')}"],
-                           ["DisplayName", SERVICE_NAME],
+                           ["DisplayName", service_name],
                            ["type", "own"]])
         end
         service_control('start')
@@ -126,7 +141,9 @@ exit 1
 
     module SetupEnvironment
       def setup_test_environment(top_dir, base_dir, ext_dir)
-        build_type = "Release"
+        @@top_dir = top_dir
+
+        build_type = ENV["BUILD_TYPE"] || "Release"
 
         FileUtils.mkdir_p(ext_dir)
 
@@ -154,6 +171,30 @@ exit 1
         end
       end
 
+      def gen_make_opts
+        @gen_make_opts ||= begin
+          lines = []
+          gen_make_opts = File.join(@@top_dir, "gen-make.opts")
+          lines = File.read(gen_make_opts).to_a if File.exists?(gen_make_opts)
+          config = Hash.new do |hash, key|
+            if /^--with-(.*)$/ =~ key
+              hash[key] = File.join(@@top_dir, $1)
+            end
+          end
+
+          lines.each do |line|
+            name, value = line.chomp.split(/\s*=\s*/, 2)
+            if value
+              config[name] = Pathname.new(value).absolute? ?
+                value :
+                File.join(@@top_dir, value)
+            end
+          end
+          config
+        end
+      end
+      module_function :gen_make_opts
+
       private
       def setup_dll_wrapper_util(dll_dir, util)
         libsvn_swig_ruby_dll_dir = File.join(dll_dir, "libsvn_swig_ruby")
@@ -173,15 +214,6 @@ EOC
       end
 
       def add_depended_dll_path_to_dll_wrapper_util(top_dir, build_type, util)
-        lines = []
-        gen_make_opts = File.join(top_dir, "gen-make.opts")
-        lines = File.read(gen_make_opts).to_a if File.exists?(gen_make_opts)
-        config = {}
-        lines.each do |line|
-          name, value = line.chomp.split(/\s*=\s*/, 2)
-          config[name] = value if value
-        end
-
         [
          ["apr", build_type],
          ["apr-util", build_type],
@@ -189,10 +221,10 @@ EOC
          ["berkeley-db", "bin"],
          ["sqlite", "bin"],
         ].each do |lib, sub_dir|
-          lib_dir = config["--with-#{lib}"] || lib
-          dirs = [top_dir, lib_dir, sub_dir].compact
-          dll_dir = File.expand_path(File.join(*dirs))
-          util.puts("add_path.call(#{dll_dir.dump})")
+          lib_dir = Pathname.new(gen_make_opts["--with-#{lib}"])
+          dll_dir = lib_dir + sub_dir
+          dll_dir = dll_dir.expand_path
+          util.puts("add_path.call(#{dll_dir.to_s.dump})")
         end
       end
 

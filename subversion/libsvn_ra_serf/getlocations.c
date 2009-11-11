@@ -2,17 +2,22 @@
  * getlocations.c :  entry point for get_locations RA functions for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -64,9 +69,6 @@ typedef struct {
   /* Current state we're in */
   loc_state_list_t *state;
   loc_state_list_t *free_state;
-
-  /* Return error code */
-  svn_error_t *error;
 
   int status_code;
 
@@ -185,14 +187,13 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  serf_bucket_t *buckets, *tmp;
+  serf_bucket_t *buckets;
   const char *relative_url, *basecoll_url, *req_url;
   int i;
   svn_error_t *err;
 
   loc_ctx = apr_pcalloc(pool, sizeof(*loc_ctx));
   loc_ctx->pool = pool;
-  loc_ctx->error = SVN_NO_ERROR;
   loc_ctx->done = FALSE;
   loc_ctx->paths = apr_hash_make(loc_ctx->pool);
 
@@ -200,20 +201,11 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   buckets = serf_bucket_aggregate_create(session->bkt_alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:get-locations xmlns:S=\"",
-                                      sizeof("<S:get-locations xmlns:S=\"")-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(SVN_XML_NAMESPACE,
-                                      sizeof(SVN_XML_NAMESPACE)-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\">",
-                                      sizeof("\">")-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+  svn_ra_serf__add_open_tag_buckets(buckets, session->bkt_alloc,
+                                    "S:get-locations",
+                                    "xmlns:S", SVN_XML_NAMESPACE,
+                                    "xmlns:D", "DAV:",
+                                    NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:path", path,
@@ -231,15 +223,14 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
                                    session->bkt_alloc);
     }
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:get-locations>",
-                                      sizeof("</S:get-locations>")-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+  svn_ra_serf__add_close_tag_buckets(buckets, session->bkt_alloc,
+                                     "S:get-locations");
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                         session, NULL, peg_revision, pool));
+  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
+                                         NULL, NULL, peg_revision, NULL,
+                                         pool));
 
-  req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
+  req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
@@ -266,13 +257,9 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   err = svn_ra_serf__context_run_wait(&loc_ctx->done, session, pool);
 
-  if (loc_ctx->error || parser_ctx->error)
-    {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-      SVN_ERR(loc_ctx->error);
-      SVN_ERR(parser_ctx->error);
-    }
+  SVN_ERR(svn_error_compose_create(
+              svn_ra_serf__error_on_status(loc_ctx->status_code, req_url),
+              err));
 
-  return err;
+  return SVN_NO_ERROR;
 }

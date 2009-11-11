@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2005,2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  */
@@ -95,6 +100,12 @@ public class NotifyInformation extends EventObject
     private RevisionRange mergeRange;
 
     /**
+     * A common absolute path prefix that can be subtracted from .path.
+     * @since 1.6
+     */
+    private String pathPrefix;
+
+    /**
      * This constructor is to be used by the native code.
      *
      * @param path The path of the item, which is the source of the event.
@@ -111,13 +122,15 @@ public class NotifyInformation extends EventObject
      * @param revision The revision of the item.
      * @param changelistName The name of the changelist.
      * @param mergeRange The range of the merge just beginning to occur.
+     * @param pathPrefix A common path prefix.
      */
     NotifyInformation(String path, int action, int kind, String mimeType,
                       Lock lock, String errMsg, int contentState,
                       int propState, int lockState, long revision,
-                      String changelistName, RevisionRange mergeRange)
+                      String changelistName, RevisionRange mergeRange,
+                      String pathPrefix)
     {
-        super(path);
+        super(path == null ? "" : path);
         this.action = action;
         this.kind = kind;
         this.mimeType = mimeType;
@@ -129,6 +142,7 @@ public class NotifyInformation extends EventObject
         this.revision = revision;
         this.changelistName = changelistName;
         this.mergeRange = mergeRange;
+        this.pathPrefix = pathPrefix;
     }
 
     /**
@@ -227,5 +241,14 @@ public class NotifyInformation extends EventObject
     public RevisionRange getMergeRange()
     {
         return mergeRange;
+    }
+
+    /**
+     * @return The common absolute path prefix.
+     * @since 1.6
+     */
+    public String getPathPrefix()
+    {
+        return pathPrefix;
     }
 }

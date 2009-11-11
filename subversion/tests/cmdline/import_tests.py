@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -63,7 +71,7 @@ def import_executable(sbox):
 
   # import new files into repository
   url = sbox.repo_url
-  output, errput =   svntest.actions.run_and_verify_svn(
+  exit_code, output, errput =   svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
     '-m', 'Log message for new import', xt_path, url)
 
@@ -142,7 +150,7 @@ def import_ignores(sbox):
   # import new dir into repository
   url = sbox.repo_url + '/dir'
 
-  output, errput = svntest.actions.run_and_verify_svn(
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
     '-m', 'Log message for new import',
     dir_path, url)
@@ -209,7 +217,7 @@ def import_no_ignores(sbox):
   # import new dir into repository
   url = sbox.repo_url + '/dir'
 
-  output, errput = svntest.actions.run_and_verify_svn(
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
     '-m', 'Log message for new import', '--no-ignore',
     dir_path, url)
@@ -288,10 +296,13 @@ def import_eol_style(sbox):
   "import should honor the eol-style property"
 
   sbox.build()
-  wc_dir = sbox.wc_dir
+  os.chdir(sbox.wc_dir)
 
   # setup a custom config, we need autoprops
   config_contents = '''\
+[auth]
+password-stores =
+
 [miscellany]
 enable-auto-props = yes
 
@@ -304,8 +315,8 @@ enable-auto-props = yes
 
   # create a new file and import it
   file_name = "test.dsp"
-  file_path = os.path.join(wc_dir, file_name)
-  imp_dir_path = os.path.join(wc_dir, 'dir')
+  file_path = file_name
+  imp_dir_path = 'dir'
   imp_file_path = os.path.join(imp_dir_path, file_name)
 
   os.mkdir(imp_dir_path, 0755)
@@ -317,7 +328,7 @@ enable-auto-props = yes
                                      sbox.repo_url,
                                      '--config-dir', config_dir)
 
-  svntest.main.run_svn(None, 'update', wc_dir, '--config-dir', config_dir)
+  svntest.main.run_svn(None, 'update', '.', '--config-dir', config_dir)
 
   # change part of the file
   svntest.main.file_append(file_path, "Extra line\n")
@@ -337,10 +348,10 @@ enable-auto-props = yes
   else:
     crlf = '\r\n'
   expected_output = [
-  "Index: svn-test-work/working_copies/import_tests-5/test.dsp\n",
+  "Index: test.dsp\n",
   "===================================================================\n",
-  "--- svn-test-work/working_copies/import_tests-5/test.dsp\t(revision 2)\n",
-  "+++ svn-test-work/working_copies/import_tests-5/test.dsp\t(working copy)\n",
+  "--- test.dsp\t(revision 2)\n",
+  "+++ test.dsp\t(working copy)\n",
   "@@ -1 +1,2 @@\n",
   " This is file test.dsp." + crlf,
   "+Extra line" + crlf

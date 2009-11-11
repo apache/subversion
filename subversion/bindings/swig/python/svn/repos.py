@@ -5,15 +5,22 @@
 # See http://subversion.tigris.org for more information.
 #
 ######################################################################
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
-#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 from libsvn.repos import *
@@ -48,7 +55,7 @@ class ChangedPath:
     self.path = path
     if action not in [None, CHANGE_ACTION_MODIFY, CHANGE_ACTION_ADD,
                       CHANGE_ACTION_DELETE, CHANGE_ACTION_REPLACE]:
-      raise Exception, "unsupported change type"
+      raise Exception("unsupported change type")
     self.action = action
 
     ### it would be nice to avoid this flag. however, without it, it would
@@ -139,7 +146,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def add_directory(self, path, parent_baton,
                     copyfrom_path, copyfrom_revision, dir_pool=None):
-    action = self.changes.has_key(path) and CHANGE_ACTION_REPLACE \
+    action = path in self.changes and CHANGE_ACTION_REPLACE \
              or CHANGE_ACTION_ADD
     self.changes[path] = ChangedPath(_svncore.svn_node_dir,
                                      False,
@@ -163,7 +170,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def change_dir_prop(self, dir_baton, name, value, pool=None):
     dir_path = dir_baton[0]
-    if self.changes.has_key(dir_path):
+    if dir_path in self.changes:
       self.changes[dir_path].prop_changes = True
     else:
       # can't be added or deleted, so this must be CHANGED
@@ -179,7 +186,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool=None):
-    action = self.changes.has_key(path) and CHANGE_ACTION_REPLACE \
+    action = path in self.changes and CHANGE_ACTION_REPLACE \
              or CHANGE_ACTION_ADD
     self.changes[path] = ChangedPath(_svncore.svn_node_file,
                                      False,
@@ -203,7 +210,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def apply_textdelta(self, file_baton, base_checksum):
     file_path = file_baton[0]
-    if self.changes.has_key(file_path):
+    if file_path in self.changes:
       self.changes[file_path].text_changed = True
     else:
       # an add would have inserted a change record already, and it can't
@@ -223,7 +230,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def change_file_prop(self, file_baton, name, value, pool=None):
     file_path = file_baton[0]
-    if self.changes.has_key(file_path):
+    if file_path in self.changes:
       self.changes[file_path].prop_changes = True
     else:
       # an add would have inserted a change record already, and it can't
@@ -261,11 +268,3 @@ class RevisionChangeCollector(ChangeCollector):
     if idx == -1:
       return parent_path + '/' + path
     return parent_path + path[idx:]
-
-
-# enable True/False in older vsns of Python
-try:
-  True
-except NameError:
-  True = 1
-  False = 0

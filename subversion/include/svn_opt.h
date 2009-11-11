@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -25,9 +30,15 @@
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_getopt.h>
+#include <apr_tables.h>
+#include <apr_hash.h>
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+#define APR_WANT_STDIO
+#endif
+#include <apr_want.h>   /* for FILE* */
 
 #include "svn_types.h"
-#include "svn_error.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,8 +59,8 @@ extern "C" {
  * unless the instance is explicitly documented to allocate from a
  * pool in @a baton.
  */
-typedef svn_error_t *(svn_opt_subcommand_t)
-       (apr_getopt_t *os, void *baton, apr_pool_t *pool);
+typedef svn_error_t *(svn_opt_subcommand_t)(
+  apr_getopt_t *os, void *baton, apr_pool_t *pool);
 
 
 /** The maximum number of aliases a subcommand can have. */
@@ -144,6 +155,7 @@ svn_opt_get_canonical_subcommand2(const svn_opt_subcommand_desc2_t *table,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 const svn_opt_subcommand_desc_t *
 svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
                                  const char *cmd_name);
@@ -174,6 +186,7 @@ svn_opt_get_option_from_code2(int code,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 const apr_getopt_option_t *
 svn_opt_get_option_from_code(int code,
                              const apr_getopt_option_t *option_table);
@@ -198,6 +211,7 @@ svn_opt_subcommand_takes_option3(const svn_opt_subcommand_desc2_t *command,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_boolean_t
 svn_opt_subcommand_takes_option2(const svn_opt_subcommand_desc2_t *command,
                                  int option_code);
@@ -212,6 +226,7 @@ svn_opt_subcommand_takes_option2(const svn_opt_subcommand_desc2_t *command,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_boolean_t
 svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
                                 int option_code);
@@ -246,6 +261,7 @@ svn_opt_print_generic_help2(const char *header,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 void
 svn_opt_print_generic_help(const char *header,
                            const svn_opt_subcommand_desc_t *cmd_table,
@@ -291,6 +307,7 @@ svn_opt_subcommand_help3(const char *subcommand,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 void
 svn_opt_subcommand_help2(const char *subcommand,
                          const svn_opt_subcommand_desc2_t *table,
@@ -304,6 +321,7 @@ svn_opt_subcommand_help2(const char *subcommand,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 void
 svn_opt_subcommand_help(const char *subcommand,
                         const svn_opt_subcommand_desc_t *table,
@@ -347,6 +365,8 @@ enum svn_opt_revision_kind {
 
   /** repository youngest */
   svn_opt_revision_head
+
+  /* please update svn_opt__revision_to_string() when extending this enum */
 };
 
 /**
@@ -405,21 +425,35 @@ typedef struct svn_opt_revision_range_t
  *
  * Use @a pool for temporary allocations.
  */
-int svn_opt_parse_revision(svn_opt_revision_t *start_revision,
-                           svn_opt_revision_t *end_revision,
-                           const char *arg,
-                           apr_pool_t *pool);
+int
+svn_opt_parse_revision(svn_opt_revision_t *start_revision,
+                       svn_opt_revision_t *end_revision,
+                       const char *arg,
+                       apr_pool_t *pool);
 
 /**
- * Similar to svn_opt_parse_revision but stores result in
- * @a *ranges_to_merge, an array of @c svn_opt_revision_range_t *'s.
+ * Parse @a arg, where @a arg is "N" or "N:M", into a
+ * @c svn_opt_revision_range_t and push that onto @a opt_ranges.
+ *
+ *    - If @a arg is "N", set the @c start field of the
+ *      @c svn_opt_revision_range_t to represent N and the @c end field
+ *      to @c svn_opt_revision_unspecified.
+ *
+ *    - If @a arg is "N:M", set the @c start field of the
+ *      @c svn_opt_revision_range_t to represent N and the @c end field
+ *      to represent M.
+ *
+ * If @a arg is invalid, return -1; else return 0.  It is invalid to omit
+ * a revision (as in, ":", "N:" or ":M").
+ *
+ * Use @a pool to allocate @c svn_opt_revision_range_t pushed to the array.
  *
  * @since New in 1.5.
  */
 int
-svn_opt_parse_revision2(apr_array_header_t **ranges_to_merge,
-                        const char *arg,
-                        apr_pool_t *pool);
+svn_opt_parse_revision_to_range(apr_array_header_t *opt_ranges,
+                                const char *arg,
+                                apr_pool_t *pool);
 
 /**
  * Resolve peg revisions and operational revisions in the following way:
@@ -464,13 +498,38 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
  *
  * On each URL target, do some IRI-to-URI encoding and some
  * auto-escaping.  On each local path, canonicalize case and path
- * separators, and silently skip it if it has the same name as a
- * Subversion working copy administrative directory.
+ * separators.
  *
  * Allocate @a *targets_p and its elements in @a pool.
  *
- * @since New in 1.2.
+ * If a path has the same name as a Subversion working copy
+ * administrative directory, return SVN_ERR_RESERVED_FILENAME_SPECIFIED;
+ * if multiple reserved paths are encountered, return a chain of
+ * errors, all of which are SVN_ERR_RESERVED_FILENAME_SPECIFIED.  Do
+ * not return this type of error in a chain with any other type of
+ * error, and if this is the only type of error encountered, complete
+ * the operation before returning the error(s).
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ * @see svn_client_args_to_target_array()
  */
+SVN_DEPRECATED
+svn_error_t *
+svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
+                              apr_getopt_t *os,
+                              apr_array_header_t *known_targets,
+                              apr_pool_t *pool);
+
+/**
+ * This is the same as svn_opt_args_to_target_array3() except that it
+ * silently ignores paths that have the same name as a working copy
+ * administrative directory.
+ *
+ * @since New in 1.2.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
@@ -492,6 +551,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_opt_args_to_target_array(apr_array_header_t **targets_p,
                              apr_getopt_t *os,
@@ -503,14 +563,29 @@ svn_opt_args_to_target_array(apr_array_header_t **targets_p,
 
 
 /**
+ * Parse revprop key/value pair from @a revprop_spec (name[=value]) into
+ * @a revprops, making copies of both with @a pool.  If @a revprops is
+ * @c NULL, allocate a new apr_hash_t in it.  @a revprops maps
+ * const char * revprop names to svn_string_t * revprop values for use
+ * with svn_repos_get_commit_editor5 and other get_commit_editor APIs.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_opt_parse_revprop(apr_hash_t **revprops, const char *revprop_spec,
+                      apr_pool_t *pool);
+
+
+/**
  * If no targets exist in @a *targets, add `.' as the lone target.
  *
  * (Some commands take an implicit "." string argument when invoked
  * with no arguments. Those commands make use of this function to
  * add "." to the target array if the user passes no args.)
  */
-void svn_opt_push_implicit_dot_target(apr_array_header_t *targets,
-                                      apr_pool_t *pool);
+void
+svn_opt_push_implicit_dot_target(apr_array_header_t *targets,
+                                 apr_pool_t *pool);
 
 
 /**
@@ -553,20 +628,23 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
  *    "foo/bar@1:2"                  -> error
  *    "foo/bar@baz"                  -> error
  *    "foo/bar@"                     -> "foo/bar",       (base)
+ *    "foo/@bar@"                    -> "foo/@bar",      (base)
  *    "foo/bar/@13"                  -> "foo/bar/",      (number, 13)
  *    "foo/bar@@13"                  -> "foo/bar@",      (number, 13)
  *    "foo/@bar@HEAD"                -> "foo/@bar",      (head)
  *    "foo@/bar"                     -> "foo@/bar",      (unspecified)
  *    "foo@HEAD/bar"                 -> "foo@HEAD/bar",  (unspecified)
+ *    "@foo/bar"                     -> error
+ *    "@foo/bar@"                    -> "@foo/bar",      (unspecified)
  *
  *   [*] Syntactically valid but probably not semantically useful.
  *
  * If a trailing revision specifier is found, parse it into @a *rev and
  * put the rest of the path into @a *truepath, allocating from @a pool;
- * or return an @c SVN_ERR_CL_ARG_PARSING_ERROR if the revision
- * specifier is invalid.  If no trailing revision specifier is found,
- * set @a *truepath to @a path and @a rev->kind to @c
- * svn_opt_revision_unspecified.
+ * or return an @c SVN_ERR_CL_ARG_PARSING_ERROR (with the effect on
+ * @a *truepath undefined) if the revision specifier is invalid.
+ * If no trailing revision specifier is found, set @a *truepath to
+ * @a path and @a rev->kind to @c svn_opt_revision_unspecified.
  *
  * This function does not require that @a path be in canonical form.
  * No canonicalization is done and @a *truepath will only be in
@@ -634,6 +712,7 @@ svn_opt_print_help3(apr_getopt_t *os,
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 
+SVN_DEPRECATED
 svn_error_t *
 svn_opt_print_help2(apr_getopt_t *os,
                     const char *pgm_name,
@@ -652,6 +731,7 @@ svn_opt_print_help2(apr_getopt_t *os,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_opt_print_help(apr_getopt_t *os,
                    const char *pgm_name,
@@ -663,6 +743,29 @@ svn_opt_print_help(apr_getopt_t *os,
                    const apr_getopt_option_t *option_table,
                    const char *footer,
                    apr_pool_t *pool);
+
+/* Return, in @a *true_targets_p, a copy of @a targets with peg revision
+ * specifiers snipped off the end of each element.
+ *
+ * This function is useful for subcommands for which peg revisions
+ * do not make any sense. Such subcommands still need to allow peg
+ * revisions to be specified on the command line so that users of
+ * the command line client can consistently escape '@' characters
+ * in filenames by appending an '@' character, regardless of the
+ * subcommand being used.
+ *
+ * If a peg revision is present but cannot be parsed, an error is thrown.
+ * The user has likely forgotten to escape an '@' character in a filename.
+ *
+ * It is safe to pass the address of @a targets as @a true_targets_p.
+ *
+ * Do all allocations in @a pool.
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_opt_eat_peg_revisions(apr_array_header_t **true_targets_p,
+                          apr_array_header_t *targets,
+                          apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

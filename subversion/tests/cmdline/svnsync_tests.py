@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2005-2007 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -24,9 +32,11 @@ import svntest
 from svntest.verify import SVNUnexpectedStdout, SVNUnexpectedStderr
 from svntest.verify import SVNExpectedStderr
 from svntest.main import write_restrictive_svnserve_conf
+from svntest.main import server_has_partial_replay
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -47,7 +57,7 @@ def build_repos(sbox):
 
 def run_sync(url, expected_error=None):
   "Synchronize the mirror repository with the master"
-  output, errput = svntest.main.run_svnsync(
+  exit_code, output, errput = svntest.main.run_svnsync(
     "synchronize", url,
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd)
@@ -65,9 +75,30 @@ def run_sync(url, expected_error=None):
     # should be: ['Committed revision 1.\n', 'Committed revision 2.\n']
     raise SVNUnexpectedStdout("Missing stdout")
 
+def run_copy_revprops(url, expected_error=None):
+  "Copy revprops to the mirror repository from the master"
+  exit_code, output, errput = svntest.main.run_svnsync(
+    "copy-revprops", url,
+    "--username", svntest.main.wc_author,
+    "--password", svntest.main.wc_passwd)
+  if errput:
+    if expected_error is None:
+      raise SVNUnexpectedStderr(errput)
+    else:
+      expected_error = svntest.verify.RegexOutput(expected_error,
+                                                  match_all=False)
+      svntest.verify.compare_and_display_lines(None, "STDERR",
+                                               expected_error, errput)
+  elif expected_error is not None:
+    raise SVNExpectedStderr
+  if not output and not expected_error:
+    # should be: ['Copied properties for revision 1.\n',
+    #             'Copied properties for revision 2.\n']
+    raise SVNUnexpectedStdout("Missing stdout")
+
 def run_init(dst_url, src_url):
   "Initialize the mirror repository from the master"
-  output, errput = svntest.main.run_svnsync(
+  exit_code, output, errput = svntest.main.run_svnsync(
     "initialize", dst_url, src_url,
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd)
@@ -75,6 +106,28 @@ def run_init(dst_url, src_url):
     raise SVNUnexpectedStderr(errput)
   if output != ['Copied properties for revision 0.\n']:
     raise SVNUnexpectedStdout(output)
+
+def run_info(url, expected_error=None):
+  "Print synchronization information of the repository"
+  exit_code, output, errput = svntest.main.run_svnsync(
+    "info", url,
+    "--username", svntest.main.wc_author,
+    "--password", svntest.main.wc_passwd)
+  if errput:
+    if expected_error is None:
+      raise SVNUnexpectedStderr(errput)
+    else:
+      expected_error = svntest.verify.RegexOutput(expected_error,
+                                                  match_all=False)
+      svntest.verify.compare_and_display_lines(None, "STDERR",
+                                               expected_error, errput)
+  elif expected_error is not None:
+    raise SVNExpectedStderr
+  if not output and not expected_error:
+    # should be: ['From URL: http://....\n',
+    #             'From UUID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX\n',
+    #             'Last Merged Revision: XXX\n']
+    raise SVNUnexpectedStdout("Missing stdout")
 
 
 def run_test(sbox, dump_file_name, subdir = None, exp_dump_file_name = None):
@@ -88,8 +141,9 @@ or another dump file."""
   svnsync_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnsync_tests_data')
   # Load the specified dump file into the master repository.
-  master_dumpfile_contents = file(os.path.join(svnsync_tests_dir,
-                                               dump_file_name)).readlines()
+  master_dumpfile_contents = open(os.path.join(svnsync_tests_dir,
+                                               dump_file_name),
+                                  'rb').readlines()
   svntest.actions.run_and_verify_load(sbox.repo_dir, master_dumpfile_contents)
 
   # Create the empty destination repository.
@@ -97,11 +151,10 @@ or another dump file."""
   build_repos(dest_sbox)
 
   # Setup the mirror repository.  Feed it the UUID of the source repository.
-  output, errput = svntest.main.run_svnlook("uuid", sbox.repo_dir)
-  mirror_cfg = ["SVN-fs-dump-format-version: 2\n",
-                "UUID: " + output[0],
-                ]
-  svntest.actions.run_and_verify_load(dest_sbox.repo_dir, mirror_cfg)
+  exit_code, output, errput = svntest.main.run_svnlook("uuid", sbox.repo_dir)
+  svntest.actions.run_and_verify_svnadmin2("Setting UUID", None, None, 0,
+                                           'setuuid', dest_sbox.repo_dir,
+                                           output[0][:-1])
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
@@ -112,6 +165,7 @@ or another dump file."""
   run_init(dest_sbox.repo_url, repo_url)
 
   run_sync(dest_sbox.repo_url)
+  run_copy_revprops(dest_sbox.repo_url)
 
   # Remove some SVNSync-specific housekeeping properties from the
   # mirror repository in preparation for the comparison dump.
@@ -124,11 +178,11 @@ or another dump file."""
   # Create a dump file from the mirror repository.
   dest_dump = svntest.actions.run_and_verify_dump(dest_sbox.repo_dir)
 
-  # Compare the dump produced by the mirror repository with either the original 
+  # Compare the dump produced by the mirror repository with either the original
   # dump file (used to create the master repository) or another specified dump
   # file.
   if exp_dump_file_name:
-    exp_master_dumpfile_contents = file(os.path.join(svnsync_tests_dir,
+    exp_master_dumpfile_contents = open(os.path.join(svnsync_tests_dir,
                                         exp_dump_file_name)).readlines()
   else:
     exp_master_dumpfile_contents = master_dumpfile_contents
@@ -384,11 +438,11 @@ def copy_from_unreadable_dir(sbox):
     '\n', # log message is stripped
   ]
 
-  out, err = svntest.main.run_svn(None,
-                                  'log',
-                                  '-r', '3',
-                                  '-v',
-                                  dest_sbox.repo_url)
+  exit_code, out, err = svntest.main.run_svn(None,
+                                             'log',
+                                             '-r', '3',
+                                             '-v',
+                                             dest_sbox.repo_url)
 
   if err:
     raise SVNUnexpectedStderr(err)
@@ -509,11 +563,11 @@ def copy_with_mod_from_unreadable_dir(sbox):
     '\n', # log message is stripped
   ]
 
-  out, err = svntest.main.run_svn(None,
-                                  'log',
-                                  '-r', '2',
-                                  '-v',
-                                  dest_sbox.repo_url)
+  exit_code, out, err = svntest.main.run_svn(None,
+                                             'log',
+                                             '-r', '2',
+                                             '-v',
+                                             dest_sbox.repo_url)
 
   if err:
     raise SVNUnexpectedStderr(err)
@@ -611,11 +665,11 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
     '\n', # log message is stripped
   ]
 
-  out, err = svntest.main.run_svn(None,
-                                  'log',
-                                  '-r', '2',
-                                  '-v',
-                                  dest_sbox.repo_url)
+  exit_code, out, err = svntest.main.run_svn(None,
+                                             'log',
+                                             '-r', '2',
+                                             '-v',
+                                             dest_sbox.repo_url)
 
   if err:
     raise SVNUnexpectedStderr(err)
@@ -643,13 +697,78 @@ def copy_revprops(sbox):
 
 def only_trunk(sbox):
   "test syncing subdirectories"
-  run_test(sbox, "svnsync-trunk-only.dump", "/trunk", 
+  run_test(sbox, "svnsync-trunk-only.dump", "/trunk",
            "svnsync-trunk-only.expected.dump")
 
 def only_trunk_A_with_changes(sbox):
   "test syncing subdirectories with changes on root"
-  run_test(sbox, "svnsync-trunk-A-changes.dump", "/trunk/A", 
+  run_test(sbox, "svnsync-trunk-A-changes.dump", "/trunk/A",
            "svnsync-trunk-A-changes.expected.dump")
+
+# test for issue #2904
+def move_and_modify_in_the_same_revision(sbox):
+  "test move parent and modify child file in same rev"
+  run_test(sbox, "svnsync-move-and-modify.dump")
+
+def info_synchronized(sbox):
+  "test info cmd on a synchronized repo"
+
+  sbox.build("svnsync-info-syncd", False)
+
+  # Get the UUID of the source repository.
+  exit_code, output, errput = svntest.main.run_svnlook("uuid", sbox.repo_dir)
+  src_uuid = output[0].strip()
+
+  dest_sbox = sbox.clone_dependent()
+  build_repos(dest_sbox)
+
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
+  run_init(dest_sbox.repo_url, sbox.repo_url)
+  run_sync(dest_sbox.repo_url)
+
+  exit_code, output, errput = svntest.main.run_svnsync(
+    "info", dest_sbox.repo_url,
+    "--username", svntest.main.wc_author,
+    "--password", svntest.main.wc_passwd)
+  if errput:
+      raise SVNUnexpectedStderr(errput)
+
+  expected_out = ['Source URL: %s\n' % sbox.repo_url,
+                  'Source Repository UUID: %s\n' % src_uuid,
+                  'Last Merged Revision: 1\n',
+                  ]
+
+  svntest.verify.compare_and_display_lines(None,
+                                           'INFO',
+                                           expected_out,
+                                           output)
+
+def info_not_synchronized(sbox):
+  "test info cmd on an un-synchronized repo"
+
+  sbox.build("svnsync-info-not-syncd", False)
+
+  run_info(sbox.repo_url,
+           ".*Repository '%s' is not initialized.*" % sbox.repo_url)
+
+#----------------------------------------------------------------------
+
+def copy_bad_line_endings(sbox):
+  "copy with inconsistent lineendings in svn:props"
+  run_test(sbox, "copy-bad-line-endings.dump",
+           exp_dump_file_name="copy-bad-line-endings.expected.dump")
+
+#----------------------------------------------------------------------
+
+def delete_svn_props(sbox):
+  "copy with svn:prop deletions"
+  run_test(sbox, "delete-svn-props.dump")
+
+def commit_a_copy_of_root(sbox):
+  "commit a copy of root causes sync to fail"
+  #Testcase for issue 3438.
+  run_test(sbox, "repo_with_copy_of_root_dir.dump")
+
 
 ########################################################################
 # Run the tests
@@ -679,8 +798,16 @@ test_list = [ None,
               url_encoding,
               no_author,
               copy_revprops,
-              only_trunk,
-              only_trunk_A_with_changes,
+              SkipUnless(only_trunk,
+                         server_has_partial_replay),
+              SkipUnless(only_trunk_A_with_changes,
+                         server_has_partial_replay),
+              move_and_modify_in_the_same_revision,
+              info_synchronized,
+              info_not_synchronized,
+              copy_bad_line_endings,
+              delete_svn_props,
+              commit_a_copy_of_root,
              ]
 
 if __name__ == '__main__':

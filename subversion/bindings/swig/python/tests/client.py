@@ -1,11 +1,17 @@
-import unittest, os, weakref, tempfile, types, setup_path
+import unittest, os, weakref, tempfile, setup_path
 
 from svn import core, repos, fs, delta, client, wc
 from svn.core import SubversionException
+import weakref
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH, REPOS_URL
-from urlparse import urljoin
+try:
+  # Python >=3.0
+  from urllib.parse import urljoin
+except ImportError:
+  # Python <3.0
+  from urlparse import urljoin
 
 class SubversionClientTestCase(unittest.TestCase):
   """Test cases for the basic SWIG Subversion client layer"""
@@ -16,18 +22,24 @@ class SubversionClientTestCase(unittest.TestCase):
     return "Test log message"
 
   def log_receiver(self, changed_paths, revision, author, date, message, pool):
-    """ Function to recieve log messages retrieved by client.log3(). """
+    """ Function to receive log messages retrieved by client.log3(). """
     self.log_message = message
     self.change_author = author
     self.changed_paths = changed_paths
+
+  def log_entry_receiver(self, log_entry, pool):
+    """An implementation of svn_log_entry_receiver_t."""
+    self.received_revisions.append(log_entry.revision)
 
   def setUp(self):
     """Set up authentication and client context"""
     self.client_ctx = client.svn_client_create_context()
     self.assertEquals(self.client_ctx.log_msg_baton2, None)
     self.assertEquals(self.client_ctx.log_msg_func2, None)
-    self.client_ctx.log_msg_func2 = client.svn_swig_py_get_commit_log_func
-    self.client_ctx.log_msg_baton2 = self.log_message_func
+    self.assertEquals(self.client_ctx.log_msg_baton3, None)
+    self.assertEquals(self.client_ctx.log_msg_func3, None)
+    self.client_ctx.log_msg_func3 = client.svn_swig_py_get_commit_log_func
+    self.client_ctx.log_msg_baton3 = self.log_message_func
     self.log_message_func_calls = 0
     self.log_message = None
     self.changed_paths = None
@@ -40,16 +52,31 @@ class SubversionClientTestCase(unittest.TestCase):
 
     self.client_ctx.auth_baton = core.svn_auth_open(providers)
 
+    self.cleanup_dirs = []
+
+  def tearDown(self):
+    # We have to free client_ctx first, since it may be holding handles
+    # to WC DBs
+    del self.client_ctx
+    for dir in self.cleanup_dirs:
+      core.svn_io_remove_dir(dir)
+
+  def allocate_temp_dir(self, suffix = ""):
+    temp_dir_name = core.svn_dirent_internal_style(tempfile.mkdtemp(suffix))
+    self.cleanup_dirs.append(temp_dir_name)
+    return temp_dir_name
+
   def testBatonPlay(self):
     """Test playing with C batons"""
-    self.client_ctx.log_msg_baton2 = self.client_ctx.auth_baton
-    self.assertEquals(str(self.client_ctx.log_msg_baton2),
-                      str(self.client_ctx.auth_baton))
-    self.client_ctx.log_msg_baton2 = self.client_ctx.log_msg_baton2
-    self.assertEquals(str(self.client_ctx.log_msg_baton2),
-                      str(self.client_ctx.auth_baton))
+    baton = lambda: 1
+    weakref_baton = weakref.ref(baton)
+    self.client_ctx.log_msg_baton2 = baton
+    baton = None
+    self.assertEquals(self.client_ctx.log_msg_baton2(), 1)
+    self.assertEquals(weakref_baton()(), 1)
     self.client_ctx.log_msg_baton2 = None
     self.assertEquals(self.client_ctx.log_msg_baton2, None)
+    self.assertEquals(weakref_baton(), None)
 
     # External objects should retain their current parent pool
     self.assertNotEquals(self.client_ctx._parent_pool,
@@ -67,16 +94,16 @@ class SubversionClientTestCase(unittest.TestCase):
     """Test direct method calls to callbacks"""
 
     # Directly invoking the msg_baton should work
-    self.client_ctx.log_msg_baton2(None, None)
-    b = self.client_ctx.log_msg_baton2
+    self.client_ctx.log_msg_baton3(None, None)
+    b = self.client_ctx.log_msg_baton3
     b(None, None)
     self.assertEqual(self.log_message_func_calls, 2)
 
-    # You can also invoke the log_msg_func2. It'd be
-    # nice if we could get log_msg_func2 function
+    # You can also invoke the log_msg_func3. It'd be
+    # nice if we could get log_msg_func3 function
     # to invoke the baton function, but, in order to do that,
     # we'd need to supply a value for the first parameter.
-    self.client_ctx.log_msg_func2(None, self.client_ctx.log_msg_baton2)
+    self.client_ctx.log_msg_func3(None, self.client_ctx.log_msg_baton3)
 
   def info_receiver(self, path, info, pool):
     """Squirrel away the output from 'svn info' so that the unit tests
@@ -120,7 +147,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = tempfile.mktemp('-checkout')
+    path = self.allocate_temp_dir('-checkout')
 
     self.assertRaises(ValueError, client.checkout2,
                       REPOS_URL, path, None, None, True, True,
@@ -153,6 +180,15 @@ class SubversionClientTestCase(unittest.TestCase):
     self.assertEqual(commit_info.revision, 13)
     self.assertEqual(self.log_message_func_calls, 1)
 
+  def test_mkdir_url_with_revprops(self):
+    """Test svn_client_mkdir3 on a file:// URL, with added revprops"""
+    dir = urljoin(REPOS_URL+"/", "some/deep/subdir")
+
+    commit_info = client.mkdir3((dir,), 1, {'customprop':'value'},
+                                self.client_ctx)
+    self.assertEqual(commit_info.revision, 14)
+    self.assertEqual(self.log_message_func_calls, 1)
+
   def test_log3_url(self):
     """Test svn_client_log3 on a file:// URL"""
     dir = urljoin(REPOS_URL+"/", "trunk/dir1")
@@ -166,14 +202,35 @@ class SubversionClientTestCase(unittest.TestCase):
     self.assertEqual(self.log_message, "More directories.")
     self.assertEqual(len(self.changed_paths), 3)
     for dir in ('/trunk/dir1', '/trunk/dir2', '/trunk/dir3'):
-      self.assert_(self.changed_paths.has_key(dir))
+      self.assert_(dir in self.changed_paths)
       self.assertEqual(self.changed_paths[dir].action, 'A')
+
+  def test_log5(self):
+    """Test svn_client_log5."""
+    start = core.svn_opt_revision_t()
+    start.kind = core.svn_opt_revision_number
+    start.value.number = 0
+
+    end = core.svn_opt_revision_t()
+    end.kind = core.svn_opt_revision_number
+    end.value.number = 4
+
+    rev_range = core.svn_opt_revision_range_t()
+    rev_range.start = start
+    rev_range.end = end
+
+    self.received_revisions = []
+
+    client.log5((REPOS_URL,), end, (rev_range,), 0, False, True, False, (),
+        self.log_entry_receiver, self.client_ctx)
+
+    self.assertEqual(self.received_revisions, range(0, 5))
 
   def test_uuid_from_url(self):
     """Test svn_client_uuid_from_url on a file:// URL"""
     self.assert_(isinstance(
                  client.uuid_from_url(REPOS_URL, self.client_ctx),
-                 types.StringTypes))
+                 basestring))
 
   def test_url_from_path(self):
     """Test svn_client_url_from_path for a file:// URL"""
@@ -182,7 +239,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = tempfile.mktemp('-url_from_path')
+    path = self.allocate_temp_dir('-url_from_path')
 
     client.checkout2(REPOS_URL, path, rev, rev, True, True,
                      self.client_ctx)
@@ -194,7 +251,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = tempfile.mktemp('uuid_from_path')
+    path = self.allocate_temp_dir('-uuid_from_path')
 
     client.checkout2(REPOS_URL, path, rev, rev, True, True,
                      self.client_ctx)
@@ -205,7 +262,7 @@ class SubversionClientTestCase(unittest.TestCase):
                       client.uuid_from_url(REPOS_URL, self.client_ctx))
 
     self.assert_(isinstance(client.uuid_from_path(path, wc_adm,
-                            self.client_ctx), types.StringTypes))
+                            self.client_ctx), basestring))
 
   def test_open_ra_session(self):
       """Test svn_client_open_ra_session()."""
@@ -219,7 +276,7 @@ class SubversionClientTestCase(unittest.TestCase):
     # in the repository.
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
-    wc_path = core.svn_path_canonicalize(tempfile.mktemp())
+    wc_path = self.allocate_temp_dir('-info_file')
 
     client.checkout2(REPOS_URL, wc_path, rev, rev, True, True,
                      self.client_ctx)
@@ -264,7 +321,46 @@ class SubversionClientTestCase(unittest.TestCase):
       self.assertEqual(self.info.size, 8)
     finally:
       wc.adm_close(adm_access)
-      core.svn_io_remove_dir(wc_path)
+
+  def test_merge_peg3(self):
+    """Test svn_client_merge_peg3."""
+    head = core.svn_opt_revision_t()
+    head.kind = core.svn_opt_revision_head
+    wc_path = self.allocate_temp_dir('-merge_peg3')
+
+    client.checkout3(REPOS_URL, wc_path, head, head, core.svn_depth_infinity,
+                     True, False, self.client_ctx)
+
+    # Let's try to backport a change from the v1x branch
+    trunk_path = core.svn_dirent_join(wc_path, 'trunk')
+    v1x_path = core.svn_dirent_join(wc_path, 'branches/v1x')
+
+    start = core.svn_opt_revision_t()
+    start.kind = core.svn_opt_revision_number
+    start.value.number = 8
+
+    end = core.svn_opt_revision_t()
+    end.kind = core.svn_opt_revision_number
+    end.value.number = 9
+
+    range = core.svn_opt_revision_range_t()
+    range.start = start
+    range.end = end
+
+    client.merge_peg3(v1x_path, (range,), end, trunk_path,
+                      core.svn_depth_infinity, False, False, False, False,
+                      None, self.client_ctx)
+
+    # Did it take effect?
+    readme_path_native = core.svn_dirent_local_style(
+      core.svn_dirent_join(trunk_path, 'README.txt')
+    )
+
+    readme = open(readme_path_native, 'r')
+    readme_text = readme.read()
+    readme.close()
+
+    self.assertEqual(readme_text, 'This is a test.\n')
 
 def suite():
     return unittest.makeSuite(SubversionClientTestCase, 'test',

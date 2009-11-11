@@ -1,17 +1,22 @@
 /* repos.h : interface to Subversion repository, private to libsvn_repos
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -71,6 +76,8 @@ extern "C" {
 #define SVN_REPOS__HOOK_WRITE_SENTINEL  "write-sentinels"
 #define SVN_REPOS__HOOK_PRE_REVPROP_CHANGE  "pre-revprop-change"
 #define SVN_REPOS__HOOK_POST_REVPROP_CHANGE "post-revprop-change"
+#define SVN_REPOS__HOOK_PRE_OBLITERATE  "pre-obliterate"
+#define SVN_REPOS__HOOK_POST_OBLITERATE "post-obliterate"
 #define SVN_REPOS__HOOK_PRE_LOCK        "pre-lock"
 #define SVN_REPOS__HOOK_POST_LOCK       "post-lock"
 #define SVN_REPOS__HOOK_PRE_UNLOCK      "pre-unlock"
@@ -128,6 +135,13 @@ struct svn_repos_t
      *repository's* capabilities, but no, they represent the
      client's -- we just don't have any other place to persist them. */
   apr_array_header_t *client_capabilities;
+
+  /* Maps SVN_REPOS_CAPABILITY_foo keys to "yes" or "no" values.
+     If a capability is not yet discovered, it is absent from the table.
+     Most likely the keys and values are constants anyway (and
+     sufficiently well-informed internal code may just compare against
+     those constants' addresses, therefore). */
+  apr_hash_t *repository_capabilities;
 };
 
 
@@ -136,7 +150,7 @@ struct svn_repos_t
 /* Run the start-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
-   USER is the authenticated name of the user starting the commit.  
+   USER is the authenticated name of the user starting the commit.
    CAPABILITIES is a list of 'const char *' capability names (using
    SVN_RA_CAPABILITY_*) that the client has self-reported.  Note that
    there is no guarantee the client is telling the truth: the hook
@@ -144,7 +158,7 @@ struct svn_repos_t
 svn_error_t *
 svn_repos__hooks_start_commit(svn_repos_t *repos,
                               const char *user,
-                              apr_array_header_t *capabilities,
+                              const apr_array_header_t *capabilities,
                               apr_pool_t *pool);
 
 /* Run the pre-commit hook for REPOS.  Use POOL for any temporary
@@ -206,18 +220,67 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
                                      svn_revnum_t rev,
                                      const char *author,
                                      const char *name,
-                                     svn_string_t *old_value,
+                                     const svn_string_t *old_value,
                                      char action,
                                      apr_pool_t *pool);
+
+/* Run the pre-obliterate hook for REPOS.  Use POOL for any
+   temporary allocations.  If the hook fails, return
+   SVN_ERR_REPOS_HOOK_FAILURE.
+
+   REV is the revision whose property is being changed.
+   AUTHOR is the authenticated name of the user changing the prop.
+   OBLITERATION_SET is a string listing all the PATH@REV pairs, with
+   a newline after each.
+
+   The pre-revprop-change hook will have the new property value
+   written to its stdin.  If the property is being deleted, no data
+   will be written. */
+svn_error_t *
+svn_repos__hooks_pre_obliterate(svn_repos_t *repos,
+                                svn_revnum_t rev,
+                                const char *author,
+                                const svn_string_t *obliteration_set,
+                                apr_pool_t *pool);
+
+/* Run the pre-obliterate hook for REPOS.  Use POOL for any
+   temporary allocations.  If the hook fails, return
+   SVN_ERR_REPOS_HOOK_FAILURE.
+
+   REV is the revision whose property was changed.
+   AUTHOR is the authenticated name of the user who changed the prop.
+   OBLITERATION_SET is a string listing all the PATH@REV pairs, with
+   a newline after each.
+
+   The old value will be passed to the post-revprop hook on stdin.  If
+   the property is being created, no data will be written. */
+svn_error_t *
+svn_repos__hooks_post_obliterate(svn_repos_t *repos,
+                                 svn_revnum_t rev,
+                                 const char *author,
+                                const svn_string_t *obliteration_set,
+                                 apr_pool_t *pool);
 
 /* Run the pre-lock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
-   PATH is the path being locked, USERNAME is the person doing it.  */
+   PATH is the path being locked, USERNAME is the person doing it,
+   COMMENT is the comment of the lock, and is treated as an empty
+   string when NULL is given.  STEAL-LOCK is a flag if the user is
+   stealing the lock.
+
+   If TOKEN is non-null, set *TOKEN to a new lock token generated by
+   the pre-lock hook, if any (see the pre-lock hook template for more
+   information).  If TOKEN is non-null but the hook does not return
+   any token, then set *TOKEN to empty string. */
+
 svn_error_t *
 svn_repos__hooks_pre_lock(svn_repos_t *repos,
+                          const char **token,
                           const char *path,
                           const char *username,
+                          const char *comment,
+                          svn_boolean_t steal_lock,
                           apr_pool_t *pool);
 
 /* Run the post-lock hook for REPOS.  Use POOL for any temporary
@@ -227,18 +290,22 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
    who did it.  */
 svn_error_t *
 svn_repos__hooks_post_lock(svn_repos_t *repos,
-                           apr_array_header_t *paths,
+                           const apr_array_header_t *paths,
                            const char *username,
                            apr_pool_t *pool);
 
 /* Run the pre-unlock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
-   PATH is the path being unlocked, USERNAME is the person doing it.  */
+   PATH is the path being unlocked, USERNAME is the person doing it,
+   TOKEN is the lock token to be unlocked which should not be NULL,
+   and BREAK-LOCK is a flag if the user is breaking the lock.  */
 svn_error_t *
 svn_repos__hooks_pre_unlock(svn_repos_t *repos,
                             const char *path,
                             const char *username,
+                            const char *token,
+                            svn_boolean_t break_lock,
                             apr_pool_t *pool);
 
 /* Run the post-unlock hook for REPOS.  Use POOL for any temporary
@@ -248,7 +315,7 @@ svn_repos__hooks_pre_unlock(svn_repos_t *repos,
    who did it.  */
 svn_error_t *
 svn_repos__hooks_post_unlock(svn_repos_t *repos,
-                             apr_array_header_t *paths,
+                             const apr_array_header_t *paths,
                              const char *username,
                              apr_pool_t *pool);
 
@@ -266,23 +333,27 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
                          const char *path2,
                          apr_pool_t *pool);
 
-/* Get the mergeinfo for PATH in REPOS as REVNUM and store it in MERGEINFO. */
-svn_error_t *
-svn_repos__get_path_mergeinfo(apr_hash_t **mergeinfo,
-                              svn_fs_t *fs,
-                              const char *path,
-                              svn_revnum_t revnum,
-                              apr_pool_t *pool);
+/* Set *PREV_PATH and *PREV_REV to the path and revision which
+   represent the location at which PATH in FS was located immediately
+   prior to REVISION iff there was a copy operation (to PATH or one of
+   its parent directories) between that previous location and
+   PATH@REVISION, and set *APPEARED_REV to the first revision in which
+   PATH@REVISION appeared at PATH as a result of that copy operation.
 
-/* Determine whether or not PATH  in ROOT is a branching copy.  PATH_MERGEINFO
-   should be the the mergeinfo for PATH in ROOT.  If PATH_MERGEINFO is NULL, it
-   will be fetched internally.  The result is returned in *IS_BRANCHING. */
+   If there was no such copy operation in that portion
+   of PATH's history, set *PREV_PATH to NULL, and set *PREV_REV and
+   *APPEARED_REV to SVN_INVALID_REVNUM.
+
+   NOTE: Any of PREV_PATH, PREV_REV, and APPEARED_REV may be NULL to
+   if that information is of no interest to the caller.  */
 svn_error_t *
-svn_repos__is_branching_copy(svn_boolean_t *is_branching,
-                             svn_fs_root_t *root,
-                             const char *path,
-                             apr_hash_t *path_mergeinfo,
-                             apr_pool_t *pool);
+svn_repos__prev_location(svn_revnum_t *appeared_rev,
+                         const char **prev_path,
+                         svn_revnum_t *prev_rev,
+                         svn_fs_t *fs,
+                         svn_revnum_t revision,
+                         const char *path,
+                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

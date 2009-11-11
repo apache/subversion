@@ -2,24 +2,28 @@
  * replay.c :  routines for replaying revisions
  *
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 #include <apr_pools.h>
 #include <apr_strings.h>
 #include <apr_xml.h>
-#include <apr_md5.h>
 
 #include <http_request.h>
 #include <http_log.h>
@@ -28,12 +32,12 @@
 #include "svn_pools.h"
 #include "svn_repos.h"
 #include "svn_fs.h"
-#include "svn_md5.h"
 #include "svn_base64.h"
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "svn_props.h"
+#include "private/svn_log.h"
 
 #include "../dav_svn.h"
 
@@ -54,12 +58,10 @@ maybe_start_report(edit_baton_t *eb)
 {
   if (! eb->started)
     {
-      SVN_ERR(dav_svn__send_xml
-                (eb->bb, eb->output,
-                 DAV_XML_HEADER DEBUG_CR
-                 "<S:editor-report xmlns:S=\"" SVN_XML_NAMESPACE "\">"
-                 DEBUG_CR));
-
+      SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output,
+                                    DAV_XML_HEADER DEBUG_CR
+                                    "<S:editor-report xmlns:S=\""
+                                    SVN_XML_NAMESPACE "\">" DEBUG_CR));
       eb->started = TRUE;
     }
 
@@ -69,8 +71,8 @@ maybe_start_report(edit_baton_t *eb)
 static svn_error_t *
 end_report(edit_baton_t *eb)
 {
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                            "</S:editor-report>" DEBUG_CR));
+  SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output,
+                                "</S:editor-report>" DEBUG_CR));
 
   return SVN_NO_ERROR;
 }
@@ -81,8 +83,8 @@ maybe_close_textdelta(edit_baton_t *eb)
 {
   if (eb->sending_textdelta)
     {
-      SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                                "</S:apply-textdelta>" DEBUG_CR));
+      SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output,
+                                    "</S:apply-textdelta>" DEBUG_CR));
       eb->sending_textdelta = FALSE;
     }
 
@@ -108,14 +110,16 @@ add_file_or_directory(const char *file_or_directory,
   *added_baton = (void *)eb;
 
   if (! copyfrom_path)
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                              "<S:add-%s name=\"%s\"/>" DEBUG_CR,
-                              file_or_directory, qname));
+    SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
+                                    "<S:add-%s name=\"%s\"/>" DEBUG_CR,
+                                    file_or_directory, qname));
   else
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                              "<S:add-%s name=\"%s\" copyfrom-path=\"%s\" "
-                                        "copyfrom-rev=\"%ld\"/>" DEBUG_CR,
-                              file_or_directory, qname, qcopy, copyfrom_rev));
+    SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
+                                    "<S:add-%s name=\"%s\" "
+                                    "copyfrom-path=\"%s\" "
+                                    "copyfrom-rev=\"%ld\"/>" DEBUG_CR,
+                                    file_or_directory, qname,
+                                    qcopy, copyfrom_rev));
 
   return SVN_NO_ERROR;
 }
@@ -131,9 +135,10 @@ open_file_or_directory(const char *file_or_directory,
   const char *qname = apr_xml_quote_string(pool, path, 1);
   SVN_ERR(maybe_close_textdelta(eb));
   *opened_baton = (void *)eb;
-  return dav_svn__send_xml(eb->bb, eb->output,
-                           "<S:open-%s name=\"%s\" rev=\"%ld\"/>" DEBUG_CR,
-                           file_or_directory, qname, base_revision);
+  return dav_svn__brigade_printf(eb->bb, eb->output,
+                                 "<S:open-%s name=\"%s\" rev=\"%ld\"/>"
+                                 DEBUG_CR,
+                                 file_or_directory, qname, base_revision);
 }
 
 
@@ -150,16 +155,28 @@ change_file_or_dir_prop(const char *file_or_dir,
 
   if (value)
     {
-      const svn_string_t *enc_value = svn_base64_encode_string(value, pool);
+      const svn_string_t *enc_value =
+        svn_base64_encode_string2(value, TRUE, pool);
 
-      SVN_ERR(dav_svn__send_xml
-                (eb->bb, eb->output,
-                 "<S:change-%s-prop name=\"%s\">%s</S:change-%s-prop>" DEBUG_CR,
-                 file_or_dir, qname, enc_value->data, file_or_dir));
+      /* Some versions of apr_brigade_vprintf() have a buffer overflow
+         bug that can be triggered by just the wrong size of a large
+         property value.  The bug has been fixed (see
+         http://svn.apache.org/viewvc?view=rev&revision=768417), but
+         we need a workaround for the buggy APR versions, so we write
+         our potentially large block of property data using a
+         different underlying function. */
+      SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
+                                      "<S:change-%s-prop name=\"%s\">",
+                                      file_or_dir, qname));
+      SVN_ERR(dav_svn__brigade_write(eb->bb, eb->output,
+                                     enc_value->data, enc_value->len));
+      SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
+                                      "</S:change-%s-prop>" DEBUG_CR,
+                                      file_or_dir));
     }
   else
     {
-      SVN_ERR(dav_svn__send_xml
+      SVN_ERR(dav_svn__brigade_printf
                 (eb->bb, eb->output,
                  "<S:change-%s-prop name=\"%s\" del=\"true\"/>" DEBUG_CR,
                  file_or_dir, qname));
@@ -179,9 +196,9 @@ set_target_revision(void *edit_baton,
 {
   edit_baton_t *eb = edit_baton;
   SVN_ERR(maybe_start_report(eb));
-  return dav_svn__send_xml(eb->bb, eb->output,
-                           "<S:target-revision rev=\"%ld\"/>" DEBUG_CR,
-                           target_revision);
+  return dav_svn__brigade_printf(eb->bb, eb->output,
+                                 "<S:target-revision rev=\"%ld\"/>" DEBUG_CR,
+                                 target_revision);
 }
 
 
@@ -194,9 +211,9 @@ open_root(void *edit_baton,
   edit_baton_t *eb = edit_baton;
   *root_baton = edit_baton;
   SVN_ERR(maybe_start_report(eb));
-  return dav_svn__send_xml(eb->bb, eb->output,
-                           "<S:open-root rev=\"%ld\"/>" DEBUG_CR,
-                           base_revision);
+  return dav_svn__brigade_printf(eb->bb, eb->output,
+                                 "<S:open-root rev=\"%ld\"/>" DEBUG_CR,
+                                 base_revision);
 }
 
 
@@ -209,9 +226,10 @@ delete_entry(const char *path,
   edit_baton_t *eb = parent_baton;
   const char *qname = apr_xml_quote_string(pool, path, 1);
   SVN_ERR(maybe_close_textdelta(eb));
-  return dav_svn__send_xml(eb->bb, eb->output,
-                           "<S:delete-entry name=\"%s\" rev=\"%ld\"/>" DEBUG_CR,
-                            qname, revision);
+  return dav_svn__brigade_printf(eb->bb, eb->output,
+                                 "<S:delete-entry name=\"%s\" rev=\"%ld\"/>"
+                                 DEBUG_CR,
+                                 qname, revision);
 }
 
 
@@ -294,17 +312,21 @@ apply_textdelta(void *file_baton,
 {
   edit_baton_t *eb = file_baton;
 
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "<S:apply-textdelta"));
+  SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output, "<S:apply-textdelta"));
 
   if (base_checksum)
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, " checksum=\"%s\">",
-                              base_checksum));
+    SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output, " checksum=\"%s\">",
+                                    base_checksum));
   else
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, ">"));
+    SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output, ">"));
 
-  svn_txdelta_to_svndiff(dav_svn__make_base64_output_stream(eb->bb, eb->output,
-                                                            pool),
-                         pool, handler, handler_baton);
+  svn_txdelta_to_svndiff2(handler,
+                          handler_baton,
+                          dav_svn__make_base64_output_stream(eb->bb,
+                                                             eb->output,
+                                                             pool),
+                          0,
+                          pool);
 
   eb->sending_textdelta = TRUE;
 
@@ -317,13 +339,14 @@ close_file(void *file_baton, const char *text_checksum, apr_pool_t *pool)
 {
   edit_baton_t *eb = file_baton;
   SVN_ERR(maybe_close_textdelta(eb));
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "<S:close-file"));
+  SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output, "<S:close-file"));
 
   if (text_checksum)
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, " checksum=\"%s\"/>" DEBUG_CR,
-                              text_checksum));
+    SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
+                                    " checksum=\"%s\"/>" DEBUG_CR,
+                                    text_checksum));
   else
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "/>" DEBUG_CR));
+    SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output, "/>" DEBUG_CR));
 
   return SVN_NO_ERROR;
 }
@@ -333,7 +356,8 @@ static svn_error_t *
 close_directory(void *dir_baton, apr_pool_t *pool)
 {
   edit_baton_t *eb = dir_baton;
-  return dav_svn__send_xml(eb->bb, eb->output, "<S:close-directory/>" DEBUG_CR);
+  return dav_svn__brigade_puts(eb->bb, eb->output,
+                               "<S:close-directory/>" DEBUG_CR);
 }
 
 
@@ -388,6 +412,7 @@ dav_svn__replay_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
                        ap_filter_t *output)
 {
+  dav_error *derr = NULL;
   svn_revnum_t low_water_mark = SVN_INVALID_REVNUM;
   svn_revnum_t rev = SVN_INVALID_REVNUM;
   const svn_delta_editor_t *editor;
@@ -465,9 +490,12 @@ dav_svn__replay_report(const dav_resource *resource,
 
   if ((err = svn_fs_revision_root(&root, resource->info->repos->fs, rev,
                                   resource->pool)))
-    return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                                "Couldn't retrieve revision root",
-                                resource->pool);
+    {
+      derr = dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Couldn't retrieve revision root",
+                                  resource->pool);
+      goto cleanup;
+    }
 
   make_editor(&editor, &edit_baton, bb, output, resource->pool);
 
@@ -475,30 +503,27 @@ dav_svn__replay_report(const dav_resource *resource,
                                send_deltas, editor, edit_baton,
                                dav_svn__authz_read_func(&arb), &arb,
                                resource->pool)))
-    return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                                "Problem replaying revision",
-                                resource->pool);
+    {
+      derr = dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Problem replaying revision",
+                                  resource->pool);
+      goto cleanup;
+    }
 
   if ((err = end_report(edit_baton)))
-    return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                                "Problem closing editor drive",
-                                resource->pool);
+    {
+      derr = dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Problem closing editor drive",
+                                  resource->pool);
+      goto cleanup;
+    }
 
-  {
-    const char *action;
+ cleanup:
+  dav_svn__operational_log(resource->info,
+                           svn_log__replay(base_dir, rev,
+                                           resource->info->r->pool));
 
-    if (base_dir && base_dir[0] != '\0')
-      action = apr_psprintf(resource->info->r->pool,
-                            "replay %s r%ld",
-                            svn_path_uri_encode(base_dir,
-                                                resource->info->r->pool), rev);
-    else
-      action = apr_psprintf(resource->info->r->pool, "replay r%ld", rev);
-
-    dav_svn__operational_log(resource->info, action);
-  }
-
-  ap_fflush(output, bb);
-
-  return NULL;
+  /* Flush the brigade. */
+  return dav_svn__final_flush_or_error(resource->info->r, bb, output,
+                                       derr, resource->pool);
 }

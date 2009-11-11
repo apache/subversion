@@ -21,6 +21,11 @@ import sys
 import re
 
 
+# A handy constant for refering to the NULL digest (one that
+# matches every digest).
+NULL_DIGEST = '00000000000000000000000000000000'
+
+
 class FsfsVerifyException(Exception):
   pass
 
@@ -516,6 +521,7 @@ class Rep(object):
     self.offset = int(offset)
     self.length = int(length)
     self.size = int(size)
+
     self.digest = digest
     self.currentRev = currentRev
 
@@ -570,7 +576,7 @@ class Rep(object):
         e.noderev = self.noderev
         raise
 
-      if digest:
+      if digest and (self.digest != NULL_DIGEST):
         assert(digest == self.digest)
     else:
       if f.read(1) != '\n':
@@ -580,7 +586,8 @@ class Rep(object):
       m = md5.new()
       m.update(f.read(self.length))
 
-      if self.digest and self.digest != m.hexdigest():
+      if self.digest and self.digest != NULL_DIGEST \
+          and self.digest != m.hexdigest():
         raise DataCorrupt, \
           "PLAIN data is corrupted.  Expected digest '%s', computed '%s'." % (
             self.digest, m.hexdigest())
@@ -761,7 +768,7 @@ class ChangedPaths(object):
 
       line = revFile.readline()
       if line != '\n':
-        (copyfromRev, copyfromPath) = line.split(' ')
+        (copyfromRev, copyfromPath) = line[:-1].split(' ', 1)
       else:
         copyfromRev = -1
         copyfromPath = ''
@@ -795,12 +802,13 @@ def dumpChangedPaths(changedPaths):
        (id, action, textMod, propMod,
         copyfromRev, copyfromPath)) in changedPaths:
     print " %s:" % path
+    print "  id: %s" % id
     print "  action: %s" % action
     print "  text mod: %s" % textMod
     print "  prop mod: %s" % propMod
     if copyfromRev != -1:
-      print "copyfrom path: %s" % copyfromPath
-      print "copyfrom rev: %s" % copyfromRev
+      print "  copyfrom path: %s" % copyfromPath
+      print "  copyfrom rev: %s" % copyfromRev
     print
 
 

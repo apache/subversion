@@ -1,16 +1,21 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  *
  * core.i: SWIG module interface file for libsvn_subr, a few pieces of
@@ -32,8 +37,9 @@
 #include <apr.h>
 #include <apr_general.h>
 
-#include "svn_md5.h"
+#include <apr_md5.h>
 #include "svn_diff.h"
+#include "svn_private_config.h"
 %}
 
 #ifdef SWIGRUBY
@@ -207,7 +213,7 @@
 %ignore svn_path_is_child;
 %ignore svn_path_is_ancestor;
 %ignore svn_path_check_valid;
-%ignore svn_path_is_url;
+// svn_path_is_url;
 // svn_path_is_uri_safe;
 %ignore svn_path_uri_encode;
 %ignore svn_path_uri_decode;
@@ -217,7 +223,28 @@
 %ignore svn_path_cstring_from_utf8;
 %ignore svn_path_cstring_to_utf8;
 
+/* svn_dirent_uri.h: SWIG can't digest these functions yet, so ignore them
+ * for now. TODO: make them work.
+ */
+%ignore svn_dirent_join_many;
+%ignore svn_dirent_condense_targets;
+%ignore svn_uri_condense_targets;
+%ignore svn_dirent_is_under_root;
+
 /* Other files */
+
+/* Ignore platform-specific auth functions */
+%ignore svn_auth_get_keychain_simple_provider;
+%ignore svn_auth_get_keychain_ssl_client_cert_pw_provider;
+%ignore svn_auth_get_windows_simple_provider;
+%ignore svn_auth_get_windows_ssl_server_trust_provider;
+%ignore svn_auth_gnome_keyring_version;
+%ignore svn_auth_get_gnome_keyring_simple_provider;
+%ignore svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider;
+%ignore svn_auth_kwallet_version;
+%ignore svn_auth_get_kwallet_simple_provider;
+%ignore svn_auth_get_kwallet_ssl_client_cert_pw_provider;
+
 /* bad pool convention */
 %ignore svn_opt_print_generic_help;
 
@@ -270,6 +297,7 @@
    apr_hash_t *mergein1,
    apr_hash_t *mergein2,
    apr_hash_t *mergeinfo,
+   apr_hash_t *mergeinput,
    apr_hash_t *eraser,
    apr_hash_t *whiteboard,
    apr_hash_t *changes
@@ -291,6 +319,17 @@
     apr_hash_t **added
 }
 #endif
+
+/* -----------------------------------------------------------------------
+   output mergeinfo hash
+*/
+
+#if defined(SWIGRUBY) || defined(SWIGPYTHON)
+%apply apr_hash_t **MERGEINFO_CATALOG {
+  apr_hash_t **catalog
+};
+#endif
+
 
 /* -----------------------------------------------------------------------
    handle the default value of svn_config_get().and the
@@ -388,7 +427,7 @@
 %typemap(in) (const char *data, apr_size_t *len) ($*2_type temp)
 {
   $1 = StringValuePtr($input);
-  temp = RSTRING($input)->len;
+  temp = RSTRING_LEN($input);
   $2 = ($2_ltype)&temp;
 }
 #endif
@@ -417,15 +456,32 @@
 
 /* set */
 #ifdef SWIGPYTHON
-%typemap(in) const void *value {
+%typemap(in) const void *value 
+  (apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
+{
+    if (_global_pool == NULL)
+    {
+       if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                     &_global_py_pool, &_global_pool))
+       SWIG_fail;
+    }
+
     if (PyString_Check($input)) {
-        $1 = (void *)PyString_AS_STRING($input);
+        char *value = PyString_AS_STRING($input);
+        $1 = apr_pstrdup(_global_pool, value);
     }
     else if (PyLong_Check($input)) {
-        $1 = (void *)PyLong_AsLong($input);
+        $1 = apr_palloc(_global_pool, sizeof(apr_uint32_t));
+        *((apr_uint32_t *)$1) = PyLong_AsLong($input);
     }
     else if (PyInt_Check($input)) {
-        $1 = (void *)PyInt_AsLong($input);
+        $1 = apr_palloc(_global_pool, sizeof(apr_uint32_t));
+        *((apr_uint32_t *)$1) = PyInt_AsLong($input);
+    }
+    else if ($input == Py_None) {
+        $1 = NULL;
+    }
+    else if (svn_swig_ConvertPtr($input, (void **)&$1, $descriptor(svn_auth_ssl_server_cert_info_t *)) == 0) {
     }
     else {
         PyErr_SetString(PyExc_TypeError, "not a known type");
@@ -535,6 +591,10 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 %include apr_errno.h
 */
 typedef int apr_status_t;
+
+/* Make possible to parse the SVN_VER_NUM definition. */
+#define APR_STRINGIFY_HELPER(n) #n
+#define APR_STRINGIFY(n) APR_STRINGIFY_HELPER(n)
 
 /* -----------------------------------------------------------------------
    pool functions renaming since swig doesn't take care of the #define's
@@ -680,6 +740,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %ignore svn_commit_info_dup;
 
 %ignore svn_opt_args_to_target_array2;
+%ignore svn_opt_args_to_target_array3;
 %ignore svn_opt_parse_num_args;
 %ignore svn_opt_parse_all_args;
 #endif
@@ -705,11 +766,15 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %include svn_utf_h.swg
 %include svn_nls_h.swg
 %include svn_path_h.swg
+%include svn_dirent_uri_h.swg
 %include svn_mergeinfo_h.swg
 %include svn_io_h.swg
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL) || defined(SWIGRUBY)
 %include svn_md5_h.swg
+#endif
+
+#ifdef SWIGPERL
 %include svn_diff_h.swg
 %include svn_error_h.swg
 
@@ -745,9 +810,8 @@ svn_swig_py_initialize();
 %init %{
   svn_swig_rb_initialize();
 
-  rb_define_const(mCore, "SVN_VER_NUM", rb_str_new2(SVN_VER_NUM));
-  rb_define_const(mCore, "SVN_VER_NUMBER", rb_str_new2(SVN_VER_NUMBER));
-  rb_define_const(mCore, "SVN_VERSION", rb_str_new2(SVN_VERSION));
+  rb_define_const(mCore, "SVN_ALLOCATOR_MAX_FREE_UNLIMITED",
+                  UINT2NUM(APR_ALLOCATOR_MAX_FREE_UNLIMITED));
 %}
 
 %header %{
@@ -768,6 +832,10 @@ struct apr_pool_wrapper_t
     svn_swig_rb_destroy_internal_pool(object);
   }
 
+  static void set_default_max_free_size(apr_size_t size) {
+    apr_allocator_max_free_set(svn_swig_rb_allocator(), size);
+  }
+
   apr_pool_wrapper_t(apr_pool_wrapper_t *parent) {
     apr_pool_wrapper_t *self;
     apr_pool_t *parent_pool;
@@ -777,7 +845,7 @@ struct apr_pool_wrapper_t
       parent_pool = parent->pool;
       APR_ARRAY_PUSH(parent->children, apr_pool_wrapper_t *) = self;
     } else {
-      parent_pool = NULL;
+      parent_pool = svn_swig_rb_pool();
     }
     self->pool = svn_pool_create_ex(parent_pool, NULL);
     self->destroyed = FALSE;
@@ -790,6 +858,13 @@ struct apr_pool_wrapper_t
   ~apr_pool_wrapper_t() {
     apr_pool_wrapper_destroy(self);
     xfree(self);
+  }
+
+  void set_max_free_size(apr_size_t size) {
+    apr_allocator_t *allocator;
+
+    allocator = apr_pool_allocator_get(self->pool);
+    apr_allocator_max_free_set(allocator, size);
   }
 
   void _destroy(void) {

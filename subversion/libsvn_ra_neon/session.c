@@ -2,23 +2,27 @@
  * session.c :  routines for maintaining sessions state (to the DAV server)
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 
 
-#include <assert.h>
 #include <ctype.h>
 
 #define APR_WANT_STRFUNC
@@ -39,10 +43,17 @@
 #include "svn_time.h"
 #include "svn_xml.h"
 #include "svn_private_config.h"
+#include "private/svn_atomic.h"
+
+#ifdef SVN_NEON_0_28
+#include <ne_pkcs11.h>
+#endif
 
 #include "ra_neon.h"
 
 #define DEFAULT_HTTP_TIMEOUT 3600
+
+static svn_atomic_t neon_initialized = 0;
 
 
 /* a cleanup routine attached to the pool that contains the RA session
@@ -60,6 +71,17 @@ static apr_status_t cleanup_uri(void *uri)
   ne_uri_free(uri);
   return APR_SUCCESS;
 }
+
+#ifdef SVN_NEON_0_28
+/* a cleanup routine attached to the pool that contains the PKCS#11
+   provider object. */
+static apr_status_t cleanup_p11provider(void *provider)
+{
+  ne_ssl_pkcs11_provider *prov = provider;
+  ne_ssl_pkcs11_provider_destroy(prov);
+  return APR_SUCCESS;
+}
+#endif
 
 /* A neon-session callback to 'pull' authentication data when
    challenged.  In turn, this routine 'pulls' the data from the client
@@ -275,6 +297,10 @@ client_ssl_decrypt_cert(svn_ra_neon__session_t *ras,
 
           if (ne_ssl_clicert_decrypt(clicert, pw_creds->password) == 0)
             {
+              error = svn_auth_save_credentials(state, pool);
+              if (error)
+                svn_error_clear(error);
+
               /* Success */
               ok = TRUE;
               break;
@@ -286,6 +312,58 @@ client_ssl_decrypt_cert(svn_ra_neon__session_t *ras,
   return ok;
 }
 
+#ifdef SVN_NEON_0_28
+/* Callback invoked to enter PKCS#11 PIN code. */
+static int
+client_ssl_pkcs11_pin_entry(void *userdata,
+                            int attempt,
+                            const char *slot_descr,
+                            const char *token_label,
+                            unsigned int flags,
+                            char *pin)
+{
+  svn_ra_neon__session_t *ras = userdata;
+  svn_error_t *err;
+  void *creds;
+  svn_auth_cred_ssl_client_cert_pw_t *pw_creds;
+
+  /* Always prevent PIN caching. */
+  svn_auth_set_parameter(ras->callbacks->auth_baton,
+                         SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+
+  if (attempt == 0)
+    {
+      const char *realmstring;
+
+      realmstring = apr_psprintf(ras->pool,
+                                 _("PIN for token \"%s\" in slot \"%s\""),
+                                 token_label, slot_descr);
+
+      err = svn_auth_first_credentials(&creds,
+                                       &(ras->auth_iterstate),
+                                       SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
+                                       realmstring,
+                                       ras->callbacks->auth_baton,
+                                       ras->pool);
+    }
+  else
+    {
+      err = svn_auth_next_credentials(&creds, ras->auth_iterstate, ras->pool);
+    }
+
+  if (err || ! creds)
+    {
+      svn_error_clear(err);
+      return -1;
+    }
+
+  pw_creds = creds;
+
+  apr_cpystrn(pin, pw_creds->password, NE_SSL_P11PINLEN);
+
+  return 0;
+}
+#endif
 
 static void
 client_ssl_callback(void *userdata, ne_session *sess,
@@ -349,14 +427,14 @@ client_ssl_callback(void *userdata, ne_session *sess,
 }
 
 /* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, *PROXY_PASSWORD,
- * *TIMEOUT_SECONDS, *NEON_DEBUG, *COMPRESSION, and *NEON_AUTO_PROTOCOLS
- * to the information for REQUESTED_HOST, allocated in POOL, if there is
- * any applicable information.  If there is no applicable information or
- * if there is an error, then set *PROXY_PORT to (unsigned int) -1,
- * *TIMEOUT_SECONDS and *NEON_DEBUG to zero, *COMPRESSION to TRUE,
- * *NEON_AUTH_TYPES is left untouched, and the rest are set to NULL.
- * This function can return an error, so before examining any values,
- * check the error return value.
+ * *TIMEOUT_SECONDS, *NEON_DEBUG, *COMPRESSION, *NEON_AUTH_TYPES, and
+ * *PK11_PROVIDER to the information for REQUESTED_HOST, allocated in
+ * POOL, if there is any applicable information.  If there is no
+ * applicable information or if there is an error, then set
+ * *PROXY_PORT to (unsigned int) -1, *TIMEOUT_SECONDS and *NEON_DEBUG
+ * to zero, *COMPRESSION to TRUE, *NEON_AUTH_TYPES is left untouched,
+ * and the rest are set to NULL.  This function can return an error,
+ * so before examining any values, check the error return value.
  */
 static svn_error_t *get_server_settings(const char **proxy_host,
                                         unsigned int *proxy_port,
@@ -366,6 +444,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                         int *neon_debug,
                                         svn_boolean_t *compression,
                                         unsigned int *neon_auth_types,
+                                        const char **pk11_provider,
                                         svn_config_t *cfg,
                                         const char *requested_host,
                                         apr_pool_t *pool)
@@ -382,9 +461,10 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   timeout_str     = NULL;
   debug_str       = NULL;
   http_auth_types = NULL;
+  *pk11_provider  = NULL;
 
-  /* If there are defaults, use them, but only if the requested host
-     is not one of the exceptions to the defaults. */
+  /* Use the default proxy-specific settings if and only if
+     "http-proxy-exceptions" is not set to exclude this host. */
   svn_config_get(cfg, &exceptions, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, NULL);
   if (exceptions)
@@ -402,17 +482,21 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                      SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
       svn_config_get(cfg, proxy_password, SVN_CONFIG_SECTION_GLOBAL,
                      SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
-      svn_config_get(cfg, &timeout_str, SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
-      SVN_ERR(svn_config_get_bool(cfg, compression, SVN_CONFIG_SECTION_GLOBAL,
-                                  SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
-      svn_config_get(cfg, &debug_str, SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_NEON_DEBUG_MASK, NULL);
-#ifdef SVN_NEON_0_26
-      svn_config_get(cfg, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
-#endif
     }
+
+  /* Apply non-proxy-specific settings regardless of exceptions: */
+  svn_config_get(cfg, &timeout_str, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
+  SVN_ERR(svn_config_get_bool(cfg, compression, SVN_CONFIG_SECTION_GLOBAL,
+                              SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
+  svn_config_get(cfg, &debug_str, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_NEON_DEBUG_MASK, NULL);
+#ifdef SVN_NEON_0_26
+  svn_config_get(cfg, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
+#endif
+  svn_config_get(cfg, pk11_provider, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_SSL_PKCS11_PROVIDER, NULL);
 
   if (cfg)
     server_group = svn_config_find_group(cfg, requested_host,
@@ -438,9 +522,11 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       svn_config_get(cfg, &debug_str, server_group,
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, debug_str);
 #ifdef SVN_NEON_0_26
-      svn_config_get(cfg, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
+      svn_config_get(cfg, &http_auth_types, server_group,
+                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, http_auth_types);
 #endif
+      svn_config_get(cfg, pk11_provider, server_group,
+                     SVN_CONFIG_OPTION_SSL_PKCS11_PROVIDER, *pk11_provider);
     }
 
   /* Special case: convert the port value, if any. */
@@ -471,11 +557,11 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       const long int timeout = strtol(timeout_str, &endstr, 10);
 
       if (*endstr)
-        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                 _("Invalid config: illegal character in "
                                   "timeout value"));
       if (timeout < 0)
-        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                 _("Invalid config: negative timeout value"));
       *timeout_seconds = timeout;
     }
@@ -488,7 +574,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       const long int debug = strtol(debug_str, &endstr, 10);
 
       if (*endstr)
-        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                 _("Invalid config: illegal character in "
                                   "debug mask value"));
 
@@ -506,14 +592,14 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       while ((token = apr_strtok(auth_types_list, ";", &last)) != NULL)
         {
           auth_types_list = NULL;
-          if (strcasecmp("basic", token) == 0)
+          if (svn_cstring_casecmp("basic", token) == 0)
             *neon_auth_types |= NE_AUTH_BASIC;
-          else if (strcasecmp("digest", token) == 0)
+          else if (svn_cstring_casecmp("digest", token) == 0)
             *neon_auth_types |= NE_AUTH_DIGEST;
-          else if (strcasecmp("negotiate", token) == 0)
+          else if (svn_cstring_casecmp("negotiate", token) == 0)
             *neon_auth_types |= NE_AUTH_NEGOTIATE;
           else
-            return svn_error_createf(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+            return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                      _("Invalid config: unknown http auth"
                                        "type '%s'"), token);
       }
@@ -617,173 +703,6 @@ ra_neon_neonprogress(void *baton, off_t progress, off_t total)
 
 
 
-/** Capabilities exchange. */
-
-/* The only two possible values for a capability. */
-static const char *capability_yes = "yes";
-static const char *capability_no = "no";
-
-
-/* Store in RAS the capabilities discovered from REQ's headers.
-   Use POOL for temporary allocation only. */
-static void
-parse_capabilities(ne_request *req,
-                   svn_ra_neon__session_t *ras,
-                   apr_pool_t *pool)
-{
-  void *ne_header_cursor = NULL;
-
-  /* Start out assuming all capabilities are unsupported. */
-  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
-               APR_HASH_KEY_STRING, capability_no);
-  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-               APR_HASH_KEY_STRING, capability_no);
-  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
-               APR_HASH_KEY_STRING, capability_no);
-
-  /* Then find out which ones are supported. */
-  do {
-    const char *header_name;
-    const char *header_value;
-    ne_header_cursor = ne_response_header_iterate(req,
-                                                  ne_header_cursor,
-                                                  &header_name,
-                                                  &header_value);
-    if (ne_header_cursor && strcasecmp(header_name, "dav") == 0)
-      {
-        /* By the time we get the headers, Neon has downcased them and
-           merged them together -- merged in the sense that if a
-           header "foo" appears multiple times, all the values will be
-           concatenated together, with spaces at the splice points.
-           For example, if the server sent:
-
-              DAV: version-control,checkout,working-resource
-              DAV: merge,baseline,activity,version-controlled-collection
-              DAV: http://subversion.tigris.org/xmlns/dav/svn/depth
-
-           Here we might see:
-
-              header_name  == "dav"
-              header_value == "1,2, version-control,checkout,working-resource, merge,baseline,activity,version-controlled-collection, http://subversion.tigris.org/xmlns/dav/svn/depth, <http://apache.org/dav/propset/fs/1>"
-
-           (Deliberately not line-wrapping that, so you can see what
-           we're about to parse.)
-        */
-
-        apr_array_header_t *vals =
-          svn_cstring_split(header_value, ",", TRUE, pool);
-
-        /* Right now we only have a few capabilities to detect, so
-           just seek for them directly.  This could be written
-           slightly more efficiently, but that wouldn't be worth it
-           until we have many more capabilities. */
-
-        if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
-          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
-                       APR_HASH_KEY_STRING, capability_yes);
-
-        if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
-          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                       APR_HASH_KEY_STRING, capability_yes);
-
-        if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
-          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
-                       APR_HASH_KEY_STRING, capability_yes);
-
-        if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, 
-                                        vals))
-          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
-                       APR_HASH_KEY_STRING, capability_yes);
-      }
-  } while (ne_header_cursor);
-}
-
-
-/* Exchange capabilities with the server, by sending an OPTIONS
-   request announcing the client's capabilities, and by filling
-   RAS->capabilities with the server's capabilities as read from the
-   response headers.  Use POOL only for temporary allocation. */
-static svn_error_t *
-exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
-{
-  int http_ret_code;
-  svn_ra_neon__request_t *rar;
-
-  rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
-
-  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
-  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
-  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
-
-  SVN_ERR(svn_ra_neon__request_dispatch(&http_ret_code, rar,
-                                        NULL, NULL, 200, 0, pool));
-
-  if (http_ret_code == 200)
-    {
-      parse_capabilities(rar->ne_req, ras, pool);
-    }
-  else
-    {
-      /* "can't happen", because svn_ra_neon__request_dispatch()
-         itself should have returned error if response code != 200. */
-      return svn_error_createf
-        (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-         _("OPTIONS request (for capabilities) got HTTP response code %d"),
-         http_ret_code);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_ra_neon__has_capability(svn_ra_session_t *session,
-                            svn_boolean_t *has,
-                            const char *capability,
-                            apr_pool_t *pool)
-{
-  svn_ra_neon__session_t *ras = session->priv;
-  const char *cap_result = apr_hash_get(ras->capabilities,
-                                        capability,
-                                        APR_HASH_KEY_STRING);
-
-  /* If any capability is unknown, they're all unknown, so ask. */
-  if (cap_result == NULL)
-    SVN_ERR(exchange_capabilities(ras, pool));
-
-
-  /* Try again, now that we've fetched the capabilities. */
-  cap_result = apr_hash_get(ras->capabilities,
-                            capability, APR_HASH_KEY_STRING);
-
-  if (cap_result == capability_yes)
-    {
-      *has = TRUE;
-    }
-  else if (cap_result == capability_no)
-    {
-      *has = FALSE;
-    }
-  else if (cap_result == NULL)
-    {
-      return svn_error_createf
-        (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
-         _("Don't know anything about capability '%s'"), capability);
-    }
-  else  /* "can't happen" */
-    {
-      /* Well, let's hope it's a string. */
-      return svn_error_createf
-        (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-         _("Attempt to fetch capability '%s' resulted in '%s'"),
-         capability, cap_result);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-
 /* ### need an ne_session_dup to avoid the second gethostbyname
  * call and make this halfway sane. */
 
@@ -797,13 +716,33 @@ parse_url(ne_uri *uri, const char *url)
       || uri->host == NULL || uri->path == NULL || uri->scheme == NULL)
     {
       ne_uri_free(uri);
-      return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              _("Malformed URL for repository"));
+      return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                               _("URL '%s' is malformed or the "
+                                 "scheme or host or path is missing"), url);
     }
   if (uri->port == 0)
     uri->port = ne_uri_defaultport(uri->scheme);
 
   return SVN_NO_ERROR;
+}
+
+/* Initializer function matching the prototype accepted by
+   svn_atomic__init_once(). */
+static svn_error_t *
+initialize_neon(apr_pool_t *ignored_pool)
+{
+  if (ne_sock_init() != 0)
+    return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
+                            _("Network socket initialization failed"));
+
+  return SVN_NO_ERROR;
+}
+
+/* Initialize neon when not initialized before. */
+static svn_error_t *
+ensure_neon_initialized(void)
+{
+  return svn_atomic__init_once(&neon_initialized, initialize_neon, NULL);
 }
 
 static svn_error_t *
@@ -820,12 +759,23 @@ svn_ra_neon__open(svn_ra_session_t *session,
   svn_ra_neon__session_t *ras;
   int is_ssl_session;
   svn_boolean_t compression;
-  svn_config_t *cfg;
+  svn_config_t *cfg, *cfg_client;
   const char *server_group;
   char *itr;
   unsigned int neon_auth_types = 0;
+  const char *pkcs11_provider;
   neonprogress_baton_t *neonprogress_baton =
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
+  const char *useragent = NULL;
+  const char *client_string = NULL;
+
+  if (callbacks->get_client_string)
+    callbacks->get_client_string(callback_baton, &client_string, pool);
+
+  if (client_string)
+    useragent = apr_pstrcat(pool, "SVN/" SVN_VERSION "/", client_string, NULL);
+  else
+    useragent = "SVN/" SVN_VERSION;
 
   /* Sanity check the URI */
   SVN_ERR(parse_url(uri, repos_URL));
@@ -834,10 +784,8 @@ svn_ra_neon__open(svn_ra_session_t *session,
   apr_pool_cleanup_register(pool, uri, cleanup_uri, apr_pool_cleanup_null);
 
 
-  /* Can we initialize network? */
-  if (ne_sock_init() != 0)
-    return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
-                            _("Network socket initialization failed"));
+  /* Initialize neon if required */
+  SVN_ERR(ensure_neon_initialized());
 
   /* we want to know if the repository is actually somewhere else */
   /* ### not yet: http_redirect_register(sess, ... ); */
@@ -851,7 +799,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
   for (itr = uri->scheme; *itr; ++itr)
     *itr = tolower(*itr);
 
-  is_ssl_session = (strcasecmp(uri->scheme, "https") == 0);
+  is_ssl_session = (svn_cstring_casecmp(uri->scheme, "https") == 0);
   if (is_ssl_session)
     {
       if (ne_has_support(NE_FEATURE_SSL) == 0)
@@ -869,6 +817,9 @@ svn_ra_neon__open(svn_ra_session_t *session,
   cfg = config ? apr_hash_get(config,
                               SVN_CONFIG_CATEGORY_SERVERS,
                               APR_HASH_KEY_STRING) : NULL;
+  cfg_client = config ? apr_hash_get(config,
+                                     SVN_CONFIG_CATEGORY_CONFIG,
+                                     APR_HASH_KEY_STRING) : NULL;
   if (cfg)
     server_group = svn_config_find_group(cfg, uri->host,
                                          SVN_CONFIG_SECTION_GROUPS, pool);
@@ -892,6 +843,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
                                 &debug,
                                 &compression,
                                 &neon_auth_types,
+                                &pkcs11_provider,
                                 cfg,
                                 uri->host,
                                 pool));
@@ -927,16 +879,39 @@ svn_ra_neon__open(svn_ra_session_t *session,
             ne_set_proxy_auth(sess, proxy_auth, pab);
             ne_set_proxy_auth(sess2, proxy_auth, pab);
           }
+#ifdef SVN_NEON_0_26
+        else
+          {
+            /* Enable (only) the Negotiate scheme for proxy
+               authentication, if no username/password is
+               configured. */
+            ne_add_proxy_auth(sess, NE_AUTH_NEGOTIATE, NULL, NULL);
+            ne_add_proxy_auth(sess2, NE_AUTH_NEGOTIATE, NULL, NULL);
+          }
+#endif
       }
 
     if (!timeout)
       timeout = DEFAULT_HTTP_TIMEOUT;
     ne_set_read_timeout(sess, timeout);
     ne_set_read_timeout(sess2, timeout);
+
+#ifdef SVN_NEON_0_27
+    ne_set_connect_timeout(sess, timeout);
+    ne_set_connect_timeout(sess2, timeout);
+#endif
   }
 
-  ne_set_useragent(sess, "SVN/" SVN_VERSION);
-  ne_set_useragent(sess2, "SVN/" SVN_VERSION);
+  if (useragent)
+    {
+      ne_set_useragent(sess, useragent);
+      ne_set_useragent(sess2, useragent);
+    }
+  else
+    {
+      ne_set_useragent(sess, "SVN/" SVN_VERSION);
+      ne_set_useragent(sess2, "SVN/" SVN_VERSION);
+    }
 
   /* clean up trailing slashes from the URL */
   len = strlen(uri->path);
@@ -957,9 +932,13 @@ svn_ra_neon__open(svn_ra_session_t *session,
   ras->progress_baton = callbacks->progress_baton;
   ras->progress_func = callbacks->progress_func;
   ras->capabilities = apr_hash_make(ras->pool);
+  ras->vcc = NULL;
+  ras->uuid = NULL;
   /* save config and server group in the auth parameter hash */
   svn_auth_set_parameter(ras->callbacks->auth_baton,
-                         SVN_AUTH_PARAM_CONFIG, cfg);
+                         SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG, cfg_client);
+  svn_auth_set_parameter(ras->callbacks->auth_baton,
+                         SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS, cfg);
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_SERVER_GROUP, server_group);
 
@@ -977,11 +956,11 @@ svn_ra_neon__open(svn_ra_session_t *session,
 
   if (is_ssl_session)
     {
-      const char *authorities, *trust_default_ca;
-      authorities = svn_config_get_server_setting(
-            cfg, server_group,
-            SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES,
-            NULL);
+      svn_boolean_t trust_default_ca;
+      const char *authorities
+        = svn_config_get_server_setting(cfg, server_group,
+                                        SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES,
+                                        NULL);
 
       if (authorities != NULL)
         {
@@ -996,7 +975,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
               if (ca_cert == NULL)
                 {
                   return svn_error_createf
-                    (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                    (SVN_ERR_BAD_CONFIG_VALUE, NULL,
                      _("Invalid config: unable to load certificate file '%s'"),
                      svn_path_local_style(file, pool));
                 }
@@ -1013,16 +992,48 @@ svn_ra_neon__open(svn_ra_session_t *session,
       /* For client connections, we register a callback for if the server
          wants to authenticate the client via client certificate. */
 
-      ne_ssl_provide_clicert(sess, client_ssl_callback, ras);
-      ne_ssl_provide_clicert(sess2, client_ssl_callback, ras);
+#ifdef SVN_NEON_0_28
+      if (pkcs11_provider)
+        {
+          ne_ssl_pkcs11_provider *provider;
+          int rv;
+
+          /* Initialize the PKCS#11 provider. */
+          rv = ne_ssl_pkcs11_provider_init(&provider, pkcs11_provider);
+          if (rv != NE_PK11_OK)
+            {
+              return svn_error_createf
+                (SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                 _("Invalid config: unable to load PKCS#11 provider '%s'"),
+                 pkcs11_provider);
+            }
+
+          /* Share the provider between the two sessions. */
+          ne_ssl_set_pkcs11_provider(sess, provider);
+          ne_ssl_set_pkcs11_provider(sess2, provider);
+
+          ne_ssl_pkcs11_provider_pin(provider, client_ssl_pkcs11_pin_entry,
+                                     ras);
+
+          apr_pool_cleanup_register(pool, provider, cleanup_p11provider,
+                                    apr_pool_cleanup_null);
+        }
+      /* Note the "else"; if a PKCS#11 provider is set up, a client
+         cert callback is already configured, so don't displace it
+         with the normal one here.  */
+      else
+#endif
+        {
+          ne_ssl_provide_clicert(sess, client_ssl_callback, ras);
+          ne_ssl_provide_clicert(sess2, client_ssl_callback, ras);
+        }
 
       /* See if the user wants us to trust "default" openssl CAs. */
-      trust_default_ca = svn_config_get_server_setting(
-               cfg, server_group,
-               SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA,
-               "true");
+      SVN_ERR(svn_config_get_server_setting_bool(
+               cfg, &trust_default_ca, server_group,
+               SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA, TRUE));
 
-      if (strcasecmp(trust_default_ca, "true") == 0)
+      if (trust_default_ca)
         {
           ne_ssl_trust_default_ca(sess);
           ne_ssl_trust_default_ca(sess2);
@@ -1035,9 +1046,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
   ne_set_progress(sess2, ra_neon_neonprogress, neonprogress_baton);
   session->priv = ras;
 
-  SVN_ERR(exchange_capabilities(ras, pool));
-
-  return SVN_NO_ERROR;
+  return svn_ra_neon__exchange_capabilities(ras, pool);
 }
 
 
@@ -1104,31 +1113,24 @@ static svn_error_t *svn_ra_neon__do_get_uuid(svn_ra_session_t *session,
     {
       svn_ra_neon__resource_t *rsrc;
       const char *lopped_path;
-      const svn_string_t *uuid_propval;
 
       SVN_ERR(svn_ra_neon__search_for_starting_props(&rsrc, &lopped_path,
                                                      ras, ras->url->data,
                                                      pool));
       SVN_ERR(svn_ra_neon__maybe_store_auth_info(ras, pool));
 
-      uuid_propval = apr_hash_get(rsrc->propset,
-                                  SVN_RA_NEON__PROP_REPOSITORY_UUID,
-                                  APR_HASH_KEY_STRING);
-      if (uuid_propval == NULL)
-        /* ### better error reporting... */
-        return svn_error_create(APR_EGENERAL, NULL,
-                                _("The UUID property was not found on the "
-                                  "resource or any of its parents"));
-
-      if (uuid_propval && (uuid_propval->len > 0))
-        ras->uuid = apr_pstrdup(ras->pool, uuid_propval->data); /* cache */
-      else
-        return svn_error_create
-          (SVN_ERR_RA_NO_REPOS_UUID, NULL,
-           _("Please upgrade the server to 0.19 or later"));
+      if (! ras->uuid)
+        {
+          /* ### better error reporting... */
+          return svn_error_create(APR_EGENERAL, NULL,
+                                  _("The UUID property was not found on the "
+                                    "resource or any of its parents"));
+        }
     }
 
+  /* search_for_starting_props() filled it. */
   *uuid = ras->uuid;
+
   return SVN_NO_ERROR;
 }
 
@@ -1173,7 +1175,8 @@ static const svn_ra__vtable_t neon_vtable = {
   svn_ra_neon__get_locks,
   svn_ra_neon__replay,
   svn_ra_neon__has_capability,
-  svn_ra_neon__replay_range
+  svn_ra_neon__replay_range,
+  svn_ra_neon__get_deleted_rev
 };
 
 svn_error_t *

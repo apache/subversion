@@ -2,17 +2,22 @@
  * props.c :  routines for fetching DAV properties
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -25,6 +30,7 @@
 #include <apr_want.h>
 
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
@@ -623,9 +629,9 @@ svn_error_t * svn_ra_neon__get_one_prop(const svn_string_t **propval,
   if (value == NULL)
     {
       /* ### need an SVN_ERR here */
-      return svn_error_createf(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
-                               _("'%s' was not present on the resource"),
-                               name);
+      return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                               _("'%s' was not present on the resource '%s'"),
+                               name, url);
     }
 
   *propval = value;
@@ -638,8 +644,32 @@ svn_error_t * svn_ra_neon__get_starting_props(svn_ra_neon__resource_t **rsrc,
                                               const char *label,
                                               apr_pool_t *pool)
 {
-  return svn_ra_neon__get_props_resource(rsrc, sess, url, label, starting_props,
-                                         pool);
+  svn_string_t *propval;
+
+  SVN_ERR(svn_ra_neon__get_props_resource(rsrc, sess, url, label,
+                                          starting_props, pool));
+
+  /* Cache some of the resource information. */
+
+  if (! sess->vcc)
+    {
+      propval = apr_hash_get((*rsrc)->propset,
+                             SVN_RA_NEON__PROP_VCC,
+                             APR_HASH_KEY_STRING);
+      if (propval)
+        sess->vcc = apr_pstrdup(sess->pool, propval->data);
+    }
+
+  if (! sess->uuid)
+    {
+      propval = apr_hash_get((*rsrc)->propset,
+                             SVN_RA_NEON__PROP_REPOSITORY_UUID,
+                             APR_HASH_KEY_STRING);
+      if (propval)
+        sess->uuid = apr_pstrdup(sess->pool, propval->data);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -686,12 +716,12 @@ svn_ra_neon__search_for_starting_props(svn_ra_neon__resource_t **rsrc,
       if (! err)
         break;   /* found an existing parent! */
 
-      if (err->apr_err != SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+      if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
         return err;  /* found a _real_ error */
 
       /* else... lop off the basename and try again. */
       svn_stringbuf_set(lopped_path,
-                        svn_path_join(svn_path_basename(path_s->data, iterpool),
+                        svn_path_join(svn_uri_basename(path_s->data, iterpool),
                                       lopped_path->data, iterpool));
 
       len = path_s->len;
@@ -747,9 +777,13 @@ svn_error_t *svn_ra_neon__get_vcc(const char **vcc,
 {
   svn_ra_neon__resource_t *rsrc;
   const char *lopped_path;
-  const svn_string_t *vcc_s;
 
-  /* ### Someday, possibly look for memory-cached VCC in the RA session. */
+  /* Look for memory-cached VCC in the RA session. */
+  if (sess->vcc)
+    {
+      *vcc = sess->vcc;
+      return SVN_NO_ERROR;
+    }
 
   /* ### Someday, possibly look for disk-cached VCC via get_wcprop callback. */
 
@@ -757,14 +791,15 @@ svn_error_t *svn_ra_neon__get_vcc(const char **vcc,
   SVN_ERR(svn_ra_neon__search_for_starting_props(&rsrc, &lopped_path,
                                                  sess, url, pool));
 
-  vcc_s = apr_hash_get(rsrc->propset,
-                       SVN_RA_NEON__PROP_VCC, APR_HASH_KEY_STRING);
-  if (! vcc_s)
-    return svn_error_create(APR_EGENERAL, NULL,
-                             _("The VCC property was not found on the "
-                               "resource"));
+  if (! sess->vcc)
+    {
+      /* ### better error reporting... */
+      return svn_error_create(APR_EGENERAL, NULL,
+                              _("The VCC property was not found on the "
+                                "resource"));
+    }
 
-  *vcc = vcc_s->data;
+  *vcc = sess->vcc;
   return SVN_NO_ERROR;
 }
 
@@ -778,7 +813,7 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
                                              apr_pool_t *pool)
 {
   svn_ra_neon__resource_t *rsrc;
-  const svn_string_t *vcc;
+  const char *vcc;
   const svn_string_t *relative_path;
   const char *my_bc_relative;
   const char *lopped_path;
@@ -809,7 +844,7 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
   SVN_ERR(svn_ra_neon__search_for_starting_props(&rsrc, &lopped_path,
                                                  sess, url, pool));
 
-  vcc = apr_hash_get(rsrc->propset, SVN_RA_NEON__PROP_VCC, APR_HASH_KEY_STRING);
+  SVN_ERR(svn_ra_neon__get_vcc(&vcc, sess, url, pool));
   if (vcc == NULL)
     {
       /* ### better error reporting... */
@@ -881,7 +916,7 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
       /* Get the Baseline from the DAV:checked-in value, then fetch its
          DAV:baseline-collection property. */
       /* ### should wrap this with info about rsrc==VCC */
-      SVN_ERR(svn_ra_neon__get_one_prop(&baseline, sess, vcc->data, NULL,
+      SVN_ERR(svn_ra_neon__get_one_prop(&baseline, sess, vcc, NULL,
                                         &svn_ra_neon__checked_in_prop, pool));
 
       /* ### do we want to optimize the props we fetch, based on what the
@@ -902,7 +937,7 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
 
       /* ### do we want to optimize the props we fetch, based on what the
          ### user asked for? i.e. omit version-name if latest_rev is NULL */
-      SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, sess, vcc->data, label,
+      SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, sess, vcc, label,
                                               which_props, pool));
     }
 
@@ -982,8 +1017,8 @@ svn_error_t *svn_ra_neon__get_baseline_info(svn_boolean_t *is_dir,
       const char *full_bc_url = svn_path_url_add_component(my_bc_url->data,
                                                            my_bc_rel.data,
                                                            pool);
-      SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, sess, full_bc_url,
-                                              NULL, starting_props, pool));
+      SVN_ERR(svn_ra_neon__get_starting_props(&rsrc, sess, full_bc_url,
+                                              NULL, pool));
       *is_dir = rsrc->is_collection;
     }
 
@@ -1036,7 +1071,8 @@ append_setprop(svn_stringbuf_t *body,
     }
   else
     {
-      const svn_string_t *base64ed = svn_base64_encode_string(value, pool);
+      const svn_string_t *base64ed = svn_base64_encode_string2(value, TRUE,
+                                                               pool);
       encoding = " V:encoding=\"base64\"";
       xml_safe = base64ed->data;
     }
@@ -1182,12 +1218,12 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
       else
         *kind = svn_node_file;
     }
-  else if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+  else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
 
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
       *kind = svn_node_none;
-      return SVN_NO_ERROR;
     }
 
   return err;
@@ -1227,7 +1263,7 @@ svn_ra_neon__do_stat(svn_ra_session_t *session,
                                            url, revision, pool);
       if (err)
         {
-          if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+          if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
             {
               /* easy out: */
               svn_error_clear(err);
@@ -1248,7 +1284,7 @@ svn_ra_neon__do_stat(svn_ra_session_t *session,
                                NULL, NULL /* all props */, pool);
   if (err)
     {
-      if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
         {
           /* easy out: */
           svn_error_clear(err);

@@ -2,17 +2,22 @@
  * revert.c:  wrapper around wc revert functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -24,6 +29,7 @@
 
 #include "svn_wc.h"
 #include "svn_client.h"
+#include "svn_dirent_uri.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_time.h"
@@ -44,6 +50,11 @@
    on immediate subdirectories; else if svn_depth_infinity, revert
    path and everything under it fully recursively.
 
+   CHANGELISTS is an array of const char * changelist names, used as a
+   restrictive filter on items reverted; that is, don't revert any
+   item unless it's a member of one of those changelists.  If
+   CHANGELISTS is empty (or altogether NULL), no changelist filtering occurs.
+
    Consult CTX to determine whether or not to revert timestamp to the
    time of last commit ('use-commit-times = yes').  Use POOL for
    temporary allocation.
@@ -53,20 +64,28 @@ static svn_error_t *
 revert(const char *path,
        svn_depth_t depth,
        svn_boolean_t use_commit_times,
+       const apr_array_header_t *changelists,
        svn_client_ctx_t *ctx,
        apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access, *target_access;
-  const char *target;
+  const char *target, *local_abspath;
   svn_error_t *err;
   int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
-  SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &target_access, &target, path,
-                                 TRUE, adm_lock_level,
+  SVN_ERR(svn_wc__adm_open_anchor_in_context(
+                                 &adm_access, &target_access, &target,
+                                 ctx->wc_ctx, path, TRUE, adm_lock_level,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 
-  err = svn_wc_revert3(path, adm_access, depth, use_commit_times,
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  err = svn_wc_revert4(ctx->wc_ctx,
+                       local_abspath,
+                       depth,
+                       use_commit_times,
+                       changelists,
                        ctx->cancel_func, ctx->cancel_baton,
                        ctx->notify_func2, ctx->notify_baton2,
                        pool);
@@ -86,18 +105,17 @@ revert(const char *path,
           svn_error_clear(err);
         }
       else
-        return err;
+        return svn_error_return(err);
     }
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 
 svn_error_t *
 svn_client_revert2(const apr_array_header_t *paths,
                    svn_depth_t depth,
+                   const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -128,29 +146,27 @@ svn_client_revert2(const apr_array_header_t *paths,
           && ((err = ctx->cancel_func(ctx->cancel_baton))))
         goto errorful;
 
-      err = revert(path, depth, use_commit_times, ctx, subpool);
+      err = revert(path, depth, use_commit_times, changelists, ctx, subpool);
       if (err)
         goto errorful;
     }
 
  errorful:
 
+  if (!use_commit_times)
+    {
+      /* Sleep to ensure timestamp integrity. */
+      const char* sleep_path = NULL;
+
+      /* Only specify a path if we are certain all paths are on the
+         same filesystem */
+      if (paths->nelts == 1)
+        sleep_path = APR_ARRAY_IDX(paths, 0, const char *);
+
+      svn_io_sleep_for_timestamps(sleep_path, subpool);
+    }
+
   svn_pool_destroy(subpool);
 
-  /* Sleep to ensure timestamp integrity. */
-  svn_sleep_for_timestamps();
-
-  return err;
-}
-
-
-svn_error_t *
-svn_client_revert(const apr_array_header_t *paths,
-                  svn_boolean_t recursive,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  return svn_client_revert2(paths,
-                            recursive ? svn_depth_infinity : svn_depth_empty,
-                            ctx, pool);
+  return svn_error_return(err);
 }

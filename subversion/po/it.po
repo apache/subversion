@@ -2,8 +2,22 @@
 # Italian translations for Subversion
 # Traduzione italiana per Subversion
 #
-# Copyright (C) 2004 CollabNet.
-# This file is distributed under the same license as the subversion package.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 #
 # Translation dictionary:
 # Nota: Il criterio per le traduzioni proposte tiene conto del fatto che
@@ -87,7 +101,7 @@
 # working copy: copia di lavoro (CL)
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.2.0\n"
+"Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-10-12 06:53+0200\n"
 "PO-Revision-Date: 2007-10-12 10:09+0200\n"
@@ -4707,13 +4721,13 @@ msgstr ""
 
 #: libsvn_subr/opt.c:1016
 msgid ""
-"Copyright (C) 2000-2007 CollabNet.\n"
+"Copyright (C) 2000-2009 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
 "This product includes software developed by CollabNet (http://www.Collab."
 "Net/).\n"
 "\n"
 msgstr ""
-"Copyright (C) 2000-2007 CollabNet.\n"
+"Copyright (C) 2000-2009 CollabNet.\n"
 "Subversion è un software open source, vedi http://subversion.tigris.org/\n"
 "Questo prodotto include software sviluppato da CollabNet (http://www.Collab."
 "Net/).\n"
@@ -8725,7 +8739,7 @@ msgstr ""
 
 #: svnadmin/main.c:335
 msgid ""
-"usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
+"usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER] [--incremental]]\n"
 "\n"
 "Dump the contents of filesystem to stdout in a 'dumpfile'\n"
 "portable format, sending feedback to stderr.  Dump revisions\n"
@@ -8734,7 +8748,7 @@ msgid ""
 "If --incremental is passed, then the first revision dumped will be\n"
 "a diff against the previous revision, instead of the usual fulltext.\n"
 msgstr ""
-"uso: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
+"uso: svnadmin dump REPOS_PATH [-r LOWER[:UPPER] [--incremental]]\n"
 "\n"
 "Scarica i contenuti di un filesystem su stdout in un formato portatile,\n"
 "mandando il feedback in stderr. Scarica le revisioni da LOWER fino a UPPER.\n"

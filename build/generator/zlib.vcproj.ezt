@@ -3,8 +3,7 @@
 	ProjectType="Visual C++"
 	Version="[version]"
 	Name="zlib"
-	SccProjectName=""
-	SccLocalPath=""
+	ProjectGUID="{41FE336A-F191-4F4E-A17C-602C627EA1E1}"
 	Keyword="MakeFileProj">
 	<Platforms>
 [for platforms]		<Platform
@@ -16,6 +15,7 @@
 			OutputDirectory="[zlib_path]\Debug"
 			IntermediateDirectory="[zlib_path]\Debug"
 			ConfigurationType="0"
+			ManagedExtensions="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
@@ -30,6 +30,7 @@
 			OutputDirectory="[zlib_path]\Release"
 			IntermediateDirectory="[zlib_path]\Release"
 			ConfigurationType="0"
+			ManagedExtensions="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool

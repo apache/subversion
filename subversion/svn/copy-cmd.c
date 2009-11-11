@@ -2,17 +2,22 @@
  * copy-cmd.c -- Subversion copy command
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -47,8 +52,9 @@ svn_cl__copy(apr_getopt_t *os,
   svn_error_t *err;
   int i;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
+                                                      ctx, pool));
   if (targets->nelts < 2)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
@@ -83,8 +89,8 @@ svn_cl__copy(apr_getopt_t *os,
     {
       /* WC->WC */
       if (! opt_state->quiet)
-        svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                             FALSE, FALSE, FALSE, pool);
+        SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                     FALSE, FALSE, FALSE, pool));
     }
   else if ((! srcs_are_urls) && (dst_is_url))
     {
@@ -111,8 +117,8 @@ svn_cl__copy(apr_getopt_t *os,
     {
       /* URL->WC : Use checkout-style notification. */
       if (! opt_state->quiet)
-        svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, TRUE,
-                             FALSE, FALSE, pool);
+        SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                     TRUE, FALSE, FALSE, pool));
     }
   /* else URL -> URL, meaning that no notification is needed. */
 
@@ -130,15 +136,14 @@ svn_cl__copy(apr_getopt_t *os,
     SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
                                        NULL, ctx->config, pool));
 
-  ctx->revprop_table = opt_state->revprop_table;
-
-  err = svn_client_copy4(&commit_info, sources, dst_path, TRUE,
-                         opt_state->parents, ctx, pool);
+  err = svn_client_copy5(&commit_info, sources, dst_path, TRUE,
+                         opt_state->parents, opt_state->ignore_externals,
+                         opt_state->revprop_table, ctx, pool);
 
   if (ctx->log_msg_func3)
-    SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err));
+    SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool));
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   if (commit_info && ! opt_state->quiet)
     SVN_ERR(svn_cl__print_commit_info(commit_info, pool));

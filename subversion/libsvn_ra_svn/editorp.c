@@ -2,17 +2,22 @@
  * editorp.c :  Driving and consuming an editor across an svn connection
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -22,15 +27,12 @@
 #include <apr_want.h>
 #include <apr_general.h>
 #include <apr_strings.h>
-#include <apr_md5.h>
-
-#include <assert.h>
 
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
-#include "svn_path.h"
 #include "svn_delta.h"
+#include "svn_dirent_uri.h"
 #include "svn_ra_svn.h"
 #include "svn_pools.h"
 #include "svn_private_config.h"
@@ -118,7 +120,7 @@ static ra_svn_baton_t *ra_svn_make_baton(svn_ra_svn_conn_t *conn,
  * get one, abort the edit and return the error. */
 static svn_error_t *check_for_error(ra_svn_edit_baton_t *eb, apr_pool_t *pool)
 {
-  assert(!eb->got_status);
+  SVN_ERR_ASSERT(!eb->got_status);
   if (svn_ra_svn__input_waiting(eb->conn, pool))
     {
       eb->got_status = TRUE;
@@ -173,8 +175,8 @@ static svn_error_t *ra_svn_add_dir(const char *path, void *parent_baton,
   ra_svn_baton_t *b = parent_baton;
   const char *token = make_token('d', b->eb, pool);
 
-  assert((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
-         || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
+  SVN_ERR_ASSERT((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
+                 || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
   SVN_ERR(check_for_error(b->eb, pool));
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "add-dir", "ccc(?cr)", path,
                                b->token, token, copy_path, copy_rev));
@@ -243,8 +245,8 @@ static svn_error_t *ra_svn_add_file(const char *path,
   ra_svn_baton_t *b = parent_baton;
   const char *token = make_token('c', b->eb, pool);
 
-  assert((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
-         || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
+  SVN_ERR_ASSERT((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
+                 || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
   SVN_ERR(check_for_error(b->eb, pool));
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "add-file", "ccc(?cr)", path,
                                b->token, token, copy_path, copy_rev));
@@ -364,7 +366,7 @@ static svn_error_t *ra_svn_close_edit(void *edit_baton, apr_pool_t *pool)
   ra_svn_edit_baton_t *eb = edit_baton;
   svn_error_t *err;
 
-  assert(!eb->got_status);
+  SVN_ERR_ASSERT(!eb->got_status);
   eb->got_status = TRUE;
   SVN_ERR(svn_ra_svn_write_cmd(eb->conn, pool, "close-edit", ""));
   err = svn_ra_svn_read_cmd_response(eb->conn, pool, "");
@@ -498,7 +500,7 @@ static svn_error_t *ra_svn_handle_delete_entry(svn_ra_svn_conn_t *conn,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)c", &path, &rev, &token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
-  path = svn_path_canonicalize(path, pool);
+  path = svn_uri_canonicalize(path, pool);
   SVN_CMD_ERR(ds->editor->delete_entry(path, rev, entry->baton, pool));
   return SVN_NO_ERROR;
 }
@@ -518,9 +520,9 @@ static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
                                  &child_token, &copy_path, &copy_rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   subpool = svn_pool_create(entry->pool);
-  path = svn_path_canonicalize(path, pool);
+  path = svn_uri_canonicalize(path, pool);
   if (copy_path)
-    copy_path = svn_path_canonicalize(copy_path, pool);
+    copy_path = svn_uri_canonicalize(copy_path, pool);
   SVN_CMD_ERR(ds->editor->add_directory(path, entry->baton, copy_path,
                                         copy_rev, subpool, &child_baton));
   store_token(ds, child_baton, child_token, FALSE, subpool);
@@ -542,7 +544,7 @@ static svn_error_t *ra_svn_handle_open_dir(svn_ra_svn_conn_t *conn,
                                  &child_token, &rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   subpool = svn_pool_create(entry->pool);
-  path = svn_path_canonicalize(path, pool);
+  path = svn_uri_canonicalize(path, pool);
   SVN_CMD_ERR(ds->editor->open_directory(path, entry->baton, rev, subpool,
                                          &child_baton));
   store_token(ds, child_baton, child_token, FALSE, subpool);
@@ -616,9 +618,9 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
                                  &file_token, &copy_path, &copy_rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
-  path = svn_path_canonicalize(path, pool);
+  path = svn_uri_canonicalize(path, pool);
   if (copy_path)
-    copy_path = svn_path_canonicalize(copy_path, pool);
+    copy_path = svn_uri_canonicalize(copy_path, pool);
   file_entry = store_token(ds, NULL, file_token, TRUE, ds->file_pool);
   SVN_CMD_ERR(ds->editor->add_file(path, entry->baton, copy_path, copy_rev,
                                    ds->file_pool, &file_entry->baton));
@@ -638,7 +640,7 @@ static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
                                  &file_token, &rev));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
-  path = svn_path_canonicalize(path, pool);
+  path = svn_uri_canonicalize(path, pool);
   file_entry = store_token(ds, NULL, file_token, TRUE, ds->file_pool);
   SVN_CMD_ERR(ds->editor->open_file(path, entry->baton, rev, ds->file_pool,
                                     &file_entry->baton));
@@ -913,12 +915,36 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
       SVN_ERR(err);
     }
 
-  /* Read and discard editing commands until the edit is complete. */
+  /* Read and discard editing commands until the edit is complete.
+     Hopefully, the other side will call another editor command, run
+     check_for_error, notice the error, write "abort-edit" at us, and
+     throw the error up a few levels on its side (possibly even
+     tossing it right back at us, which is why we can return
+     SVN_NO_ERROR below).
+
+     However, if the other side is way ahead of us, it might
+     completely finish the edit (or sequence of edit/revprops, for
+     "replay-range") before we send over our "failure".  So we should
+     also stop if we see "success".  (Then the other side will try to
+     interpret our "failure" as a command, which will itself fail...
+     The net effect is that whatever error we wrote to the other side
+     will be replaced with SVN_ERR_RA_SVN_UNKNOWN_CMD.)
+   */
   while (!state.done)
     {
       svn_pool_clear(subpool);
-      SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmd, &params));
-      state.done = (strcmp(cmd, "abort-edit") == 0);
+      err = svn_ra_svn_read_tuple(conn, subpool, "wl", &cmd, &params);
+      if (err && err->apr_err == SVN_ERR_RA_SVN_CONNECTION_CLOSED)
+        {
+          /* Other side disconnected; that's no error. */
+          svn_error_clear(err);
+          svn_pool_destroy(subpool);
+          return SVN_NO_ERROR;
+        }
+      svn_error_clear(err);
+      if (strcmp(cmd, "abort-edit") == 0
+          || strcmp(cmd, "success") == 0)
+        state.done = TRUE;
     }
 
   svn_pool_destroy(subpool);

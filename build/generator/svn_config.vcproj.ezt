@@ -3,8 +3,7 @@
 	ProjectType="Visual C++"
 	Version="[version]"
 	Name="__CONFIG__"
-	SccProjectName=""
-	SccLocalPath=""
+	ProjectGUID="{638FEA9B-E592-4B88-93B7-08B8A32CAD1F}"
 	Keyword="MakeFileProj">
 	<Platforms>
 [for platforms]		<Platform
@@ -54,6 +53,19 @@
 					Outputs="..\..\subversion\svn_private_config.h"/>
 			</FileConfiguration>
 [end][end]		</File>
+[for sql]		<File
+			RelativePath="../../[sql.source]">
+[for platforms][for configs]			<FileConfiguration
+				Name="[configs]|[platforms]">
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Generating [sql.header]"
+					CommandLine="&quot;[sql.svn_python]&quot; &quot;$(SolutionDir)\build\transform_sql.py&quot; &quot;$(InputPath)&quot; &quot;$(SolutionDir)\[sql.header]&quot;"
+					Outputs="$(SolutionDir)\[sql.header]"
+				/>
+			</FileConfiguration>
+[end][end]		</File>
+[end]
 	</Files>
 	<Globals>
 	</Globals>

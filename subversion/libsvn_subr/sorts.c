@@ -2,17 +2,22 @@
  * sorts.c:   all sorts of sorts
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -152,4 +157,74 @@ svn_sort__hash(apr_hash_t *ht,
         (int (*)(const void *, const void *))comparison_func);
 
   return ary;
+}
+
+/* Return the lowest index at which the element *KEY should be inserted into
+   the array at BASE which has NELTS elements of size ELT_SIZE bytes each,
+   according to the ordering defined by COMPARE_FUNC.
+   0 <= NELTS <= INT_MAX, 1 <= ELT_SIZE <= INT_MAX.
+   The array must already be sorted in the ordering defined by COMPARE_FUNC.
+   COMPARE_FUNC is defined as for the C stdlib function bsearch().
+   Note: This function is modeled on bsearch() and on lower_bound() in the
+   C++ STL.
+ */
+static int
+bsearch_lower_bound(const void *key,
+                    const void *base,
+                    int nelts,
+                    int elt_size,
+                    int (*compare_func)(const void *, const void *))
+{
+  int lower = 0;
+  int upper = nelts - 1;
+
+  /* Binary search for the lowest position at which to insert KEY. */
+  while (lower <= upper)
+    {
+      int try = lower + (upper - lower) / 2;  /* careful to avoid overflow */
+      int cmp = compare_func((const char *)base + try * elt_size, key);
+
+      if (cmp < 0)
+        lower = try + 1;
+      else
+        upper = try - 1;
+    }
+  assert(lower == upper + 1);
+
+  return lower;
+}
+
+int
+svn_sort__bsearch_lower_bound(const void *key,
+                              apr_array_header_t *array,
+                              int (*compare_func)(const void *, const void *))
+{
+  return bsearch_lower_bound(key,
+                             array->elts, array->nelts, array->elt_size,
+                             compare_func);
+}
+
+void
+svn_sort__array_insert(const void *new_element,
+                       apr_array_header_t *array,
+                       int insert_index)
+{
+  int elements_to_move;
+  char *new_position;
+
+  assert(0 <= insert_index && insert_index <= array->nelts);
+  elements_to_move = array->nelts - insert_index;  /* before bumping nelts */
+
+  /* Grow the array, allocating a new space at the end. Note: this can
+     reallocate the array's "elts" at a different address. */
+  apr_array_push(array);
+
+  /* Move the elements after INSERT_INDEX along. (When elements_to_move == 0,
+     this is a no-op.) */
+  new_position = (char *)array->elts + insert_index * array->elt_size;
+  memmove(new_position + array->elt_size, new_position,
+          array->elt_size * elements_to_move);
+
+  /* Copy in the new element */
+  memcpy(new_position, new_element, array->elt_size);
 }

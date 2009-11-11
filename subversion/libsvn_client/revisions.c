@@ -2,17 +2,22 @@
  * revisions.c:  discovering revisions
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -22,6 +27,7 @@
 
 #include "svn_error.h"
 #include "svn_ra.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "client.h"
 
@@ -34,10 +40,11 @@
 svn_error_t *
 svn_client__get_revision_number(svn_revnum_t *revnum,
                                 svn_revnum_t *youngest_rev,
+                                svn_wc_context_t *wc_ctx,
+                                const char *local_abspath,
                                 svn_ra_session_t *ra_session,
                                 const svn_opt_revision_t *revision,
-                                const char *path,
-                                apr_pool_t *pool)
+                                apr_pool_t *scratch_pool)
 {
   switch (revision->kind)
     {
@@ -63,45 +70,51 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
           if (! ra_session)
             return svn_error_create(SVN_ERR_CLIENT_RA_ACCESS_REQUIRED,
                                     NULL, NULL);
-          SVN_ERR(svn_ra_get_latest_revnum(ra_session, revnum, pool));
+          SVN_ERR(svn_ra_get_latest_revnum(ra_session, revnum, scratch_pool));
           if (youngest_rev)
             *youngest_rev = *revnum;
         }
       break;
 
-    case svn_opt_revision_committed:
     case svn_opt_revision_working:
     case svn_opt_revision_base:
-    case svn_opt_revision_previous:
       {
-        svn_wc_adm_access_t *adm_access;
         const svn_wc_entry_t *ent;
 
         /* Sanity check. */
-        if (path == NULL)
+        if (local_abspath == NULL)
           return svn_error_create(SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
                                   NULL, NULL);
 
-        SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
-                                       0, NULL, NULL, pool));
-        SVN_ERR(svn_wc__entry_versioned(&ent, path, adm_access, FALSE, pool));
-        SVN_ERR(svn_wc_adm_close(adm_access));
+        SVN_ERR(svn_wc__get_entry_versioned(&ent, wc_ctx, local_abspath,
+                                            svn_node_unknown, FALSE, FALSE,
+                                            scratch_pool, scratch_pool));
 
-        if ((revision->kind == svn_opt_revision_base)
-            || (revision->kind == svn_opt_revision_working))
-          {
-            *revnum = ent->revision;
-          }
-        else
-          {
-            if (! SVN_IS_VALID_REVNUM(ent->cmt_rev))
-              return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                                       _("Path '%s' has no committed "
-                                         "revision"), path);
-            *revnum = ent->cmt_rev;
-            if (revision->kind == svn_opt_revision_previous)
-              (*revnum)--;
-          }
+        *revnum = ent->revision;
+      }
+      break;
+
+    case svn_opt_revision_committed:
+    case svn_opt_revision_previous:
+      {
+        const svn_wc_entry_t *ent;
+
+        /* Sanity check. */
+        if (local_abspath == NULL)
+          return svn_error_create(SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
+                                  NULL, NULL);
+
+        SVN_ERR(svn_wc__get_entry_versioned(&ent, wc_ctx, local_abspath,
+                                            svn_node_unknown, FALSE, FALSE,
+                                            scratch_pool, scratch_pool));
+
+        if (! SVN_IS_VALID_REVNUM(ent->cmt_rev))
+          return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                                   _("Path '%s' has no committed "
+                                     "revision"), local_abspath);
+        *revnum = ent->cmt_rev;
+        if (revision->kind == svn_opt_revision_previous)
+          (*revnum)--;
       }
       break;
 
@@ -118,20 +131,24 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
       if (! ra_session)
         return svn_error_create(SVN_ERR_CLIENT_RA_ACCESS_REQUIRED, NULL, NULL);
       SVN_ERR(svn_ra_get_dated_revision(ra_session, revnum,
-                                        revision->value.date, pool));
+                                        revision->value.date, scratch_pool));
       break;
 
     default:
       return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                                _("Unrecognized revision type requested for "
                                  "'%s'"),
-                               svn_path_local_style(path, pool));
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
     }
 
   /* Final check -- if our caller provided a youngest revision, and
-  the number we wound up with is younger than that revision, we need
-  to stick to our caller's idea of "youngest". */
+     the number we wound up with (after talking to the server) is younger
+     than that revision, we need to stick to our caller's idea of "youngest".
+   */
   if (youngest_rev
+      && (revision->kind == svn_opt_revision_head
+          || revision->kind == svn_opt_revision_date)
       && SVN_IS_VALID_REVNUM(*youngest_rev)
       && SVN_IS_VALID_REVNUM(*revnum)
       && (*revnum > *youngest_rev))
@@ -139,33 +156,3 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
 
   return SVN_NO_ERROR;
 }
-
-
-svn_boolean_t
-svn_client__compare_revisions(svn_opt_revision_t *revision1,
-                              svn_opt_revision_t *revision2)
-{
-  if ((revision1->kind != revision2->kind)
-      || ((revision1->kind == svn_opt_revision_number)
-          && (revision1->value.number != revision2->value.number))
-      || ((revision1->kind == svn_opt_revision_date)
-          && (revision1->value.date != revision2->value.date)))
-    return FALSE;
-
-  /* Else. */
-  return TRUE;
-}
-
-
-svn_boolean_t
-svn_client__revision_is_local(const svn_opt_revision_t *revision)
-{
-  if ((revision->kind == svn_opt_revision_unspecified)
-      || (revision->kind == svn_opt_revision_head)
-      || (revision->kind == svn_opt_revision_number)
-      || (revision->kind == svn_opt_revision_date))
-    return FALSE;
-  else
-    return TRUE;
-}
-

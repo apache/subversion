@@ -1,13 +1,19 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # $HeadURL$
 # $LastChangedDate$
 # $LastChangedBy$
 # $LastChangedRevision$
 
-import commands
 import sys, os
 import getopt
+try:
+  # Python >=3.0
+  from subprocess import getstatusoutput as subprocess_getstatusoutput
+except ImportError:
+  # Python <3.0
+  from commands import getstatusoutput as subprocess_getstatusoutput
 try:
     my_getopt = getopt.gnu_getopt
 except AttributeError:
@@ -35,7 +41,7 @@ class Config:
         cursectdict = None
         optname = None
         lineno = 0
-        for line in file.xreadlines():
+        for line in file:
             lineno = lineno + 1
             if line.isspace() or line[0] == '#':
                 continue
@@ -63,8 +69,8 @@ class Config:
                     self._sections_list.append((sectname, cursectlist))
                     optname = None
                 elif cursectdict is None:
-                    raise Error, "%s:%d: no section header" % \
-                                 (filename, lineno)
+                    raise Error("%s:%d: no section header" % \
+                                 (filename, lineno))
                 else:
                     m = OPTION.match(line)
                     if m:
@@ -73,14 +79,14 @@ class Config:
                         cursectdict[optname] = optval
                         cursectlist.append([optname, optval])
                     else:
-                        raise Error, "%s:%d: parsing error" % \
-                                     (filename, lineno)
+                        raise Error("%s:%d: parsing error" % \
+                                     (filename, lineno))
 
     def sections(self):
-        return self._sections_dict.keys()
+        return list(self._sections_dict.keys())
 
     def options(self, section):
-        return self._sections_dict.get(section, {}).keys()
+        return list(self._sections_dict.get(section, {}).keys())
 
     def get(self, section, option, default=None):
         return self._sections_dict.get(option, default)
@@ -120,8 +126,8 @@ class Permission:
                         try:
                             users.extend(self._group[groupuser[1:]])
                         except KeyError:
-                            raise Error, "group '%s' not found" % \
-                                         groupuser[1:]
+                            raise Error("group '%s' not found" % \
+                                         groupuser[1:])
                     else:
                         users.append(groupuser)
                 self._permlist.append((pattern, users, perms))
@@ -141,12 +147,12 @@ class SVNLook:
 
     def _execcmd(self, *cmd, **kwargs):
         cmdstr = " ".join(cmd)
-        status, output = commands.getstatusoutput(cmdstr)
+        status, output = subprocess_getstatusoutput(cmdstr)
         if status != 0:
             sys.stderr.write(cmdstr)
             sys.stderr.write("\n")
             sys.stderr.write(output)
-            raise Error, "command failed: %s\n%s" % (cmdstr, output)
+            raise Error("command failed: %s\n%s" % (cmdstr, output))
         return status, output
 
     def _execsvnlook(self, cmd, *args, **kwargs):
@@ -156,18 +162,18 @@ class SVNLook:
         execcmd_kwargs = {}
         keywords = ["show", "noerror"]
         for key in keywords:
-            if kwargs.has_key(key):
+            if key in kwargs:
                 execcmd_kwargs[key] = kwargs[key]
         return self._execcmd(*execcmd_args, **execcmd_kwargs)
 
     def _add_txnrev(self, cmd_args, received_kwargs):
-        if received_kwargs.has_key("txn"):
+        if "txn" in received_kwargs:
             txn = received_kwargs.get("txn")
             if txn is not None:
                 cmd_args += ["-t", txn]
         elif self.txn is not None:
             cmd_args += ["-t", self.txn]
-        if received_kwargs.has_key("rev"):
+        if "rev" in received_kwargs:
             rev = received_kwargs.get("rev")
             if rev is not None:
                 cmd_args += ["-r", rev]
@@ -207,9 +213,9 @@ def check_perms(filename, section, repos, txn=None, rev=None, author=None):
     try:
         config = Config(filename)
     except IOError:
-        raise Error, "can't read config file "+filename
+        raise Error("can't read config file "+filename)
     if not section in config.sections():
-        raise Error, "section '%s' not found in config file" % section
+        raise Error("section '%s' not found in config file" % section)
     perm = Permission()
     perm.parse_groups(config.walk("groups"))
     perm.parse_groups(config.walk(section+" groups"))
@@ -231,7 +237,7 @@ def check_perms(filename, section, repos, txn=None, rev=None, author=None):
     if permerrors:
         permerrors.insert(0, "you don't have enough permissions for "
                              "this transaction:")
-        raise Error, "\n".join(permerrors)
+        raise Error("\n".join(permerrors))
 
 
 # Command:
@@ -259,7 +265,7 @@ def parse_options():
     try:
         opts, args = my_getopt(sys.argv[1:], "f:s:r:t:R:A:h", ["help"])
     except getopt.GetoptError, e:
-        raise Error, e.msg
+        raise Error(e.msg)
     class Options: pass
     obj = Options()
     obj.filename = None
@@ -290,8 +296,7 @@ def parse_options():
     if not (obj.transaction or obj.revision):
         missingopts.append("either transaction or a revision")
     if missingopts:
-        raise MissingArgumentsException, \
-              "missing required option(s): " + ", ".join(missingopts)
+        raise MissingArgumentsException("missing required option(s): " + ", ".join(missingopts))
     obj.repository = os.path.abspath(obj.repository)
     if obj.filename is None:
         obj.filename = os.path.join(obj.repository, "conf", "svnperms.conf")
@@ -301,8 +306,8 @@ def parse_options():
             os.path.isdir(os.path.join(obj.repository, "db")) and
             os.path.isdir(os.path.join(obj.repository, "hooks")) and
             os.path.isfile(os.path.join(obj.repository, "format"))):
-        raise Error, "path '%s' doesn't look like a repository" % \
-                     obj.repository
+        raise Error("path '%s' doesn't look like a repository" % \
+                     obj.repository)
 
     return obj
 

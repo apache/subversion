@@ -77,6 +77,6 @@ while line:
   if last_date > date_as_int:
     ok_not_ok = "NOT OK"
 
-  print "%-8s  %s  %s %s" % (rev, ok_not_ok, date, offset)
+  print("%-8s  %s  %s %s" % (rev, ok_not_ok, date, offset))
   last_date = date_as_int
   line = sys.stdin.readline()

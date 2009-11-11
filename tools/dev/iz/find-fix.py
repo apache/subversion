@@ -36,7 +36,12 @@ import os
 import os.path
 import pydoc
 import re
-import string
+try:
+  # Python >=2.6
+  from functools import reduce
+except ImportError:
+  # Python <2.6
+  pass
 import sys
 import time
 
@@ -115,7 +120,7 @@ def main():
     elif opt == "--verbose":
       verbose = 1
     elif opt == "--milestones":
-      for mstone in string.split(arg, ","):
+      for mstone in arg.split(","):
         if mstone == "noncore":
           _milestone_filter = noncore_milestone_filter
         elif mstone == "beta":
@@ -141,7 +146,7 @@ def main():
 
   if verbose:
     sys.stderr.write("%s: Filtering out milestones %s.\n"
-                     % (me, string.join(_milestone_filter, ", ")))
+                     % (me, ", ".join(_milestone_filter)))
 
   if len(args) == 2:
     if verbose:
@@ -204,9 +209,9 @@ def summary(datafile, d_start, d_end):
     fromzerorem_t = fromzerofound[t]\
                     - (fromzerofixed[t] + fromzeroinval[t] + fromzerodup[t]
                        + fromzeroother[t])
-    print '%12s: found=%3d  fixed=%3d  inval=%3d  dup=%3d  ' \
+    print('%12s: found=%3d  fixed=%3d  inval=%3d  dup=%3d  ' \
           'other=%3d  remain=%3d' \
-          % (t, found[t], fixed[t], inval[t], dup[t], other[t], fromzerorem_t)
+          % (t, found[t], fixed[t], inval[t], dup[t], other[t], fromzerorem_t))
     alltypes_found = alltypes_found + found[t]
     alltypes_fixed = alltypes_fixed + fixed[t]
     alltypes_inval = alltypes_inval + inval[t]
@@ -214,11 +219,11 @@ def summary(datafile, d_start, d_end):
     alltypes_other = alltypes_other + other[t]
     alltypes_rem   = alltypes_rem + fromzerorem_t
 
-  print '-' * 77
-  print '%12s: found=%3d  fixed=%3d  inval=%3d  dup=%3d  ' \
+  print('-' * 77)
+  print('%12s: found=%3d  fixed=%3d  inval=%3d  dup=%3d  ' \
         'other=%3d  remain=%3d' \
         % ('totals', alltypes_found, alltypes_fixed, alltypes_inval,
-           alltypes_dup, alltypes_other, alltypes_rem)
+           alltypes_dup, alltypes_other, alltypes_rem))
   # print '%12s  find/fix ratio: %g%%' \
   #      % (" "*12, (alltypes_found*100.0/(alltypes_fixed
   #         + alltypes_inval + alltypes_dup + alltypes_other)))
@@ -347,14 +352,14 @@ def extract(data, details, d_start, d_end):
 
 def load_data(datafile):
   "Return a list of Issue objects for the specified data."
-  return map(Issue, open(datafile).readlines())
+  return list(map(Issue, open(datafile).readlines()))
 
 
 class Issue:
   "Represents a single issue from the exported IssueZilla data."
 
   def __init__(self, line):
-    row = string.split(string.strip(line), '\t')
+    row = line.strip().split('\t')
 
     self.id = int(row[0])
     self.type = row[1]
@@ -401,29 +406,29 @@ def parse_time(t):
     sys.exit(1)
 
 def shortusage():
-  print pydoc.synopsis(sys.argv[0])
-  print """
+  print(pydoc.synopsis(sys.argv[0]))
+  print("""
 For simple text summary:
        find-fix.py [options] query-set-1.tsv YYYY-MM-DD YYYY-MM-DD
 
 For gnuplot presentation:
        find-fix.py [options] query-set-1.tsv outfile
-"""
+""")
 
 def usage():
   shortusage()
   for x in long_opts:
       padding_limit = 18
       if x[0][-1:] == '=':
-          print "   --" + x[0][:-1],
+          sys.stdout.write("   --%s " % x[0][:-1])
           padding_limit = 19
       else:
-          print "   --" + x[0],
-      print (' ' * (padding_limit - len(x[0]))), x[1]
-  print '''
+          sys.stdout.write("   --%s " % x[0])
+      print("%s %s" % ((' ' * (padding_limit - len(x[0]))), x[1]))
+  print('''
 Option keywords may be abbreviated to any unique prefix.
 Most options require "=xxx" arguments.
-Option order is not important.'''
+Option order is not important.''')
 
 if __name__ == '__main__':
   main()

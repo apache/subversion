@@ -1,17 +1,22 @@
 /* strings-table.c : operations on the `strings' table
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -350,14 +355,12 @@ svn_fs_bdb__string_append(svn_fs_t *fs,
 
   /* Store a new record into the database. */
   svn_fs_base__trail_debug(trail, "strings", "put");
-  SVN_ERR(BDB_WRAP(fs, "appending string",
-                   bfd->strings->put
-                   (bfd->strings, trail->db_txn,
-                    svn_fs_base__str_to_dbt(&query, *key),
-                    svn_fs_base__set_dbt(&result, buf, len),
-                    0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, "appending string",
+                  bfd->strings->put
+                  (bfd->strings, trail->db_txn,
+                   svn_fs_base__str_to_dbt(&query, *key),
+                   svn_fs_base__set_dbt(&result, buf, len),
+                   0));
 }
 
 
@@ -460,9 +463,7 @@ svn_fs_bdb__string_delete(svn_fs_t *fs,
        "No such string '%s'", key);
 
   /* Handle any other error conditions.  */
-  SVN_ERR(BDB_WRAP(fs, "deleting string", db_err));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, "deleting string", db_err);
 }
 
 

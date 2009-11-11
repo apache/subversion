@@ -26,3 +26,9 @@ Bourne shell version, including, but not limited to:
   * "svnmerge avail" has grown two new options:
     -B to display a list of the blocked revisions.
     -A to display both the blocked and the available revisions.
+
+  * The Subverson properties used for tracking can represent a branch
+    in one of several ways:
+    - path (the old repo-relative path; the default)
+    - uuid (uuid://XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/repo/relative/path
+    - url

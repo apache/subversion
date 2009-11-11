@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -80,13 +88,13 @@ def check_keywords(actual_kw, expected_kw, name):
   """A Helper function to compare two keyword lists"""
 
   if len(actual_kw) != len(expected_kw):
-    print "Keyword lists are different by size"
+    print("Keyword lists are different by size")
     raise svntest.Failure
 
   for i in range(0,len(actual_kw)):
     if actual_kw[i] != expected_kw[i]:
-      print '%s item %s, Expected: %s' % (name, i, expected_kw[i][:-1])
-      print '%s item %s, Got:      %s' % (name, i, actual_kw[i][:-1])
+      print('%s item %s, Expected: %s' % (name, i, expected_kw[i][:-1]))
+      print('%s item %s, Got:      %s' % (name, i, actual_kw[i][:-1]))
       raise svntest.Failure
 
 def setup_working_copy(wc_dir, value_len):
@@ -99,6 +107,8 @@ def setup_working_copy(wc_dir, value_len):
   global url_exp_path
   global id_unexp_path
   global id_exp_path
+  global header_unexp_path
+  global header_exp_path
   global bogus_keywords_path
   global embd_author_rev_unexp_path
   global embd_author_rev_exp_path
@@ -118,6 +128,8 @@ def setup_working_copy(wc_dir, value_len):
   url_exp_path = os.path.join(wc_dir, 'url_exp')
   id_unexp_path = os.path.join(wc_dir, 'id_unexp')
   id_exp_path = os.path.join(wc_dir, 'id_exp')
+  header_unexp_path = os.path.join(wc_dir, 'header_unexp')
+  header_exp_path = os.path.join(wc_dir, 'header_exp')
   bogus_keywords_path = os.path.join(wc_dir, 'bogus_keywords')
   embd_author_rev_unexp_path = os.path.join(wc_dir, 'embd_author_rev_unexp')
   embd_author_rev_exp_path = os.path.join(wc_dir, 'embd_author_rev_exp')
@@ -132,6 +144,8 @@ def setup_working_copy(wc_dir, value_len):
   svntest.main.file_append(url_exp_path, "$URL: blah $")
   svntest.main.file_append(id_unexp_path, "$Id$")
   svntest.main.file_append(id_exp_path, "$Id: blah $")
+  svntest.main.file_append(header_unexp_path, "$Header$")
+  svntest.main.file_append(header_exp_path, "$Header: blah $")
   svntest.main.file_append(bogus_keywords_path, "$Arthur$\n$Rev0$")
   svntest.main.file_append(embd_author_rev_unexp_path,
                            "one\nfish\n$Author$ two fish\n red $Rev$\n fish")
@@ -169,14 +183,15 @@ def setup_working_copy(wc_dir, value_len):
 ### Helper functions for setting/removing properties
 
 # Set the property keyword for PATH.  Turn on all possible keywords.
-# ### todo: Later, take list of keywords to set.
+### todo: Later, take list of keywords to set.
 def keywords_on(path):
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
-                                     "svn:keywords", "Author Rev Date URL Id",
+                                     "svn:keywords",
+                                     "Author Rev Date URL Id Header",
                                      path)
 
 # Delete property NAME from versioned PATH in the working copy.
-# ### todo: Later, take list of keywords to remove from the propval?
+### todo: Later, take list of keywords to remove from the propval?
 def keywords_off(path):
   svntest.actions.run_and_verify_svn(None, None, [], 'propdel',
                                      "svn:keywords", path)
@@ -215,6 +230,8 @@ def keywords_from_birth(sbox):
     'url_exp' : Item(status='A ', wc_rev=0),
     'id_unexp' : Item(status='A ', wc_rev=0),
     'id_exp' : Item(status='A ', wc_rev=0),
+    'header_unexp' : Item(status='A ', wc_rev=0),
+    'header_exp' : Item(status='A ', wc_rev=0),
     'bogus_keywords' : Item(status='A ', wc_rev=0),
     'embd_author_rev_unexp' : Item(status='A ', wc_rev=0),
     'embd_author_rev_exp' : Item(status='A ', wc_rev=0),
@@ -230,6 +247,8 @@ def keywords_from_birth(sbox):
   svntest.main.run_svn(None, 'add', url_exp_path)
   svntest.main.run_svn(None, 'add', id_unexp_path)
   svntest.main.run_svn(None, 'add', id_exp_path)
+  svntest.main.run_svn(None, 'add', header_unexp_path)
+  svntest.main.run_svn(None, 'add', header_exp_path)
   svntest.main.run_svn(None, 'add', bogus_keywords_path)
   svntest.main.run_svn(None, 'add', embd_author_rev_unexp_path)
   svntest.main.run_svn(None, 'add', embd_author_rev_exp_path)
@@ -246,6 +265,8 @@ def keywords_from_birth(sbox):
   keywords_on(url_exp_path)
   keywords_on(id_unexp_path)
   keywords_on(id_exp_path)
+  keywords_on(header_unexp_path)
+  keywords_on(header_exp_path)
   keywords_on(embd_author_rev_exp_path)
   keywords_on(fixed_length_keywords_path)
   keywords_on(id_with_space_path)
@@ -259,6 +280,8 @@ def keywords_from_birth(sbox):
     'url_exp' : Item(verb='Adding'),
     'id_unexp' : Item(verb='Adding'),
     'id_exp' : Item(verb='Adding'),
+    'header_unexp' : Item(verb='Adding'),
+    'header_exp' : Item(verb='Adding'),
     'bogus_keywords' : Item(verb='Adding'),
     'embd_author_rev_unexp' : Item(verb='Adding'),
     'embd_author_rev_exp' : Item(verb='Adding'),
@@ -269,15 +292,15 @@ def keywords_from_birth(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None,
-                                        None, None, None, None, wc_dir)
+                                        None, None, wc_dir)
 
   # Make sure the unexpanded URL keyword got expanded correctly.
   fp = open(url_unexp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http|file|svn|svn\\+ssh)://", lines[0]))):
-    print "URL expansion failed for", url_unexp_path
+          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
+                        lines[0]))):
+    print("URL expansion failed for %s" % url_unexp_path)
     raise svntest.Failure
   fp.close()
 
@@ -285,8 +308,9 @@ def keywords_from_birth(sbox):
   fp = open(url_exp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http|file|svn|svn\\+ssh)://", lines[0]))):
-    print "URL expansion failed for", url_exp_path
+          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
+                        lines[0]))):
+    print("URL expansion failed for %s" % url_exp_path)
     raise svntest.Failure
   fp.close()
 
@@ -295,7 +319,7 @@ def keywords_from_birth(sbox):
   lines = fp.readlines()
   if not ((len(lines) == 1)
           and (re.match("\$Id: id_unexp", lines[0]))):
-    print "Id expansion failed for", id_exp_path
+    print("Id expansion failed for %s" % id_exp_path)
     raise svntest.Failure
   fp.close()
 
@@ -304,7 +328,27 @@ def keywords_from_birth(sbox):
   lines = fp.readlines()
   if not ((len(lines) == 1)
           and (re.match("\$Id: id_exp", lines[0]))):
-    print "Id expansion failed for", id_exp_path
+    print("Id expansion failed for %s" % id_exp_path)
+    raise svntest.Failure
+  fp.close()
+
+  # Make sure the unexpanded Header keyword got expanded correctly.
+  fp = open(header_unexp_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1)
+          and (re.match("\$Header: (https?|file|svn|svn\\+ssh)://.* jrandom",
+                        lines[0]))):
+    print("Header expansion failed for %s" % header_unexp_path)
+    raise svntest.Failure
+  fp.close()
+
+  # Make sure the preexpanded Header keyword got reexpanded correctly.
+  fp = open(header_exp_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1)
+          and (re.match("\$Header: (https?|file|svn|svn\\+ssh)://.* jrandom",
+                        lines[0]))):
+    print("Header expansion failed for %s" % header_exp_path)
     raise svntest.Failure
   fp.close()
 
@@ -354,7 +398,7 @@ def keywords_from_birth(sbox):
   lines = fp.readlines()
   if not ((len(lines) == 1)
           and (re.match("\$Id: .*id with space", lines[0]))):
-    print "Id expansion failed for", id_with_space_path
+    print("Id expansion failed for %s" % id_with_space_path)
     raise svntest.Failure
   fp.close()
 
@@ -364,7 +408,7 @@ def keywords_from_birth(sbox):
   if not ((len(lines) == 1)
           and (re.match("\$Id: .*id_exp with_\$_sign [^$]* jrandom \$",
                         lines[0]))):
-    print "Id expansion failed for", id_exp_with_dollar_path
+    print("Id expansion failed for %s" % id_exp_with_dollar_path)
 
     raise svntest.Failure
   fp.close()
@@ -429,8 +473,7 @@ def update_modified_with_translation(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        rho_path)
+                                        None, rho_path)
 
   # Change rho again
   svntest.main.file_write(rho_path, "1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n")
@@ -442,8 +485,7 @@ def update_modified_with_translation(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        rho_path)
+                                        None, rho_path)
 
   # Locally modify rho again.
   svntest.main.file_write(rho_path, "1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n10\n")
@@ -580,8 +622,9 @@ def keyword_expanded_on_checkout(sbox):
   fp = open(other_url_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http|file|svn|svn\\+ssh)://", lines[0]))):
-    print "URL expansion failed for", other_url_path
+          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
+                        lines[0]))):
+    print("URL expansion failed for %s" % other_url_path)
     raise svntest.Failure
   fp.close()
 
@@ -608,8 +651,7 @@ def cat_keyword_expansion(sbox):
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Change the author to value which will get truncated on expansion
   full_author = "x" * 400
@@ -634,8 +676,7 @@ def cat_keyword_expansion(sbox):
   expected_status.tweak('A/B/lambda', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # At one stage the keywords were expanded to values for the requested
   # revision, not to those committed revision
@@ -673,8 +714,7 @@ def copy_propset_commit(sbox):
   expected_status.tweak('A/mu2', status='  ', wc_rev=2, copied=None)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 #----------------------------------------------------------------------
 #      Create a greek tree, commit a keyword into one file,
@@ -697,8 +737,7 @@ def propset_commit_checkout_nocrash(sbox):
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Set property to do keyword expansion on A/mu, commit.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -710,8 +749,7 @@ def propset_commit_checkout_nocrash(sbox):
   expected_status.tweak('A/mu', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Check out into another wc dir
   other_wc_dir = sbox.add_wc_path('other')
@@ -723,7 +761,7 @@ def propset_commit_checkout_nocrash(sbox):
 
   mu_other_contents = svntest.main.file_read(mu_other_path)
   if mu_other_contents != "This is the file 'mu'.\n$Rev: 3 $":
-    print "'%s' does not have the expected contents" % mu_other_path
+    print("'%s' does not have the expected contents" % mu_other_path)
     raise svntest.Failure
 
 

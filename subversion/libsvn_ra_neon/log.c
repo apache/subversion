@@ -2,22 +2,25 @@
  * log.c :  routines for requesting and parsing log reports
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
-
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h> /* for strcmp() */
 
@@ -30,6 +33,7 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_xml.h"
+#include "svn_props.h"
 
 #include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
@@ -64,7 +68,7 @@ struct log_baton
   svn_boolean_t want_message;
 
   /* The current changed path item. */
-  svn_log_changed_path_t *this_path_item;
+  svn_log_changed_path2_t *this_path_item;
 
   /* Client's callback, invoked on the above fields when the end of an
      item is seen. */
@@ -72,7 +76,8 @@ struct log_baton
   void *receiver_baton;
 
   int limit;
-  int count;
+  int nest_level; /* used to track mergeinfo nesting levels */
+  int count; /* only incremented when nest_level == 0 */
 
   /* If we're in backwards compatibility mode for the svn log --limit
      stuff, we need to be able to bail out while parsing log messages.
@@ -91,14 +96,14 @@ struct log_baton
 static void
 reset_log_item(struct log_baton *lb)
 {
-  lb->log_entry->revision      = SVN_INVALID_REVNUM;
-  lb->log_entry->revprops      = NULL;
-  lb->log_entry->changed_paths = NULL;
-  lb->log_entry->has_children  = FALSE;
+  lb->log_entry->revision       = SVN_INVALID_REVNUM;
+  lb->log_entry->revprops       = NULL;
+  lb->log_entry->changed_paths  = NULL;
+  lb->log_entry->has_children   = FALSE;
+  lb->log_entry->changed_paths2 = NULL;
 
   svn_pool_clear(lb->subpool);
 }
-
 
 /*
  * This implements the `svn_ra_neon__xml_startelm_cb' prototype.
@@ -179,9 +184,15 @@ log_start_element(int *elem, void *baton, int parent,
     case ELEM_replaced_path:
     case ELEM_deleted_path:
     case ELEM_modified_path:
-      lb->this_path_item = apr_pcalloc(lb->subpool,
-                                       sizeof(*(lb->this_path_item)));
+      lb->this_path_item = svn_log_changed_path2_create(lb->subpool);
+      lb->this_path_item->node_kind = svn_node_kind_from_word(
+                                     svn_xml_get_attr_value("node-kind", atts));
       lb->this_path_item->copyfrom_rev = SVN_INVALID_REVNUM;
+
+      lb->this_path_item->text_modified = svn_tristate_from_word(
+                                     svn_xml_get_attr_value("text-mods", atts));
+      lb->this_path_item->props_modified = svn_tristate_from_word(
+                                     svn_xml_get_attr_value("prop-mods", atts));
 
       /* See documentation for `svn_repos_node_t' in svn_repos.h,
          and `svn_log_changed_path_t' in svn_types.h, for more
@@ -259,9 +270,12 @@ log_end_element(void *baton, int state,
     case ELEM_modified_path:
       {
         char *path = apr_pstrdup(lb->subpool, lb->cdata->data);
-        if (! lb->log_entry->changed_paths)
-          lb->log_entry->changed_paths = apr_hash_make(lb->subpool);
-        apr_hash_set(lb->log_entry->changed_paths, path, APR_HASH_KEY_STRING,
+        if (! lb->log_entry->changed_paths2)
+          {
+            lb->log_entry->changed_paths2 = apr_hash_make(lb->subpool);
+            lb->log_entry->changed_paths = lb->log_entry->changed_paths2;
+          }
+        apr_hash_set(lb->log_entry->changed_paths2, path, APR_HASH_KEY_STRING,
                      lb->this_path_item);
         break;
       }
@@ -284,22 +298,30 @@ log_end_element(void *baton, int state,
       break;
     case ELEM_log_item:
       {
-        /* Compatability cruft so that we can provide limit functionality
+        /* Compatibility cruft so that we can provide limit functionality
            even if the server doesn't support it.
 
            If we've seen as many log entries as we're going to show just
            error out of the XML parser so we can avoid having to parse the
-           remaining XML, but set lb->err to SVN_NO_ERROR so no error will
-           end up being shown to the user. */
-        if (lb->limit && (++lb->count > lb->limit))
+           remaining XML, but set a flag that we will later use to ensure
+           this error will not be shown to the user. */
+        if (lb->limit && (lb->nest_level == 0) && (++lb->count > lb->limit))
           {
             lb->limit_compat_bailout = TRUE;
             return svn_error_create(APR_EGENERAL, NULL, NULL);
           }
-
         SVN_ERR((*(lb->receiver))(lb->receiver_baton,
                                   lb->log_entry,
                                   lb->subpool));
+        if (lb->log_entry->has_children)
+          {
+            lb->nest_level++;
+          }
+        if (! SVN_IS_VALID_REVNUM(lb->log_entry->revision))
+          {
+            SVN_ERR_ASSERT(lb->nest_level);
+            lb->nest_level--;
+          }
         reset_log_item(lb);
       }
       break;
@@ -319,7 +341,7 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
                                    svn_boolean_t discover_changed_paths,
                                    svn_boolean_t strict_node_history,
                                    svn_boolean_t include_merged_revisions,
-                                   apr_array_header_t *revprops,
+                                   const apr_array_header_t *revprops,
                                    svn_log_entry_receiver_t receiver,
                                    void *receiver_baton,
                                    apr_pool_t *pool)
@@ -413,6 +435,10 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
           else
             want_custom_revprops = TRUE;
         }
+      if (revprops->nelts == 0)
+	{
+	  svn_stringbuf_appendcstr(request_body, "<S:no-revprops/>");
+	}
     }
   else
     {
@@ -426,8 +452,8 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
   if (want_custom_revprops)
     {
       svn_boolean_t has_log_revprops;
-      SVN_ERR(svn_ra_has_capability(session, &has_log_revprops,
-                                    SVN_RA_CAPABILITY_LOG_REVPROPS, pool));
+      SVN_ERR(svn_ra_neon__has_capability(session, &has_log_revprops,
+                                          SVN_RA_CAPABILITY_LOG_REVPROPS, pool));
       if (!has_log_revprops)
         return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
                                 _("Server does not support custom revprops"
@@ -456,6 +482,7 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
   lb.subpool = svn_pool_create(pool);
   lb.limit = limit;
   lb.count = 0;
+  lb.nest_level = 0;
   lb.limit_compat_bailout = FALSE;
   lb.cdata = svn_stringbuf_create("", pool);
   lb.log_entry = svn_log_entry_create(pool);
@@ -493,13 +520,8 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
 
   if (err && lb.limit_compat_bailout)
     {
-      svn_log_entry_t *log_entry;
-
       svn_error_clear(err);
-
-      log_entry = svn_log_entry_create(pool);
-      log_entry->revision = SVN_INVALID_REVNUM;
-      return receiver(receiver_baton, log_entry, pool);
+      err = SVN_NO_ERROR;
     }
 
   return err;

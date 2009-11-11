@@ -2,17 +2,22 @@
  * debug_editor.c :  An editor that writes the operations it does to stderr.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -62,11 +67,9 @@ set_target_revision(void *edit_baton,
   SVN_ERR(svn_stream_printf(eb->out, pool, "set_target_revision : %ld\n",
                             target_revision));
 
-  SVN_ERR(eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
-                                                  target_revision,
-                                                  pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
+                                                 target_revision,
+                                                 pool);
 }
 
 static svn_error_t *
@@ -108,12 +111,10 @@ delete_entry(const char *path,
   SVN_ERR(svn_stream_printf(eb->out, pool, "delete_entry : %s:%ld\n",
                             path, base_revision));
 
-  SVN_ERR(eb->wrapped_editor->delete_entry(path,
-                                           base_revision,
-                                           pb->wrapped_dir_baton,
-                                           pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->delete_entry(path,
+                                          base_revision,
+                                          pb->wrapped_dir_baton,
+                                          pool);
 }
 
 static svn_error_t *
@@ -402,7 +403,7 @@ svn_delta__get_debug_editor(const svn_delta_editor_t **editor,
   if (apr_err)
     return svn_error_wrap_apr(apr_err, "Problem opening stderr");
 
-  out = svn_stream_from_aprfile(errfp, pool);
+  out = svn_stream_from_aprfile2(errfp, TRUE, pool);
 
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;

@@ -20,19 +20,22 @@ my @ldpaths = ("$swig_builddir/perl/libsvn_swig_perl/.libs",
                map {"$svnlib_builddir/libsvn_$_/.libs"} (@modules, qw/diff subr
                                                                       ra_local
                                                                       ra_svn
-                                                                      ra_dav
+                                                                      ra_neon
+                                                                      ra_serf
                                                                       fs_base
+                                                                      fs_util
                                                                       fs_fs/));
 my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
 my $apr_shlib_path_var = '@SVN_APR_SHLIB_PATH_VAR@';
 my $cppflags = '@CPPFLAGS@';
+my $cflags = '@CFLAGS@';
 my $apr_cflags = '@SVN_APR_INCLUDES@';
 my $apu_cflags = '@SVN_APRUTIL_INCLUDES@';
 
 # According to the log of r7937, the flags guarded by the conditional break
 # the build on FreeBSD if not conditionalized.
-my $apr_ldflags = '@SVN_APR_EXPORT_LIBS@' 
+my $apr_ldflags = '@SVN_APR_LIBS@' 
    if $^O eq 'darwin' or $^O eq 'cygwin';
 
 chomp $apr_shlib_path_var;
@@ -40,6 +43,7 @@ chomp $apr_shlib_path_var;
 my %config = (
     ABSTRACT => 'Perl bindings for Subversion',
     DEFINE => $cppflags,
+    CCFLAGS => $cflags,
     INC  => join(' ',$apr_cflags, $apu_cflags, 
                  " -I$swig_srcdir/perl/libsvn_swig_perl",
                  " -I$svnlib_srcdir/include",

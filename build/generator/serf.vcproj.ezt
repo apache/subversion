@@ -3,8 +3,7 @@
     ProjectType="Visual C++"
     Version="[version]"
     Name="serf"
-    SccProjectName=""
-    SccLocalPath=""
+    ProjectGUID="{F1EC01C7-C056-410B-A564-777D73A9AEE8}"
     Keyword="MakeFileProj">
     <Platforms>
 [for platforms]		<Platform
@@ -16,6 +15,7 @@
             OutputDirectory="Debug"
             IntermediateDirectory="Debug"
             ConfigurationType="0"
+            ManagedExtensions="1"
             UseOfMFC="0"
             ATLMinimizesCRunTimeLibraryUsage="FALSE">
             <Tool
@@ -30,6 +30,7 @@
             OutputDirectory="Release"
             IntermediateDirectory="Release"
             ConfigurationType="0"
+            ManagedExtensions="1"
             UseOfMFC="0"
             ATLMinimizesCRunTimeLibraryUsage="FALSE">
             <Tool

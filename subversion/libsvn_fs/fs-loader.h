@@ -2,17 +2,22 @@
  * fs_loader.h:  Declarations for the FS loader library
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -66,9 +71,9 @@ typedef struct fs_library_vtable_t
      this statement, now that the minor version has increased. */
   const svn_version_t *(*get_version)(void);
 
-  /* The open_fs/create/open_fs_for_recovery functions are serialized
-     so that they may use the common_pool parameter to allocate
-     fs-global objects such as the bdb env cache. */
+  /* The open_fs/create/open_fs_for_recovery/upgrade_fs functions are
+     serialized so that they may use the common_pool parameter to
+     allocate fs-global objects such as the bdb env cache. */
   svn_error_t *(*create)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
                          apr_pool_t *common_pool);
   svn_error_t *(*open_fs)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
@@ -79,11 +84,17 @@ typedef struct fs_library_vtable_t
   svn_error_t *(*open_fs_for_recovery)(svn_fs_t *fs, const char *path,
                                        apr_pool_t *pool,
                                        apr_pool_t *common_pool);
+  svn_error_t *(*upgrade_fs)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+                             apr_pool_t *common_pool);
   svn_error_t *(*delete_fs)(const char *path, apr_pool_t *pool);
   svn_error_t *(*hotcopy)(const char *src_path, const char *dest_path,
                           svn_boolean_t clean, apr_pool_t *pool);
   const char *(*get_description)(void);
   svn_error_t *(*recover)(svn_fs_t *fs,
+                          svn_cancel_func_t cancel_func, void *cancel_baton,
+                          apr_pool_t *pool);
+  svn_error_t *(*pack_fs)(svn_fs_t *fs, const char *path,
+                          svn_fs_pack_notify_t notify_func, void *notify_baton,
                           svn_cancel_func_t cancel_func, void *cancel_baton,
                           apr_pool_t *pool);
 
@@ -156,6 +167,8 @@ typedef struct fs_vtable_t
   svn_error_t *(*begin_txn)(svn_fs_txn_t **txn_p, svn_fs_t *fs,
                             svn_revnum_t rev, apr_uint32_t flags,
                             apr_pool_t *pool);
+  svn_error_t *(*begin_obliteration_txn)(svn_fs_txn_t **txn_p, svn_fs_t *fs,
+                                         svn_revnum_t rev, apr_pool_t *pool);
   svn_error_t *(*open_txn)(svn_fs_txn_t **txn, svn_fs_t *fs,
                            const char *name, apr_pool_t *pool);
   svn_error_t *(*purge_txn)(svn_fs_t *fs, const char *txn_id,
@@ -189,6 +202,8 @@ typedef struct txn_vtable_t
 {
   svn_error_t *(*commit)(const char **conflict_p, svn_revnum_t *new_rev,
                          svn_fs_txn_t *txn, apr_pool_t *pool);
+  svn_error_t *(*commit_obliteration)(svn_revnum_t rev, svn_fs_txn_t *txn,
+                                      apr_pool_t *pool);
   svn_error_t *(*abort)(svn_fs_txn_t *txn, apr_pool_t *pool);
   svn_error_t *(*get_prop)(svn_string_t **value_p, svn_fs_txn_t *txn,
                            const char *propname, apr_pool_t *pool);
@@ -207,7 +222,10 @@ typedef struct txn_vtable_t
    roots may not all have the same vtable, we need a rule to determine
    which root's vtable is used.  The rule is: if one of the roots is
    named "target", we use that root's vtable; otherwise, we use the
-   first root argument's vtable. */
+   first root argument's vtable.
+   These callbacks correspond to svn_fs_* functions in include/svn_fs.h,
+   see there for details.
+   Note: delete_node() corresponds to svn_fs_delete(). */
 typedef struct root_vtable_t
 {
   /* Determining what has changed in a root */
@@ -271,9 +289,9 @@ typedef struct root_vtable_t
   /* Files */
   svn_error_t *(*file_length)(svn_filesize_t *length_p, svn_fs_root_t *root,
                               const char *path, apr_pool_t *pool);
-  svn_error_t *(*file_md5_checksum)(unsigned char digest[],
-                                    svn_fs_root_t *root,
-                                    const char *path, apr_pool_t *pool);
+  svn_error_t *(*file_checksum)(svn_checksum_t **checksum,
+                                svn_checksum_kind_t kind, svn_fs_root_t *root,
+                                const char *path, apr_pool_t *pool);
   svn_error_t *(*file_contents)(svn_stream_t **contents,
                                 svn_fs_root_t *root, const char *path,
                                 apr_pool_t *pool);
@@ -282,11 +300,11 @@ typedef struct root_vtable_t
   svn_error_t *(*apply_textdelta)(svn_txdelta_window_handler_t *contents_p,
                                   void **contents_baton_p,
                                   svn_fs_root_t *root, const char *path,
-                                  const char *base_checksum,
-                                  const char *result_checksum,
+                                  svn_checksum_t *base_checksum,
+                                  svn_checksum_t *result_checksum,
                                   apr_pool_t *pool);
   svn_error_t *(*apply_text)(svn_stream_t **contents_p, svn_fs_root_t *root,
-                             const char *path, const char *result_checksum,
+                             const char *path, svn_checksum_t *result_checksum,
                              apr_pool_t *pool);
   svn_error_t *(*contents_changed)(int *changed_p, svn_fs_root_t *root1,
                                    const char *path1, svn_fs_root_t *root2,
@@ -307,17 +325,12 @@ typedef struct root_vtable_t
                         svn_fs_root_t *ancestor_root,
                         const char *ancestor_path,
                         apr_pool_t *pool);
-  svn_error_t *(*get_mergeinfo)(apr_hash_t **minfohash,
+  svn_error_t *(*get_mergeinfo)(svn_mergeinfo_catalog_t *catalog,
                                 svn_fs_root_t *root,
                                 const apr_array_header_t *paths,
                                 svn_mergeinfo_inheritance_t inherit,
+                                svn_boolean_t include_descendants,
                                 apr_pool_t *pool);
-  svn_error_t *(*get_mergeinfo_for_tree)(apr_hash_t **mergeinfo,
-                                         svn_fs_root_t *root,
-                                         const apr_array_header_t *paths,
-                                         svn_fs_mergeinfo_filter_func_t filter_func,
-                                         void *filter_func_baton,
-                                         apr_pool_t *pool);
 } root_vtable_t;
 
 
@@ -345,12 +358,6 @@ typedef struct id_vtable_t
    in the 'flags' argument to svn_fs_lock().  */
 #define SVN_FS__PROP_TXN_CHECK_LOCKS           SVN_PROP_PREFIX "check-locks"
 #define SVN_FS__PROP_TXN_CHECK_OOD             SVN_PROP_PREFIX "check-ood"
-
-/* This transaction property determines whether the txn has mergeinfo
-   properties set in it, and thus will need some info inserted about
-   uid->rev mapping in the mergeinfo table  */
-#define SVN_FS__PROP_TXN_CONTAINS_MERGEINFO    SVN_PROP_PREFIX "contains-mergeinfo"
-
 
 struct svn_fs_t
 {
@@ -397,7 +404,7 @@ struct svn_fs_txn_t
 
 struct svn_fs_root_t
 {
-  /* A pool managing this root */
+  /* A pool managing this root (and only this root!) */
   apr_pool_t *pool;
 
   /* The filesystem to which this root belongs */

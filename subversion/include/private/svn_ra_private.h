@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -39,6 +44,29 @@ svn_error_t *
 svn_ra__assert_mergeinfo_capable_server(svn_ra_session_t *ra_session,
                                         const char *path_or_url,
                                         apr_pool_t *pool);
+
+/** Permanently delete @a path (relative to the URL of @a session) in revision
+ * @a rev.
+ *
+ * Do not change the content of other node in the repository, even other nodes
+ * that were copied from this one. The only other change in the repository is
+ * to "copied from" pointers that were pointing to the now-deleted node. These
+ * are removed or made to point to a previous version of the now-deleted node.
+ * (### TODO: details.)
+ *
+ * If administratively forbidden, return @c SVN_ERR_RA_NOT_AUTHORIZED. If not
+ * implemented by the server, return @c SVN_ERR_RA_NOT_IMPLEMENTED.
+ *
+ * @note This functionality is not implemented in pre-1.7 servers and may not
+ * be implemented in all 1.7 and later servers.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_ra__obliterate(svn_ra_session_t *session,
+                   svn_revnum_t rev,
+                   const char *path,
+                   apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  */
@@ -25,6 +30,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Date;
+import java.text.ParseException;
 
 /**
  * This is the main client class.  All Subversion client APIs are
@@ -107,20 +113,23 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #status(String, int, boolean, boolean,
-     *                                boolean, boolean, StatusCallback)}
-     *             instead.
+     *                                boolean, boolean, String[],
+     *                                StatusCallback)} instead.
      * @since 1.0
      */
     public Status singleStatus(String path, boolean onServer)
             throws ClientException
     {
+        Status[] statusArray = status(path, false, onServer, true, false, false);
+        if (statusArray == null || statusArray.length == 0)
+            return null;
         return status(path, false, onServer, true, false, false)[0];
     }
 
     /**
      * @deprecated Use {@link #status(String, int, boolean, boolean,
-     *                                boolean, boolean, StatusCallback)}
-     *             instead.
+     *                                boolean, boolean, String[],
+     *                                StatusCallback)} instead.
      * @since 1.0
      */
     public Status[] status(String path, boolean descend, boolean onServer,
@@ -132,8 +141,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #status(String, int, boolean, boolean,
-     *                                boolean, boolean, StatusCallback)}
-     *             instead.
+     *                                boolean, boolean, String[],
+     *                                StatusCallback)} instead.
      * @since 1.0
      */
     public Status[] status(String path, boolean descend,
@@ -146,8 +155,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #status(String, int, boolean, boolean,
-     *                                boolean, boolean, StatusCallback)}
-     *             instead.
+     *                                boolean, boolean, String[],
+     *                                StatusCallback)} instead.
      * @since 1.2
      */
     public Status[] status(String path, boolean descend, boolean onServer,
@@ -158,7 +167,7 @@ public class SVNClient implements SVNClientInterface
         MyStatusCallback callback = new MyStatusCallback();
 
         status(path, Depth.unknownOrImmediates(descend), onServer, getAll,
-               noIgnore, ignoreExternals, callback);
+               noIgnore, ignoreExternals, null, callback);
 
         return callback.getStatusArray();
     }
@@ -168,7 +177,8 @@ public class SVNClient implements SVNClientInterface
      */
     public native void status(String path, int depth, boolean onServer,
                               boolean getAll, boolean noIgnore,
-                              boolean ignoreExternals, StatusCallback callback)
+                              boolean ignoreExternals, String[] changelists,
+                              StatusCallback callback)
             throws ClientException;
 
     /**
@@ -288,12 +298,35 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #logMessages(String, Revision, RevisionRange[],
+     *                                     boolean, boolean, boolean, String[],
+     *                                     long, LogMessageCallback)} instead.
      * @since 1.5
+     */
+    public void logMessages(String path,
+                            Revision pegRevision,
+                            Revision revisionStart,
+                            Revision revisionEnd,
+                            boolean stopOnCopy,
+                            boolean discoverPath,
+                            boolean includeMergedRevisions,
+                            String[] revProps,
+                            long limit,
+                            LogMessageCallback callback)
+            throws ClientException
+    {
+        logMessages(path, pegRevision, toRevisionRange(revisionStart,
+                                                       revisionEnd), stopOnCopy,
+                    discoverPath, includeMergedRevisions, revProps, limit,
+                    callback);
+    }
+
+    /**
+     * @since 1.6
      */
     public native void logMessages(String path,
                                    Revision pegRevision,
-                                   Revision revisionStart,
-                                   Revision revisionEnd,
+                                   RevisionRange[] revisionRanges,
                                    boolean stopOnCopy,
                                    boolean discoverPath,
                                    boolean includeMergedRevisions,
@@ -366,37 +399,37 @@ public class SVNClient implements SVNClientInterface
     public native void commitMessageHandler(CommitMessage messageHandler);
 
     /**
-     * @deprecated Use {@link #remove(String[], String, boolean, boolean)}
+     * @deprecated Use {@link #remove(String[], String, boolean, boolean, Map)}
      *             instead.
      * @since 1.0
      */
     public void remove(String[] path, String message, boolean force)
             throws ClientException
     {
-        remove(path, message, force, false);
+        remove(path, message, force, false, null);
     }
 
     /**
      * @since 1.5
      */
     public native void remove(String[] path, String message, boolean force,
-                              boolean keepLocal)
+                              boolean keepLocal, Map revpropTable)
             throws ClientException;
 
     /**
-     * @deprecated Use {@link #revert(String, int)} instead.
+     * @deprecated Use {@link #revert(String, int, String[])} instead.
      * @since 1.0
      */
     public void revert(String path, boolean recurse)
             throws ClientException
     {
-        revert(path, Depth.infinityOrEmpty(recurse));
+        revert(path, Depth.infinityOrEmpty(recurse), null);
     }
 
     /**
      * @since 1.5
      */
-    public native void revert(String path, int depth)
+    public native void revert(String path, int depth, String[] changelists)
             throws ClientException;
 
     /**
@@ -430,26 +463,25 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #update(String[], Revision, int, boolean,
-     *                                boolean)} instead.
+     *                                boolean, boolean)} instead.
      * @since 1.0
      */
     public long update(String path, Revision revision, boolean recurse)
             throws ClientException
     {
-        return update(new String[]{path}, revision,
-                      Depth.unknownOrFiles(recurse), false, false)[0];
+        return update(new String[]{path}, revision, recurse, false)[0];
     }
 
     /**
      * @deprecated Use {@link #update(String[], Revision, int, boolean,
-     *                                boolean)} instead.
+     *                                boolean, boolean)} instead.
      * @since 1.2
      */
     public long[] update(String[] path, Revision revision,
                          boolean recurse, boolean ignoreExternals)
             throws ClientException
     {
-        return update(path, revision, Depth.unknownOrFiles(recurse),
+        return update(path, revision, Depth.unknownOrFiles(recurse), false,
                       ignoreExternals, false);
     }
 
@@ -457,11 +489,11 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public long update(String path, Revision revision, int depth,
-                       boolean ignoreExternals,
+                       boolean depthIsSticky, boolean ignoreExternals,
                        boolean allowUnverObstructions)
             throws ClientException
     {
-        return update(new String[]{path}, revision, depth,
+        return update(new String[]{path}, revision, depth, depthIsSticky,
                       ignoreExternals, allowUnverObstructions)[0];
     }
 
@@ -469,13 +501,14 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public native long[] update(String[] path, Revision revision,
-                                int depth, boolean ignoreExternals,
+                                int depth, boolean depthIsSticky,
+                                boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
 
     /**
      * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
-     *                                String)} instead.
+     *                                String[], Map)} instead.
      * @since 1.0
      */
     public long commit(String[] path, String message, boolean recurse)
@@ -486,7 +519,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
-     *                                String)} instead.
+     *                                String[], Map)} instead.
      * @since 1.2
      */
     public long commit(String[] path, String message, boolean recurse,
@@ -494,7 +527,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         return commit(path, message, Depth.infinityOrEmpty(recurse), noUnlock,
-                      false, null);
+                      false, null, null);
     }
 
     /**
@@ -502,7 +535,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native long commit(String[] path, String message, int depth,
                               boolean noUnlock, boolean keepChangelist,
-                              String changelistName)
+                              String[] changelists, Map revpropTable)
             throws ClientException;
 
     /**
@@ -510,12 +543,12 @@ public class SVNClient implements SVNClientInterface
      */
     public native void copy(CopySource[] sources, String destPath,
                             String message, boolean copyAsChild,
-                            boolean makeParents)
+                            boolean makeParents, Map revpropTable)
             throws ClientException;
 
     /**
      * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
-     *                              boolean)} instead.
+     *                              boolean, Map)} instead.
      * @since 1.0
      */
     public void copy(String srcPath, String destPath, String message,
@@ -524,7 +557,7 @@ public class SVNClient implements SVNClientInterface
     {
         copy(new CopySource[] { new CopySource(srcPath, revision,
                                                Revision.HEAD) },
-             destPath, message, true, false);
+             destPath, message, true, false, null);
     }
 
     /**
@@ -532,48 +565,50 @@ public class SVNClient implements SVNClientInterface
      */
     public native void move(String[] srcPaths, String destPath, String message,
                             boolean force, boolean moveAsChild,
-                            boolean makeParents)
+                            boolean makeParents, Map revpropTable)
             throws ClientException;
 
     /**
      * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
-     *                              boolean)} instead.
+     *                              boolean, Map)} instead.
      * @since 1.2
      */
     public void move(String srcPath, String destPath, String message,
                      Revision ignored, boolean force)
             throws ClientException
     {
-        move(new String[] { srcPath }, destPath, message, force, true, false);
+        move(new String[] { srcPath }, destPath, message, force, true, false,
+             null);
     }
 
     /**
      * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
-     *                              boolean)} instead.
+     *                              boolean, Map)} instead.
      * @since 1.0
      */
     public void move(String srcPath, String destPath, String message,
                      boolean force)
             throws ClientException
     {
-        move(new String[] { srcPath }, destPath, message, force, true, false);
+        move(new String[] { srcPath }, destPath, message, force, true, false,
+             null);
     }
 
     /**
      * @since 1.5
      */
     public native void mkdir(String[] path, String message,
-                             boolean makeParents)
+                             boolean makeParents, Map revpropTable)
             throws ClientException;
 
     /**
-     * @deprecated Use {@link #mkdir(String[], String, boolean)} instead.
+     * @deprecated Use {@link #mkdir(String[], String, boolean, Map)} instead.
      * @since 1.0
      */
     public void mkdir(String[] path, String message)
             throws ClientException
     {
-        mkdir(path, message, false);
+        mkdir(path, message, false, null);
     }
 
     /**
@@ -583,7 +618,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @deprecated Use {@link #resolved(String, int, int)} instead.
+     * @deprecated Use {@link #resolve(String, int, int)} instead.
      * @since 1.0
      */
     public void resolved(String path, boolean recurse)
@@ -591,8 +626,8 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            resolved(path, Depth.infinityOrEmpty(recurse),
-                     ConflictResult.chooseMerged);
+            resolve(path, Depth.infinityOrEmpty(recurse),
+                    ConflictResult.chooseMerged);
         }
         catch (SubversionException e)
         {
@@ -603,7 +638,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void resolved(String path, int depth, int conflictResult)
+    public native void resolve(String path, int depth, int conflictResult)
         throws SubversionException;
 
     /**
@@ -654,7 +689,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         return doSwitch(path, url, revision, Revision.HEAD,
-                        Depth.unknownOrFiles(recurse), false, false);
+                        Depth.unknownOrFiles(recurse), false, false, false);
     }
 
     /**
@@ -662,13 +697,13 @@ public class SVNClient implements SVNClientInterface
      */
     public native long doSwitch(String path, String url, Revision revision,
                                 Revision pegRevision, int depth,
-                                boolean ignoreExternals,
+                                boolean depthIsSticky, boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
 
     /**
      * @deprecated Use {@link #doImport(String, String, String, int, boolean,
-     *                                  boolean)} instead.
+     *                                  boolean, Map)} instead.
      * @since 1.0
      */
     public void doImport(String path, String url, String message,
@@ -676,7 +711,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         doImport(path, url, message, Depth.infinityOrFiles(recurse),
-                 false, false);
+                 false, false, null);
     }
 
     /**
@@ -684,7 +719,8 @@ public class SVNClient implements SVNClientInterface
      */
     public native void doImport(String path, String url, String message,
                                 int depth, boolean noIgnore,
-                                boolean ignoreUnknownNodeTypes)
+                                boolean ignoreUnknownNodeTypes,
+                                Map revpropTable)
             throws ClientException;
 
     /**
@@ -697,7 +733,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @deprecated Use {@link #merge(String, Revision, String, Revision,
      *                               String, boolean, int, boolean,
-     *                               boolean)} instead.
+     *                               boolean, boolean)} instead.
      * @since 1.0
      */
     public void merge(String path1, Revision revision1, String path2,
@@ -712,7 +748,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @deprecated Use {@link #merge(String, Revision, String, Revision,
      *                               String, boolean, int, boolean,
-     *                               boolean)} instead.
+     *                               boolean, boolean)} instead.
      * @since 1.2
      */
     public void merge(String path1, Revision revision1, String path2,
@@ -737,7 +773,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @deprecated Use {@link #merge(String, Revision, RevisionRange[],
      *                               String, boolean, int, boolean,
-     *                               boolean)} instead.
+     *                               boolean, boolean)} instead.
      * @since 1.2
      */
     public void merge(String path, Revision pegRevision, Revision revision1,
@@ -745,11 +781,9 @@ public class SVNClient implements SVNClientInterface
                       boolean recurse, boolean ignoreAncestry, boolean dryRun)
            throws ClientException
     {
-        RevisionRange[] ranges = new RevisionRange[1];
-        ranges[0] = new RevisionRange(revision1, revision2);
-
-        merge(path, pegRevision, ranges, localPath, force,
-              Depth.infinityOrFiles(recurse), ignoreAncestry, dryRun, false);
+        merge(path, pegRevision, toRevisionRange(revision1, revision2),
+              localPath, force, Depth.infinityOrFiles(recurse), ignoreAncestry,
+              dryRun, false);
     }
 
     /**
@@ -764,21 +798,32 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native MergeInfo getMergeInfo(String path, Revision pegRevision)
+    public native void mergeReintegrate(String path, Revision pegRevision,
+                                        String localPath, boolean dryRun)
+            throws ClientException;
+
+    /**
+     * @since 1.5
+     */
+    public native Mergeinfo getMergeinfo(String path, Revision pegRevision)
             throws SubversionException;
 
     /**
      * @since 1.5
      */
-    public native RevisionRange[] getAvailableMerges(String path,
-                                                     Revision pegRevision,
-                                                     String mergeSource)
-        throws SubversionException;
+    public native void getMergeinfoLog(int kind, String pathOrUrl,
+                                       Revision pegRevision,
+                                       String mergeSourceUrl,
+                                       Revision srcPegRevision,
+                                       boolean discoverChangedPaths,
+                                       String[] revprops,
+                                       LogMessageCallback callback)
+        throws ClientException;
 
     /**
      * @deprecated Use {@link #diff(String, Revision, String, Revision,
-     *                              String, int, boolean, boolean, boolean)}
-     *                              instead.
+     *                              String, String, int, String[], boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.0
      */
     public void diff(String target1, Revision revision1, String target2,
@@ -792,8 +837,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #diff(String, Revision, String, Revision,
-     *                              String, int, boolean, boolean, boolean)}
-     *                              instead.
+     *                              String, String, int, String[], boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.2
      */
     public void diff(String target1, Revision revision1, String target2,
@@ -803,7 +848,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         diff(target1, revision1, target2, revision2, null, outFileName,
-             Depth.unknownOrFiles(recurse), ignoreAncestry, noDiffDeleted,
+             Depth.unknownOrFiles(recurse), null, ignoreAncestry, noDiffDeleted,
              force);
     }
 
@@ -812,15 +857,15 @@ public class SVNClient implements SVNClientInterface
      */
     public native void diff(String target1, Revision revision1, String target2,
                             Revision revision2, String relativeToDir,
-                            String outFileName, int depth,
+                            String outFileName, int depth, String[] changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force)
             throws ClientException;
 
     /**
      * @deprecated Use {@link #diff(String, Revision, Revision, Revision,
-     *                              String, int, boolean, boolean, boolean)}
-     *                              instead.
+     *                              String, String, int, String[], boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.2
      */
     public void diff(String target, Revision pegRevision,
@@ -831,7 +876,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         diff(target, pegRevision, startRevision, endRevision, null,
-             outFileName, Depth.unknownOrFiles(recurse), ignoreAncestry,
+             outFileName, Depth.unknownOrFiles(recurse), null, ignoreAncestry,
              noDiffDeleted, force);
     }
 
@@ -841,8 +886,9 @@ public class SVNClient implements SVNClientInterface
     public native void diff(String target, Revision pegRevision,
                             Revision startRevision, Revision endRevision,
                             String relativeToDir, String outFileName,
-                            int depth, boolean ignoreAncestry,
-                            boolean noDiffDeleted, boolean force)
+                            int depth, String[] changelists,
+                            boolean ignoreAncestry, boolean noDiffDeleted,
+                            boolean force)
             throws ClientException;
 
     /**
@@ -850,7 +896,8 @@ public class SVNClient implements SVNClientInterface
      */
     public native void diffSummarize(String target1, Revision revision1,
                                      String target2, Revision revision2,
-                                     int depth, boolean ignoreAncestry,
+                                     int depth, String[] changelists,
+                                     boolean ignoreAncestry,
                                      DiffSummaryReceiver receiver)
             throws ClientException;
 
@@ -860,13 +907,15 @@ public class SVNClient implements SVNClientInterface
     public native void diffSummarize(String target, Revision pegRevision,
                                      Revision startRevision,
                                      Revision endRevision,
-                                     int depth, boolean ignoreAncestry,
+                                     int depth, String[] changelists,
+                                     boolean ignoreAncestry,
                                      DiffSummaryReceiver receiver)
             throws ClientException;
 
     /**
      * @deprecated Use {@link #properties(String, Revision, Revision,
-     *                                    int, ProplistCallback)} instead.
+     *                                    int, String[], ProplistCallback)}
+     *             instead.
      * @since 1.0
      */
     public PropertyData[] properties(String path) throws ClientException
@@ -876,7 +925,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #properties(String, Revision, Revision,
-     *                                    int, ProplistCallback)} instead.
+     *                                    int, String[], ProplistCallback)}
+     *             instead.
      * @since 1.2
      */
     public PropertyData[] properties(String path, Revision revision)
@@ -887,7 +937,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #properties(String, Revision, Revision,
-     *                                    int, ProplistCallback)} instead.
+     *                                    int, String[], ProplistCallback)}
+     *             instead.
      * @since 1.2
      */
     public PropertyData[] properties(String path, Revision revision,
@@ -895,7 +946,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
-        properties(path, revision, pegRevision, Depth.empty, callback);
+        properties(path, revision, pegRevision, Depth.empty, null, callback);
 
         Map propMap = callback.getProperties(path);
         if (propMap == null)
@@ -920,12 +971,13 @@ public class SVNClient implements SVNClientInterface
      */
     public native void properties(String path, Revision revision,
                                   Revision pegRevision, int depth,
+                                  String[] changelists,
                                   ProplistCallback callback)
             throws ClientException;
 
     /**
      * @deprecated Use {@link #propertySet(String, String, String, int,
-     *                                     boolean)} instead.
+     *                                     String[], boolean, Map)} instead.
      * @since 1.0
      */
     public void propertySet(String path, String name, String value,
@@ -937,19 +989,20 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #propertySet(String, String, String, int,
-     *                                     boolean)} instead.
+     *                                     String[], boolean, Map)} instead.
      * @since 1.2
      */
     public void propertySet(String path, String name, String value,
                                    boolean recurse, boolean force)
             throws ClientException
     {
-        propertySet(path, name, value, Depth.infinityOrEmpty(recurse), force);
+        propertySet(path, name, value, Depth.infinityOrEmpty(recurse), null,
+                    force, null);
     }
 
     /**
      * @deprecated Use {@link #propertySet(String, String, String, int,
-     *                                     boolean)} instead.
+     *                                     String[], boolean, Map)} instead.
      * @since 1.0
      */
     public void propertySet(String path, String name, byte[] value,
@@ -961,7 +1014,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #propertySet(String, String, String, int,
-     *                                     boolean)} instead.
+     *                                     String[], boolean, Map)} instead.
      * @since 1.2
      */
     public void propertySet(String path, String name, byte[] value,
@@ -975,29 +1028,34 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public native void propertySet(String path, String name, String value,
-                                   int depth, boolean force)
+                                   int depth, String[] changelists,
+                                   boolean force, Map revpropTable)
             throws ClientException;
 
     /**
-     * @deprecated Use {@link #propertyRemove(String, String, int)} instead.
+     * @deprecated Use {@link #propertyRemove(String, String, int, String[])}
+                   instead.
      * @since 1.0
      */
     public void propertyRemove(String path, String name, boolean recurse)
             throws ClientException
     {
-        propertyRemove(path, name, Depth.infinityOrEmpty(recurse));
+        propertyRemove(path, name, Depth.infinityOrEmpty(recurse), null);
     }
 
     /**
      * @since 1.5
      */
-    public native void propertyRemove(String path, String name,
-                                      int depth)
-            throws ClientException;
+    public void propertyRemove(String path, String name, int depth,
+                               String[] changelists)
+            throws ClientException
+    {
+        propertySet(path, name, null, depth, changelists, false, null);
+    }
 
     /**
      * @deprecated Use {@link #propertyCreate(String, String, String, int,
-     *                                        boolean)} instead.
+     *                                        String[], boolean)} instead.
      * @since 1.0
      */
     public void propertyCreate(String path, String name, String value,
@@ -1009,7 +1067,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #propertyCreate(String, String, String, int,
-     *                                        boolean)} instead.
+     *                                        String[], boolean)} instead.
      * @since 1.2
      */
     public void propertyCreate(String path, String name, String value,
@@ -1021,7 +1079,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #propertyCreate(String, String, String, int,
-     *                                        boolean)} instead.
+     *                                        String[], boolean)} instead.
      * @since 1.0
      */
     public void propertyCreate(String path, String name, byte[] value,
@@ -1033,7 +1091,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #propertyCreate(String, String, String, int,
-     *                                        boolean)} instead.
+     *                                        String[], boolean)} instead.
      * @since 1.2
      */
     public void propertyCreate(String path, String name, byte[] value,
@@ -1047,10 +1105,10 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public void propertyCreate(String path, String name, String value,
-                               int depth, boolean force)
+                               int depth, String[] changelists, boolean force)
             throws ClientException
     {
-        propertySet(path, name, value, depth, force);
+        propertySet(path, name, value, depth, changelists, force, null);
     }
 
     /**
@@ -1067,10 +1125,23 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
+     * @deprecated Use {@link #setRevProperty(String, String, Revision, String,
+     *                                        String, boolean)} instead.
      * @since 1.2
      */
+    public void setRevProperty(String path, String name, Revision rev,
+                               String value, boolean force)
+            throws ClientException
+    {
+        setRevProperty(path, name, rev, value, null, force);
+    }
+
+    /**
+     * @since 1.6
+     */
     public native void setRevProperty(String path, String name, Revision rev,
-                                      String value, boolean force)
+                                      String value, String originalValue,
+                                      boolean force)
             throws ClientException;
 
     /**
@@ -1217,7 +1288,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @deprecated Use {@link #info2(String, Revision, Revision, int,
+     * @deprecated Use {@link #info2(String, Revision, Revision, int, String[],
      *                               InfoCallback)} instead.
      * @since 1.0
      */
@@ -1227,19 +1298,22 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void addToChangelist(String[] paths, String changelist)
+    public native void addToChangelist(String[] paths, String changelist,
+                                       int depth, String[] changelists)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public native void removeFromChangelist(String[] paths, String changelist)
+    public native void removeFromChangelists(String[] paths, int depth,
+                                             String[] changelists)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public native String[] getChangelist(String changelist, String rootPath)
+    public native void getChangelists(String rootPath, String[] changelists,
+                                      int depth, ChangelistCallback callback)
             throws ClientException;
 
     /**
@@ -1306,7 +1380,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @deprecated Use {@link #info2(String, Revision, Revision, int,
+     * @deprecated Use {@link #info2(String, Revision, Revision, int, String[],
      *                               InfoCallback)} instead.
      * @since 1.2
      */
@@ -1316,7 +1390,7 @@ public class SVNClient implements SVNClientInterface
     {
         MyInfoCallback callback = new MyInfoCallback();
         info2(pathOrUrl, revision, pegRevision,
-              Depth.infinityOrEmpty(recurse), callback);
+              Depth.infinityOrEmpty(recurse), null, callback);
         return callback.getInfoArray();
     }
 
@@ -1325,8 +1399,19 @@ public class SVNClient implements SVNClientInterface
      */
     public native void info2(String pathOrUrl, Revision revision,
                              Revision pegRevision, int depth,
-                             InfoCallback callback)
+                             String[] changelists, InfoCallback callback)
             throws ClientException;
+
+    /**
+     * A private wrapper function for RevisionRanges.
+     * @returns a single-element revision range.
+     */
+    private RevisionRange[] toRevisionRange(Revision rev1, Revision rev2)
+    {
+        RevisionRange[] ranges = new RevisionRange[1];
+        ranges[0] = new RevisionRange(rev1, rev2);
+        return ranges;
+    }
 
     /**
      * A private log message callback implementation used by thin wrappers.
@@ -1338,11 +1423,20 @@ public class SVNClient implements SVNClientInterface
 
         public void singleMessage(ChangePath[] changedPaths,
                                   long revision,
-                                  String author,
-                                  long timeMicros,
-                                  String message,
+                                  Map revprops,
                                   boolean hasChildren)
         {
+            String author = (String) revprops.get("svn:author");
+            String message = (String) revprops.get("svn:log");
+            long timeMicros;
+
+            try {
+                LogDate date = new LogDate((String) revprops.get("svn:date"));
+                timeMicros = date.getTimeMicros();
+            } catch (ParseException ex) {
+                timeMicros = 0;
+            }
+
             LogMessage msg = new LogMessage(changedPaths,
                                             revision,
                                             author,

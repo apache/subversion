@@ -2,17 +2,22 @@
  * node_tree.c:  an editor for tracking repository deltas changes
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -22,7 +27,6 @@
 
 
 #include <stdio.h>
-#include <assert.h>
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -30,6 +34,7 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
@@ -207,7 +212,7 @@ delete_entry(const char *path,
   svn_node_kind_t kind;
 
   /* Get (or create) the change node and update it. */
-  name = svn_path_basename(path, pool);
+  name = svn_relpath_basename(path, pool);
   node = find_child_by_name(d->node, name);
   if (! node)
     node = create_child_node(d->node, name, eb->node_pool);
@@ -257,13 +262,13 @@ add_open_helper(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct node_baton *nb = apr_pcalloc(pool, sizeof(*nb));
 
-  assert(parent_baton && path);
+  SVN_ERR_ASSERT(parent_baton && path);
 
   nb->edit_baton = eb;
   nb->parent_baton = pb;
 
   /* Create and populate the node. */
-  nb->node = create_child_node(pb->node, svn_path_basename(path, pool),
+  nb->node = create_child_node(pb->node, svn_relpath_basename(path, pool),
                                eb->node_pool);
   nb->node->kind = kind;
   nb->node->action = action;
@@ -303,10 +308,9 @@ open_directory(const char *path,
                apr_pool_t *pool,
                void **child_baton)
 {
-  SVN_ERR(add_open_helper(path, 'R', svn_node_dir, parent_baton,
-                          NULL, SVN_INVALID_REVNUM,
-                          pool, child_baton));
-  return SVN_NO_ERROR;
+  return add_open_helper(path, 'R', svn_node_dir, parent_baton,
+                         NULL, SVN_INVALID_REVNUM,
+                         pool, child_baton);
 }
 
 
@@ -318,10 +322,9 @@ add_directory(const char *path,
               apr_pool_t *pool,
               void **child_baton)
 {
-  SVN_ERR(add_open_helper(path, 'A', svn_node_dir, parent_baton,
-                          copyfrom_path, copyfrom_revision,
-                          pool, child_baton));
-  return SVN_NO_ERROR;
+  return add_open_helper(path, 'A', svn_node_dir, parent_baton,
+                         copyfrom_path, copyfrom_revision,
+                         pool, child_baton);
 }
 
 
@@ -332,10 +335,9 @@ open_file(const char *path,
           apr_pool_t *pool,
           void **file_baton)
 {
-  SVN_ERR(add_open_helper(path, 'R', svn_node_file, parent_baton,
-                          NULL, SVN_INVALID_REVNUM,
-                          pool, file_baton));
-  return SVN_NO_ERROR;
+  return add_open_helper(path, 'R', svn_node_file, parent_baton,
+                         NULL, SVN_INVALID_REVNUM,
+                         pool, file_baton);
 }
 
 
@@ -347,10 +349,9 @@ add_file(const char *path,
          apr_pool_t *pool,
          void **file_baton)
 {
-  SVN_ERR(add_open_helper(path, 'A', svn_node_file, parent_baton,
-                          copyfrom_path, copyfrom_revision,
-                          pool, file_baton));
-  return SVN_NO_ERROR;
+  return add_open_helper(path, 'A', svn_node_file, parent_baton,
+                         copyfrom_path, copyfrom_revision,
+                         pool, file_baton);
 }
 
 

@@ -2,17 +2,22 @@
  * util.c :  utility functions for the RA/DAV library
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -32,6 +37,7 @@
 #include "svn_string.h"
 #include "svn_utf.h"
 #include "svn_xml.h"
+#include "svn_props.h"
 
 #include "svn_private_config.h"
 
@@ -343,9 +349,9 @@ path_from_url(const char *url)
     if (*p == '/' || *p == '?' || *p == '#')
       break;
 
-  /* Return a pointer to the rest of the URL, or to the empty string if there
+  /* Return a pointer to the rest of the URL, or to "/" if there
      was no next section. */
-  return p;
+  return *p == '\0' ? "/" : p;
 }
 
 svn_ra_neon__request_t *
@@ -510,8 +516,10 @@ svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src,
   */
 
   apr_uri_t uri;
-  apr_status_t apr_status
-    = apr_uri_parse(pool, src, &uri);
+  apr_status_t apr_status;
+  /* SRC can have trailing '/' */
+  src = svn_path_canonicalize(src, pool);
+  apr_status = apr_uri_parse(pool, src, &uri);
 
   if (apr_status != APR_SUCCESS)
     return svn_error_wrap_apr(apr_status,
@@ -540,8 +548,12 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
       switch (req->code)
         {
         case 404:
-          return svn_error_create(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+          return svn_error_create(SVN_ERR_FS_NOT_FOUND, NULL,
                                   apr_psprintf(pool, _("'%s' path not found"),
+                                               req->url));
+        case 403:
+          return svn_error_create(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
+                                  apr_psprintf(pool, _("access to '%s' forbidden"),
                                                req->url));
 
         case 301:
@@ -566,7 +578,16 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
         }
     case NE_AUTH:
       errcode = SVN_ERR_RA_NOT_AUTHORIZED;
+#ifdef SVN_NEON_0_27
+      /* neon >= 0.27 gives a descriptive error message after auth
+       * failure; expose this since it's a useful diagnostic e.g. for
+       * an unsupported challenge scheme, or a local GSSAPI error due
+       * to an expired ticket. */
+      SVN_ERR(svn_utf_cstring_to_utf8(&msg, ne_get_error(req->ne_sess), pool));
+      msg = apr_psprintf(pool, _("authorization failed: %s"), msg);
+#else
       msg = _("authorization failed");
+#endif
       break;
 
     case NE_CONNECT:
@@ -912,8 +933,18 @@ svn_error_t *svn_ra_neon__set_neon_body_provider(svn_ra_neon__request_t *req,
   b->body_file = body_file;
   b->req = req;
 
+#if defined(SVN_NEON_0_27)
+  ne_set_request_body_provider(req->ne_req, (ne_off_t)finfo.size,
+                               ra_neon_body_provider, b);
+#elif defined(NE_LFS)
+  ne_set_request_body_provider64(req->ne_req, finfo.size,
+                                 ra_neon_body_provider, b);
+#else
+  /* Cut size to 32 bit */
   ne_set_request_body_provider(req->ne_req, (size_t) finfo.size,
                                ra_neon_body_provider, b);
+#endif
+
   return SVN_NO_ERROR;
 }
 
@@ -948,14 +979,11 @@ parse_spool_file(svn_ra_neon__session_t *ras,
                  ne_xml_parser *success_parser,
                  apr_pool_t *pool)
 {
-  apr_file_t *spool_file;
   svn_stream_t *spool_stream;
   char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_size_t len;
 
-  SVN_ERR(svn_io_file_open(&spool_file, spool_file_name,
-                           (APR_READ | APR_BUFFERED), APR_OS_DEFAULT, pool));
-  spool_stream = svn_stream_from_aprfile(spool_file, pool);
+  SVN_ERR(svn_stream_open_readonly(&spool_stream, spool_file_name, pool, pool));
   while (1)
     {
       if (ras->callbacks &&
@@ -973,7 +1001,7 @@ parse_spool_file(svn_ra_neon__session_t *ras,
       if (len != SVN__STREAM_CHUNK_SIZE)
         break;
     }
-  return SVN_NO_ERROR;
+  return svn_stream_close(spool_stream);
 }
 
 
@@ -1148,7 +1176,8 @@ get_cancellation_baton(svn_ra_neon__request_t *req,
 
 /* See doc string for svn_ra_neon__parsed_request. */
 static svn_error_t *
-parsed_request(svn_ra_neon__session_t *ras,
+parsed_request(svn_ra_neon__request_t *req,
+               svn_ra_neon__session_t *ras,
                const char *method,
                const char *url,
                const char *body,
@@ -1164,13 +1193,9 @@ parsed_request(svn_ra_neon__session_t *ras,
                svn_boolean_t spool_response,
                apr_pool_t *pool)
 {
-  svn_ra_neon__request_t *req;
   ne_xml_parser *success_parser = NULL;
   const char *msg;
   spool_reader_baton_t spool_reader_baton;
-
-  /* create/prep the request */
-  req = svn_ra_neon__request_create(ras, method, url, pool);
 
   if (body == NULL)
     SVN_ERR(svn_ra_neon__set_neon_body_provider(req, body_file));
@@ -1193,16 +1218,12 @@ parsed_request(svn_ra_neon__session_t *ras,
      the response to disk first, we use our custom spool reader.  */
   if (spool_response)
     {
-      const char *tmpfile_path;
-      SVN_ERR(svn_io_temp_dir(&tmpfile_path, pool));
-
-      tmpfile_path = svn_path_join(tmpfile_path, "dav-spool", pool);
       /* Blow the temp-file away as soon as we eliminate the entire request */
-      SVN_ERR(svn_io_open_unique_file2(&spool_reader_baton.spool_file,
+      SVN_ERR(svn_io_open_unique_file3(&spool_reader_baton.spool_file,
                                        &spool_reader_baton.spool_file_name,
-                                       tmpfile_path, "",
+                                       NULL,
                                        svn_io_file_del_on_pool_cleanup,
-                                       req->pool));
+                                       req->pool, pool));
       spool_reader_baton.req = req;
 
       svn_ra_neon__add_response_body_reader(req, ne_accept_2xx, spool_reader,
@@ -1248,8 +1269,6 @@ parsed_request(svn_ra_neon__session_t *ras,
                                "in the response: %s (%s)"),
                              method, msg, url);
 
-  svn_ra_neon__request_destroy(req);
-
   return SVN_NO_ERROR;
 }
 
@@ -1271,14 +1290,17 @@ svn_ra_neon__parsed_request(svn_ra_neon__session_t *sess,
                             svn_boolean_t spool_response,
                             apr_pool_t *pool)
 {
-  SVN_ERR_W(parsed_request(sess, method, url, body, body_file,
-                           set_parser,
-                           startelm_cb, cdata_cb, endelm_cb,
-                           baton, extra_headers, status_code,
-                           spool_response, pool),
-            apr_psprintf(pool,_("%s request failed on '%s'"), method, url));
-
-  return SVN_NO_ERROR;
+  /* create/prep the request */
+  svn_ra_neon__request_t* req = svn_ra_neon__request_create(sess, method, url,
+                                                           pool);
+  svn_error_t *err = parsed_request(req,
+                                    sess, method, url, body, body_file,
+                                    set_parser,
+                                    startelm_cb, cdata_cb, endelm_cb,
+                                    baton, extra_headers, status_code,
+                                    spool_response, pool);
+  svn_ra_neon__request_destroy(req);
+  return err;
 }
 
 
@@ -1293,6 +1315,7 @@ svn_ra_neon__simple_request(int *code,
 {
   svn_ra_neon__request_t *req =
     svn_ra_neon__request_create(ras, method, url, pool);
+  svn_error_t *err;
 
   /* we don't need the status parser: it's attached to the request
      and detected errors will be returned there... */
@@ -1300,12 +1323,12 @@ svn_ra_neon__simple_request(int *code,
 
   /* svn_ra_neon__request_dispatch() adds the custom error response
      reader.  Neon will take care of the Content-Length calculation */
-  SVN_ERR(svn_ra_neon__request_dispatch(code, req, extra_headers,
-                                        body ? body : "",
-                                        okay_1, okay_2, pool));
+  err = svn_ra_neon__request_dispatch(code, req, extra_headers,
+                                      body ? body : "",
+                                      okay_1, okay_2, pool);
   svn_ra_neon__request_destroy(req);
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 void
@@ -1356,10 +1379,7 @@ svn_ra_neon__maybe_store_auth_info(svn_ra_neon__session_t *ras,
     return SVN_NO_ERROR;
 
   /* If we ever got credentials, ask the iter_baton to save them.  */
-  SVN_ERR(svn_auth_save_credentials(ras->auth_iterstate,
-                                    pool));
-
-  return SVN_NO_ERROR;
+  return svn_auth_save_credentials(ras->auth_iterstate, pool);
 }
 
 
@@ -1410,6 +1430,22 @@ svn_ra_neon__request_dispatch(int *code_p,
                                 (const char *) key, (const char *) val);
         }
     }
+
+  /* Certain headers must be transmitted unconditionally with every
+     request; see issue #3255 ("mod_dav_svn does not pass client
+     capabilities to start-commit hooks") for why.  It's okay if one
+     of these headers was already added via extra_headers above --
+     they are all idempotent headers.
+
+     Note that at most one could have been sent via extra_headers,
+     because extra_headers is a hash and the key would be the same for
+     all of them: "DAV".  In a just and righteous world, extra_headers
+     would be an array, not a hash, so that callers could send the
+     same header with different values too.  But, apparently, that
+     hasn't been necessary yet. */
+  ne_add_request_header(req->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
+  ne_add_request_header(req->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
+  ne_add_request_header(req->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
 
   if (body)
     ne_set_request_body_buffer(req->ne_req, body, strlen(body));

@@ -1,4 +1,11 @@
-import unittest, os, setup_path, StringIO
+import unittest, os, setup_path, tempfile
+from sys import version_info # For Python version check
+if version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from StringIO import StringIO
 from svn import core, repos, fs, delta
 from svn.core import SubversionException
 
@@ -32,12 +39,16 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.fs = repos.fs(self.repos)
     self.rev = fs.youngest_rev(self.fs)
 
+  def tearDown(self):
+    self.fs = None
+    self.repos = None
+
   def test_create(self):
     """Make sure that repos.create doesn't segfault when we set fs-type
        using a config hash"""
     fs_config = { "fs-type": "fsfs" }
     for i in range(5):
-      path = os.path.join(REPOS_PATH, "test" + str(i))
+      path = core.svn_dirent_internal_style(tempfile.mkdtemp("-test" + str(i)))
       repos.create(path, "", "", None, fs_config)
       repos.delete(path)
 
@@ -50,8 +61,8 @@ class SubversionRepositoryTestCase(unittest.TestCase):
       self.callback_calls += 1
       return None
 
-    dumpstream = StringIO.StringIO()
-    feedbackstream = StringIO.StringIO()
+    dumpstream = StringIO()
+    feedbackstream = StringIO()
     repos.dump_fs2(self.repos, dumpstream, feedbackstream, 0, self.rev, 0, 0,
                    is_cancelled)
 
@@ -74,8 +85,8 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.assertRaises(ValueError, repos.dump_fs2,
       self.repos, dumpstream, feedbackstream, 0, self.rev, 0, 0, None)
 
-    dumpstream = StringIO.StringIO()
-    feedbackstream = StringIO.StringIO()
+    dumpstream = StringIO()
+    feedbackstream = StringIO()
 
     # Check that we can grab the feedback stream, but not the dumpstream
     repos.dump_fs2(self.repos, None, feedbackstream, 0, self.rev, 0, 0, None)

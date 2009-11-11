@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -282,7 +290,6 @@ def export_working_copy_at_base_revision(sbox):
                                         export_target,
                                         svntest.wc.State(sbox.wc_dir, {}),
                                         expected_disk,
-                                        None, None, None, None,
                                         '-rBASE')
 
 def export_native_eol_option(sbox):
@@ -314,7 +321,6 @@ def export_native_eol_option(sbox):
                                         export_target,
                                         expected_output,
                                         expected_disk,
-                                        None, None, None, None,
                                         '--native-eol','CR')
 
 def export_nonexistent_file(sbox):
@@ -362,8 +368,7 @@ def export_with_state_deleted(sbox):
   expected_status.remove('A/B/E/alpha')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   export_target = sbox.add_wc_path('export')
   expected_output = svntest.wc.State(sbox.wc_dir, {})
@@ -390,6 +395,15 @@ def export_creates_intermediate_folders(sbox):
                                         expected_output,
                                         svntest.main.greek_state.copy())
 
+def export_HEADplus1_fails(sbox):
+  "export -r {HEAD+1} fails"
+
+  sbox.build(create_wc = False, read_only = True)
+
+  svntest.actions.run_and_verify_svn(None, None, '.*No such revision.*',
+                                     'export', sbox.repo_url, sbox.wc_dir,
+                                     '-r', 38956)
+
 ########################################################################
 # Run the tests
 
@@ -412,6 +426,7 @@ test_list = [ None,
               export_unversioned_file,
               export_with_state_deleted,
               export_creates_intermediate_folders,
+              export_HEADplus1_fails,
              ]
 
 if __name__ == '__main__':

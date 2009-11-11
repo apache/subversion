@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -30,21 +38,13 @@ Item = svntest.wc.StateItem
 
 
 # Helper function
-def check_proplist(path, exp_out, config_dir):
+def check_proplist(path, exp_out):
   """Verify that property list on PATH has a value of EXP_OUT"""
 
-  out, err = svntest.main.run_svn(None, 'proplist', '--verbose', path,
-                                  '--config-dir', config_dir)
-
-  out2 = []
-  for line in out[1:]:
-    out2 = out2 + [line.strip()]
-  out2.sort()
-  exp_out.sort()
-  if out2 != exp_out:
-    print "Expected properties:", exp_out
-    print "Actual properties:  ", out2
-    print "Actual proplist output:", out
+  props = svntest.tree.get_props([path]).get(path, {})
+  if props != exp_out:
+    print("Expected properties: %s" % exp_out)
+    print("Actual properties:   %s" % props)
     raise svntest.Failure
 
 
@@ -58,6 +58,9 @@ def create_config(config_dir, enable_flag):
 
   # contents of the file 'config'
   config_contents = '''\
+[auth]
+password-stores =
+
 [miscellany]
 enable-auto-props = %s
 
@@ -67,6 +70,8 @@ enable-auto-props = %s
 fubar* = tarfile=si
 foobar.lha = lhafile=da;lzhfile=niet
 spacetest = abc = def ; ghi = ; = j
+escapetest = myval=;;;;val;myprop=p
+quotetest = svn:keywords="Author Date Id Rev URL";
 * = auto=oui
 ''' % (enable_flag and 'yes' or 'no')
 
@@ -130,7 +135,9 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
                'foo.jpg',
                'fubar.tar',
                'foobar.lha',
-               'spacetest']
+               'spacetest',
+               'escapetest',
+               'quotetest']
   for filename in filenames:
     svntest.main.file_write(os.path.join(files_dir, filename),
                             'foo\nbar\nbaz\n')
@@ -160,21 +167,25 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
   # check the properties
   if enable_flag:
     filename = os.path.join(files_wc_dir, 'foo.h')
-    check_proplist(filename, ['auto : oui'], config_dir)
+    check_proplist(filename, {'auto':'oui'})
     filename = os.path.join(files_wc_dir, 'foo.c')
-    check_proplist(filename, ['auto : oui', 'cfile : yes'], config_dir)
+    check_proplist(filename, {'auto':'oui', 'cfile':'yes'})
     filename = os.path.join(files_wc_dir, 'foo.jpg')
-    check_proplist(filename, ['auto : oui', 'jpgfile : ja'], config_dir)
+    check_proplist(filename, {'auto':'oui', 'jpgfile':'ja'})
     filename = os.path.join(files_wc_dir, 'fubar.tar')
-    check_proplist(filename, ['auto : oui', 'tarfile : si'], config_dir)
+    check_proplist(filename, {'auto':'oui', 'tarfile':'si'})
     filename = os.path.join(files_wc_dir, 'foobar.lha')
-    check_proplist(filename, ['auto : oui', 'lhafile : da', 'lzhfile : niet'],
-                   config_dir)
+    check_proplist(filename, {'auto':'oui', 'lhafile':'da', 'lzhfile':'niet'})
     filename = os.path.join(files_wc_dir, 'spacetest')
-    check_proplist(filename, ['auto : oui', 'abc : def', 'ghi :'], config_dir)
+    check_proplist(filename, {'auto':'oui', 'abc':'def', 'ghi':''})
+    filename = os.path.join(files_wc_dir, 'escapetest')
+    check_proplist(filename, {'auto':'oui', 'myval':';;val', 'myprop':'p'})
+    filename = os.path.join(files_wc_dir, 'quotetest')
+    check_proplist(filename, {'auto':'oui',
+                              'svn:keywords': 'Author Date Id Rev URL'})
   else:
     for filename in filenames:
-      check_proplist(os.path.join(files_wc_dir, filename), [], config_dir)
+      check_proplist(os.path.join(files_wc_dir, filename), {})
 
 
 #----------------------------------------------------------------------
@@ -275,6 +286,37 @@ def autoprops_imp_dir(sbox):
 
   autoprops_test(sbox, 'import', 1, 0, 'autodir')
 
+#----------------------------------------------------------------------
+
+# Issue #2713: adding a file with an svn:eol-style property, svn should abort
+# if the file has mixed EOL style. Previously, svn aborted but had added the
+# file anyway.
+def fail_add_mixed_eol_style(sbox):
+  "fail to add a file with mixed EOL style"
+
+  from svntest.actions import run_and_verify_svn, run_and_verify_unquiet_status
+
+  # Bootstrap
+  sbox.build()
+
+  filename = 'mixed-eol.txt'
+  filepath = os.path.join(sbox.wc_dir, filename)
+  parameters = ['--auto-props',
+                '--config-option=config:auto-props:' + filename
+                + '=svn:eol-style=native']
+
+  svntest.main.file_write(filepath, 'foo\nbar\r\nbaz\r')
+
+  expected_stderr = "svn: File '.*/" + filename + \
+                    "' has inconsistent newlines" + \
+                    "|" + "svn: Inconsistent line ending style\n"
+  run_and_verify_svn(None, [], expected_stderr,
+                     'add', filepath, *parameters)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {filename : Item(status='? ')})
+  run_and_verify_unquiet_status(filepath, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -296,6 +338,7 @@ test_list = [ None,
               autoprops_imp_yes_no,
               autoprops_add_dir,
               autoprops_imp_dir,
+              fail_add_mixed_eol_style,
              ]
 
 if __name__ == '__main__':

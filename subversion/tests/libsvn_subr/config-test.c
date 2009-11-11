@@ -2,17 +2,22 @@
  * config-test.c:  tests svn_config
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -81,7 +86,7 @@ fail(apr_pool_t *pool, const char *fmt, ...)
   msg = apr_pvsprintf(pool, fmt, ap);
   va_end(ap);
 
-  return svn_error_create(SVN_ERR_TEST_FAILED, 0, msg);
+  return svn_error_create(SVN_ERR_TEST_FAILED, SVN_NO_ERROR, msg);
 }
 
 
@@ -94,19 +99,11 @@ static const char *config_values[] = { "bar", "Aa", "100", "bar",
                                        "Aa 100", NULL };
 
 static svn_error_t *
-test1(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test_text_retrieval(apr_pool_t *pool)
 {
   svn_config_t *cfg;
   int i;
   const char *cfg_file;
-
-  *msg = "test svn_config";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   if (!srcdir)
     SVN_ERR(init_params(pool));
@@ -133,6 +130,16 @@ test1(const char **msg,
         return fail(pool, "Expected value '%s' not equal to '%s' for "
                     "option '%s'", py_val, c_val, key);
     }
+
+  {
+    const char *value = svn_config_get_server_setting(cfg, "server group",
+                                                      "setting", "default");
+    if (value == NULL || strcmp(value, "default") != 0)
+      return svn_error_create(SVN_ERR_TEST_FAILED, SVN_NO_ERROR,
+                              "Expected a svn_config_get_server_setting()"
+                              "to return 'default'");
+  }
+
   return SVN_NO_ERROR;
 }
 
@@ -143,19 +150,11 @@ static const char *false_keys[] = {"false1", "false2", "false3", "false4",
                                    NULL};
 
 static svn_error_t *
-test2(const char **msg,
-      svn_boolean_t msg_only,
-      svn_test_opts_t *opts,
-      apr_pool_t *pool)
+test_boolean_retrieval(apr_pool_t *pool)
 {
   svn_config_t *cfg;
   int i;
   const char *cfg_file;
-
-  *msg = "test svn_config boolean conversion";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   if (!srcdir)
     SVN_ERR(init_params(pool));
@@ -198,22 +197,24 @@ test2(const char **msg,
       return fail(pool, "No error on bad truth value");
   }
 
+  {
+    svn_boolean_t value;
+    SVN_ERR(svn_config_get_server_setting_bool(cfg, &value, "server group",
+                                               "setting", FALSE));
+    if (value)
+      return svn_error_create(SVN_ERR_TEST_FAILED, SVN_NO_ERROR,
+                              "Expected a svn_config_get_server_setting_bool()"
+                              "to return FALSE, but it returned TRUE");
+  }
+
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-has_section_test(const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
-                 apr_pool_t *pool)
+test_has_section(apr_pool_t *pool)
 {
   svn_config_t *cfg;
   const char *cfg_file;
-
-  *msg = "test svn_config_has_section";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   if (!srcdir)
     SVN_ERR(init_params(pool));
@@ -241,8 +242,11 @@ has_section_test(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test1),
-    SVN_TEST_PASS(test2),
-    SVN_TEST_PASS(has_section_test),
+    SVN_TEST_PASS2(test_text_retrieval,
+                   "test svn_config"),
+    SVN_TEST_PASS2(test_boolean_retrieval,
+                   "test svn_config boolean conversion"),
+    SVN_TEST_PASS2(test_has_section,
+                   "test svn_config_has_section"),
     SVN_TEST_NULL
   };

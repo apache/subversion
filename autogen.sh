@@ -33,47 +33,15 @@ done
 # ### sees an empty arg rather than missing one.
 ./build/buildcheck.sh "$RELEASE_MODE" || exit 1
 
-# Handle some libtool helper files
-#
-# ### eventually, we can/should toss this in favor of simply using
-# ### APR's libtool. deferring to a second round of change...
-#
-
-libtoolize="`./build/PrintPath glibtoolize libtoolize libtoolize15`"
-
-if [ "x$libtoolize" = "x" ]; then
-    echo "libtoolize not found in path"
-    exit 1
-fi
-
-$libtoolize --copy --automake
-
-ltpath="`dirname $libtoolize`"
-ltfile=${LIBTOOL_M4-`cd $ltpath/../share/aclocal ; pwd`/libtool.m4}
-
-if [ ! -f $ltfile ]; then
-    echo "$ltfile not found (try setting the LIBTOOL_M4 environment variable)"
-    exit 1
-fi
-
-echo "Copying libtool helper: $ltfile"
-# An ancient helper might already be present from previous builds,
-# and it might be write-protected (e.g. mode 444, seen on FreeBSD).
-# This would cause cp to fail and print an error message, but leave
-# behind a potentially outdated libtool helper.  So, remove before
-# copying:
-rm -f build/libtool.m4
-cp $ltfile build/libtool.m4
-
 # Create the file detailing all of the build outputs for SVN.
 #
 # Note: this dependency on Python is fine: only SVN developers use autogen.sh
 #       and we can state that dev people need Python on their machine. Note
-#       that running gen-make.py requires Python 2.X or newer.
+#       that running gen-make.py requires Python 2.4 or newer.
 
 PYTHON="`./build/find_python.sh`"
 if test -z "$PYTHON"; then
-  echo "Python 2.2 or later is required to run autogen.sh"
+  echo "Python 2.4 or later is required to run autogen.sh"
   echo "If you have a suitable Python installed, but not on the"
   echo "PATH, set the environment variable PYTHON to the full path"
   echo "to the Python executable, and re-run autogen.sh"

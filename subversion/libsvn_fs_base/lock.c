@@ -1,17 +1,22 @@
 /* lock.c :  functions for manipulating filesystem locks.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -42,9 +47,8 @@ add_lock_and_token(svn_lock_t *lock,
 {
   SVN_ERR(svn_fs_bdb__lock_add(trail->fs, lock_token, lock,
                                trail, trail->pool));
-  SVN_ERR(svn_fs_bdb__lock_token_add(trail->fs, path, lock_token,
-                                     trail, trail->pool));
-  return SVN_NO_ERROR;
+  return svn_fs_bdb__lock_token_add(trail->fs, path, lock_token,
+                                    trail, trail->pool);
 }
 
 
@@ -57,9 +61,8 @@ delete_lock_and_token(const char *lock_token,
 {
   SVN_ERR(svn_fs_bdb__lock_delete(trail->fs, lock_token,
                                   trail, trail->pool));
-  SVN_ERR(svn_fs_bdb__lock_token_delete(trail->fs, path,
-                                        trail, trail->pool));
-  return SVN_NO_ERROR;
+  return svn_fs_bdb__lock_token_delete(trail->fs, path,
+                                       trail, trail->pool);
 }
 
 
@@ -226,8 +229,7 @@ svn_fs_base__lock(svn_lock_t **lock,
   args.expiration_date = expiration_date;
   args.current_rev = current_rev;
 
-  return svn_fs_base__retry_txn(fs, txn_body_lock, &args, pool);
-
+  return svn_fs_base__retry_txn(fs, txn_body_lock, &args, FALSE, pool);
 }
 
 
@@ -290,8 +292,7 @@ txn_body_unlock(void *baton, trail_t *trail)
     }
 
   /* Remove a row from each of the locking tables. */
-  SVN_ERR(delete_lock_and_token(lock_token, args->path, trail));
-  return SVN_NO_ERROR;
+  return delete_lock_and_token(lock_token, args->path, trail);
 }
 
 
@@ -309,7 +310,7 @@ svn_fs_base__unlock(svn_fs_t *fs,
   args.path = svn_fs__canonicalize_abspath(path, pool);
   args.token = token;
   args.break_lock = break_lock;
-  return svn_fs_base__retry_txn(fs, txn_body_unlock, &args, pool);
+  return svn_fs_base__retry_txn(fs, txn_body_unlock, &args, TRUE, pool);
 }
 
 
@@ -350,7 +351,7 @@ svn_fs_base__get_lock_helper(svn_lock_t **lock_p,
   else
     SVN_ERR(err);
 
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -382,7 +383,7 @@ svn_fs_base__get_lock(svn_lock_t **lock,
 
   args.path = svn_fs__canonicalize_abspath(path, pool);
   args.lock_p = lock;
-  return svn_fs_base__retry_txn(fs, txn_body_get_lock, &args, pool);
+  return svn_fs_base__retry_txn(fs, txn_body_get_lock, &args, FALSE, pool);
 }
 
 
@@ -417,7 +418,7 @@ svn_fs_base__get_locks(svn_fs_t *fs,
   args.path = svn_fs__canonicalize_abspath(path, pool);
   args.get_locks_func = get_locks_func;
   args.get_locks_baton = get_locks_baton;
-  return svn_fs_base__retry_txn(fs, txn_body_get_locks, &args, pool);
+  return svn_fs_base__retry_txn(fs, txn_body_get_locks, &args, FALSE, pool);
 }
 
 
@@ -448,7 +449,7 @@ verify_lock(svn_fs_t *fs,
   else if (strcmp(fs->access_ctx->username, lock->owner) != 0)
     return svn_error_createf
       (SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL,
-       _("User %s does not own lock on path '%s' (currently locked by %s)"),
+       _("User '%s' does not own lock on path '%s' (currently locked by '%s')"),
        fs->access_ctx->username, lock->path, lock->owner);
 
   else if (apr_hash_get(fs->access_ctx->lock_tokens, lock->token,

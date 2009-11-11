@@ -2,17 +2,22 @@
  * constructors.c :  Constructors for various data structures.
  *
  * ====================================================================
- * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -53,12 +58,21 @@ svn_commit_info_dup(const svn_commit_info_t *src_commit_info,
   return dst_commit_info;
 }
 
-svn_log_changed_path_t *
-svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
-                         apr_pool_t *pool)
+svn_log_changed_path2_t *
+svn_log_changed_path2_create(apr_pool_t *pool)
 {
-  svn_log_changed_path_t *new_changed_path
-    = apr_palloc(pool, sizeof(*new_changed_path));
+  svn_log_changed_path2_t *new_changed_path
+    = apr_pcalloc(pool, sizeof(*new_changed_path));
+
+  return new_changed_path;
+}
+
+svn_log_changed_path2_t *
+svn_log_changed_path2_dup(const svn_log_changed_path2_t *changed_path,
+                          apr_pool_t *pool)
+{
+  svn_log_changed_path2_t *new_changed_path
+    = svn_log_changed_path2_create(pool);
 
   *new_changed_path = *changed_path;
 
@@ -110,7 +124,7 @@ apr_array_header_t *
 svn_prop_hash_to_array(apr_hash_t *hash, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  apr_array_header_t *array = apr_array_make(pool, apr_hash_count(hash), 
+  apr_array_header_t *array = apr_array_make(pool, apr_hash_count(hash),
                                              sizeof(svn_prop_t));
 
   for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
@@ -127,6 +141,27 @@ svn_prop_hash_to_array(apr_hash_t *hash, apr_pool_t *pool)
 
   return array;
 }
+
+apr_hash_t *
+svn_prop_hash_dup(apr_hash_t *hash,
+                  apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *new_hash = apr_hash_make(pool);
+
+  for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *prop;
+
+      apr_hash_this(hi, &key, &klen, &prop);
+      apr_hash_set(new_hash, apr_pstrdup(pool, key), klen,
+                   svn_string_dup(prop, pool));
+    }
+  return new_hash;
+}
+
 
 svn_dirent_t *
 svn_dirent_dup(const svn_dirent_t *dirent,
@@ -149,8 +184,45 @@ svn_log_entry_create(apr_pool_t *pool)
   return log_entry;
 }
 
+svn_log_entry_t *
+svn_log_entry_dup(const svn_log_entry_t *log_entry, apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  svn_log_entry_t *new_entry = svn_log_entry_create(pool);
+
+  *new_entry = *log_entry;
+
+  if (log_entry->revprops)
+    new_entry->revprops = svn_prop_hash_dup(log_entry->revprops, pool);
+
+  if (log_entry->changed_paths2)
+    {
+      new_entry->changed_paths2 = apr_hash_make(pool);
+
+      for (hi = apr_hash_first(pool, log_entry->changed_paths2);
+           hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *change;
+
+          apr_hash_this(hi, &key, NULL, &change);
+
+          apr_hash_set(new_entry->changed_paths2, apr_pstrdup(pool, key),
+                       APR_HASH_KEY_STRING,
+                       svn_log_changed_path2_dup(change, pool));
+        }
+    }
+
+  /* We can't copy changed_paths by itself without using deprecated code,
+     but we don't have to, as this function was new after the introduction
+     of the changed_paths2 field. */
+  new_entry->changed_paths = new_entry->changed_paths2;
+
+  return new_entry;
+}
+
 svn_location_segment_t *
-svn_location_segment_dup(svn_location_segment_t *segment,
+svn_location_segment_dup(const svn_location_segment_t *segment,
                          apr_pool_t *pool)
 {
   svn_location_segment_t *new_segment =

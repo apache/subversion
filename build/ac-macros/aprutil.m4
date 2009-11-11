@@ -19,7 +19,7 @@ AC_DEFUN(SVN_LIB_APRUTIL,
 
   AC_MSG_NOTICE([Apache Portable Runtime Utility (APRUTIL) library configuration])
 
-  APR_FIND_APU("$abs_srcdir/apr-util", "$abs_builddir/apr-util", 1, [0 1])
+  APR_FIND_APU("$abs_srcdir/apr-util", "$abs_builddir/apr-util", 1, [1 0])
 
   if test $apu_found = "no"; then
     AC_MSG_WARN([APRUTIL not found])
@@ -62,31 +62,37 @@ AC_DEFUN(SVN_LIB_APRUTIL,
 
   dnl Get libraries and thread flags from APRUTIL ---------------------
 
-  LDFLAGS="$LDFLAGS `$apu_config --ldflags`"
+  apu_ldflags="`$apu_config --ldflags`"
   if test $? -ne 0; then
     AC_MSG_ERROR([apu-config --ldflags failed])
   fi
+  LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS($apu_ldflags)`"
 
   SVN_APRUTIL_INCLUDES="`$apu_config --includes`"
   if test $? -ne 0; then
     AC_MSG_ERROR([apu-config --includes failed])
   fi
 
-  dnl When APR stores the dependent libs in the .la file, we don't need
-  dnl --libs.
-  SVN_APRUTIL_LIBS="`$apu_config --link-libtool --libs`"
+  SVN_APRUTIL_PREFIX="`$apu_config --prefix`"
   if test $? -ne 0; then
-    AC_MSG_ERROR([apu-config --link-libtool --libs failed])
+    AC_MSG_ERROR([apu-config --prefix failed])
   fi
 
-  SVN_APRUTIL_EXPORT_LIBS="`$apu_config --link-ld --libs`"
-  if test $? -ne 0; then
-    AC_MSG_ERROR([apu-config --link-ld --libs failed])
+  if test "$enable_all_static" = "yes"; then
+    SVN_APRUTIL_LIBS="`$apu_config --link-ld --libs`"
+    if test $? -ne 0; then
+      AC_MSG_ERROR([apu-config --link-ld --libs failed])
+    fi
+  else
+    SVN_APRUTIL_LIBS="`$apu_config --link-ld`"
+    if test $? -ne 0; then
+      AC_MSG_ERROR([apu-config --link-ld failed])
+    fi
   fi
+  SVN_APRUTIL_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($SVN_APRUTIL_LIBS)`"
 
   AC_SUBST(SVN_APRUTIL_INCLUDES)
   AC_SUBST(SVN_APRUTIL_LIBS)
-  AC_SUBST(SVN_APRUTIL_EXPORT_LIBS)
   AC_SUBST(SVN_APRUTIL_PREFIX)
 
   dnl What version of Expat are we using? -----------------
@@ -109,7 +115,7 @@ AC_DEFUN(SVN_DOWNLOAD_APRUTIL,
   echo "get it with SVN and put it in a subdirectory of this source:"
   echo ""
   echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/0.9.x \\"
+  echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/1.2.x \\"
   echo "    apr-util"
   echo ""
   echo "Run that right here in the top level of the Subversion tree."

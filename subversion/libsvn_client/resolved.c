@@ -2,17 +2,22 @@
  * resolved.c:  wrapper around wc resolved functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -26,6 +31,8 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
+#include "svn_path.h"
 #include "client.h"
 #include "private/svn_wc_private.h"
 
@@ -33,38 +40,22 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_resolved(const char *path,
-                    svn_boolean_t recursive,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
+svn_client_resolve(const char *path,
+                   svn_depth_t depth,
+                   svn_wc_conflict_choice_t conflict_choice,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
 {
-  svn_depth_t depth = (recursive ? svn_depth_infinity : svn_depth_empty);
-  return svn_client_resolved2(path, depth,
-                              svn_wc_conflict_choose_merged, ctx, pool);
-}
+  const char *local_abspath;
 
-svn_error_t *
-svn_client_resolved2(const char *path,
-                     svn_depth_t depth,
-                     svn_wc_conflict_choice_t conflict_choice,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
-{
-  svn_wc_adm_access_t *adm_access;
-  int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, TRUE,
-                                 adm_lock_level,
-                                 ctx->cancel_func, ctx->cancel_baton,
-                                 pool));
-
-  SVN_ERR(svn_wc_resolved_conflict3(path, adm_access, TRUE, TRUE, depth,
+  SVN_ERR(svn_wc_resolved_conflict5(ctx->wc_ctx, local_abspath,
+                                    depth, TRUE, "", TRUE,
                                     conflict_choice,
-                                    ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
+                                    ctx->notify_func2, ctx->notify_baton2,
                                     pool));
-
-  SVN_ERR(svn_wc_adm_close(adm_access));
 
   return SVN_NO_ERROR;
 }

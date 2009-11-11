@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 # mailer.py: send email describing a commit
 #
@@ -26,16 +27,25 @@
 
 import os
 import sys
-import string
-import ConfigParser
+try:
+  # Python >=3.0
+  import configparser
+  from urllib.parse import quote as urllib_parse_quote
+except ImportError:
+  # Python <3.0
+  import ConfigParser as configparser
+  from urllib import quote as urllib_parse_quote
 import time
-import popen2
-import cStringIO
+import subprocess
+if sys.version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from cStringIO import StringIO
 import smtplib
 import re
 import tempfile
-import types
-import urllib
 
 # Minimal version of Subversion's bindings required
 _MIN_SVN_VERSION = [1, 5, 0]
@@ -50,14 +60,14 @@ try:
 except ImportError:
   sys.stderr.write(
     "You need version %s or better of the Subversion Python bindings.\n" \
-    % string.join(map(lambda x: str(x), _MIN_SVN_VERSION), '.'))
+    % ".".join([str(x) for x in _MIN_SVN_VERSION]))
   sys.exit(1)
 if _MIN_SVN_VERSION > [svn.core.SVN_VER_MAJOR,
                        svn.core.SVN_VER_MINOR,
                        svn.core.SVN_VER_PATCH]:
   sys.stderr.write(
     "You need version %s or better of the Subversion Python bindings.\n" \
-    % string.join(map(lambda x: str(x), _MIN_SVN_VERSION), '.'))
+    % ".".join([str(x) for x in _MIN_SVN_VERSION]))
   sys.exit(1)
 
 
@@ -94,41 +104,6 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
   messenger.generate()
 
 
-# Minimal, incomplete, versions of popen2.Popen[34] for those platforms
-# for which popen2 does not provide them.
-try:
-  Popen3 = popen2.Popen3
-  Popen4 = popen2.Popen4
-except AttributeError:
-  class Popen3:
-    def __init__(self, cmd, capturestderr = False):
-      if type(cmd) != types.StringType:
-        cmd = svn.core.argv_to_command_string(cmd)
-      if capturestderr:
-        self.fromchild, self.tochild, self.childerr \
-            = popen2.popen3(cmd, mode='b')
-      else:
-        self.fromchild, self.tochild = popen2.popen2(cmd, mode='b')
-        self.childerr = None
-
-    def wait(self):
-      rv = self.fromchild.close()
-      rv = self.tochild.close() or rv
-      if self.childerr is not None:
-        rv = self.childerr.close() or rv
-      return rv
-
-  class Popen4:
-    def __init__(self, cmd):
-      if type(cmd) != types.StringType:
-        cmd = svn.core.argv_to_command_string(cmd)
-      self.fromchild, self.tochild = popen2.popen4(cmd, mode='b')
-
-    def wait(self):
-      rv = self.fromchild.close()
-      rv = self.tochild.close() or rv
-      return rv
-
 def remove_leading_slashes(path):
   while path and path[0] == '/':
     path = path[1:]
@@ -136,7 +111,7 @@ def remove_leading_slashes(path):
 
 
 class OutputBase:
-  "Abstract base class to formalize the inteface of output methods"
+  "Abstract base class to formalize the interface of output methods"
 
   def __init__(self, cfg, repos, prefix_param):
     self.cfg = cfg
@@ -189,12 +164,14 @@ class OutputBase:
     """Override this method, if the default implementation is not sufficient.
     Execute CMD, writing the stdout produced to the output representation."""
     # By default we choose to incorporate child stderr into the output
-    pipe_ob = Popen4(cmd)
+    pipe_ob = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT,
+                               close_fds=sys.platform != "win32")
 
-    buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
+    buf = pipe_ob.stdout.read(self._CHUNKSIZE)
     while buf:
       self.write(buf)
-      buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
+      buf = pipe_ob.stdout.read(self._CHUNKSIZE)
 
     # wait on the child so we don't end up with a billion zombies
     pipe_ob.wait()
@@ -214,9 +191,9 @@ class MailedOutput(OutputBase):
     if len(to_addr_in) >= 3 and to_addr_in[0] == '[' \
                             and to_addr_in[2] == ']':
       self.to_addrs = \
-        filter(None, string.split(to_addr_in[3:], to_addr_in[1]))
+        [_f for _f in to_addr_in[3:].split(to_addr_in[1]) if _f]
     else:
-      self.to_addrs = filter(None, string.split(to_addr_in))
+      self.to_addrs = [_f for _f in to_addr_in.split() if _f]
     self.from_addr = self.cfg.get('from_addr', group, params) \
                      or self.repos.author or 'no_author'
     # if the from_addr (also) starts with '[.]' (may happen if one
@@ -244,7 +221,13 @@ class MailedOutput(OutputBase):
            'MIME-Version: 1.0\n' \
            'Content-Type: text/plain; charset=UTF-8\n' \
            'Content-Transfer-Encoding: 8bit\n' \
-           % (self.from_addr, string.join(self.to_addrs, ', '), subject)
+           'X-Svn-Commit-Project: %s\n' \
+           'X-Svn-Commit-Author: %s\n' \
+           'X-Svn-Commit-Revision: %d\n' \
+           'X-Svn-Commit-Repository: %s\n' \
+           % (self.from_addr, ', '.join(self.to_addrs), subject,
+              group, self.repos.author or 'no_author', self.repos.rev,
+              os.path.basename(self.repos.repos_dir))
     if self.reply_to:
       hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
     return hdrs + '\n'
@@ -256,7 +239,7 @@ class SMTPOutput(MailedOutput):
   def start(self, group, params):
     MailedOutput.start(self, group, params)
 
-    self.buffer = cStringIO.StringIO()
+    self.buffer = StringIO()
     self.write = self.buffer.write
 
     self.write(self.mail_headers(group, params))
@@ -292,7 +275,7 @@ class PipeOutput(MailedOutput):
     MailedOutput.__init__(self, cfg, repos, prefix_param)
 
     # figure out the command for delivery
-    self.cmd = string.split(cfg.general.mail_command)
+    self.cmd = cfg.general.mail_command.split()
 
   def start(self, group, params):
     MailedOutput.start(self, group, params)
@@ -302,18 +285,16 @@ class PipeOutput(MailedOutput):
     cmd = self.cmd + [ '-f', self.from_addr ] + self.to_addrs
 
     # construct the pipe for talking to the mailer
-    self.pipe = Popen3(cmd)
-    self.write = self.pipe.tochild.write
-
-    # we don't need the read-from-mailer descriptor, so close it
-    self.pipe.fromchild.close()
+    self.pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                                 close_fds=sys.platform != "win32")
+    self.write = self.pipe.stdin.write
 
     # start writing out the mail message
     self.write(self.mail_headers(group, params))
 
   def finish(self):
     # signal that we're done sending content
-    self.pipe.tochild.close()
+    self.pipe.stdin.close()
 
     # wait to avoid zombies
     self.pipe.wait()
@@ -345,18 +326,16 @@ class Commit(Messenger):
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
     svn.repos.replay(repos.root_this, e_ptr, e_baton, self.pool)
 
-    self.changelist = editor.get_changes().items()
-    self.changelist.sort()
+    self.changelist = sorted(editor.get_changes().items())
 
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
     for path, change in self.changelist:
       for (group, params) in self.cfg.which_groups(path):
         # turn the params into a hashable object and stash it away
-        param_list = params.items()
-        param_list.sort()
+        param_list = sorted(params.items())
         # collect the set of paths belonging to this group
-        if self.groups.has_key( (group, tuple(param_list)) ):
+        if (group, tuple(param_list)) in self.groups:
           old_param, paths = self.groups[group, tuple(param_list)]
         else:
           paths = { }
@@ -369,19 +348,19 @@ class Commit(Messenger):
       if change.item_kind == svn.core.svn_node_dir:
         dirs[path] = None
       else:
-        idx = string.rfind(path, '/')
+        idx = path.rfind('/')
         if idx == -1:
           dirs[''] = None
         else:
           dirs[path[:idx]] = None
 
-    dirlist = dirs.keys()
+    dirlist = list(dirs.keys())
 
     commondir, dirlist = get_commondir(dirlist)
 
     # compose the basic subject line. later, we can prefix it.
     dirlist.sort()
-    dirlist = string.join(dirlist)
+    dirlist = ' '.join(dirlist)
     if commondir:
       self.output.subject = 'r%d - in %s: %s' % (repos.rev, commondir, dirlist)
     else:
@@ -414,23 +393,6 @@ class Commit(Messenger):
     svn.core.svn_pool_destroy(subpool)
 
 
-try:
-  from tempfile import NamedTemporaryFile
-except ImportError:
-  # NamedTemporaryFile was added in Python 2.3, so we need to emulate it
-  # for older Pythons.
-  class NamedTemporaryFile:
-    def __init__(self):
-      self.name = tempfile.mktemp()
-      self.file = open(self.name, 'w+b')
-    def __del__(self):
-      os.remove(self.name)
-    def write(self, data):
-      self.file.write(data)
-    def flush(self):
-      self.file.flush()
-
-
 class PropChange(Messenger):
   def __init__(self, pool, cfg, repos, author, propname, action):
     Messenger.__init__(self, pool, cfg, repos, 'propchange_subject_prefix')
@@ -442,8 +404,7 @@ class PropChange(Messenger):
     self.groups = { }
     for (group, params) in self.cfg.which_groups(''):
       # turn the params into a hashable object and stash it away
-      param_list = params.items()
-      param_list.sort()
+      param_list = sorted(params.items())
       self.groups[group, tuple(param_list)] = params
 
     self.output.subject = 'r%d - %s' % (repos.rev, propname)
@@ -460,16 +421,16 @@ class PropChange(Messenger):
                         % (self.author, self.repos.rev, self.propname,
                            actions.get(self.action, 'Unknown (\'%s\')' \
                                        % self.action)))
-      if self.action == 'A' or not actions.has_key(self.action):
+      if self.action == 'A' or self.action not in actions:
         self.output.write('Property value:\n')
         propvalue = self.repos.get_rev_prop(self.propname)
         self.output.write(propvalue)
       elif self.action == 'M':
         self.output.write('Property diff:\n')
-        tempfile1 = NamedTemporaryFile()
+        tempfile1 = tempfile.NamedTemporaryFile()
         tempfile1.write(sys.stdin.read())
         tempfile1.flush()
-        tempfile2 = NamedTemporaryFile()
+        tempfile2 = tempfile.NamedTemporaryFile()
         tempfile2.write(self.repos.get_rev_prop(self.propname))
         tempfile2.flush()
         self.output.run(self.cfg.get_diff_cmd(group, {
@@ -491,15 +452,15 @@ def get_commondir(dirlist):
     commondir = ''
     newdirs = dirlist
   else:
-    common = string.split(dirlist[0], '/')
+    common = dirlist[0].split('/')
     for j in range(1, len(dirlist)):
       d = dirlist[j]
-      parts = string.split(d, '/')
+      parts = d.split('/')
       for i in range(len(common)):
         if i == len(parts) or common[i] != parts[i]:
           del common[i:]
           break
-    commondir = string.join(common, '/')
+    commondir = '/'.join(common)
     if commondir:
       # strip the common portion from each directory
       l = len(commondir) + 1
@@ -526,17 +487,16 @@ class Lock(Messenger):
                         or 'unlock_subject_prefix'))
 
     # read all the locked paths from STDIN and strip off the trailing newlines
-    self.dirlist = map(lambda x: x.rstrip(), sys.stdin.readlines())
+    self.dirlist = [x.rstrip() for x in sys.stdin.readlines()]
 
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
     for path in self.dirlist:
       for (group, params) in self.cfg.which_groups(path):
         # turn the params into a hashable object and stash it away
-        param_list = params.items()
-        param_list.sort()
+        param_list = sorted(params.items())
         # collect the set of paths belonging to this group
-        if self.groups.has_key( (group, tuple(param_list)) ):
+        if (group, tuple(param_list)) in self.groups:
           old_param, paths = self.groups[group, tuple(param_list)]
         else:
           paths = { }
@@ -547,7 +507,7 @@ class Lock(Messenger):
 
     # compose the basic subject line. later, we can prefix it.
     dirlist.sort()
-    dirlist = string.join(dirlist)
+    dirlist = ' '.join(dirlist)
     if commondir:
       self.output.subject = '%s: %s' % (commondir, dirlist)
     else:
@@ -589,7 +549,7 @@ class DiffSelections:
     ### don't have an option anywhere in your configuration file, it
     ### still gets returned as non-None.
     if len(gen_diffs):
-      list = string.split(gen_diffs, " ")
+      list = gen_diffs.split(" ")
       for item in list:
         if item == 'add':
           self.add = True
@@ -624,8 +584,8 @@ class DiffURLSelections:
     # parameters for the configuration module, otherwise we may get
     # KeyError exceptions.
     params = self.params.copy()
-    params['path'] = change.path and urllib.quote(change.path) or None
-    params['base_path'] = change.base_path and urllib.quote(change.base_path) \
+    params['path'] = change.path and urllib_parse_quote(change.path) or None
+    params['base_path'] = change.base_path and urllib_parse_quote(change.base_path) \
                           or None
     params['rev'] = repos_rev
     params['base_rev'] = change.base_rev
@@ -710,7 +670,7 @@ def generate_list(changekind, changelist, paths, in_paths):
 
   items = [ ]
   for path, change in changelist:
-    if selection(change) and paths.has_key(path) == in_paths:
+    if selection(change) and (path in paths) == in_paths:
       item = _data(
         path=path,
         is_dir=change.item_kind == svn.core.svn_node_dir,
@@ -753,7 +713,7 @@ class DiffGenerator:
     return True
 
   def __getitem__(self, idx):
-    while 1:
+    while True:
       if self.idx == len(self.changelist):
         raise IndexError
 
@@ -775,7 +735,7 @@ class DiffGenerator:
         continue
 
       # is this change in (or out of) the set of matched paths?
-      if self.paths.has_key(path) != self.in_paths:
+      if (path in self.paths) != self.in_paths:
         continue
 
       if change.base_rev != -1:
@@ -917,7 +877,9 @@ class DiffContent:
     self.seen_change = False
 
     # By default we choose to incorporate child stderr into the output
-    self.pipe = Popen4(cmd)
+    self.pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 close_fds=sys.platform != "win32")
 
   def __nonzero__(self):
     # we always have some items
@@ -927,7 +889,7 @@ class DiffContent:
     if self.pipe is None:
       raise IndexError
 
-    line = self.pipe.fromchild.readline()
+    line = self.pipe.stdout.readline()
     if not line:
       # wait on the child so we don't end up with a billion zombies
       self.pipe.wait()
@@ -1123,7 +1085,7 @@ class Config:
   _predefined = ('general', 'defaults', 'maps')
 
   def __init__(self, fname, repos, global_params):
-    cp = ConfigParser.ConfigParser()
+    cp = configparser.ConfigParser()
     cp.read(fname)
 
     # record the (non-default) groups that we find
@@ -1163,7 +1125,7 @@ class Config:
     The option is specified as a dotted symbol, such as 'general.mail_command'
     """
     ob = self
-    for part in string.split(option, '.'):
+    for part in option.split('.'):
       if not hasattr(ob, part):
         return None
       ob = getattr(ob, part)
@@ -1199,7 +1161,7 @@ class Config:
   def get_diff_cmd(self, group, args):
     "Get a diff command as a list of argv elements."
     ### do some better splitting to enable quoting of spaces
-    diff_cmd = string.split(self.get('diff', group, None))
+    diff_cmd = self.get('diff', group, None).split()
 
     cmd = [ ]
     for part in diff_cmd:
@@ -1326,14 +1288,6 @@ class UnknownMappingSpec(Exception):
   pass
 class UnknownSubcommand(Exception):
   pass
-
-
-# enable True/False in older vsns of Python
-try:
-  _unused = True
-except NameError:
-  True = 1
-  False = 0
 
 
 if __name__ == '__main__':

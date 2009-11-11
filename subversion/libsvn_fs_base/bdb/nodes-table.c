@@ -1,30 +1,36 @@
 /* nodes-table.c : working with the `nodes' table
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 #include <string.h>
 #include <assert.h>
+
 #include "bdb_compat.h"
 
 #include "svn_fs.h"
+#include "private/svn_skel.h"
 
 #include "../fs.h"
 #include "../err.h"
 #include "dbt.h"
-#include "../util/skel.h"
 #include "../util/fs_skels.h"
 #include "../trail.h"
 #include "../key-gen.h"
@@ -33,8 +39,8 @@
 #include "bdb-err.h"
 #include "nodes-table.h"
 
-
 #include "svn_private_config.h"
+
 
 
 /* Opening/creating the `nodes' table.  */
@@ -88,8 +94,7 @@ svn_fs_bdb__new_node_id(svn_fs_id_t **id_p,
   int db_err;
   const char *next_node_id;
 
-  /* TXN_ID is required! */
-  assert(txn_id);
+  SVN_ERR_ASSERT(txn_id);
 
   /* Get the current value associated with the `next-key' key in the table.  */
   svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY);
@@ -132,8 +137,7 @@ svn_fs_bdb__new_successor_id(svn_fs_id_t **successor_p,
   svn_fs_id_t *new_id;
   svn_error_t *err;
 
-  /* TXN_ID is required! */
-  assert(txn_id);
+  SVN_ERR_ASSERT(txn_id);
 
   /* Create and return the new successor ID.  */
   new_id = svn_fs_base__id_create(svn_fs_base__id_node_id(id),
@@ -175,13 +179,11 @@ svn_fs_bdb__delete_nodes_entry(svn_fs_t *fs,
   DBT key;
 
   svn_fs_base__trail_debug(trail, "nodes", "del");
-  SVN_ERR(BDB_WRAP(fs, _("deleting entry from 'nodes' table"),
-                   bfd->nodes->del(bfd->nodes,
-                                   trail->db_txn,
-                                   svn_fs_base__id_to_dbt(&key, id, pool),
-                                   0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("deleting entry from 'nodes' table"),
+                  bfd->nodes->del(bfd->nodes,
+                                  trail->db_txn,
+                                  svn_fs_base__id_to_dbt(&key, id, pool),
+                                  0));
 }
 
 
@@ -199,7 +201,7 @@ svn_fs_bdb__get_node_revision(node_revision_t **noderev_p,
 {
   base_fs_data_t *bfd = fs->fsap_data;
   node_revision_t *noderev;
-  skel_t *skel;
+  svn_skel_t *skel;
   int db_err;
   DBT key, value;
 
@@ -223,7 +225,7 @@ svn_fs_bdb__get_node_revision(node_revision_t **noderev_p,
     return SVN_NO_ERROR;
 
   /* Parse and the NODE-REVISION skel.  */
-  skel = svn_fs_base__parse_skel(value.data, value.size, pool);
+  skel = svn_skel__parse(value.data, value.size, pool);
 
   /* Convert to a native FS type. */
   SVN_ERR(svn_fs_base__parse_node_revision_skel(&noderev, skel, pool));
@@ -242,10 +244,11 @@ svn_fs_bdb__put_node_revision(svn_fs_t *fs,
   base_fs_data_t *bfd = fs->fsap_data;
   DB_TXN *db_txn = trail->db_txn;
   DBT key, value;
-  skel_t *skel;
+  svn_skel_t *skel;
 
   /* Convert from native type into skel */
-  SVN_ERR(svn_fs_base__unparse_node_revision_skel(&skel, noderev, pool));
+  SVN_ERR(svn_fs_base__unparse_node_revision_skel(&skel, noderev,
+                                                  bfd->format, pool));
   svn_fs_base__trail_debug(trail, "nodes", "put");
   return BDB_WRAP(fs, _("storing node revision"),
                   bfd->nodes->put(bfd->nodes, db_txn,

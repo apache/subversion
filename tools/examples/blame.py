@@ -26,14 +26,14 @@ def blame(path, filename, rev=None):
   if rev is None:
     rev = fs.youngest_rev(fsob)
   filedata = ''
-  for i in xrange(0, rev+1):
+  for i in range(0, rev+1):
     root = fs.revision_root(fsob, i)
     if fs.check_path(root, filename) != core.svn_node_none:
       first = i
       break
-  print "First revision is %d" % first
-  print "Last revision is %d" % rev
-  for i in xrange(first, rev+1):
+  print("First revision is %d" % first)
+  print("Last revision is %d" % rev)
+  for i in range(first, rev+1):
     previousroot = root
     root = fs.revision_root(fsob, i)
     if i != first:
@@ -43,20 +43,20 @@ def blame(path, filename, rev=None):
     file = fs.file_contents(root, filename)
     previousdata = filedata
     filedata = ''
-    while 1:
+    while True:
       data = core.svn_stream_read(file, CHUNK_SIZE)
       if not data:
         break
       filedata = filedata + data
 
-    print "Current revision is %d" % i
+    print("Current revision is %d" % i)
     diffresult = difflib.ndiff(previousdata.splitlines(1),
                                filedata.splitlines(1))
     #    print ''.join(diffresult)
     k = 0
     for j in diffresult:
       if j[0] == ' ':
-        if annotresult.has_key (k):
+        if k in annotresult:
           k = k + 1
           continue
         else:
@@ -70,13 +70,13 @@ def blame(path, filename, rev=None):
         k = k + 1
 #    print ''.join(diffresult)
 #  print annotresult
-  for x in xrange(len(annotresult.keys())):
+  for x in range(len(annotresult.keys())):
      sys.stdout.write("Line %d (rev %d):%s" % (x,
                                                annotresult[x][0],
                                                annotresult[x][1]))
 
 def usage():
-  print "USAGE: blame.py [-r REV] repos-path file"
+  print("USAGE: blame.py [-r REV] repos-path file")
   sys.exit(1)
 
 def main():

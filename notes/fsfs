@@ -155,8 +155,8 @@ directories containing many files (even if they require a linear
 search for files within a directory, they may do well on repeated
 accesses using an in-memory hash of the directory), some do not.
 
-A future release of Subversion may address this issue by optionally
-organizing revision files into subdirectories.
+Subversion 1.5 addresses this issue by optionally organizing revision
+files and revprop files into sharded subdirectories.
 
 * (Developers) More difficult to index
 

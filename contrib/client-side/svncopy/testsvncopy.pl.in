@@ -16,13 +16,13 @@
 #  USE, DATA,  OR PROFITS; OR  BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
 #  ANY THEORY OF LIABILITY, WHETHER IN  CONTRACT, STRICT LIABILITY, OR TORT
 #  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-#  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+#  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 #  You should have received a copy of the  GNU General Public License along
 #  with this program; if not, write  to the Free Software Foundation, Inc.,
 #  59 Temple Place - Suite 330, Boston MA 02111-1307 USA.
 #
-#  This product makes use of software developed by 
+#  This product makes use of software developed by
 #  CollabNet (http://www.Collab.Net/), see http://subversion.tigris.org/.
 #
 #  This software consists of voluntary contributions made by many
@@ -162,8 +162,8 @@ sub testUpdateExternals
   my $old_verbose = $verbose;
   my %revisions = {};
   my $testRev;
-    
-  my $test_externals = 
+
+  my $test_externals =
                   "DIR2 $testURL/source/dirA/dir2\n".     # 1 space
                   "DIR2Pin -r __PINREV__ $testURL/source/dirA/dir2\n".
                   "DIR3     $testURL/source/dirB/dir3\n". # 5 spaces
@@ -207,7 +207,7 @@ sub testUpdateExternals
           pin => 0,
           update => 0,
           ext_dir => "dirA/dir1",
-          expected_externals => [ 
+          expected_externals => [
                     "DIR2 $testURL/source/dirA/dir2",
                     "DIR2Pin -r __PINREV__ $testURL/source/dirA/dir2",
                     "DIR3     $testURL/source/dirB/dir3",
@@ -286,7 +286,7 @@ sub testUpdateExternals
                     ],
         },
     );
-    
+
   my $auto_temp_dir = Temp::Delete->new();
   my $test_temp_dir = $auto_temp_dir->temp_dir();
   $temp_dir = $test_temp_dir;
@@ -298,11 +298,11 @@ sub testUpdateExternals
   #
   # Set up the source directory to copy
   #
-    
+
   # Kill the directory if it's there
   info( " - Deleting '$testURL'\n" );
   SVNCall( 'delete', '-m', '"Preparing to test svncopy --update-externals"', $testURL );
-    
+
   # Now create the source directories
   foreach my $dir ( @testdirs )
     {
@@ -320,13 +320,13 @@ sub testUpdateExternals
       $failed = 1;
       return;
     }
-    
+
   # Set an svn:externals on it
   # - work our what externals we need to set (get the revision for the
   #   pinned directory)
   my $pinnedRev = CurrentRevision( "$testURL/$pinnedDir" );
   $test_externals =~ s|__PINREV__|$pinnedRev|gi;
-    
+
   # Now write the externals to a temporary file and set them on the dir.
   my ($handle, $tmpfile) = tempfile( DIR => $test_temp_dir );
   print $handle $test_externals;
@@ -339,7 +339,7 @@ sub testUpdateExternals
       $failed = 1;
       return;
     }
-    
+
   # And commit them
   if ( 0 != SVNCall( "commit", "-m",
                      "\"Testing svncopy --update_externals - adding svn:externals\"",
@@ -349,7 +349,7 @@ sub testUpdateExternals
       $failed = 1;
       return;
     }
-    
+
   #
   # Also set a property on the pinned directory to make sure the pinned
   # revision isn't the last one.
@@ -378,31 +378,31 @@ sub testUpdateExternals
     {
       $revisions{ "$testURL/$dir" } = CurrentRevision( "$testURL/$dir" );
     }
-    
+
   print( "...Source directory structure complete\n" );
-    
+
   # Script parameters
   my $message = "\"Testing svncopy.pl\"";
-    
+
   TEST: foreach my $testtype ( "HEAD", "-r" )
     {
       my @copy_options = @svn_options;
       my $testno = 1;
-        
+
       # Do extra setup for -r
       if ( "-r" eq $testtype )
         {
           $testRev = $revisions{ "$testURL/$pinnedDir" };
           print "Updating repository to run --revision tests against revision ".
                 "$testRev...\n";
-                  
+
           #
           # Copy the same revision we did before
           # The last thing we changed was the pinned directory, so
           # take its revision as the one we want to copy.
           #
           push( @copy_options, "--revision", "$testRev" );
-            
+
           #
           # Now add a file to each directory.
           #
@@ -414,7 +414,7 @@ sub testUpdateExternals
                   return;
                 }
             }
-        
+
           # And commit
           if ( 0 != SVNCall( "commit", "-m",
                              "\"Testing svncopy --update_externals".
@@ -425,31 +425,31 @@ sub testUpdateExternals
               $failed = 1;
               return;
             }
-            
+
           print "...update done.  Now re-running tests against new repository\n";
         }
-        
+
       foreach my $test ( @tests )
         {
           my @cmd_options = @copy_options;
-            
+
           print "\n################################################################\n";
           print "### test number $testno\n";
-            
+
           # Kill the destination directory if it's there
           $verbose = 0;
           SVNCall( 'delete', '-m', '"Preparing to test svncopy --update-externals"', $dest );
           $verbose = $old_verbose;
-            
+
           my @sources = @{$test->{sources}};
           my @expected_externals = @{$test->{expected_externals}};
           my @expected_tree = @{$test->{expected_tree}};
-            
+
           # Update global parameters
           push( @cmd_options, "--message", "$message" );
           push( @cmd_options, "--tag" ) if ( $test->{pin} );
           push( @cmd_options, "--branch" ) if ( $test->{update} );
-            
+
           # Now do the copy
           my @cmdline = ( "perl", "svncopy.pl", @cmd_options, @sources, $dest );
           info( "\n=> Calling ", join( " ", @cmdline ), "\n\n" );
@@ -458,14 +458,14 @@ sub testUpdateExternals
               error( "Copy failed" );
               $failed = 1;
             }
-            
+
           # Check that the generated tree is as expected.
           if ( !CheckTree( $dest, @expected_tree ) )
             {
               # CheckTree outputs an error message if it fails
               $failed = 1;
             }
-            
+
           # And check the externals
           my $ext_dir = "$dest/$test->{ext_dir}";
           if ( !CheckExternals( $ext_dir, \%revisions, $pinnedRev, @expected_externals ) )
@@ -473,7 +473,7 @@ sub testUpdateExternals
               # CheckExternals outputs an error message if it fails
               $failed = 1;
             }
-            
+
           # Bomb out if we had an error
           if ( $failed )
             {
@@ -481,7 +481,7 @@ sub testUpdateExternals
               print "****************************************************************\n";
               last TEST;
             }
-                        
+
           print "\n### '$testtype' test $testno passed\n";
           print "################################################################\n";
           $testno++;
@@ -506,7 +506,7 @@ sub testUpdateExternals
 sub CreateTestDirectory
 {
   my $svnpath = $_[0];
-    
+
   my $test_uri = URI->new( "$svnpath" );
   info( "Creating '$test_uri'\n" );
   if ( !CreateSVNDirectories( $test_uri, "Testing svncopy --update_externals" ) )
@@ -534,7 +534,7 @@ sub UpdateTestDirectory
 {
   my $dir = $_[0];
   my $testfile = "$dir/test.txt";
-    
+
   # Create a file in the directory
   if ( !open FILE, ">$testfile" )
     {
@@ -543,14 +543,14 @@ sub UpdateTestDirectory
     }
   print FILE "Test file in '$dir'\n";
   close FILE;
-    
+
   # Now add it to Subversion
   if ( 0 != SVNCall( "add", $testfile ) )
     {
       error( "svn add '$testfile' failed" );
       return 0;
     }
-    
+
   # We're done
   return 1;
 }
@@ -572,25 +572,25 @@ sub UpdateTestDirectory
 sub CheckTree
 {
   my ( $svnpath, @expected ) = @_;
-    
+
   my ( $retval, @output ) = SVNCall( "list", "--recursive", $svnpath );
   if ( 0 != $retval )
     {
       error( "svn list on '$svnpath' failed" );
       return 0;
     }
-    
+
   # Remove any blank lines and carriage returns
   @output = grep( { chomp($_); $_ !~ m"^\s*$"} @output );
-    
+
   # Now compare with expected
   my $compare_ctx = { list1 => [@expected], list2 => [@output] };
-    
+
   if ( 0 != CompareLists( $compare_ctx ) )
     {
       my $addedtext;
       my $removedtext;
-        
+
       if ( @{$compare_ctx->{added}} )
         {
           $addedtext = "\n   +".join( "\n   +", @{$compare_ctx->{added}} );
@@ -600,10 +600,10 @@ sub CheckTree
           $removedtext = "\n   -".join( "\n   -", @{$compare_ctx->{removed}} );
         }
       error( "'$svnpath' doesn't match expected$addedtext$removedtext\n" );
-        
+
       return 0;
     }
-    
+
   return 1;
 }
 
@@ -633,7 +633,7 @@ sub CheckExternals
       error( "svn propget on '$svnpath' failed" );
       return 0;
     }
-    
+
   # Update @expected with revisions
   @expected = grep
     {
@@ -647,13 +647,13 @@ sub CheckExternals
         }
       1;
     } @expected;
-        
+
   # Remove any blank lines and carriage returns from the output
   @new_externals = grep( { chomp($_); $_ !~ m"^\s*$"} @new_externals );
-    
+
   # Now compare with expected
   my $compare_ctx = { list1 => [@expected], list2 => [@new_externals] };
-    
+
   if ( 0 != CompareLists( $compare_ctx ) )
     {
       error( "Externals on '$svnpath' don't match expected\n".
@@ -662,10 +662,10 @@ sub CheckExternals
              "\n - actual:\n    ".
              join( "\n    ", @new_externals )
            );
-        
+
       return 0;
     }
-    
+
   return 1;
 }
 
@@ -683,7 +683,7 @@ sub CheckExternals
 sub CurrentRevision
 {
   my $source = shift;
-    
+
   my $old_verbose = $verbose;
   $verbose = 0;
   my ( $retval, @output ) = SVNCall( "log -q", $source );
@@ -694,7 +694,7 @@ sub CurrentRevision
       error( "CurrentRevision: log -q on '$source' failed" );
       return -1;
     }
-    
+
   #
   # The second line should give us the info we need: e.g.
   #
@@ -715,9 +715,9 @@ sub CurrentRevision
     {
       return $1;
     }
-    
+
   error( "CurrentRevision: log output not formatted as expected\n" );
-    
+
   return -1;
 }
 
@@ -740,9 +740,9 @@ sub SVNCall
   my @commandline = ( $svn, $command, @options );
 
   info( " > ", join( " ", @commandline ), "\n" );
-  
+
   my @output = qx( @commandline 2>&1 );
-      
+
   my $result = $?;
   my $exit   = $result >> 8;
   my $signal = $result & 127;
@@ -751,7 +751,7 @@ sub SVNCall
     {
       error( "$0: 'svn $command' failed $cd: exit=$exit signal=$signal\n" );
     }
-  
+
   if ( $exit > 0 )
     {
       info( join( "\n", @output ) );
@@ -760,7 +760,7 @@ sub SVNCall
     {
       return ( $exit, @output );
     }
-    
+
   return $exit;
 }
 
@@ -819,7 +819,7 @@ sub CreateSVNDirectories
               $found_tail = 1;
             }
         }
-        
+
       if ( $found_tail )
         {
           # We're creating directories
@@ -832,7 +832,7 @@ sub CreateSVNDirectories
         }
     }
   $verbose = $old_verbose;
-  
+
   return 1;
 }
 
@@ -857,7 +857,7 @@ sub CompareLists
 {
   my $context = $_[0];
   my %count = ();
-    
+
   # Make sure everything's clean
   @{$context->{added}} = ();
   @{$context->{removed}} = ();
@@ -873,7 +873,7 @@ sub CompareLists
     {
       $count{$element}--;
     }
-    
+
   # Now elements in list1 only have a count of 1, in list2 only have a
   # count of -1, and in both have a count of 0
   foreach $element ( keys %count )
@@ -882,10 +882,10 @@ sub CompareLists
       elsif ( 0 == $count{$element} ) { push( @{$context->{common}}, $element ); }
       else { push( @{$context->{added}}, $element ); }
     }
-    
+
   $context->{diffs} = scalar( @{$context->{added}} ) +
                       scalar( @{$context->{removed}} );
-                              
+
   return $context->{diffs};
 }
 
@@ -922,13 +922,13 @@ sub info
 sub error
 {
   my $error;
-    
+
   # This is used during testing
   if ( $hideerrors )
     {
       return;
     }
-    
+
   # Now print out each error message and add it to the list.
   foreach $error ( @_ )
     {
@@ -956,7 +956,7 @@ sub Usage
 {
   my $msg;
   $msg = "\n*** $_[0] ***\n" if $_[0];
-    
+
   pod2usage( { -message => $msg,
                -verbose => 0 } );
 }
@@ -977,9 +977,9 @@ sub new
   bless $self, $class;
 
   my $temp_dir = tempdir("testsvncopy_XXXXXXXXXX", TMPDIR => 1);
-  
+
   $self->{tempdir} = $temp_dir;
-  
+
   return $self;
 }
 
@@ -1002,7 +1002,7 @@ sub DESTROY
     info( "Cleaning up $temp_dir\n" );
     File::Path::rmtree([$temp_dir], 0, 0);
   }
-  
+
   # Return to the original directory
   chdir( $startDir );
 }

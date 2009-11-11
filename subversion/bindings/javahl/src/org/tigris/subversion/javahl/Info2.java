@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2005,2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  */
@@ -167,6 +172,18 @@ public class Info2 implements java.io.Serializable
     private long reposSize;
 
     /**
+     * The depth of the item.
+     * @since 1.6
+     */
+    private int depth;
+
+    /**
+     * Info on any tree conflict of which this node is a victim.
+     * @since 1.6
+     */
+    private ConflictDescriptor treeConflict;
+
+    /**
      * constructor to build the object by native code. See fields for
      * parameters
      * @param path
@@ -190,6 +207,8 @@ public class Info2 implements java.io.Serializable
      * @param conflictNew
      * @param conflictWrk
      * @param prejfile
+     * @param depth
+     * @param treeConflict
      */
     Info2(String path, String url, long rev, int kind, String reposRootUrl,
           String reposUUID, long lastChangedRev, long lastChangedDate,
@@ -197,7 +216,8 @@ public class Info2 implements java.io.Serializable
           String copyFromUrl, long copyFromRev, long textTime, long propTime,
           String checksum, String conflictOld, String conflictNew,
           String conflictWrk, String prejfile, String changelistName,
-          long workingSize, long reposSize)
+          long workingSize, long reposSize, int depth,
+          ConflictDescriptor treeConflict)
     {
         this.path = path;
         this.url = url;
@@ -223,6 +243,8 @@ public class Info2 implements java.io.Serializable
         this.changelistName = changelistName;
         this.workingSize = workingSize;
         this.reposSize = reposSize;
+        this.depth = depth;
+        this.treeConflict = treeConflict;
     }
 
     /**
@@ -434,6 +456,25 @@ public class Info2 implements java.io.Serializable
     public long getReposSize()
     {
         return reposSize;
+    }
+
+    /**
+     * @return The depth of the directory or <code>null</code> if the
+     * item is a file.
+     * @since New in 1.5.
+     */
+    public int getDepth()
+    {
+        return depth;
+    }
+
+    /**
+     * @return the tree conflict of which this node is a victim, or null if none
+     * @since New in 1.6.
+     */
+    public ConflictDescriptor getConflictDescriptor()
+    {
+        return treeConflict;
     }
 
     /**

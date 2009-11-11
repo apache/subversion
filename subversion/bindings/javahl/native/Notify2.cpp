@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -21,7 +26,7 @@
 
 #include "Notify2.h"
 #include "JNIUtil.h"
-#include "SVNClient.h"
+#include "CreateJ.h"
 #include "EnumMapper.h"
 #include "RevisionRange.h"
 
@@ -140,8 +145,9 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
       midCT = env->GetMethodID(clazz, "<init>",
                                "(Ljava/lang/String;IILjava/lang/String;"
                                "Lorg/tigris/subversion/javahl/Lock;"
-                               "Ljava/lang/String;IIIJLjava/lang/String;L"
-                               JAVA_PACKAGE "/RevisionRange;)V");
+                               "Ljava/lang/String;IIIJLjava/lang/String;"
+                               "L" JAVA_PACKAGE "/RevisionRange;"
+                               "Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
         return;
     }
@@ -157,7 +163,7 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
-  jobject jLock = SVNClient::createJavaLock(wcNotify->lock);
+  jobject jLock = CreateJ::Lock(wcNotify->lock);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -185,12 +191,16 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
       jMergeRange = NULL;
     }
 
+  jstring jpathPrefix = JNIUtil::makeJString(wcNotify->path_prefix);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
   // call the Java method
   jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction,
                                  jKind, jMimeType, jLock, jErr,
                                  jContentState, jPropState, jLockState,
                                  (jlong) wcNotify->revision, jChangelistName,
-                                 jMergeRange);
+                                 jMergeRange, jpathPrefix);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -216,6 +226,10 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
     return;
 
   env->DeleteLocalRef(jChangelistName);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  env->DeleteLocalRef(jpathPrefix);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 

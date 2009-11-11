@@ -1,17 +1,22 @@
 /* env.h : managing the BDB environment
  *
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -83,12 +88,21 @@ struct bdb_env_t
   /**************************************************************************/
   /* Error Reporting */
 
-  /* Berkeley DB returns extended error info by callback before returning
-     an error code from the failing function.  The callback baton type is a
-     string, not an arbitrary struct, so we prefix our struct with a valid
-     string, to avoid problems should BDB ever try to interpret our baton as
-     a string.  Initializers of this structure must strcpy the value of
-     BDB_ERRPFX_STRING into this array.  */
+  /* A (char *) casted pointer to this structure is passed to BDB's
+     set_errpfx(), which treats it as a NUL-terminated character
+     string to prefix all BDB error messages.  However, svn also
+     registers bdb_error_gatherer() as an error handler with
+     set_errcall() which turns off BDB's default printing of errors to
+     stderr and anytime thereafter when BDB reports an error and
+     before the BDB function returns, it calls bdb_error_gatherer()
+     and passes the same error prefix (char *) pointer given to
+     set_errpfx().  The bdb_error_gatherer() callback casts the
+     (char *) it back to a (bdb_env_t *).
+
+     To avoid problems should BDB ever try to interpret our baton as a
+     string, the first field in the structure is a char
+     errpfx_string[].  Initializers of this structure must strcpy the
+     value of BDB_ERRPFX_STRING into this array.  */
   char errpfx_string[sizeof(BDB_ERRPFX_STRING)];
 
   /* Extended error information. */
@@ -205,6 +219,8 @@ convert_bdb_error(bdb_env_t *bdb, int db_err)
 static void
 bdb_error_gatherer(const DB_ENV *dbenv, const char *baton, const char *msg)
 {
+  /* See the documentation at bdb_env_t's definition why the
+     (bdb_env_t *) cast is safe and why it is done. */
   bdb_error_info_t *error_info = get_error_info((bdb_env_t *) baton);
   svn_error_t *new_err;
 
@@ -246,7 +262,7 @@ cleanup_env(void *data)
 /* This cleanup is the fall back plan.  If the thread exits and the
    environment hasn't been closed it's responsible for cleanup of the
    thread local error info variable, which would otherwise be leaked.
-   Normally it will not be called, because svn_fs_base__close will
+   Normally it will not be called, because svn_fs_bdb__close will
    set the thread's error info to NULL after cleaning it up. */
 static void
 cleanup_error_info(void *baton)
@@ -271,10 +287,10 @@ create_env(bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
   apr_size_t path_size, path_bdb_size;
 
 #if SVN_BDB_PATH_UTF8
-  path_bdb = svn_path_local_style(path, pool);
+  path_bdb = svn_dirent_local_style(path, pool);
 #else
   SVN_ERR(svn_utf_cstring_from_utf8(&path_bdb,
-                                    svn_path_local_style(path, pool),
+                                    svn_dirent_local_style(path, pool),
                                     pool));
 #endif
 
@@ -282,6 +298,8 @@ create_env(bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
      because it must survive the cache pool cleanup. */
   path_size = strlen(path) + 1;
   path_bdb_size = strlen(path_bdb) + 1;
+  /* Using calloc() to ensure the padding bytes in bdb->key (which is used as
+   * a hash key) are zeroed. */
   bdb = calloc(1, sizeof(*bdb) + path_size + path_bdb_size);
 
   /* We must initialize this now, as our callers may assume their bdb
@@ -311,7 +329,10 @@ create_env(bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
   db_err = db_env_create(&(bdb->env), 0);
   if (!db_err)
     {
+      /* See the documentation at bdb_env_t's definition why the
+         (char *) cast is safe and why it is done. */
       bdb->env->set_errpfx(bdb->env, (char *) bdb);
+
       /* bdb_error_gatherer is in parens to stop macro expansion. */
       bdb->env->set_errcall(bdb->env, (bdb_error_gatherer));
 
@@ -382,8 +403,7 @@ bdb_init_cb(apr_pool_t *pool)
 svn_error_t *
 svn_fs_bdb__init(apr_pool_t* pool)
 {
-  SVN_ERR(svn_atomic__init_once(&bdb_cache_state, bdb_init_cb, pool));
-  return SVN_NO_ERROR;
+  return svn_atomic__init_once(&bdb_cache_state, bdb_init_cb, pool);
 }
 
 static APR_INLINE void
@@ -413,7 +433,7 @@ static svn_error_t *
 bdb_cache_key(bdb_env_key_t *keyp, apr_file_t **dbconfig_file,
               const char *path, apr_pool_t *pool)
 {
-  const char *dbcfg_file_name = svn_path_join(path, BDB_CONFIG_FILE, pool);
+  const char *dbcfg_file_name = svn_dirent_join(path, BDB_CONFIG_FILE, pool);
   apr_file_t *dbcfg_file;
   apr_status_t apr_err;
   apr_finfo_t finfo;
@@ -499,7 +519,7 @@ bdb_close(bdb_env_t *bdb)
     svn_pool_destroy(bdb->pool);
   else
     free(bdb);
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -509,7 +529,7 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
   svn_error_t *err = SVN_NO_ERROR;
   bdb_env_t *bdb = bdb_baton->bdb;
 
-  assert(bdb_baton->env == bdb_baton->bdb->env);
+  SVN_ERR_ASSERT(bdb_baton->env == bdb_baton->bdb->env);
 
   /* Neutralize bdb_baton's pool cleanup to prevent double-close. See
      cleanup_env_baton(). */
@@ -535,9 +555,11 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
 
       /* If the environment is panicked and automatic recovery is not
          enabled, return an appropriate error. */
-      if (!SVN_BDB_AUTO_RECOVER && svn_atomic_read(&bdb->panic))
+#if !SVN_BDB_AUTO_RECOVER
+      if (svn_atomic_read(&bdb->panic))
         err = svn_error_create(SVN_ERR_FS_BERKELEY_DB, NULL,
                                db_strerror(DB_RUNRECOVERY));
+#endif
     }
   else
     {
@@ -550,7 +572,7 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
       err = bdb_close(bdb);
       release_cache_mutex();
     }
-  return err;
+  return svn_error_return(err);
 }
 
 
@@ -574,10 +596,8 @@ bdb_open(bdb_env_t *bdb, u_int32_t flags, int mode)
           (bdb, bdb->env->set_flags(bdb->env, SVN_BDB_AUTO_COMMIT, 1)));
 #endif
 
-  SVN_ERR(bdb_cache_key(&bdb->key, &bdb->dbconfig_file,
-                        bdb->path, bdb->pool));
-
-  return SVN_NO_ERROR;
+  return bdb_cache_key(&bdb->key, &bdb->dbconfig_file,
+                       bdb->path, bdb->pool);
 }
 
 
@@ -616,7 +636,7 @@ svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
   if (err)
     {
       release_cache_mutex();
-      return err;
+      return svn_error_return(err);
     }
 
   bdb = bdb_cache_get(&key, &panic);
@@ -687,7 +707,7 @@ svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
     }
 
   release_cache_mutex();
-  return err;
+  return svn_error_return(err);
 }
 
 

@@ -2,17 +2,22 @@
  * main.c: Subversion server administration tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -26,6 +31,7 @@
 #include "svn_opt.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_config.h"
 #include "svn_repos.h"
@@ -34,6 +40,8 @@
 #include "svn_props.h"
 #include "svn_time.h"
 #include "svn_user.h"
+
+#include "private/svn_opt_private.h"
 
 #include "svn_private_config.h"
 
@@ -94,7 +102,7 @@ create_stdio_stream(svn_stream_t **stream,
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't open stdio file"));
 
-  *stream = svn_stream_from_aprfile(stdio_file, pool);
+  *stream = svn_stream_from_aprfile2(stdio_file, TRUE, pool);
   return SVN_NO_ERROR;
 }
 
@@ -115,7 +123,7 @@ parse_local_repos_path(apr_getopt_t *os,
     {
       const char * path = os->argv[os->ind++];
       SVN_ERR(svn_utf_cstring_to_utf8(repos_path, path, pool));
-      *repos_path = svn_path_internal_style(*repos_path, pool);
+      *repos_path = svn_dirent_internal_style(*repos_path, pool);
     }
 
   if (*repos_path == NULL)
@@ -191,12 +199,14 @@ static svn_opt_subcommand_t
   subcommand_list_unused_dblogs,
   subcommand_lslocks,
   subcommand_lstxns,
+  subcommand_pack,
   subcommand_recover,
   subcommand_rmlocks,
   subcommand_rmtxns,
   subcommand_setlog,
   subcommand_setrevprop,
   subcommand_setuuid,
+  subcommand_upgrade,
   subcommand_verify;
 
 enum
@@ -219,7 +229,8 @@ enum
     svnadmin__clean_logs,
     svnadmin__wait,
     svnadmin__pre_1_4_compatible,
-    svnadmin__pre_1_5_compatible
+    svnadmin__pre_1_5_compatible,
+    svnadmin__pre_1_6_compatible
   };
 
 /* Option codes and descriptions.
@@ -301,6 +312,10 @@ static const apr_getopt_option_t options_table[] =
      N_("use format compatible with Subversion versions\n"
         "                             earlier than 1.5")},
 
+    {"pre-1.6-compatible",     svnadmin__pre_1_6_compatible, 0,
+     N_("use format compatible with Subversion versions\n"
+        "                             earlier than 1.6")},
+
     {NULL}
   };
 
@@ -308,7 +323,7 @@ static const apr_getopt_option_t options_table[] =
 /* Array of available subcommands.
  * The entire list must be terminated with an entry of nulls.
  */
-static const svn_opt_subcommand_desc_t cmd_table[] =
+static const svn_opt_subcommand_desc2_t cmd_table[] =
 {
   {"crashtest", subcommand_crashtest, {0}, N_
    ("usage: svnadmin crashtest REPOS_PATH\n\n"
@@ -321,7 +336,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     "Create a new, empty repository at REPOS_PATH.\n"),
    {svnadmin__bdb_txn_nosync, svnadmin__bdb_log_keep,
     svnadmin__config_dir, svnadmin__fs_type, svnadmin__pre_1_4_compatible,
-    svnadmin__pre_1_5_compatible } },
+    svnadmin__pre_1_5_compatible, svnadmin__pre_1_6_compatible } },
 
   {"deltify", subcommand_deltify, {0}, N_
    ("usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
@@ -333,13 +348,16 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
    {'r', 'q'} },
 
   {"dump", subcommand_dump, {0}, N_
-   ("usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n\n"
+   ("usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER] [--incremental]]\n\n"
     "Dump the contents of filesystem to stdout in a 'dumpfile'\n"
     "portable format, sending feedback to stderr.  Dump revisions\n"
     "LOWER rev through UPPER rev.  If no revisions are given, dump all\n"
     "revision trees.  If only LOWER is given, dump that one revision tree.\n"
-    "If --incremental is passed, then the first revision dumped will be\n"
-    "a diff against the previous revision, instead of the usual fulltext.\n"),
+    "If --incremental is passed, the first revision dumped will describe\n"
+    "only the paths changed in that revision; otherwise it will describe\n"
+    "every path present in the repository as of that revision.  (In either\n"
+    "case, the second and subsequent revisions, if any, describe only paths\n"
+    "changed in those revisions.)\n"),
    {'r', svnadmin__incremental, svnadmin__deltas, 'q'} },
 
   {"help", subcommand_help, {"?", "h"}, N_
@@ -383,6 +401,12 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
   {"lstxns", subcommand_lstxns, {0}, N_
    ("usage: svnadmin lstxns REPOS_PATH\n\n"
     "Print the names of all uncommitted transactions.\n"),
+   {0} },
+
+  {"pack", subcommand_pack, {0}, N_
+   ("usage: svnadmin pack REPOS_PATH\n\n"
+    "Possibly compact the repository into a more efficient storage model.\n"
+    "This may not apply to all repositories, in which case, exit.\n"),
    {0} },
 
   {"recover", subcommand_recover, {0}, N_
@@ -433,6 +457,19 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     "generate a brand new UUID for the repository.\n"),
    {0} },
 
+  {"upgrade", subcommand_upgrade, {0}, N_
+   ("usage: svnadmin upgrade REPOS_PATH\n\n"
+    "Upgrade the repository located at REPOS_PATH to the latest supported\n"
+    "schema version.\n\n"
+    "This functionality is provided as a convenience for repository\n"
+    "administrators who wish to make use of new Subversion functionality\n"
+    "without having to undertake a potentially costly full repository dump\n"
+    "and load operation.  As such, the upgrade performs only the minimum\n"
+    "amount of work needed to accomplish this while still maintaining the\n"
+    "integrity of the repository.  It does not guarantee the most optimized\n"
+    "repository state as a dump and subsequent load would.\n"),
+   {0} },
+
   {"verify", subcommand_verify, {0}, N_
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verifies the data stored in the repository.\n"),
@@ -450,6 +487,7 @@ struct svnadmin_opt_state
   const char *fs_type;                              /* --fs-type */
   svn_boolean_t pre_1_4_compatible;                 /* --pre-1.4-compatible */
   svn_boolean_t pre_1_5_compatible;                 /* --pre-1.5-compatible */
+  svn_boolean_t pre_1_6_compatible;                 /* --pre-1.6-compatible */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
@@ -532,6 +570,11 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   if (opt_state->pre_1_5_compatible)
     apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
+                 APR_HASH_KEY_STRING,
+                 "1");
+
+  if (opt_state->pre_1_6_compatible)
+    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
                  APR_HASH_KEY_STRING,
                  "1");
 
@@ -635,13 +678,9 @@ recode_stream_create(FILE *std_stream, apr_pool_t *pool)
 }
 
 
-/* Common implementation for dump and verify.  First three parameters mirror
-   the 'svn_opt_subcommand_t' type.  The DUMP_CONTENTS parameter determines
-   whether to send the dump to stdout or an empty stream. */
+/* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
-dump_repo(apr_getopt_t *os, void *baton,
-          apr_pool_t *pool, svn_boolean_t dump_contents,
-          svn_boolean_t incremental)
+subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
@@ -676,32 +715,18 @@ dump_repo(apr_getopt_t *os, void *baton,
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        _("First revision cannot be higher than second"));
 
-  /* Run the dump to STDOUT.  Let the user redirect output into
-     a file if they want.  :-)  */
-  if (dump_contents)
-    SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
-  else
-    stdout_stream = NULL;
+  SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
 
   /* Progress feedback goes to STDERR, unless they asked to suppress it. */
   if (! opt_state->quiet)
     stderr_stream = recode_stream_create(stderr, pool);
 
   SVN_ERR(svn_repos_dump_fs2(repos, stdout_stream, stderr_stream,
-                             lower, upper, incremental,
+                             lower, upper, opt_state->incremental,
                              opt_state->use_deltas, check_cancel, NULL,
                              pool));
 
   return SVN_NO_ERROR;
-}
-
-
-/* This implements `svn_opt_subcommand_t'. */
-static svn_error_t *
-subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
-{
-  struct svnadmin_opt_state *opt_state = baton;
-  return dump_repo(os, baton, pool, TRUE, opt_state->incremental);
 }
 
 
@@ -725,11 +750,11 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   version_footer = svn_stringbuf_create(fs_desc_start, pool);
   SVN_ERR(svn_fs_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help(os, "svnadmin",
-                             opt_state ? opt_state->version : FALSE,
-                             FALSE, version_footer->data,
-                             header, cmd_table, options_table, NULL,
-                             pool));
+  SVN_ERR(svn_opt_print_help3(os, "svnadmin",
+                              opt_state ? opt_state->version : FALSE,
+                              FALSE, version_footer->data,
+                              header, cmd_table, options_table, NULL, NULL,
+                              pool));
 
   return SVN_NO_ERROR;
 }
@@ -881,7 +906,7 @@ list_dblogs(apr_getopt_t *os, void *baton, svn_boolean_t only_unused,
       log_utf8 = svn_path_join(opt_state->repository_path,
                                APR_ARRAY_IDX(logfiles, i, const char *),
                                pool);
-      log_utf8 = svn_path_local_style(log_utf8, pool);
+      log_utf8 = svn_dirent_local_style(log_utf8, pool);
       SVN_ERR(svn_cmdline_printf(pool, "%s\n", log_utf8));
     }
 
@@ -985,9 +1010,9 @@ set_revprop(const char *prop_name, const char *filename,
   const char *filename_utf8;
 
   SVN_ERR(svn_utf_cstring_to_utf8(&filename_utf8, filename, pool));
-  filename_utf8 = svn_path_internal_style(filename_utf8, pool);
+  filename_utf8 = svn_dirent_internal_style(filename_utf8, pool);
 
-  SVN_ERR(svn_stringbuf_from_file(&file_contents, filename_utf8, pool));
+  SVN_ERR(svn_stringbuf_from_file2(&file_contents, filename_utf8, pool));
 
   prop_value->data = file_contents->data;
   prop_value->len = file_contents->len;
@@ -1060,7 +1085,7 @@ subcommand_setuuid(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
 
   if (args->nelts > 1)
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, NULL);
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, NULL);
   if (args->nelts == 1)
     uuid = APR_ARRAY_IDX(args, 0, const char *);
 
@@ -1102,14 +1127,80 @@ subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                      opt_state, pool);
 }
 
+/* This implements svn_fs_pack_notify_t */
+static svn_error_t *
+pack_notify(void *baton,
+            apr_int64_t shard,
+            svn_fs_pack_notify_action_t action,
+            apr_pool_t *pool)
+{
+  switch (action)
+    {
+      case svn_fs_pack_notify_start:
+        {
+          const char *shardstr = apr_psprintf(pool, "%" APR_INT64_T_FMT, shard);
+          SVN_ERR(svn_cmdline_printf(pool, _("Packing shard %s..."), shardstr));
+        }
+        break;
+
+      case svn_fs_pack_notify_end:
+        SVN_ERR(svn_cmdline_printf(pool, _("done.\n")));
+        break;
+
+      default:
+        return SVN_NO_ERROR;
+    }
+
+  return svn_cmdline_fflush(stdout);
+}
+
+
+/* This implements 'svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_pack(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+
+  return svn_repos_fs_pack(repos, pack_notify, NULL, check_cancel, NULL, pool);
+}
+
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
 subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
-  return dump_repo(os, baton, pool, FALSE,
-               opt_state->start_revision.kind != svn_opt_revision_unspecified);
+  svn_stream_t *stderr_stream;
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_revnum_t youngest, lower, upper;
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  fs = svn_repos_fs(repos);
+  SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
+
+  /* Find the revision numbers at which to start and end. */
+  SVN_ERR(get_revnum(&lower, &opt_state->start_revision,
+                     youngest, repos, pool));
+  SVN_ERR(get_revnum(&upper, &opt_state->end_revision,
+                     youngest, repos, pool));
+
+  if (upper == SVN_INVALID_REVNUM)
+    {
+      upper = lower;
+    }
+
+  if (opt_state->quiet)
+    stderr_stream = NULL;
+  else
+    stderr_stream = recode_stream_create(stderr, pool);
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  return svn_repos_verify_fs(repos, stderr_stream, lower, upper,
+                             check_cancel, NULL, pool);
 }
 
 
@@ -1139,7 +1230,7 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   apr_hash_t *locks;
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+  SVN_ERR(svn_opt__args_to_target_array(&targets, os,
                                         apr_array_make(pool, 0,
                                                        sizeof(const char *)),
                                         pool));
@@ -1156,15 +1247,10 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const char *path, *cr_date, *exp_date = "";
-      svn_lock_t *lock;
+      const char *cr_date, *exp_date = "";
+      const char *path = svn_apr_hash_index_key(hi);
+      svn_lock_t *lock = svn_apr_hash_index_val(hi);
       int comment_lines = 0;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      lock = val;
 
       cr_date = svn_time_to_human_cstring(lock->creation_date, pool);
 
@@ -1179,9 +1265,10 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       SVN_ERR(svn_cmdline_printf(pool, _("Owner: %s\n"), lock->owner));
       SVN_ERR(svn_cmdline_printf(pool, _("Created: %s\n"), cr_date));
       SVN_ERR(svn_cmdline_printf(pool, _("Expires: %s\n"), exp_date));
-      SVN_ERR(svn_cmdline_printf(pool, (comment_lines != 1)
-                                 ? _("Comment (%i lines):\n%s\n\n")
-                                 : _("Comment (%i line):\n%s\n\n"),
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 Q_("Comment (%i line):\n%s\n\n",
+                                    "Comment (%i lines):\n%s\n\n",
+                                    comment_lines),
                                  comment_lines,
                                  lock->comment ? lock->comment : ""));
     }
@@ -1224,7 +1311,7 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Our usage requires at least one FS path. */
   if (args->nelts == 0)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, 
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
                             _("No paths to unlock provided"));
 
   /* All the rest of the arguments are paths from which to remove locks. */
@@ -1273,6 +1360,76 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
+/* A callback which is called when the upgrade starts. */
+static svn_error_t *
+upgrade_started(void *baton)
+{
+  apr_pool_t *pool = (apr_pool_t *)baton;
+
+  SVN_ERR(svn_cmdline_printf(pool,
+                             _("Repository lock acquired.\n"
+                               "Please wait; upgrading the"
+                               " repository may take some time...\n")));
+  SVN_ERR(svn_cmdline_fflush(stdout));
+
+  /* Enable cancellation signal handlers. */
+  setup_cancellation_signals(signal_handler);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_upgrade(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  struct svnadmin_opt_state *opt_state = baton;
+
+  /* Restore default signal handlers. */
+  setup_cancellation_signals(SIG_DFL);
+
+  err = svn_repos_upgrade(opt_state->repository_path, TRUE,
+                          upgrade_started, pool, pool);
+  if (err)
+    {
+      if (APR_STATUS_IS_EAGAIN(err->apr_err))
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+          if (! opt_state->wait)
+            return svn_error_create(SVN_ERR_REPOS_LOCKED, NULL,
+                                    _("Failed to get exclusive repository "
+                                      "access; perhaps another process\n"
+                                      "such as httpd, svnserve or svn "
+                                      "has it open?"));
+          SVN_ERR(svn_cmdline_printf(pool,
+                                     _("Waiting on repository lock; perhaps"
+                                       " another process has it open?\n")));
+          SVN_ERR(svn_cmdline_fflush(stdout));
+          SVN_ERR(svn_repos_upgrade(opt_state->repository_path, FALSE,
+                                    upgrade_started, pool, pool));
+        }
+      else if (err->apr_err == SVN_ERR_FS_UNSUPPORTED_UPGRADE)
+        {
+          return svn_error_quick_wrap
+            (err, _("Upgrade of this repository's underlying versioned "
+                    "filesystem is not supported; consider "
+                    "dumping and loading the data elsewhere"));
+        }
+      else if (err->apr_err == SVN_ERR_REPOS_UNSUPPORTED_UPGRADE)
+        {
+          return svn_error_quick_wrap
+            (err, _("Upgrade of this repository is not supported; consider "
+                    "dumping and loading the data elsewhere"));
+        }
+    }
+  SVN_ERR(err);
+
+  SVN_ERR(svn_cmdline_printf(pool, _("\nUpgrade completed.\n")));
+  return SVN_NO_ERROR;
+}
+
 
 
 /** Main. **/
@@ -1285,7 +1442,7 @@ main(int argc, const char *argv[])
   apr_allocator_t *allocator;
   apr_pool_t *pool;
 
-  const svn_opt_subcommand_desc_t *subcommand = NULL;
+  const svn_opt_subcommand_desc2_t *subcommand = NULL;
   struct svnadmin_opt_state opt_state;
   apr_getopt_t *os;
   int opt_id;
@@ -1296,7 +1453,7 @@ main(int argc, const char *argv[])
   if (svn_cmdline_init("svnadmin", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
-  /* Create our top-level pool.  Use a seperate mutexless allocator,
+  /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
   if (apr_allocator_create(&allocator))
@@ -1412,6 +1569,9 @@ main(int argc, const char *argv[])
       case svnadmin__pre_1_5_compatible:
         opt_state.pre_1_5_compatible = TRUE;
         break;
+      case svnadmin__pre_1_6_compatible:
+        opt_state.pre_1_6_compatible = TRUE;
+        break;
       case svnadmin__fs_type:
         err = svn_utf_cstring_to_utf8(&opt_state.fs_type, opt_arg, pool);
         if (err)
@@ -1423,7 +1583,7 @@ main(int argc, const char *argv[])
         if (err)
           return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
         opt_state.parent_dir
-          = svn_path_internal_style(opt_state.parent_dir, pool);
+          = svn_dirent_internal_style(opt_state.parent_dir, pool);
         break;
       case svnadmin__use_pre_commit_hook:
         opt_state.use_pre_commit_hook = TRUE;
@@ -1470,7 +1630,7 @@ main(int argc, const char *argv[])
      just typos/mistakes.  Whatever the case, the subcommand to
      actually run is subcommand_help(). */
   if (opt_state.help)
-    subcommand = svn_opt_get_canonical_subcommand(cmd_table, "help");
+    subcommand = svn_opt_get_canonical_subcommand2(cmd_table, "help");
 
   /* If we're not running the `help' subcommand, then look for a
      subcommand in the first argument. */
@@ -1481,7 +1641,7 @@ main(int argc, const char *argv[])
           if (opt_state.version)
             {
               /* Use the "help" subcommand to handle the "--version" option. */
-              static const svn_opt_subcommand_desc_t pseudo_cmd =
+              static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", subcommand_help, {0}, "",
                   {svnadmin__version,  /* must accept its own option */
                   } };
@@ -1501,7 +1661,7 @@ main(int argc, const char *argv[])
       else
         {
           const char *first_arg = os->argv[os->ind++];
-          subcommand = svn_opt_get_canonical_subcommand(cmd_table, first_arg);
+          subcommand = svn_opt_get_canonical_subcommand2(cmd_table, first_arg);
           if (subcommand == NULL)
             {
               const char* first_arg_utf8;
@@ -1555,11 +1715,12 @@ main(int argc, const char *argv[])
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! svn_opt_subcommand_takes_option(subcommand, opt_id))
+      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id, NULL))
         {
           const char *optstr;
           const apr_getopt_option_t *badopt =
-            svn_opt_get_option_from_code(opt_id, options_table);
+            svn_opt_get_option_from_code2(opt_id, options_table, subcommand,
+                                          pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
             subcommand_help(NULL, NULL, pool);
@@ -1609,11 +1770,12 @@ main(int argc, const char *argv[])
       /* Ensure that everything is written to stdout, so the user will
          see any print errors. */
       err = svn_cmdline_fflush(stdout);
-      if (err) {
-        svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
-        svn_error_clear(err);
-        return EXIT_FAILURE;
-      }
+      if (err)
+        {
+          svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
+          svn_error_clear(err);
+          return EXIT_FAILURE;
+        }
       return EXIT_SUCCESS;
     }
 }
@@ -1628,6 +1790,4 @@ subcommand_crashtest(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   abort();
-
-  return SVN_NO_ERROR;
 }

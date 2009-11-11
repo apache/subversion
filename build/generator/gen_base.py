@@ -4,11 +4,15 @@
 
 import os
 import sys
-import string
 import glob
 import re
 import fileinput
-import ConfigParser
+try:
+  # Python >=3.0
+  import configparser
+except ImportError:
+  # Python <3.0
+  import ConfigParser as configparser
 import generator.swig
 
 import getversion
@@ -49,7 +53,7 @@ class GeneratorBase:
         self.release_mode = 1
 
     # Now read and parse build.conf
-    parser = ConfigParser.ConfigParser()
+    parser = configparser.ConfigParser()
     parser.read(fname)
 
     self.conf = build_path(os.path.abspath(fname))
@@ -71,18 +75,16 @@ class GeneratorBase:
     self.private_includes = \
         _collect_paths(parser.get('options', 'private-includes'))
     self.private_built_includes = \
-        string.split(parser.get('options', 'private-built-includes'))
-    self.apache_files = \
-        _collect_paths(parser.get('options', 'static-apache-files'))
+        parser.get('options', 'private-built-includes').split()
     self.scripts = \
         _collect_paths(parser.get('options', 'test-scripts'))
     self.bdb_scripts = \
         _collect_paths(parser.get('options', 'bdb-test-scripts'))
 
     self.include_wildcards = \
-      string.split(parser.get('options', 'include-wildcards'))
-    self.swig_lang = string.split(parser.get('options', 'swig-languages'))
-    self.swig_dirs = string.split(parser.get('options', 'swig-dirs'))
+      parser.get('options', 'include-wildcards').split()
+    self.swig_lang = parser.get('options', 'swig-languages').split()
+    self.swig_dirs = parser.get('options', 'swig-dirs').split()
 
     # SWIG Generator
     self.swig = generator.swig.Generator(self.conf, "swig")
@@ -99,11 +101,10 @@ class GeneratorBase:
     self.target_dirs = []    # Directories in which files are built
     self.manpages = []       # Manpages
 
-    # Collect the build targets
-    parser_sections = parser.sections()
-    parser_sections.sort() # Have a reproducible ordering
+    # Collect the build targets and have a reproducible ordering
+    parser_sections = sorted(parser.sections())
     for section_name in parser_sections:
-      if self.skip_sections.has_key(section_name):
+      if section_name in self.skip_sections:
         continue
 
       options = {}
@@ -130,8 +131,8 @@ class GeneratorBase:
       for dep_type, dep_names in dependencies:
         # Translate string names to Section objects
         dep_section_objects = []
-        for section_name in string.split(dep_names):
-          if self.sections.has_key(section_name):
+        for section_name in dep_names.split():
+          if section_name in self.sections:
             dep_section_objects.append(self.sections[section_name])
 
         # For each dep_section that this section declares a dependency on,
@@ -148,7 +149,7 @@ class GeneratorBase:
 
   def compute_hdrs(self):
     """Get a list of the header files"""
-    all_includes = map(native_path, self.includes + self.private_includes)
+    all_includes = list(map(native_path, self.includes + self.private_includes))
     for d in unique(self.target_dirs):
       for wildcard in self.include_wildcards:
         hdrs = glob.glob(os.path.join(native_path(d), wildcard))
@@ -159,7 +160,7 @@ class GeneratorBase:
     """Compute the dependencies of each header file"""
 
     include_deps = IncludeDependencyInfo(self.compute_hdrs(),
-        map(native_path, self.private_built_includes))
+        list(map(native_path, self.private_built_includes)))
 
     for objectfile, sources in self.graph.get_deps(DT_OBJECT):
       assert len(sources) == 1
@@ -189,6 +190,16 @@ class GeneratorBase:
         for include_file in include_deps.query(native_path(source.filename)):
           self.graph.add(DT_OBJECT, objectfile, build_path(include_file))
 
+  def write_sqlite_headers(self):
+    "Transform sql files into header files"
+
+    import transform_sql
+    for hdrfile, sqlfile in self.graph.get_deps(DT_SQLHDR):
+      assert len(sqlfile) == 1
+      transform_sql.main(open(sqlfile[0], 'r'),
+                         open(hdrfile, 'w'),
+                         os.path.basename(sqlfile[0]))
+
 
 class DependencyGraph:
   """Record dependencies between build items.
@@ -204,13 +215,13 @@ class DependencyGraph:
       self.deps[dt] = { }
 
   def add(self, type, target, source):
-    if self.deps[type].has_key(target):
+    if target in self.deps[type]:
       self.deps[type][target].append(source)
     else:
       self.deps[type][target] = [ source ]
 
   def bulk_add(self, type, target, sources):
-    if self.deps[type].has_key(target):
+    if target in self.deps[type]:
       self.deps[type][target].extend(sources)
     else:
       self.deps[type][target] = sources[:]
@@ -232,7 +243,7 @@ class DependencyGraph:
     return sources
 
   def get_deps(self, type):
-    return self.deps[type].items()
+    return list(self.deps[type].items())
 
 # dependency types
 dep_types = [
@@ -241,6 +252,7 @@ dep_types = [
   'DT_SWIG_C',   # a swig-generated .c file, depending upon .i filename(s)
   'DT_LINK',     # a libtool-linked filename, depending upon object fnames
   'DT_NONLIB',   # filename depends on object fnames, but isn't linked to them
+  'DT_SQLHDR',   # header generated from a .sql file
   ]
 
 # create some variables for these
@@ -268,7 +280,7 @@ class SWIGObject(ObjectFile):
     self.lang_abbrev = lang_abbrev[lang]
     self.source_generated = 1
     ### hmm. this is Makefile-specific
-    self.compile_cmd = '$(COMPILE_%s_WRAPPER)' % string.upper(self.lang_abbrev)
+    self.compile_cmd = '$(COMPILE_%s_WRAPPER)' % self.lang_abbrev.upper()
 
 class HeaderFile(DependencyNode):
   def __init__(self, filename, classname = None, compile_cmd = None):
@@ -284,7 +296,7 @@ class SourceFile(DependencyNode):
 class SWIGSource(SourceFile):
   def __init__(self, filename):
     SourceFile.__init__(self, filename, build_path_dirname(filename))
-  pass
+
 
 lang_abbrev = {
   'python' : 'py',
@@ -355,12 +367,12 @@ class TargetLinked(Target):
     Target.__init__(self, name, options, gen_obj)
     self.install = options.get('install')
     self.compile_cmd = options.get('compile-cmd')
-    self.sources = options.get('sources', '*.c')
+    self.sources = options.get('sources', '*.c *.cpp')
     self.link_cmd = options.get('link-cmd', '$(LINK)')
 
     self.external_lib = options.get('external-lib')
     self.external_project = options.get('external-project')
-    self.msvc_libs = string.split(options.get('msvc-libs', ''))
+    self.msvc_libs = options.get('msvc-libs', '').split()
 
   def add_dependencies(self):
     if self.external_lib or self.external_project:
@@ -371,30 +383,31 @@ class TargetLinked(Target):
     # the specified install area depends upon this target
     self.gen_obj.graph.add(DT_INSTALL, self.install, self)
 
-    sources = _collect_paths(self.sources or '*.c', self.path)
-    sources.sort()
+    sources = sorted(_collect_paths(self.sources or '*.c' or '*.cpp', self.path))
 
-    for src, reldir in sources:
-      if src[-2:] == '.c':
-        objname = src[:-2] + self.objext
-      elif src[-4:] == '.cpp':
-        objname = src[:-4] + self.objext
-      else:
-        raise GenError('ERROR: unknown file extension on ' + src)
+    for srcs, reldir in sources:
+      for src in srcs.split(" "):
+        if glob.glob(src):
+          if src[-2:] == '.c':
+            objname = src[:-2] + self.objext
+          elif src[-4:] == '.cpp':
+            objname = src[:-4] + self.objext
+          else:
+            raise GenError('ERROR: unknown file extension on ' + src)
 
-      ofile = ObjectFile(objname, self.compile_cmd)
+          ofile = ObjectFile(objname, self.compile_cmd)
 
-      # object depends upon source
-      self.gen_obj.graph.add(DT_OBJECT, ofile, SourceFile(src, reldir))
+          # object depends upon source
+          self.gen_obj.graph.add(DT_OBJECT, ofile, SourceFile(src, reldir))
 
-      # target (a linked item) depends upon object
-      self.gen_obj.graph.add(DT_LINK, self.name, ofile)
+          # target (a linked item) depends upon object
+          self.gen_obj.graph.add(DT_LINK, self.name, ofile)
 
     # collect all the paths where stuff might get built
     ### we should collect this from the dependency nodes rather than
     ### the sources. "what dir are you going to put yourself into?"
     self.gen_obj.target_dirs.append(self.path)
-    for pattern in string.split(self.sources):
+    for pattern in self.sources.split():
       dirname = build_path_dirname(pattern)
       if dirname:
         self.gen_obj.target_dirs.append(build_path_join(self.path, dirname))
@@ -424,7 +437,7 @@ class TargetExe(TargetLinked):
       if self.testing != 'skip':
         self.gen_obj.bdb_test_progs.append(self.filename)
 
-    self.gen_obj.manpages.extend(string.split(self.manpages))
+    self.gen_obj.manpages.extend(self.manpages.split())
 
 class TargetScript(Target):
   def add_dependencies(self):
@@ -451,7 +464,7 @@ class TargetLib(TargetLinked):
 
     self.msvc_static = options.get('msvc-static') == 'yes' # is a static lib
     self.msvc_fake = options.get('msvc-fake') == 'yes' # has fake target
-    self.msvc_export = string.split(options.get('msvc-export', ''))
+    self.msvc_export = options.get('msvc-export', '').split()
 
 class TargetApacheMod(TargetLib):
 
@@ -490,8 +503,7 @@ class TargetI18N(Target):
   def add_dependencies(self):
     self.gen_obj.graph.add(DT_INSTALL, self.install, self)
 
-    sources = _collect_paths(self.sources or '*.po', self.path)
-    sources.sort()
+    sources = sorted(_collect_paths(self.sources or '*.po', self.path))
 
     for src, reldir in sources:
       if src[-3:] == '.po':
@@ -518,7 +530,7 @@ class TargetSWIG(TargetLib):
     self.include_runtime = options.get('include-runtime') == 'yes'
 
     ### hmm. this is Makefile-specific
-    self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(lang_abbrev[lang])
+    self.link_cmd = '$(LINK_%s_WRAPPER)' % lang_abbrev[lang].upper()
 
   def add_dependencies(self):
     # Look in source directory for dependencies
@@ -533,7 +545,7 @@ class TargetSWIG(TargetLib):
 
     assert iname[-2:] == '.i'
     cname = iname[:-2] + '.c'
-    oname = iname[:-2] + self.gen_obj._extension_map['lib', 'object']
+    oname = iname[:-2] + self.gen_obj._extension_map['pyd', 'object']
 
     # Extract SWIG module name from .i file name
     module_name = iname[:4] != 'svn_' and iname[:-2] or iname[4:-2]
@@ -542,8 +554,9 @@ class TargetSWIG(TargetLib):
     if self.lang == "ruby":
       lib_filename = module_name + lib_extension
     elif self.lang == "perl":
-      lib_filename = '_' + string.capitalize(module_name) + lib_extension
+      lib_filename = '_' + module_name.capitalize() + lib_extension
     else:
+      lib_extension = self.gen_obj._extension_map['pyd', 'target']
       lib_filename = '_' + module_name + lib_extension
 
     self.name = self.lang + '_' + module_name
@@ -577,7 +590,7 @@ class TargetSWIG(TargetLib):
         self.targets[lang] = target
 
     def get_targets(self):
-      return self.targets.values()
+      return list(self.targets.values())
 
     def get_dep_targets(self, target):
       target = self.targets.get(target.lang, None)
@@ -613,7 +626,7 @@ class TargetJava(TargetLinked):
   def __init__(self, name, options, gen_obj):
     TargetLinked.__init__(self, name, options, gen_obj)
     self.link_cmd = options.get('link-cmd')
-    self.packages = string.split(options.get('package-roots', ''))
+    self.packages = options.get('package-roots', '').split()
     self.jar = options.get('jar')
     self.deps = [ ]
 
@@ -638,10 +651,10 @@ class TargetJavaHeaders(TargetJava):
 
       class_header = build_path_join(self.headers, class_name + '.h')
       class_header_win = build_path_join(self.headers,
-                                         string.replace(self.package,".", "_")
+                                         self.package.replace(".", "_")
                                          + "_" + class_name + '.h')
-      class_pkg_list = string.split(self.package, '.')
-      class_pkg = apply(build_path_join, class_pkg_list)
+      class_pkg_list = self.package.split('.')
+      class_pkg = build_path_join(*class_pkg_list)
       class_file = ObjectFile(build_path_join(self.classes, class_pkg,
                                               class_name + self.objext))
       class_file.source_generated = 1
@@ -663,7 +676,7 @@ class TargetJavaHeaders(TargetJava):
     self.gen_obj.target_dirs.append(self.path)
     self.gen_obj.target_dirs.append(self.classes)
     self.gen_obj.target_dirs.append(self.headers)
-    for pattern in string.split(self.sources):
+    for pattern in self.sources.split():
       dirname = build_path_dirname(pattern)
       if dirname:
         self.gen_obj.target_dirs.append(build_path_join(self.path, dirname))
@@ -693,9 +706,8 @@ class TargetJavaClasses(TargetJava):
         sourcedirs = dirs[:-1]  # Last element is the .class file name.
         while sourcedirs:
           if sourcedirs.pop() in self.packages:
-            sourcepath = apply(build_path_join, sourcedirs)
-            objname = apply(build_path_join,
-                            [self.classes] + dirs[len(sourcedirs):])
+            sourcepath = build_path_join(*sourcedirs)
+            objname = build_path_join(self.classes, *dirs[len(sourcedirs):])
             break
         else:
           raise GenError('Unable to find Java package root in path "%s"' % objname)
@@ -720,12 +732,30 @@ class TargetJavaClasses(TargetJava):
     ### the sources. "what dir are you going to put yourself into?"
     self.gen_obj.target_dirs.append(self.path)
     self.gen_obj.target_dirs.append(self.classes)
-    for pattern in string.split(self.sources):
+    for pattern in self.sources.split():
       dirname = build_path_dirname(pattern)
       if dirname:
         self.gen_obj.target_dirs.append(build_path_join(self.path, dirname))
 
     self.gen_obj.graph.add(DT_INSTALL, self.name, self)
+
+class TargetSQLHeader(Target):
+  def __init__(self, name, options, gen_obj):
+    Target.__init__(self, name, options, gen_obj)
+    self.sources = options.get('sources')
+
+  def add_dependencies(self):
+
+    sources = _collect_paths(self.sources, self.path)
+    assert len(sources) == 1  # support for just one source, for now
+
+    source, reldir = sources[0]
+    assert reldir == ''  # no support for reldir right now
+    assert source.endswith('.sql')
+
+    output = source[:-4] + '.h'
+
+    self.gen_obj.graph.add(DT_SQLHDR, output, source)
 
 
 _build_types = {
@@ -743,6 +773,7 @@ _build_types = {
   'javah' : TargetJavaHeaders,
   'java' : TargetJavaClasses,
   'i18n' : TargetI18N,
+  'sql-header' : TargetSQLHeader,
   }
 
 
@@ -759,26 +790,26 @@ class GenError(Exception):
 
 def native_path(path):
   """Convert a build path to a native path"""
-  return string.replace(path, '/', os.sep)
+  return path.replace('/', os.sep)
 
 def build_path(path):
   """Convert a native path to a build path"""
-  path = string.replace(path, os.sep, '/')
+  path = path.replace(os.sep, '/')
   if os.altsep:
-    path = string.replace(path, os.altsep, '/')
+    path = path.replace(os.altsep, '/')
   return path
 
 def build_path_join(*path_parts):
   """Join path components into a build path"""
-  return string.join(path_parts, '/')
+  return '/'.join(path_parts)
 
 def build_path_split(path):
   """Return list of components in a build path"""
-  return string.split(path, '/')
+  return path.split('/')
 
 def build_path_splitfile(path):
   """Return the filename and directory portions of a file path"""
-  pos = string.rfind(path, '/')
+  pos = path.rfind('/')
   if pos > 0:
     return path[:pos], path[pos+1:]
   elif pos == 0:
@@ -796,7 +827,7 @@ def build_path_basename(path):
 
 def build_path_retreat(path):
   "Given a relative directory, return ../ paths to retreat to the origin."
-  return ".." + "/.." * string.count(path, '/')
+  return ".." + "/.." * path.count('/')
 
 def build_path_strip(path, files):
   "Strip the given path from each file."
@@ -823,12 +854,12 @@ def _collect_paths(pats, path=None):
   glob pattern which matched the file before its last forward slash (/)
   """
   result = [ ]
-  for base_pat in string.split(pats):
+  for base_pat in pats.split():
     if path:
       pattern = build_path_join(path, base_pat)
     else:
       pattern = base_pat
-    files = glob.glob(native_path(pattern)) or [pattern]
+    files = sorted(glob.glob(native_path(pattern))) or [pattern]
 
     if path is None:
       # just append the names to the result list
@@ -920,11 +951,13 @@ class IncludeDependencyInfo:
                  self._domain["apr.swg"][0]: '%',
                  fname: '%' }
         for h in self._deps[fname].keys():
-          if _is_public_include(h):
+          if (_is_public_include(h)
+              or h == os.path.join('subversion', 'include', 'private',
+                                    'svn_debug.h')):
             hdrs[_swig_include_wrapper(h)] = '%'
           else:
-            raise RuntimeError, "Public include '%s' depends on '%s', " \
-                "which is not a public include! What's going on?" % (fname, h)
+            raise RuntimeError("Public include '%s' depends on '%s', " \
+                "which is not a public include! What's going on?" % (fname, h))
         swig_fname = _swig_include_wrapper(fname)
         swig_bname = os.path.basename(swig_fname)
         self._deps[swig_fname] = hdrs
@@ -932,7 +965,7 @@ class IncludeDependencyInfo:
       self._deps[fname] = {}
 
     # Keep recomputing closures until we see no more changes
-    while 1:
+    while True:
       changes = 0
       for fname in self._deps.keys():
         changes = self._include_closure(self._deps[fname]) or changes
@@ -943,7 +976,7 @@ class IncludeDependencyInfo:
     """Scan the C or SWIG file FNAME, and return the full paths of each
     include file that is a direct or indirect dependency, as a 2-tuple:
       (C_INCLUDES, SWIG_INCLUDES)."""
-    if self._deps.has_key(fname):
+    if fname in self._deps:
       hdrs = self._deps[fname]
     else:
       hdrs = self._scan_for_includes(fname)
@@ -975,7 +1008,7 @@ class IncludeDependencyInfo:
     HDRS is of the form { 'path/to/header.h': TYPECODE, }
 
     Return a boolean indicating whether any changes were made."""
-    items = hdrs.items()
+    items = list(hdrs.items())
     for this_hdr, this_type in items:
       for dependency_hdr, dependency_type in self._deps[this_hdr].items():
         self._upd_dep_hash(hdrs, dependency_hdr, dependency_type)
@@ -1104,7 +1137,7 @@ def unique(seq):
   list = [ ]
   dupes = { }
   for e in seq:
-    if not dupes.has_key(e):
+    if e not in dupes:
       dupes[e] = None
       list.append(e)
   return list

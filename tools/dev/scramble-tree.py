@@ -40,7 +40,12 @@ try:
 except AttributeError:
   my_getopt = getopt.getopt
 import random
-import md5
+try:
+  # Python >=2.5
+  from hashlib import md5 as hashlib_md5
+except ImportError:
+  # Python <2.5
+  from md5 import md5 as hashlib_md5
 import base64
 
 
@@ -95,13 +100,14 @@ class hashDir:
 
   def __init__(self, rootdir):
     self.allfiles = []
-    os.path.walk(rootdir, self.walker_callback, len(rootdir))
+    for dirpath, dirs, files in os.walk(rootdir):
+      self.walker_callback(len(rootdir), dirpath, dirs + files)
 
   def gen_seed(self):
     # Return a base64-encoded (kinda ... strip the '==\n' from the
     # end) MD5 hash of sorted tree listing.
     self.allfiles.sort()
-    return base64.encodestring(md5.md5(''.join(self.allfiles)).digest())[:-3]
+    return base64.encodestring(hashlib_md5(''.join(self.allfiles)).digest())[:-3]
 
   def walker_callback(self, baselen, dirname, fnames):
     if ((dirname == '.svn') or (dirname == 'CVS')):
@@ -116,7 +122,7 @@ class hashDir:
 class Scrambler:
   def __init__(self, seed, vc_actions, dry_run, quiet):
     if not quiet:
-      print 'SEED: ' + seed
+      print('SEED: ' + seed)
 
     self.rand = random.Random(seed)
     self.vc_actions = vc_actions
@@ -152,7 +158,7 @@ talented scramble-tree.py script.
   ### File Mungers
   def _mod_append_to_file(self, path):
     if not self.quiet:
-      print 'append_to_file:', path
+      print('append_to_file: %s' % path)
     if self.dry_run:
       return
     fh = open(path, "a")
@@ -161,7 +167,7 @@ talented scramble-tree.py script.
 
   def _mod_remove_from_file(self, path):
     if not self.quiet:
-      print 'remove_from_file:', path
+      print('remove_from_file: %s' % path)
     if self.dry_run:
       return
     lines = self.shrink_list(open(path, "r").readlines(), 5)
@@ -169,7 +175,7 @@ talented scramble-tree.py script.
 
   def _mod_delete_file(self, path):
     if not self.quiet:
-      print 'delete_file:', path
+      print('delete_file: %s' % path)
     if self.dry_run:
       return
     self.vc_actions.remove_file(path)
@@ -194,7 +200,7 @@ talented scramble-tree.py script.
       if op == "add":
         path = self._make_new_file(path)
         if not self.quiet:
-          print "add_file:", path
+          print("add_file: %s" % path)
         if self.dry_run:
           return
         self.vc_actions.add_file(path)
@@ -211,18 +217,18 @@ talented scramble-tree.py script.
 
 
 def usage(retcode=255):
-  print 'Usage: %s [OPTIONS] DIRECTORY' % (sys.argv[0])
-  print ''
-  print 'Options:'
-  print '    --help, -h  : Show this usage message.'
-  print '    --seed ARG  : Use seed ARG to scramble the tree.'
-  print '    --use-svn   : Use Subversion (as "svn") to perform file additions'
-  print '                  and removals.'
-  print '    --use-cvs   : Use CVS (as "cvs") to perform file additions'
-  print '                  and removals.'
-  print '    --dry-run   : Don\'t actually change the disk.'
-  print '    --limit N   : Limit the scrambling to a maximum of N operations.'
-  print '    --quiet, -q : Run in stealth mode!'
+  print('Usage: %s [OPTIONS] DIRECTORY' % (sys.argv[0]))
+  print('')
+  print('Options:')
+  print('    --help, -h  : Show this usage message.')
+  print('    --seed ARG  : Use seed ARG to scramble the tree.')
+  print('    --use-svn   : Use Subversion (as "svn") to perform file additions')
+  print('                  and removals.')
+  print('    --use-cvs   : Use CVS (as "cvs") to perform file additions')
+  print('                  and removals.')
+  print('    --dry-run   : Don\'t actually change the disk.')
+  print('    --limit N   : Limit the scrambling to a maximum of N operations.')
+  print('    --quiet, -q : Run in stealth mode!')
   sys.exit(retcode)
 
 
@@ -275,7 +281,8 @@ def main():
   if seed is None:
     seed = hashDir(rootdir).gen_seed()
   scrambler = Scrambler(seed, vc_actions, dry_run, quiet)
-  os.path.walk(rootdir, walker_callback, scrambler)
+  for dirpath, dirs, files in os.walk(rootdir):
+    walker_callback(scrambler, dirpath, dirs + files)
   scrambler.enact(limit)
 
 if __name__ == '__main__':

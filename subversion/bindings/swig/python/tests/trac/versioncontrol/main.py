@@ -235,8 +235,7 @@ class Authorizer(object):
 
     def assert_permission(self, path):
         if not self.has_permission(path):
-            raise PermissionDenied, \
-                  'Insufficient permissions to access %s' % path
+            raise PermissionDenied('Insufficient permissions to access %s' % path)
 
     def has_permission(self, path):
         return 1

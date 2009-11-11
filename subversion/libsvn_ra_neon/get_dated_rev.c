@@ -2,17 +2,22 @@
  * date_rev.c :  RA get-dated-revision API implementation
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -24,7 +29,6 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_strings.h>
-#include <apr_md5.h>
 #include <apr_xml.h>
 
 #include <ne_basic.h>
@@ -117,7 +121,7 @@ svn_error_t *svn_ra_neon__get_dated_revision(svn_ra_session_t *session,
 {
   svn_ra_neon__session_t *ras = session->priv;
   const char *body;
-  const char *vcc_url;
+  const char *report_target;
   svn_error_t *err;
   drev_baton_t *b = apr_palloc(pool, sizeof(*b));
 
@@ -125,9 +129,16 @@ svn_error_t *svn_ra_neon__get_dated_revision(svn_ra_session_t *session,
   b->cdata = NULL;
   b->revision = SVN_INVALID_REVNUM;
 
-  /* Run the 'dated-rev-report' on the VCC url, which is always
-     guaranteed to exist.   */
-  SVN_ERR(svn_ra_neon__get_vcc(&vcc_url, ras, ras->root.path, pool));
+  /* Got HTTP v2 support?  We'll report against the "me resource".
+     Otherwise, we'll use the VCC.  */
+  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
+    {
+      report_target = ras->me_resource;
+    }
+  else
+    {
+      SVN_ERR(svn_ra_neon__get_vcc(&report_target, ras, ras->root.path, pool));
+    }
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -138,7 +149,7 @@ svn_error_t *svn_ra_neon__get_dated_revision(svn_ra_session_t *session,
                       svn_time_to_cstring(timestamp, pool));
 
   err = svn_ra_neon__parsed_request(ras, "REPORT",
-                                    vcc_url, body, NULL, NULL,
+                                    report_target, body, NULL, NULL,
                                     drev_start_element,
                                     svn_ra_neon__xml_collect_cdata,
                                     drev_end_element,

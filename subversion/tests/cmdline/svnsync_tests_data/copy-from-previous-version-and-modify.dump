@@ -82,6 +82,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 14
 Text-content-md5: 9f089b639127e2f5a79c4eda189678d6
+Text-content-sha1: b1c2f43edab746cec4857f5d4b00579922a83d92
 Content-length: 24
 
 PROPS-END
@@ -112,6 +113,7 @@ Node-kind: file
 Node-action: change
 Text-content-length: 15
 Text-content-md5: 27f60b341727cb8ed1de139b0da7c173
+Text-content-sha1: b61e81f23c338df5c1dff26963f755d4226227c6
 Content-length: 15
 
 second version
@@ -142,8 +144,10 @@ Node-action: add
 Node-copyfrom-rev: 2
 Node-copyfrom-path: trunk/file.txt
 Text-copy-source-md5: 9f089b639127e2f5a79c4eda189678d6
+Text-copy-source-sha1: b1c2f43edab746cec4857f5d4b00579922a83d92
 Text-content-length: 28
 Text-content-md5: 7b4d0f5ac875af39d2ee3a67798f5754
+Text-content-sha1: 2040e27d431428a216382b42560dccaaa5e1b3b6
 Content-length: 28
 
 first version, but modified

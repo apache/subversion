@@ -6,19 +6,27 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2003 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
 import os.path
-import warnings
+import tempfile
 
 # Our testing module
 import svntest
@@ -32,7 +40,7 @@ Item = svntest.wc.StateItem
 #----------------------------------------------------------------------
 
 def svnversion_test(sbox):
-  "test 'svnversion' on wc and other dirs"
+  "test 'svnversion' on files and directories"
   sbox.build()
   wc_dir = sbox.wc_dir
   repo_url = sbox.repo_url
@@ -50,6 +58,11 @@ def svnversion_test(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.file_append(mu_path, 'appended mu text')
 
+  # Modified file
+  svntest.actions.run_and_verify_svnversion("Modified file",
+                                            mu_path, repo_url + '/A/mu',
+                                            [ "1M\n" ], [])
+
   # Text modified
   svntest.actions.run_and_verify_svnversion("Modified text", wc_dir, repo_url,
                                             [ "1M\n" ], [])
@@ -59,8 +72,7 @@ def svnversion_test(sbox):
   expected_status.tweak('A/mu', wc_rev=2)
   if svntest.actions.run_and_verify_commit(wc_dir,
                                            expected_output, expected_status,
-                                           None, None, None, None, None,
-                                           wc_dir):
+                                           None, wc_dir):
     raise svntest.Failure
 
   # Unmodified, mixed
@@ -104,20 +116,32 @@ def svnversion_test(sbox):
   os.mkdir(Q_path)
   svntest.actions.run_and_verify_svnversion("Exported subdirectory",
                                             Q_path, repo_url,
-                                            [ "exported\n" ], [])
+                                            [ "Unversioned directory\n" ], [])
 
   # Plain (exported) directory that is not a direct subdir of a versioned dir
   R_path = os.path.join(Q_path, 'Q')
   os.mkdir(R_path)
   svntest.actions.run_and_verify_svnversion("Exported directory",
                                             R_path, repo_url,
-                                            [ "exported\n" ], [])
+                                            [ "Unversioned directory\n" ], [])
 
-  # No directory generates an error
-  svntest.actions.run_and_verify_svnversion("None existent directory",
-                                            os.path.join(wc_dir, 'Q', 'X'),
-                                            repo_url,
-                                            None, svntest.verify.AnyOutput)
+  # Switched file
+  svntest.actions.run_and_verify_svnversion("Switched file",
+                                            iota_path, repo_url + '/iota',
+                                            [ "2S\n" ], [])
+
+  # Unversioned file
+  kappa_path = os.path.join(wc_dir, 'kappa')
+  svntest.main.file_write(kappa_path, "This is the file 'kappa'.")
+  svntest.actions.run_and_verify_svnversion("Unversioned file",
+                                            kappa_path, repo_url,
+                                            [ "Unversioned file\n" ], [])
+
+  # Nonexistent file or directory
+  X_path = os.path.join(wc_dir, 'Q', 'X')
+  svntest.actions.run_and_verify_svnversion("Nonexistent file or directory",
+                                            X_path, repo_url,
+                                            None, [ "'%s' doesn't exist\n" % X_path ])
 
   # Perform a sparse checkout of under the existing WC, and confirm that
   # svnversion detects it as a "partial" WC.
@@ -151,11 +175,12 @@ def ignore_externals(sbox):
   # Set up an external item
   C_path = os.path.join(wc_dir, "A", "C")
   externals_desc = "ext -r 1 " + repo_url + "/A/D/G" + "\n"
-  tmp_f = os.tempnam(wc_dir, 'tmp')
+  (fd, tmp_f) = tempfile.mkstemp(dir=wc_dir)
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset',
                                      '-F', tmp_f, 'svn:externals', C_path)
+  os.close(fd)
   os.remove(tmp_f)
   expected_output = svntest.wc.State(wc_dir, {
    'A/C' : Item(verb='Sending'),
@@ -165,20 +190,15 @@ def ignore_externals(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                       wc_dir)
+                                        None, wc_dir)
 
   # Update to get it on disk
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   ext_path = os.path.join(C_path, 'ext')
-  out, err = svntest.actions.run_and_verify_svn(None,
-                                                svntest.verify.AnyOutput, [],
-                                                'info', ext_path)
-  for line in out:
-    if line.find('Revision: 1') != -1:
-      break
-  else:
-    raise svntest.Failure
+  expected_infos = [
+      { 'Revision' : '^1$' },
+    ]
+  svntest.actions.run_and_verify_info(expected_infos, ext_path)
 
   svntest.actions.run_and_verify_svnversion("working copy with svn:externals",
                                             wc_dir, repo_url,
@@ -195,7 +215,6 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  warnings.filterwarnings('ignore', 'tempnam', RuntimeWarning)
   svntest.main.run_tests(test_list)
   # NOTREACHED
 

@@ -2,17 +2,22 @@
  * status.c:  the command-line's portion of the "svn status" command
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -23,11 +28,12 @@
 /*** Includes. ***/
 #include "svn_cmdline.h"
 #include "svn_wc.h"
-#include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "cl.h"
 #include "svn_private_config.h"
+#include "tree-conflicts.h"
 
 /* Return the single character representation of STATUS */
 static char
@@ -53,6 +59,18 @@ generate_status_code(enum svn_wc_status_kind status)
     }
 }
 
+/* Return the single character representation of the switched column
+   status. */
+static char
+generate_switch_column_code(const svn_wc_status2_t *status)
+{
+  if (status->switched)
+    return 'S';
+  else if (status->file_external)
+    return 'X';
+  else
+    return ' ';
+}
 
 /* Return the detailed string representation of STATUS */
 static const char *
@@ -76,7 +94,6 @@ generate_status_desc(enum svn_wc_status_kind status)
     case svn_wc_status_unversioned: return "unversioned";
     default:                        abort();
     }
-  return NULL;
 }
 
 
@@ -87,9 +104,26 @@ print_status(const char *path,
              svn_boolean_t detailed,
              svn_boolean_t show_last_committed,
              svn_boolean_t repos_locks,
-             svn_wc_status2_t *status,
+             const svn_wc_status2_t *status,
              apr_pool_t *pool)
 {
+  enum svn_wc_status_kind text_status = status->text_status;
+  char tree_status_code = ' ';
+  const char *tree_desc_line = "";
+
+  /* To indicate this node is the victim of a tree conflict, we show
+     'C' in the tree-conflict column, overriding any other status.
+     We also print a separate line describing the nature of the tree
+     conflict. */
+  if (status->tree_conflict)
+    {
+      const char *desc;
+      tree_status_code = 'C';
+      svn_cl__get_human_readable_tree_conflict_description(
+        &desc, status->tree_conflict, pool);
+      tree_desc_line = apr_psprintf(pool, "\n      >   %s", desc);
+    }
+
   if (detailed)
     {
       char ood_status, lock_status;
@@ -154,53 +188,57 @@ print_status(const char *path,
 
           SVN_ERR
             (svn_cmdline_printf(pool,
-                                "%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n",
-                                generate_status_code(status->text_status),
+                                "%c%c%c%c%c%c%c %c   %6s   %6s %-12s %s%s\n",
+                                generate_status_code(text_status),
                                 generate_status_code(status->prop_status),
                                 status->locked ? 'L' : ' ',
                                 status->copied ? '+' : ' ',
-                                status->switched ? 'S' : ' ',
+                                generate_switch_column_code(status),
                                 lock_status,
+                                tree_status_code,
                                 ood_status,
                                 working_rev,
                                 commit_rev,
                                 commit_author,
-                                path));
+                                path,
+                                tree_desc_line));
         }
       else
         SVN_ERR
-          (svn_cmdline_printf(pool, "%c%c%c%c%c%c %c   %6s   %s\n",
-                              generate_status_code(status->text_status),
+          (svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %c   %6s   %s%s\n",
+                              generate_status_code(text_status),
                               generate_status_code(status->prop_status),
                               status->locked ? 'L' : ' ',
                               status->copied ? '+' : ' ',
-                              status->switched ? 'S' : ' ',
+                              generate_switch_column_code(status),
                               lock_status,
+                              tree_status_code,
                               ood_status,
                               working_rev,
-                              path));
+                              path,
+                              tree_desc_line));
     }
   else
     SVN_ERR
-      (svn_cmdline_printf(pool, "%c%c%c%c%c%c %s\n",
-                          generate_status_code(status->text_status),
+      (svn_cmdline_printf(pool, "%c%c%c%c%c%c%c %s%s\n",
+                          generate_status_code(text_status),
                           generate_status_code(status->prop_status),
                           status->locked ? 'L' : ' ',
                           status->copied ? '+' : ' ',
-                          status->switched ? 'S' : ' ',
+                          generate_switch_column_code(status),
                           ((status->entry && status->entry->lock_token)
                            ? 'K' : ' '),
-                          path));
+                          tree_status_code,
+                          path,
+                          tree_desc_line));
 
-  SVN_ERR(svn_cmdline_fflush(stdout));
-
-  return SVN_NO_ERROR;
+  return svn_cmdline_fflush(stdout);
 }
 
 
 svn_error_t *
 svn_cl__print_status_xml(const char *path,
-                         svn_wc_status2_t *status,
+                         const svn_wc_status2_t *status,
                          apr_pool_t *pool)
 {
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
@@ -211,7 +249,7 @@ svn_cl__print_status_xml(const char *path,
     return SVN_NO_ERROR;
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
-                        "path", svn_path_local_style(path, pool), NULL);
+                        "path", svn_dirent_local_style(path, pool), NULL);
 
   att_hash = apr_hash_make(pool);
   apr_hash_set(att_hash, "item", APR_HASH_KEY_STRING,
@@ -224,9 +262,14 @@ svn_cl__print_status_xml(const char *path,
     apr_hash_set(att_hash, "copied", APR_HASH_KEY_STRING, "true");
   if (status->switched)
     apr_hash_set(att_hash, "switched", APR_HASH_KEY_STRING, "true");
+  if (status->file_external)
+    apr_hash_set(att_hash, "file-external", APR_HASH_KEY_STRING, "true");
   if (status->entry && ! status->entry->copied)
     apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
                  apr_psprintf(pool, "%ld", status->entry->revision));
+  if (status->tree_conflict)
+    apr_hash_set(att_hash, "tree-conflicted", APR_HASH_KEY_STRING,
+                 "true");
   svn_xml_make_open_tag_hash(&sb, pool, svn_xml_normal, "wc-status",
                              att_hash);
 
@@ -252,7 +295,7 @@ svn_cl__print_status_xml(const char *path,
       else
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("'%s' has lock token, but no lock owner"),
-                                 svn_path_local_style(path, pool));
+                                 svn_dirent_local_style(path, pool));
 
       svn_cl__xml_tagged_cdata(&sb, pool, "comment",
                                status->entry->lock_comment);
@@ -315,7 +358,7 @@ svn_cl__print_status_xml(const char *path,
 /* Called by status-cmd.c */
 svn_error_t *
 svn_cl__print_status(const char *path,
-                     svn_wc_status2_t *status,
+                     const svn_wc_status2_t *status,
                      svn_boolean_t detailed,
                      svn_boolean_t show_last_committed,
                      svn_boolean_t skip_unrecognized,
@@ -323,12 +366,12 @@ svn_cl__print_status(const char *path,
                      apr_pool_t *pool)
 {
   if (! status
-      || (skip_unrecognized && ! status->entry)
+      || (skip_unrecognized && !(status->entry || status->tree_conflict))
       || (status->text_status == svn_wc_status_none
           && status->repos_text_status == svn_wc_status_none))
     return SVN_NO_ERROR;
 
-  return print_status(svn_path_local_style(path, pool),
+  return print_status(svn_dirent_local_style(path, pool),
                       detailed, show_last_committed, repos_locks, status,
                       pool);
 }

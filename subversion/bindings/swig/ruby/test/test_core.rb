@@ -628,9 +628,8 @@ EOM
     assert_raises(Svn::Error::BadFilename) do
       Svn::Core::MimeType.detect(nonexistent_html_file)
     end
-    assert_raises(Svn::Error::BadFilename) do
-      Svn::Core::MimeType.detect(nonexistent_html_file, type_map)
-    end
+    assert_equal("text/html",
+                 Svn::Core::MimeType.detect(nonexistent_html_file, type_map))
 
     empty_html_file = File.join(@tmp_path, "empty.html")
     FileUtils.touch(empty_html_file)
@@ -824,8 +823,20 @@ EOM
   def test_range_list_to_s
     range_list = Svn::Core::RangeList.new([5, 5, true],
                                           [7, 7, true], [9, 13, true])
-    assert_equal("6-5,8-7,10-13", range_list.to_s)
-    assert_not_equal("6-5,8-7,10-13", range_list.inspect)
+    expectation = "5-6,7-8,10-13"
+    assert_equal(expectation, range_list.to_s)
+    assert_not_equal(expectation, range_list.inspect)
+  end
+
+  def test_mergerange_equality
+    mergerange1 = Svn::Core::MergeRange.new(1,2,true)
+    mergerange2 = Svn::Core::MergeRange.new(1,2,true)
+    mergerange3 = Svn::Core::MergeRange.new(1,2,false)
+    mergerange4 = Svn::Core::MergeRange.new(1,4,true)
+
+    assert_equal(mergerange1, mergerange2)
+    assert_not_equal(mergerange1, mergerange3)
+    assert_not_equal(mergerange1, mergerange4)
   end
 
   private

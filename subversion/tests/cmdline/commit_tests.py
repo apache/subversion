@@ -6,21 +6,30 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
-import string, sys, os, re
+import sys, os, re
 
 # Our testing module
 import svntest
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -28,7 +37,8 @@ SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-from svntest.main import server_has_revprop_commit
+from svntest.main import server_has_revprop_commit, \
+    server_gets_client_capabilities
 from svntest.actions import inject_conflict_into_wc
 
 ######################################################################
@@ -156,8 +166,6 @@ def commit_one_file(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         omega_path)
 
 
@@ -184,8 +192,6 @@ def commit_one_new_file(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         gloo_path)
 
 
@@ -214,8 +220,6 @@ def commit_one_new_binary_file(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         gloo_path)
 
 
@@ -270,8 +274,6 @@ def commit_multiple_targets(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         psi_path, AB_path, pi_path)
 
 #----------------------------------------------------------------------
@@ -328,8 +330,6 @@ def commit_multiple_targets_2(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         psi_path, AB_path,
                                         omega_path, pi_path)
 
@@ -366,8 +366,6 @@ def commit_inclusive_dir(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         D_path)
 
 #----------------------------------------------------------------------
@@ -410,8 +408,6 @@ def commit_top_dir(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 #----------------------------------------------------------------------
@@ -444,8 +440,6 @@ def commit_unversioned_thing(sbox):
                                         None,
                                         None,
                                         "is not under version control",
-                                        None, None,
-                                        None, None,
                                         os.path.join(wc_dir,'blorg'))
 
 #----------------------------------------------------------------------
@@ -513,8 +507,6 @@ def nested_dir_replacements(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 #----------------------------------------------------------------------
@@ -547,8 +539,7 @@ def hudson_part_1(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Now gamma should be marked as `deleted' under the hood.  When we
   # update, we should no output, and a perfect, virginal status list
@@ -599,8 +590,7 @@ def hudson_part_1_variation_1(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Now H should be marked as `deleted' under the hood.  When we
   # update, we should no see output, and a perfect, virginal status
@@ -651,8 +641,7 @@ def hudson_part_1_variation_2(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Now gamma should be marked as `deleted' under the hood.
   # Go ahead and re-add gamma, so that is *also* scheduled for addition.
@@ -678,8 +667,7 @@ def hudson_part_1_variation_2(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 
 #----------------------------------------------------------------------
@@ -713,8 +701,7 @@ def hudson_part_2(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Now gamma should be marked as `deleted' under the hood, at
   # revision 2.  Meanwhile, A/D is still lagging at revision 1.
@@ -727,8 +714,6 @@ def hudson_part_2(sbox):
                                         None,
                                         None,
                                         "[Oo]ut.of.date",
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 #----------------------------------------------------------------------
@@ -781,8 +766,7 @@ def hudson_part_2_1(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Now, assuming all three files in H are marked as 'deleted', an
   # update of H should print absolutely nothing.
@@ -900,8 +884,7 @@ def merge_mixed_revisions(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 
   # 2. svn up A/D/H
@@ -936,8 +919,7 @@ def merge_mixed_revisions(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 
   # 4. echo "moo" >> A/D/H/chi; svn ci A/D/H/chi
@@ -952,8 +934,7 @@ def merge_mixed_revisions(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # 5. echo "moo" >> iota; svn ci iota
   svntest.main.file_append(iota_path, "moomoo")
@@ -967,8 +948,7 @@ def merge_mixed_revisions(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # At this point, here is what our tree should look like:
   # _    1       (     5)  working_copies/commit_tests-10
@@ -1010,8 +990,7 @@ def merge_mixed_revisions(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -1089,8 +1068,7 @@ def commit_uri_unsafe(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 
 #----------------------------------------------------------------------
@@ -1127,8 +1105,7 @@ def commit_deleted_edited(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -1150,8 +1127,6 @@ def commit_in_dir_scheduled_for_addition(sbox):
                                         None,
                                         None,
                                         "unversioned",
-                                        None, None,
-                                        None, None,
                                         mu_path)
 
   Q_path = os.path.join(wc_dir, 'Q')
@@ -1167,8 +1142,6 @@ def commit_in_dir_scheduled_for_addition(sbox):
                                         None,
                                         None,
                                         "not under version control",
-                                        None, None,
-                                        None, None,
                                         bloo_path)
 
 #----------------------------------------------------------------------
@@ -1219,8 +1192,6 @@ def commit_add_file_twice(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Update to state before commit
@@ -1235,8 +1206,6 @@ def commit_add_file_twice(sbox):
                                         None,
                                         None,
                                         "already exists",
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 #----------------------------------------------------------------------
@@ -1275,8 +1244,6 @@ def commit_from_long_dir(sbox):
                                         expected_output,
                                         None,
                                         None,
-                                        None, None,
-                                        None, None,
                                         abs_wc_dir)
 
 #----------------------------------------------------------------------
@@ -1298,8 +1265,6 @@ def commit_with_lock(sbox):
                                         None,
                                         None,
                                         'svn: Working copy \'.*\' locked',
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # unlock directory
@@ -1317,8 +1282,6 @@ def commit_with_lock(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 #----------------------------------------------------------------------
@@ -1345,8 +1308,6 @@ def commit_current_dir(sbox):
                                         expected_output,
                                         None,
                                         None,
-                                        None, None,
-                                        None, None,
                                         '.')
   os.chdir(was_cwd)
 
@@ -1387,7 +1348,8 @@ def failed_commit(sbox):
                                      'commit', '-m', 'log', other_wc_dir)
 
   # Now list the txns in the repo. The list should be empty.
-  output, errput = svntest.main.run_svnadmin('lstxns', sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin('lstxns',
+                                                        sbox.repo_dir)
   svntest.verify.compare_and_display_lines(
     "Error running 'svnadmin lstxns'.",
     'STDERR', [], errput)
@@ -1397,13 +1359,13 @@ def failed_commit(sbox):
 
 #----------------------------------------------------------------------
 
-# Commit from multiple working copies is not yet supported.  At
-# present an error is generated and none of the working copies change.
-# Related to issue 959, this test here doesn't use svn:externals but the
-# behaviour needs to be considered.
+# Commit from multiple working copies is being worked on as issue #2381.
+# Also related to issue #959, this test here doesn't use svn:externals
+# but the behaviour needs to be considered.
+# In this test two WCs are nested, one WC is child of the other.
 
-def commit_multiple_wc(sbox):
-  "attempted commit from multiple wc fails"
+def commit_multiple_wc_nested(sbox):
+  "commit from two nested working copies"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1430,16 +1392,120 @@ def commit_multiple_wc(sbox):
   expected_status2.tweak('A/B/lambda', status='M ')
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
-  # Commit should fail, even though one target is a "child" of the other.
-  svntest.actions.run_and_verify_svn("Unexpectedly not locked",
-                                     None, svntest.verify.AnyOutput,
+  # Commit should succeed, even though one target is a "child" of the other.
+  svntest.actions.run_and_verify_svn("Ouput on stderr where none expected",
+                                     svntest.verify.AnyOutput, [],
                                      'commit', '-m', 'log',
                                      wc_dir, wc2_dir)
 
-  # Verify status unchanged
+  # Verify status changed
+  expected_status.tweak('A/mu', status='  ', wc_rev=2)
+  expected_status2.tweak('A/B/lambda', status='  ', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
+# Same as commit_multiple_wc_nested except that the two WCs are not nested.
+def commit_multiple_wc(sbox):
+  "commit from two working copies"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Cleanup original wc
+  svntest.sandbox._cleanup_test_path(wc_dir)
+
+  # Checkout two wcs
+  wc1_dir = os.path.join(wc_dir, 'wc1')
+  wc2_dir = os.path.join(wc_dir, 'wc2')
+  url = sbox.repo_url
+  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
+                                     svntest.verify.AnyOutput, [],
+                                     'checkout',
+                                     url, wc1_dir)
+  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
+                                     svntest.verify.AnyOutput, [],
+                                     'checkout',
+                                     url, wc2_dir)
+
+  # Modify both working copies
+  mu1_path = os.path.join(wc1_dir, 'A', 'mu')
+  svntest.main.file_append(mu1_path, 'appended mu1 text')
+  lambda2_path = os.path.join(wc2_dir, 'A', 'B', 'lambda')
+  svntest.main.file_append(lambda2_path, 'appended lambda2 text')
+
+  # Verify modified status
+  expected_status1 = svntest.actions.get_virginal_state(wc1_dir, 1)
+  expected_status1.tweak('A/mu', status='M ')
+  svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
+  expected_status2 = svntest.actions.get_virginal_state(wc2_dir, 1)
+  expected_status2.tweak('A/B/lambda', status='M ')
+  svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
+
+  # Commit should succeed.
+  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
+                                     svntest.verify.AnyOutput, [],
+                                     'commit', '-m', 'log',
+                                     wc1_dir, wc2_dir)
+
+  # Verify status changed
+  expected_status1.tweak('A/mu', status='  ', wc_rev=2)
+  expected_status2.tweak('A/B/lambda', status='  ', wc_rev=2)
+  svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
+  svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
+
+# Same as commit_multiple_wc except that the two WCs come
+# from different repositories. Commits to multiple repositories
+# are outside the scope of issue #2381.
+def commit_multiple_wc_multiple_repos(sbox):
+  "committing two WCs from different repos fails"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create another repository
+  repo2, url2 = sbox.add_repo_path("repo2")
+  svntest.main.copy_repos(sbox.repo_dir, repo2, 1, 1)
+
+  # Cleanup original wc
+  svntest.sandbox._cleanup_test_path(wc_dir)
+
+  # Checkout two wcs
+  wc1_dir = os.path.join(wc_dir, 'wc1')
+  wc2_dir = os.path.join(wc_dir, 'wc2')
+  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
+                                     svntest.verify.AnyOutput, [],
+                                     'checkout',
+                                     sbox.repo_url, wc1_dir)
+  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
+                                     svntest.verify.AnyOutput, [],
+                                     'checkout',
+                                     url2, wc2_dir)
+
+  # Modify both working copies
+  mu1_path = os.path.join(wc1_dir, 'A', 'mu')
+  svntest.main.file_append(mu1_path, 'appended mu1 text')
+  lambda2_path = os.path.join(wc2_dir, 'A', 'B', 'lambda')
+  svntest.main.file_append(lambda2_path, 'appended lambda2 text')
+
+  # Verify modified status
+  expected_status1 = svntest.actions.get_virginal_state(wc1_dir, 1)
+  expected_status1.tweak('A/mu', status='M ')
+  svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
+  expected_status2 = svntest.actions.get_virginal_state(wc2_dir, 1)
+  expected_status2.tweak('A/B/lambda', status='M ')
+  svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
+
+  # Commit should fail, since WCs come from different repositories.
+  svntest.actions.run_and_verify_svn("Expected output on stderr doesn't match",
+                                     [], ".*is not a working copy.*",
+                                     'commit', '-m', 'log',
+                                     wc1_dir, wc2_dir)
+
+  # Verify status unchanged
+  svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
+  svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
+
+#----------------------------------------------------------------------
 
 def commit_nonrecursive(sbox):
   "commit named targets with -N (issues #1195, #1239)"
@@ -1522,8 +1588,6 @@ def commit_nonrecursive(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         '-N',
                                         os.path.join(wc_dir, file1_path),
                                         os.path.join(wc_dir, dir1_path),
@@ -1582,17 +1646,14 @@ def commit_nonrecursive(sbox):
   ### commit to behave differently from other commands taking -N.
   ###
   ### These days, -N should be equivalent to --depth=files in almost
-  ### all cases.  There are some exceptions (e.g., status), but commit
-  ### is not an exception.  Thus, the above recipe is now incorrect,
-  ### because "wc/dirA/dirB" was given as an explicit target, and
-  ### therefore the file "wc/dirA/dirB/nocommit" *should* have been
-  ### committed after all, since it's a file child of a named target
-  ### and -N means --depth=files.
+  ### all cases.  There are some exceptions (e.g., status), and commit
+  ### is one of them: 'commit -N' means 'commit --depth=empty'.
   ###
-  ### So we really need two tests: one for commit -N (--depth=files),
-  ### and another for --depth=empty.  I've changed this test to cover
-  ### the -N case, and added 'commit_propmods_with_depth_empty' to
-  ### depth_tests.py to cover the --depth=empty case.
+  ### The original implementation, as well as this test, mistakenly
+  ### mapped 'commit -N' to 'commit --depth=files'; that was a bug that
+  ### made 'svn ci -N' incompatible with 1.4 and earlier versions.
+  ###
+  ### See also 'commit_propmods_with_depth_empty' in depth_tests.py .
 
   # Now add these directories and files, except the last:
   dirA_path  = 'dirA'
@@ -1612,19 +1673,19 @@ def commit_nonrecursive(sbox):
 
   # Add them to version control.
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
-                                     'add', '--depth=empty',
+                                     'add', '-N',
                                      os.path.join(wc_dir, dirA_path),
                                      os.path.join(wc_dir, fileA_path),
-                                     os.path.join(wc_dir, fileB_path),
+                                     # don't add fileB
                                      os.path.join(wc_dir, dirB_path),
                                      os.path.join(wc_dir, nope_1_path),
-                                     os.path.join(wc_dir, nope_2_path))
+                                     # don't add nope_2
+                                     )
 
   expected_output = svntest.wc.State(
     wc_dir,
     { dirA_path  : Item(verb='Adding'),
-      fileA_path : Item(verb='Adding'),
-      fileB_path : Item(verb='Adding'),
+      # no children!
       }
     )
 
@@ -1643,81 +1704,116 @@ def commit_nonrecursive(sbox):
   # Expect some commits and some non-commits from this part of the test.
   expected_status.add({
     dirA_path     : Item(status='  ', wc_rev=3),
-    fileA_path    : Item(status='  ', wc_rev=3),
-    fileB_path    : Item(status='  ', wc_rev=3),
+    fileA_path    : Item(status='A ', wc_rev=0),
+    # no fileB
     dirB_path     : Item(status='A ', wc_rev=0),
     nope_1_path   : Item(status='A ', wc_rev=0),
-    nope_2_path   : Item(status='A ', wc_rev=0)
+    # no nope_2
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         '-N', os.path.join(wc_dir, dirA_path))
 
 #----------------------------------------------------------------------
 # Regression for #1017: ra_neon was allowing the deletion of out-of-date
 # files or dirs, which majorly violates Subversion's semantics.
-
+# An out-of-date error should be raised if the object to be committed has
+# already been deleted or modified in the repo.
 
 def commit_out_of_date_deletions(sbox):
   "commit deletion of out-of-date file or dir"
 
+  # Path           WC 1    WC backup
+  # ===========    ====    =========
+  # A/C            pset    del
+  # A/I            del     pset
+  # A/B/F          del     del
+  # A/D/H/omega    text    del
+  # A/B/E/alpha    pset    del
+  # A/D/H/chi      del     text
+  # A/B/E/beta     del     pset
+  # A/D/H/psi      del     del
+
   sbox.build()
   wc_dir = sbox.wc_dir
+
+  # Need another empty dir
+  I_path = os.path.join(wc_dir, 'A', 'I')
+  os.mkdir(I_path)
+  svntest.main.run_svn(None, 'add', I_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'prep', wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
 
   # Make a backup copy of the working copy
   wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
-  # Change omega's text, and make a propchange to A/C directory
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  # Edits in wc 1
   C_path = os.path.join(wc_dir, 'A', 'C')
-  svntest.main.file_append(omega_path, 'appended omega text')
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
   svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', C_path)
+  svntest.main.file_append(omega_path, 'appended omega text')
+  svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', alpha_path)
 
-  # Commit revision 2.
+  # Deletions in wc 1
+  I_path = os.path.join(wc_dir, 'A', 'I')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
+  beta_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
+  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  svntest.main.run_svn(None, 'rm', I_path, F_path, chi_path, beta_path,
+                       psi_path)
+
+  # Commit in wc 1
   expected_output = svntest.wc.State(wc_dir, {
-    'A/D/H/omega' : Item(verb='Sending'),
-    'A/C' : Item(verb='Sending'),
-    })
-  expected_status =  svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/D/H/omega', 'A/C', wc_rev=2, status='  ')
+      'A/C' : Item(verb='Sending'),
+      'A/I' : Item(verb='Deleting'),
+      'A/B/F' : Item(verb='Deleting'),
+      'A/D/H/omega' : Item(verb='Sending'),
+      'A/B/E/alpha' : Item(verb='Sending'),
+      'A/D/H/chi' : Item(verb='Deleting'),
+      'A/B/E/beta' : Item(verb='Deleting'),
+      'A/D/H/psi' : Item(verb='Deleting'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/C', 'A/D/H/omega', 'A/B/E/alpha', wc_rev=3,
+                        status='  ')
+  expected_status.remove('A/B/F', 'A/D/H/chi', 'A/B/E/beta', 'A/D/H/psi')
+  commit = svntest.actions.run_and_verify_commit
+  commit(wc_dir, expected_output, expected_status, None, wc_dir)
 
-  svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None,
-                                        None, None,
-                                        None, None,
-                                        wc_dir)
+  # Edits in wc backup
+  I_path = os.path.join(wc_backup, 'A', 'I')
+  chi_path = os.path.join(wc_backup, 'A', 'D', 'H', 'chi')
+  beta_path = os.path.join(wc_backup, 'A', 'B', 'E','beta')
+  svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', I_path)
+  svntest.main.file_append(chi_path, 'appended chi text')
+  svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', beta_path)
 
-  # Now, in the second working copy, schedule both omega and C for deletion.
-  omega_path = os.path.join(wc_backup, 'A', 'D', 'H', 'omega')
+  # Deletions in wc backup
   C_path = os.path.join(wc_backup, 'A', 'C')
-  svntest.main.run_svn(None, 'rm', omega_path, C_path)
+  F_path = os.path.join(wc_backup, 'A', 'B', 'F')
+  omega_path = os.path.join(wc_backup, 'A', 'D', 'H', 'omega')
+  alpha_path = os.path.join(wc_backup, 'A', 'B', 'E', 'alpha')
+  psi_path = os.path.join(wc_backup, 'A', 'D', 'H', 'psi')
+  svntest.main.run_svn(None, 'rm', C_path, F_path, omega_path, alpha_path,
+                       psi_path)
 
-  # Attempt to delete omega.  This should return an (expected)
-  # out-of-dateness error.
-  outlines, errlines = svntest.main.run_svn(1, 'commit', '-m', 'blah',
-                                            omega_path)
-  for line in errlines:
-    if re.match(".*[Oo]ut.of.date.*", line):
-      break
-  else:
-    raise svntest.Failure
-
-  # Attempt to delete directory C.  This should return an (expected)
-  # out-of-dateness error.
-  outlines, errlines = svntest.main.run_svn(1, 'commit', '-m', 'blah', C_path)
-  for line in errlines:
-    if re.match(".*[Oo]ut.of.date.*", line):
-      break
-  else:
-    raise svntest.Failure
+  # A commit of any one of these files or dirs should fail, preferably
+  # with an out-of-date error message.
+  error_re = "(out of date|not found)"
+  commit(wc_backup, None, None, error_re, C_path)
+  commit(wc_backup, None, None, error_re, I_path)
+  commit(wc_backup, None, None, error_re, F_path)
+  commit(wc_backup, None, None, error_re, omega_path)
+  commit(wc_backup, None, None, error_re, alpha_path)
+  commit(wc_backup, None, None, error_re, chi_path)
+  commit(wc_backup, None, None, error_re, beta_path)
+  commit(wc_backup, None, None, error_re, psi_path)
 
 def commit_with_bad_log_message(sbox):
   "commit with a log message containing bad data"
@@ -1738,9 +1834,61 @@ def commit_with_bad_log_message(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None, None,
                                         "contains a zero byte",
-                                        None, None,
-                                        None, None,
                                         '-F', log_msg_path,
+                                        iota_path)
+
+def commit_with_mixed_line_endings(sbox):
+  "commit with log message with mixed EOL"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  expected_status = make_standard_slew_of_changes(wc_dir)
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  log_msg_path = os.path.join(wc_dir, 'log-message')
+
+  # Make a random change, so there's something to commit.
+  svntest.main.file_append(iota_path, 'kebab')
+
+  # Create a log message containing a zero-byte.
+  svntest.main.file_append(log_msg_path, "test\nthis\n\rcase\r\n--This line, and those below, will be ignored--\n")
+
+  # Commit and expect an error.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None, None,
+                                        "Error normalizing log message to internal format",
+                                        '-F', log_msg_path,
+                                        iota_path)
+
+def commit_with_mixed_line_endings_in_ignored_part(sbox):
+  "commit with log message with mixed EOL in tail"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  expected_status = make_standard_slew_of_changes(wc_dir)
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  log_msg_path = os.path.join(wc_dir, 'log-message')
+
+  # Make a random change, so there's something to commit.
+  svntest.main.file_append(iota_path, 'cheeseburger')
+
+  # Create a log message containing a zero-byte.
+  svntest.main.file_append(log_msg_path, "test\n--This line, and those below, will be ignored--\nfoo\r\nbar\nbaz\n\r")
+
+  # Create expected state.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+  expected_status.tweak('iota', wc_rev=2, status='  ')
+
+  # Commit the one file.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
                                         iota_path)
 
 def from_wc_top_with_bad_editor(sbox):
@@ -1773,15 +1921,15 @@ def from_wc_top_with_bad_editor(sbox):
                                      svntest.verify.AnyOutput, [],
                                      'pset', 'fish', 'food', wc_dir)
   os.chdir(wc_dir)
-  out, err = svntest.actions.run_and_verify_svn(
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
     "Commit succeeded when should have failed.",
     None, svntest.verify.AnyOutput,
     'ci', '--editor-cmd', 'no_such-editor')
 
-  err = string.join(map(string.strip, err), ' ')
+  err = " ".join([x.strip() for x in err])
   if not (re.match(".*no_such-editor.*", err)
           and re.match(".*Commit failed.*", err)):
-    print "Commit failed, but not in the way expected."
+    print("Commit failed, but not in the way expected.")
     raise svntest.Failure
 
 
@@ -1807,7 +1955,7 @@ def mods_in_schedule_delete(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None, wc_dir)
+                                        None, wc_dir)
 
   # Unversioned file still exists
   actual_contents = svntest.main.file_read(foo_path)
@@ -1841,29 +1989,29 @@ def tab_test(sbox):
       raise svntest.Failure("Failed to find match_re in " + str(errlines))
 
   # add file to wc
-  outlines, errlines = svntest.main.run_svn(1, 'add', tab_file)
+  exit_code, outlines, errlines = svntest.main.run_svn(1, 'add', tab_file)
   match_bad_tab_path(tab_file, errlines)
 
   # add dir to wc
-  outlines, errlines = svntest.main.run_svn(1, 'add', tab_dir)
+  exit_code, outlines, errlines = svntest.main.run_svn(1, 'add', tab_dir)
   match_bad_tab_path(tab_dir, errlines)
 
   # mkdir URL
-  outlines, errlines = svntest.main.run_svn(1,
-                                            'mkdir', '-m', 'msg', tab_url)
+  exit_code, outlines, errlines = svntest.main.run_svn(1, 'mkdir',
+                                                       '-m', 'msg', tab_url)
   match_bad_tab_path(tab_dir, errlines)
 
   # copy URL
   svntest.main.run_svn(1,
                        'mkdir', '-m', 'msg', source_url)
-  outlines, errlines = svntest.main.run_svn(1,
-                                            'copy', '-m', 'msg',
-                                            source_url, tab_url)
+  exit_code, outlines, errlines = svntest.main.run_svn(1, 'copy',
+                                                       '-m', 'msg',
+                                                       source_url, tab_url)
   match_bad_tab_path(tab_dir, errlines)
 
   # mv URL
-  outlines, errlines = svntest.main.run_svn(1, 'mv', '-m', 'msg',
-                                            source_url, tab_url)
+  exit_code, outlines, errlines = svntest.main.run_svn(1, 'mv', '-m', 'msg',
+                                                       source_url, tab_url)
   match_bad_tab_path(tab_dir, errlines)
 
 #----------------------------------------------------------------------
@@ -1998,8 +2146,6 @@ def commit_same_folder_in_targets(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         '-N',
                                         wc_dir,
                                         iota_path)
@@ -2091,7 +2237,7 @@ def commit_with_revprop(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        None,
                                         '-m', 'msg',
                                         '--with-revprop', 'bug=62',
                                         omega_path, gloo_path)
@@ -2331,9 +2477,8 @@ sys.exit(1)"""
   svntest.main.file_append(iota_path, "More stuff in iota")
 
   # Commit, expect error code 1
-  actual_stdout, actual_stderr = svntest.main.run_svn(1,
-                                                      'ci', '--quiet',
-                                                      '-m', 'log msg', wc_dir)
+  exit_code, actual_stdout, actual_stderr = svntest.main.run_svn(
+    1, 'ci', '--quiet', '-m', 'log msg', wc_dir)
 
   # No stdout expected
   svntest.verify.compare_and_display_lines('Start-commit hook test',
@@ -2375,9 +2520,8 @@ sys.exit(1)"""
   svntest.main.file_append(iota_path, "More stuff in iota")
 
   # Commit, expect error code 1
-  actual_stdout, actual_stderr = svntest.main.run_svn(1,
-                                                      'ci', '--quiet',
-                                                      '-m', 'log msg', wc_dir)
+  exit_code, actual_stdout, actual_stderr = svntest.main.run_svn(
+    1, 'ci', '--quiet', '-m', 'log msg', wc_dir)
 
   # No stdout expected
   svntest.verify.compare_and_display_lines('Pre-commit hook test',
@@ -2461,27 +2605,12 @@ def changelist_near_conflict(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        None,
                                         "--changelist=" + changelist_name,
                                         "-m", "msg", wc_dir)
 
 
 #----------------------------------------------------------------------
-
-def no_such_changelist(sbox):
-  "'svn commit --changelist=not-found' should warn"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # Attempt to commit a non-existent changelist.
-  expected_output = svntest.wc.State(wc_dir, {})
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  svntest.actions.run_and_verify_svn("Attempt to commit a changelist with no "
-                                     "relevant paths should warn",
-                                     None, ".*Unknown changelist 'not-found'",
-                                     "commit", "--changelist=not-found",
-                                     "-m", "msg", wc_dir)
 
 def commit_out_of_date_file(sbox):
   "try to commit a file that is out-of-date"
@@ -2505,7 +2634,7 @@ def commit_out_of_date_file(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        None,
                                         "-m", "log message", wc_dir)
 
   svntest.main.file_append(backup_pi_path, "hello")
@@ -2549,6 +2678,106 @@ def start_commit_detect_capabilities(sbox):
   if data != 'yes':
     raise svntest.Failure
 
+def commit_url(sbox):
+  "'svn commit SOME_URL' should error"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repos_url = sbox.repo_url
+
+  # Commit directly to a URL
+  svntest.actions.run_and_verify_commit(None,
+                                        None,
+                                        None,
+                                        "Must give local path",
+                                        repos_url)
+
+# Test for issue #3198
+def commit_added_missing(sbox):
+  "commit a missing to-be-added file should fail"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  a_path = os.path.join(wc_dir, 'A', 'a.txt')
+  b_path = os.path.join(wc_dir, 'A', 'b.txt')
+
+  # Make two copies of mu: a and b
+  svntest.main.run_svn(None, 'cp', mu_path, a_path)
+  svntest.main.run_svn(None, 'cp', mu_path, b_path)
+
+  # remove b, make it missing
+  os.remove(b_path)
+
+  # Commit, hoping to see an error
+  svntest.actions.run_and_verify_svn("Commit should have failed",
+                                     [], ".* is scheduled for addition, but is missing",
+                                     'commit', '-m', 'logmsg', wc_dir)
+
+#----------------------------------------------------------------------
+
+# Helper for commit-failure tests
+def commit_fails_at_path(path, wc_dir, error_re):
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        error_re,
+                                        path)
+
+def tree_conflicts_block_commit(sbox):
+  "tree conflicts block commit"
+
+  # Commit is not allowed in a directory containing tree conflicts.
+  # This test corresponds to use cases 1-3 (with file victims) in
+  # notes/tree-conflicts/use-cases.txt.
+
+  svntest.actions.build_greek_tree_conflicts(sbox)
+  wc_dir = sbox.wc_dir
+  A = os.path.join(wc_dir, 'A')
+  D = os.path.join(wc_dir, 'A', 'D')
+  G = os.path.join(wc_dir, 'A', 'D', 'G')
+
+  error_re = "remains in conflict"
+  commit_fails_at_path(wc_dir, wc_dir, error_re)
+  commit_fails_at_path(A, A, error_re)
+  commit_fails_at_path(D, D, error_re)
+  commit_fails_at_path(G, G, error_re)
+  commit_fails_at_path(os.path.join(G, 'pi'), G, error_re)
+
+
+def tree_conflicts_resolved(sbox):
+  "tree conflicts resolved"
+
+  # Commit is allowed after tree conflicts are resolved.
+  # This test corresponds to use cases 1-3 in
+  # notes/tree-conflicts/use-cases.txt.
+
+  svntest.actions.build_greek_tree_conflicts(sbox)
+  wc_dir = sbox.wc_dir
+
+  # Duplicate wc for tests
+  wc_dir_2 = sbox.add_wc_path('2')
+  svntest.actions.duplicate_dir(wc_dir, wc_dir_2)
+
+  # Mark the tree conflict victims as resolved
+  G = os.path.join(wc_dir, 'A', 'D', 'G')
+  victims = [ os.path.join(G, v) for v in ['pi', 'rho', 'tau'] ]
+  svntest.actions.run_and_verify_resolved(victims)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/D/G/pi',  status='D ')
+  expected_status.tweak('A/D/G/rho', status='A ', copied='+', wc_rev='-')
+  expected_status.remove('A/D/G/tau')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Recursively resolved in parent directory -- expect same result
+  G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
+  victims = [ os.path.join(G2, v) for v in ['pi', 'rho', 'tau'] ]
+  svntest.actions.run_and_verify_resolved(victims, G2, '-R')
+
+  expected_status.wc_dir = wc_dir_2
+  svntest.actions.run_and_verify_status(wc_dir_2, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -2579,11 +2808,15 @@ test_list = [ None,
               commit_from_long_dir,
               commit_with_lock,
               commit_current_dir,
-              commit_multiple_wc,
+              XFail(commit_multiple_wc_nested),
+              XFail(commit_multiple_wc),
+              commit_multiple_wc_multiple_repos,
               commit_nonrecursive,
               failed_commit,
               commit_out_of_date_deletions,
               commit_with_bad_log_message,
+              commit_with_mixed_line_endings,
+              commit_with_mixed_line_endings_in_ignored_part,
               from_wc_top_with_bad_editor,
               mods_in_schedule_delete,
               Skip(tab_test, is_non_posix_os_or_cygwin_platform),
@@ -2609,9 +2842,13 @@ test_list = [ None,
               pre_commit_hook_test,
               versioned_log_message,
               changelist_near_conflict,
-              no_such_changelist,
               commit_out_of_date_file,
-              start_commit_detect_capabilities,
+              SkipUnless(start_commit_detect_capabilities,
+                         server_gets_client_capabilities),
+              commit_url,
+              commit_added_missing,
+              tree_conflicts_block_commit,
+              tree_conflicts_resolved,
              ]
 
 if __name__ == '__main__':

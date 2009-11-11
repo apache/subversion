@@ -1,16 +1,21 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  *
  * svn_containers.swg: This is a child file of svn_types.swg, and
@@ -94,7 +99,8 @@
 %apply apr_hash_t **HASH_SVN_STRING {
   apr_hash_t **props,
   apr_hash_t **original_props,
-  apr_hash_t **table_p
+  apr_hash_t **table_p,
+  apr_hash_t **revprops
 };
 %apply apr_hash_t **HASH_SVN_STRING_MAYBENULL {
   /* svn_config_read_auth_data() */
@@ -111,7 +117,18 @@
   %append_output(svn_swig_rb_apr_hash_to_hash_string(*$1));
 }
 #endif
+#ifdef SWIGPYTHON
+%typemap(argout) apr_hash_t **HASH_CSTRING {
+  %append_output(svn_swig_py_stringhash_to_dict(*$1));
+}
+#endif
 
+%apply apr_hash_t **HASH_CSTRING {
+  apr_hash_t **type_map,
+  apr_hash_t **externals_old,
+  apr_hash_t **externals_new,
+  apr_hash_t **depths
+};
 
 /* -----------------------------------------------------------------------
    apr_hash_t **locations
@@ -217,6 +234,11 @@
     svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
   }
 }
+
+%typemap(out) apr_hash_t *PROPHASH
+{
+  %append_output(svn_swig_rb_apr_hash_to_hash_svn_string($1));
+}
 #endif
 
 #if defined(SWIGPYTHON) || defined(SWIGRUBY)
@@ -227,6 +249,20 @@
   apr_hash_t *props,
   apr_hash_t *revprop_table,
   apr_hash_t *revprops
+};
+#endif
+
+#ifdef SWIGRUBY
+%typemap(out) apr_hash_t *CHANGED_PATH_HASH
+{
+  VALUE rb_changed_path_hash;
+  rb_changed_path_hash =
+    svn_swig_rb_apr_hash_to_hash_swig_type($1, "svn_log_changed_path_t *");
+  %append_output(rb_changed_path_hash);
+}
+
+%apply apr_hash_t *CHANGED_PATH_HASH {
+  apr_hash_t *changed_paths
 };
 #endif
 
@@ -323,6 +359,13 @@
 }
 #endif
 
+#ifdef SWIGPERL
+%typemap(in) apr_hash_t *path_revs
+{
+  $1 = svn_swig_pl_objs_to_hash_of_revnum_t($input, _global_pool);
+}
+#endif
+
 /* =======================================================================
    %typemap(argout) apr_array_header_t **
 */
@@ -347,6 +390,13 @@
 %typemap(argout) apr_array_header_t **OUTPUT_OF_PROP {
   %append_output(svn_swig_py_proparray_to_dict(*$1));
 }
+
+%apply apr_array_header_t **OUTPUT_OF_PROP {
+  apr_array_header_t **entry_props,
+  apr_array_header_t **wc_props,
+  apr_array_header_t **regular_props,
+  apr_array_header_t **propdiffs
+};
 #endif
 
 /* -----------------------------------------------------------------------
@@ -372,7 +422,9 @@
 %apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
   apr_array_header_t **patterns,
   apr_array_header_t **logfiles,
-  apr_array_header_t **names_p
+  apr_array_header_t **names_p,
+  apr_array_header_t **targets_p,
+  apr_array_header_t **args_p
 };
 
 /* -----------------------------------------------------------------------
@@ -437,6 +489,14 @@
     if (PyErr_Occurred())
       SWIG_fail;
 }
+%typemap(in) const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
+    $1 = ($input == Py_None) 
+           ? NULL
+           : (apr_array_header_t *)svn_swig_py_strings_to_array($input,
+                                                                _global_pool);
+    if (PyErr_Occurred())
+      SWIG_fail;
+}
 #endif
 #ifdef SWIGPERL
 %typemap(in) const apr_array_header_t *STRINGLIST {
@@ -447,6 +507,10 @@
 #ifdef SWIGRUBY
 %typemap(in) const apr_array_header_t *STRINGLIST {
   $1 = svn_swig_rb_strings_to_apr_array($input, _global_pool);
+}
+%typemap(in) const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
+  $1 = (NIL_P($input)) ? NULL :
+    svn_swig_rb_strings_to_apr_array($input, _global_pool);
 }
 #endif
 
@@ -467,6 +531,12 @@
   apr_array_header_t *preserved_exts
 };
 
+#ifdef SWIGRUBY
+%apply const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
+  apr_array_header_t *revprops
+};
+#endif
+
 /* -----------------------------------------------------------------------
    auth provider convertors
 */
@@ -485,7 +555,11 @@
         PyErr_SetString(PyExc_TypeError, "not a sequence");
         SWIG_fail;
     }
+    
     targlen = PySequence_Length($input);
+    if (targlen < 0)
+        return NULL;
+
     $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
     ($1)->nelts = targlen;
     while (targlen--) {
@@ -602,6 +676,16 @@
 /* -----------------------------------------------------------------------
    Input of apr_array_header_t * <svn_opt_revision_range_t *>
 */
+#ifdef SWIGPYTHON
+%typemap(in) apr_array_header_t *REVISION_RANGE_LIST {
+  $1 = (apr_array_header_t *) svn_swig_py_struct_ptr_list_to_array($input,
+    $descriptor(svn_opt_revision_range_t *), _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif
+
 #ifdef SWIGRUBY
 %typemap(in) apr_array_header_t *REVISION_RANGE_LIST {
   $1 = svn_swig_rb_array_to_apr_array_revision_range($input, _global_pool);
@@ -677,9 +761,20 @@
                                array_header_t * <svn_merge_range_t *>>>
 */
 #ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **MERGEINFO_HASH
+%typemap(argout) apr_hash_t **MERGEINFO_CATALOG
 {
   %append_output(svn_swig_rb_apr_hash_to_hash_merge_range_hash(*$1));
+}
+#endif
+#ifdef SWIGPYTHON
+%typemap(argout) apr_hash_t **MERGEINFO_CATALOG
+{
+  %append_output(svn_swig_py_mergeinfo_catalog_to_dict(*$1,
+                                            $descriptor(svn_merge_range_t *),
+                                            _global_py_pool));
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
 }
 #endif
 

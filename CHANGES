@@ -1,3 +1,685 @@
+Version 1.6.7
+(?? ??? ????, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.7
+
+ User-visible changes:
+
+ Developer-visible changes:
+
+
+Version 1.6.6
+(16 Oct 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.6
+
+ User-visible changes:
+  * fix crash during 'svn update' (r39673)
+  * respect Apache's ServerSignature directive (r40008, -21, -31)
+  * don't add a file with mixed line endings, and then abort (issue #2713)
+  * support Neon 0.29.
+  * fix a crash in 'svn rm --force' (r37953)
+  * handle tree conflicts involving replacements (issue #3486)
+  * allow non-threadsafe sqlite if APR has no threads (r39301)
+  * print newline before plaintext SSL cert / password prompts (r38982, r39302)
+  * improve merge performance with implicit subtree mergeinfo (issue #3443)
+  * fix "libsvn_ra_svn/marshal.c assertion failed (opt || cstr)" (issue #3485)
+  * make file externals work for binary files (issue #3368)
+  * perform MIME type matching case-insensitively (issue #3479)
+  * do not treat non-existent revisions as HEAD in 'svn export' (issue #3400)
+  * revert r36720's default MIME type change back to "text/plain" (issue #3508)
+  * improve "tree conflict already exists" error message (r38872)
+  * fix failure to commit replacement of a directory (issue #3281)
+  * fix mod_dav_svn parent dir links to preserve peg revisions (issue #3425)
+
+ Developer-visible changes:
+  * fix 2 failing tests in ruby bindings (r38886)
+  * do not require GNU grep for build (issue #3453)
+  * use '$SED' instead of 'sed' in build scripts (issue #3458)
+  * add svn.client.{log5,merge_peg3} to python bindings (r39635, -6, -7)
+  * include the time of a test run in tests.log (r39887)
+
+
+Version 1.6.5
+(21 Aug 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.5
+
+ User-visible changes:
+  * fix mod_dav_svn directory view links to preserve peg revisions (r38021)
+  * do not error on Windows when ALLUSERPROFILE dir nonexistent (r38053, -5, -7)
+  * properly escape lock comments over ra_neon (r38101, -2)
+  * allow syncing copies of '/' over ra_neon and ra_serf (issue #3438)
+  * make 'svnlook diff' show empty added or deleted files (r38458)
+  * fix building with Apache 2.4 (r36720)
+  * fix possible data loss on ext4 and GPFS filesystems (issue #3442)
+  * resolve symlinks when checking for ~/.subversion (r36023)
+  * don't let svn+ssh SIGKILL ssh processes (issue #2580)
+  * allow PLAIN and LOGIN mechanisms with SASL in svnserve (r38205)
+  * fix peg revision parsing in filenames like 'dir/@file.txt' (issue #3416)
+  * fix detection of Apache <2.0.56 (r38290, -3, -4)
+  * don't pretend to do tree conflict resolution (r38799, -801, -805)
+  * fix data corruption when syncing from svnserve to mod_dav_svn (r38686, -7)
+  * fix GNOME Keyring with '--non-interactive' option (r38222, -3, -61, -410)
+  * fixed: false "File '...' already exists" error during commit (issue #3119)
+
+ Developer-visible changes:
+  * avoid referencing uninitialized variables (r38388)
+  * plug a couple of error leaks (r38572)
+  * improve windows test output (r38616, -7, -9, -49)
+
+
+Version 1.6.4
+(06 Aug 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.4
+
+ User-visible changes:
+  * fixed: heap overflow vulnerability on server and client
+           See CVE-2009-2411, and descriptive advisory at
+           http://subversion.tigris.org/security/CVE-2009-2411-advisory.txt
+
+
+Version 1.6.3
+(22 Jun 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.3
+
+ User-visible changes:
+  * fix segfault in WC->URL copy (r37646, -56)
+  * let 'svnadmin load' tolerate mergeinfo with "\r\n" (r37768)
+  * make svnsync normalize svn:* props to LF line endings (issue #3404)
+  * better integration with external merge tools (r36178)
+  * return a friendly error message for 'svn diff' (r37735)
+  * update dsvn.el for 1.6 (r37774)
+  * don't allow setting of props on out-of-date dirs under neon (r37745)
+  * improve BASH completion (r36450, -52, -70, -79, -538)
+  * always show tree conflicts with 'svn st' (issue #3382)
+  * improve correctness of 'svn mergeinfo' (issue #3126)
+  * decrease the amount of memory needed for large commits (r37894, -6)
+  * work around an APR buffer overflow seen by svnsync (r37622)
+  * ra_svn clients now use TCP keep-alives if available (issue #3347)
+  * improve 'svn merge' perf by reducing server contact (r37491, -593, -618)
+  * stop propagating self-referential mergeinfo in reintegrate merges (r37931)
+  * fix NLS detection where -liconv is required for bindtextdomain() (r37827)
+  * don't delete unversioned files with 'rm --keep-local' (r38015, -17, -19)
+  * bump apr and apr-util versions included in deps to latest. (r37941)
+  * avoid temp file name collisions with ra_serf, ra_neon (r37972)
+  * fixed: potential segfault with noop file merges (r37779)
+  * fixed: incorrect output with 'svn blame -g' (r37719, -23, -41)
+  * fixed: bindings don't load FS libs when module search enabled (issue #3413)
+  * fixed: DAV RA layers not properly handling update/switch working copy
+    directory to revision/place in which it doesn't exist (issue #3414)
+  * fixed: potential abort() in the working copy library (r37857)
+  * fixed: memory leak in hash reading functions (r37868, -979)
+
+ Developer-visible changes:
+  * improve memory usage in file-to-stringbuf APIs (r37907)
+  * reduce memory usage for temp string manipulation (r38010)
+
+
+Version 1.6.2
+(11 May 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.2
+
+ User-visible changes:
+  * vastly improve memory usage with 'svn merge' (issue #3393)
+  * make default depth for merge 'infinity' (r37156)
+  * make 'status --quiet' show tree conflicts (issue #3396)
+  * allow '--set-depth infinity' to expand shallow subtrees (r37169)
+  * return an error if attempting to reintegrate from/to the repo root (r37385)
+  * don't store bogus mergeinfo for '--ignore-ancestry', foreign merges (r37333)
+  * don't allow merge of difference between two repos (r37519)
+  * avoid potential segfault with subtree mergeinfo (r36613, -15, -31, -41)
+  * recommend sqlite 3.6.13 (r37245)
+  * avoid unnecessary server query for implicit mergeinfo (r36509)
+  * avoid unnecessary server query during reverse merges (r36527)
+  * set depth=infinity on 'svn add' items with restricted depth (r37607)
+  * fixed: commit log message template missing paths (issue #3399)
+  * fixed: segfault on merge with servers < 1.6 (r37363, -67, -68, -79)
+  * fixed: repeat merge failures with non-inheritable mergeinfo (issue #3392)
+  * fixed: another memory leak when performing mergeinfo-aware merges (r37398)
+  * fixed: incorrect mergeinfo on children of shallow merges (issue #3407)
+  * fixed: pool lifetime issues in the BDB backend (r37137)
+
+ Developer-visible changes:
+  * don't fail if an embedding app has already initialized SQLite (issue #3387)
+  * resolve naming collisions with static stat() function in svnserve (r37527)
+  * fix an expectation for a failing dirent windows test (r37121)
+
+
+Version 1.6.1
+(9 Apr 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.1
+
+ User-visible changes:
+  * recommend Neon 0.28.4. (r36388)
+  * improve performance of 'svn merge --ignore-ancestry' (r36256)
+  * improve 'svn merge' performance with subtree mergeinfo (r36444)
+  * correctly proxy LOCK and UNLOCK requests (r36159)
+  * prevent a crash when updating old working copies (r36751)
+  * don't let svnmerge.py delete a nonexistent property (r36086, -767, -769)
+  * don't fail when upgrading pre-1.2 repositories (r36851, -7)
+  * allow escaping of separator characters in autoprops (r36763, -84)
+  * improve tempfile creation robustness on Windows (r36442, -3)
+  * fix change-svn-wc-format.py for 1.6.x working copies (r36874, -5)
+  * improve configure's detection of Berkeley DB (r36741, -2)
+  * don't allow foreign merges to add foreign mergeinfo (issue #3383)
+  * improve performance of 'svn update' on large files (r36389, et. al.)
+  * fixed: error leak and potential crash (r36860)
+  * fixed: parent directory handling on Windows (r36049, -50, -51, -131)
+  * fixed: unintialized memory errors (r36252, -3)
+  * fixed: potential working copy corruption (r36714)
+  * fixed: working copy upgrade error (r36302)
+  * fixed: pointer dereference error (r36783)
+  * fixed: error diff'ing large data with ignored whitespace (r36816)
+  * fixed: potential hang in ra_serf (r36913)
+  * fixed: problem with merge and non-inheritable mergeinfo (r36879)
+  * fixed: repeated merging of conflicted properties fails (issue #3250)
+  * fixed: excluding an absent directory segfaults (issue #3391)
+
+ Developer-visible changes:
+  * ensure svn_subst_translate_cstring2() properly flushes data (r36747)
+  * make serf report a base checksum to apply_textdelta (r36890)
+  * syntax updates for strict C89 compilers (r36799)
+  * update RPM scripts for RHEL4 (r36834)
+  * allow tests to be run with Python 2.6.1 on Windows (r36149, -50, -51, -56)
+  * allow building JavaHL with Visual Studio 2008 (r36954)
+  * stop setting default translation domain in JavaHL (r36955)
+  * fixed: warning with Python 2.6 and ctypes bindings (r36559)
+  * fixed: undefined references to svn_fs_path_change2_create() (r36823)
+
+
+Version 1.6.0
+(20 Mar 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.0
+
+ User-visible changes:
+  - General:
+    * Now require Windows 2000 or newer on Windows (r33170)
+
+  - Major new features:
+    * identical files share storage space in repository (issue #2286)
+    * file-externals support for intra-repository files (issue #937)
+    * "tree" conflicts now handled more gracefully (issue #2282, #2908)
+    * repository root relative URL support on most commands (issue #3193)
+
+  - Minor new features and improvements:
+    * pre-lock hook can now specify lock tokens via stdout (r32778)
+    * svnmucc: support '--with-revprop' (r29492)
+    * merge: log include-descendants in operational log (r30426, r30428)
+    * improved operational logging for 'svn switch' (r30517)
+    * new 'Header' keyword, similar to 'Id' but with full URL (r35386)
+    * warn/disallow when storing plain-text passwords (r31046)
+    * support KWallet and GNOME keyring for password storage (r31241, -337)
+    * client now caches SSL client cert passphrases (issue #2489)
+    * add '--prefix-file' option to 'svndumpfilter' (issue #2697)
+    * add '--ignore-externals' option to 'svn cp' (issue #3365)
+    * add '--with-no-revprops' to 'svn log' (issue #3286)
+    * new 'svnadmin pack' command to compress FSFS filesystems
+    * new SVNAllowBulkUpdates mod_dav_svn directive (issue #3121)
+    * new public mod_dav_svn URI syntax:  path?[p=PEG][&r=REV] (r34076)
+    * new 'svnsync info' command to show synchronization information (r35053)
+    * conflict resolver supports display-conflict, mine-conflict and theirs-conflict
+
+  - Client-side bugfixes:
+    * faulty reflexive merges (issue #2897)
+    * buffer overflow on a 0 byte string buffer (r35968, -74)
+    * conflict resolver needed more useful 'diff' option (issue #3048)
+    * disable username assumption (issue #2324)
+    * more accurate usage message for 'svn log' (r30449)
+    * do not repeat merge if target has explicit mergeinfo (issue #2821)
+    * corruption when filtering self-referential mergeinfo (r30467)
+    * filter empty mergeinfo with self-referential mergeinfo (r30510)
+    * pay attention to partial replay from the server in svnsync (r30440)
+    * improved property name handling in svnsync (r30480)
+    * properly recognize the file:/// in repository with svnsync (r30482)
+    * svn+ssh SIGKILLs ssh processes (issue #2580)
+    * 'svn up'/'svn co' early abort with svn:externals (issue #3148)
+    * improve tempfile names for conflict resolver (issue #3166)
+    * ra_serf: 'svn merge' aborts (issue #3212)
+    * 'svn cleanup' failed on non-ASCII characters (issue #3313)
+    * 'svn update' fails on moved, modified file with local mods (issue #3354)
+    * easier use of NTLM for proxy with ra_neon (r29874)
+    * 2-url merge from DAV-accessed foreign repo makes bad wcprops (issue #3118)
+    * can't add .svn (and children) to your wc via '--parents' (r35819)
+    * improved performance removing unversioned directories (r36111)
+    * 'svn cp --parents' had path URL encoding issues (issue #3374)
+    * support shell quoting rules in externals definitions (issue #2461)
+    * new SVN_LOCALE_DIR environment variable for localization (issue #2879)
+    * scheme and domain name in urls handled case insensitive (issue #2475)
+    * merge: pick default revisions with peg revision in single url (r30455)
+    * many other minor bugfixes, optimizations, plugs of memory leaks, etc
+ 
+  - Server-side bugfixes:
+    * mod_dav_svn runs pre-revprop-change twice (issue #3085)
+    * mod_dav_svn ignores pre-revprop-change failure on delete (issue #3086)
+    * mod_dav_svn prevented lock breaks from being propagated to client (r29914)
+    * non-UTF8 filenames could enter repository (issue #2748)
+    * 'svnlook proplist' xml output (issue #2809)
+    * don't let mod_dav_svn hide errors from client (issue #3102)
+    * ra_serf failure during update (issue #3113)
+    * ra_serf comply with RFC 2617 in handling authentication headers (r35981)
+    * use both SHA1 and MD5 in the FS backends (r34388)
+    * many other minor bugfixes too numerous to list here
+
+  - Contributed tools improvements and bugfixes:
+    * commit-email.pl: Deprecated; use mailer.py instead (r31755, -67)
+    * svnmerge.py migration tool munged svn:mergeinfo ordering (issue #3302)
+    * And other random sundry stuff
+
+ Developer-visible changes:
+  - General:
+    * serf 0.3.0 required, when building with serf (r35586)
+    * require SQLite 3.4.0 or newer (r33520)
+    * allow the use of an in-tree SQLite amalgamation (r35263)
+    * svn_log_changed_path_t now includes a 'kind' field (issue #1967)
+    * BDB `changes' table inconsistency when APIs are misused (issue #3349)
+    * configure should prefer apr-1 over apr-0 if both are present (issue #2671)
+    * make 'Not Found' errors consistent between RA layers (issue #3137)
+    * fix a potential buffer overrun (r34374)
+    * many bug fixes and improvements to the test suite
+
+  - API changes:
+    * notification system for properties and revision properties (issue #783)
+    * make ra_svn's merge commit-revprops public (r30462, r30453)
+    * mod_dav_svn operational logging compatible with svnserve logging (r30518) 
+    * improve speed of svn_client__get_copy_source() (issue #3356)
+    * if fsfs commit fails return SVN_INVALID_REVNUM (r35950)
+
+  - Bindings:
+    * new: ctypes python bindings
+    * many improvements to all bindings (Java, Perl, Python, and Ruby)
+    * respect CFLAGS in SWIG bindings (r35879)
+    * fix building Ruby bindings with Ruby 1.9 (r35852, r35883)
+
+
+Version 1.5.7
+(06 Aug 2009, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.7
+
+ User-visible changes:
+  * fixed: heap overflow vulnerability on server and client
+           See CVE-2009-2411, and descriptive advisory at
+           http://subversion.tigris.org/security/CVE-2009-2411-advisory.txt
+
+
+Version 1.5.6
+(26 Feb 2009, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.6
+
+ User-visible changes:
+  * allow colons within mergeinfo path names (r35040)
+  * make it impossible to add .svn to wc via 'svn add --parents' (r35143, -5)
+  * copy properties of added but uncommitted files (r32448)
+  * speedup JavaHL bindings on Windows (r35733)
+  * improve performance of log operation on < 1.5 servers (r35566)
+  * allow commits over Neon of files >2GB (POSIX only) (r34919, -24)
+  * allow serf from behind MS ISA proxy servers (r35981)
+  * prevent svnmerge-migrate-history.py from committing bogus mergeinfo (r35516)
+
+ Developer-visible changes:
+  * fix error handling in mod_dav_svn (r35250, -86)
+  * support --server-minor-version in windows testsuite (r31393)
+  * fix depth_tests.py 23 on Windows with a BDB repo (r34875)
+  * allow svn_mergeinfo_parse() to tolerate unordered mergeinfo (r35297, -367)
+  * allow overlapping rangelists into svn_mergeinfo_parse() (r35466, -712, -713)
+
+
+Version 1.5.5
+(22 Dec 2008, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.5
+
+ User-visible changes:
+  * allow prop commits on dirs with modified children (r34487, -92, -94)
+  * make Cyrus auth implementation always prefer EXTERNAL to ANONYMOUS (r33866)
+  * do not create mergeinfo for wc-wc moves or copies (r34184, -585)
+  * do not autoupgrade old BDB filesystems to 1.5 or 1.4 format (r34653, -6)
+  * return mergeinfo to prior state during reverse merges (r30257, r33024, -6)
+  * remove mergeinfo deleted by merge (issue #3323)
+  * make proxy slaves pass through txn GET and PROPFIND requests (issue #3275)
+  * merge can now use targets with inconsistent newlines (issue #3262)
+  * don't allow empty-string changelists (issue #3344)
+  * remove false positive ra_neon mergeinfo errors (r34822)
+  * improve performance of 'svn merge --reintegrate' (r34091, -4, and others)
+  * fixed: foreign merges keep UUID of foreign repository (r34050, -1, -3)
+  * fixed: properly encode diff headers used in conflict resolution (r34171)
+  * fixed: segfault in 'svn cp --parents' (r31311, -4)
+  * fixed: mergeinfo for '...' maps to empty revision range (issue #3312)
+  * fixed: segfault in BDB backend node-origins cache (r34506)
+  * fixed: broken merge if target's history includes resurrections (r34385, -93)
+  * fixed: invalid mergeinfo created on a subtree during merge (r34560, -2)
+
+ Developer-visible changes:
+  * fixed: svn_repos_get_logs() chokes on some revision arguments (r33873, -4)
+
+
+Version 1.5.4
+(24 Oct 2008, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.4
+
+ User-visible changes:
+  * Properly handle explicit mergeinfo added in merge source (r32968, -75)
+  * fixed: merging of paths containing spaces (r33641, -44)
+  * fixed: regression in mergeinfo-aware merges against 1.5.3 (r33693, -704)
+
+
+Version 1.5.3
+(10 Oct 2008, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.3
+
+ User-visible changes:
+  * Allow switch to continue after deleting locally modified dirs (issue #2505)
+  * Update bash_completion to be compatible with 1.5 (r32900, -11, -12)
+  * Improve 'svn merge' execution time by 30% on Windows (r33447)
+  * Reuse network sessions during 'svn merge', improving performance (r33476)
+  * Improve temp file creation time on Windows (r33464)
+  * Greatly improve merge performance (r29969, r32463, r33013, -016, -022, -112)
+  * Improve file IO performance on Windows (r33178, -85)
+  * fixed: merging files with spaces in name (r33109, -121, -369)
+  * fixed: incorrect relative externals expansion (r33109, -121, -369)
+  * fixed: 'svn mv' hangs and consumes infinite memory (r33201, -12)
+  * fixed: correctness regression in 'svn log -g' (issue #3285)
+  * fixed: current early bailout of 'svn log -g' (r32977)
+
+ Developer-visible changes:
+  * Allow the tests to run as non-administrator on Windows Vista (r31203)
+  * Allow out-of-tree build of bindings on BSD (r32409)
+  * Translate messages in svn_fs_util.h (r32771)
+  * fixed: bindings test for Perl 5.10 (r31546)
+  * fixed: building bindings and C API tests with VS2008 (r32012)
+  * fixed: svn_ra_replay API over ra_serf (r33173)
+
+
+Version 1.5.2
+(30 Aug 2008, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.2
+
+ User-visible changes:
+  * Set correct permissions on created fsfs shards (r32355, -7)
+  * Pass client capabilities to start-commit hook (issue #3255)
+  * Disallow creating nested repositories (issue #3269)
+  * Support Neon 0.28.3
+  * Properly canonicalize URIs with an empty hostname (issue #2116)
+  * Improved merge performance for superfluous ranges (r32643)
+  * Better error message for 'Malformed URL for repository' (r31867, r32365)
+  * Improved svn:externals parsing (r32672, -673, -674, -739)
+  * fixed: improper ordering in 'svnlook diff' output (r32019)
+  * fixed: mod_dav_svn memory leak with 'SVNPathAuthz short_circuit' (r32360)
+  * fixed: duplicate svn:externals targets fail on co/up (issue #3246)
+  * fixed: 'svn merge --depth' inconsistencies (issue #2825)
+  * fixed: ra_serf test failures (1.5.x-ra_serf-backports branch)
+  * fixed: memory leak and crashes in FS (r32545, -58, -82)
+  * fixed: core dump with relative externals (issue #3237)
+  * fixed: 'svn copy' working copy corruption (r32467, -70)
+  * fixed: perl bindings errors in non-English locale (issue #3258)
+  * fixed: 'svn merge' incorrectly reverses previous merges (r32494, -522, -523)
+  * fixed: 'svn merge' errors with subtree mergeinfo (issue #3067)
+
+ Developer-visible changes:
+  * make libsvn_ra_neon initialization thread-safe (r32497, r32510)
+  * respect LDFLAGS in SWIG bindings (r32416, r32421, r32442)
+  * fixed: test failures in non-English locales (r32491)
+
+
+Version 1.5.1
+(26 Jul 2008, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.1
+
+ User-visible changes:
+  * mergeinfo on switched subtrees should elide in repos (issue #3188)
+  * Add support for --config-dir to svnmerge.py (r31727)
+  * improve performance of bdb post-commit deltification (r31820, -59)
+  * return faster when there is nothing to be merged (r30748)
+  * don't commit an add of a missing item (issue #3198)
+  * don't create unneeded self-referential mergeinfo (issue #3157)
+  * support 'http-library' (if --enable-runtime-module-search) (r31425, -722)
+  * support Berkeley DB 4.7 (r32017, -29)
+  * fixed: make serf usable with root-level authz (r31464)
+  * fixed: 'svndumpfilter' partial-path matching bug (r31833)
+  * fixed: crash on invalid dates in 'log' and 'blame' (issue #2721)
+  * fixed: 'svn status --xml' outputting invalid XML (issue #2887)
+  * fixed: 'svn merge' prints incorrect range (r30746, -47)
+  * fixed: using neon/serf, can not replace branch (issue #2939)
+  * fixed: 'file not found' error when merging to a broken symlink (r31159, -79)
+  * fixed: using serf, crash or endless loop fetching authn data (r31619)
+  * fixed: ArrayIndexOutOfBoundsException in JavaHL bindings (r31719, -806)
+  * fixed: authn password lookup used wrong username (issue #2242)
+  * fixed: unbounded memory usage in wc-to-wc copy and move (r31868)
+  * fixed: subtree merges broken for non-intersecting ranges (issue #3199)
+  * fixed: invalid XML from 'svn log --xml' against pre-1.2 servers (r31875)
+  * fixed: 'svnlook diff' ignores --diff-copy-from for properties (issue #3248)
+  * fixed: 'svnlook diff' doesn't report that binary files differ (issue #3249)
+  * fixed: bogus results from commits to subtrees added by merge (issue #3240)
+  * fixed: non-existent subtree in destination breaks the merge (issue #3067)
+  * fixed: serf merge bug too complex to describe here (r32056)
+  * fixed: 'svn log -g' correctness and speed (issue #3220, issue #3235)
+  * fixed: merge chokes on renamed subtrees (issue #3174)
+
+ Developer-visible changes:
+  * export svn_path_is_url() to the bindings (r31603)
+  * don't clobber LDFLAGS in configure when given '--with-zlib' (r31825)
+  * make libsvn_ra depend on libsvn_delta unconditionally (r31852)
+  * correctly set the peg revision for copy in JavaHL (r31994)
+  * 'svn mergeinfo' handles wc paths (r31023, -873, -874, -929, -930, -038)
+  * fixed: crash when when svn_ra_open3() is passed a bogus URL (r31223)
+  * fixed: JavaHL compilation on Windows (r31737)
+  * fixed: crash in calling apr_pstrcat (affects TortoiseSVN) (r32080)
+
+
+Version 1.5.0
+(19 Jun 2008, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.0
+
+ User-visible changes:
+  - Major new features:
+    * Merge Tracking [foundational] (issue #820)
+    * Sparse checkouts (see new '--depth' option) (issue #695)
+    * Interactive conflict resolution (r25670 et al)
+    * svn:externals handles relative URLs (issue #1336) and peg URLs
+    * Changelist support
+    * WebDAV transparent write-through proxy
+    * Better support for large FSFS deployments (via sharding & partitioning)
+    * Cyrus SASL support for ra_svn and svnserve (issue #1144)
+
+  - Minor new features and improvements:
+    * 'svn resolve' (with '--accept' option) replaces "resolved" (issue #2784)
+    * 'svn move file1 file2 ... dir' now moves the files into dir (issue #747)
+    * 'svn mkdir' and 'svn copy' now take '--parents' option (issue #1776)
+    * 'svn delete' now takes '--keep-local' to not remove working copy files
+    * 'svn copy', 'move' now support peg revisions (issue #2546; also r26484)
+    * 'svn copy A B ; svn move B C' now the same as 'svn copy A C' (issue #756)
+    * 'svn copy -rBASE' now works in a working copy (issue #1643)
+    * 'svn import' now takes '--force' (issue #2806)
+    * 'svn status -u' now shows of locally deleted directories (issue #2420)
+    * 'svn switch' now takes '--force' (issue #2392)
+    * 'svn switch' now takes '--ignore-externals' option (issue #2189)
+    * 'svn switch' now supports peg revisions (issue #2545)
+    * 'svn checkout' now takes '--force' option (issue #1328)
+    * 'svn proplist' and 'svn propget' now support peg revisions (issue #3070)
+    * 'svn propget' now takes '--xml' option (issue #2696)
+    * 'svn propedit' now support URLs (issue #2238, but see issue #2923)
+    * 'svn proplist --quiet' no longer prints extra info (issue #1547)
+    * 'svn diff --summarize' now takes '--xml' option (issue #2967)
+    * 'svn diff -x' now takes '-p' extension option (issue #2995)
+    * 'svn log' now takes '-c' option (r27933)
+    * 'svn log' now takes '-l' as short form of '--limit' (r25829)
+    * 'svn log --xml' now takes '--with-revprop' option (issue #2850)
+    * 'svn diff'/'svnlook diff' now show property actions better (issue #3019)
+    * 'svn merge' now has informative messages on reverse merges (issue #2848)
+    * 'svn merge FILE' now honors '--ignore-ancestry' (issue #2853, r25891)
+    * 'svn merge' handles multiple notifications for single items (issue #2828)
+    * 'svn merge' handles skipped path better (issue #2829)
+    * 'svn merge' handles merges from foreign repositories more completely
+    * 'update', 'checkout', 'switch' now handle obstructions gracefully (r22257)
+    * 'svn update' now takes '--force' (issue #2392)
+    * 'svn update' now sometimes copies or moves local files, for efficiency
+    * 'svnadmin lslocks' now accepts path within repository (issue #2965)
+    * 'svnadmin recover' now supports FSFS repositories (issue #2992)
+    * 'svnadmin verify' now has '-q' and '-r' options (r22103)
+    * 'svnadmin setrevprop' command added (r21736)
+    * 'svnadmin setuuid' command added (r28511)
+    * 'svnsync sync' now shows commit progress like 'svn commit'
+    * 'svnsync' now takes '-q, --quiet' option (r26465)
+    * 'svnsync' now supports separate authn for source/target (issue #2717)
+    * 'svnsync copy-revprops' now supports revision ranges (r23498)
+    * 'svnsync copy-revprops' now supports "HEAD" revision alias (r23500)
+    * 'svnmucc' is new name for contrib tool formerly called 'mucc'
+    * 'svnmucc' now has propset and propdel subcommands (issue #2758)
+    * 'svnmucc' now has more authentication options
+    * 'svnmucc' now now takes '--non-interactive' option (r25977)
+    * 'svnmucc' now takes a global base revision, for extra safety (r23764)
+    * 'svnlook' now takes '--extensions' option (issue #2912)
+    * 'svnlook' now takes '-N' option (issue #2663)
+    * 'svnlook history' now takes '-l' / '--limit' option (r25843)
+    * 'svnserve' now takes '--config-file' option (r24119)
+    * 'mod_dav_svn' now uses Apache default mime-type for files (issue #2304)
+    * new '--with-revprop' option on all commands that commit (issue #1976)
+    * now accept "peg dates" (URL@{DATE}), behaving like peg revs (issue #2602)
+    * easier to try out experimental ra_serf http:// access module
+    * select ra_neon vs ra_serf on a site-by-site basis in config (r25535)
+    * client-side post-commit processing now more efficient (issue #2607)
+    * windows binaries now use a custom crash handler (issue #1628)
+    * add vim swap file patterns to default global-ignores (r24348)
+    * add "*.pyc" and "*.pyo" patterns to default global-ignores (issue #2415)
+    * add unix/libtool library patterns to default global-ignores (issue #2415)
+    * naming scheme for conflict files is now configurable (issue #2474)
+    * removed svn-ref.tex as it's extremely out of date (issue #2762)
+    * improved cancellation response in many situations
+    * support Neon up to 0.28
+    * character set conversion now uses native API on Windows (r25650)
+    * HTTP authn protocol now configurable (for Neon 0.26 and higher) (r21531)
+    * http:// (over Neon) supports HTTP redirection / relocation (issue #660)
+    * support PKCS#11-provided (smartcard) SSL client certs with Neon (r29421)
+    * authz now supports aliases (r21982)
+    * authz token rules for authenticated-only, anonymous, and inverse (r23750)
+    * mailer.py now supports properties in commit messages (r21684)
+    * ra_serf now supports NTLM/SSPI authentication (issue #2900)
+    * warn if try to turn off boolean property via propset/propedit (r25486)
+    * display repository basename in XML and HTML index views (r25837, r25838)
+    * config 'http-auth-type' can be overridden to force BASIC auth (r23900)
+    * translation updates for all languages, as usual
+    * Revamp mod_dav_svn logging; see tools/server-side/svn_dav_log_parse.py
+    * misleading configure arg --enable-dso now --enable-runtime-module-search
+
+  - Client-side bugfixes:
+    * 'svn revert' of missing scheduled addition broke wc (issue #2425)
+    * 'svn export' should export svn:externals from local copies (issue #2429)
+    * 'svn status -uN' should show status of files (issue #2468)
+    * 'svn update' overwrote if local timestamp unchanged (issue #2746)
+    * 'svn update -N' errored when receiving a deletion (issue #3039)
+    * 'svn merge' would delete locally modified props (issue #2857)
+    * 'svn log --xml' could output invalid XML (issue #2866)
+    * 'svn copy' on URL with spaces made wrong WC file name (issue #2955)
+    * 'svn diff' was failing w/ large diffs on Windows (issue #1789)
+    * 'svn delete' no longer deletes locally-modified files (issue #1808)
+    * 'svn move' moved files to wrong directory on Windows (issue #1869)
+    * 'svn revert' mistakenly used leftover .svn-revert files (issue #2927)
+    * 'svn diff' output now shows relative paths (issue #2723)
+    * 'svn diff' wasn't ignoring all EOLs (issue #2920)
+    * 'svn cleanup' no longer fails on a missing .svn/tmp dir (r23370)
+    * infinite loop in UTF conversion in non-C locale (issue #2577)
+    * interrupting "svn status" could make svn crash (issue #2623)
+    * commit-email.pl date header output now RFC2822-compliant (issue #2633)
+    * authz write access to folder wasn't permitting locking (issue #2700)
+    * stop complaining just because $HOME is unreadable (issue #2363)
+    * do not display unescaped characters in error message (issue #2471)
+    * propchange received on subdir merge causes conflict (issue #2969)
+    * revert replaced-with-history files should restore checksum (issue #2928)
+    * catch improper arguments to diff (issue #2996)
+    * handle URLs like http://hostname (i.e. no path part) (issue #1851)
+    * config autoprops honored regardless of case of entry (issue #2036)
+    * "Cannot replace a directory from within" error now rarer (issue #2047)
+    * handle _svn/.svn as part of a path (issue #3026)
+    * make permissions changes on symlinks a no-op (issue #2581)
+    * error usefully if asked to update a URL (r22296)
+    * fixed infinite loop on Windows if fail to find repository root (r22483)
+    * 'svn info $REPO_ROOT' now supports pre-1.2 svn:// servers (r26264)
+    * be more resilient in the face of faulty .svn/entries files (r26482)
+    * 'svn diff -x --ignore-eol-style' failed to ignore all EOLs (r27094)
+    * rare property dataloss bug now fixed (issue #2986, see also r29538)
+    * fixed faulty status reporting for some missing directories (issue #2804)
+    * 'svn diff --summarize' showed wrong output paths (issue #2765)
+    * propset and move interaction could cause property weirdness (r25833)
+    * 'svn propget <propname> .@HEAD' now works (issue #3012)
+    * 'svnsync' had bug with replaced+modified rev over serf (issue #2904)
+    * 'svnsync --config-dir' sometimes ignored, thus tunnel agent bug (r27056)
+    * update/merge safely receives file on top of schedule-add file (r23506)
+    * http:// (over Neon) reports progress while disk-spooling delta (r26271)
+    * print "Out of memory" before dying from memory shortage (issue #2167)
+    * warn when used on old checkout without a repository root entry (r25168)
+    * merge to missing file target wrongly appeared to succeed (issue #2782)
+    * 'svn merge URL PATH -cX' could cause property corruption (issue #2781)
+    * URL parsing now consistently checks for error earlier (issue #2207)
+    * security hole: files could be created above cwd (r26047, CVE-2007-3846)
+    * local property mods to replaced-with-history file could be lost (r26364)
+    * revert of replaced-with-history path left copyfrom info (r23452)
+    * character encoding translation could hang (r23492)
+    * un-substituting keywords was buggy ($Id$ vs. $Id:$) (issue #2640)
+    * ra_neon and ra_serf lost pre-revprop-change hook output (issue #443)
+    * merge of non-empty subdir could be committed incorrectly (issue #1962)
+    * many other minor bugfixes, optimizations, plugs of memory leaks, etc
+
+  - Server-side bugfixes:
+    * segfault in svnserve and svnversion commands fixed (issue #2757)
+    * segfault when stopping httpd (if BDB repository) fixed (issue #2732)
+    * 'svnadmin dump' had a path ordering bug (issue #2641)
+    * better FSFS support for NFS v3 and lower (r24470)
+    * better FSFS support for some buggy NFS clients (r29448)
+    * authentication and authz bugs w.r.t. anonymous access (issue #2712)
+    * inconclusive authz result should deny, not allow (r23815)
+    * better reporting of problems parsing authz files (r22329)
+    * set svn:date revprop even if dumpstream does not (issue #2729)
+    * http:// commit can now create empty files properly (r25471, r25474)
+    * squelch not-a-directory errors in both FS backends (issue #2549)
+    * segfault on update-report response without base revision (issue #3023)
+    * 'svnserve --root PATH' checks that PATH exists (r22580, r22701)
+    * 'svnlook propget -t TXN_NAME' reports errors better (r22772)
+    * make location of mod_dav_svn activity database configurable (r24873)
+    * select only paths that are proper children of requested path (r25231)
+    * http:// commit error could leave empty transactions behind (r23594)
+    * 'svn switch --relocate' now works against unreadable repos root (r23848)
+    * many other minor bugfixes too numerous to list here
+
+  - Contributed tools improvements and bugfixes:
+    * svn_load_dirs.pl:
+      - Support global-ignores list (issue #2470)
+      - Allow "@" in filenames (r22203, Debian bug 359145)
+      - Add -no_auto_exe option (r26399)
+    * svnmerge.py:
+      - fixed: Always get end_rev from source instead of target (issue #2863)
+      - fixed: 'init' now chooses a better default revision range (issue #2810)
+      - fixed: Consider revs changing blocking status as reflected (issue #2814)
+      - Performance inmprovement (issue #2812)
+      - initialized revisions can be excluded (issue #2851)
+    * new 'svn-populate-node-origins-index' tool (issue #3024)
+    * new 'svn-merge-vendor.py' to assist in merging vendor branches (r23030)
+    * 'svn2rss.py' is now called 'svn2feed.py'
+    * svn2cl: New release 0.9 (r24498)
+    * commit-email.pl: various improvements (r22971, r22589)
+    * commit-email.rb: various improvements
+    * psvn.el: too many improvements and new features to list them all here
+    * dsvn.el: improve XEmacs compatibility (r24337)
+    * svn-tweak-author.py: make NEWAUTHOR argument optional (r24387)
+    * And more stuff that we just didn't have time to list.  Enjoy.
+
+ Developer-visible changes:
+ * General:
+   - libsvn_ra_neon is new name for libsvn_ra_dav (to accommodate ra_serf)
+   - many abort() calls removed, replaced with error returns
+   - client and server now do capabilities exchange (r29358 et al)
+   - gen_win.py: auto-detect the path to the JDK on Windows (r24333)
+ * API changes:
+   - many, many new APIs and types as part of the new features in 1.5.0
+   - APIs to allow retrieving multiple revprops in one fetch (issue #2850)
+   - basic progress reporting for ra_svn (issue #901)
+   - new APIs for creating and using iterators (r26533)
+   - svn_fs_node_origin_rev finds line of history origin (issue #3017, #3024)
+   - svn_revnum_parse for parsing revision numbers (r26195)
+   - svn_path_is_canonical for validating paths (r26481)
+   - new API svn_fs_txn_root_base_revision() (r22610)
+   - pass individual arguments rather than config objects (r25182, r25190)
+   - clients can now extend HTTP User-Agent header (r28613)
+   - SVN_ERR_RA_DAV_PATH_NOT_FOUND is deprecated and no longer raised
+ * Bindings:
+   - Many improvements to all bindings (Java, Perl, Python, and Ruby)
+
+
 Version 1.4.6
 (21 Dec 2007, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.6
@@ -433,6 +1115,7 @@ http://svn.collab.net/repos/svn/tags/1.3.1
      - fixed: pool lifetime bug (r17992)
      - fixed: memory leak (r18230)
      - fixed: race condition during application pool initialization (r18721)
+     - fixed: Make pool parameters optional (issue #2444)
  * ruby bindings:
      - fixed: pool management issue (r17795, -811)
      - fixed: protect baton from garbage collection (r17627)

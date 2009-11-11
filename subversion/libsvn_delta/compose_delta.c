@@ -2,17 +2,22 @@
  * compose_delta.c:  Delta window composition.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -574,8 +579,10 @@ build_range_list(apr_size_t offset, apr_size_t limit, range_index_t *ndx)
       else
         {
           /* TODO: (Potential optimization) Investigate if it would
-             make sense to forbid range_from_target lengths shorter
-             than, say, VD_KEY_SIZE (see vdelta.c) */
+             make sense to forbid short range_from_target lengths
+             (this comment originally said "shorter than, say,
+             VD_KEY_SIZE (see vdelta.c)", but Subversion no longer
+             uses vdelta). */
 
           if (offset >= node->limit)
             node = node->next;
@@ -600,8 +607,8 @@ build_range_list(apr_size_t offset, apr_size_t limit, range_index_t *ndx)
         }
     }
 
-  assert(!"A range's offset isn't smaller than its limit? Impossible!");
-  return range_list;
+  /* A range's offset isn't smaller than its limit? Impossible! */
+  SVN_ERR_MALFUNCTION_NO_RETURN();
 }
 
 
@@ -804,17 +811,4 @@ svn_txdelta_compose_windows(const svn_txdelta_window_t *window_A,
   composite->sview_len = window_A->sview_len;
   composite->tview_len = window_B->tview_len;
   return composite;
-}
-
-/* This is a private interlibrary compatibility wrapper. */
-svn_txdelta_window_t *
-svn_txdelta__compose_windows(const svn_txdelta_window_t *window_A,
-                             const svn_txdelta_window_t *window_B,
-                             apr_pool_t *pool);
-svn_txdelta_window_t *
-svn_txdelta__compose_windows(const svn_txdelta_window_t *window_A,
-                             const svn_txdelta_window_t *window_B,
-                             apr_pool_t *pool)
-{
-  return svn_txdelta_compose_windows(window_A, window_B, pool);
 }

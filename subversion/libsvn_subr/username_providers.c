@@ -2,17 +2,22 @@
  * username_providers.c: providers for SVN_AUTH_CRED_USERNAME
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -34,8 +39,9 @@
 /* File provider                                                         */
 /*-----------------------------------------------------------------------*/
 
-/* The keys that will be stored on disk */
-#define SVN_CLIENT__AUTHFILE_USERNAME_KEY            "username"
+/* The key that will be stored on disk.  Serves the same role as similar
+   constants in other providers. */
+#define AUTHN_USERNAME_KEY "username"
 
 
 
@@ -72,8 +78,7 @@ username_first_creds(void **credentials,
       svn_error_clear(err);
       if (! err && creds_hash)
         {
-          svn_string_t *str = apr_hash_get(creds_hash,
-                                           SVN_CLIENT__AUTHFILE_USERNAME_KEY,
+          svn_string_t *str = apr_hash_get(creds_hash, AUTHN_USERNAME_KEY,
                                            APR_HASH_KEY_STRING);
           if (str && str->data)
             username = str->data;
@@ -124,8 +129,7 @@ username_save_creds(svn_boolean_t *saved,
 
   /* Put the credentials in a hash and save it to disk */
   creds_hash = apr_hash_make(pool);
-  apr_hash_set(creds_hash, SVN_CLIENT__AUTHFILE_USERNAME_KEY,
-               APR_HASH_KEY_STRING,
+  apr_hash_set(creds_hash, AUTHN_USERNAME_KEY, APR_HASH_KEY_STRING,
                svn_string_create(creds->username, pool));
   err = svn_config_write_auth_data(creds_hash, SVN_AUTH_CRED_USERNAME,
                                    realmstring, config_dir, pool);
@@ -266,7 +270,7 @@ username_prompt_next_creds(void **credentials_p,
                                            SVN_AUTH_PARAM_NO_AUTH_CACHE,
                                            APR_HASH_KEY_STRING);
 
-  if (ib->retries >= pb->retry_limit)
+  if ((pb->retry_limit >= 0) && (ib->retries >= pb->retry_limit))
     {
       /* give up, go on to next provider. */
       *credentials_p = NULL;
@@ -274,11 +278,9 @@ username_prompt_next_creds(void **credentials_p,
     }
   ib->retries++;
 
-  SVN_ERR(prompt_for_username_creds
-          ((svn_auth_cred_username_t **) credentials_p, pb,
-           parameters, realmstring, FALSE, ! no_auth_cache, pool));
-
-  return SVN_NO_ERROR;
+  return prompt_for_username_creds
+         ((svn_auth_cred_username_t **) credentials_p, pb,
+          parameters, realmstring, FALSE, ! no_auth_cache, pool);
 }
 
 

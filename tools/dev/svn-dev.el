@@ -128,6 +128,23 @@ Inhibit backup files unless `vc-make-backup-files' is non-nil."
 
 
 
+;;; Dynamic generation of common Subversion URLs.
+;;;
+;;; (I have a version of this that actually fetches the stuff from the
+;;; Net if you don't have a local copy, but it requires a very recent
+;;; version of Emacs, so I didn't bother with it here.  -kfogel)
+
+(defvar svn-source-tree-top (expand-file-name "~/projects/svn/")
+  "*Top directory of your Subversion source tree.  You almost
+certainly want to set this in your .emacs, to override the default;
+use `(setq svn-source-tree-top \"/path/to/the/tree\")'.")
+
+(defvar svn-faq-file (concat svn-source-tree-top "/www/faq.html")
+  "*A local copy of the Subversion FAQ.")
+
+(defvar svn-hacking-file (concat svn-source-tree-top "/www/hacking.html")
+  "*A local copy of the Subversion hacking.html file.")
+
 ;; Helper for referring to issue numbers in a user-friendly way.
 (defun svn-bug-url (n)
   "Insert the url for Subversion issue number N.  Interactively, prompt for N."
@@ -154,6 +171,62 @@ the resulting URL."
              (end   (cdr bounds)))
         (delete-region start end)))
   (insert (format "http://svn.collab.net/viewcvs/svn?rev=%s&view=rev" rev)))
+
+(defconst svn-url-base "http://subversion.tigris.org/")
+(defconst svn-faq-url (concat svn-url-base "faq.html"))
+(defconst svn-hacking-url (concat svn-url-base "hacking.html"))
+
+(defun svn-html-get-targets (file)
+  "Build a list of targets for the Subversion web file FILE."
+  (let* ((lst nil)
+         (already-buffer (find-buffer-visiting file))
+         (faq-buffer (or already-buffer (find-file-noselect file))))
+    (save-excursion
+      (set-buffer faq-buffer)
+      (goto-char (point-min))
+      ;; TODO: Ideally, this wouldn't depend on the presence of a
+      ;; table of contents with "#" URLs, it would read the divs and
+      ;; anchors themselves.
+      (while (search-forward "href=\"#" nil t)
+        (let ((b (point))
+              (e (progn (search-forward "\"") (forward-char -1) (point))))
+          (setq lst (cons (buffer-substring b e) lst))))
+      (if (not already-buffer)
+          (kill-buffer (current-buffer)))
+      lst)))
+
+(defun svn-url-completing-read (file prompt &optional hist-list)
+  "Completingly read an HTML target for FILE, prompting with PROMPT.
+If HIST-LIST is non-nil, it is a symbol: the completion history list to use."
+  (progn
+    (let* ((targets (svn-html-get-targets file))
+           (target-str (completing-read prompt targets nil t nil hist-list)))
+      (list target-str))))
+
+(defvar svn-faq-history-list nil
+  "History list for the 'svn-faq-url' prompt.")
+
+(defvar svn-hacking-history-list nil
+  "History list for the 'svn-hacking-url' prompt.")
+
+(defun svn-faq-url (target)
+  "Prompt with completion for a targeted SVN FAQ item, then insert it.
+If called non-interactively, TARGET is the target within the faq (an
+HTML anchor name, that is, the part after the \"#\")."
+  (interactive
+   (svn-url-completing-read svn-faq-file "FAQ entry: "
+                            'svn-faq-history-list))
+  (insert svn-faq-url "#" target))
+
+(defun svn-hacking-url (target)
+  "Prompt with completion for a targeted hacking.html item, then insert it.
+If called non-interactively, TARGET is the target within hacking.html
+(an HTML anchor name, that is, the part after the \"#\")."
+  (interactive
+   (svn-url-completing-read svn-hacking-file "hacking.html entry: "
+                            'svn-hacking-history-list))
+  (insert svn-hacking-url "#" target))
+
 
 
 ;;; Subversion C conventions

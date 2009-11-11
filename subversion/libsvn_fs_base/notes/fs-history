@@ -218,7 +218,7 @@ copy.
 
    [### Right about here, C-Mike's memory starts getting fuzzy ###]
 
-The following is the copy ID inheritence algorithm, used to calculate
+The following is the copy ID inheritance algorithm, used to calculate
 what copy ID a node revision will use when cloned for mutability.
 Remember that a node revision is never cloned until its parent is
 first cloned.

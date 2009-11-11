@@ -2,17 +2,22 @@
  * mergeinfo.c :  routines for requesting and parsing mergeinfo reports
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -35,17 +40,17 @@
 
 #include "ra_neon.h"
 
-/* Baton for accumulating mergeinfo.  RESULT stores the final
-   mergeinfo hash result we are going to hand back to the caller of
+/* Baton for accumulating mergeinfo.  CATALOG stores the final
+   mergeinfo catalog result we are going to hand back to the caller of
    get_mergeinfo.  curr_path and curr_info contain the value of the
    CDATA from the mergeinfo items as we get them from the server.  */
 
 struct mergeinfo_baton
 {
   apr_pool_t *pool;
-  const char *curr_path;
+  svn_stringbuf_t *curr_path;
   svn_stringbuf_t *curr_info;
-  apr_hash_t *result;
+  svn_mergeinfo_catalog_t catalog;
   svn_error_t *err;
 };
 
@@ -86,7 +91,7 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
   if (elm->id == ELEM_mergeinfo_item)
     {
       svn_stringbuf_setempty(mb->curr_info);
-      mb->curr_path = NULL;
+      svn_stringbuf_setempty(mb->curr_path);
     }
 
   SVN_ERR(mb->err);
@@ -110,14 +115,14 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
     {
       if (mb->curr_info && mb->curr_path)
         {
-          apr_hash_t *path_mergeinfo;
+          svn_mergeinfo_t path_mergeinfo;
 
-          mb->err = svn_mergeinfo_parse(&path_mergeinfo, mb->curr_info->data,
-                                        mb->pool);
-          SVN_ERR(mb->err);
-
-          apr_hash_set(mb->result, mb->curr_path,  APR_HASH_KEY_STRING,
-                       path_mergeinfo);
+          SVN_ERR_ASSERT(mb->curr_path->data);
+          SVN_ERR((mb->err = svn_mergeinfo_parse(&path_mergeinfo,
+                                                 mb->curr_info->data,
+                                                 mb->pool)));
+          apr_hash_set(mb->catalog, apr_pstrdup(mb->pool, mb->curr_path->data),
+                       APR_HASH_KEY_STRING, path_mergeinfo);
         }
     }
 
@@ -133,30 +138,28 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
   switch (state)
     {
     case ELEM_mergeinfo_path:
-      mb->curr_path = apr_pstrndup(mb->pool, cdata, nlen);
+      svn_stringbuf_appendbytes(mb->curr_path, cdata, nlen);
       break;
 
     case ELEM_mergeinfo_info:
-      if (mb->curr_info)
-        svn_stringbuf_appendbytes(mb->curr_info, cdata, nlen);
+      svn_stringbuf_appendbytes(mb->curr_info, cdata, nlen);
       break;
 
     default:
       break;
     }
-  SVN_ERR(mb->err);
-
-  return SVN_NO_ERROR;
+  return mb->err;
 }
 
 /* Request a mergeinfo-report from the URL attached to SESSION,
-   and fill in the MERGEINFO hash with the results.  */
+   and fill in the CATALOG with the results.  */
 svn_error_t *
 svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
-                           apr_hash_t **mergeinfo,
+                           svn_mergeinfo_catalog_t *catalog,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,
                            svn_mergeinfo_inheritance_t inherit,
+                           svn_boolean_t include_descendants,
                            apr_pool_t *pool)
 {
   int i, status_code;
@@ -184,6 +187,15 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                                         "<S:inherit>%s"
                                         "</S:inherit>",
                                         svn_inheritance_to_word(inherit)));
+
+  if (include_descendants)
+    {
+      /* Send it only if true; server will default to "no". */
+      svn_stringbuf_appendcstr(request_body,
+                               "<S:include-descendants>yes"
+                               "</S:include-descendants>");
+    }
+
   if (paths)
     {
       for (i = 0; i < paths->nelts; i++)
@@ -201,9 +213,9 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
   svn_stringbuf_appendcstr(request_body, minfo_report_tail);
 
   mb.pool = pool;
-  mb.curr_path = NULL;
+  mb.curr_path = svn_stringbuf_create("", pool);
   mb.curr_info = svn_stringbuf_create("", pool);
-  mb.result = apr_hash_make(pool);
+  mb.catalog = apr_hash_make(pool);
   mb.err = SVN_NO_ERROR;
 
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
@@ -231,7 +243,7 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                                       pool));
 
   if (mb.err == SVN_NO_ERROR)
-    *mergeinfo = mb.result;
+    *catalog = mb.catalog;
 
   return mb.err;
 }

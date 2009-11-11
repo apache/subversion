@@ -2,17 +2,22 @@
  * properties.c:  stuff related to Subversion properties
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -22,7 +27,6 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 #include <string.h>       /* for strncmp() */
-#include <assert.h>
 #include "svn_string.h"
 #include "svn_props.h"
 #include "svn_error.h"
@@ -33,13 +37,12 @@ svn_boolean_t
 svn_prop_is_svn_prop(const char *prop_name)
 {
   return strncmp(prop_name, SVN_PROP_PREFIX, (sizeof(SVN_PROP_PREFIX) - 1))
-         ? FALSE
-         : TRUE;
+         == 0;
 }
 
 
 svn_boolean_t
-svn_prop_has_svn_prop(apr_hash_t *props, apr_pool_t *pool)
+svn_prop_has_svn_prop(const apr_hash_t *props, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   const void *prop_name;
@@ -47,7 +50,8 @@ svn_prop_has_svn_prop(apr_hash_t *props, apr_pool_t *pool)
   if (! props)
     return FALSE;
 
-  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, (apr_hash_t *)props); hi;
+       hi = apr_hash_next(hi))
     {
       apr_hash_this(hi, &prop_name, NULL, NULL);
       if (svn_prop_is_svn_prop((const char *) prop_name))
@@ -269,4 +273,21 @@ svn_prop_name_is_valid(const char *prop_name)
         return FALSE;
     }
   return TRUE;
+}
+
+const char *
+svn_prop_get_value(apr_hash_t *props,
+                   const char *prop_name)
+{
+  svn_string_t *str;
+
+  if (!props)
+    return NULL;
+
+  str = apr_hash_get(props, prop_name, APR_HASH_KEY_STRING);
+
+  if (str)
+    return str->data;
+
+  return NULL;
 }

@@ -18,6 +18,7 @@
 
 <h1>Subversion FAQ</h1>
 
+<p>Translations: <a href="faq.ja.html">&#26085;&#26412;&#35486;</a>, <a href="faq.zh.html">&#31616;&#20307;&#20013;&#25991;</a></p>
 
 <div class="h2"><!-- no 'id' or 'title' attribute for TOC -->
 <h2>Table of Contents</h2>
@@ -196,9 +197,6 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#http-301-error">I can see my repository in a web browser, but
     'svn checkout' gives me an error about "301 Moved Permanently".
     What's wrong?</a></li>
-<li><a href="#no-copy-history">I'm trying to look at an old version of my
-    file, but svn says something about "path not found".  What's going
-    on?</a></li> 
 <li><a href="#digest-auth">Why doesn't HTTP Digest auth work?</a></li>
 <li><a href="#xlc-compile">Compiling with xlc on AIX, I get compilation
     errors.  What's wrong?</a></li>
@@ -231,7 +229,7 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#debian-libtool">I can't build Subversion from working
     copy source on Debian GNU/Linux; I get errors at the final link
     stage.  What's wrong?</a></li>
-<li><a href="#freebsd-listen-host">I'm using FreeBSD, and I've started
+<li><a href="#svnserve-listen-host">I've started
   svnserve, but it doesn't seem to be listening on port 3690.</a></li>
 <li><a href="#already-under-version-control">I can't add a directory
     because Subversion says it's "already under version control".</a></li>
@@ -253,6 +251,15 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#working-copy-format-change">I got an error saying "This
     client is too old to work with working copy '...' ".  How can I
     fix it without upgrading Subversion?</a></li>
+<li><a href="#relocation-against-local-symbol">I got an error saying
+    "relocation R_X86_64_32 against `a local symbol' can not be used
+    when making a shared object" when building the Neon library on 64-bit
+    Linux.</a></li>
+<li><a href="#secure-connection-truncated">Why am I getting an error
+    saying "Could not read response body: Secure connection truncated"
+    when doing a checkout from Apache?</a></li>
+<li><a href="#self-tree-conflict">Why am I getting a tree conflict upon
+    update even though no one else has committed conflicting changes?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -427,8 +434,8 @@ standalone program similar to cvs pserver, or Apache <b>httpd-2.0</b>
 using a special <b>mod_dav_svn</b> module.  <b>svnserve</b> speaks a
 custom protocol, while <b>mod_dav_svn</b> uses WebDAV as its network
 protocol.  See <a
-href="http://svnbook.red-bean.com/html-chunk/ch06.html">chapter 6</a>
-in the Subversion book to learn more.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html"
+>chapter 6</a> in the Subversion book to learn more.</p>
 
 </div>
 
@@ -447,8 +454,8 @@ use Subversion?</h3>
 
 <p>For more details about setting up a network accessible Subversion
 server, see <a
-href="http://svnbook.red-bean.com/html-chunk/ch06.html">chapter 6</a>
-in the Subversion book.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html"
+>chapter 6</a> in the Subversion book.</p>
 
 </div>
 
@@ -489,23 +496,42 @@ there.  We're trying to replace CVS.  See the first question.</p>
 <h3>Why does the entire repository share the 
     same revision number? I want each of my projects to have their
     own revision numbers.</h3>
-<p>
-The global revision number attached to the repository as a whole is
-meaningless from a user's perspective. It's an internal mechanism that
-accomplishes the goal of the underlying schema design. It just so
-happens to be exposed so that the user's interface can sometimes be a
-little more convenient than always having to type obnoxiously long
-date/time strings.
-</p>
 
-<p>
-The revision number is only relevant to the repository, and user
-convenience. It has <b>no</b> impact on any other factor of what you
-store in the repository.  Repository revision number bumps aren't
-nearly useful enough to be an accurate indication of the real rate of
-change of a given code base.  There are other more complicated ways to
-get a much better picture of a code-base's rate of change.
-</p>
+<p>First, note that Subversion has no concept of projects.  The
+repository just stores a versioned directory
+tree&nbsp;&mdash;&nbsp;you may consider certain sub-trees to be
+projects, but Subversion doesn't treat them differently from any other
+sub-tree.  Thus, the interpretation of what constitutes a project in
+the repository is left entirely up to the users.  (This is similar to
+how <a
+href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.using.html"
+>branches</a> and <a
+href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.tags.html"
+>tags</a> are conventions built on top of copies, instead of being
+basic concepts built into Subversion itself.)</p>
+
+<p>Each time you commit a change, the repository stores a new revision
+of that overall repository tree, and labels the new tree with a new
+revision number.  Of course, most of the tree is the same as the
+revision before, except for the parts you changed.</p>
+
+<p>The new revision number is a sequential label that applies to the
+entire new tree, not just to the files and directories you touched in
+that revision.  However, colloquially, a revision number is used to
+refer to the change committed in that revision; for example, "the
+change in r588" ("r588" is shorthand for "revision 588") really means
+"the difference between repository trees 587 and 588", or put another
+way, "the change made to tree 587 to produce tree 588".</p>
+
+<p>Thus, the advancing revision number marks the progress of the
+repository as a whole; you generally can't gauge the progress of a
+particular project within the repository by watching the revision
+number.  Also, the revision number should not be used as the
+publicly-visible release number of a particular project in the
+repository.  For that, you should devise some other mechanism of
+distinguishing releases, such as using <a
+href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.tags.html"
+>tags</a>.</p>
 
 </div>
 
@@ -612,7 +638,7 @@ Illustrator document</a> are available.</p>
 other resources available:</p>
 <ul>
   <li><a href="http://svnbook.red-bean.com">The Subversion Book</a></li>
-  <li><a href="http://subversion.tigris.org/servlets/ProjectMailingListList">The
+  <li><a href="mailing-lists.html">The
        Subversion Users mailing list</a> (<a
        href="mailto:users@subversion.tigris.org"
        >users@subversion.tigris.org</a>)
@@ -682,18 +708,13 @@ at section IV, the "Quickstart Guide".</p>
 <h3>How do I convert an existing CVS repository
     into a Subversion repository?</h3>
 
-<p>Members of the Subversion development community created and
-maintain a tool called cvs2svn.  You can find it at <a
-href="http://cvs2svn.tigris.org/">http://cvs2svn.tigris.org/</a>.  Be
-sure to read the <a
-href="http://cvs2svn.tigris.org/cvs2svn.html">cvs2svn documentation</a>.
-</p>
-
-<p>If cvs2svn.py does not work for you, (e.g. your repository
-causes it to crash, or it doesn't deal with branches and tags
-quite how you would like), there are at least two other
-conversion utilities you can try.  These have different features
-(and possibly different bugs):</p>
+<p>Try the cvs2svn conversion tool, from <a
+href="http://cvs2svn.tigris.org/">http://cvs2svn.tigris.org/</a> (see
+also its <a href="http://cvs2svn.tigris.org/features.html" >feature
+list</a> and <a href="http://cvs2svn.tigris.org/cvs2svn.html"
+>documentation</a>).  cvs2svn seems to be what most people use, but if
+for some reason it doesn't meet your needs, there are at least two
+other tools you could try:</p>
 
 <ul>
 
@@ -784,8 +805,8 @@ scheme is supported by running <tt>svn --version</tt>.</p>
 
 <p>A simple option is to use the <b>svnserve</b> server instead of
 Apache.  See <a
-href="http://svnbook.red-bean.com/html-chunk/ch06.html">chapter 6</a>
-in the Subversion book for details.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html"
+>chapter 6</a> in the Subversion book for details.</p>
 
 <p>However, if your admins don't want you to run Apache, it's very
 likely they don't want you to run a custom server process on port 3690
@@ -943,6 +964,14 @@ equivalent to CVS modules:</p>
 	repository to access modules imported from the second.  They
 	remain separate URLs.</p>
 </blockquote>
+
+<p>See also <a href="links.html#misc_utils">miscellaneous utilities</a>
+for helpful tools to select and reorder revisions when merging
+several repositories, especially the 
+<a href="http://www.coelho.net/svn-merge-repos.html">svn-merge-repos.pl</a> 
+perl script for basic operations and the
+<a href="http://svn.borg.ch/svndumptool/">SvnDumpTool</a> python classes
+for advanced reorganisations.</p>
 </div>
 
 
@@ -1049,8 +1078,8 @@ owns the repository.</p>
 <p>If your clients are accessing via <tt>file:///</tt> or
 <tt>svn+ssh://</tt>, then there's no way to avoid access by multiple
 users.  In that case, read <a
-href="http://svnbook.red-bean.com/html-chunk/ch06s05.html">the last
-section in chapter 6</a>, and pay particular attention to the
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.multimethod.html"
+>the last section in chapter 6</a>, and pay particular attention to the
 "checklist" sidebar at the bottom.  It outlines a number of steps to
 make this scenario safer.</p>
 
@@ -1097,8 +1126,8 @@ revision, and the other is often a temporary transaction-tree -- thus
 the need for write access.</p>
 
 <p>This limitation only applies to the Berkeley DB backend; the <a
-href="http://svnbook.red-bean.com/svnbook-1.1/ch05.html#svn-ch-5-sect-1.2.A">FSFS
-backend</a> does not exhibit this behaviour.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.planning.html#svn.reposadmin.basics.backends.fsfs"
+>FSFS backend</a> does not exhibit this behaviour.</p>
 
 </div>
 
@@ -1125,8 +1154,8 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=516">issue
 <p>In the meantime, your only recourse is to <b>svnadmin dump</b> your
 repository, then pipe the dumpfile through <b>svndumpfilter</b>
 (excluding the bad path) into an <b>svnadmin load</b> command.  See <a
-href="http://svnbook.red-bean.com/html-chunk/ch05.html">chapter 5</a>
-of the Subversion book for details about this.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.html"
+>chapter 5</a> of the Subversion book for details about this.</p>
 
 </div>
 
@@ -1139,7 +1168,7 @@ How do I change the log message for a revision after it's been committed?
 <p>Log messages are kept in the repository as properties attached to each
 revision.  By default, the log message property (<em>svn:log</em>) cannot be
 edited once it is committed.  That is because changes to <a
-href="http://svnbook.red-bean.com/svnbook/ch05.html#svn-ch-5-sect-1.2">revision
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html">revision
 properties</a> (of which <em>svn:log</em> is one) cause the property's
 previous value to be permanently discarded, and Subversion tries to prevent
 you from doing this accidentally.  However, there are a couple of ways to get
@@ -1148,13 +1177,13 @@ Subversion to change a revision property.</p>
 <p>The first way is for the repository administrator to enable revision
 property modifications.  This is done by creating a hook called
 "pre-revprop-change" (see <a
-href="http://svnbook.red-bean.com/svnbook/ch05s02.html#svn-ch-5-sect-2.1">this
-section</a> in the Subversion book for more details about how to do this).
-The "pre-revprop-change" hook has access to the old log message before it is
-changed, so it can preserve it in some way (for example, by sending an email).
-Once revision property modifications are enabled, you can change a revision's
-log message by passing the --revprop switch to <b>svn propedit</b> or <b>svn
-propset</b>, like either one of these:</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.create.html#svn.reposadmin.create.hooks"
+>this section</a> in the Subversion book for more details about how to do
+this).  The "pre-revprop-change" hook has access to the old log message
+before it is changed, so it can preserve it in some way (for example, by
+sending an email).  Once revision property modifications are enabled, you
+can change a revision's log message by passing the --revprop switch to
+<b>svn propedit</b> or <b>svn propset</b>, like either one of these:</p>
 
 <pre>
 $ svn propedit -r N --revprop svn:log URL
@@ -1303,9 +1332,9 @@ do the following: </p>
 </ol>
 
 <p> See
-<a href="http://svnbook.red-bean.com/html-chunk/ch05s03.html#svn-ch-5-sect-3.4"
->http://svnbook.red-bean.com/html-chunk/ch05s03.html#svn-ch-5-sect-3.4</a>
-for more details on dumping and loading.</p>
+<a href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.maint.html#svn.reposadmin.maint.migrate"
+>this section of the Subversion book</a> for more details on dumping and
+loading.</p>
 
 <p> <b>Note</b>: Most upgrades of Subversion do <i>not</i> involve a
 dump and load.  When one is required, the release announcement and the
@@ -1750,8 +1779,8 @@ mechanism to automatically set properties on files being committed.
 This means that all of your users need to remember to set certain
 properties whenever they <tt>svn add</tt> a file.  Fortunately,
 there's a client-side tool to help with this.  Read about the <a
-href="http://svnbook.red-bean.com/svnbook-1.1/ch07s02.html#svn-ch-7-sect-2.4">
-auto-props</a> feature in the book.  You need to make sure all your
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html#svn.advanced.props.auto"
+>auto-props</a> feature in the book.  You need to make sure all your
 users configure their clients' auto-props settings appropriately.</p>
 
 <p>You could write a pre-commit hook script to reject any commit which
@@ -1863,6 +1892,8 @@ the log format version
   <tr><td>8 (0x00000008)</td><td>4.2</td></tr>
   <tr><td>10 (0x0000000a)</td><td>4.3</td></tr>
   <tr><td>11 (0x0000000b)</td><td>4.4</td></tr>
+  <tr><td>12 (0x0000000c)</td><td>4.5</td></tr>
+  <tr><td>13 (0x0000000d)</td><td>4.6</td></tr>
 </table>
 
 </div>
@@ -1876,10 +1907,10 @@ every commit?</h3>
 <p>This is done all the time, and is easily accomplished by adding a
 post-commit hook script to your repository.  Read about hook scripts
 in <a
-href="http://svnbook.red-bean.com/en/1.1/ch05s02.html#svn-ch-5-sect-2.1">Chapter
-5</a> of the book.  The basic idea is to make the "live site" just an
-ordinary working copy, and then have your post-commit hook script run
-'svn update' on it.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.create.html#svn.reposadmin.create.hooks"
+>Chapter 5</a> of the book.  The basic idea is to make the "live site"
+just an ordinary working copy, and then have your post-commit hook
+script run 'svn update' on it.</p>
 
 <p>In practice, there are a couple of things to watch out for.  The
 server program performing the commit (svnserve or apache) is the same
@@ -2070,7 +2101,7 @@ the future, however.</p>
 <p>If Subversion determines that the file is binary, the file receives
 an svn:mime-type property set to "application/octet-stream".  (You can
 always override this by using the <a
-href="http://svnbook.red-bean.com/svnbook-1.1/ch07s02.html#svn-ch-7-sect-2.4"
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html#svn.advanced.props.auto"
 >auto-props feature</a> or by setting the property manually with
 <tt>svn propset</tt>.)</p>
 
@@ -2137,7 +2168,7 @@ You want to do something like
 svn mv svn://server/trunk/stuff/* svn://server/trunk/some-other-dir
 </pre>
 <p>
-but it fails with 
+but it fails with
 </p>
 <pre>
 svn: Path 'svn://server/trunk/stuff/*' does not exist in revision 123
@@ -2147,20 +2178,36 @@ svn: Path 'svn://server/trunk/stuff/*' does not exist in revision 123
 </p>
 
 <p>
-The short, unhappy answer is: there's no built-in way to do this; many
-commands, like <tt>mv</tt>, refuse to take an arbitrary number of
-arguments ... and in any case, Subversion doesn't expand wildcards like
-"*" the way the shell does.
+Subversion doesn't expand wildcards like "*" in URL arguments.
+(Technically speaking, Subversion does not expand wildcards in local
+paths either, but on most operating systems the shell expands wildcards
+in local paths in the command line before passing the resulting list to
+Subversion.)
 </p>
 
 <p>
+You have to generate the list of source URLs yourself. You could do it
+like this (in Bash):
+</p>
+
+<pre>
+        s=svn://server/trunk/stuff
+        items=$(svn ls "$s")
+        urls=$(for item in $items; do echo $s/$item; done)
+        svn mv $urls svn://server/trunk/some-other-dir -m "Moved all at once"
+</pre>
+
+<p>
+In Subversion v1.4 and earlier, Subversion did not allow you to "cp" and
+"mv" multiple paths or URLs in one command. You have to issue multiple
+commands.
 If you happen to have a working copy that contains all the source
 files as well as the destination directory, then you can exploit your
 shell's wildcard feature to do the move, like this (for Bash):
 </p>
 <pre>
-  for i in stuff/*; do svn mv $i some-other-dir; done
-  svn ci -m "moved all the stuff into some other dir"
+        for i in stuff/*; do svn mv $i some-other-dir; done
+        svn ci -m "moved all the stuff into some other dir"
 </pre>
 
 <p>
@@ -2169,7 +2216,7 @@ source files, and then run "svn mv" on each item in that list, like
 this:
 </p>
 <pre>
-        s=svn://server/trunk/stuff/
+        s=svn://server/trunk/stuff
         svn ls "$s"  | \
         while read f
            do svn mv "$s/$f" svn://server/trunk/some-other-dir -m "Moved just one file"
@@ -2182,17 +2229,10 @@ generates just one commit total.
 </p>
 
 <p>
-There is a program called "svnmucc" or "mucc" depending upon which
-version of Subversion you have, whose source is distributed with
-Subversion (in ...<tt>/contrib/client-side/mucc/mucc.c</tt> for
-Subversion 1.4 or earlier, in
-...<tt>/contrib/client-side/svnmucc/svnmucc.c</tt> for Subversion 1.5
-or later), that appears to solve this problem for you.
-</p>
-
-<p>
-Rumor has it that with release 1.5, Subversion will in fact allow you
-to "cp" and "mv" multiple files at once.
+There is a program called "svnmucc" (previously "mucc"), whose source is
+distributed with Subversion, that enables you to combine multiple
+commands into one commit. See <a href="tools_contrib.html#svnmucc_c">the
+Tools and Contrib page</a>.
 </p>
 </div>
 
@@ -2468,10 +2508,10 @@ working copy is out of date?</h3>
      (for example, directory property modifications), if the
      repository has a more recent version of the node, the commit will
      be rejected, to prevent data loss.  See <a
-     href="http://svnbook.red-bean.com/svnbook/ch02s03.html#svn-ch-2-sect-3.4">
-     The Limitations of Mixed Revisions</a> in the <a
+     href="http://svnbook.red-bean.com/nightly/en/svn.basic.in-action.html#svn.basic.in-action.mixedrevs.limits"
+     >Mixed revisions have limitations</a> in the <a
      href="http://svnbook.red-bean.com/">Version Control with
-     Subversion</a> for details.</p>
+     Subversion</a> book for details.</p>
 
      <p>You can fix the problem by running 'svn update' in the working
      copy.</p>
@@ -2496,7 +2536,7 @@ If your patch is committed to the code base and you run an <tt>svn update</tt>, 
 you might receive an error message of: "svn: Failed to add file 'my.new.file':
 object of the same name already exists".</p>
 
-<p>The reason that you recieved this error is that you still have your local copy of
+<p>The reason that you received this error is that you still have your local copy of
 the file in your working copy.  The steps to correct this problem are:</p>
 
 <ol>
@@ -2517,17 +2557,20 @@ and when I try to check out Subversion, I get an error about an
 
 <p>Subversion uses a plugin system to allow access to repositories.
 Currently there are three of these plugins: ra_local allows access to
-a local repository, ra_dav which allows access to a repository via
+a local repository, ra_neon or ra_serf which allow access to a repository via
 WebDAV, and ra_svn allows local or remote access via the svnserve
 server.  When you attempt to perform an operation in Subversion, the
 program tries to dynamically load a plugin based on the URL scheme.  A
 `file://' URL will try to load ra_local, and an `http://' URL will try
-to load ra_dav.</p>
+to load ra_neon or ra_serf.</p>
 
 <p>The error you are seeing means that the dynamic linker/loader can't find
-the plugins to load.  This normally happens when you build Subversion with
-shared libraries, then attempt to run it without first running 'make
-install'.  Another possible cause is that you ran make install, but the
+the plugins to load.  For `http://' access, this normally means that you have
+not linked Subversion to neon or serf when compiling it (check the configure
+script output and the config.log file for information about this).
+It also happens when you build Subversion with shared libraries,
+then attempt to run it without first running 'make install'.
+Another possible cause is that you ran make install, but the
 libraries were installed in a location that the dynamic linker/loader
 doesn't recognize.  Under Linux, you can allow the linker/loader to find the
 libraries by adding the library directory to /etc/ld.so.conf and running
@@ -2585,8 +2628,9 @@ a <tt>file:</tt> URL?</h3>
 svn import file:///d:/some/path/to/repos/on/d/drive
 </pre>
 <p>See <a
-href="http://svnbook.red-bean.com/html-chunk/ch02s03.html#svn-ch-2-sidebar-1">
-Repository URLs</a> in the Subversion Book for more details.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.basic.in-action.html#svn.advanced.reposurls">
+Subversion Repository URLs</a> in the Subversion Book for more
+details.</p>
 
 </div>
 
@@ -2668,79 +2712,8 @@ sorts of information about that Service Pack here:</p>
     trace of the conversation between a Subversion client and
     server?</h3>
 
-<p>Use <a href="http://www.wireshark.org/">Wireshark</a> (formerly
-known as "Ethereal") to eavesdrop on the conversation.</p>
-
-<p>First, make sure that between captures within the same wireshark
-session, you hit <em>Clear</em>, otherwise filters from one capture
-(say, an HTTP capture) might interfere with others (say, an ra_svn
-capture). </p>
-
-<p>Assuming you're cleared, then:</p>
-
-<ol>
-<li><p>Pull down the <i>Capture</i> menu, and choose
-    <i>Capture&nbsp;Filters</i>.</p></li>
-<li><p>If debugging the http:// (WebDAV) protocol, then in the window
-    that pops up, choose "<code>HTTP&nbsp;TCP&nbsp;port&nbsp;(80)</code>"
-    (which should result in the filter string
-    "<code><i>tcp&nbsp;port&nbsp;http</i></code>").</p>
-    <p>If debugging the svn:// (ra_svn) protocol, then choose <i>New</i>,
-    give the new filter a name (say, "ra_svn"), and type
-    "<code>tcp&nbsp;port&nbsp;3690</code>" into the filter string box.</p>
-    <p>When done, click OK.</p></li> 
-<li><p>Again go to the <i>Capture</i> menu, this time choose
-    <i>Interfaces</i>, and click <i>Options</i> next to the
-    appropriate interface (probably you want interface "lo", for
-    "loopback", assuming the server will run on the same machine as
-    the client).</p></li>
-<li><p>Turn off promiscuous mode by unchecking the appropriate
-    checkbox.</p></li>
-<li><p>Click the <i>Start</i> button in the lower right to start the
-    capture.</p></li>
-<li><p>Run your Subversion client.</p></li>
-<li><p>Click the Stop icon (a red X over an ethernet interface card) when
-    the operation is finished (or <i>Capture-&gt;Stop</i> should
-    work).  Now you have a capture.  It looks like a huge list of
-    lines.</p></li>
-<li><p>Click on the <i>Protocol</i> column to sort.</p></li>
-<li><p>Then, click on the first relevant line to select it; usually this
-    is just the first line.</p></li>
-<li><p>Right click, and choose <i>Follow TCP Stream</i>.  You'll be
-    presented with the request/response pairs of the Subversion
-    client's HTTP conversion.</p></li>
-</ol>
-
-<p>The above instructions are specific to the graphical version of
-Wireshark (version 0.99.6), and don't apply to the command-line
-version known as "tshark" (which corresponds to "tethereal", from back
-when Wireshark was called Ethereal).</p>
-
-<p>Alternatively, you may set the <tt>neon-debug-mask</tt> parameter in your
-<tt>servers</tt> configuration file to cause neon's debugging output
-to appear when you run the <tt>svn</tt> client.  The numeric value of
-<tt>neon-debug-mask</tt> is a combination of the <tt>NE_DBG_...</tt> values
-in the header file <tt>ne_utils.h</tt>.  For current versions of neon, setting
-<tt>neon-debug-mask</tt> to 130 (i.e. <tt>NE_DBG_HTTP+NE_DBG_HTTPBODY)</tt>
-will cause the HTTP data to be shown.</p>
-
-<p>You may well want to disable compression when doing a network
-trace&mdash;see the <tt>http-compression</tt> parameter in the <tt>servers</tt>
-configuration file.</p>
-
-<p>Another alternative is to set up a logging proxy between the
- Subversion client and server.  A simple way to do this is to use
- the <tt>socat</tt> program.  For example, to log communication with
- an svnserve instance, run the following command:</p>
-
-<p><tt>socat -v  TCP4-LISTEN:9630,reuseaddr,fork
-    TCP4:localhost:svn</tt></p>
-
-<p>Then run your svn commands using an URL base
-  of <tt>svn://127.0.0.1:9630/</tt>; <tt>socat</tt> will forward the
-  traffic from port 9630 to the normal svnserve port (3690), and will
-  print all traffic in both directions to standard error, prefixing it
-  with &lt; and &gt; signs to show the direction of the traffic.</p>
+<p>Please see <a href="hacking.html#net-trace"
+>hacking.html#net-trace</a>.</p>
 
 </div>
 
@@ -2843,9 +2816,9 @@ $ svn log
 rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
 </pre></blockquote>
 
-<p>See the Subversion Book (<a
-href="http://svnbook.red-bean.com/book.html#svn-ch-5-sect-4"
->"Networking a Repository"</a>)
+<p>See <a
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.httpd.html"
+>the Subversion book</a>
 to learn about configuring access restrictions in Apache.</p>
 
 </div>
@@ -2920,59 +2893,6 @@ a 301 error to occur.</p>
 </div>
 
 
-<div class="h3" id="no-copy-history" title="no-copy-history">
-<h3>I'm trying to look at an old version of my
-    file, but svn says something about "path not found".  What's going
-    on?</h3>
-
-<p>A nice feature of Subversion is that the repository understands
-copies and renames, and preserves the historical connections.  For
-example, if you copy <tt>/trunk</tt> to <tt>/branches/mybranch</tt>,
-then the repository understands that every file in the branch has a
-"predecessor" in the trunk.  Running <tt>svn log --verbose</tt> will
-show you the historical copy, so you can see the rename:</p>
-
-<pre>
-r7932 | joe | 2003-12-03 17:54:02 -0600 (Wed, 03 Dec 2003) | 1 line
-Changed paths:
-   A /branches/mybranch (from /trunk:7931)
-</pre>
-
-<p>Unfortunately, while the repository is aware of copies and renames,
-almost all the svn client subcommands are <b>not</b> aware.  Commands
-like <tt>svn diff</tt>, <tt>svn merge</tt>, and <tt>svn cat</tt> ought
-to understand and follow renames, but don't yet do this.  It's
-scheduled as post-1.0 feature, currently <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=1093">issue
-#1093</a>.  For example, if you ask <tt>svn diff</tt> to compare two
-earlier versions of <tt>/branches/mybranch/foo.c</tt>, the command
-will not automatically understand that the task actually requires
-comparing two versions of <tt>/trunk/foo.c</tt>, due to the rename.
-Instead, you'll see an error about how the branch-path doesn't exist
-in the earlier revisions.</p>
-
-<p>The workaround for all problems of this sort is to do the legwork
-yourself.  That is: <i>you</i> need to be aware of any renamed paths,
-discover them yourself using <tt>svn log -v</tt>, and then provide
-them explicitly to the svn client.  For example, instead of
-running</p>
-
-<pre>
-$ svn diff -r 1000:2000 http://host/repos/branches/mybranch/foo.c
-svn: Filesystem has no item
-svn: '/branches/mybranch/fooc..c' not found in the repository at revision 1000
-</pre>
-
-...you would instead run
-
-<pre>
-$ svn diff -r1000:2000 http://host/repos/trunk/foo.c
-...
-</pre>
-
-</div>
-
-
 <div class="h3" id="digest-auth" title="digest-auth">
 <h3>Why doesn't HTTP Digest auth work?</h3>
 
@@ -3034,8 +2954,8 @@ copies.</p>
 Apache is unable to load one or more DLLs that <tt>mod_dav_svn.so</tt>
 relies on.  If Apache is running as a service it will not have the
 same <tt>PATH</tt> as a regular user.  Make sure that
-<tt>libdb4*.dll</tt>, <tt>libeay32.dll</tt> and <tt>ssleay32.dll</tt>
-are present in either <tt>\Apache\bin</tt> or
+<tt>libdb4*.dll</tt>, <tt>intl3_svn.dll</tt>, <tt>libeay32.dll</tt>
+and <tt>ssleay32.dll</tt> are present in either <tt>\Apache\bin</tt> or
 <tt>\Apache\modules</tt>.  You can copy them from your Subversion
 installation directory if they are not there.</p>
 
@@ -3135,13 +3055,19 @@ cached password.</p>
 <p>On Mac OS X, svn 1.4 and later uses the system Keychain
 facility to encrypt/store your svn password.</p>
 
-<p>On UNIX/Linux, there are no standard system encryption facilities,
-so the password is stored in ~/.subversion/auth/.  Notice, however,
+<p>Subversion 1.6 will address this issue for UNIX/Linux.
+Support for GNOME Keyring and KWallet has been implemented,
+both of which facilitate storing passwords on disk encrypted.
+These programs need to be available at compile-time and and at run-time.
+Otherwise, the client will fall back to caching your password in
+plaintext, but it has also been changed to <em>never</em>
+cache a password in plaintext without asking first.</p>
+
+<p>With Subversion 1.5 and earlier, on UNIX/Linux, the password can
+only be stored in plaintext in ~/.subversion/auth/.  Notice, however,
 that the directory which contains the cached passwords (usually
 ~/.subversion/auth/) has permissions of 700, meaning only you can read
 them.</p>
-
-<p>Trust your OS to protect data on disk.</p>
 
 <p>However, if you're really worried, you can permanently turn off
 password caching.  With an svn 1.0 client, just set 'store-auth-creds
@@ -3412,36 +3338,43 @@ solution described here was not mentioned in that thread.</p>
 </div>
 
 
-<div class="h3" id="freebsd-listen-host" title="freebsd-listen-host">
-<h3>I'm using FreeBSD, and I've started svnserve, but it doesn't seem
-  to be listening on port 3690.</h3>
+<div class="h3" id="svnserve-listen-host" title="svnserve-listen-host">
+<h3>I've started svnserve, but it doesn't seem to be listening on
+    port 3690.</h3>
     
-<p>Short answer: invoke <tt>svnserve</tt> with
-   the <tt>--listen-host=0.0.0.0</tt> option.</p>
-<p>Slightly longer answer: FreeBSD daemons only listen on tcp6 by
-  default; that option tells them to also listen on tcp4.</p>
+<p>Invoke <tt>svnserve</tt> with the <tt>--listen-host=0.0.0.0</tt> option.
+  Svnserve does not properly support IPv4/IPv6 dual-stack operation. 
+  See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2382"
+  >issue #2382</a>.</p>
 </div>
 
 <div class="h3" id="already-under-version-control" title="already-under-version-control">
 <h3>I can't add a directory
     because Subversion says it's "already under version control".</h3>
-<p>The directory you're trying to add already contains
-  a <tt>.svn</tt> subdirectory, but it's from a different repository
-  than the directory to which you're trying to add it.  This probably
-  happened because you used your operating system's "copy" command to
-  copy one working copy into the current one.</p>
+<p>The directory you're trying to add already contains a <tt>.svn</tt>
+  subdirectory&nbsp;&mdash;&nbsp;it is a working
+  copy&nbsp;&mdash;&nbsp;but it's from a different repository location
+  than the directory to which you're trying to add it. This probably
+  happened because you used your operating system's "copy" command
+  (instead of <tt>svn copy</tt>) to copy a subdirectory in this working
+  copy, or to copy some other working copy into this one.</p>
 <p>
   The quick and dirty solution is to delete all <tt>.svn</tt>
   directories contained in the directory you're trying to add; this
-  will let the "add" command complete.  If you're using Unix, this
-  command will delete <tt>.svn</tt> directories
-  under <tt>dir</tt>:</p>
+  will let the "add" command complete. If you're using Unix, this
+  command will delete <tt>.svn</tt> directories under
+  <tt>dir</tt>:</p>
 <pre>
   find dir -type d -name .svn -exec rm -rf {} \;
 </pre>
-<p>However, you should ask yourself <em>why</em> you made this copy;
-  and you should ensure that by adding this directory, you won't be
-  making an unwanted copy of it in your repository.
+<p>However, if the copy was from the same repository, you should
+  ideally delete or move aside the copy, and use <tt>svn copy</tt> to
+  make a proper copy, which will know its history and save space in the
+  repository.</p>
+<p>If it was from a different repository, you should ask yourself
+  <em>why</em> you made this copy; and you should ensure that by
+  adding this directory, you won't be making an unwanted copy of it in
+  your repository.
 </p>
 
 </div>
@@ -3491,6 +3424,10 @@ if you'd used a command-line client that was 1.4 or newer, along with
 your older command-line client.)
 
 The fix is simply to upgrade your command-line client to 1.4 or newer.
+
+As of Subversion 1.5, a helper script is provided to downgrade working
+copies to formats compatible with earlier releases of Subversion; see
+<a href="#working-copy-format-change">this faq.</a>
 
 </div>
 
@@ -3741,49 +3678,132 @@ their implications.</p>
 
 </div>
 
+<div class="h3"
+     id="relocation-against-local-symbol"
+     title="relocation-against-local-symbol">
+<h3>I got an error saying  "relocation R_X86_64_32 against `a local symbol'
+    can not be used when making a shared object" when building the Neon
+    library on 64-bit Linux.</h3>
+
+<p>The Neon library, used for communication between a Subversion server and
+client over HTTP, is usually built as a static library.  But it is
+subsequently linked into a different shared library.  This causes an error
+during the build process on 64-bit AMD systems similar to this:</p>
+
+<blockquote>
+<div><pre><code>
+subversion-1.4.6/neon/src/.libs/libneon.a(ne_request.o): relocation R_X86_64_32
+against `a local symbol' can not be used when making a shared object;
+recompile with -fPIC
+/home/jrandom/subversion/subversion-1.4.6/neon/src/.libs/libneon.a: could not
+read symbols: Bad value
+</code></pre></div>
+</blockquote>
+
+<p>There was a
+<a href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=119669">
+thread</a> on the developers' list about this.</p>
+
+<p>The solution is to supply the "--enable-shared" option to Subversion's
+configure script.</p>
+
 </div>
 
+<div class="h3"
+     id="secure-connection-truncated"
+     title="secure-connection-truncated">
+<h3>Why am I getting an error saying "Could not read response body:
+    Secure connection truncated" when doing a checkout from
+    Apache?</h3>
+
+<p>In short, this error is representative of a class of problems which
+can occur when Apache erroneously believes that your Subversion client
+is no longer tending to the network connection it has made with
+Apache.  Other error messages have been reported in similar
+circumstances, depending on whether or not SSL was in use for the
+connection, or when exactly Apache decided that the connection should
+be terminated.</p>
+
+<p>The Subversion client tries to keep working copies in a sane state
+at all times.  One way it does this during checkouts is by squirreling
+away the pristine versions of checked-out files until all the files
+and subdirectories for a given directory have been fetched.  Once all
+the data for a directory has been downloaded, the client "finalizes"
+that directory, copying the pristine versions of files out into the
+working area, diddling administrative data, and so on.  While this
+directory finalization is happening, the client is focused on that
+task and is <em>not</em> tending to the checkout network stream.
+Sometimes &mdash; typically in situations where a versioned directory
+contains an abnormally large number of files, or a bunch of abnormally
+large files &mdash; the client can spend so much time finalizing a
+directory (and ignoring the network stream) that Apache thinks the
+client has gone away for good, so Apache terminates the connection.
+When the client finally turns its attention back to the network
+stream, it finds that the server has given up on the connection, and
+it reports this as an error.</p>
+
+<p>One workaround for this situation is to increase the amount of time
+Apache is willing to wait for a client to prove it is still listening
+to the network stream.  You do this by adjusting upward the
+Apache <tt>Timeout</tt> configuration value.  You are encouraged,
+however, to evaluate your data set.  If having a huge number of files
+in a single directory is causing problems for you during checkouts,
+there is some chance that it will cause additional problems elsewhere,
+too.  If it is possible for you to split your collection of files up
+into a few subdirectories with smaller file counts, this could prove
+universally beneficial.</p>
+
+</div>
+
+<div class="h3"
+     id="self-tree-conflict"
+     title="self-tree-conflict">
+<h3>Why am I getting a tree conflict upon update even though no one else
+    has committed conflicting changes?</h3>
+<p>
+When you commit, only the files/directories that are actually changed by
+the commit get their base revisions bumped to HEAD in the working copy.
+The other files/directories (possibly including the directory you committed
+from!) don't get their base revisions bumped, which means Subversion still
+considers them to be based on outdated revisions.
+See also <a href="#hidden-log">this question</a> and
+<a href="http://svnbook.red-bean.com/nightly/en/svn.basic.in-action.html#svn.basic.in-action.mixedrevs.update-commit">this
+section of the Subversion book</a>.
+</p>
+
+<p>
+This can be confusing, in particular because of tree conflicts
+you can inflict upon yourself.
+E.g. if you add a file to a directory and commit, and then locally move
+that directory somewhere else, and then try to commit, this second commit
+will fail with an out-of-date error since the directory itself is still
+based on an out-of-date revision.
+When updating, a tree conflict will be flagged.</p>
+
+<p>Subversion has currently no way of knowing that you yourself just committed
+the change which caused the directory to be out-of-date during the second
+commit. And allowing an out-of-date directory to be committed may cause
+certain tree conflicts not to be detected, so Subversion can't allow you
+to do this. 
+</p>
+
+<p>To avoid this problem, make sure to update your entire working copy
+before making structural changes such as deleting, adding, or moving files
+or directories.</p>
+
+</div>
+
+</div>
 
 <div class="h2" id="developer-questions" title="developer-questions">
 <h2>Developer questions:</h2>
 <p/>
 
 <div class="h3" id="ramdisk-tests" title="ramdisk-tests">
-<h3>How do I run the regression tests in a
-    RAM disk?</h3>
-
-<p>Test execution can be dramatically sped up by keeping Subversion
-test data on a RAM disk.  On a Linux system, you can mount a RAM disk
-on the fly with the command:</p>
-
-<blockquote>
-<div><code>mount -t tmpfs tmpfs
-/path/to/src/subversion/tests/cmdline/svn-test-work
--o uid=$USER,mode=770,size=32m</code></div>
-</blockquote>
-
-<p>Or, for a more permanent solution, add lines like the following in
-your <code>/etc/fstab</code> file:</p>
-
-<blockquote>
-<div><code>tmpfs  /path/to/src/svn/subversion/tests/cmdline/svn-test-work
-tmpfs  defaults,user,noauto,exec,size=32m</code></div>
-</blockquote>
-
-<p>The minimum required size for testing ramdisk is approximately 700MB.
-However, flagging your test targets for cleanup dramatically reduces
-the space requirements (as shown in the example configuration above),
-and thus your memory usage.  Cleanup means more I/O, but since test
-data is in-memory, there will be no performance degradation.  Example:</p>
-
-<blockquote><div><code>
-make check CLEANUP=true
-</code></div></blockquote>
-
-<p>See <a href="http://svn.haxx.se/dev/archive-2003-02/0068.shtml"
->http://svn.haxx.se/dev/archive-2003-02/0068.shtml</a> for the
-original authoritative discussion on use of RAM disks.</p>
-
+<h3>How do I run the regression tests in a RAM disk?</h3>
+ See
+ <a href="http://svn.collab.net/repos/svn/trunk/subversion/tests/cmdline/README"
+ >http://svn.collab.net/repos/svn/trunk/subversion/tests/cmdline/README</a>
 </div>
 
 

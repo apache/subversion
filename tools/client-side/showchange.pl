@@ -30,5 +30,19 @@ my $svn = "svn";
 
 my $prev_revision = $revision - 1;
 
+if (not $url) {
+  # If no URL was provided, use the repository root from the current
+  # directory's working copy.  We want the root, rather than the URL
+  # of the current dir, because when someone's asking for a change
+  # by name (that is, by revision number), they generally don't want
+  # to have to cd to a particular working copy directory to get it.
+  my @info_lines = `${svn} info`;
+  foreach my $info_line (@info_lines) {
+    if ($info_line =~ s/^Repository Root: (.*)$/$1/e) {
+      $url = $info_line;
+    }
+  }
+}
+
 system ("${svn} log -v --incremental -r${revision} $url");
 system ("${svn} diff -r${prev_revision}:${revision} $url");

@@ -1,17 +1,22 @@
 /* changes-test.c --- test `changes' interfaces
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -22,20 +27,21 @@
 
 #include <apr.h>
 
+#include "../svn_test.h"
+
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "private/svn_skel.h"
 
-#include "../svn_test.h"
 #include "../svn_test_fs.h"
-#include "../../libsvn_fs_base/util/skel.h"
 #include "../../libsvn_fs_base/util/fs_skels.h"
 #include "../../libsvn_fs_base/bdb/changes-table.h"
 
 
 
 /* Helper functions/variables.  */
-static const char *standard_txns[6]
-  = { "0", "1", "2", "3", "4", "5" };
+static const char *standard_txns[]
+  = { "0", "1", "2", "3", "4", "5", "6" };
 static const char *standard_changes[19][6]
      /* KEY   PATH   NODEREVID  KIND     TEXT PROP */
   = { { "0",  "/foo",  "1.0.0",  "add",     0,  0  },
@@ -123,7 +129,7 @@ add_standard_changes(svn_fs_t *fs,
 
       /* Write new changes to the changes table. */
       SVN_ERR(svn_fs_base__retry_txn(args.fs, txn_body_changes_add, &args,
-                                     pool));
+                                     TRUE, pool));
     }
 
   return SVN_NO_ERROR;
@@ -160,21 +166,14 @@ txn_body_changes_delete(void *baton, trail_t *trail)
 /* The tests.  */
 
 static svn_error_t *
-changes_add(const char **msg,
-            svn_boolean_t msg_only,
-            svn_test_opts_t *opts,
+changes_add(const svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   svn_fs_t *fs;
 
-  *msg = "add changes to the changes table";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-changes-add",
-                              "bdb", pool));
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-changes-add", opts,
+                                  pool));
 
   /* Add the standard slew of changes. */
   SVN_ERR(add_standard_changes(fs, pool));
@@ -184,9 +183,7 @@ changes_add(const char **msg,
 
 
 static svn_error_t *
-changes_fetch_raw(const char **msg,
-                  svn_boolean_t msg_only,
-                  svn_test_opts_t *opts,
+changes_fetch_raw(const svn_test_opts_t *opts,
                   apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -195,21 +192,16 @@ changes_fetch_raw(const char **msg,
   int cur_change_index = 0;
   struct changes_args args;
 
-  *msg = "fetch raw changes from the changes table";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-changes-fetch",
-                              "bdb", pool));
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-changes-fetch", opts,
+                                  pool));
 
   /* First, verify that we can request changes for an arbitrary key
      without error. */
   args.fs = fs;
   args.key = "blahbliggityblah";
-  SVN_ERR(svn_fs_base__retry_txn(args.fs, txn_body_changes_fetch_raw,
-                                 &args, pool));
+  SVN_ERR(svn_fs_base__retry_txn(args.fs, txn_body_changes_fetch_raw, &args,
+                                 FALSE, pool));
   if ((! args.raw_changes) || (args.raw_changes->nelts))
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "expected empty changes array");
@@ -232,7 +224,7 @@ changes_fetch_raw(const char **msg,
 
       /* And get those changes. */
       SVN_ERR(svn_fs_base__retry_txn(args.fs, txn_body_changes_fetch_raw,
-                                     &args, pool));
+                                     &args, FALSE, pool));
       if (! args.raw_changes)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "got no changes for key '%s'", txn_id);
@@ -293,9 +285,7 @@ changes_fetch_raw(const char **msg,
 
 
 static svn_error_t *
-changes_delete(const char **msg,
-               svn_boolean_t msg_only,
-               svn_test_opts_t *opts,
+changes_delete(const svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -303,14 +293,9 @@ changes_delete(const char **msg,
   int num_txns = sizeof(standard_txns) / sizeof(const char *);
   struct changes_args args;
 
-  *msg = "delete changes from the changes table";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-changes-delete",
-                              "bdb", pool));
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-changes-delete", opts,
+                                  pool));
 
   /* Add the standard slew of changes. */
   SVN_ERR(add_standard_changes(fs, pool));
@@ -321,10 +306,10 @@ changes_delete(const char **msg,
       args.fs = fs;
       args.key = standard_txns[i];
       SVN_ERR(svn_fs_base__retry_txn(args.fs, txn_body_changes_delete,
-                                     &args, pool));
+                                     &args, FALSE, pool));
       args.changes = 0;
       SVN_ERR(svn_fs_base__retry_txn(args.fs, txn_body_changes_fetch_raw,
-                                     &args, pool));
+                                     &args, FALSE, pool));
       if ((! args.raw_changes) || (args.raw_changes->nelts))
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
@@ -432,7 +417,7 @@ get_ideal_changes(const char *txn_id,
 static svn_error_t *
 compare_changes(apr_hash_t *ideals,
                 apr_hash_t *changes,
-                svn_test_opts_t *opts,
+                const svn_test_opts_t *opts,
                 const char *txn_id,
                 apr_pool_t *pool)
 {
@@ -490,29 +475,24 @@ compare_changes(apr_hash_t *ideals,
 
 
 static svn_error_t *
-changes_fetch(const char **msg,
-              svn_boolean_t msg_only,
-              svn_test_opts_t *opts,
+changes_fetch(const svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
   svn_fs_t *fs;
   int i;
   int num_txns = sizeof(standard_txns) / sizeof(const char *);
   struct changes_args args;
-  *msg = "fetch compressed changes from the changes table";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-changes-fetch",
-                              "bdb", pool));
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-changes-fetch", opts,
+                                  pool));
 
   /* First, verify that we can request changes for an arbitrary key
      without error. */
   args.fs = fs;
   args.key = "blahbliggityblah";
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_fetch, &args, pool));
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_fetch, &args,
+                                 FALSE, pool));
   if ((! args.changes) || (apr_hash_count(args.changes)))
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "expected empty changes hash");
@@ -538,7 +518,7 @@ changes_fetch(const char **msg,
       /* And get those changes via in the internal interface, and
          verify that they are accurate. */
       SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_fetch, &args,
-                                     pool));
+                                     FALSE, pool));
       if (! args.changes)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
@@ -555,9 +535,7 @@ changes_fetch(const char **msg,
 
 
 static svn_error_t *
-changes_fetch_ordering(const char **msg,
-                       svn_boolean_t msg_only,
-                       svn_test_opts_t *opts,
+changes_fetch_ordering(const svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -569,15 +547,10 @@ changes_fetch_ordering(const char **msg,
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
 
-  *msg = "verify ordered-ness of fetched compressed changes";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_fs
-          (&fs, "test-repo-changes-fetch-ordering",
-           "bdb", pool));
+  SVN_ERR(svn_test__create_bdb_fs
+          (&fs, "test-repo-changes-fetch-ordering", opts,
+           pool));
 
   /*** REVISION 1: Make some files and dirs. ***/
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
@@ -620,7 +593,7 @@ changes_fetch_ordering(const char **msg,
   args.fs = fs;
   args.key = txn_name;
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_fetch, &args,
-                                 subpool));
+                                 FALSE, subpool));
   if ((! args.changes) || (apr_hash_count(args.changes) != 3))
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "expected changes");
@@ -692,7 +665,7 @@ changes_fetch_ordering(const char **msg,
   args.fs = fs;
   args.key = txn_name;
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_fetch, &args,
-                                 subpool));
+                                 FALSE, subpool));
   if ((! args.changes) || (apr_hash_count(args.changes) != 3))
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "expected changes");
@@ -731,10 +704,15 @@ changes_fetch_ordering(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(changes_add),
-    SVN_TEST_PASS(changes_fetch_raw),
-    SVN_TEST_PASS(changes_delete),
-    SVN_TEST_PASS(changes_fetch),
-    SVN_TEST_PASS(changes_fetch_ordering),
+    SVN_TEST_OPTS_PASS(changes_add,
+                       "add changes to the changes table"),
+    SVN_TEST_OPTS_PASS(changes_fetch_raw,
+                       "fetch raw changes from the changes table"),
+    SVN_TEST_OPTS_PASS(changes_delete,
+                       "delete changes from the changes table"),
+    SVN_TEST_OPTS_PASS(changes_fetch,
+                       "fetch compressed changes from the changes table"),
+    SVN_TEST_OPTS_PASS(changes_fetch_ordering,
+                       "verify ordered-ness of fetched compressed changes"),
     SVN_TEST_NULL
   };

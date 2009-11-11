@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -43,19 +51,18 @@ def cat_local_directory(sbox):
 
   A_path = os.path.join(sbox.wc_dir, 'A')
 
-  svntest.actions.run_and_verify_svn('No error where one is expected',
-                                     None, svntest.verify.AnyOutput,
-                                     'cat', A_path)
+  svntest.actions.run_and_verify_svn2('No error where one is expected',
+                                      None, svntest.verify.AnyOutput,
+                                      0, 'cat', A_path)
 
 def cat_remote_directory(sbox):
   "cat a remote directory"
   sbox.build(create_wc = False, read_only = True)
 
   A_url = sbox.repo_url + '/A'
-
-  svntest.actions.run_and_verify_svn('No error where one is expected',
-                                     None, svntest.verify.AnyOutput,
-                                     'cat', A_url)
+  svntest.actions.run_and_verify_svn2('No error where one is expected',
+                                      None, svntest.verify.AnyOutput,
+                                      0, 'cat', A_url)
 
 def cat_base(sbox):
   "cat a file at revision BASE"
@@ -66,13 +73,13 @@ def cat_base(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.file_append(mu_path, 'Appended text')
 
-  outlines, errlines = svntest.main.run_svn(0, 'cat', mu_path)
+  exit_code, outlines, errlines = svntest.main.run_svn(0, 'cat', mu_path)
 
   # Verify the expected output
   expected_output = svntest.main.greek_state.desc['A/mu'].contents
   if len(outlines) != 1 or outlines[0] != expected_output:
     raise svntest.Failure('Cat failed: expected "%s", but received "%s"' % \
-      (expected_output, outlines[0]))
+      (expected_output, outlines))
 
 def cat_nonexistent_file(sbox):
   "cat a nonexistent file"
@@ -81,10 +88,9 @@ def cat_nonexistent_file(sbox):
   wc_dir = sbox.wc_dir
 
   bogus_path = os.path.join(wc_dir, 'A', 'bogus')
-
-  svntest.actions.run_and_verify_svn('No error where one is expected',
-                                     None, svntest.verify.AnyOutput,
-                                     'cat', bogus_path)
+  svntest.actions.run_and_verify_svn2('No error where one is expected',
+                                      None, svntest.verify.AnyOutput,
+                                      0, 'cat', bogus_path)
 
 def cat_skip_uncattable(sbox):
   "cat should skip uncattable resources"
@@ -107,15 +113,15 @@ def cat_skip_uncattable(sbox):
       continue
     item_to_cat = os.path.join(dir_path, file)
     if item_to_cat == new_file_path:
-      expected_err = ["svn: warning: '" + item_to_cat + "'" + \
+      expected_err = ["svn: warning: '" + os.path.abspath(item_to_cat) + "'" + \
                      " is not under version control\n"]
-      svntest.actions.run_and_verify_svn(None, None, expected_err,
-                                         'cat', item_to_cat)
+      svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
+                                          'cat', item_to_cat)
     elif os.path.isdir(item_to_cat):
-      expected_err = ["svn: warning: '" + item_to_cat + "'" + \
+      expected_err = ["svn: warning: '" + os.path.abspath(item_to_cat) + "'" + \
                      " refers to a directory\n"]
-      svntest.actions.run_and_verify_svn(None, None,
-                                         expected_err, 'cat', item_to_cat)
+      svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
+                                          'cat', item_to_cat)
     else:
       svntest.actions.run_and_verify_svn(None,
                                          ["This is the file '"+file+"'.\n"],
@@ -125,19 +131,19 @@ def cat_skip_uncattable(sbox):
   rho_path = os.path.join(G_path, 'rho')
 
   expected_out = ["This is the file 'rho'.\n"]
-  expected_err1 = ["svn: warning: '" + G_path + "'"
+  expected_err1 = ["svn: warning: '" + os.path.abspath(G_path) + "'"
                    + " refers to a directory\n"]
-  svntest.actions.run_and_verify_svn(None, expected_out, expected_err1,
-                                     'cat', rho_path, G_path)
+  svntest.actions.run_and_verify_svn2(None, expected_out, expected_err1, 0,
+                                      'cat', rho_path, G_path)
 
-  expected_err2 = ["svn: warning: '" + new_file_path + "'"
+  expected_err2 = ["svn: warning: '" + os.path.abspath(new_file_path) + "'"
                    + " is not under version control\n"]
-  svntest.actions.run_and_verify_svn(None, expected_out, expected_err2,
-                                     'cat', rho_path, new_file_path)
+  svntest.actions.run_and_verify_svn2(None, expected_out, expected_err2, 0,
+                                      'cat', rho_path, new_file_path)
 
-  svntest.actions.run_and_verify_svn(None, expected_out,
-                                     expected_err1 + expected_err2,
-                                     'cat', rho_path, G_path, new_file_path)
+  svntest.actions.run_and_verify_svn2(None, expected_out,
+                                      expected_err1 + expected_err2, 0,
+                                      'cat', rho_path, G_path, new_file_path)
 
 
 ########################################################################

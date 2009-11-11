@@ -2,17 +2,22 @@
  * propset-cmd.c -- Set property values on files/dirs
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -42,7 +47,7 @@
 svn_error_t *
 svn_cl__propset(apr_getopt_t *os,
                 void *baton,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -50,16 +55,15 @@ svn_cl__propset(apr_getopt_t *os,
   svn_string_t *propval = NULL;
   svn_boolean_t propval_came_from_cmdline;
   apr_array_header_t *args, *targets;
-  apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   int i;
 
   /* PNAME and PROPVAL expected as first 2 arguments if filedata was
      NULL, else PNAME alone will precede the targets.  Get a UTF-8
      version of the name, too. */
   SVN_ERR(svn_opt_parse_num_args(&args, os,
-                                 opt_state->filedata ? 1 : 2, pool));
+                                 opt_state->filedata ? 1 : 2, scratch_pool));
   pname = APR_ARRAY_IDX(args, 0, const char *);
-  SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, pool));
+  SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, scratch_pool));
   if (! svn_prop_name_is_valid(pname_utf8))
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("'%s' is not a valid Subversion property name"),
@@ -69,12 +73,13 @@ svn_cl__propset(apr_getopt_t *os,
      line. */
   if (opt_state->filedata)
     {
-      propval = svn_string_create_from_buf(opt_state->filedata, pool);
+      propval = svn_string_create_from_buf(opt_state->filedata, scratch_pool);
       propval_came_from_cmdline = FALSE;
     }
   else
     {
-      propval = svn_string_create(APR_ARRAY_IDX(args, 1, const char *), pool);
+      propval = svn_string_create(APR_ARRAY_IDX(args, 1, const char *),
+                                  scratch_pool);
       propval_came_from_cmdline = TRUE;
     }
 
@@ -82,65 +87,44 @@ svn_cl__propset(apr_getopt_t *os,
      and LF line endings.  All other propvals are taken literally. */
   if (svn_prop_needs_translation(pname_utf8))
     SVN_ERR(svn_subst_translate_string(&propval, propval,
-                                       opt_state->encoding, pool));
+                                       opt_state->encoding, scratch_pool));
   else
     if (opt_state->encoding)
       return svn_error_create
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         _("Bad encoding option: prop value not stored as UTF8"));
+         _("--encoding option applies only to textual"
+           " Subversion-controlled properties"));
 
   /* Suck up all the remaining arguments into a targets array */
 
-  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
-     all the targets, we need to build a list of targets made of both
-     ones the user typed, as well as any specified by --changelist.  */
-  if (opt_state->changelist)
-    {
-      SVN_ERR(svn_client_get_changelist(&changelist_targets,
-                                        opt_state->changelist,
-                                        "",
-                                        ctx,
-                                        pool));
-      if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("no such changelist '%s'"),
-                                 opt_state->changelist);
-    }
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
+                                                      ctx, scratch_pool));
 
-  if (opt_state->targets && changelist_targets)
-    combined_targets = apr_array_append(pool, opt_state->targets,
-                                        changelist_targets);
-  else if (opt_state->targets)
-    combined_targets = opt_state->targets;
-  else if (changelist_targets)
-    combined_targets = changelist_targets;
+  if (! opt_state->quiet)
+    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                 FALSE, FALSE, FALSE, scratch_pool));
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        combined_targets, pool));
+  /* Implicit "." is okay for revision properties; it just helps
+     us find the right repository. */
+  if (opt_state->revprop)
+    svn_opt_push_implicit_dot_target(targets, scratch_pool);
+
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {
       svn_revnum_t rev;
       const char *URL;
 
-      /* Implicit "." is okay for revision properties; it just helps
-         us find the right repository. */
-      svn_opt_push_implicit_dot_target(targets, pool);
-
       SVN_ERR(svn_cl__revprop_prepare(&opt_state->start_revision, targets,
-                                      &URL, pool));
+                                      &URL, ctx, scratch_pool));
 
       /* Let libsvn_client do the real work. */
-      SVN_ERR(svn_client_revprop_set(pname_utf8, propval,
-                                     URL, &(opt_state->start_revision),
-                                     &rev, opt_state->force, ctx, pool));
-      if (! opt_state->quiet)
-        {
-          SVN_ERR
-            (svn_cmdline_printf
-             (pool, _("property '%s' set on repository revision %ld\n"),
-              pname_utf8, rev));
-        }
+      SVN_ERR(svn_client_revprop_set2(pname_utf8, propval, NULL,
+                                      URL, &(opt_state->start_revision),
+                                      &rev, opt_state->force, ctx,
+                                      scratch_pool));
     }
   else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
     {
@@ -151,7 +135,7 @@ svn_cl__propset(apr_getopt_t *os,
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *iterpool;
 
       if (opt_state->depth == svn_depth_unknown)
         opt_state->depth = svn_depth_empty;
@@ -192,41 +176,28 @@ svn_cl__propset(apr_getopt_t *os,
             }
         }
 
+      iterpool = svn_pool_create(scratch_pool);
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
           svn_commit_info_t *commit_info;
-          svn_boolean_t success;
 
-          svn_pool_clear(subpool);
+          svn_pool_clear(iterpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
           SVN_ERR(svn_cl__try(svn_client_propset3
-                              (&commit_info,
-                               pname_utf8,
-                               propval, target,
-                               opt_state->depth,
-                               opt_state->force,
-                               SVN_INVALID_REVNUM,
-                               ctx, subpool),
-                              &success, opt_state->quiet,
+                              (&commit_info, pname_utf8, propval, target,
+                               opt_state->depth, opt_state->force,
+                               SVN_INVALID_REVNUM, opt_state->changelists,
+                               NULL, ctx, iterpool),
+                              NULL, opt_state->quiet,
                               SVN_ERR_UNVERSIONED_RESOURCE,
                               SVN_ERR_ENTRY_NOT_FOUND,
                               SVN_NO_ERROR));
 
           if (! opt_state->quiet)
-            svn_cl__check_boolean_prop_val(pname_utf8, propval->data, subpool);
-
-          if (success && (! opt_state->quiet))
-            {
-              SVN_ERR
-                (svn_cmdline_printf
-                 (pool, SVN_DEPTH_IS_RECURSIVE(opt_state->depth)
-                  ? _("property '%s' set (recursively) on '%s'\n")
-                  : _("property '%s' set on '%s'\n"),
-                  pname, svn_path_local_style(target, pool)));
-            }
+            svn_cl__check_boolean_prop_val(pname_utf8, propval->data, iterpool);
         }
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(iterpool);
     }
 
   return SVN_NO_ERROR;

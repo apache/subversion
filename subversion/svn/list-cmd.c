@@ -2,25 +2,24 @@
  * list-cmd.c -- list a URL
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
-
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
 
 #include "svn_cmdline.h"
 #include "svn_client.h"
@@ -28,12 +27,15 @@
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_xml.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_utf.h"
+
 #include "cl.h"
 
 #include "svn_private_config.h"
+
 
-/*** Code. ***/
 
 /* Baton used when printing directory entries. */
 struct print_baton {
@@ -60,7 +62,7 @@ print_dirent(void *baton,
   if (strcmp(path, "") == 0)
     {
       if (dirent->kind == svn_node_file)
-        entryname = svn_path_basename(abs_path, pool);
+        entryname = svn_dirent_basename(abs_path, pool);
       else if (pb->verbose)
         entryname = ".";
       else
@@ -104,7 +106,7 @@ print_dirent(void *baton,
 
       sizestr = apr_psprintf(pool, "%" SVN_FILESIZE_T_FMT, dirent->size);
 
-      SVN_ERR(svn_cmdline_printf
+      return svn_cmdline_printf
               (pool, "%7ld %-8.8s %c %10s %12s %s%s\n",
                dirent->created_rev,
                dirent->last_author ? dirent->last_author : " ? ",
@@ -112,16 +114,14 @@ print_dirent(void *baton,
                (dirent->kind == svn_node_file) ? sizestr : "",
                utf8_timestr,
                entryname,
-               (dirent->kind == svn_node_dir) ? "/" : ""));
+               (dirent->kind == svn_node_dir) ? "/" : "");
     }
   else
     {
-      SVN_ERR(svn_cmdline_printf(pool, "%s%s\n", entryname,
-                                 (dirent->kind == svn_node_dir)
-                                 ? "/" : ""));
+      return svn_cmdline_printf(pool, "%s%s\n", entryname,
+                                (dirent->kind == svn_node_dir)
+                                ? "/" : "");
     }
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -142,7 +142,7 @@ print_dirent_xml(void *baton,
   if (strcmp(path, "") == 0)
     {
       if (dirent->kind == svn_node_file)
-        entryname = svn_path_basename(abs_path, pool);
+        entryname = svn_dirent_basename(abs_path, pool);
       else if (pb->verbose)
         entryname = ".";
       else
@@ -158,7 +158,7 @@ print_dirent_xml(void *baton,
   sb = svn_stringbuf_create("", pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
-                        "kind", svn_cl__node_kind_str(dirent->kind),
+                        "kind", svn_cl__node_kind_str_xml(dirent->kind),
                         NULL);
 
   svn_cl__xml_tagged_cdata(&sb, pool, "name", entryname);
@@ -198,9 +198,7 @@ print_dirent_xml(void *baton,
 
   svn_xml_make_close_tag(&sb, pool, "entry");
 
-  SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
-
-  return SVN_NO_ERROR;
+  return svn_cl__error_checked_fputs(sb->data, stdout);
 }
 
 
@@ -218,8 +216,9 @@ svn_cl__list(apr_getopt_t *os,
   apr_uint32_t dirent_fields;
   struct print_baton pb;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
+                                                      ctx, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);

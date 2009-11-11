@@ -6,19 +6,28 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2007 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
 import os
 import sys
+import tempfile
 
 # Our testing module
 import svntest
@@ -41,12 +50,11 @@ Item = svntest.wc.StateItem
 def filter_and_return_output(dump, *varargs):
   """Filter the array of lines passed in 'dump' and return the output"""
 
-  if type(dump) is type(""):
+  if isinstance(dump, str):
     dump = [ dump ]
 
-  ## TODO: Should we need to handle errput?
-  output, errput = \
-          svntest.main.run_command_stdin(
+  ## TODO: Should we need to handle errput and exit_code?
+  exit_code, output, errput = svntest.main.run_command_stdin(
     svntest.main.svndumpfilter_binary, None, 1, dump, *varargs)
 
   return output
@@ -73,7 +81,8 @@ def reflect_dropped_renumbered_revs(sbox):
                                           "--skip-missing-merge-sources",
                                           "--drop-empty-revs",
                                           "--renumber-revs", "--quiet")
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_out)
+  load_and_verify_dumpstream(sbox, [], [], None, filtered_out,
+                             "--ignore-uuid")
 
   # Verify the svn:mergeinfo properties
   svntest.actions.run_and_verify_svn(None,
@@ -92,7 +101,8 @@ def reflect_dropped_renumbered_revs(sbox):
                                           "--skip-missing-merge-sources",
                                           "--drop-empty-revs",
                                           "--renumber-revs", "--quiet")
-  load_and_verify_dumpstream(sbox, [], [], None, filtered_out)
+  load_and_verify_dumpstream(sbox, [], [], None, filtered_out,
+                             "--ignore-uuid")
 
   # Verify the svn:mergeinfo properties
   svntest.actions.run_and_verify_svn(None,
@@ -104,6 +114,122 @@ def reflect_dropped_renumbered_revs(sbox):
                                      [], 'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url + '/branch2')
 
+def svndumpfilter_loses_mergeinfo(sbox):
+  "svndumpfilter loses mergeinfo"
+  #svndumpfilter loses mergeinfo if invoked without --renumber-revs
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3181. ##
+
+  test_create(sbox)
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'with_merges.dump')
+  dumpfile = svntest.main.file_read(dumpfile_location)
+
+  filtered_out = filter_and_return_output(dumpfile, "include",
+                                          "trunk", "branch1", "--quiet")
+  load_and_verify_dumpstream(sbox, [], [], None, filtered_out)
+
+  # Verify the svn:mergeinfo properties
+  svntest.actions.run_and_verify_svn(None,
+                                     [sbox.repo_url+"/trunk - /branch1:4-8\n"],
+                                     [], 'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url + '/trunk')
+  svntest.actions.run_and_verify_svn(None,
+                                     [sbox.repo_url+"/branch1 - /trunk:1-2\n"],
+                                     [], 'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url + '/branch1')
+
+
+def _simple_dumpfilter_test(sbox, dumpfile, *dumpargs):
+  wc_dir = sbox.wc_dir
+
+  filtered_output = filter_and_return_output(dumpfile, '--quiet', *dumpargs)
+
+  # Setup our expectations
+  load_and_verify_dumpstream(sbox, [], [], None, filtered_output,
+                             '--ignore-uuid')
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha')
+  expected_disk.remove('A/B/E/beta')
+  expected_disk.remove('A/B/E')
+  expected_disk.remove('A/D/H/chi')
+  expected_disk.remove('A/D/H/psi')
+  expected_disk.remove('A/D/H/omega')
+  expected_disk.remove('A/D/H')
+  expected_disk.remove('A/D/G/pi')
+  expected_disk.remove('A/D/G/rho')
+  expected_disk.remove('A/D/G/tau')
+  expected_disk.remove('A/D/G')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'           : Item(status='A '),
+    'A/B'         : Item(status='A '),
+    'A/B/lambda'  : Item(status='A '),
+    'A/B/F'       : Item(status='A '),
+    'A/mu'        : Item(status='A '),
+    'A/C'         : Item(status='A '),
+    'A/D'         : Item(status='A '),
+    'A/D/gamma'   : Item(status='A '),
+    'iota'        : Item(status='A '),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/B/E/alpha')
+  expected_status.remove('A/B/E/beta')
+  expected_status.remove('A/B/E')
+  expected_status.remove('A/D/H/chi')
+  expected_status.remove('A/D/H/psi')
+  expected_status.remove('A/D/H/omega')
+  expected_status.remove('A/D/H')
+  expected_status.remove('A/D/G/pi')
+  expected_status.remove('A/D/G/rho')
+  expected_status.remove('A/D/G/tau')
+  expected_status.remove('A/D/G')
+
+  # Check that our paths really were excluded
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+
+def dumpfilter_with_targets(sbox):
+  "svndumpfilter --targets blah"
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2697. ##
+
+  test_create(sbox)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'greek_tree.dump')
+  dumpfile = svntest.main.file_read(dumpfile_location)
+
+  (fd, targets_file) = tempfile.mkstemp(dir=svntest.main.temp_dir)
+  try:
+    targets = open(targets_file, 'w')
+    targets.write('/A/D/H\n')
+    targets.write('/A/D/G\n')
+    targets.close()
+    _simple_dumpfilter_test(sbox, dumpfile,
+                            'exclude', '/A/B/E', '--targets', targets_file)
+  finally:
+    os.close(fd)
+    os.remove(targets_file)
+
+
+def dumpfilter_with_patterns(sbox):
+  "svndumpfilter --pattern PATH_PREFIX"
+
+  test_create(sbox)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'greek_tree.dump')
+  dumpfile = svntest.main.file_read(dumpfile_location)
+  _simple_dumpfilter_test(sbox, dumpfile,
+                          'exclude', '--pattern', '/A/D/[GH]*', '/A/[B]/E*')
+
 
 ########################################################################
 # Run the tests
@@ -112,7 +238,10 @@ def reflect_dropped_renumbered_revs(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               reflect_dropped_renumbered_revs,
-             ]
+              svndumpfilter_loses_mergeinfo,
+              dumpfilter_with_targets,
+              dumpfilter_with_patterns,
+              ]
 
 if __name__ == '__main__':
   svntest.main.run_tests(test_list)

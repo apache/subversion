@@ -2,17 +2,22 @@
  * ra_svn.h :  private declarations for the ra_svn module
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -80,6 +85,7 @@ struct svn_ra_svn_conn_st {
   ra_svn_block_handler_t block_handler;
   void *block_baton;
   apr_hash_t *capabilities;
+  char *remote_ip;
   apr_pool_t *pool;
 };
 
@@ -184,6 +190,10 @@ svn_ra_svn__do_internal_auth(svn_ra_svn__session_baton_t *sess,
 svn_error_t *svn_ra_svn__auth_response(svn_ra_svn_conn_t *conn,
                                        apr_pool_t *pool,
                                        const char *mech, const char *mech_arg);
+
+/* Looks for MECH as a word in MECHLIST (an array of svn_ra_svn_item_t). */
+svn_boolean_t svn_ra_svn__find_mech(apr_array_header_t *mechlist,
+                                    const char *mech);
 
 /* Initialize the SASL library. */
 svn_error_t *svn_ra_svn__sasl_init(void);

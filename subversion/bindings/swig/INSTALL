@@ -80,7 +80,7 @@ Step 1:  Install a suitable version of SWIG (which is
 
              --with-python=/path/to/correct/python/binary
 
-        to the configure script.  You need Python 2.2 or above.
+        to the configure script.  You need Python 2.4 or above.
 
         If you plan to build the Perl bindings, and have a system
         with more than one version of perl installed, you may need
@@ -109,7 +109,7 @@ Step 2:  Build and Install Subversion.
   python executable you used to configure SWIG as above.  If it does not then
   you can specify the correct path by adding PYTHON=/path/to/python or
   PERL=/path/to/perl onto the command line for configure.  For example:
-       ./configure PYTHON=/usr/bin/python2.2 PERL=/usr/bin/perl5.8.0
+       ./configure PYTHON=/usr/bin/python2.4 PERL=/usr/bin/perl5.8.0
 
   If Subversion's ./configure finds a SWIG that it's happy with, then
   it will build special glue libraries to link svn to the swig bindings:
@@ -146,12 +146,17 @@ Step 3:  Install Specific Language Bindings
        'make install-swig-py DESTDIR=$RPM_BUILD_ROOT/usr'.
 
    4.  Make sure that whatever directory the bindings got installed in
-       is in your PYTHONPATH.  That directory depends on how you
+       is in your Python search path.  That directory depends on how you
        installed; a typical location is /usr/local/lib/svn-python/.
 
-       An nice way to do this is:
+       There are several ways to do this. See Python's documentation for
+       'sys.path' and 'PYTHONPATH'. A nice way to do this is:
        $ echo /usr/local/lib/svn-python \
            > /usr/lib/python2.x/site-packages/subversion.pth
+
+       You may also need to update your operating system's dynamic linker
+       configuration to enable Python to load these new libraries. On some
+       systems this is done by running 'ldconfig'.
 
 
 *  Perl
@@ -276,7 +281,9 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
 
       Copy subversion\bindings\swig\python\svn\*.py into the svn folder.
       Copy subversion\bindings\swig\python\*.py and
-      Release\subversion\bindings\swig\python\*.dll into the libsvn folder.
+      Release\subversion\bindings\swig\python\*.pyd and
+      Release\subversion\bindings\swig\python\libsvn_swig_py\libsvn_swig_py-1.dll
+      into the libsvn folder.
 
       Optionally, you can run the following commands to compile the Python
       sources into bytecode:

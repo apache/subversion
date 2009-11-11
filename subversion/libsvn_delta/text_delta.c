@@ -2,17 +2,22 @@
  * text-delta.c -- Internal text delta representation
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -26,6 +31,8 @@
 #include "svn_delta.h"
 #include "svn_io.h"
 #include "svn_pools.h"
+#include "svn_checksum.h"
+
 #include "delta.h"
 
 
@@ -48,14 +55,12 @@ struct txdelta_baton {
   svn_boolean_t more_source;    /* FALSE if source stream hit EOF. */
   svn_boolean_t more;           /* TRUE if there are more data in the pool. */
   svn_filesize_t pos;           /* Offset of next read in source file. */
-  char *buf;                    /* Buffer for vdelta data. */
+  char *buf;                    /* Buffer for input data. */
 
-  apr_md5_ctx_t context;        /* APR's MD5 context container. */
+  svn_checksum_ctx_t *context;  /* Context for computing the checksum. */
+  svn_checksum_t *checksum;     /* If non-NULL, the checksum of TARGET. */
 
-  /* Calculated digest from MD5 operations.
-     NOTE:  This is only valid after this stream has returned the NULL
-     (final) window.  */
-  unsigned char digest[APR_MD5_DIGESTSIZE];
+  apr_pool_t *result_pool;      /* For results (e.g. checksum) */
 };
 
 
@@ -133,7 +138,7 @@ svn_txdelta__make_window(const svn_txdelta__ops_baton_t *build_baton,
 }
 
 
-/* Compute and return a delta window using the vdelta or xdelta algorithm on
+/* Compute and return a delta window using the xdelta algorithm on
    DATA, which contains SOURCE_LEN bytes of source data and TARGET_LEN
    bytes of target data.  SOURCE_OFFSET gives the offset of the source
    data, and is simply copied into the window's sview_offset field. */
@@ -148,7 +153,8 @@ compute_window(const char *data, apr_size_t source_len, apr_size_t target_len,
   build_baton.new_data = svn_stringbuf_create("", pool);
 
   if (source_len == 0)
-    svn_txdelta__vdelta(&build_baton, data, source_len, target_len, pool);
+    svn_txdelta__insert_op(&build_baton, svn_txdelta_new, 0, target_len, data,
+                           pool);
   else
     svn_txdelta__xdelta(&build_baton, data, source_len, target_len, pool);
 
@@ -209,9 +215,9 @@ svn_txdelta__insert_op(svn_txdelta__ops_baton_t *build_baton,
 {
   svn_txdelta_op_t *op;
 
-  /* Check if this op can be merged with the previous op. The vdelta
-     algorithm will never generate such ops, but the delta combiner
-     can, and this is the obvious place to make the check. */
+  /* Check if this op can be merged with the previous op. The delta
+     combiner sometimes generates such ops, and this is the obvious
+     place to make the check. */
   if (build_baton->num_ops > 0)
     {
       op = &build_baton->ops[build_baton->num_ops - 1];
@@ -324,28 +330,21 @@ txdelta_next_window(svn_txdelta_window_t **window,
     source_len = 0;
 
   /* Read the target stream. */
-  SVN_ERR(svn_stream_read(b->target, b->buf + source_len,
-                          &target_len));
+  SVN_ERR(svn_stream_read(b->target, b->buf + source_len, &target_len));
   b->pos += source_len;
 
-  /* ### The apr_md5 functions always return APR_SUCCESS.  At one
-     point, we proposed to APR folks that the interfaces change to
-     return void, but for some people that was apparently not a good
-     idea, and we didn't bother pressing the matter.  In the meantime,
-     we just ignore their return values below. */
   if (target_len == 0)
     {
       /* No target data?  We're done; return the final window. */
-      apr_md5_final(b->digest, &(b->context));
+      if (b->context != NULL)
+        SVN_ERR(svn_checksum_final(&b->checksum, b->context, b->result_pool));
+
       *window = NULL;
       b->more = FALSE;
       return SVN_NO_ERROR;
     }
-  else
-    {
-      apr_md5_update(&(b->context), b->buf + source_len,
-                     target_len);
-    }
+  else if (b->context != NULL)
+    SVN_ERR(svn_checksum_update(b->context, b->buf + source_len, target_len));
 
   *window = compute_window(b->buf, source_len, target_len,
                            b->pos - source_len, pool);
@@ -364,7 +363,60 @@ txdelta_md5_digest(void *baton)
   if (b->more)
     return NULL;
 
-  return b->digest;
+  /* The checksum should be there. */
+  return b->checksum->digest;
+}
+
+
+svn_error_t *
+svn_txdelta_run(svn_stream_t *source,
+                svn_stream_t *target,
+                svn_txdelta_window_handler_t handler,
+                void *handler_baton,
+                svn_checksum_kind_t checksum_kind,
+                svn_checksum_t **checksum,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  struct txdelta_baton tb = { 0 };
+  svn_txdelta_window_t *window;
+
+  tb.source = source;
+  tb.target = target;
+  tb.more_source = TRUE;
+  tb.more = TRUE;
+  tb.pos = 0;
+  tb.buf = apr_palloc(scratch_pool, 2 * SVN_DELTA_WINDOW_SIZE);
+  tb.result_pool = result_pool;
+
+  if (checksum != NULL)
+    tb.context = svn_checksum_ctx_create(checksum_kind, scratch_pool);
+
+  do
+    {
+      /* free the window (if any) */
+      svn_pool_clear(iterpool);
+
+      /* read in a single delta window */
+      SVN_ERR(txdelta_next_window(&window, &tb, iterpool));
+
+      /* shove it at the handler */
+      SVN_ERR((*handler)(window, handler_baton));
+
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+    }
+  while (window != NULL);
+
+  svn_pool_destroy(iterpool);
+
+  if (checksum != NULL)
+    *checksum = tb.checksum;  /* should be there! */
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -374,19 +426,18 @@ svn_txdelta(svn_txdelta_stream_t **stream,
             svn_stream_t *target,
             apr_pool_t *pool)
 {
-  struct txdelta_baton *b = apr_palloc(pool, sizeof(*b));
+  struct txdelta_baton *b = apr_pcalloc(pool, sizeof(*b));
+
   b->source = source;
   b->target = target;
   b->more_source = TRUE;
   b->more = TRUE;
-  b->pos = 0;
   b->buf = apr_palloc(pool, 2 * SVN_DELTA_WINDOW_SIZE);
-
-  /* Initialize MD5 digest calculation. */
-  apr_md5_init(&(b->context));
+  b->context = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->result_pool = pool;
 
   *stream = svn_txdelta_stream_create(b, txdelta_next_window,
-                                     txdelta_md5_digest, pool);
+                                      txdelta_md5_digest, pool);
 }
 
 
@@ -461,8 +512,7 @@ tpush_close_handler(void *baton)
     }
 
   /* Send a final NULL window signifying the end. */
-  SVN_ERR(tb->wh(NULL, tb->whb));
-  return SVN_NO_ERROR;
+  return tb->wh(NULL, tb->whb);
 }
 
 
@@ -498,7 +548,7 @@ svn_txdelta_target_push(svn_txdelta_window_handler_t handler,
 /* Functions for applying deltas.  */
 
 /* Ensure that BUF has enough space for VIEW_LEN bytes.  */
-static APR_INLINE void
+static APR_INLINE svn_error_t *
 size_buffer(char **buf, apr_size_t *buf_size,
             apr_size_t view_len, apr_pool_t *pool)
 {
@@ -507,8 +557,11 @@ size_buffer(char **buf, apr_size_t *buf_size,
       *buf_size *= 2;
       if (*buf_size < view_len)
         *buf_size = view_len;
+      SVN_ERR_ASSERT(APR_ALIGN_DEFAULT(*buf_size) >= *buf_size);
       *buf = apr_palloc(pool, *buf_size);
     }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -603,13 +656,13 @@ apply_window(svn_txdelta_window_t *window, void *baton)
     }
 
   /* Make sure the source view didn't slide backwards.  */
-  assert(window->sview_len == 0
-         || (window->sview_offset >= ab->sbuf_offset
-             && (window->sview_offset + window->sview_len
-                 >= ab->sbuf_offset + ab->sbuf_len)));
+  SVN_ERR_ASSERT(window->sview_len == 0
+                 || (window->sview_offset >= ab->sbuf_offset
+                     && (window->sview_offset + window->sview_len
+                         >= ab->sbuf_offset + ab->sbuf_len)));
 
   /* Make sure there's enough room in the target buffer.  */
-  size_buffer(&ab->tbuf, &ab->tbuf_size, window->tview_len, ab->pool);
+  SVN_ERR(size_buffer(&ab->tbuf, &ab->tbuf_size, window->tview_len, ab->pool));
 
   /* Prepare the source buffer for reading from the input stream.  */
   if (window->sview_offset != ab->sbuf_offset
@@ -618,7 +671,8 @@ apply_window(svn_txdelta_window_t *window, void *baton)
       char *old_sbuf = ab->sbuf;
 
       /* Make sure there's enough room.  */
-      size_buffer(&ab->sbuf, &ab->sbuf_size, window->sview_len, ab->pool);
+      SVN_ERR(size_buffer(&ab->sbuf, &ab->sbuf_size, window->sview_len,
+              ab->pool));
 
       /* If the existing view overlaps with the new view, copy the
        * overlap to the beginning of the new buffer.  */
@@ -651,7 +705,7 @@ apply_window(svn_txdelta_window_t *window, void *baton)
      the target view.  */
   len = window->tview_len;
   svn_txdelta_apply_instructions(window, ab->sbuf, ab->tbuf, &len);
-  assert(len == window->tview_len);
+  SVN_ERR_ASSERT(len == window->tview_len);
 
   /* Write out the output. */
 
@@ -733,9 +787,7 @@ svn_txdelta_send_string(const svn_string_t *string,
   SVN_ERR((*handler)(&window, handler_baton));
 
   /* Push a NULL at the handler, because we're done. */
-  SVN_ERR((*handler)(NULL, handler_baton));
-
-  return SVN_NO_ERROR;
+  return (*handler)(NULL, handler_baton);
 }
 
 svn_error_t *svn_txdelta_send_stream(svn_stream_t *stream,

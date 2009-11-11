@@ -3,15 +3,22 @@
 # svnlook.py : a Python-based replacement for svnlook
 #
 ######################################################################
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
-#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 #
 
@@ -44,14 +51,14 @@ class SVNLook:
   def cmd_author(self):
     # get the author property, or empty string if the property is not present
     author = self._get_property(core.SVN_PROP_REVISION_AUTHOR) or ''
-    print author
+    print(author)
 
   def cmd_changed(self):
     self._print_tree(ChangedEditor, pass_root=1)
 
   def cmd_date(self):
     if self.txn_ptr:
-      print
+      print("")
     else:
       date = self._get_property(core.SVN_PROP_REVISION_DATE)
       if date:
@@ -62,9 +69,9 @@ class SVNLook:
 
         # assume secs in local TZ, convert to tuple, and format
         ### we don't really know the TZ, do we?
-        print time.strftime('%Y-%m-%d %H:%M', time.localtime(secs))
+        print(time.strftime('%Y-%m-%d %H:%M', time.localtime(secs)))
       else:
-        print
+        print("")
 
   def cmd_diff(self):
     self._print_tree(DiffEditor, pass_root=1)
@@ -84,8 +91,8 @@ class SVNLook:
     # get the log property, or empty string if the property is not present
     log = self._get_property(core.SVN_PROP_REVISION_LOG) or ''
     if print_size:
-      print len(log)
-    print log
+      print(len(log))
+    print(log)
 
   def cmd_tree(self):
     self._print_tree(Editor, base_rev=0)
@@ -136,12 +143,12 @@ class Editor(delta.Editor):
     self.indent = ''
 
   def open_root(self, base_revision, dir_pool):
-    print '/' + self._get_id('/')
+    print('/' + self._get_id('/'))
     self.indent = self.indent + ' '    # indent one space
 
   def add_directory(self, path, *args):
     id = self._get_id(path)
-    print self.indent + _basename(path) + '/' + id
+    print(self.indent + _basename(path) + '/' + id)
     self.indent = self.indent + ' '    # indent one space
 
   # we cheat. one method implementation for two entry points.
@@ -154,7 +161,7 @@ class Editor(delta.Editor):
 
   def add_file(self, path, *args):
     id = self._get_id(path)
-    print self.indent + _basename(path) + id
+    print(self.indent + _basename(path) + id)
 
   # we cheat. one method implementation for two entry points.
   open_file = add_file
@@ -164,7 +171,6 @@ class Editor(delta.Editor):
       id = fs.node_id(self.root, path)
       return ' <%s>' % fs.unparse_id(id)
     return ''
-
 
 class DirsChangedEditor(delta.Editor):
   def open_root(self, base_revision, dir_pool):
@@ -195,9 +201,8 @@ class DirsChangedEditor(delta.Editor):
   def _dir_changed(self, baton):
     if baton[0]:
       # the directory hasn't been printed yet. do it.
-      print baton[1] + '/'
+      print(baton[1] + '/')
       baton[0] = 0
-
 
 class ChangedEditor(delta.Editor):
   def __init__(self, root, base_root):
@@ -210,13 +215,13 @@ class ChangedEditor(delta.Editor):
   def delete_entry(self, path, revision, parent_baton, pool):
     ### need more logic to detect 'replace'
     if fs.is_dir(self.base_root, '/' + path):
-      print 'D   ' + path + '/'
+      print('D   ' + path + '/')
     else:
-      print 'D   ' + path
+      print('D   ' + path)
 
   def add_directory(self, path, parent_baton,
                     copyfrom_path, copyfrom_revision, dir_pool):
-    print 'A   ' + path + '/'
+    print('A   ' + path + '/')
     return [ 0, path ]
 
   def open_directory(self, path, parent_baton, base_revision, dir_pool):
@@ -225,12 +230,12 @@ class ChangedEditor(delta.Editor):
   def change_dir_prop(self, dir_baton, name, value, pool):
     if dir_baton[0]:
       # the directory hasn't been printed yet. do it.
-      print '_U  ' + dir_baton[1] + '/'
+      print('_U  ' + dir_baton[1] + '/')
       dir_baton[0] = 0
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool):
-    print 'A   ' + path
+    print('A   ' + path)
     return [ '_', ' ', None ]
 
   def open_file(self, path, parent_baton, base_revision, file_pool):
@@ -252,26 +257,27 @@ class ChangedEditor(delta.Editor):
       status = text_mod + prop_mod
       # was there some kind of change?
       if status != '_ ':
-        print status + '  ' + path
+        print(status + '  ' + path)
 
 
 class DiffEditor(delta.Editor):
   def __init__(self, root, base_root):
     self.root = root
     self.base_root = base_root
+    self.target_revision = 0
 
   def _do_diff(self, base_path, path):
     if base_path is None:
-      print "Added: " + path
+      print("Added: " + path)
       label = path
     elif path is None:
-      print "Removed: " + path
+      print("Removed: " + base_path)
       label = base_path
     else:
-      print "Modified: " + path
+      print("Modified: " + path)
       label = path
-    print "===============================================================" + \
-          "==============="
+    print("===============================================================" + \
+          "===============")
     args = []
     args.append("-L")
     args.append(label + "\t(original)")
@@ -281,30 +287,79 @@ class DiffEditor(delta.Editor):
     differ = fs.FileDiff(self.base_root, base_path, self.root,
                          path, diffoptions=args)
     pobj = differ.get_pipe()
-    while 1:
+    while True:
       line = pobj.readline()
       if not line:
         break
-      print line,
-    print ""
+      sys.stdout.write("%s " % line)
+    print("")
+
+  def _do_prop_diff(self, path, prop_name, prop_val, pool):
+    print("Property changes on: " + path)
+    print("_______________________________________________________________" + \
+          "_______________")
+
+    old_prop_val = None
+
+    try:
+      old_prop_val = fs.node_prop(self.base_root, path, prop_name, pool)
+    except core.SubversionException:
+      pass # Must be a new path
+
+    if old_prop_val:
+      if prop_val:
+        print("Modified: " + prop_name)
+        print("   - " + str(old_prop_val))
+        print("   + " + str(prop_val))
+      else:
+        print("Deleted: " + prop_name)
+        print("   - " + str(old_prop_val))
+    else:
+      print("Added: " + prop_name)
+      print("   + " + str(prop_val))
+
+    print("")
 
   def delete_entry(self, path, revision, parent_baton, pool):
     ### need more logic to detect 'replace'
     if not fs.is_dir(self.base_root, '/' + path):
       self._do_diff(path, None)
 
+  def add_directory(self, path, parent_baton, copyfrom_path,
+                    copyfrom_revision, dir_pool):
+    return [ 1, path ]
+
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool):
     self._do_diff(None, path)
     return [ '_', ' ', None ]
+
+  def open_root(self, base_revision, dir_pool):
+    return [ 1, '' ]
+
+  def open_directory(self, path, parent_baton, base_revision, dir_pool):
+    return [ 1, path ]
 
   def open_file(self, path, parent_baton, base_revision, file_pool):
     return [ '_', ' ', path ]
 
   def apply_textdelta(self, file_baton, base_checksum):
     if file_baton[2] is not None:
-      self._do_diff(file_baton[2], file_baton[2], file_baton[3])
+      self._do_diff(file_baton[2], file_baton[2])
     return None
+
+  def change_file_prop(self, file_baton, name, value, pool):
+    if file_baton[2] is not None:
+      self._do_prop_diff(file_baton[2], name, value, pool)
+    return None
+
+  def change_dir_prop(self, dir_baton, name, value, pool):
+    if dir_baton[1] is not None:
+      self._do_prop_diff(dir_baton[1], name, value, pool)
+    return None
+
+  def set_target_revision(self, target_revision):
+    self.target_revision = target_revision
 
 def _basename(path):
   "Return the basename for a '/'-separated path."

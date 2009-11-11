@@ -2,17 +2,22 @@
  * kitchensink.c :  When no place else seems to fit...
  *
  * ====================================================================
- * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -21,6 +26,7 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_mergeinfo.h"
 #include "svn_private_config.h"
 
 svn_error_t *
@@ -137,4 +143,67 @@ svn_inheritance_from_word(const char *word)
   if (strcmp(word, "nearest-ancestor") == 0)
     return svn_mergeinfo_nearest_ancestor;
   return svn_mergeinfo_explicit;
+}
+
+const char *
+svn_node_kind_to_word(svn_node_kind_t kind)
+{
+  switch (kind)
+    {
+    case svn_node_none:
+      return "none";
+    case svn_node_file:
+      return "file";
+    case svn_node_dir:
+      return "dir";
+    case svn_node_unknown:
+    default:
+      return "unknown";
+    }
+}
+
+
+svn_node_kind_t
+svn_node_kind_from_word(const char *word)
+{
+  if (word == NULL)
+    return svn_node_unknown;
+
+  if (strcmp(word, "none") == 0)
+    return svn_node_none;
+  else if (strcmp(word, "file") == 0)
+    return svn_node_file;
+  else if (strcmp(word, "dir") == 0)
+    return svn_node_dir;
+  else
+    /* This also handles word == "unknown" */
+    return svn_node_unknown;
+}
+
+const char *
+svn_tristate_to_word(svn_tristate_t tristate)
+{
+  switch (tristate)
+    {
+      case svn_tristate_false:
+        return "false";
+      case svn_tristate_true:
+        return "true";
+      case svn_tristate_unknown:
+      default:
+        return NULL;
+    }
+}
+
+svn_tristate_t
+svn_tristate_from_word(const char *word)
+{
+  if (word == NULL)
+    return svn_tristate_unknown;
+  else if (strcmp(word, "true") == 0)
+    return svn_tristate_true;
+  else if (strcmp(word, "false") == 0)
+    return svn_tristate_false;
+
+  return svn_tristate_unknown;
 }

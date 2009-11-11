@@ -2,17 +2,22 @@
  * swigutil_py.h :  utility functions and stuff for the SWIG Python bindings
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -144,9 +149,9 @@ PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash,
 /* helper function to convert an apr_hash_t* (const char *->hash of
    mergeinfo hashes) to a Python dict */
 SVN_SWIG_SWIGUTIL_EXPORT
-PyObject *svn_swig_py_mergeinfo_hash_to_dict(apr_hash_t *hash,
-                                        swig_type_info *type,
-                                        PyObject *py_pool);
+PyObject *svn_swig_py_mergeinfo_catalog_to_dict(apr_hash_t *hash,
+                                                swig_type_info *type,
+                                                PyObject *py_pool);
 
 /* helper function to convert an apr_hash_t *(const char *->const char
  *) to a Python dict */
@@ -243,6 +248,16 @@ const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
 SVN_SWIG_SWIGUTIL_EXPORT
 const apr_array_header_t *svn_swig_py_revnums_to_array(PyObject *source,
                                                        apr_pool_t *pool);
+
+/* helper function to convert a Python sequence of SWIG wrapper objects
+   into an APR array of pointers to the wrapped structs. The structs themselves
+   are not copied. */
+SVN_SWIG_SWIGUTIL_EXPORT
+const apr_array_header_t *
+svn_swig_py_struct_ptr_list_to_array(PyObject *source,
+                                     swig_type_info *type_descriptor,
+                                     apr_pool_t *pool);
+
 
 /* make an editor that "thunks" from C callbacks up to Python */
 SVN_SWIG_SWIGUTIL_EXPORT
@@ -374,6 +389,13 @@ svn_error_t *svn_swig_py_client_blame_receiver_func(void *baton,
                                                     const char *line,
                                                     apr_pool_t *pool);
 
+/* thunked changelist receiver function */
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_py_changelist_receiver_func(void *baton,
+                                                  const char *path,
+                                                  const char *changelist,
+                                                  apr_pool_t *pool);
+
 /* auth provider callbacks */
 SVN_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_py_auth_simple_prompt_func(
@@ -424,6 +446,13 @@ svn_swig_py_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                void **baton,
                                PyObject *py_callbacks,
                                apr_pool_t *pool);
+
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_wc_diff_callbacks2_t *
+svn_swig_py_setup_wc_diff_callbacks2(void **baton,
+                                     PyObject *py_callbacks,
+                                     apr_pool_t *pool);
+
 SVN_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_py_commit_callback2(const svn_commit_info_t *commit_info,
                                           void *baton,

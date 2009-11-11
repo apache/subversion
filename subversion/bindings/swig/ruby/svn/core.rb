@@ -84,6 +84,9 @@ module Svn
     Pool = Svn::Ext::Core::Apr_pool_wrapper_t
 
     class Pool
+      RECOMMENDED_MAX_FREE_SIZE = ALLOCATOR_RECOMMENDED_MAX_FREE
+      MAX_FREE_UNLIMITED = ALLOCATOR_MAX_FREE_UNLIMITED
+
       class << self
         def number_of_pools
           ObjectSpace.each_object(Pool) {}
@@ -187,9 +190,15 @@ module Svn
         add_provider(Core.auth_get_simple_provider)
       end
 
-      if Core.respond_to?(:auth_get_windows_simple_provider)
-        def add_windows_simple_provider
-          add_provider(Core.auth_get_windows_simple_provider)
+      if Util.windows?
+        if Core.respond_to?(:auth_get_windows_simple_provider)
+          def add_windows_simple_provider
+            add_provider(Core.auth_get_windows_simple_provider)
+          end
+        elsif Core.respond_to?(:auth_get_platform_specific_provider)
+          def add_windows_simple_provider
+            add_provider(Core.auth_get_platform_specific_provider("windows","simple"))
+          end
         end
       end
 
@@ -722,6 +731,10 @@ module Svn
       def inspect
         super.gsub(/>$/, ":#{to_a.inspect}>")
       end
+
+      def ==(other)
+        to_a == other.to_a
+      end
     end
 
     class MergeInfo < Hash
@@ -738,7 +751,7 @@ module Svn
         end
       end
 
-      def diff(to, consider_inheritance=nil)
+      def diff(to, consider_inheritance=false)
         Core.mergeinfo_diff(self, to, consider_inheritance).collect do |result|
           self.class.new(result)
         end
@@ -757,7 +770,7 @@ module Svn
       end
 
       def to_s
-        Core.mergeinfo_to_stringbuf(self)
+        Core.mergeinfo_to_string(self)
       end
     end
 
@@ -769,7 +782,7 @@ module Svn
         end
       end
 
-      def diff(to, consider_inheritance=nil)
+      def diff(to, consider_inheritance=false)
         result = Core.rangelist_diff(self, to, consider_inheritance)
         deleted = result.pop
         added = result
@@ -782,12 +795,14 @@ module Svn
         self.class.new(*Core.swig_rangelist_merge(self, changes))
       end
 
-      def remove(eraser, consider_inheritance=nil)
-        self.class.new(*Core.rangelist_remove(eraser, self, consider_inheritance))
+      def remove(eraser, consider_inheritance=false)
+        self.class.new(*Core.rangelist_remove(eraser, self,
+                                              consider_inheritance))
       end
 
-      def intersect(other)
-        self.class.new(*Core.rangelist_intersect(self, other))
+      def intersect(other, consider_inheritance=false)
+        self.class.new(*Core.rangelist_intersect(self, other,
+                                                 consider_inheritance))
       end
 
       def reverse
@@ -795,8 +810,14 @@ module Svn
       end
 
       def to_s
-        Core.rangelist_to_stringbuf(self)
+        Core.rangelist_to_string(self)
       end
+    end
+
+    class LogEntry
+      alias_method(:revision_properties, :revprops)
+      alias_method(:has_children?, :has_children)
+      undef_method(:has_children)
     end
   end
 end

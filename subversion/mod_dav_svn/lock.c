@@ -2,17 +2,22 @@
  * lock.c: mod_dav_svn locking provider functions
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -28,6 +33,8 @@
 #include "svn_dav.h"
 #include "svn_time.h"
 #include "svn_pools.h"
+#include "svn_props.h"
+#include "private/svn_log.h"
 
 #include "dav_svn.h"
 
@@ -652,6 +659,10 @@ append_locks(dav_lockdb *lockdb,
       svn_fs_root_t *txn_root;
       const char *conflict_msg;
       dav_svn_repos *repos = resource->info->repos;
+      apr_hash_t *revprop_table = apr_hash_make(resource->pool);
+      apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                   APR_HASH_KEY_STRING, svn_string_create(repos->username,
+                                                          resource->pool));
 
       if (resource->info->repos->is_svn_client)
         return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED,
@@ -672,9 +683,9 @@ append_locks(dav_lockdb *lockdb,
                                     "Could not determine youngest revision",
                                     resource->pool);
 
-      if ((serr = svn_repos_fs_begin_txn_for_commit(&txn, repos->repos, rev,
-                                                    repos->username, NULL,
-                                                    resource->pool)))
+      if ((serr = svn_repos_fs_begin_txn_for_commit2(&txn, repos->repos, rev,
+                                                     revprop_table,
+                                                     resource->pool)))
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Could not begin a transaction",
                                     resource->pool);
@@ -759,10 +770,8 @@ append_locks(dav_lockdb *lockdb,
 
   /* Log the locking as a 'high-level' action. */
   dav_svn__operational_log(resource->info,
-                           apr_psprintf(resource->info->r->pool,
-                                        "lock %s",
-                                        svn_path_uri_encode(slock->path,
-                                                 resource->info->r->pool)));
+                           svn_log__lock_one_path(slock->path, info->lock_steal,
+                                                  resource->info->r->pool));
 
   return 0;
 }
@@ -846,10 +855,10 @@ remove_lock(dav_lockdb *lockdb,
 
       /* Log the unlocking as a 'high-level' action. */
       dav_svn__operational_log(resource->info,
-                               apr_psprintf(resource->info->r->pool,
-                                 "unlock %s",
-                                 svn_path_uri_encode(resource->info->repos_path,
-                                                     resource->info->r->pool)));
+                               svn_log__unlock_one_path(
+                                   resource->info->repos_path,
+                                   info->lock_break,
+                                   resource->info->r->pool));
     }
 
   return 0;

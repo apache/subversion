@@ -1,0 +1,175 @@
+Introduction
+============
+
+svnstsw (SVNServe Tunnel-mode Setuid/setgid Wrapper) is a wrapper
+around svnserve that sets the tunnel user equal to the username of the
+user that started the wrapper.
+
+Essentially, if the user running svnstsw logged in as "user1", then
+svnstsw executes the following:
+
+/usr/bin/svnserve --tunnel --tunnel-user=user1 --root=/path/to/repository
+
+It is intended that svnstsw will have the SUID/SGID bit set and will
+be owned by a user/group with read and write access to the target
+Subversion repository files.  This allows any user to access the
+repository (modulo access controls in the repository's authz database)
+without granting users read or write access to all of the repository
+files.
+
+
+Quick Install
+=============
+
+1.  Install Subversion.  The following steps assume that svnserve was
+    installed to /usr/bin/svnserve.
+
+2.  Rename svnserve:
+
+      $ sudo mv /usr/bin/svnserve /usr/bin/svnserve.real
+
+    Why rename it?  See the discussion at the end of these
+    instructions.
+
+3.  Create a system group named 'svn'.  Do not add any users to this
+    group.
+
+4.  Change repository permissions:
+
+      $ sudo chgrp -R svn /path/to/repository
+      $ sudo chmod g+rw,o-rwx /path/to/repository
+
+5.  Set up repository access controls.  Here is an example authz file
+    (/path/to/repository/conf/authz):
+
+      ---------------------
+      [groups]
+      group1 = user1, user2
+      group2 = user3
+
+      [/]
+      @group1 = r
+      @group2 = rw
+      ---------------------
+
+    Note that usernames in authz should come from system usernames
+    (e.g., someone who logs in as 'foo' on the system should be
+    referred to as 'foo' in the authz file).
+
+6.  Enable access controls.  In
+    /path/to/repository/conf/svnserve.conf:
+
+      ---------------------
+      [general]
+      authz-db = authz
+      ---------------------
+
+7.  Build and install svnstsw:
+
+      $ cd ~
+      $ tar xvfz /path/to/svnstsw-1.4.tar.gz
+      $ cd svnstsw-1.4
+      $ ./configure --with-svnserve=/usr/bin/svnserve.real
+      $ make
+      $ sudo make install
+
+    This puts the svnstsw executable in /usr/local/bin/svnstsw.
+
+8.  Create a symlink named svnserve that points to svnstsw:
+
+      $ sudo ln -s ../local/bin/svnstsw /usr/bin/svnserve
+
+    Now the command "svnserve" actually runs /usr/local/bin/svnstsw
+    (which in turn runs /usr/bin/svnserve.real).
+
+9.  Set up setgid on the svnstsw executable:
+
+      $ sudo chgrp svn /usr/local/bin/svnstsw
+      $ sudo chmod g+s /usr/local/bin/svnstsw
+
+10.  You're done!  Now test access.  From a client machine:
+
+      $ svn checkout svn+ssh://svn-server.acme.org/path/to/repository
+
+Why rename svnserve to svnserve.real:  The svn client executes
+"svnserve -t" on the server by default.  Thus, for this wrapper to be
+effective, typing "svnserve" should invoke the svnstsw wrapper, not
+svnserve.  One way to do this is to move svnserve out of the way and
+replace it with either a copy of the svnstsw executable or a symlink
+to the svnstsw executable.  An alternative is to create a
+svnserve->svnstsw symlink in another directory and make sure this
+other directory is in each user's PATH environment variable *before*
+the directory containing the real svnserve.
+
+If you also wish to have http-based access through the mod_dav_svn
+Apache module, simply add the Apache user to the svn group.  (You may
+also need to make sure Apache uses a umask of 0007.)
+
+
+Build Options
+=============
+
+The svnstsw wrapper has several build-time options, specified by
+command-line arguments to the configure script.  This section briefly
+introduces some of the more interesting options.  For more details,
+see "./configure --help".
+
+'--with-svnserve=/path/to/svnserve':
+
+    This tells configure where the real svnserve is located.
+
+'--disable-svnserve-root-override':
+
+    This argument causes svnstsw to ignore the '--root' command-line
+    argument.
+
+'--with-svnserve-root-default=/path/to/repository':
+
+    This argument causes svnstsw to always pass
+    '--root=/path/to/repository' to svnserve, unless the '--root'
+    command-line argument is passed to svnserve and the above
+    '--disable-svnserve-root-override' argument is NOT given to
+    configure.
+
+    This command is useful for cleaning up repository URLs.  For
+    example, suppose a repository is put in
+    /srv/svn-repositories/project1 on the server named
+    svn-server.acme.org.  Normally, the URL to this repository would
+    look like the following:
+
+      svn+ssh://svn-server.acme.org/srv/svn-repositories/project1
+
+    By passing '--with-svnserve-root-default=/srv/svn-repositories' to
+    configure, users would use the following URL instead:
+
+      svn+ssh://svn-server.acme.org/project1
+
+'--with-umask=<mode_t expression>':
+
+    This argument is used to control the default permissions of files
+    created inside the repository (due to commits, etc.).  By default,
+    the user and group will have read and write access to
+    newly-created files while everyone else will have no access at
+    all.
+
+    The value of this expression is passed to the umask() system
+    function; see
+    http://www.opengroup.org/onlinepubs/000095399/functions/umask.html
+    and
+    http://www.opengroup.org/onlinepubs/000095399/basedefs/sys/stat.h.html
+    for details.
+
+'--with-doxygen=/path/to/doxygen' and
+'--with-dot=/directory/containing/dot':
+
+    These arguments tell the build system where it can find Doxygen
+    and the 'dot' utility.  These utilities are used to build
+    documentation for the svnstsw source code, which is useful for
+    developers wishing to modify or extend svnstsw.  Doxygen is
+    required to build the documentation; dot is optional.  If dot is
+    found, the documentation will contain pretty graphs.
+
+    To build the Doxygen documentation, type "make html" after running
+    configure.  If "make install" is run after "make html", then the
+    Doxygen documentation will be installed (to
+    /usr/local/share/doc/svnstsw/html by default).

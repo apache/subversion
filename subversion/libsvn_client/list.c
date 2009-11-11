@@ -2,30 +2,34 @@
  * list.c:  list local and remote directory entries.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
-
-#include "client.h"
 #include "svn_client.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
+#include "svn_props.h"
+
+#include "client.h"
 
 #include "svn_private_config.h"
 
@@ -82,11 +86,11 @@ get_dir_contents(apr_uint32_t dirent_fields,
 
       svn_pool_clear(iterpool);
 
-      path = svn_path_join(dir, item->key, iterpool);
+      path = svn_relpath_join(dir, item->key, iterpool);
 
       if (locks)
         {
-          const char *abs_path = svn_path_join(fs_path, path, iterpool);
+          const char *abs_path = svn_uri_join(fs_path, path, iterpool);
           lock = apr_hash_get(locks, abs_path, APR_HASH_KEY_STRING);
         }
       else
@@ -138,10 +142,11 @@ svn_client_list2(const char *path_or_url,
                                            peg_revision,
                                            revision, ctx, pool));
 
-  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
 
-  SVN_ERR(svn_client__path_relative_to_root(&fs_path, url, repos_root,
-                                            TRUE, ra_session, NULL, pool));
+  SVN_ERR(svn_client__path_relative_to_root(&fs_path, ctx->wc_ctx, url,
+                                            repos_root, TRUE, ra_session,
+                                            pool, pool));
 
   err = svn_ra_stat(ra_session, "", rev, &dirent, pool);
 
@@ -165,7 +170,7 @@ svn_client_list2(const char *path_or_url,
 
               /* Open another session to the path's parent.  This server
                  doesn't support svn_ra_reparent anyway, so don't try it. */
-              svn_path_split(url, &parent_url, &base_name, pool);
+              svn_uri_split(url, &parent_url, &base_name, pool);
 
               /* 'base_name' is now the last component of an URL, but we want
                  to use it as a plain file name. Therefore, we must URI-decode
@@ -174,7 +179,7 @@ svn_client_list2(const char *path_or_url,
 
               SVN_ERR(svn_client__open_ra_session_internal(&parent_session,
                                                            parent_url, NULL,
-                                                           NULL, NULL, FALSE,
+                                                           NULL, FALSE,
                                                            TRUE, ctx, pool));
 
               /* Get all parent's entries, no props. */
@@ -228,7 +233,7 @@ svn_client_list2(const char *path_or_url,
         dirent = NULL;
     }
   else if (err)
-    return err;
+    return svn_error_return(err);
 
   if (! dirent)
     return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
@@ -248,7 +253,7 @@ svn_client_list2(const char *path_or_url,
           locks = NULL;
         }
       else if (err)
-        return err;
+        return svn_error_return(err);
     }
   else
     locks = NULL;
@@ -267,123 +272,4 @@ svn_client_list2(const char *path_or_url,
                              fs_path, depth, ctx, list_func, baton, pool));
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_list(const char *path_or_url,
-                const svn_opt_revision_t *peg_revision,
-                const svn_opt_revision_t *revision,
-                svn_boolean_t recurse,
-                apr_uint32_t dirent_fields,
-                svn_boolean_t fetch_locks,
-                svn_client_list_func_t list_func,
-                void *baton,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
-{
-  return svn_client_list2(path_or_url,
-                          peg_revision,
-                          revision,
-                          SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse),
-                          dirent_fields,
-                          fetch_locks,
-                          list_func,
-                          baton,
-                          ctx,
-                          pool);
-}
-
-/* Baton used by compatibility wrapper svn_client_ls3. */
-struct ls_baton {
-  apr_hash_t *dirents;
-  apr_hash_t *locks;
-  apr_pool_t *pool;
-};
-
-/* This implements svn_client_list_func_t. */
-static svn_error_t *
-store_dirent(void *baton, const char *path, const svn_dirent_t *dirent,
-             const svn_lock_t *lock, const char *abs_path, apr_pool_t *pool)
-{
-  struct ls_baton *lb = baton;
-
-  /* The dirent is allocated in a temporary pool, so duplicate it into the
-     correct pool.  Note, however, that the locks are stored in the correct
-     pool already. */
-  dirent = svn_dirent_dup(dirent, lb->pool);
-
-  /* An empty path means we are called for the target of the operation.
-     For compatibility, we only store the target if it is a file, and we
-     store it under the basename of the URL.  Note that this makes it
-     impossible to differentiate between the target being a directory with a
-     child with the same basename as the target and the target being a file,
-     but that's how it was implemented. */
-  if (path[0] == '\0')
-    {
-      if (dirent->kind == svn_node_file)
-        {
-          const char *base_name = svn_path_basename(abs_path, lb->pool);
-          apr_hash_set(lb->dirents, base_name, APR_HASH_KEY_STRING, dirent);
-          if (lock)
-            apr_hash_set(lb->locks, base_name, APR_HASH_KEY_STRING, lock);
-        }
-    }
-  else
-    {
-      path = apr_pstrdup(lb->pool, path);
-      apr_hash_set(lb->dirents, path, APR_HASH_KEY_STRING, dirent);
-      if (lock)
-        apr_hash_set(lb->locks, path, APR_HASH_KEY_STRING, lock);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_ls3(apr_hash_t **dirents,
-               apr_hash_t **locks,
-               const char *path_or_url,
-               const svn_opt_revision_t *peg_revision,
-               const svn_opt_revision_t *revision,
-               svn_boolean_t recurse,
-               svn_client_ctx_t *ctx,
-               apr_pool_t *pool)
-{
-  struct ls_baton lb;
-
-  *dirents = lb.dirents = apr_hash_make(pool);
-  if (locks)
-    *locks = lb.locks = apr_hash_make(pool);
-  lb.pool = pool;
-
-  return svn_client_list(path_or_url, peg_revision, revision, recurse,
-                         SVN_DIRENT_ALL, locks != NULL,
-                         store_dirent, &lb, ctx, pool);
-}
-
-svn_error_t *
-svn_client_ls2(apr_hash_t **dirents,
-               const char *path_or_url,
-               const svn_opt_revision_t *peg_revision,
-               const svn_opt_revision_t *revision,
-               svn_boolean_t recurse,
-               svn_client_ctx_t *ctx,
-               apr_pool_t *pool)
-{
-
-  return svn_client_ls3(dirents, NULL, path_or_url, peg_revision,
-                        revision, recurse, ctx, pool);
-}
-
-
-svn_error_t *
-svn_client_ls(apr_hash_t **dirents,
-              const char *path_or_url,
-              svn_opt_revision_t *revision,
-              svn_boolean_t recurse,
-              svn_client_ctx_t *ctx,
-              apr_pool_t *pool)
-{
-  return svn_client_ls2(dirents, path_or_url, revision,
-                        revision, recurse, ctx, pool);
 }

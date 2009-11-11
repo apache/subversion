@@ -1,25 +1,30 @@
 /* revs-txns.h : internal interface to revision and transactions operations
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 #ifndef SVN_LIBSVN_FS_REVS_TXNS_H
 #define SVN_LIBSVN_FS_REVS_TXNS_H
 
-#define APU_WANT_DB
-#include <apu_want.h>
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 
 #include "svn_fs.h"
 
@@ -144,20 +149,6 @@ svn_error_t *svn_fs_base__set_txn_base(svn_fs_t *fs,
                                        apr_pool_t *pool);
 
 
-/* Set a PATH to VALUE for the SVN_FS__PROP_TXN_MERGEINFO property (a
-   serialized hash table) on transaction TXN_NAME's proplist in FS as
-   part of TRAIL.  Use POOL for any necessary allocations.
-
-   Return SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
-   transaction that has already been committed.  */
-svn_error_t *
-svn_fs_base__set_txn_mergeinfo(svn_fs_t *fs,
-                               const char *txn_name,
-                               const char *path,
-                               const svn_string_t *value,
-                               trail_t *trail,
-                               apr_pool_t *pool);
-
 /* Set a property NAME to VALUE on transaction TXN_NAME in FS as part
    of TRAIL.  Use POOL for any necessary allocations.
 
@@ -196,6 +187,13 @@ svn_error_t *svn_fs_base__begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs,
                                     svn_revnum_t rev, apr_uint32_t flags,
                                     apr_pool_t *pool);
 
+/* Begin a new transaction in filesystem FS, to replace an existing
+   revision REV.  The new transaction is returned in *TXN_P.  Allocate
+   the new transaction structure from POOL. */
+svn_error_t *svn_fs_base__begin_obliteration_txn(svn_fs_txn_t **txn_p,
+                                                 svn_fs_t *fs, svn_revnum_t rev,
+                                                 apr_pool_t *pool);
+
 svn_error_t *svn_fs_base__open_txn(svn_fs_txn_t **txn, svn_fs_t *fs,
                                    const char *name, apr_pool_t *pool);
 
@@ -226,7 +224,7 @@ svn_error_t *svn_fs_base__change_txn_prop(svn_fs_txn_t *txn, const char *name,
                                           const svn_string_t *value,
                                           apr_pool_t *pool);
 
-svn_error_t *svn_fs_base__change_txn_props(svn_fs_txn_t *txn, 
+svn_error_t *svn_fs_base__change_txn_props(svn_fs_txn_t *txn,
                                            apr_array_header_t *props,
                                            apr_pool_t *pool);
 

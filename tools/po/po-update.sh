@@ -26,7 +26,8 @@ if [ -z "$svn_base" ]; then
 fi
 
 pot_done=
-function make_pot()
+
+make_pot()
 {
   if [ -z "$pot_done" ]; then
     echo "Building subversion.pot..."
@@ -36,10 +37,13 @@ function make_pot()
     -name tests -prune -or \
     -name bindings -prune -or \
     -name "*.c" -print -or \
-    -name "svn_error_codes.h" -print | \
-    $XGETTEXT --sort-by-file -k_ -kN_ -kSVN_ERRDEF:3 \
+    -name "svn_error_codes.h" -print -or \
+    -name "svn_fs_util.h" -print | \
+    $XGETTEXT --sort-by-file -k_ -kN_ -kQ_:1,2 -kSVN_ERRDEF:3 \
     --flag=_:1:pass-c-format \
     --flag=N_:1:pass-c-format \
+    --flag=Q_:1:pass-c-format \
+    --flag=Q_:2:pass-c-format \
     --flag=svn_cmdline_printf:2:c-format \
     --flag=svn_cmdline_fprintf:3:c-format \
     --flag=svn_error_createf:3:c-format \
@@ -60,7 +64,7 @@ function make_pot()
   fi
 }
 
-function update_po()
+update_po()
 {
   (cd $svn_base/subversion/po &&
   for i in $1.po; do
@@ -69,8 +73,8 @@ function update_po()
     # GNU gettext-tools 0.14.6 implementation) inverts the order of obsolete
     # messages every time it is run. Therefore, run it twice, to invert and
     # then re-invert, to minimize spurious diffs.
-    $MSGMERGE --sort-by-file --update $i subversion.pot 
-    $MSGMERGE --sort-by-file --update $i subversion.pot 
+    $MSGMERGE --sort-by-file --no-wrap --update $i subversion.pot 
+    $MSGMERGE --sort-by-file --no-wrap --update $i subversion.pot 
   done )
 }
 

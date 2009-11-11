@@ -2,17 +2,22 @@
  * swigutil_pl.h :  utility functions and stuff for the SWIG Perl bindings
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -74,6 +79,8 @@ svn_error_t *svn_swig_pl_callback_thunk(perl_func_invoker_t caller_func,
 SV *svn_swig_pl_prophash_to_hash(apr_hash_t *hash);
 SV *svn_swig_pl_convert_hash(apr_hash_t *hash, swig_type_info *tinfo);
 
+SV *svn_swig_pl_convert_hash_of_revnum_t(apr_hash_t *hash);
+
 const apr_array_header_t *svn_swig_pl_strings_to_array(SV *source,
                                                        apr_pool_t *pool);
 
@@ -84,6 +91,8 @@ apr_hash_t *svn_swig_pl_objs_to_hash(SV *source, swig_type_info *tinfo,
 apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
                                              const char *typename,
                                              apr_pool_t *pool);
+apr_hash_t *svn_swig_pl_objs_to_hash_of_revnum_t(SV *source,
+                                                 apr_pool_t *pool);
 const apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
                                                     swig_type_info *tinfo,
                                                     apr_pool_t *pool);
@@ -103,6 +112,13 @@ svn_error_t * svn_swig_pl_thunk_log_receiver(void *py_receiver,
                                              const char *date,
                                              const char *msg,
                                              apr_pool_t *pool);
+
+/* thunked diff summarize callback.  */
+svn_error_t * svn_swig_pl_thunk_client_diff_summarize_func(
+                     const svn_client_diff_summarize_t *diff,
+                     void *baton,
+                     apr_pool_t *pool);
+
 /* thunked commit editor callback. */
 svn_error_t *svn_swig_pl_thunk_commit_callback(svn_revnum_t new_revision,
 					       const char *date,
@@ -243,6 +259,12 @@ void svn_swig_pl_hold_ref_in_pool(apr_pool_t *pool, SV *sv);
 /* md5 access class */
 SV *svn_swig_pl_from_md5(unsigned char *digest);
 
+svn_error_t *svn_swig_pl_ra_lock_callback(void *baton,
+                                          const char *path,
+                                          svn_boolean_t do_lock,
+                                          const svn_lock_t *lock,
+                                          svn_error_t *ra_err,
+                                          apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

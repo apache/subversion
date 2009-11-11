@@ -2,17 +2,22 @@
  * utf.c:  UTF-8 conversion routines
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -30,20 +35,16 @@
 #include "svn_pools.h"
 #include "svn_ctype.h"
 #include "svn_utf.h"
-#include "utf_impl.h"
 #include "svn_private_config.h"
 #include "win32_xlate.h"
+
+#include "private/svn_utf_private.h"
 
 
 
 #define SVN_UTF_NTOU_XLATE_HANDLE "svn-utf-ntou-xlate-handle"
 #define SVN_UTF_UTON_XLATE_HANDLE "svn-utf-uton-xlate-handle"
-
-#ifndef AS400
 #define SVN_APR_UTF8_CHARSET "UTF-8"
-#else
-#define SVN_APR_UTF8_CHARSET (const char*)1208
-#endif
 
 #if APR_HAS_THREADS
 static apr_thread_mutex_t *xlate_handle_mutex = NULL;
@@ -140,7 +141,6 @@ get_xlate_key(const char *topage,
               const char *frompage,
               apr_pool_t *pool)
 {
-#ifndef AS400
   /* In the cases of SVN_APR_LOCALE_CHARSET and SVN_APR_DEFAULT_CHARSET
    * topage/frompage is really an int, not a valid string.  So generate a
    * unique key accordingly. */
@@ -156,11 +156,6 @@ get_xlate_key(const char *topage,
 
   return apr_pstrcat(pool, "svn-utf-", frompage, "to", topage,
                      "-xlate-handle", NULL);
-#else
-  /* OS400 code pages are always ints. */
-  return apr_psprintf(pool, "svn-utf-%dto%d-xlate-handle", (int)frompage,
-                      (int)topage);
-#endif
 }
 
 /* Set *RET to a handle node for converting from FROMPAGE to TOPAGE,
@@ -238,26 +233,19 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
 
   /* The error handling doesn't support the following cases, since we don't
      use them currently.  Catch this here. */
-#ifndef AS400
-  /* On OS400 V5R4 with UTF support, APR_DEFAULT_CHARSET and
-   * APR_LOCALE_CHARSET are both UTF-8 (CCSID 1208), so we won't get far
-   * with this assert active. */
-  assert(frompage != SVN_APR_DEFAULT_CHARSET
-         && topage != SVN_APR_DEFAULT_CHARSET
-         && (frompage != SVN_APR_LOCALE_CHARSET
-             || topage != SVN_APR_LOCALE_CHARSET));
-#endif
+  SVN_ERR_ASSERT(frompage != SVN_APR_DEFAULT_CHARSET
+                 && topage != SVN_APR_DEFAULT_CHARSET
+                 && (frompage != SVN_APR_LOCALE_CHARSET
+                     || topage != SVN_APR_LOCALE_CHARSET));
 
   /* Use the correct pool for creating the handle. */
   if (userdata_key && xlate_handle_hash)
     pool = apr_hash_pool_get(xlate_handle_hash);
 
   /* Try to create a handle. */
-#if defined( WIN32)
+#if defined(WIN32)
   apr_err = svn_subr__win32_xlate_open((win32_xlate_t **)&handle, topage,
                                        frompage, pool);
-#elif defined(AS400)
-  apr_err = apr_xlate_open(&handle, (int)topage, (int)frompage, pool);
 #else
   apr_err = apr_xlate_open(&handle, topage, frompage, pool);
 #endif
@@ -269,7 +257,6 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
       const char *errstr;
       /* Can't use svn_error_wrap_apr here because it calls functions in
          this file, leading to infinite recursion. */
-#ifndef AS400
       if (frompage == SVN_APR_LOCALE_CHARSET)
         errstr = apr_psprintf(pool,
                               _("Can't create a character converter from "
@@ -282,13 +269,7 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
         errstr = apr_psprintf(pool,
                               _("Can't create a character converter from "
                                 "'%s' to '%s'"), frompage, topage);
-#else
-      /* Handle the error condition normally prevented by the assert
-       * above. */
-      errstr = apr_psprintf(pool,
-                            _("Can't create a character converter from "
-                              "'%i' to '%i'"), frompage, topage);
-#endif
+
       err = svn_error_create(apr_err, NULL, errstr);
       goto cleanup;
     }
@@ -345,7 +326,7 @@ put_xlate_handle_node(xlate_handle_node_t *node,
       xlate_handle_node_t **node_p;
 #if APR_HAS_THREADS
       if (apr_thread_mutex_lock(xlate_handle_mutex) != APR_SUCCESS)
-        abort();
+        SVN_ERR_MALFUNCTION_NO_RETURN();
 #endif
       node_p = apr_hash_get(xlate_handle_hash, userdata_key,
                             APR_HASH_KEY_STRING);
@@ -363,7 +344,7 @@ put_xlate_handle_node(xlate_handle_node_t *node,
       *node_p = node;
 #if APR_HAS_THREADS
       if (apr_thread_mutex_unlock(xlate_handle_mutex) != APR_SUCCESS)
-        abort();
+        SVN_ERR_MALFUNCTION_NO_RETURN();
 #endif
     }
   else
@@ -471,8 +452,12 @@ convert_to_stringbuf(xlate_handle_node_t *node,
   apr_size_t destlen = buflen;
   char *destbuf;
 
-  /* Initialize *DEST to an empty stringbuf. */
-  *dest = svn_stringbuf_create("", pool);
+  /* Initialize *DEST to an empty stringbuf.
+     A 1:2 ratio of input bytes to output bytes (as assigned above)
+     should be enough for most translations, and if it turns out not
+     to be enough, we'll grow the buffer again, sizing it based on a
+     1:3 ratio of the remainder of the string. */
+  *dest = svn_stringbuf_create_ensure(buflen + 1, pool);
   destbuf = (*dest)->data;
 
   /* Not only does it not make sense to convert an empty string, but
@@ -482,13 +467,6 @@ convert_to_stringbuf(xlate_handle_node_t *node,
 
   do
     {
-      /* A 1:2 ratio of input bytes to output bytes (as assigned above)
-         should be enough for most translations, and if it turns out not
-         to be enough, we'll grow the buffer again, sizing it based on a
-         1:3 ratio of the remainder of the string. */
-
-      svn_stringbuf_ensure(*dest, buflen + 1);
-
       /* Set up state variables for xlate. */
       destlen = buflen - (*dest)->len;
 
@@ -518,7 +496,6 @@ convert_to_stringbuf(xlate_handle_node_t *node,
 
       /* Can't use svn_error_wrap_apr here because it calls functions in
          this file, leading to infinite recursion. */
-#ifndef AS400
       if (node->frompage == SVN_APR_LOCALE_CHARSET)
         errstr = apr_psprintf
           (pool, _("Can't convert string from native encoding to '%s':"),
@@ -531,13 +508,7 @@ convert_to_stringbuf(xlate_handle_node_t *node,
         errstr = apr_psprintf
           (pool, _("Can't convert string from '%s' to '%s':"),
            node->frompage, node->topage);
-#else
-      /* On OS400 V5R4 every possible node->topage and node->frompage
-       * *really* is an int. */
-      errstr = apr_psprintf
-        (pool, _("Can't convert string from CCSID '%i' to CCSID '%i'"),
-         node->frompage, node->topage);
-#endif
+
       err = svn_error_create(apr_err, NULL, fuzzy_escape(src_data,
                                                          src_length, pool));
       return svn_error_create(apr_err, err, errstr);
@@ -598,17 +569,18 @@ check_non_ascii(const char *data, apr_size_t len, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Construct an error with a suitable message to describe the invalid UTF-8
- * sequence DATA of length LEN (which may have embedded NULLs).  We can't
- * simply print the data, almost by definition we don't really know how it
- * is encoded.
+/* Construct an error with code APR_EINVAL and with a suitable message
+ * to describe the invalid UTF-8 sequence DATA of length LEN (which
+ * may have embedded NULLs).  We can't simply print the data, almost
+ * by definition we don't really know how it is encoded.
  */
 static svn_error_t *
 invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
 {
   const char *last = svn_utf__last_valid(data, len);
   const char *valid_txt = "", *invalid_txt = "";
-  int i, valid, invalid;
+  int i;
+  size_t valid, invalid;
 
   /* We will display at most 24 valid octets (this may split a leading
      multi-byte character) as that should fit on one 80 character line. */
@@ -635,7 +607,8 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
                            valid_txt, invalid_txt);
 }
 
-/* Verify that the sequence DATA of length LEN is valid UTF-8 */
+/* Verify that the sequence DATA of length LEN is valid UTF-8.
+   If it is not, return an error with code APR_EINVAL. */
 static svn_error_t *
 check_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
 {
@@ -644,7 +617,8 @@ check_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Verify that the NULL terminated sequence DATA is valid UTF-8 */
+/* Verify that the NULL terminated sequence DATA is valid UTF-8.
+   If it is not, return an error with code APR_EINVAL. */
 static svn_error_t *
 check_cstring_utf8(const char *data, apr_pool_t *pool)
 {
@@ -755,9 +729,7 @@ svn_utf_cstring_to_utf8(const char **dest,
   err = convert_cstring(dest, src, node, pool);
   put_xlate_handle_node(node, SVN_UTF_NTOU_XLATE_HANDLE, pool);
   SVN_ERR(err);
-  SVN_ERR(check_cstring_utf8(*dest, pool));
-
-  return SVN_NO_ERROR;
+  return check_cstring_utf8(*dest, pool);
 }
 
 
@@ -777,9 +749,7 @@ svn_utf_cstring_to_utf8_ex2(const char **dest,
   err = convert_cstring(dest, src, node, pool);
   put_xlate_handle_node(node, convset_key, pool);
   SVN_ERR(err);
-  SVN_ERR(check_cstring_utf8(*dest, pool));
-
-  return SVN_NO_ERROR;
+  return check_cstring_utf8(*dest, pool);
 }
 
 

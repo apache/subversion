@@ -2,28 +2,33 @@
  * path_driver.c -- drive an editor across a set of paths
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 
-#include <assert.h>
 #include <apr_pools.h>
 #include <apr_strings.h>
 
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
 
@@ -54,7 +59,7 @@ open_dir(apr_array_header_t *db_stack,
   apr_pool_t *subpool;
 
   /* Assert that we are in a stable state. */
-  assert(db_stack && db_stack->nelts);
+  SVN_ERR_ASSERT(db_stack && db_stack->nelts);
 
   /* Get the parent dir baton. */
   item = APR_ARRAY_IDX(db_stack, db_stack->nelts - 1, void *);
@@ -87,7 +92,7 @@ pop_stack(apr_array_header_t *db_stack,
   dir_stack_t *item;
 
   /* Assert that we are in a stable state. */
-  assert(db_stack && db_stack->nelts);
+  SVN_ERR_ASSERT(db_stack && db_stack->nelts);
 
   /* Close the most recent directory pushed to the stack. */
   item = APR_ARRAY_IDX(db_stack, db_stack->nelts - 1, dir_stack_t *);
@@ -189,7 +194,7 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
            current one.  For the first iteration, this is just the
            empty string. ***/
       if (i > 0)
-        common = svn_path_get_longest_ancestor(last_path, path, iterpool);
+        common = svn_relpath_get_longest_ancestor(last_path, path, iterpool);
       common_len = strlen(common);
 
       /*** Step B - Close any directories between the last path and
@@ -209,7 +214,10 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
 
       /*** Step C - Open any directories between the common ancestor
            and the parent of the current path. ***/
-      svn_path_split(path, &pdir, &bname, iterpool);
+      if (*path == '/')
+        svn_uri_split(path, &pdir, &bname, iterpool);
+      else
+        svn_relpath_split(path, &pdir, &bname, iterpool);
       if (strlen(pdir) > common_len)
         {
           const char *piece = pdir + common_len + 1;

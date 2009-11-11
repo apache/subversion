@@ -1,30 +1,37 @@
 /* fs-helpers.c --- tests for the filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 #include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>
+
+#include "svn_test.h"
+
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "svn_delta.h"
 
-#include "svn_test.h"
 #include "svn_test_fs.h"
 
 
@@ -61,6 +68,7 @@ svn_test__fs_new(svn_fs_t **fs_p, apr_pool_t *pool)
 
 static apr_hash_t *
 make_fs_config(const char *fs_type,
+               int server_minor_version,
                apr_pool_t *pool)
 {
   apr_hash_t *fs_config = apr_hash_make(pool);
@@ -69,18 +77,31 @@ make_fs_config(const char *fs_type,
   apr_hash_set(fs_config, SVN_FS_CONFIG_FS_TYPE,
                APR_HASH_KEY_STRING,
                fs_type);
+  if (server_minor_version)
+    {
+      if (server_minor_version == 5)
+        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
+                     APR_HASH_KEY_STRING, "1");
+      else if (server_minor_version == 4)
+        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
+                     APR_HASH_KEY_STRING, "1");
+      else if (server_minor_version == 3)
+        apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
+                     APR_HASH_KEY_STRING, "1");
+    }
   return fs_config;
 }
 
 
-svn_error_t *
-svn_test__create_fs(svn_fs_t **fs_p,
-                    const char *name,
-                    const char *fs_type,
-                    apr_pool_t *pool)
+static svn_error_t *
+create_fs(svn_fs_t **fs_p,
+          const char *name,
+          const char *fs_type,
+          int server_minor_version,
+          apr_pool_t *pool)
 {
   apr_finfo_t finfo;
-  apr_hash_t *fs_config = make_fs_config(fs_type, pool);
+  apr_hash_t *fs_config = make_fs_config(fs_type, server_minor_version, pool);
 
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a
@@ -110,15 +131,68 @@ svn_test__create_fs(svn_fs_t **fs_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+maybe_install_fsfs_conf(svn_fs_t *fs,
+                        const svn_test_opts_t *opts,
+                        svn_boolean_t *must_reopen,
+                        apr_pool_t *pool)
+{
+  *must_reopen = FALSE;
+  if (strcmp(opts->fs_type, "fsfs") != 0 || ! opts->config_file)
+    return SVN_NO_ERROR;
+
+  *must_reopen = TRUE;
+  return svn_io_copy_file(opts->config_file,
+                          svn_path_join(svn_fs_path(fs, pool),
+                                        "fsfs.conf", pool),
+                          FALSE,
+                          pool);
+}
+
+
+svn_error_t *
+svn_test__create_bdb_fs(svn_fs_t **fs_p,
+                        const char *name,
+                        const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  return create_fs(fs_p, name, "bdb", opts->server_minor_version, pool);
+}
+
+
+svn_error_t *
+svn_test__create_fs(svn_fs_t **fs_p,
+                    const char *name,
+                    const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+{
+  svn_boolean_t must_reopen;
+
+  SVN_ERR(create_fs(fs_p, name, opts->fs_type,
+                    opts->server_minor_version, pool));
+
+  SVN_ERR(maybe_install_fsfs_conf(*fs_p, opts, &must_reopen, pool));
+  if (must_reopen)
+    {
+      SVN_ERR(svn_fs_open(fs_p, name, NULL, pool));
+      svn_fs_set_warning_func(*fs_p, fs_warning_handler, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_test__create_repos(svn_repos_t **repos_p,
                        const char *name,
-                       const char *fs_type,
+                       const svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
   apr_finfo_t finfo;
-  apr_hash_t *fs_config = make_fs_config(fs_type, pool);
+  svn_repos_t *repos;
+  svn_boolean_t must_reopen;
+  apr_hash_t *fs_config = make_fs_config(opts->fs_type,
+                                         opts->server_minor_version, pool);
 
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a
@@ -134,12 +208,21 @@ svn_test__create_repos(svn_repos_t **repos_p,
                                  "there is already a file named '%s'", name);
     }
 
-  SVN_ERR(svn_repos_create(repos_p, name, NULL, NULL, NULL,
+  SVN_ERR(svn_repos_create(&repos, name, NULL, NULL, NULL,
                            fs_config, pool));
 
   /* Register this repo for cleanup. */
   svn_test_add_dir_cleanup(name);
 
+  SVN_ERR(maybe_install_fsfs_conf(svn_repos_fs(repos), opts, &must_reopen,
+                                  pool));
+  if (must_reopen)
+    {
+      SVN_ERR(svn_repos_open(&repos, name, pool));
+      svn_fs_set_warning_func(svn_repos_fs(repos), fs_warning_handler, NULL);
+    }
+
+  *repos_p = repos;
   return SVN_NO_ERROR;
 }
 

@@ -2,17 +2,22 @@
  * diff-cmd.c -- Display context diff of a file
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -25,6 +30,7 @@
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error_codes.h"
 #include "svn_error.h"
@@ -91,10 +97,10 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
 
   /* Convert non-urls to local style, so that things like "" show up as "." */
   if (! svn_path_is_url(path))
-    path = svn_path_local_style(path, pool);
+    path = svn_dirent_local_style(path, pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
-                        "kind", svn_cl__node_kind_str(summary->node_kind),
+                        "kind", svn_cl__node_kind_str_xml(summary->node_kind),
                         "item", kind_to_word(summary->summarize_kind),
                         "props", summary->prop_changed ? "modified" : "none",
                         NULL);
@@ -102,9 +108,7 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
   svn_xml_escape_cdata_cstring(&sb, path, pool);
   svn_xml_make_close_tag(&sb, pool, "path");
 
-  SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
-
-  return SVN_NO_ERROR;
+  return svn_cl__error_checked_fputs(sb->data, stdout);
 }
 
 /* Print summary information about a given change, implements the
@@ -122,21 +126,19 @@ summarize_regular(const svn_client_diff_summarize_t *summary,
 
   /* Convert non-urls to local style, so that things like "" show up as "." */
   if (! svn_path_is_url(path))
-    path = svn_path_local_style(path, pool);
+    path = svn_dirent_local_style(path, pool);
 
   /* Note: This output format tries to look like the output of 'svn status',
    *       thus the blank spaces where information that is not relevant to
    *       a diff summary would go. */
 
   SVN_ERR(svn_cmdline_printf(pool,
-                             "%c%c     %s\n",
+                             "%c%c      %s\n",
                              kind_to_char(summary->summarize_kind),
                              summary->prop_changed ? 'M' : ' ',
                              path));
 
-  SVN_ERR(svn_cmdline_fflush(stdout));
-
-  return SVN_NO_ERROR;
+  return svn_cmdline_fflush(stdout);
 }
 
 /* An svn_opt_subcommand_t to handle the 'diff' command.
@@ -147,9 +149,9 @@ svn_cl__diff(apr_getopt_t *os,
              apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *options;
   apr_array_header_t *targets;
-  apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   apr_file_t *outfile, *errfile;
   apr_status_t status;
   const char *old_target, *new_target;
@@ -189,32 +191,9 @@ svn_cl__diff(apr_getopt_t *os,
       SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
     }
 
-  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
-     all the targets, we need to build a list of targets made of both
-     ones the user typed, as well as any specified by --changelist.  */
-  if (opt_state->changelist)
-    {
-      SVN_ERR(svn_client_get_changelist(&changelist_targets,
-                                        opt_state->changelist,
-                                        "",
-                                        ((svn_cl__cmd_baton_t *)baton)->ctx,
-                                        pool));
-      if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
-                                 _("Unknown changelist '%s'"),
-                                 opt_state->changelist);
-    }
-
-  if (opt_state->targets && changelist_targets)
-    combined_targets = apr_array_append(pool, opt_state->targets,
-                                        changelist_targets);
-  else if (opt_state->targets)
-    combined_targets = opt_state->targets;
-  else if (changelist_targets)
-    combined_targets = changelist_targets;
-
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        combined_targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
+                                                      ctx, pool));
 
   if (! opt_state->old_target && ! opt_state->new_target
       && (targets->nelts == 2)
@@ -253,7 +232,8 @@ svn_cl__diff(apr_getopt_t *os,
                                            : APR_ARRAY_IDX(tmp, 0,
                                                            const char *));
 
-      SVN_ERR(svn_opt_args_to_target_array2(&tmp2, os, tmp, pool));
+      SVN_ERR(svn_cl__args_to_target_array_print_reserved(&tmp2, os, tmp,
+                                                          ctx, pool));
       SVN_ERR(svn_opt_parse_path(&old_rev, &old_target,
                                  APR_ARRAY_IDX(tmp2, 0, const char *),
                                  pool));
@@ -337,6 +317,12 @@ svn_cl__diff(apr_getopt_t *os,
       svn_pool_clear(iterpool);
       if (! pegged_diff)
         {
+          /* We can't be tacking URLs onto base paths! */
+          if (svn_path_is_url(path))
+            return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                     _("Path '%s' not relative to base URLs"),
+                                     path);
+
           target1 = svn_path_join(old_target, path, iterpool);
           target2 = svn_path_join(new_target, path, iterpool);
 
@@ -347,13 +333,13 @@ svn_cl__diff(apr_getopt_t *os,
                      target2,
                      &opt_state->end_revision,
                      opt_state->depth,
-                     opt_state->notice_ancestry ? FALSE : TRUE,
+                     ! opt_state->notice_ancestry,
+                     opt_state->changelists,
                      summarize_func,
                      (void *) target1,
-                     ((svn_cl__cmd_baton_t *)baton)->ctx,
-                     iterpool));
+                     ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff4
+            SVN_ERR(svn_client_diff5
                     (options,
                      target1,
                      &(opt_state->start_revision),
@@ -361,14 +347,15 @@ svn_cl__diff(apr_getopt_t *os,
                      &(opt_state->end_revision),
                      NULL,
                      opt_state->depth,
-                     opt_state->notice_ancestry ? FALSE : TRUE,
+                     ! opt_state->notice_ancestry,
                      opt_state->no_diff_deleted,
+                     opt_state->show_copies_as_adds,
                      opt_state->force,
                      svn_cmdline_output_encoding(pool),
                      outfile,
                      errfile,
-                     ((svn_cl__cmd_baton_t *)baton)->ctx,
-                     iterpool));
+                     opt_state->changelists,
+                     ctx, iterpool));
         }
       else
         {
@@ -391,13 +378,13 @@ svn_cl__diff(apr_getopt_t *os,
                      &opt_state->start_revision,
                      &opt_state->end_revision,
                      opt_state->depth,
-                     opt_state->notice_ancestry ? FALSE : TRUE,
+                     ! opt_state->notice_ancestry,
+                     opt_state->changelists,
                      summarize_func,
                      (void *) truepath,
-                     ((svn_cl__cmd_baton_t *)baton)->ctx,
-                     iterpool));
+                     ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff_peg4
+            SVN_ERR(svn_client_diff_peg5
                     (options,
                      truepath,
                      &peg_revision,
@@ -405,14 +392,15 @@ svn_cl__diff(apr_getopt_t *os,
                      &opt_state->end_revision,
                      NULL,
                      opt_state->depth,
-                     opt_state->notice_ancestry ? FALSE : TRUE,
+                     ! opt_state->notice_ancestry,
                      opt_state->no_diff_deleted,
+                     opt_state->show_copies_as_adds,
                      opt_state->force,
                      svn_cmdline_output_encoding(pool),
                      outfile,
                      errfile,
-                     ((svn_cl__cmd_baton_t *)baton)->ctx,
-                     iterpool));
+                     opt_state->changelists,
+                     ctx, iterpool));
         }
     }
 

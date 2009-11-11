@@ -40,20 +40,12 @@ PGP Signatures are available at:
 For this release, the following people have provided PGP signatures:
 
 @SIGINFO@
+@RCWARNING@
+Release notes for the @MAJOR_MINOR@.x release series may be found at:
 
-The Windows binary packages are also available:
+    http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html
 
-    http://subversion.tigris.org/downloads/svn-win32-@VERSION@.zip
-    http://subversion.tigris.org/downloads/svn-win32-@VERSION@_dev.zip
-    http://subversion.tigris.org/downloads/svn-win32-@VERSION@_javahl.zip
-    http://subversion.tigris.org/downloads/svn-win32-@VERSION@_pdb.zip
-    http://subversion.tigris.org/downloads/svn-win32-@VERSION@_pl.zip
-
-Release notes for the 1.4.x release series may be found at:
-
-    http://subversion.tigris.org/svn_1.4_releasenotes.html
-
-You can find list of changes between @VERSION@ and earlier versions at:
+You can find the list of changes between @VERSION@ and earlier versions at:
 
     http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES
 
@@ -67,12 +59,12 @@ ann_html = """\
 <p>I'm happy to announce Subversion @VERSION@, available from:</p>
 
 <dl>
-<dd>http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.bz2</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.gz</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-@VERSION@.zip</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.bz2</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.gz</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.zip</dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.bz2">http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.bz2</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.gz">http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.gz</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-@VERSION@.zip">http://subversion.tigris.org/downloads/subversion-@VERSION@.zip</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.bz2">http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.bz2</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.gz">http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.gz</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.zip">http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.zip</a></dd>
 </dl>
 
 <p>The MD5 checksums are:</p>
@@ -89,12 +81,12 @@ ann_html = """\
 <p>PGP Signatures are available at:</p>
 
 <dl>
-<dd>http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.bz2.asc</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.gz.asc</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-@VERSION@.zip.asc</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.bz2.asc</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.gz.asc</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.zip.asc</dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.bz2.asc">http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.bz2.asc</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.gz.asc">http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.gz.asc</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-@VERSION@.zip.asc">http://subversion.tigris.org/downloads/subversion-@VERSION@.zip.asc</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.bz2.asc">http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.bz2.asc</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.gz.asc">http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.gz.asc</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.zip.asc">http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.zip.asc</a></dd>
 </dl>
 
 <p>For this release, the following people have provided PGP signatures:</p>
@@ -102,38 +94,60 @@ ann_html = """\
 <dl>
 @SIGINFO@
 </dl>
+@RCWARNING@
+<p>Release notes for the @MAJOR_MINOR@.x release series may be found at:</p>
 
-<p>The Windows binary packages are also available:</p>
+<dl><dd><a href="http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html">http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html</a></dd></dl>
 
-<dl>
-<dd>http://subversion.tigris.org/downloads/svn-win32-@VERSION@.zip</dd>
-<dd>http://subversion.tigris.org/downloads/svn-win32-@VERSION@_dev.zip</dd>
-<dd>http://subversion.tigris.org/downloads/svn-win32-@VERSION@_javahl.zip</dd>
-<dd>http://subversion.tigris.org/downloads/svn-win32-@VERSION@_pdb.zip</dd>
-<dd>http://subversion.tigris.org/downloads/svn-win32-@VERSION@_pl.zip</dd>
-</dl>
+<p>You can find the list of changes between @VERSION@ and earlier versions at:</p>
 
-<p>Release notes for the 1.4.x release series may be found at:</p>
-
-<dl><dd>http://subversion.tigris.org/svn_1.4_releasenotes.html</dd></dl>
-
-<p>You can find list of changes between @VERSION@ and earlier versions at:</p>
-
-<dl><dd>http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES</dd></dl>
+<dl><dd><a href="http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES">http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES</a></dd></dl>
 """
 
-import sys
+rc_warning_text = [ """\
+
+The term 'release candidate' means the Subversion developers feel that this
+release is stable and ready to be tested in production use.  If this testing
+confirms its readiness, this candidate version will become the final released
+version.  Therefore, we encourage people to test this release thoroughly.
+""",
+"""\
+As a note to operating system distro packagers: while we wish to have this
+release candidate widely tested, we do not feel that it is ready for packaging
+and providing to end-users through a distro package system.  Packaging a
+release candidate poses many problems, the biggest being that our policy lets
+us break compatibility between the release candidate and the final release, if
+we find something serious enough.  Having many users depending on a release
+candidate through their distro would cause no end of pain and frustration that
+we do not want to have to deal with.  However, if your distro has a branch that
+is clearly labeled as containing experimental and often broken software, and
+explicitly destined to consenting developers and integrators only, then we're
+okay with packaging the release candidate there.  Just don't let it near the
+end users please.
+""" ]
+
+import sys, re
 
 def fmtsums_text(sumlist):
-    return "\n".join(map(lambda x: "    " + x, sumlist))
+    return "\n".join(["    " + x for x in sumlist])
 
 def fmtsums_html(sumlist):
-    return "\n".join(map(lambda x: "<dd>" + x + "</dd>", sumlist))
+    return "\n".join(["<dd>" + x + "</dd>" for x in sumlist])
 
 def main():
     global ann_text
     global ann_html
     version = sys.argv[1]
+    match = re.match(r'^\d+\.\d+\.\d+(-(alpha|beta|rc)\d+)?$', version)
+    if not match:
+        print("Did you really mean to use version '%s'?" % version)
+        return
+
+    if match.group(1):
+      warning_text = rc_warning_text
+    else:
+      warning_text = ''
+
     md5sums = []
     sha1sums = []
     siginfo = []
@@ -150,10 +164,15 @@ def main():
 
     ann_text = ann_text.replace('@VERSION@', version)
     ann_html = ann_html.replace('@VERSION@', version)
+    ann_text = ann_text.replace('@MAJOR_MINOR@', version[0:3])
+    ann_html = ann_html.replace('@MAJOR_MINOR@', version[0:3])
     ann_text = ann_text.replace('@MD5SUMS@', fmtsums_text(md5sums))
     ann_text = ann_text.replace('@SHA1SUMS@', fmtsums_text(sha1sums))
     ann_html = ann_html.replace('@MD5SUMS@', fmtsums_html(md5sums))
     ann_html = ann_html.replace('@SHA1SUMS@', fmtsums_html(sha1sums))
+    ann_text = ann_text.replace('@RCWARNING@', '\n'.join(warning_text))
+    ann_html = ann_html.replace('@RCWARNING@',
+                       '\n'.join([ '<p>' + x + '</p>' for x in warning_text]))
 
     ann_text = ann_text.replace('@SIGINFO@', "\n".join(siginfo))
     htmlsigs = []

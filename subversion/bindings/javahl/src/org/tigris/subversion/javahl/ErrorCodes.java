@@ -19,6 +19,7 @@ public class ErrorCodes
     public static final int badPropertyValue = 125005;
     public static final int badVersionFileFormat = 125006;
     public static final int badRelativePath = 125007;
+    public static final int badUuid = 125008;
     public static final int xmlAttribNotFound = 130000;
     public static final int xmlMissingAncestry = 130001;
     public static final int xmlUnknownEncoding = 130002;
@@ -117,9 +118,7 @@ public class ErrorCodes
     public static final int fsUnsupportedFormat = 160043;
     public static final int fsRepBeingWritten = 160044;
     public static final int fsTxnNameTooLong = 160045;
-    public static final int fsSqliteError = 160046;
-    public static final int fsNoSuchNodeOrigin = 160047;
-    public static final int fsSqliteReadonly = 160048;
+    public static final int fsNoSuchNodeOrigin = 160046;
     public static final int reposLocked = 165000;
     public static final int reposHookFailure = 165001;
     public static final int reposBadArgs = 165002;
@@ -139,6 +138,7 @@ public class ErrorCodes
     public static final int raUnsupportedAbiVersion = 170006;
     public static final int raNotLocked = 170007;
     public static final int raUnknownCapability = 170008;
+    public static final int raPartialReplayNotSupported = 170009;
     public static final int raDavSockInit = 175000;
     public static final int raDavCreatingRequest = 175001;
     public static final int raDavRequestFailed = 175002;
@@ -180,6 +180,7 @@ public class ErrorCodes
     public static final int clientMissingLockToken = 195013;
     public static final int clientMultipleSourcesDisallowed = 195014;
     public static final int clientNoVersionedParent = 195015;
+    public static final int clientNotReadyToMerge = 195016;
     public static final int base = 200000;
     public static final int pluginLoadFailure = 200001;
     public static final int malformedFile = 200002;
@@ -200,7 +201,7 @@ public class ErrorCodes
     public static final int propertyNotFound = 200017;
     public static final int noAuthFilePath = 200018;
     public static final int versionMismatch = 200019;
-    public static final int mergeInfoParseError = 200020;
+    public static final int mergeinfoParseError = 200020;
     public static final int ceaseInvocation = 200021;
     public static final int revnumParseFailure = 200022;
     public static final int iterBreak = 200023;

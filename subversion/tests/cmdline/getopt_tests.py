@@ -6,14 +6,22 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
@@ -58,6 +66,7 @@ del_lines_res = [
                  # Also for 'svn --version':
                  re.compile(r"\* ra_(neon|local|svn|serf) :"),
                  re.compile(r"  - handles '(https?|file|svn)' scheme"),
+                 re.compile(r"  - with Cyrus SASL authentication"),
                  re.compile(r"\* fs_(base|fs) :"),
                 ]
 
@@ -114,11 +123,10 @@ def run_one_test(sbox, basename, *varargs):
 
   # special case the 'svn' test so that no extra arguments are added
   if basename != 'svn':
-    actual_stdout, actual_stderr = apply(svntest.main.run_svn, (1,) + varargs)
+    exit_code, actual_stdout, actual_stderr = svntest.main.run_svn(1, *varargs)
   else:
-    actual_stdout, actual_stderr = apply(svntest.main.run_command,
-                                         (svntest.main.svn_binary, 1, 0)
-                                         + varargs)
+    exit_code, actual_stdout, actual_stderr = svntest.main.run_command(svntest.main.svn_binary,
+                                                                       1, 0, *varargs)
 
   # Delete and perform search and replaces on the lines from the
   # actual and expected output that may differ between build
@@ -129,27 +137,31 @@ def run_one_test(sbox, basename, *varargs):
   actual_stderr = process_lines(actual_stderr)
 
   if exp_stdout != actual_stdout:
-    print "Standard output does not match."
-    print "Expected standard output:"
-    print "====="
-    map(sys.stdout.write, exp_stdout)
-    print "====="
-    print "Actual standard output:"
-    print "====="
-    map(sys.stdout.write, actual_stdout)
-    print "====="
+    print("Standard output does not match.")
+    print("Expected standard output:")
+    print("=====")
+    for x in exp_stdout:
+      sys.stdout.write(x)
+    print("=====")
+    print("Actual standard output:")
+    print("=====")
+    for x in actual_stdout:
+      sys.stdout.write(x)
+    print("=====")
     raise svntest.Failure
 
   if exp_stderr != actual_stderr:
-    print "Standard error does not match."
-    print "Expected standard error:"
-    print "====="
-    map(sys.stdout.write, exp_stderr)
-    print "====="
-    print "Actual standard error:"
-    print "====="
-    map(sys.stdout.write, actual_stderr)
-    print "====="
+    print("Standard error does not match.")
+    print("Expected standard error:")
+    print("=====")
+    for x in exp_stderr:
+      sys.stdout.write(x)
+    print("=====")
+    print("Actual standard error:")
+    print("=====")
+    for x in actual_stderr:
+      sys.stdout.write(x)
+    print("=====")
     raise svntest.Failure
 
 def getopt_no_args(sbox):

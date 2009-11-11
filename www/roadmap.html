@@ -20,8 +20,40 @@
 <div class="h2" id="upcoming-releases" title="upcoming-releases">
 <h2>Upcoming Releases</h2>
 
-<p>For a schedule of upcoming releases, please see the <a
-href="project_status.html">project status</a> page.</p>
+<p>This is a <em>preliminary</em> timetable for the next few upcoming
+releases.  As noted above, we do not guarantee that a specific feature will
+be in a given release, or that a release will be published on a particular
+schedule.  The following chart is more of a guideline for the developers
+to help ensure more timely releases, and is quite mutable.</p>
+
+<table border="1" class="sborder" style="margin-left: auto; margin-right: auto;">
+<tr>
+  <th>Date</th>
+  <th>Task</th>
+  <th>Notes</th>
+</tr>
+
+<tr>
+  <td>Mid-December 2009</td>
+  <td>Roll 1.6.7 tarball</td>
+  <td><em>Pending demand</em></td>
+</tr>
+
+<tr>
+  <td>January 2010</td>
+  <td>Branch 1.7.x</td>
+  <td><em>This date is highly speculative.</em></td>
+</tr>
+</table>
+
+<p>We try to roll releases on Wednesdays.  Like most of the other information
+on this page, the day we roll isn't a hard-and-fast rule, but it is something
+that has been useful in the past.  Rolling mid-week gives us enough time for
+the typical nomination/review/vote/merge process in the couple of days prior
+to the release, and it also allows some time for committers to test and sign
+the tarball before the weekend hits.  The release is finalized and announced
+shortly after all the signatures are collected.  See the
+<a href="release-process.html">release process</a> for more information.</p>
 
 </div>
 
@@ -70,7 +102,7 @@ Our main source of ideas is our users: we watch the <a
 href="mailto:users@subversion.tigris.org"
 >users@subversion.tigris.org</a> mailing list, the <a
 href="irc://irc.freenode.net/#svn">#svn IRC channel</a>, and the <a
-href="project_issues.html">issue tracker</a> to see what people are
+href="issue-tracker.html">issue tracker</a> to see what people are
 saying, and base our priorities on that, though we may sometimes grab
 low-hanging fruit along the way.</p>
 
@@ -92,21 +124,21 @@ development mailing list, <a href="mailto:dev@subversion.tigris.org"
 
 <li><b>Medium-term Goals:</b>
   <ul>
-    <li>1.5
+    <li>1.7
       <ul>
-        <li>Merge tracking: tracking of merge history (see
-        <a href="merge-tracking/">info</a>)</li>
+        <li>Streamline HTTP transport to reduce the DeltaV overhead and
+        increase performance (see <a
+        href="http://subversion.tigris.org/issues/show_bug.cgi?id=3371">issue
+        #3371</a>)</li>
 
-        <li>Sparsely populated checkouts (full API and basic
-        command-line support coming in 1.5)</li>
-      </ul>
-    </li>
+        <li>Rewrite the working-copy library to feature centralized metadata
+        storage and better future extensibility (see <a
+        href="http://subversion.tigris.org/issues/show_bug.cgi?id=3357">issue
+        #3357</a>)</li>
 
-    <li>1.6
-      <ul>
-        <li>Augmented diff representation (svnpatch)</li>
-
-        <li>Python C-types bindings</li>
+        <li>Augmented diff representation (svnpatch) (see <a
+        href="http://subversion.tigris.org/issues/show_bug.cgi?id=511">issue
+        #511</a>)</li>
       </ul>
     </li>
 
@@ -124,9 +156,6 @@ development mailing list, <a href="mailto:dev@subversion.tigris.org"
 
         <li>Inherited properties (see <a href="http://subversion.tigris.org/servlets/BrowseList?list=dev&amp;by=thread&amp;from=326933"
         >discussion thread</a>)</li>
-
-        <li>Rewrite the working-copy library to feature centralized metadata
-        storage</li>
       </ul>
     </li>
   </ul>
@@ -136,7 +165,7 @@ development mailing list, <a href="mailto:dev@subversion.tigris.org"
   <ul>
     <li><p>hybrid distributed/centralized VC model</p></li>
     <li><p>repository-level ACLs</p></li>
-    <li><p>broader WebDAV/deltaV compatibility</p></li>
+    <li><p>broader WebDAV compatibility (autoversioning)</p></li>
     <li><p>improved pluggable client-side diff (see <a
     href="http://subversion.tigris.org/issues/show_bug.cgi?id=2044">issue
     #2044</a>)</p></li>
@@ -153,7 +182,7 @@ development mailing list, <a href="mailto:dev@subversion.tigris.org"
 <h2>Past Releases</h2>
 
 <p>For information about past releases, see the <a
-href="project_status.html">project status</a> page.</p>
+href="release-history.html">release history</a>.</p>
 
 <p>To see a summary of the major changes in each Subversion release,
 read over the <a

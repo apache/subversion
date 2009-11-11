@@ -2,25 +2,32 @@
  * util.c: some handy utility functions
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 #include <apr_xml.h>
 #include <apr_errno.h>
 #include <apr_uri.h>
+#include <apr_buckets.h>
 
 #include <mod_dav.h>
+#include <http_protocol.h>
 
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -73,6 +80,11 @@ dav_svn__convert_err(svn_error_t *serr,
                      apr_pool_t *pool)
 {
     dav_error *derr;
+
+    /* Remove the trace-only error chain links.  We need predictable
+       protocol behavior regardless of whether or not we're in a
+       debugging build. */
+    serr = svn_error_purge_tracing(serr);
 
     /* ### someday mod_dav_svn will send back 'rich' error tags, much
        finer grained than plain old svn_error_t's.  But for now, all
@@ -225,8 +237,7 @@ dav_svn__build_uri(const dav_svn_repos *repos,
 
     default:
       /* programmer error somewhere */
-      abort();
-      return NULL;
+      SVN_ERR_MALFUNCTION_NO_RETURN();
     }
 
   /* NOTREACHED */
@@ -381,11 +392,50 @@ dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri)
 }
 
 
+
+/*** Brigade I/O wrappers ***/
+
+
 svn_error_t *
-dav_svn__send_xml(apr_bucket_brigade *bb,
-                  ap_filter_t *output,
-                  const char *fmt,
-                  ...)
+dav_svn__brigade_write(apr_bucket_brigade *bb,
+                       ap_filter_t *output,
+                       const char *data,
+                       apr_size_t len)
+{
+  apr_status_t apr_err;
+  apr_err = apr_brigade_write(bb, ap_filter_flush, output, data, len);
+  if (apr_err)
+    return svn_error_create(apr_err, 0, NULL);
+  /* Check for an aborted connection, since the brigade functions don't
+     appear to be return useful errors when the connection is dropped. */
+  if (output->c->aborted)
+    return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+dav_svn__brigade_puts(apr_bucket_brigade *bb,
+                      ap_filter_t *output,
+                      const char *str)
+{
+  apr_status_t apr_err;
+  apr_err = apr_brigade_puts(bb, ap_filter_flush, output, str);
+  if (apr_err)
+    return svn_error_create(apr_err, 0, NULL);
+  /* Check for an aborted connection, since the brigade functions don't
+     appear to be return useful errors when the connection is dropped. */
+  if (output->c->aborted)
+    return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+dav_svn__brigade_printf(apr_bucket_brigade *bb,
+                        ap_filter_t *output,
+                        const char *fmt,
+                        ...)
 {
   apr_status_t apr_err;
   va_list ap;
@@ -395,14 +445,15 @@ dav_svn__send_xml(apr_bucket_brigade *bb,
   va_end(ap);
   if (apr_err)
     return svn_error_create(apr_err, 0, NULL);
-  /* ### check for an aborted connection, since the brigade functions
-     don't appear to be return useful errors when the connection is
-     dropped. */
+  /* Check for an aborted connection, since the brigade functions don't
+     appear to be return useful errors when the connection is dropped. */
   if (output->c->aborted)
     return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
   return SVN_NO_ERROR;
 }
 
+
+
 
 dav_error *
 dav_svn__test_canonical(const char *path, apr_pool_t *pool)
@@ -437,7 +488,7 @@ dav_svn__sanitize_error(svn_error_t *serr,
         svn_error_clear(serr);
       }
     return dav_svn__convert_err(safe_err, http_status,
-                                apr_psprintf(r->pool, safe_err->message),
+                                apr_psprintf(r->pool, "%s", safe_err->message),
                                 r->pool);
 }
 
@@ -484,7 +535,79 @@ void
 dav_svn__operational_log(struct dav_resource_private *info, const char *line)
 {
   apr_table_set(info->r->subprocess_env, "SVN-ACTION", line);
-  apr_table_set(info->r->subprocess_env, "SVN-REPOS", info->repos->fs_path);
+  apr_table_set(info->r->subprocess_env, "SVN-REPOS",
+                svn_path_uri_encode(info->repos->fs_path, info->r->pool));
   apr_table_set(info->r->subprocess_env, "SVN-REPOS-NAME",
-                info->repos->repo_basename);
+                svn_path_uri_encode(info->repos->repo_basename, info->r->pool));
+}
+
+
+dav_error *
+dav_svn__final_flush_or_error(request_rec *r,
+                              apr_bucket_brigade *bb,
+                              ap_filter_t *output,
+                              dav_error *preferred_err,
+                              apr_pool_t *pool)
+{
+  dav_error *derr = preferred_err;
+  svn_boolean_t do_flush;
+
+  do_flush = r->sent_bodyct > 0;
+  if (! do_flush)
+    {
+      /* Ask about the length of the bucket brigade, ignoring errors. */
+      apr_off_t len;
+      (void)apr_brigade_length(bb, FALSE, &len);
+      do_flush = (len != 0);
+    }
+
+  /* If there's something in the bucket brigade to flush, or we've
+     already started sending data down the wire, flush what we've
+     got.  We only keep any error retrieved from the flush if weren't
+     provided a more-important DERR, though. */
+  if (do_flush)
+    {
+      apr_status_t apr_err = ap_fflush(output, bb);
+      if (apr_err && (! derr))
+        derr = dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             "Error flushing brigade.");
+    }
+  return derr;
+}
+
+
+int
+dav_svn__error_response_tag(request_rec *r,
+                            dav_error *err)
+{
+  r->status = err->status;
+
+  /* ### I really don't think this is needed; gotta test */
+  r->status_line = ap_get_status_line(err->status);
+
+  ap_set_content_type(r, DAV_XML_CONTENT_TYPE);
+  ap_rputs(DAV_XML_HEADER DEBUG_CR "<D:error xmlns:D=\"DAV:\"", r);
+
+  if (err->desc != NULL)
+    ap_rputs(" xmlns:m=\"http://apache.org/dav/xmlns\"", r);
+
+  if (err->namespace != NULL)
+    ap_rprintf(r, " xmlns:C=\"%s\">" DEBUG_CR "<C:%s/>" DEBUG_CR,
+               err->namespace, err->tagname);
+  else
+    ap_rprintf(r, ">" DEBUG_CR "<D:%s/>" DEBUG_CR, err->tagname);
+
+  /* here's our mod_dav specific tag: */
+  if (err->desc != NULL)
+    ap_rprintf(r, "<m:human-readable errcode=\"%d\">" DEBUG_CR "%s" DEBUG_CR
+               "</m:human-readable>" DEBUG_CR, err->error_id,
+               apr_xml_quote_string(r->pool, err->desc, 0));
+
+  ap_rputs("</D:error>" DEBUG_CR, r);
+
+  /* the response has been sent. */
+  /*
+   * ### Use of DONE obviates logging..!
+   */
+  return DONE;
 }

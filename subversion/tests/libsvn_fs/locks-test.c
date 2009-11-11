@@ -1,23 +1,30 @@
 /* lock-test.c --- tests for the filesystem locking functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 #include <string.h>
 #include <apr_pools.h>
 #include <apr_time.h>
+
+#include "../svn_test.h"
 
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -92,9 +99,7 @@ verify_matching_lock_paths(struct get_locks_baton_t *baton,
 
 /* Test that we can create a lock--nothing more.  */
 static svn_error_t *
-lock_only(const char **msg,
-          svn_boolean_t msg_only,
-          svn_test_opts_t *opts,
+lock_only(const svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -105,14 +110,9 @@ lock_only(const char **msg,
   svn_fs_access_t *access;
   svn_lock_t *mylock;
 
-  *msg = "lock only";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Prepare a filesystem and a new txn. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-lock-only",
-                              opts->fs_type, pool));
+                              opts, pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
@@ -138,9 +138,7 @@ lock_only(const char **msg,
 /* Test that we can create, fetch, and destroy a lock.  It exercises
    each of the five public fs locking functions.  */
 static svn_error_t *
-lookup_lock_by_path(const char **msg,
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts,
+lookup_lock_by_path(const svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -151,14 +149,9 @@ lookup_lock_by_path(const char **msg,
   svn_fs_access_t *access;
   svn_lock_t *mylock, *somelock;
 
-  *msg = "lookup lock by path";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Prepare a filesystem and a new txn. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-lookup-lock-by-path",
-                              opts->fs_type, pool));
+                              opts, pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
@@ -186,9 +179,7 @@ lookup_lock_by_path(const char **msg,
 /* Test that we can create a lock outside of the fs and attach it to a
    path.  */
 static svn_error_t *
-attach_lock(const char **msg,
-            svn_boolean_t msg_only,
-            svn_test_opts_t *opts,
+attach_lock(const svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -201,14 +192,9 @@ attach_lock(const char **msg,
   svn_lock_t *mylock;
   const char *token;
 
-  *msg = "attach lock";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Prepare a filesystem and a new txn. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-attach-lock",
-                              opts->fs_type, pool));
+                              opts, pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
@@ -245,9 +231,7 @@ attach_lock(const char **msg,
 
 /* Test that we can get all locks under a directory. */
 static svn_error_t *
-get_locks(const char **msg,
-          svn_boolean_t msg_only,
-          svn_test_opts_t *opts,
+get_locks(const svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -260,14 +244,9 @@ get_locks(const char **msg,
   struct get_locks_baton_t *get_locks_baton;
   apr_size_t i, num_expected_paths;
 
-  *msg = "get locks";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Prepare a filesystem and a new txn. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-get-locks",
-                              opts->fs_type, pool));
+                              opts, pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
@@ -382,9 +361,7 @@ get_locks(const char **msg,
 /* Test that we can create, fetch, and destroy a lock.  It exercises
    each of the five public fs locking functions.  */
 static svn_error_t *
-basic_lock(const char **msg,
-           svn_boolean_t msg_only,
-           svn_test_opts_t *opts,
+basic_lock(const svn_test_opts_t *opts,
            apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -395,14 +372,9 @@ basic_lock(const char **msg,
   svn_fs_access_t *access;
   svn_lock_t *mylock, *somelock;
 
-  *msg = "basic locking";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Prepare a filesystem and a new txn. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-basic-lock",
-                              opts->fs_type, pool));
+                              opts, pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
@@ -439,9 +411,7 @@ basic_lock(const char **msg,
 /* Test that locks are enforced -- specifically that both a username
    and token are required to make use of the lock.  */
 static svn_error_t *
-lock_credentials(const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
+lock_credentials(const svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -453,14 +423,9 @@ lock_credentials(const char **msg,
   svn_lock_t *mylock;
   svn_error_t *err;
 
-  *msg = "test that locking requires proper credentials";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Prepare a filesystem and a new txn. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-lock-credentials",
-                              opts->fs_type, pool));
+                              opts, pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
@@ -536,9 +501,7 @@ lock_credentials(const char **msg,
    svn_fs_commit_txn().  Also, this test verifies that recursive
    lock-checks on directories is working properly. */
 static svn_error_t *
-final_lock_check(const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
+final_lock_check(const svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -550,14 +513,9 @@ final_lock_check(const char **msg,
   svn_lock_t *mylock;
   svn_error_t *err;
 
-  *msg = "test that locking is enforced in final commit step";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Prepare a filesystem and a new txn. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-final-lock-check",
-                              opts->fs_type, pool));
+                              opts, pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
@@ -601,9 +559,7 @@ final_lock_check(const char **msg,
 /* If a directory's child is locked by someone else, we should still
    be able to commit a propchange on the directory. */
 static svn_error_t *
-lock_dir_propchange(const char **msg,
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts,
+lock_dir_propchange(const svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -614,14 +570,9 @@ lock_dir_propchange(const char **msg,
   svn_fs_access_t *access;
   svn_lock_t *mylock;
 
-  *msg = "dir propchange can be committed with locked child";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Prepare a filesystem and a new txn. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-lock-dir-propchange",
-                              opts->fs_type, pool));
+                              opts, pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
@@ -657,9 +608,7 @@ lock_dir_propchange(const char **msg,
 /* DAV clients sometimes LOCK non-existent paths, as a way of
    reserving names.  Check that this technique works. */
 static svn_error_t *
-lock_name_reservation(const char **msg,
-                      svn_boolean_t msg_only,
-                      svn_test_opts_t *opts,
+lock_name_reservation(const svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -671,14 +620,9 @@ lock_name_reservation(const char **msg,
   svn_lock_t *mylock;
   svn_error_t *err;
 
-  *msg = "able to reserve a name (lock non-existent path)";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Prepare a filesystem and a new txn. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-lock-name-reservation",
-                              opts->fs_type, pool));
+                              opts, pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
@@ -717,9 +661,7 @@ lock_name_reservation(const char **msg,
    use non-existent FS paths for this test, though, as the FS API
    currently disallows directory locking.  */
 static svn_error_t *
-directory_locks_kinda(const char **msg,
-                      svn_boolean_t msg_only,
-                      svn_test_opts_t *opts,
+directory_locks_kinda(const svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -730,14 +672,9 @@ directory_locks_kinda(const char **msg,
   apr_size_t num_expected_paths, i;
   struct get_locks_baton_t *get_locks_baton;
 
-  *msg = "directory locks (kinda)";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Prepare a filesystem and a new txn. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-directory-locks-kinda",
-                              opts->fs_type, pool));
+                              opts, pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
@@ -793,9 +730,7 @@ directory_locks_kinda(const char **msg,
 
 /* Test that locks auto-expire correctly. */
 static svn_error_t *
-lock_expiration(const char **msg,
-                svn_boolean_t msg_only,
-                svn_test_opts_t *opts,
+lock_expiration(const svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -808,14 +743,9 @@ lock_expiration(const char **msg,
   svn_error_t *err;
   struct get_locks_baton_t *get_locks_baton;
 
-  *msg = "test that locks can expire";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Prepare a filesystem and a new txn. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-lock-expiration",
-                              opts->fs_type, pool));
+                              opts, pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
@@ -886,9 +816,7 @@ lock_expiration(const char **msg,
 
 /* Test that a lock can be broken, stolen, or refreshed */
 static svn_error_t *
-lock_break_steal_refresh(const char **msg,
-                         svn_boolean_t msg_only,
-                         svn_test_opts_t *opts,
+lock_break_steal_refresh(const svn_test_opts_t *opts,
                          apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -899,14 +827,9 @@ lock_break_steal_refresh(const char **msg,
   svn_fs_access_t *access;
   svn_lock_t *mylock, *somelock;
 
-  *msg = "breaking, stealing, refreshing a lock";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Prepare a filesystem and a new txn. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-steal-refresh",
-                              opts->fs_type, pool));
+                              opts, pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
@@ -972,9 +895,7 @@ lock_break_steal_refresh(const char **msg,
 /* Test that svn_fs_lock() and svn_fs_attach_lock() can do
    out-of-dateness checks..  */
 static svn_error_t *
-lock_out_of_date(const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
+lock_out_of_date(const svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -986,14 +907,9 @@ lock_out_of_date(const char **msg,
   svn_lock_t *mylock;
   svn_error_t *err;
 
-  *msg = "check out-of-dateness before locking";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   /* Prepare a filesystem and a new txn. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-lock-out-of-date",
-                              opts->fs_type, pool));
+                              opts, pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
@@ -1049,18 +965,31 @@ lock_out_of_date(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(lock_only),
-    SVN_TEST_PASS(lookup_lock_by_path),
-    SVN_TEST_PASS(attach_lock),
-    SVN_TEST_PASS(get_locks),
-    SVN_TEST_PASS(basic_lock),
-    SVN_TEST_PASS(lock_credentials),
-    SVN_TEST_PASS(final_lock_check),
-    SVN_TEST_PASS(lock_dir_propchange),
-    SVN_TEST_XFAIL(lock_name_reservation),
-    SVN_TEST_XFAIL(directory_locks_kinda),
-    SVN_TEST_PASS(lock_expiration),
-    SVN_TEST_PASS(lock_break_steal_refresh),
-    SVN_TEST_PASS(lock_out_of_date),
+    SVN_TEST_OPTS_PASS(lock_only,
+                       "lock only"),
+    SVN_TEST_OPTS_PASS(lookup_lock_by_path,
+                       "lookup lock by path"),
+    SVN_TEST_OPTS_PASS(attach_lock,
+                       "attach lock"),
+    SVN_TEST_OPTS_PASS(get_locks,
+                       "get locks"),
+    SVN_TEST_OPTS_PASS(basic_lock,
+                       "basic locking"),
+    SVN_TEST_OPTS_PASS(lock_credentials,
+                       "test that locking requires proper credentials"),
+    SVN_TEST_OPTS_PASS(final_lock_check,
+                       "test that locking is enforced in final commit step"),
+    SVN_TEST_OPTS_PASS(lock_dir_propchange,
+                       "dir propchange can be committed with locked child"),
+    SVN_TEST_OPTS_XFAIL(lock_name_reservation,
+                        "able to reserve a name (lock non-existent path)"),
+    SVN_TEST_OPTS_XFAIL(directory_locks_kinda,
+                        "directory locks (kinda)"),
+    SVN_TEST_OPTS_PASS(lock_expiration,
+                       "test that locks can expire"),
+    SVN_TEST_OPTS_PASS(lock_break_steal_refresh,
+                       "breaking, stealing, refreshing a lock"),
+    SVN_TEST_OPTS_PASS(lock_out_of_date,
+                       "check out-of-dateness before locking"),
     SVN_TEST_NULL
   };

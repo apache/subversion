@@ -1,17 +1,22 @@
 /* fs.c --- creating, opening and closing filesystems
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -33,6 +38,7 @@
 #include "fs_fs.h"
 #include "tree.h"
 #include "lock.h"
+#include "id.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_util.h"
 
@@ -80,7 +86,7 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
       ffsd = apr_pcalloc(common_pool, sizeof(*ffsd));
       ffsd->common_pool = common_pool;
 
-#if APR_HAS_THREADS
+#if SVN_FS_FS__USE_LOCK_MUTEX
       /* POSIX fcntl locks are per-process, so we need a mutex for
          intra-process synchronization when grabbing the repository write
          lock. */
@@ -90,6 +96,14 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
         return svn_error_wrap_apr(status,
                                   _("Can't create FSFS write-lock mutex"));
 
+      /* ... not to mention locking the txn-current file. */
+      status = apr_thread_mutex_create(&ffsd->txn_current_lock,
+                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
+      if (status)
+        return svn_error_wrap_apr(status,
+                                  _("Can't create FSFS txn-current mutex"));
+#endif
+#if APR_HAS_THREADS
       /* We also need a mutex for synchronising access to the active
          transaction list and free transaction pointer. */
       status = apr_thread_mutex_create(&ffsd->txn_list_lock,
@@ -97,14 +111,8 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
       if (status)
         return svn_error_wrap_apr(status,
                                   _("Can't create FSFS txn list mutex"));
-
-      /* ... not to mention locking the transaction-current file. */
-      status = apr_thread_mutex_create(&ffsd->txn_current_lock,
-                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
-      if (status)
-        return svn_error_wrap_apr(status,
-                                  _("Can't create FSFS txn-current mutex"));
 #endif
+
 
       key = apr_pstrdup(common_pool, key);
       status = apr_pool_userdata_set(ffsd, key, NULL, common_pool);
@@ -142,6 +150,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__set_uuid,
   svn_fs_fs__revision_root,
   svn_fs_fs__begin_txn,
+  svn_fs_fs__begin_obliteration_txn,
   svn_fs_fs__open_txn,
   svn_fs_fs__purge_txn,
   svn_fs_fs__list_transactions,
@@ -158,19 +167,13 @@ static fs_vtable_t fs_vtable = {
 /* Creating a new filesystem. */
 
 /* Set up vtable and fsap_data fields in FS. */
-static void
+static svn_error_t *
 initialize_fs_struct(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
-
-  ffd->rev_root_id_cache_pool = svn_pool_create(fs->pool);
-  ffd->rev_root_id_cache = apr_hash_make(ffd->rev_root_id_cache_pool);
-
-  ffd->rev_node_cache = apr_hash_make(fs->pool);
-  ffd->rev_node_list.prev = &ffd->rev_node_list;
-  ffd->rev_node_list.next = &ffd->rev_node_list;
+  return SVN_NO_ERROR;
 }
 
 /* This implements the fs_library_vtable_t.create() API.  Create a new
@@ -183,9 +186,11 @@ fs_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 {
   SVN_ERR(svn_fs__check_fs(fs, FALSE));
 
-  initialize_fs_struct(fs);
+  SVN_ERR(initialize_fs_struct(fs));
 
   SVN_ERR(svn_fs_fs__create(fs, path, pool));
+
+  SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
   return fs_serialized_init(fs, common_pool, pool);
 }
 
@@ -201,9 +206,11 @@ static svn_error_t *
 fs_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
         apr_pool_t *common_pool)
 {
-  initialize_fs_struct(fs);
+  SVN_ERR(initialize_fs_struct(fs));
 
   SVN_ERR(svn_fs_fs__open(fs, path, pool));
+
+  SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
   return fs_serialized_init(fs, common_pool, pool);
 }
 
@@ -215,17 +222,17 @@ fs_open_for_recovery(svn_fs_t *fs,
                      const char *path,
                      apr_pool_t *pool, apr_pool_t *common_pool)
 {
-  /* Recovery for FSFS is currently limited to recreating the current
+  /* Recovery for FSFS is currently limited to recreating the 'current'
      file from the latest revision. */
 
-  /* The only thing we have to watch out for is that the current file
+  /* The only thing we have to watch out for is that the 'current' file
      might not exist.  So we'll try to create it here unconditionally,
      and just ignore any errors that might indicate that it's already
      present. (We'll need it to exist later anyway as a source for the
      new file's permissions). */
 
-  /* Use a partly-filled fs pointer first to create current.  This will fail
-     if current already exists, but we don't care about that. */
+  /* Use a partly-filled fs pointer first to create 'current'.  This will fail
+     if 'current' already exists, but we don't care about that. */
   fs->path = apr_pstrdup(fs->pool, path);
   svn_error_clear(svn_io_file_create(svn_fs_fs__path_current(fs, pool),
                                      "0 1 1\n", pool));
@@ -233,6 +240,40 @@ fs_open_for_recovery(svn_fs_t *fs,
   /* Now open the filesystem properly by calling the vtable method directly. */
   return fs_open(fs, path, pool, common_pool);
 }
+
+
+
+/* This implements the fs_library_vtable_t.upgrade_fs() API. */
+static svn_error_t *
+fs_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+           apr_pool_t *common_pool)
+{
+  SVN_ERR(svn_fs__check_fs(fs, FALSE));
+  SVN_ERR(initialize_fs_struct(fs));
+  SVN_ERR(svn_fs_fs__open(fs, path, pool));
+  SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
+  SVN_ERR(fs_serialized_init(fs, common_pool, pool));
+  return svn_fs_fs__upgrade(fs, pool);
+}
+
+static svn_error_t *
+fs_pack(svn_fs_t *fs,
+        const char *path,
+        svn_fs_pack_notify_t notify_func,
+        void *notify_baton,
+        svn_cancel_func_t cancel_func,
+        void *cancel_baton,
+        apr_pool_t *pool)
+{
+  SVN_ERR(svn_fs__check_fs(fs, FALSE));
+  SVN_ERR(initialize_fs_struct(fs));
+  SVN_ERR(svn_fs_fs__open(fs, path, pool));
+  SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
+  SVN_ERR(fs_serialized_init(fs, pool, pool));
+  return svn_fs_fs__pack(fs, notify_func, notify_baton,
+                         cancel_func, cancel_baton, pool);
+}
+
 
 
 
@@ -301,10 +342,12 @@ static fs_library_vtable_t library_vtable = {
   fs_create,
   fs_open,
   fs_open_for_recovery,
+  fs_upgrade,
   fs_delete_fs,
   fs_hotcopy,
   fs_get_description,
   svn_fs_fs__recover,
+  fs_pack,
   fs_logfiles
 };
 

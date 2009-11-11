@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -44,7 +49,10 @@ class LogMessageCallback;
 class InfoCallback;
 class ListCallback;
 class StatusCallback;
+class ChangelistCallback;
 class CommitMessage;
+class StringArray;
+class RevpropTable;
 #include "svn_types.h"
 #include "svn_client.h"
 #include "SVNBase.h"
@@ -53,7 +61,8 @@ class SVNClient :public SVNBase
 {
  public:
   void info2(const char *path, Revision &revision, Revision &pegRevision,
-             svn_depth_t depth, InfoCallback *callback);
+             svn_depth_t depth, StringArray &changelists,
+             InfoCallback *callback);
   void unlock(Targets &targets, bool force);
   void lock(Targets &targets, const char *comment, bool force);
   jobjectArray revProperties(jobject jthis, const char *path,
@@ -80,15 +89,17 @@ class SVNClient :public SVNBase
   void streamFileContent(const char *path, Revision &revision,
                          Revision &pegRevision, jobject outputStream,
                          size_t bufSize);
-  void propertyRemove(const char *path, const char *name, svn_depth_t depth);
   void propertySet(const char *path, const char *name, const char *value,
-                   svn_depth_t depth, bool force);
+                   svn_depth_t depth, StringArray &changelists, bool force,
+                   RevpropTable &revprops);
   void properties(const char *path, Revision &revision,
                   Revision &pegRevision, svn_depth_t depth,
-                  ProplistCallback *callback);
-  jobject getMergeInfo(const char *target, Revision &pegRevision);
-  jobjectArray getAvailableMerges(const char *target, Revision &pegRevision,
-                                  const char *mergeSource);
+                  StringArray &changelists, ProplistCallback *callback);
+  jobject getMergeinfo(const char *target, Revision &pegRevision);
+  void getMergeinfoLog(int type, const char *pathOrURL,
+                       Revision &pegRevision, const char *mergeSourceURL,
+                       Revision &srcPegREvision, bool discoverChangedPaths,
+                       StringArray &revProps, LogMessageCallback *callback);
   jobjectArray suggestMergeSources(const char *path, Revision &pegRevision);
   void merge(const char *path1, Revision &revision1, const char *path2,
              Revision &revision2, const char *localPath, bool force,
@@ -98,34 +109,41 @@ class SVNClient :public SVNBase
              std::vector<RevisionRange> &rangesToMerge,
              const char *localPath, bool force, svn_depth_t depth,
              bool ignoreAncestry, bool dryRun, bool recordOnly);
+  void mergeReintegrate(const char *path, Revision &pegRevision,
+                        const char *localPath, bool dryRun);
   void doImport(const char *path, const char *url, const char *message,
-                svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes);
+                svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes,
+                RevpropTable &revprops);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
                  Revision &pegRevision, svn_depth_t depth,
-                 bool ignoreExternals, bool allowUnverObstructions);
+                 bool depthIsSticky, bool ignoreExternals,
+                 bool allowUnverObstructions);
   jlong doExport(const char *srcPath, const char *destPath,
                  Revision &revision, Revision &pegRevision, bool force,
                  bool ignoreExternals, svn_depth_t depth,
                  const char *nativeEOL);
-  void resolved(const char *path, svn_depth_t depth,
-                svn_wc_conflict_choice_t choice);
+  void resolve(const char *path, svn_depth_t depth,
+               svn_wc_conflict_choice_t choice);
   void cleanup(const char *path);
-  void mkdir(Targets &targets, const char *message, bool makeParents);
+  void mkdir(Targets &targets, const char *message, bool makeParents,
+             RevpropTable &revprops);
   void move(Targets &srcPaths, const char *destPath,
             const char *message, bool force, bool moveAsChild,
-            bool makeParents);
+            bool makeParents, RevpropTable &revprops);
   void copy(CopySources &copySources, const char *destPath,
-            const char *message, bool copyAsChild, bool makeParents);
+            const char *message, bool copyAsChild, bool makeParents,
+            RevpropTable &revprops);
   jlong commit(Targets &targets, const char *message, svn_depth_t depth,
                bool noUnlock, bool keepChangelist,
-               const char *changelistName);
+               StringArray &changelists, RevpropTable &revprops);
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
-                    bool ignoreExternals, bool allowUnverObstructions);
+                    bool depthIsSticky, bool ignoreExternals,
+                    bool allowUnverObstructions);
   void add(const char *path, svn_depth_t depth, bool force, bool no_ignore,
            bool add_parents);
-  void revert(const char *path, svn_depth_t depth);
+  void revert(const char *path, svn_depth_t depth, StringArray &changelists);
   void remove(Targets &targets, const char *message, bool force,
-              bool keep_local);
+              bool keep_local, RevpropTable &revprops);
   void notification(Notify *notify);
   void notification2(Notify2 *notify2);
   void setConflictResolver(ConflictResolverCallback *conflictResolver);
@@ -134,10 +152,9 @@ class SVNClient :public SVNBase
                  Revision &revision, Revision &pegRevsion, svn_depth_t depth,
                  bool ignoreExternals, bool allowUnverObstructions);
   void logMessages(const char *path, Revision &pegRevision,
-                   Revision &revisionStart,
-                   Revision &revisionEnd, bool stopOnCopy,
+                   std::vector<RevisionRange> &ranges, bool stopOnCopy,
                    bool discoverPaths, bool includeMergedRevisions,
-                   std::vector<std::string> &revProps,
+                   StringArray &revProps,
                    long limit, LogMessageCallback *callback);
   void setPrompt(Prompter *prompter);
   void password(const char *pi_password);
@@ -145,19 +162,23 @@ class SVNClient :public SVNBase
   jstring getAdminDirectoryName();
   jboolean isAdminDirectory(const char *name);
   jobject info(const char *path);
-  void addToChangelist(Targets &srcPaths, const char *changelist);
-  void removeFromChangelist(Targets &srcPaths, const char *changelist);
-  jobjectArray getChangelist(const char *changelist, const char *rootPath);
+  void addToChangelist(Targets &srcPaths, const char *changelist,
+                       svn_depth_t depth, StringArray &changelists);
+  void removeFromChangelists(Targets &srcPaths, svn_depth_t depth,
+                             StringArray &changelists);
+  void getChangelists(const char *path, StringArray &changelists,
+                      svn_depth_t depth, ChangelistCallback *callback);
   void status(const char *path, svn_depth_t depth, bool onServer,
               bool getAll, bool noIgnore, bool ignoreExternals,
-              StatusCallback *callback);
+              StringArray &changelists, StatusCallback *callback);
   void list(const char *url, Revision &revision, Revision &pegRevision,
             svn_depth_t depth, int direntFields, bool fetchLocks,
             ListCallback *callback);
   jobject revProperty(jobject jthis, const char *path, const char *name,
                       Revision &rev);
   void setRevProperty(jobject jthis, const char *path, const char *name,
-                      Revision &rev, const char *value, bool force);
+                      Revision &rev, const char *value,
+                      const char *original_value, bool force);
   jstring getVersionInfo(const char *path, const char *trailUrl,
                          bool lastChanged);
   jobject propertyGet(jobject jthis, const char *path, const char *name,
@@ -165,35 +186,29 @@ class SVNClient :public SVNBase
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
             const char *relativeToDir, const char *outfileName,
-            svn_depth_t depth, bool ignoreAncestry, bool noDiffDelete,
-            bool force);
+            svn_depth_t depth, StringArray &changelists,
+            bool ignoreAncestry, bool noDiffDelete, bool force);
   void diff(const char *target, Revision &pegevision,
             Revision &startRevision, Revision &endRevision,
             const char *relativeToDir, const char *outfileName,
-            svn_depth_t depth, bool ignoreAncestry, bool noDiffDelete,
-            bool force);
+            svn_depth_t depth, StringArray &changelists,
+            bool ignoreAncestry, bool noDiffDelete, bool force);
   void diffSummarize(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
-                     svn_depth_t depth, bool ignoreAncestry,
-                     DiffSummaryReceiver &receiver);
+                     svn_depth_t depth, StringArray &changelists,
+                     bool ignoreAncestry, DiffSummaryReceiver &receiver);
   void diffSummarize(const char *target, Revision &pegRevision,
                      Revision &startRevision, Revision &endRevision,
-                     svn_depth_t depth, bool ignoreAncestry,
-                     DiffSummaryReceiver &receiver);
+                     svn_depth_t depth, StringArray &changelists,
+                     bool ignoreAncestry, DiffSummaryReceiver &receiver);
 
   const char *getLastPath();
   void dispose(jobject jthis);
   static SVNClient *getCppObject(jobject jthis);
   SVNClient();
   virtual ~SVNClient();
-  static jobject createJavaLock(const svn_lock_t *lock);
  private:
   static svn_error_t *checkCancel(void *cancelBaton);
-  void propertySet(const char *path, const char *name,
-                   svn_string_t *value, svn_depth_t depth, bool force,
-                   svn_revnum_t baseRevisionForURL);
-  jobject createJavaProperty(jobject jthis, const char *path,
-                             const char *name, svn_string_t *value);
   svn_client_ctx_t *getContext(const char *message);
   svn_stream_t *createReadStream(apr_pool_t *pool, const char *path,
                                  Revision &revision, Revision &pegRevision,
@@ -206,10 +221,8 @@ class SVNClient :public SVNBase
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
             Revision *pegRevision, const char *relativeToDir,
-            const char *outfileName, svn_depth_t depth, bool ignoreAncestry,
-            bool noDiffDelete, bool force);
-
-  jobject createJavaInfo(const svn_wc_entry_t *entry);
+            const char *outfileName, svn_depth_t depth, StringArray &changelists,
+            bool ignoreAncestry, bool noDiffDelete, bool force);
 
   Notify *m_notify;
   Notify2 *m_notify2;
@@ -219,8 +232,6 @@ class SVNClient :public SVNBase
   Path m_lastPath;
   bool m_cancelOperation;
   CommitMessage *m_commitMessage;
-
-  jobjectArray makeJRevisionRangeArray(apr_array_header_t *ranges);
 
   /**
    * Implements the svn_client_get_commit_log3_t API.

@@ -2,17 +2,22 @@
  * sasl_auth.c :  Functions for SASL-based authentication
  *
  * ====================================================================
- * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -42,7 +47,11 @@
    authentication realm, and worst of all, this realm overrides the one that
    we pass to sasl_server_new().  If we didn't check this, a user that could
    successfully authenticate in one realm would be able to authenticate
-   in any other realm, simply by appending '@realm' to his username. */
+   in any other realm, simply by appending '@realm' to his username.
+
+   Note that the value returned in *OUT does not need to be
+   '\0'-terminated; we just need to set *OUT_LEN correctly.
+*/
 static int canonicalize_username(sasl_conn_t *conn,
                                  void *context, /* not used */
                                  const char *in, /* the username */
@@ -105,7 +114,7 @@ static svn_error_t *initialize(apr_pool_t *pool)
 
   /* The second parameter tells SASL to look for a configuration file
      named subversion.conf. */
-  result = sasl_server_init(callbacks, "subversion");
+  result = sasl_server_init(callbacks, SVN_RA_SVN_SASL_NAME);
   if (result != SASL_OK)
     {
       svn_error_t *err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
@@ -132,13 +141,24 @@ fail_auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool, sasl_conn_t *sasl_ctx)
   return svn_ra_svn_flush(conn, pool);
 }
 
+/* Like svn_ra_svn_write_cmd_failure, but also clears the given error
+   and sets it to SVN_NO_ERROR. */
+static svn_error_t *
+write_failure(svn_ra_svn_conn_t *conn, apr_pool_t *pool, svn_error_t **err_p)
+{
+  svn_error_t *write_err = svn_ra_svn_write_cmd_failure(conn, pool, *err_p);
+  svn_error_clear(*err_p);
+  *err_p = SVN_NO_ERROR;
+  return write_err;
+}
+
 /* Used if we run into a SASL error outside try_auth(). */
 static svn_error_t *
 fail_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool, sasl_conn_t *sasl_ctx)
 {
   svn_error_t *err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                       sasl_errdetail(sasl_ctx));
-  SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+  SVN_ERR(write_failure(conn, pool, &err));
   return svn_ra_svn_flush(conn, pool);
 }
 
@@ -181,7 +201,7 @@ static svn_error_t *try_auth(svn_ra_svn_conn_t *conn,
       arg = svn_string_ncreate(out, outlen, pool);
       /* Encode what we send to the client. */
       if (use_base64)
-        arg = svn_base64_encode_string(arg, pool);
+        arg = svn_base64_encode_string2(arg, TRUE, pool);
 
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(s)", "step", arg));
 
@@ -201,8 +221,8 @@ static svn_error_t *try_auth(svn_ra_svn_conn_t *conn,
 
   /* Send our last response, if necessary. */
   if (outlen)
-    arg = svn_base64_encode_string(svn_string_ncreate(out, outlen, pool),
-                                   pool);
+    arg = svn_base64_encode_string2(svn_string_ncreate(out, outlen, pool), TRUE,
+                                    pool);
   else
     arg = NULL;
 
@@ -241,13 +261,13 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
   if (apr_err)
     {
       svn_error_t *err = svn_error_wrap_apr(apr_err, _("Can't get hostname"));
-      SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+      SVN_ERR(write_failure(conn, pool, &err));
       return svn_ra_svn_flush(conn, pool);
     }
 
   /* Create a SASL context. SASL_SUCCESS_DATA tells SASL that the protocol
      supports sending data along with the final "success" message. */
-  result = sasl_server_new("svn",
+  result = sasl_server_new(SVN_RA_SVN_SASL_NAME,
                            hostname, b->realm,
                            localaddrport, remoteaddrport,
                            NULL, SASL_SUCCESS_DATA,
@@ -256,7 +276,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
     {
       svn_error_t *err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                           sasl_errstring(result, NULL, NULL));
-      SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+      SVN_ERR(write_failure(conn, pool, &err));
       return svn_ra_svn_flush(conn, pool);
     }
 
@@ -266,9 +286,6 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
 
   /* Initialize security properties. */
   svn_ra_svn__default_secprops(&secprops);
-
-  /* Don't allow PLAIN or LOGIN, since we don't support TLS yet. */
-  secprops.security_flags = SASL_SEC_NOPLAINTEXT;
 
   /* Don't allow ANONYMOUS if a username is required. */
   no_anonymous = needs_username || get_access(b, UNAUTHENTICATED) < required;
@@ -310,7 +327,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
       svn_error_t *err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                           _("Could not obtain the list"
                                           " of SASL mechanisms"));
-      SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+      SVN_ERR(write_failure(conn, pool, &err));
       return svn_ra_svn_flush(conn, pool);
     }
 
@@ -350,7 +367,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
           err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                  _("Couldn't obtain the authenticated"
                                  " username"));
-          SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+          SVN_ERR(write_failure(conn, pool, &err));
           return svn_ra_svn_flush(conn, pool);
         }
     }

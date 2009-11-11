@@ -43,14 +43,13 @@ try:
   my_getopt = getopt.gnu_getopt
 except AttributeError:
   my_getopt = getopt.getopt
-from urllib import quote as url_encode
-
-# Pretend we have true booleans on older python versions
 try:
-  True
-except:
-  True = 1
-  False = 0
+  # Python >=3.0
+  from urllib.parse import quote as urllib_parse_quote
+except ImportError:
+  # Python <3.0
+  from urllib import quote as urllib_parse_quote
+
 
 # Warnings and errors start with these strings.  They are typically
 # followed by a colon and a space, as in "%s: " ==> "WARNING: ".
@@ -95,9 +94,11 @@ def spam_guard_in_html_block(str):
   return _spam_guard_in_html_block_re.subn(_spam_guard_in_html_block_func,
                                            str)[0]
 
-def html_header(title, page_heading=None):
+def html_header(title, page_heading=None, highlight_targets=False):
   """Write HTML file header.  TITLE and PAGE_HEADING parameters are
-  expected to already by HTML-escaped if needed."""
+  expected to already by HTML-escaped if needed.  If HIGHLIGHT_TARGETS
+is true, then write out a style header that causes anchor targets to be
+surrounded by a red border when they are jumped to."""
   if not page_heading:
     page_heading = title
   s  = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"\n'
@@ -105,6 +106,10 @@ def html_header(title, page_heading=None):
   s += '<html><head>\n'
   s += '<meta http-equiv="Content-Type"'
   s += ' content="text/html; charset=UTF-8" />\n'
+  if highlight_targets:
+    s += '<style type="text/css">\n'
+    s += ':target { border: 2px solid red; }\n'
+    s += '</style>\n'
   s += '<title>%s</title>\n' % title
   s += '</head>\n\n'
   s += '<body style="text-color: black; background-color: white">\n\n'
@@ -117,7 +122,7 @@ def html_footer():
   return '\n</body>\n</html>\n'
 
 
-class Contributor:
+class Contributor(object):
   # Map contributor names to contributor instances, so that there
   # exists exactly one instance associated with a given name.
   # Fold names with email addresses.  That is, if we see someone
@@ -125,9 +130,6 @@ class Contributor:
   # name and that same email address together, we create only one
   # instance, and store it under both the email and the real name.
   all_contributors = { }
-
-  # See __hash__() for why this is necessary.
-  hash_value = 1
 
   def __init__(self, username, real_name, email):
     """Instantiate a contributor.  Don't use this to generate a
@@ -142,9 +144,6 @@ class Contributor:
     # "Patch" represent all the revisions for which this contributor
     # contributed a patch.
     self.activities = { }
-    # Sigh.
-    self.unique_hash_value = Contributor.hash_value
-    Contributor.hash_value += 1
 
   def add_activity(self, field_name, log):
     """Record that this contributor was active in FIELD_NAME in LOG."""
@@ -155,13 +154,14 @@ class Contributor:
     if not log in logs:
       logs.append(log)
 
+  @staticmethod
   def get(username, real_name, email):
     """If this contributor is already registered, just return it;
     otherwise, register it then return it.  Hint: use parse() to
     generate the arguments."""
     c = None
     for key in username, real_name, email:
-      if key and Contributor.all_contributors.has_key(key):
+      if key and key in Contributor.all_contributors:
         c = Contributor.all_contributors[key]
         break
     # If we didn't get a Contributor, create one now.
@@ -183,7 +183,6 @@ class Contributor:
       Contributor.all_contributors[email]     = c
     # This Contributor has never been in better shape; return it.
     return c
-  get = staticmethod(get)
 
   def score(self):
     """Return a contribution score for this contributor."""
@@ -236,10 +235,7 @@ class Contributor:
     else:
       return 0 - result
 
-  def __hash__(self):
-    """See LogMessage.__hash__() for why this exists."""
-    return self.hash_value
-
+  @staticmethod
   def parse(name):
     """Parse NAME, which can be
 
@@ -277,7 +273,6 @@ class Contributor:
       email = email.replace('{_AT_}', '@')
 
     return username, real_name, email
-  parse = staticmethod(parse)
 
   def canonical_name(self):
     """Return a canonical name for this contributor.  The canonical
@@ -309,7 +304,7 @@ class Contributor:
       retval = ''.join(self.real_name.lower().split(' '))
     if retval is None:
       complain('Unable to construct a canonical name for Contributor.', True)
-    return url_encode(retval, safe="!#$&'()+,;<=>@[]^`{}~")
+    return urllib_parse_quote(retval, safe="!#$&'()+,;<=>@[]^`{}~")
 
   def big_name(self, html=False, html_eo=False):
     """Return as complete a name as possible for this contributor.
@@ -355,11 +350,10 @@ class Contributor:
     this contributor was active."""
     out = open(filename, 'w')
     out.write(html_header(self.big_name(html_eo=True),
-                          self.big_name(html=True)))
+                          self.big_name(html=True), True))
     unique_logs = { }
 
-    sorted_activities = self.activities.keys()
-    sorted_activities.sort()
+    sorted_activities = sorted(self.activities.keys())
 
     out.write('<div class="h2" id="activities" title="activities">\n\n')
     out.write('<table border="1">\n')
@@ -383,8 +377,7 @@ class Contributor:
     out.write('</table>\n\n')
     out.write('</div>\n\n')
 
-    sorted_logs = unique_logs.keys()
-    sorted_logs.sort()
+    sorted_logs = sorted(unique_logs.keys())
     for log in sorted_logs:
       out.write('<hr />\n')
       out.write('<div class="h3" id="%s" title="%s">\n' % (log.revision,
@@ -437,7 +430,7 @@ class Field:
     return s
 
 
-class LogMessage:
+class LogMessage(object):
   # Maps revision strings (e.g., "r12345") onto LogMessage instances,
   # holding all the LogMessage instances ever created.
   all_logs = { }
@@ -453,7 +446,7 @@ class LogMessage:
     # Map field names (e.g., "Patch", "Review", "Suggested") onto
     # Field objects.
     self.fields = { }
-    if LogMessage.all_logs.has_key(revision):
+    if revision in LogMessage.all_logs:
       complain("Revision '%s' seen more than once" % revision, True)
     LogMessage.all_logs[revision] = self
     rev_as_number = int(revision[1:])
@@ -475,18 +468,6 @@ class LogMessage:
     if a > b: return -1
     if a < b: return 1
     else:     return 0
-
-  def __hash__(self):
-    """I don't really understand why defining __cmp__() but not
-    __hash__() renders an object type unfit to be a dictionary key,
-    especially in light of the recommendation that if a class defines
-    mutable objects and implements __cmp__() or __eq__(), then it
-    should not implement __hash__().  See these for details:
-    http://mail.python.org/pipermail/python-dev/2004-February/042580.html
-    http://mail.python.org/pipermail/python-bugs-list/2003-December/021314.html
-
-    In the meantime, I think it's safe to use the revision as a hash value."""
-    return int(self.revision[1:])
 
   def __str__(self):
     s = '=' * 15
@@ -539,6 +520,7 @@ def graze(input):
           log = LogMessage(m.group(1), m.group(2), m.group(3))
           num_lines = int(m.group(4))
           just_saw_separator = False
+          saw_patch = False
           line = input.readline()
           # Handle 'svn log -v' by waiting for the blank line.
           while line != '\n':
@@ -554,7 +536,7 @@ def graze(input):
               while m:
                 if not field:
                   ident = m.group(1)
-                  if field_aliases.has_key(ident):
+                  if ident in field_aliases:
                     field = Field(field_aliases[ident], ident)
                   else:
                     field = Field(ident)
@@ -568,8 +550,18 @@ def graze(input):
                   user = log.committer
                 c = Contributor.get(user, real, email)
                 c.add_activity(field.name, log)
+                if (field.name == 'Patch'):
+                  saw_patch = True
                 field.add_contributor(c)
                 line = input.readline()
+                if line == log_separator:
+                  # If the log message doesn't end with its own
+                  # newline (that is, there's the newline added by the
+                  # svn client, but no further newline), then just move
+                  # on to the next log entry.
+                  just_saw_separator = True
+                  num_lines = 0
+                  break
                 log.accum(line)
                 num_lines -= 1
                 m = in_field_re.match(line)
@@ -582,6 +574,9 @@ def graze(input):
                   log.add_field(field)
                   field = None
             num_lines -= 1
+          if not saw_patch and log.committer != '(no author)':
+            c = Contributor.get(log.committer, None, None)
+            c.add_activity('Patch', log)
         continue
 
 index_introduction = '''
@@ -638,10 +633,9 @@ def drop(revision_url_pattern):
   # sort by number of contributions, so the most active people appear at
   # the top -- that way we know whom to look at first for commit access
   # proposals.
-  sorted_contributors = Contributor.all_contributors.values()
-  sorted_contributors.sort()
+  sorted_contributors = sorted(Contributor.all_contributors.values())
   for c in sorted_contributors:
-    if not seen_contributors.has_key(c):
+    if c not in seen_contributors:
       if c.score() > 0:
         if c.is_full_committer:
           # Don't even bother to print out full committers.  They are
@@ -654,7 +648,7 @@ def drop(revision_url_pattern):
           urlpath = "%s/%s.html" % (detail_subdir, c.canonical_name())
           fname = os.path.join(detail_subdir, "%s.html" % c.canonical_name())
           index.write('<li><p><a href="%s">%s</a>&nbsp;[%s]%s</p></li>\n'
-                      % (url_encode(urlpath),
+                      % (urllib_parse_quote(urlpath),
                          c.big_name(html=True),
                          c.score_str(), committerness))
           c.html_out(revision_url_pattern, fname)
@@ -682,7 +676,7 @@ def process_committers(committers):
     if line == 'Committers who have asked to be listed as dormant:\n':
       in_full_committers = True
     elif line.find('@') >= 0:
-      line = line.strip()
+      line = line.lstrip()
       m = matcher.match(line)
       user = m.group(1)
       real_and_email = m.group(2).strip()
@@ -694,26 +688,26 @@ def process_committers(committers):
 
 
 def usage():
-  print 'USAGE: %s [-C COMMITTERS_FILE] < SVN_LOG_OR_LOG-V_OUTPUT' \
-        % os.path.basename(sys.argv[0])
-  print ''
-  print 'Create HTML files in the current directory, rooted at index.html,'
-  print 'in which you can browse to see who contributed what.'
-  print ''
-  print 'The log input should use the contribution-tracking format defined'
-  print 'in http://subversion.tigris.org/hacking.html#crediting.'
-  print ''
-  print 'Options:'
-  print ''
-  print '  -h, -H, -?, --help   Print this usage message and exit'
-  print '  -C FILE              Use FILE as the COMMITTERS file'
-  print '  -U URL               Use URL as a Python interpolation pattern to'
-  print '                       generate URLs to link revisions to some kind'
-  print '                       of web-based viewer (e.g. ViewCVS).  The'
-  print '                       interpolation pattern should contain exactly'
-  print '                       one format specifier, \'%s\', which will be'
-  print '                       replaced with the revision number.'
-  print ''
+  print('USAGE: %s [-C COMMITTERS_FILE] < SVN_LOG_OR_LOG-V_OUTPUT' \
+        % os.path.basename(sys.argv[0]))
+  print('')
+  print('Create HTML files in the current directory, rooted at index.html,')
+  print('in which you can browse to see who contributed what.')
+  print('')
+  print('The log input should use the contribution-tracking format defined')
+  print('in http://subversion.tigris.org/hacking.html#crediting.')
+  print('')
+  print('Options:')
+  print('')
+  print('  -h, -H, -?, --help   Print this usage message and exit')
+  print('  -C FILE              Use FILE as the COMMITTERS file')
+  print('  -U URL               Use URL as a Python interpolation pattern to')
+  print('                       generate URLs to link revisions to some kind')
+  print('                       of web-based viewer (e.g. ViewCVS).  The')
+  print('                       interpolation pattern should contain exactly')
+  print('                       one format specifier, \'%s\', which will be')
+  print('                       replaced with the revision number.')
+  print('')
 
 
 def main():

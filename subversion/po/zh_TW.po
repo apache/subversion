@@ -1,16 +1,32 @@
 # Tranditional Chinese translation for subversion package
-# Copyright (C) 2004 CollabNet.
-# This file is distributed under the same license as the subversion package.
-# The original repos for this translation could be found at
+#
+#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
+#
+#The original repos for this translation could be found at
 # http://svn.ntcu.net/tmprepo/svn.pot.  There is a glossary.txt.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.1.0\n"
+"Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-05-25 20:39+0800\n"
 "PO-Revision-Date: 2004-09-12 22:05+0800\n"
-"Last-Translator: Subversion <dev@subversion.tigris.org>\n"
+"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Traditional Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -4508,13 +4524,13 @@ msgstr ""
 #: libsvn_subr/opt.c:998
 #, fuzzy
 msgid ""
-"Copyright (C) 2000-2007 CollabNet.\n"
+"Copyright (C) 2000-2009 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
 "This product includes software developed by CollabNet (http://www.Collab."
 "Net/).\n"
 "\n"
 msgstr ""
-"Copyright (C) 2000-2006 CollabNet.\n"
+"Copyright (C) 2000-2009 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
 "This product includes software developed by CollabNet (http://www.Collab."
 "Net/).\n"
@@ -7807,7 +7823,7 @@ msgstr ""
 
 #: svnadmin/main.c:335
 msgid ""
-"usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
+"usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER] [--incremental]]\n"
 "\n"
 "Dump the contents of filesystem to stdout in a 'dumpfile'\n"
 "portable format, sending feedback to stderr.  Dump revisions\n"
@@ -7816,7 +7832,7 @@ msgid ""
 "If --incremental is passed, then the first revision dumped will be\n"
 "a diff against the previous revision, instead of the usual fulltext.\n"
 msgstr ""
-"用法: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
+"用法: svnadmin dump REPOS_PATH [-r LOWER[:UPPER] [--incremental]]\n"
 "\n"
 "將檔案系統的內容, 以一種可攜式 '傾印檔' 格式輸出到標準輸出, 並將訊息\n"
 "回報輸出到標準錯誤. 將 LOWER 與 UPPER 之間修訂版內容傾印出來. 如果沒\n"

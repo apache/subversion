@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -25,6 +30,7 @@
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include "EnumMapper.h"
+#include "CreateJ.h"
 #include "ConflictResolverCallback.h"
 
 ConflictResolverCallback::ConflictResolverCallback(jobject jconflictResolver)
@@ -115,57 +121,7 @@ ConflictResolverCallback::resolve(svn_wc_conflict_result_t **result,
     }
 
   // Create an instance of the conflict descriptor.
-  static jmethodID ctor = 0;
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/ConflictDescriptor");
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  if (ctor == 0)
-    {
-      ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;II"
-                              "Ljava/lang/String;ZLjava/lang/String;II"
-                              "Ljava/lang/String;Ljava/lang/String;"
-                              "Ljava/lang/String;Ljava/lang/String;)V");
-      if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
-        return SVN_NO_ERROR;
-    }
-
-  jstring jpath = JNIUtil::makeJString(desc->path);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-  jstring jpropertyName = JNIUtil::makeJString(desc->property_name);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-  jstring jmimeType = JNIUtil::makeJString(desc->mime_type);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-  jstring jbasePath = JNIUtil::makeJString(desc->base_file);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-  jstring jreposPath = JNIUtil::makeJString(desc->their_file);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-  jstring juserPath = JNIUtil::makeJString(desc->my_file);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-  jstring jmergedPath = JNIUtil::makeJString(desc->merged_file);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  // Instantiate the conflict descriptor.
-  jobject jdesc = env->NewObject(clazz, ctor, jpath,
-                                 EnumMapper::mapConflictKind(desc->kind),
-                                 EnumMapper::mapNodeKind(desc->node_kind),
-                                 jpropertyName,
-                                 (jboolean) desc->is_binary, jmimeType,
-                                 EnumMapper::mapConflictAction(desc->action),
-                                 EnumMapper::mapConflictReason(desc->reason),
-                                 jbasePath, jreposPath, juserPath,
-                                 jmergedPath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  env->DeleteLocalRef(clazz);
+  jobject jdesc = CreateJ::ConflictDescriptor(desc);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
@@ -182,28 +138,6 @@ ConflictResolverCallback::resolve(svn_wc_conflict_result_t **result,
   if (*result == NULL)
     // Unable to convert the result into a C representation.
     return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL, NULL);
-
-  env->DeleteLocalRef(jpath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-  env->DeleteLocalRef(jpropertyName);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-  env->DeleteLocalRef(jmimeType);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-  env->DeleteLocalRef(jbasePath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-  env->DeleteLocalRef(jreposPath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-  env->DeleteLocalRef(juserPath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-  env->DeleteLocalRef(jmergedPath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
 
   env->DeleteLocalRef(jdesc);
   if (JNIUtil::isJavaExceptionThrown())
@@ -272,10 +206,14 @@ svn_wc_conflict_choice_t ConflictResolverCallback::javaChoiceToC(jint jchoice)
       return svn_wc_conflict_choose_postpone;
     case org_tigris_subversion_javahl_ConflictResult_chooseBase:
       return svn_wc_conflict_choose_base;
-    case org_tigris_subversion_javahl_ConflictResult_chooseTheirs:
-      return svn_wc_conflict_choose_theirs;
-    case org_tigris_subversion_javahl_ConflictResult_chooseMine:
-      return svn_wc_conflict_choose_mine;
+    case org_tigris_subversion_javahl_ConflictResult_chooseTheirsFull:
+      return svn_wc_conflict_choose_theirs_full;
+    case org_tigris_subversion_javahl_ConflictResult_chooseMineFull:
+      return svn_wc_conflict_choose_mine_full;
+    case org_tigris_subversion_javahl_ConflictResult_chooseTheirsConflict:
+      return svn_wc_conflict_choose_theirs_conflict;
+    case org_tigris_subversion_javahl_ConflictResult_chooseMineConflict:
+      return svn_wc_conflict_choose_mine_conflict;
     case org_tigris_subversion_javahl_ConflictResult_chooseMerged:
       return svn_wc_conflict_choose_merged;
     }

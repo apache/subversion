@@ -12,7 +12,7 @@ command-line client.  It has no access to code internals; it never
 looks inside the .svn/ directory; it only performs actions that a
 human user would do.
 
-These tests require Python 2.2 or later.
+These tests require Python 2.4 or later.
 
   [ For more general information on Subversion's testing system,
     please read the README in subversion/tests/. ]
@@ -33,6 +33,10 @@ script:
 Invoke with one or more numeric arguments to run those particular tests:
 
    $ ./basic_tests.py 7 13 17
+
+Invoke with one or more function names to run those particular tests:
+
+   $ ./basic_tests.py basic_mkdir_wc_with_parents basic_switch basic_import
 
 And invoke with the "--list" option to list information about some or
 all tests available in that script:
@@ -134,6 +138,17 @@ Note [1]: It would be quite too much to expect those password entries
           ----------------------------
 
 
+[If you want to test with serf instead of neon:
+
+  $ ./basic_tests.py --url=http://localhost --http-library=serf
+
+  or
+
+  $ make check BASE_URL=http://localhost HTTP_LIBRARY=serf
+]
+
+
+
 Running over ra_svn
 -------------------
 
@@ -169,6 +184,34 @@ $ saslpasswd2 -c -u svntest jrandom
 $ saslpasswd2 -c -u svntest jconstant
 
 As usual, both users should use the password 'rayjandom'.
+
+
+Running tests in a RAM disk
+--------------------------
+
+Test execution can be dramatically sped up by keeping Subversion test
+data on a RAM disk. On a Linux system, you can mount a RAM disk on the
+fly with the command:
+
+ mount -t tmpfs tmpfs /path/to/src/subversion/tests/cmdline/svn-test-work \
+  -o uid=$USER,mode=770,size=32m
+
+Or, for a more permanent solution, add lines like the following in your
+/etc/fstab file:
+
+ tmpfs /path/to/src/svn/subversion/tests/cmdline/svn-test-work tmpfs defaults,user,noauto,exec,size=32m
+
+The minimum required size for testing ramdisk is approximately 700MB.
+However, flagging your test targets for cleanup dramatically reduces
+the space requirements (as shown in the example configuration above),
+and thus your memory usage. Cleanup means more I/O, but since test
+data is in-memory, there will be no performance degradation. Example:
+
+  make check CLEANUP=true 
+
+See http://svn.haxx.se/dev/archive-2003-02/0068.shtml for the original
+authoritative discussion on use of RAM disks.
+
 
 Directory Contents
 ==================
@@ -290,3 +333,24 @@ there.  Don't forget to add your test to the 'test_list' variable at
 the bottom of the file.
 
 
+Testing Compatability With Previous Release
+===========================================
+
+You can run the Python test suite against older installed versions of
+the Subversion servers.  This mail fragment introduces the ability:
+
+   Message-ID: <1ea387f60804091828q48c9d18ah7bf8d89ef7d39461@mail.gmail.com>
+   Date: Wed, 9 Apr 2008 18:28:40 -0700
+   From: "David Glasser" <glasser@davidglasser.net>
+   To: "Subversion Developers" <dev@subversion.tigris.org>
+   Subject:  backwards-compatibility testing!
+   
+   I've updated the expectations on trunk so that you can cleanly run the
+   test suite against 1.4.x svnserve or DAV.  You do this by adding
+   SERVER_MINOR_VERSION=4 with make check, or --server-minor-version 4 to
+   run_tests.py or a specific Python test.
+   
+   [...]
+
+We expect that post-1.5, this support will expand in the obvious ways
+(allowing "--server-minor-version 5" and SERVER_MINOR_VERSION=5).

@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -108,10 +113,11 @@ typedef struct svn_ra__vtable_t {
                           apr_uint32_t dirent_fields,
                           apr_pool_t *pool);
   svn_error_t *(*get_mergeinfo)(svn_ra_session_t *session,
-                                apr_hash_t **mergeinfo,
+                                svn_mergeinfo_catalog_t *mergeinfo,
                                 const apr_array_header_t *paths,
                                 svn_revnum_t revision,
                                 svn_mergeinfo_inheritance_t inherit,
+                                svn_boolean_t include_merged_revisions,
                                 apr_pool_t *pool);
   svn_error_t *(*do_update)(svn_ra_session_t *session,
                             const svn_ra_reporter3_t **reporter,
@@ -162,7 +168,7 @@ typedef struct svn_ra__vtable_t {
                           svn_boolean_t discover_changed_paths,
                           svn_boolean_t strict_node_history,
                           svn_boolean_t include_merged_revisions,
-                          apr_array_header_t *revprops,
+                          const apr_array_header_t *revprops,
                           svn_log_entry_receiver_t receiver,
                           void *receiver_baton,
                           apr_pool_t *pool);
@@ -246,6 +252,17 @@ typedef struct svn_ra__vtable_t {
                   svn_ra_replay_revfinish_callback_t revfinish_func,
                   void *replay_baton,
                   apr_pool_t *pool);
+  svn_error_t *(*get_deleted_rev)(svn_ra_session_t *session,
+                                  const char *path,
+                                  svn_revnum_t peg_revision,
+                                  svn_revnum_t end_revision,
+                                  svn_revnum_t *revision_deleted,
+                                  apr_pool_t *pool);
+  svn_error_t *(*obliterate_path_rev)(svn_ra_session_t *session,
+                                      svn_revnum_t revision,
+                                      const char *path,
+                                      apr_pool_t *pool);
+
 } svn_ra__vtable_t;
 
 /* The RA session object. */
@@ -375,6 +392,33 @@ svn_ra__file_revs_from_log(svn_ra_session_t *session,
                            svn_file_rev_handler_t handler,
                            void *handler_baton,
                            apr_pool_t *pool);
+
+
+/**
+ * Given a path REL_DELETED_PATH, relative to the URL of SESSION, which
+ * exists at PEG_REVISION, and an END_REVISION > PEG_REVISION at which
+ * REL_DELETED_PATH no longer exists, set *REVISION_DELETED to the revision
+ * REL_DELETED_PATH was first deleted or replaced, within the inclusive
+ * revision range defined by PEG_REVISION and END_REVISION.
+ *
+ * If REL_DELETED_PATH does not exist at PEG_REVISION or was not deleted prior
+ * to END_REVISION within the specified range, then set *REVISION_DELETED to
+ * SVN_INVALID_REVNUM.  If PEG_REVISION or END_REVISION are invalid or if
+ * END_REVISION <= PEG_REVISION, then return SVN_ERR_CLIENT_BAD_REVISION.
+ *
+ * Use POOL for all allocations.
+ *
+ * NOTE: This function uses the RA get_log interfaces to do its work,
+ * as a fallback mechanism for servers which don't support the native
+ * get_deleted_rev API.
+ */
+svn_error_t *
+svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
+                                 const char *rel_deleted_path,
+                                 svn_revnum_t peg_revision,
+                                 svn_revnum_t end_revision,
+                                 svn_revnum_t *revision_deleted,
+                                 apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

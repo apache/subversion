@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -45,12 +50,12 @@
 
 #include <apr.h>
 #include <apr_pools.h>
-#include <apr_file_io.h>
+#include <apr_tables.h>   /* for apr_array_header_t */
 
 #include "svn_types.h"
-#include "svn_error.h"
-#include "svn_io.h"
+#include "svn_io.h"       /* for svn_stream_t */
 #include "svn_version.h"
+#include "svn_string.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,7 +68,8 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-const svn_version_t *svn_diff_version(void);
+const svn_version_t *
+svn_diff_version(void);
 
 
 /* Diffs. */
@@ -144,20 +150,22 @@ typedef struct svn_diff_fns_t
  * return a diff object in @a *diff that represents a difference between
  * an "original" and "modified" datasource.  Do all allocation in @a pool.
  */
-svn_error_t *svn_diff_diff(svn_diff_t **diff,
-                           void *diff_baton,
-                           const svn_diff_fns_t *diff_fns,
-                           apr_pool_t *pool);
+svn_error_t *
+svn_diff_diff(svn_diff_t **diff,
+              void *diff_baton,
+              const svn_diff_fns_t *diff_fns,
+              apr_pool_t *pool);
 
 /** Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
  * return a diff object in @a *diff that represents a difference between
  * three datasources: "original", "modified", and "latest".  Do all
  * allocation in @a pool.
  */
-svn_error_t *svn_diff_diff3(svn_diff_t **diff,
-                            void *diff_baton,
-                            const svn_diff_fns_t *diff_fns,
-                            apr_pool_t *pool);
+svn_error_t *
+svn_diff_diff3(svn_diff_t **diff,
+               void *diff_baton,
+               const svn_diff_fns_t *diff_fns,
+               apr_pool_t *pool);
 
 /** Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
  * return a diff object in @a *diff that represents a difference between
@@ -165,10 +173,11 @@ svn_error_t *svn_diff_diff3(svn_diff_t **diff,
  * difference between "original", "modified" and "latest" using "ancestor".
  * Do all allocation in @a pool.
  */
-svn_error_t *svn_diff_diff4(svn_diff_t **diff,
-                            void *diff_baton,
-                            const svn_diff_fns_t *diff_fns,
-                            apr_pool_t *pool);
+svn_error_t *
+svn_diff_diff4(svn_diff_t **diff,
+               void *diff_baton,
+               const svn_diff_fns_t *diff_fns,
+               apr_pool_t *pool);
 
 
 /* Utility functions */
@@ -289,6 +298,35 @@ typedef struct svn_diff_output_fns_t
                                   svn_diff_t *resolved_diff);
 } svn_diff_output_fns_t;
 
+/** Style for displaying conflicts during diff3 output.
+ *
+ * @since New in 1.6.
+ */
+typedef enum svn_diff_conflict_display_style_t
+{
+  /** Display modified and latest, with conflict markers. */
+  svn_diff_conflict_display_modified_latest,
+
+  /** Like svn_diff_conflict_display_modified_latest, but with an
+      extra effort to identify common sequences between modified and
+      latest. */
+  svn_diff_conflict_display_resolved_modified_latest,
+
+  /** Display modified, original, and latest, with conflict
+      markers. */
+  svn_diff_conflict_display_modified_original_latest,
+
+  /** Just display modified, with no markers. */
+  svn_diff_conflict_display_modified,
+
+  /** Just display latest, with no markers. */
+  svn_diff_conflict_display_latest,
+
+  /** Like svn_diff_conflict_display_modified_original_latest, but
+      *only* showing conflicts. */
+  svn_diff_conflict_display_only_conflicts
+} svn_diff_conflict_display_style_t;
+
 
 /** Given a vtable of @a output_fns/@a output_baton for consuming
  * differences, output the differences in @a diff.
@@ -338,6 +376,12 @@ typedef struct svn_diff_file_options_t
   /** Whether to treat all end-of-line markers the same when comparing lines.
    * The default is @c FALSE. */
   svn_boolean_t ignore_eol_style;
+  /** Whether the '@@' lines of the unified diff output should include a prefix
+    * of the nearest preceding line that starts with a character that might be
+    * the initial character of a C language identifier.  The default is
+    * @c FALSE.
+    */
+  svn_boolean_t show_c_function;
 } svn_diff_file_options_t;
 
 /** Allocate a @c svn_diff_file_options_t structure in @a pool, initializing
@@ -389,6 +433,7 @@ svn_diff_file_diff_2(svn_diff_t **diff,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_diff(svn_diff_t **diff,
                    const char *original,
@@ -418,6 +463,7 @@ svn_diff_file_diff3_2(svn_diff_t **diff,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_diff3(svn_diff_t **diff,
                     const char *original,
@@ -449,6 +495,7 @@ svn_diff_file_diff4_2(svn_diff_t **diff,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_diff4(svn_diff_t **diff,
                     const char *original,
@@ -484,13 +531,15 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
                               const char *modified_header,
                               const char *header_encoding,
                               const char *relative_to_dir,
+                              svn_boolean_t show_c_function,
                               apr_pool_t *pool);
 
 /** Similar to svn_diff_file_output_unified3(), but with @a relative_to_dir
- * set to NULL.
+ * set to NULL and @a show_c_function to false.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_output_unified2(svn_stream_t *output_stream,
                               svn_diff_t *diff,
@@ -506,6 +555,7 @@ svn_diff_file_output_unified2(svn_stream_t *output_stream,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_output_unified(svn_stream_t *output_stream,
                              svn_diff_t *diff,
@@ -525,9 +575,39 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
  * @a conflict_latest to be displayed as conflict markers in the output.
  * If @a conflict_original, @a conflict_modified, @a conflict_latest and/or
  * @a conflict_separator is @c NULL, a default marker will be displayed.
- * Set @a display_original_in_conflict and @a display_resolved_conflicts
- * as desired.  Note that these options are mutually exclusive.
+ * @a conflict_style dictates how conflicts are displayed.
+ *
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_diff_file_output_merge2(svn_stream_t *output_stream,
+                            svn_diff_t *diff,
+                            const char *original_path,
+                            const char *modified_path,
+                            const char *latest_path,
+                            const char *conflict_original,
+                            const char *conflict_modified,
+                            const char *conflict_latest,
+                            const char *conflict_separator,
+                            svn_diff_conflict_display_style_t conflict_style,
+                            apr_pool_t *pool);
+
+
+/** Similar to svn_diff_file_output_merge2, but with @a
+ * display_original_in_conflict and @a display_resolved_conflicts
+ * booleans instead of the @a conflict_style enum.
+ *
+ * If both booleans are false, acts like
+ * svn_diff_conflict_display_modified_latest; if @a
+ * display_original_in_conflict is true, acts like
+ * svn_diff_conflict_display_modified_original_latest; if @a
+ * display_resolved_conflicts is true, acts like
+ * svn_diff_conflict_display_resolved_modified_latest.  The booleans
+ * may not both be true.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_output_merge(svn_stream_t *output_stream,
                            svn_diff_t *diff,
@@ -587,14 +667,36 @@ svn_diff_mem_string_diff4(svn_diff_t **diff,
                           const svn_diff_file_options_t *options,
                           apr_pool_t *pool);
 
-
 /** Outputs the @a diff object generated by svn_diff_mem_string_diff()
  * in unified diff format on @a output_stream, using @a original
  * and @a modified for the text in the output.
- * Outputs the header and markers in @a header_encoding.
+ * A diff header is only written to the output if @a with_diff_header
+ * is TRUE.
+ *
+ * Outputs the header and hunk delimiters in @a header_encoding.
+ * A @a hunk_delimiter can optionally be specified.
+ * If @a hunk_delimiter is NULL, use the default hunk delimiter "@@".
  *
  * @a original_header and @a modified header are
  * used to fill the field after the "---" and "+++" header markers.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
+                                    svn_diff_t *diff,
+                                    svn_boolean_t with_diff_header,
+                                    const char *hunk_delimiter,
+                                    const char *original_header,
+                                    const char *modified_header,
+                                    const char *header_encoding,
+                                    const svn_string_t *original,
+                                    const svn_string_t *modified,
+                                    apr_pool_t *pool);
+
+/** Similar to svn_diff_mem_string_output_unified2() but with
+ * @a with_diff_header always set to TRUE and @a hunk_delimiter always
+ * set to NULL.
  *
  * @since New in 1.5.
  */
@@ -616,12 +718,38 @@ svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
  * @a conflict_latest and @a conflict_separator or the default one for
  * each of these if @c NULL is passed.
  *
- * Insert the original in the output if @a display_original_in_conflict
- * is @c TRUE.
+ * @a conflict_style dictates how conflicts are displayed.
  *
- * @note @a display_original_in_conflict and @a display_resolved_conflicts
- *       are mutually exclusive.
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
+                                  svn_diff_t *diff,
+                                  const svn_string_t *original,
+                                  const svn_string_t *modified,
+                                  const svn_string_t *latest,
+                                  const char *conflict_original,
+                                  const char *conflict_modified,
+                                  const char *conflict_latest,
+                                  const char *conflict_separator,
+                                  svn_diff_conflict_display_style_t style,
+                                  apr_pool_t *pool);
+
+/** Similar to svn_diff_mem_string_output_merge2, but with @a
+ * display_original_in_conflict and @a display_resolved_conflicts
+ * booleans instead of the @a conflict_style enum.
+ *
+ * If both booleans are false, acts like
+ * svn_diff_conflict_display_modified_latest; if @a
+ * display_original_in_conflict is true, acts like
+ * svn_diff_conflict_display_modified_original_latest; if @a
+ * display_resolved_conflicts is true, acts like
+ * svn_diff_conflict_display_resolved_modified_latest.  The booleans
+ * may not both be true.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
                                  svn_diff_t *diff,

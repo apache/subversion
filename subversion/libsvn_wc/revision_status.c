@@ -2,46 +2,54 @@
  * revision_status.c: report the revision range and status of a working copy
  *
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 #include "svn_wc.h"
+#include "svn_dirent_uri.h"
+
+#include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
-
 
 /* A baton for analyze_status(). */
 struct status_baton
 {
   svn_wc_revision_status_t *result;           /* where to put the result */
   svn_boolean_t committed;           /* examine last committed revisions */
-  const char *wc_path;               /* path whose URL we're looking for */
+  const char *local_abspath;         /* path whose URL we're looking for */
   const char *wc_url;    /* URL for the path whose URL we're looking for */
   apr_pool_t *pool;         /* pool in which to store alloc-needy things */
 };
 
-/* An svn_wc_status_func2_t callback function for analyzing status
+/* An svn_wc_status_func4_t callback function for analyzing status
    structures. */
-static void
+static svn_error_t *
 analyze_status(void *baton,
-               const char *path,
-               svn_wc_status2_t *status)
+               const char *local_abspath,
+               const svn_wc_status2_t *status,
+               apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
 
   if (! status->entry)
-    return;
+    return SVN_NO_ERROR;
 
   /* Added files have a revision of no interest */
   if (status->text_status != svn_wc_status_added)
@@ -65,30 +73,31 @@ analyze_status(void *baton,
                            && status->prop_status != svn_wc_status_none);
   sb->result->sparse_checkout |= (status->entry->depth != svn_depth_infinity);
 
-  if (sb->wc_path
+  if (sb->local_abspath
       && (! sb->wc_url)
-      && (strcmp(path, sb->wc_path) == 0)
+      && (strcmp(local_abspath, sb->local_abspath) == 0)
       && (status->entry))
     sb->wc_url = apr_pstrdup(sb->pool, status->entry->url);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_wc_revision_status(svn_wc_revision_status_t **result_p,
-                       const char *wc_path,
-                       const char *trail_url,
-                       svn_boolean_t committed,
-                       svn_cancel_func_t cancel_func,
-                       void *cancel_baton,
-                       apr_pool_t *pool)
+svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
+                        svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        const char *trail_url,
+                        svn_boolean_t committed,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   struct status_baton sb;
-  const char *target;
-  svn_wc_adm_access_t *anchor_access, *target_access;
-  const svn_delta_editor_t *editor;
-  void *edit_baton;
-  svn_revnum_t edit_revision;
-  svn_wc_revision_status_t *result = apr_palloc(pool, sizeof(**result_p));
+  svn_wc_revision_status_t *result = apr_palloc(result_pool, sizeof(*result));
   *result_p = result;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* set result as nil */
   result->min_rev  = SVN_INVALID_REVNUM;
@@ -100,29 +109,21 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
   /* initialize walking baton */
   sb.result = result;
   sb.committed = committed;
-  sb.wc_path = wc_path;
+  sb.local_abspath = local_abspath;
   sb.wc_url = NULL;
-  sb.pool = pool;
+  sb.pool = scratch_pool;
 
-  SVN_ERR(svn_wc_adm_open_anchor(&anchor_access, &target_access, &target,
-                                 wc_path, FALSE, -1,
-                                 cancel_func, cancel_baton,
-                                 pool));
+  SVN_ERR(svn_wc_walk_status(wc_ctx,
+                             local_abspath,
+                             svn_depth_infinity,
+                             TRUE  /* get_all */,
+                             FALSE /* no_ignore */,
+                             NULL  /* ignore_patterns */,
+                             analyze_status, &sb,
+                             NULL, NULL,
+                             cancel_func, cancel_baton,
+                             scratch_pool));
 
-  SVN_ERR(svn_wc_get_status_editor3(&editor, &edit_baton, NULL,
-                                    &edit_revision, anchor_access, target,
-                                    svn_depth_infinity,
-                                    TRUE  /* get_all */,
-                                    FALSE /* no_ignore */,
-                                    NULL  /* ignore_patterns */,
-                                    analyze_status, &sb,
-                                    cancel_func, cancel_baton,
-                                    NULL  /* traversal_info */,
-                                    pool));
-
-  SVN_ERR(editor->close_edit(edit_baton, pool));
-
-  SVN_ERR(svn_wc_adm_close(anchor_access));
 
   if ((! result->switched) && (trail_url != NULL))
     {
@@ -141,6 +142,14 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
             result->switched = TRUE;
         }
     }
+
+  /* ### 1.6+: If result->sparse_checkout is FALSE the answer is not final
+         We can still have excluded nodes!
+
+     ### TODO: Check every node below local_abspath for excluded
+
+     ### BH: What about absent? You don't know if you have a complete tree
+             without checking for absent too */
 
   return SVN_NO_ERROR;
 }

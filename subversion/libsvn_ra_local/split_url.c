@@ -2,22 +2,26 @@
  * checkout.c : read a repository and drive a checkout editor.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 #include "ra_local.h"
-#include <assert.h>
 #include <string.h>
 #include "svn_path.h"
 #include "svn_private_config.h"
@@ -46,24 +50,33 @@ svn_ra_local__split_URL(svn_repos_t **repos,
   /* Then, skip what's between the "file://" prefix and the next
      occurance of '/' -- this is the hostname, and we are considering
      everything from that '/' until the end of the URL to be the
-     absolute path portion of the URL. */
+     absolute path portion of the URL.
+     If we got just "file://", treat it the same as "file:///". */
   hostname = URL + 7;
-  path = strchr(hostname, '/');
-  if (! path)
-    return svn_error_createf
-      (SVN_ERR_RA_ILLEGAL_URL, NULL,
-       _("Local URL '%s' contains only a hostname, no path"), URL);
-
-  /* Treat localhost as an empty hostname. */
-  if (hostname != path)
+  if (*hostname == '\0')
     {
-      hostname = svn_path_uri_decode(apr_pstrmemdup(pool, hostname,
-                                                    path - hostname), pool);
-      if (strncmp(hostname, "localhost", 9) == 0)
-        hostname = NULL;
+      path = "/";
+      hostname = NULL;
     }
   else
-    hostname = NULL;
+    {
+      path = strchr(hostname, '/');
+      if (! path)
+        return svn_error_createf
+          (SVN_ERR_RA_ILLEGAL_URL, NULL,
+           _("Local URL '%s' contains only a hostname, no path"), URL);
+
+      /* Treat localhost as an empty hostname. */
+      if (hostname != path)
+        {
+          hostname = svn_path_uri_decode(apr_pstrmemdup(pool, hostname,
+                                                        path - hostname), pool);
+          if (strncmp(hostname, "localhost", 9) == 0)
+            hostname = NULL;
+        }
+      else
+        hostname = NULL;
+    }
 
   /* Duplicate the URL, starting at the top of the path.
      At the same time, we URI-decode the path. */
@@ -154,7 +167,7 @@ svn_ra_local__split_URL(svn_repos_t **repos,
   /* Ensure that *FS_PATH has its leading slash. */
   if (**fs_path != '/')
     *fs_path = apr_pstrcat(pool, "/", *fs_path, NULL);
-  
+
   /* Remove the path components in *fs_path from the original URL, to get
      the URL to the repository root. */
   urlbuf = svn_stringbuf_create(URL, pool);

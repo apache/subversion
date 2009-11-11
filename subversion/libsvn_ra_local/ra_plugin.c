@@ -2,17 +2,22 @@
  * ra_plugin.c : the main RA module for local repository access
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -29,12 +34,11 @@
 
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
+#include "private/svn_mergeinfo_private.h"
+#include "private/svn_repos_private.h"
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
-
-#include <assert.h>
-
 
 /*----------------------------------------------------------------*/
 
@@ -185,7 +189,7 @@ reporter_link_path(void *reporter_baton,
   reporter_baton_t *rbaton = reporter_baton;
   const char *fs_path = NULL;
   const char *repos_url_decoded;
-  int repos_url_len;
+  size_t repos_url_len;
 
   url = svn_path_uri_decode(url, pool);
   repos_url_decoded = svn_path_uri_decode(rbaton->sess->repos_url, pool);
@@ -246,7 +250,7 @@ make_reporter(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   void *rbaton;
-  int repos_url_len;
+  size_t repos_url_len;
   const char *other_fs_path = NULL;
   const char *repos_url_decoded;
 
@@ -360,7 +364,7 @@ deltify_etc(const svn_commit_info_t *commit_info,
           svn_pool_clear(iterpool);
           apr_hash_this(hi, &rel_path, NULL, &val);
           token = val;
-          abs_path = svn_path_join(db->fs_path, rel_path, iterpool);
+          abs_path = svn_dirent_join(db->fs_path, rel_path, iterpool);
           /* We may get errors here if the lock was broken or stolen
              after the commit succeeded.  This is fine and should be
              ignored. */
@@ -407,6 +411,28 @@ svn_ra_local__get_schemes(apr_pool_t *pool)
   return schemes;
 }
 
+/* Do nothing.
+ *
+ * Why is this acceptable?  As of now, FS warnings are used for only
+ * two things: failures to close BDB repositories and failures to
+ * interact with memcached in FSFS (new in 1.6).  In 1.5 and earlier,
+ * we did not call svn_fs_set_warning_func in ra_local, which means
+ * that any BDB-closing failure would have led to abort()s; the fact
+ * that this hasn't led to huge hues and cries makes it seem likely
+ * that this just doesn't happen that often, at least not through
+ * ra_local.  And as far as memcached goes, it seems unlikely that
+ * somebody is going to go through the trouble of setting up and
+ * running memcached servers but then use ra_local access.  So we
+ * ignore errors here, so that memcached can use the FS warnings API
+ * without crashing ra_local.
+ */
+static void
+ignore_warnings(void *baton,
+                svn_error_t *err)
+{
+  return;
+}
+
 static svn_error_t *
 svn_ra_local__open(svn_ra_session_t *session,
                    const char *repos_URL,
@@ -438,6 +464,9 @@ svn_ra_local__open(svn_ra_session_t *session,
      convenience. */
   sess->fs = svn_repos_fs(sess->repos);
 
+  /* Ignore FS warnings. */
+  svn_fs_set_warning_func(sess->fs, ignore_warnings, NULL);
+
   /* Cache the repository UUID as well */
   SVN_ERR(svn_fs_get_uuid(sess->fs, &sess->uuid, session->pool));
 
@@ -459,7 +488,7 @@ svn_ra_local__reparent(svn_ra_session_t *session,
   /* If the new URL isn't the same as our repository root URL, then
      let's ensure that it's some child of it. */
   if (strcmp(url, sess->repos_url) != 0)
-    relpath = svn_path_is_child(sess->repos_url, url, pool);
+    relpath = svn_uri_is_child(sess->repos_url, url, pool);
   if (! relpath)
     return svn_error_createf
       (SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -480,9 +509,9 @@ svn_ra_local__get_session_url(svn_ra_session_t *session,
                               apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  *url = svn_path_join(sess->repos_url,
-                       svn_path_uri_encode(sess->fs_path->data + 1, pool),
-                       pool);
+  *url = svn_uri_join(sess->repos_url,
+                      svn_path_uri_encode(sess->fs_path->data + 1, pool),
+                      pool);
   return SVN_NO_ERROR;
 }
 
@@ -506,7 +535,7 @@ svn_ra_local__get_file_revs(svn_ra_session_t *session,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_path_join(sess->fs_path->data, path, pool);
+  const char *abs_path = svn_dirent_join(sess->fs_path->data, path, pool);
   return svn_repos_get_file_revs2(sess->repos, abs_path, start, end,
                                   include_merged_revisions, NULL, NULL,
                                   handler, handler_baton, pool);
@@ -532,10 +561,9 @@ svn_ra_local__change_rev_prop(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   SVN_ERR(get_username(session, pool));
-  SVN_ERR(svn_repos_fs_change_rev_prop3(sess->repos, rev, sess->username,
-                                        name, value, TRUE, TRUE, NULL, NULL,
-                                        pool));
-  return SVN_NO_ERROR;
+  return svn_repos_fs_change_rev_prop3(sess->repos, rev, sess->username,
+                                       name, value, TRUE, TRUE, NULL, NULL,
+                                       pool);
 }
 
 static svn_error_t *
@@ -623,11 +651,14 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                hi = apr_hash_next(hi))
             {
               void *val;
-              const char *token;
+              const char *path, *token;
+              const void *key;
 
-              apr_hash_this(hi, NULL, NULL, &val);
+              apr_hash_this(hi, &key, NULL, &val);
+              path = svn_dirent_join(sess->fs_path->data, (const char *)key,
+                                     pool);
               token = val;
-              SVN_ERR(svn_fs_access_add_lock_token(fs_access, token));
+              SVN_ERR(svn_fs_access_add_lock_token2(fs_access, path, token));
             }
         }
     }
@@ -638,63 +669,45 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                svn_string_create(sess->username, pool));
 
   /* Get the repos commit-editor */
-  SVN_ERR(svn_repos_get_commit_editor5
-          (editor, edit_baton, sess->repos, NULL, 
-           svn_path_uri_decode(sess->repos_url, pool), sess->fs_path->data, 
-           revprop_table, deltify_etc, db, NULL, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return svn_repos_get_commit_editor5
+         (editor, edit_baton, sess->repos, NULL,
+          svn_path_uri_decode(sess->repos_url, pool), sess->fs_path->data,
+          revprop_table, deltify_etc, db, NULL, NULL, pool);
 }
 
 
 static svn_error_t *
 svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
-                            apr_hash_t **mergeinfo,
+                            svn_mergeinfo_catalog_t *catalog,
                             const apr_array_header_t *paths,
                             svn_revnum_t revision,
                             svn_mergeinfo_inheritance_t inherit,
+                            svn_boolean_t include_descendants,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  apr_hash_t *tmp_mergeinfo;
+  svn_mergeinfo_catalog_t tmp_catalog;
   int i;
-  apr_array_header_t *abs_paths = 
+  apr_array_header_t *abs_paths =
     apr_array_make(pool, 0, sizeof(const char *));
 
   for (i = 0; i < paths->nelts; i++)
     {
       const char *relative_path = APR_ARRAY_IDX(paths, i, const char *);
-      APR_ARRAY_PUSH(abs_paths, const char *) = 
-        svn_path_join(sess->fs_path->data, relative_path, pool);
+      APR_ARRAY_PUSH(abs_paths, const char *) =
+        svn_dirent_join(sess->fs_path->data, relative_path, pool);
     }
 
-  SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_mergeinfo, sess->repos, abs_paths,
-                                     revision, inherit, NULL, NULL, pool));
-  *mergeinfo = NULL;
-  if (tmp_mergeinfo != NULL && apr_hash_count(tmp_mergeinfo) > 0)
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *value;
-      apr_hash_index_t *hi;
-
-      *mergeinfo = apr_hash_make(pool);
-
-      for (hi = apr_hash_first(pool, tmp_mergeinfo); hi;
-           hi = apr_hash_next(hi))
-        {
-          const char *path, *info;
-          apr_ssize_t path_len;
-          apr_hash_t *for_path;
-
-          apr_hash_this(hi, &key, &klen, &value);
-          path = (const char *)key + sess->fs_path->len;
-          path_len = klen - sess->fs_path->len;
-          info = value;
-          SVN_ERR(svn_mergeinfo_parse(&for_path, info, pool));
-          apr_hash_set(*mergeinfo, path, path_len, for_path);
-        }
-    }
+  SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_catalog, sess->repos, abs_paths,
+                                     revision, inherit, include_descendants,
+                                     NULL, NULL, pool));
+  if (apr_hash_count(tmp_catalog) > 0)
+    SVN_ERR(svn_mergeinfo__remove_prefix_from_catalog(catalog,
+                                                      tmp_catalog,
+                                                      sess->fs_path->data,
+                                                      pool));
+  else
+    *catalog = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -843,7 +856,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
                       svn_boolean_t discover_changed_paths,
                       svn_boolean_t strict_node_history,
                       svn_boolean_t include_merged_revisions,
-                      apr_array_header_t *revprops,
+                      const apr_array_header_t *revprops,
                       svn_log_entry_receiver_t receiver,
                       void *receiver_baton,
                       apr_pool_t *pool)
@@ -851,7 +864,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
   svn_ra_local__session_baton_t *sess = session->priv;
   int i;
   struct log_baton lb;
-  apr_array_header_t *abs_paths = 
+  apr_array_header_t *abs_paths =
     apr_array_make(pool, 0, sizeof(const char *));
 
   if (paths)
@@ -859,8 +872,8 @@ svn_ra_local__get_log(svn_ra_session_t *session,
       for (i = 0; i < paths->nelts; i++)
         {
           const char *relative_path = APR_ARRAY_IDX(paths, i, const char *);
-          APR_ARRAY_PUSH(abs_paths, const char *) = 
-            svn_path_join(sess->fs_path->data, relative_path, pool);
+          APR_ARRAY_PUSH(abs_paths, const char *) =
+            svn_dirent_join(sess->fs_path->data, relative_path, pool);
         }
     }
 
@@ -900,13 +913,12 @@ svn_ra_local__do_check_path(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   svn_fs_root_t *root;
-  const char *abs_path = svn_path_join(sess->fs_path->data, path, pool);
+  const char *abs_path = svn_uri_join(sess->fs_path->data, path, pool);
 
   if (! SVN_IS_VALID_REVNUM(revision))
     SVN_ERR(svn_fs_youngest_rev(&revision, sess->fs, pool));
   SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, pool));
-  SVN_ERR(svn_fs_check_path(kind, root, abs_path, pool));
-  return SVN_NO_ERROR;
+  return svn_fs_check_path(kind, root, abs_path, pool);
 }
 
 
@@ -919,15 +931,13 @@ svn_ra_local__stat(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   svn_fs_root_t *root;
-  const char *abs_path = svn_path_join(sess->fs_path->data, path, pool);
+  const char *abs_path = svn_dirent_join(sess->fs_path->data, path, pool);
 
   if (! SVN_IS_VALID_REVNUM(revision))
     SVN_ERR(svn_fs_youngest_rev(&revision, sess->fs, pool));
   SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, pool));
 
-  SVN_ERR(svn_repos_stat(dirent, root, abs_path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_repos_stat(dirent, root, abs_path, pool);
 }
 
 
@@ -989,7 +999,7 @@ svn_ra_local__get_file(svn_ra_session_t *session,
   svn_stream_t *contents;
   svn_revnum_t youngest_rev;
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_path_join(sess->fs_path->data, path, pool);
+  const char *abs_path = svn_dirent_join(sess->fs_path->data, path, pool);
 
   /* Open the revision's root. */
   if (! SVN_IS_VALID_REVNUM(revision))
@@ -1014,10 +1024,14 @@ svn_ra_local__get_file(svn_ra_session_t *session,
          svn_fs_file_contents() directly, which already checks the
          stored checksum, and all we're doing here is writing bytes in
          a loop.  Truly, Nothing Can Go Wrong :-).  But RA layers that
-         go over a network should confirm the checksum. */
-      SVN_ERR(svn_stream_copy2(contents, stream,
+         go over a network should confirm the checksum.
+
+         Note: we are not supposed to close the passed-in stream, so
+         disown the thing.
+      */
+      SVN_ERR(svn_stream_copy3(contents, svn_stream_disown(stream, pool),
                                sess->callbacks
-                               ? sess->callbacks->cancel_func : NULL,
+                                 ? sess->callbacks->cancel_func : NULL,
                                sess->callback_baton,
                                pool));
     }
@@ -1048,7 +1062,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
   apr_hash_index_t *hi;
   svn_ra_local__session_baton_t *sess = session->priv;
   apr_pool_t *subpool;
-  const char *abs_path = svn_path_join(sess->fs_path->data, path, pool);
+  const char *abs_path = svn_dirent_join(sess->fs_path->data, path, pool);
 
   /* Open the revision's root. */
   if (! SVN_IS_VALID_REVNUM(revision))
@@ -1085,7 +1099,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
           entryname = (const char *) key;
           fs_entry = (svn_fs_dirent_t *) val;
 
-          fullpath = svn_path_join(abs_path, entryname, subpool);
+          fullpath = svn_dirent_join(abs_path, entryname, subpool);
 
           if (dirent_fields & SVN_DIRENT_KIND)
             {
@@ -1108,7 +1122,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
               /* has_props? */
               SVN_ERR(svn_fs_node_proplist(&prophash, root, fullpath,
                                            subpool));
-              entry->has_props = (apr_hash_count(prophash)) ? TRUE : FALSE;
+              entry->has_props = (apr_hash_count(prophash) != 0);
             }
 
           if ((dirent_fields & SVN_DIRENT_TIME)
@@ -1150,7 +1164,7 @@ svn_ra_local__get_locations(svn_ra_session_t *session,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_path_join(sess->fs_path->data, path, pool);
+  const char *abs_path = svn_dirent_join(sess->fs_path->data, path, pool);
   return svn_repos_trace_node_locations(sess->fs, locations, abs_path,
                                         peg_revision, location_revisions,
                                         NULL, NULL, pool);
@@ -1168,7 +1182,7 @@ svn_ra_local__get_location_segments(svn_ra_session_t *session,
                                     apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_path_join(sess->fs_path->data, path, pool);
+  const char *abs_path = svn_dirent_join(sess->fs_path->data, path, pool);
   return svn_repos_node_location_segments(sess->repos, abs_path,
                                           peg_revision, start_rev, end_rev,
                                           receiver, receiver_baton,
@@ -1207,7 +1221,7 @@ svn_ra_local__lock(svn_ra_session_t *session,
       path = key;
       revnum = val;
 
-      abs_path = svn_path_join(sess->fs_path->data, path, iterpool);
+      abs_path = svn_dirent_join(sess->fs_path->data, path, iterpool);
 
       /* This wrapper will call pre- and post-lock hooks. */
       err = svn_repos_fs_lock(&lock, sess->repos, abs_path, NULL, comment,
@@ -1267,7 +1281,7 @@ svn_ra_local__unlock(svn_ra_session_t *session,
       else
         token = NULL;
 
-      abs_path = svn_path_join(sess->fs_path->data, path, iterpool);
+      abs_path = svn_dirent_join(sess->fs_path->data, path, iterpool);
 
       /* This wrapper will call pre- and post-unlock hooks. */
       err = svn_repos_fs_unlock(sess->repos, abs_path, token, force,
@@ -1299,7 +1313,7 @@ svn_ra_local__get_lock(svn_ra_session_t *session,
                        apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_path_join(sess->fs_path->data, path, pool);
+  const char *abs_path = svn_dirent_join(sess->fs_path->data, path, pool);
   return svn_fs_get_lock(lock, sess->fs, abs_path, pool);
 }
 
@@ -1312,7 +1326,7 @@ svn_ra_local__get_locks(svn_ra_session_t *session,
                         apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path = svn_path_join(sess->fs_path->data, path, pool);
+  const char *abs_path = svn_dirent_join(sess->fs_path->data, path, pool);
 
   /* Kinda silly to call the repos wrapper, since we have no authz
      func to give it.  But heck, why not. */
@@ -1335,11 +1349,9 @@ svn_ra_local__replay(svn_ra_session_t *session,
 
   SVN_ERR(svn_fs_revision_root(&root, svn_repos_fs(sess->repos),
                                revision, pool));
-  SVN_ERR(svn_repos_replay2(root, sess->fs_path->data, low_water_mark,
-                            send_deltas, editor, edit_baton, NULL, NULL,
-                            pool));
-
-  return SVN_NO_ERROR;
+  return svn_repos_replay2(root, sess->fs_path->data, low_water_mark,
+                           send_deltas, editor, edit_baton, NULL, NULL,
+                           pool);
 }
 
 
@@ -1364,19 +1376,66 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
                              const char *capability,
                              apr_pool_t *pool)
 {
+  svn_ra_local__session_baton_t *sess = session->priv;
+
   if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0)
+      || strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0)
     {
       *has = TRUE;
+    }
+  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+    {
+      /* With mergeinfo, the code's capabilities may not reflect the
+         repository's, so inquire further. */
+      SVN_ERR(svn_repos_has_capability(sess->repos, has,
+                                       SVN_REPOS_CAPABILITY_MERGEINFO,
+                                       pool));
     }
   else  /* Don't know any other capabilities, so error. */
     {
       return svn_error_createf
-        (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
+        (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
          _("Don't know anything about capability '%s'"), capability);
     }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svn_ra_local__get_deleted_rev(svn_ra_session_t *session,
+                              const char *path,
+                              svn_revnum_t peg_revision,
+                              svn_revnum_t end_revision,
+                              svn_revnum_t *revision_deleted,
+                              apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+  const char *abs_path = svn_dirent_join(sess->fs_path->data, path, pool);
+
+  SVN_ERR(svn_repos_deleted_rev(sess->fs,
+                                abs_path,
+                                peg_revision,
+                                end_revision,
+                                revision_deleted,
+                                pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svn_ra_local__obliterate_path_rev(svn_ra_session_t *session,
+                                  svn_revnum_t revision,
+                                  const char *path,
+                                  apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+
+  SVN_ERR(svn_repos__obliterate_path_rev(sess->repos,
+                                         revision,
+                                         path,
+                                         pool));
 
   return SVN_NO_ERROR;
 }
@@ -1426,7 +1485,9 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_locks,
   svn_ra_local__replay,
   svn_ra_local__has_capability,
-  svn_ra_local__replay_range
+  svn_ra_local__replay_range,
+  svn_ra_local__get_deleted_rev,
+  svn_ra_local__obliterate_path_rev
 };
 
 

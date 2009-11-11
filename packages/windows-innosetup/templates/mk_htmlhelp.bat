@@ -3,17 +3,22 @@ REM #######################################################################
 REM FILE       mk_htmlhelp.bat
 REM PURPOSE    Making MS HTML help file out of the svn-book sources
 REM ====================================================================
-REM Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+REM   Licensed to the Subversion Corporation (SVN Corp.) under one
+REM   or more contributor license agreements.  See the NOTICE file
+REM   distributed with this work for additional information
+REM   regarding copyright ownership.  The SVN Corp. licenses this file
+REM   to you under the Apache License, Version 2.0 (the
+REM   "License"); you may not use this file except in compliance
+REM   with the License.  You may obtain a copy of the License at
 REM
-REM This software is licensed as described in the file COPYING, which
-REM you should have received as part of this distribution.  The terms
-REM are also available at http://subversion.tigris.org/license-1.html.
-REM If newer versions of this license are posted there, you may use a
-REM newer version instead, at your option.
+REM     http://www.apache.org/licenses/LICENSE-2.0
 REM
-REM This software consists of voluntary contributions made by many
-REM individuals.  For exact contribution history, see the revision
-REM history and logs, available at http://subversion.tigris.org/.
+REM   Unless required by applicable law or agreed to in writing,
+REM   software distributed under the License is distributed on an
+REM   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+REM   KIND, either express or implied.  See the License for the
+REM   specific language governing permissions and limitations
+REM   under the License.
 REM ====================================================================
 
 SET BOOKNAME=svn-book

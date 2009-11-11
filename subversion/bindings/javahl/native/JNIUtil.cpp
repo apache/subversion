@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -29,6 +34,7 @@
 
 #include "svn_pools.h"
 #include "svn_wc.h"
+#include "svn_dso.h"
 #include "svn_path.h"
 #include <apr_file_info.h>
 #include "svn_private_config.h"
@@ -71,7 +77,7 @@ bool JNIUtil::JNIInit(JNIEnv *env)
   // Clear all standing exceptions.
   env->ExceptionClear();
 
-  // Remember the env paramater for the remainder of the request.
+  // Remember the env parameter for the remainder of the request.
   setEnv(env);
 
   // Lock the list of finalized objects.
@@ -99,6 +105,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 {
   // This method has to be run only once during the run a program.
   static bool run = false;
+  svn_error_t *err;
   if (run) // already run
     return true;
 
@@ -166,6 +173,16 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
       return FALSE;
     }
 
+  /* This has to happen before any pools are created. */
+  if ((err = svn_dso_initialize2()))
+    {
+      if (stderr && err->message)
+        fprintf(stderr, "%s", err->message);
+
+      svn_error_clear(err);
+      return FALSE;
+    }
+
   if (0 > atexit(apr_terminate))
     {
       if (stderr)
@@ -183,7 +200,8 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     const char *internal_path;
     apr_pool_t *pool;
     apr_status_t apr_err;
-    unsigned int inwords, outbytes, outlength;
+    apr_size_t inwords, outbytes;
+    unsigned int outlength;
 
     apr_pool_create(&pool, 0);
     /* get dll name - our locale info will be in '../share/locale' */
@@ -215,7 +233,6 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 #else
   bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
 #endif
-  textdomain(PACKAGE_NAME);
 #endif
 
   /* Create our top-level pool. */
@@ -227,7 +244,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
      ### the libsvn_wc library, which basically means SVNClient. */
   if (getenv ("SVN_ASP_DOT_NET_HACK"))
     {
-      svn_error_t *err = svn_wc_set_adm_dir("_svn", g_pool);
+      err = svn_wc_set_adm_dir("_svn", g_pool);
       if (err)
         {
           if (stderr)
@@ -639,7 +656,7 @@ jobject JNIUtil::createDate(apr_time_t time)
  * request (call).
  * @return the pool to be used for this request
  */
-Pool *JNIUtil::getRequestPool()
+SVN::Pool *JNIUtil::getRequestPool()
 {
   return JNIThreadData::getThreadData()->m_requestPool;
 }
@@ -648,7 +665,7 @@ Pool *JNIUtil::getRequestPool()
  * Set the request pool in thread local storage.
  * @param pool  the request pool
  */
-void JNIUtil::setRequestPool(Pool *pool)
+void JNIUtil::setRequestPool(SVN::Pool *pool)
 {
   JNIThreadData::getThreadData()->m_requestPool = pool;
 }
@@ -660,16 +677,18 @@ void JNIUtil::setRequestPool(Pool *pool)
  */
 jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
 {
-  if (data == NULL || length == 0)
-    // a NULL or empty will create no Java array
-    return NULL;
+  if (data == NULL)
+    {
+      // a NULL will create no Java array
+      return NULL;
+    }
 
   JNIEnv *env = getEnv();
 
   // Allocate the Java array.
   jbyteArray ret = env->NewByteArray(length);
-  if (isJavaExceptionThrown())
-    return NULL;
+  if (isJavaExceptionThrown() || ret == NULL)
+      return NULL;
 
   // Access the bytes.
   jbyte *retdata = env->GetByteArrayElements(ret, NULL);
@@ -773,38 +792,31 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
         return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                                  _("URL '%s' contains a '..' element"),
                                  path);
-
-      /* strip any trailing '/' */
-      path = svn_path_canonicalize(path, pool);
     }
   else  /* not a url, so treat as a path */
     {
-      const char *apr_target;
-      char *truenamed_target; /* APR-encoded */
-      apr_status_t apr_err;
+      /* Normalize path to subversion internal style */
 
-      /* canonicalize case, and change all separators to '/'. */
-      SVN_ERR(svn_path_cstring_from_utf8(&apr_target, path, pool));
-      apr_err = apr_filepath_merge(&truenamed_target, "", apr_target,
-                                   APR_FILEPATH_TRUENAME, pool);
+      /* ### In Subversion < 1.6 this method on Windows actually tried
+         to lookup the path on disk to fix possible invalid casings in
+         the passed path. (An extremely expensive operation; especially
+         on network drives).
 
-      if (!apr_err)
-        /* We have a canonicalized APR-encoded target now. */
-        apr_target = truenamed_target;
-      else if (APR_STATUS_IS_ENOENT(apr_err))
-        /* It's okay for the file to not exist, that just means we
-           have to accept the case given to the client. We'll use
-           the original APR-encoded target. */
-        ;
-      else
-        return svn_error_createf(apr_err, NULL,
-                                 _("Error resolving case of '%s'"),
-                                 svn_path_local_style(path, pool));
+         This 'feature'is now removed as it penalizes every correct
+         path passed, and also breaks behavior of e.g.
+           'svn status .' returns '!' file, because there is only a "File"
+             on disk.
+            But when you then call 'svn status file', you get '? File'.
 
-      /* convert back to UTF-8. */
-      SVN_ERR(svn_path_cstring_to_utf8(&path, apr_target, pool));
-      path = svn_path_canonicalize(path, pool);
+         As JavaHL is designed to be platform independent I assume users
+         don't want this broken behavior on non round-trippable paths, nor
+         the performance penalty.
+       */
 
+      path = svn_path_internal_style(path, pool);
     }
+    /* strip any trailing '/' */
+    path = svn_path_canonicalize(path, pool);
+
   return NULL;
 }

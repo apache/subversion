@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004,2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  */
@@ -27,7 +32,7 @@ public class ChangePath implements java.io.Serializable
     // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
     // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
     // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     /**
      * Constructor to be called from the native code
@@ -35,14 +40,16 @@ public class ChangePath implements java.io.Serializable
      * @param copySrcRevision   copy source revision (if any)
      * @param copySrcPath       copy source path (if any)
      * @param action            action performed
+     * @param nodeKind          the kind of the changed path
      */
     ChangePath(String path, long copySrcRevision, String copySrcPath,
-               char action)
+               char action, int nodeKind)
     {
         this.path = path;
         this.copySrcRevision = copySrcRevision;
         this.copySrcPath = copySrcPath;
         this.action = action;
+        this.nodeKind = nodeKind;
     }
 
     /** Path of commited item */
@@ -56,6 +63,9 @@ public class ChangePath implements java.io.Serializable
 
     /** 'A'dd, 'D'elete, 'R'eplace, 'M'odify */
     private char action;
+
+    /** The kind of the changed path. */
+    private int nodeKind;
 
     /**
      * Retrieve the path to the commited item
@@ -91,5 +101,14 @@ public class ChangePath implements java.io.Serializable
     public char getAction()
     {
         return action;
+    }
+
+    /**
+     * Retrieve the node kind
+     * @return  the node kind
+     */
+    public int getNodeKind()
+    {
+        return nodeKind;
     }
 }

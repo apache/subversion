@@ -2,17 +2,22 @@
  * cyrus_auth.c :  functions for Cyrus SASL-based authentication
  *
  * ====================================================================
- * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -270,7 +275,7 @@ get_credentials(cred_baton_t *baton)
 
 /* The username callback. Implements the sasl_getsimple_t interface. */
 static int
-get_username_cb(void *b, int id, const char **username, unsigned *len)
+get_username_cb(void *b, int id, const char **username, size_t *len)
 {
   cred_baton_t *baton = b;
 
@@ -296,7 +301,7 @@ get_password_cb(sasl_conn_t *conn, void *b, int id, sasl_secret_t **psecret)
   if (baton->password || get_credentials(baton))
     {
       sasl_secret_t *secret;
-      int len = strlen(baton->password);
+      size_t len = strlen(baton->password);
 
       /* sasl_secret_t is a struct with a variable-sized array as a final
          member, which means we need to allocate len-1 supplementary bytes
@@ -326,7 +331,8 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
   sasl_security_properties_t secprops;
   int result;
 
-  result = sasl_client_new("svn", hostname, local_addrport, remote_addrport,
+  result = sasl_client_new(SVN_RA_SVN_SASL_NAME,
+                           hostname, local_addrport, remote_addrport,
                            callbacks, SASL_SUCCESS_DATA,
                            sasl_ctx);
   if (result != SASL_OK)
@@ -340,7 +346,7 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
   if (is_tunneled)
     {
       /* We need to tell SASL that this connection is tunneled,
-         otherwise it will ignore EXTERNAL. The third paramater
+         otherwise it will ignore EXTERNAL. The third parameter
          should be the username, but since SASL doesn't seem
          to use it on the client side, any non-empty string will do. */
       result = sasl_setprop(*sasl_ctx,
@@ -350,10 +356,8 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
                                 sasl_errdetail(*sasl_ctx));
     }
 
-  /* Set security properties. Don't allow PLAIN or LOGIN, since we
-     don't support TLS yet. */
+  /* Set security properties. */
   svn_ra_svn__default_secprops(&secprops);
-  secprops.security_flags = SASL_SEC_NOPLAINTEXT;
   sasl_setprop(*sasl_ctx, SASL_SEC_PROPS, &secprops);
 
   return SVN_NO_ERROR;
@@ -400,10 +404,12 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
             /* For anything else, delete the mech from the list
                and try again. */
             {
-              char *dst = strstr(mechstring, mech);
-              char *src = dst + strlen(mech);
-              while ((*dst++ = *src++) != '\0')
-                ;
+              const char *pmech = strstr(mechstring, mech);
+              const char *head = apr_pstrndup(pool, mechstring,
+                                              pmech - mechstring);
+              const char *tail = pmech + strlen(mech);
+
+              mechstring = apr_pstrcat(pool, head, tail, NULL);
               again = TRUE;
             }
         }
@@ -412,8 +418,8 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
 
   /* Prepare the initial authentication token. */
   if (outlen > 0 || strcmp(mech, "EXTERNAL") == 0)
-    arg = svn_base64_encode_string(svn_string_ncreate(out, outlen, pool),
-                                   pool);
+    arg = svn_base64_encode_string2(svn_string_ncreate(out, outlen, pool),
+                                    TRUE, pool);
 
   /* Send the initial client response */
   SVN_ERR(svn_ra_svn__auth_response(sess->conn, pool, mech,
@@ -456,14 +462,22 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                 sasl_errdetail(sasl_ctx));
 
+      /* If the server thinks we're done, then don't send any response. */
+      if (strcmp(status, "success") == 0)
+        break;
+
       if (outlen > 0)
         {
           arg = svn_string_ncreate(out, outlen, pool);
           /* Write our response. */
           /* For CRAM-MD5, we don't use base64-encoding. */
           if (strcmp(mech, "CRAM-MD5") != 0)
-            arg = svn_base64_encode_string(arg, pool);
+            arg = svn_base64_encode_string2(arg, TRUE, pool);
           SVN_ERR(svn_ra_svn_write_cstring(sess->conn, pool, arg->data));
+        }
+      else
+        {
+          SVN_ERR(svn_ra_svn_write_cstring(sess->conn, pool, ""));
         }
     }
 
@@ -587,7 +601,7 @@ sasl_write_cb(void *baton, const char *buffer, apr_size_t *len)
         *len = 0;
         return SVN_NO_ERROR;
       }
-      sasl_baton->write_len -= tmplen;
+      sasl_baton->write_len -= (unsigned int) tmplen;
       sasl_baton->write_buf += tmplen;
     }
   while (sasl_baton->write_len > 0);
@@ -616,10 +630,8 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
                                                 sasl_conn_t *sasl_ctx,
                                                 apr_pool_t *pool)
 {
-  sasl_baton_t *sasl_baton;
   const sasl_ssf_t *ssfp;
   int result;
-  const void *maxsize;
 
   if (! conn->encrypted)
     {
@@ -631,6 +643,9 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
 
       if (*ssfp > 0)
         {
+          sasl_baton_t *sasl_baton;
+          const void *maxsize;
+
           /* Flush the connection, as we're about to replace its stream. */
           SVN_ERR(svn_ra_svn_flush(conn, pool));
 
@@ -643,7 +658,7 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
           if (result != SASL_OK)
             return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                     sasl_errdetail(sasl_ctx));
-          sasl_baton->maxsize = *((unsigned int *) maxsize);
+          sasl_baton->maxsize = *((const unsigned int *) maxsize);
 
           /* If there is any data left in the read buffer at this point,
              we need to decrypt it. */
@@ -731,22 +746,22 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
                                         sess->conn, pool));
     }
 
-  /* Create a string containing the list of mechanisms, separated by spaces. */
-  for (i = 0; i < mechlist->nelts; i++)
+  /* Prefer EXTERNAL, then ANONYMOUS, then let SASL decide. */
+  if (svn_ra_svn__find_mech(mechlist, "EXTERNAL"))
+    mechstring = "EXTERNAL";
+  else if (svn_ra_svn__find_mech(mechlist, "ANONYMOUS"))
+    mechstring = "ANONYMOUS";
+  else
     {
-      svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(mechlist, i, svn_ra_svn_item_t);
-
-      /* Force the client to use ANONYMOUS or EXTERNAL if they are available.*/
-      if (strcmp(elt->u.word, "ANONYMOUS") == 0
-          || strcmp(elt->u.word, "EXTERNAL") == 0)
+      /* Create a string containing the list of mechanisms, separated by spaces. */
+      for (i = 0; i < mechlist->nelts; i++)
         {
-          mechstring = elt->u.word;
-          break;
+          svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(mechlist, i, svn_ra_svn_item_t);
+          mechstring = apr_pstrcat(pool,
+                                   mechstring,
+                                   i == 0 ? "" : " ",
+                                   elt->u.word, NULL);
         }
-      mechstring = apr_pstrcat(pool,
-                               mechstring,
-                               i == 0 ? "" : " ",
-                               elt->u.word, NULL);
     }
 
   realmstring = apr_psprintf(pool, "%s %s", sess->realm_prefix, realm);

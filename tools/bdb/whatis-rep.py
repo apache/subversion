@@ -18,14 +18,16 @@ def main():
     if not os.path.exists(dbhome):
       sys.stderr.write("%s: '%s' is not a valid svn repository\n" %
           (sys.argv[0], dbhome))
+      sys.stderr.flush()
       sys.exit(1)
     rep_ids = sys.argv[2:]
   else:
-    print >> sys.stderr, "Usage: %s <svn-repository> <rep-id>..." % progname
+    sys.stderr.write("Usage: %s <svn-repository> <rep-id>...\n" % progname)
+    sys.stderr.flush()
     sys.exit(1)
 
-  print "%s running on repository '%s'" % (progname, dbhome)
-  print
+  print("%s running on repository '%s'" % (progname, dbhome))
+  print("")
   rep_ids = dict.fromkeys(rep_ids)
   ctx = svnfs.Ctx(dbhome)
   try:
@@ -38,12 +40,12 @@ def main():
           nd = skel.Node(rec[1])
           if nd.datarep in rep_ids:
             rev = skel.Txn(ctx.txns_db[tid]).rev
-            print "%s: data of '%s%s' in r%s" % (nd.datarep,
-                nd.createpath, {"dir":'/', "file":''}[nd.kind], rev)
+            print("%s: data of '%s%s' in r%s" % (nd.datarep,
+                nd.createpath, {"dir":'/', "file":''}[nd.kind], rev))
           if nd.proprep in rep_ids:
             rev = skel.Txn(ctx.txns_db[tid]).rev
-            print "%s: properties of '%s%s' in r%s" % (nd.datarep,
-                nd.createpath, {"dir":'/', "file":''}[nd.kind], rev)
+            print("%s: properties of '%s%s' in r%s" % (nd.datarep,
+                nd.createpath, {"dir":'/', "file":''}[nd.kind], rev))
         rec = cur.next()
     finally:
       cur.close()

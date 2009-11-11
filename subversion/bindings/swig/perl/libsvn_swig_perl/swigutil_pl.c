@@ -2,19 +2,28 @@
  * swigutil_pl.c: utility functions for the SWIG Perl bindings
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
+
+#include <apr.h>
+#include <apr_general.h>
+#include <apr_portable.h>
 
 #include <EXTERN.h>
 #include <perl.h>
@@ -24,10 +33,6 @@
 #ifdef WIN32
 #include <io.h>
 #endif
-
-#include <apr.h>
-#include <apr_general.h>
-#include <apr_portable.h>
 
 #include "svn_pools.h"
 #include "svn_opt.h"
@@ -84,6 +89,13 @@ static void *convert_pl_obj(SV *value, swig_type_info *tinfo,
     return *result;
 }
 
+static void *convert_pl_revnum_t(SV *value, void *dummy, apr_pool_t *pool)
+{
+  svn_revnum_t *result = apr_palloc(pool, sizeof(svn_revnum_t));
+  *result = SvIV(value);
+  return (void *)result;
+}
+
 /* perl -> c hash convertors */
 static apr_hash_t *svn_swig_pl_to_hash(SV *source,
                                        pl_element_converter_t cv,
@@ -131,6 +143,15 @@ apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
 {
     swig_type_info *tinfo = _SWIG_TYPE(typename);
     return svn_swig_pl_objs_to_hash(source, tinfo, pool);
+}
+
+apr_hash_t *svn_swig_pl_objs_to_hash_of_revnum_t(SV *source,
+                                                 apr_pool_t *pool)
+{
+
+  return svn_swig_pl_to_hash(source,
+                             (pl_element_converter_t)convert_pl_revnum_t,
+                             NULL, pool);
 }
 
 /* perl -> c array convertors */
@@ -814,6 +835,25 @@ svn_error_t *svn_swig_pl_thunk_log_receiver(void *baton,
     return SVN_NO_ERROR;
 }
 
+svn_error_t * svn_swig_pl_thunk_client_diff_summarize_func(
+                     const svn_client_diff_summarize_t *diff,
+                     void *baton,
+                     apr_pool_t *pool)
+{
+    SV *func = baton;
+
+    if(!SvOK(func))
+    return SVN_NO_ERROR;
+
+    svn_swig_pl_callback_thunk(CALL_SV,
+                               func, NULL,
+                               "SS", diff,
+                               _SWIG_TYPE("svn_client_diff_summarize_t *"),
+                               pool, POOLINFO);
+
+    return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_swig_pl_thunk_history_func(void *baton,
                                             const char *path,
                                             svn_revnum_t revision,
@@ -1155,7 +1195,7 @@ svn_error_t *svn_swig_pl_info_receiver(void *baton,
     swig_type_info *infoinfo = _SWIG_TYPE("svn_info_t *");
 
     if (!SvOK((SV *)baton))
-        return;
+        return SVN_NO_ERROR;
 
     svn_swig_pl_callback_thunk(CALL_SV, baton, &result, "sSS", path, info,
                                infoinfo, pool, POOLINFO);
@@ -1416,6 +1456,25 @@ svn_error_t *svn_swig_pl_make_stream(svn_stream_t **stream, SV *obj)
       croak("unknown type for svn_stream_t");
 
     return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_swig_pl_ra_lock_callback(
+                    void *baton,
+                    const char *path,
+                    svn_boolean_t do_lock,
+                    const svn_lock_t *lock,
+                    svn_error_t *ra_err,
+                    apr_pool_t *pool)
+{
+  if (!SvOK((SV *)baton))
+      return SVN_NO_ERROR;
+
+  SVN_ERR(svn_swig_pl_callback_thunk(CALL_SV, baton, NULL, "sbSSS",
+                                     path, do_lock,
+                                     lock, _SWIG_TYPE("svn_lock_t *"),
+                                     ra_err, _SWIG_TYPE("svn_error_t *"),
+                                     pool, POOLINFO));
+  return SVN_NO_ERROR;
 }
 
 SV *svn_swig_pl_from_stream(svn_stream_t *stream)

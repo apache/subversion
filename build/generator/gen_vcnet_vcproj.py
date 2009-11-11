@@ -3,8 +3,12 @@
 #
 
 import os
-import md5
-import string
+try:
+  # Python >=2.5
+  from hashlib import md5 as hashlib_md5
+except ImportError:
+  # Python <2.5
+  from md5 import md5 as hashlib_md5
 
 import gen_base
 import gen_win
@@ -36,18 +40,18 @@ class Generator(gen_win.WinGeneratorBase):
   def write_project(self, target, fname):
     "Write a Project (.vcproj)"
 
-    if isinstance(target, gen_base.TargetExe):
+    if isinstance(target, gen_base.TargetProject):
+      config_type=10
+    elif isinstance(target, gen_base.TargetExe):
       #EXE
       config_type=1
     elif isinstance(target, gen_base.TargetJava):
-      config_type=1
+      config_type=10
     elif isinstance(target, gen_base.TargetLib):
       if target.msvc_static:
         config_type=4
       else:
         config_type=2
-    elif isinstance(target, gen_base.TargetProject):
-      config_type=1
     elif isinstance(target, gen_base.TargetI18N):
       config_type=4
     else:
@@ -94,16 +98,11 @@ class Generator(gen_win.WinGeneratorBase):
     ### implement this from scratch using the algorithms described in
     ### http://www.webdav.org/specs/draft-leach-uuids-guids-01.txt
 
-    hash = md5.md5(data)
-    try:
-      myhash = hash.hexdigest()
-    except AttributeError:
-      # Python 1.5.2
-      myhash = string.join(map(lambda x: '%02x' % ord(x), hash.digest()), '')
+    myhash = hashlib_md5(data).hexdigest()
 
-    guid = string.upper("{%s-%s-%s-%s-%s}" % (myhash[0:8], myhash[8:12],
-                                              myhash[12:16], myhash[16:20],
-                                              myhash[20:32]))
+    guid = ("{%s-%s-%s-%s-%s}" % (myhash[0:8], myhash[8:12],
+                                  myhash[12:16], myhash[16:20],
+                                  myhash[20:32])).upper()
     return guid
 
   def getguid(self, path):
@@ -112,8 +111,8 @@ class Generator(gen_win.WinGeneratorBase):
       proj = open(path)
       line = proj.readline()
       while len(line) > 0:
-        l = string.lower(line)
-        pos = string.find(l, 'projectguid="{')
+        l = line.lower()
+        pos = l.find('projectguid="{')
         if pos >= 0:
           guid = line[pos+13:pos+13+38]
           return guid
@@ -125,9 +124,26 @@ class Generator(gen_win.WinGeneratorBase):
   def write(self):
     "Write a Solution (.sln)"
 
+    # Gather sql targets for inclusion in svn_config project.
+    class _eztdata(object):
+      def __init__(self, **kw):
+        vars(self).update(kw)
+
+    import sys
+    sql=[]
+    for hdrfile, sqlfile in sorted(self.graph.get_deps(gen_base.DT_SQLHDR),
+                                   key=lambda t: t[0]):
+      sql.append(_eztdata(header=hdrfile.replace('/', '\\'),
+                          source=sqlfile[0].replace('/', '\\'),
+                          svn_python=sys.executable))
+
     # apr doesn't supply vcproj files, the user must convert them
     # manually before loading the generated solution
-    self.move_proj_file(os.path.join('build', 'win32'), 'svn_config.vcproj')
+    self.move_proj_file(os.path.join('build', 'win32'), 'svn_config.vcproj',
+                          (
+                            ('sql', sql),
+                          )
+                        )
     self.move_proj_file(os.path.join('build', 'win32'), 'svn_locale.vcproj')
     self.write_zlib_project_file('zlib.vcproj')
     self.write_neon_project_file('neon.vcproj')
@@ -184,20 +200,50 @@ class Generator(gen_win.WinGeneratorBase):
         deplist.append(gen_win.ProjectItem(guid=guids[depends[i].name],
                                            index=i,
                                            ))
+
+      groupname = ''
+
+      if target.name.startswith('__'):
+        groupname = 'root'
+      elif isinstance(target, gen_base.TargetLib):
+        if isinstance(target, gen_base.TargetSWIGLib) \
+           or isinstance(target, gen_base.TargetSWIG):
+          groupname = 'swiglib'
+        elif target.msvc_fake:
+          groupname = 'fake'
+        elif target.msvc_export and not self.disable_shared:
+          groupname = 'dll'
+        else:
+          groupname = 'lib'
+      elif isinstance(target, gen_base.TargetSWIGProject):
+        groupname = 'swiglib'
+      elif isinstance(target, gen_base.TargetJava):
+        # Keep the buildbot happy
+        groupname = 'root'
+        # groupname = 'java'
+      elif isinstance(target, gen_base.TargetExe):
+        if target.name.endswith('-test') \
+           or target.name.endswith('-tests') \
+           or target.name.startswith('diff'):
+          groupname = 'test'
+        else:
+          groupname = 'exe'
+
       targets.append(
         gen_win.ProjectItem(name=target.name,
-                            path=string.replace(fname, os.sep, '\\'),
+                            path=fname.replace(os.sep, '\\'),
                             guid=guids[target.name],
                             depends=deplist,
+                            group=groupname,
                             ))
 
     # the path name in the .sln template is already enclosed with ""
     # therefore, remove them from the path itself
     for target in targets:
-      target.path = string.rstrip(target.path, '"')
-      target.path = string.lstrip(target.path, '"')
+      target.path = target.path.rstrip('"')
+      target.path = target.path.lstrip('"')
 
-    targets.sort(lambda x, y: cmp(x.name, y.name))
+    targets.sort(key = lambda x: x.name)
 
     configs = [ ]
     for i in range(len(self.configs)):
@@ -205,8 +251,7 @@ class Generator(gen_win.WinGeneratorBase):
       configs.append(gen_win.ProjectItem(name=self.configs[i], index=i))
 
     # sort the values for output stability.
-    guidvals = guids.values()
-    guidvals.sort()
+    guidvals = sorted(guids.values())
 
     data = {
       'version': self.vsnet_version,
@@ -220,11 +265,3 @@ class Generator(gen_win.WinGeneratorBase):
       self.write_with_template('subversion_vcnet.sln', 'vc2005_sln.ezt', data)
     else:
       self.write_with_template('subversion_vcnet.sln', 'vcnet_sln.ezt', data)
-
-
-# compatibility with older Pythons:
-try:
-  True
-except NameError:
-  True = 1
-  False = 0

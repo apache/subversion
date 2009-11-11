@@ -53,7 +53,7 @@ AC_DEFUN(SVN_FIND_SWIG,
   if test "$SWIG" != "none"; then
     AC_MSG_CHECKING([swig version])
     SWIG_VERSION_RAW="`$SWIG -version 2>&1 | \
-                       sed -ne 's/^.*Version \(.*\)$/\1/p'`"
+                       $SED -ne 's/^.*Version \(.*\)$/\1/p'`"
     # We want the version as an integer so we can test against
     # which version we're using.  SWIG doesn't provide this
     # to us so we have to come up with it on our own. 
@@ -62,7 +62,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     # and the patch level is zero padded to three places.
     # e.g. 1.3.24 becomes 103024
     SWIG_VERSION="`echo \"$SWIG_VERSION_RAW\" | \
-                  sed -e 's/[[^0-9\.]].*$//' \
+                  $SED -e 's/[[^0-9\.]].*$//' \
                       -e 's/\.\([[0-9]]\)$/.0\1/' \
                       -e 's/\.\([[0-9]][[0-9]]\)$/.0\1/' \
                       -e 's/\.\([[0-9]]\)\./0\1/; s/\.//g;'`"
@@ -75,13 +75,13 @@ AC_DEFUN(SVN_FIND_SWIG,
     #   packages/rpm/rhel-4/subversion.spec
     if test -n "$SWIG_VERSION" &&
        test "$SWIG_VERSION" -ge "103024" &&
-       test "$SWIG_VERSION" -le "103031"; then
+       test "$SWIG_VERSION" -le "103039"; then
       SWIG_SUITABLE=yes
     else
       SWIG_SUITABLE=no
       AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
       AC_MSG_WARN([Subversion requires 1.3.24 or later, and is known to work])
-      AC_MSG_WARN([with versions up to 1.3.31])
+      AC_MSG_WARN([with versions up to 1.3.39])
     fi
   fi
  
@@ -102,7 +102,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_CACHE_CHECK([for compiling Python extensions], [ac_cv_python_compile],[
       ac_cv_python_compile="`$PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
     ])
-    SWIG_PY_COMPILE="$ac_cv_python_compile"
+    SWIG_PY_COMPILE="$ac_cv_python_compile $CFLAGS"
 
     AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
       ac_cv_python_link="`$PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
@@ -112,7 +112,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_CACHE_CHECK([for linking Python libraries], [ac_cv_python_libs],[
       ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
     ])
-    SWIG_PY_LIBS="$ac_cv_python_libs"
+    SWIG_PY_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_python_libs)`"
 
     dnl Sun Forte adds an extra space before substituting APR_INT64_T_FMT
     dnl gcc-2.95 adds an extra space after substituting APR_INT64_T_FMT
@@ -168,8 +168,8 @@ AC_DEFUN(SVN_FIND_SWIG,
   if test "$RUBY" != "none"; then
     rbconfig="$RUBY -rrbconfig -e "
 
-    for var_name in archdir CC CFLAGS LDSHARED DLEXT LIBRUBYARG \
-                    sitedir sitelibdir sitearchdir libdir
+    for var_name in arch archdir CC LDSHARED DLEXT LIBRUBYARG \
+                    rubyhdrdir sitedir sitelibdir sitearchdir libdir
     do
       rbconfig_tmp=`$rbconfig "print Config::CONFIG@<:@'$var_name'@:>@"`
       eval "rbconfig_$var_name=\"$rbconfig_tmp\""
@@ -178,12 +178,19 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_MSG_NOTICE([Configuring Ruby SWIG binding])
 
     AC_CACHE_CHECK([for Ruby include path], [svn_cv_ruby_includes],[
-    svn_cv_ruby_includes="-I. -I$rbconfig_archdir"
+    if test -d "$rbconfig_rubyhdrdir"; then
+      dnl Ruby >=1.9
+      svn_cv_ruby_includes="-I. -I$rbconfig_rubyhdrdir -I$rbconfig_rubyhdrdir/ruby -I$rbconfig_rubyhdrdir/ruby/backward -I$rbconfig_rubyhdrdir/$rbconfig_arch"
+    else
+      dnl Ruby 1.8
+      svn_cv_ruby_includes="-I. -I$rbconfig_archdir"
+    fi
     ])
     SWIG_RB_INCLUDES="\$(SWIG_INCLUDES) $svn_cv_ruby_includes"
 
     AC_CACHE_CHECK([how to compile Ruby extensions], [svn_cv_ruby_compile],[
-      svn_cv_ruby_compile="$rbconfig_CC $rbconfig_CFLAGS"
+      # Ruby doesn't like '-ansi', so strip that out of CFLAGS
+      svn_cv_ruby_compile="$rbconfig_CC `echo $CFLAGS | $SED -e "s/ -ansi//g"`"
     ])
     SWIG_RB_COMPILE="$svn_cv_ruby_compile"
 
@@ -198,7 +205,26 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_CACHE_CHECK([for linking Ruby libraries], [ac_cv_ruby_libs], [
       ac_cv_ruby_libs="$rbconfig_LIBRUBYARG"
     ])
-    SWIG_RB_LIBS="$ac_cv_ruby_libs"
+    SWIG_RB_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_ruby_libs)`"
+
+    AC_MSG_CHECKING([for rb_errinfo])
+    old_CFLAGS="$CFLAGS"
+    old_LIBS="$LIBS"
+    CFLAGS="`echo $CFLAGS | $SED -e "s/ -ansi//g"` $svn_cv_ruby_includes"
+    LIBS="$SWIG_RB_LIBS"
+    AC_LINK_IFELSE([
+#include <ruby.h>
+int main()
+{rb_errinfo();}], have_rb_errinfo="yes", have_rb_errinfo="no")
+    if test "$have_rb_errinfo" = "yes"; then
+      AC_MSG_RESULT([yes])
+      AC_DEFINE([HAVE_RB_ERRINFO], [1],
+                [Define to 1 if you have the `rb_errinfo' function.])
+    else
+      AC_MSG_RESULT([no])
+    fi
+    CFLAGS="$old_CFLAGS"
+    LIBS="$old_LIBS"
 
     AC_CACHE_VAL([svn_cv_ruby_sitedir],[
       svn_cv_ruby_sitedir="$rbconfig_sitedir"
@@ -212,16 +238,16 @@ AC_DEFUN(SVN_FIND_SWIG,
 
     AC_MSG_CHECKING([where to install Ruby scripts])
     AC_CACHE_VAL([svn_cv_ruby_sitedir_libsuffix],[
-      svn_cv_ruby_sitedir_libsuffix="`echo \"$rbconfig_sitelibdir\" | \
-                                        sed -e \"s,^$rbconfig_sitedir,,\"`"
+      svn_cv_ruby_sitedir_libsuffix="`echo "$rbconfig_sitelibdir" | \
+                                        $SED -e "s,^$rbconfig_sitedir,,"`"
     ])
     SWIG_RB_SITE_LIB_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_libsuffix}"
     AC_MSG_RESULT([$SWIG_RB_SITE_LIB_DIR])
 
     AC_MSG_CHECKING([where to install Ruby extensions])
     AC_CACHE_VAL([svn_cv_ruby_sitedir_archsuffix],[
-      svn_cv_ruby_sitedir_archsuffix="`echo \"$rbconfig_sitearchdir\" | \
-                                        sed -e \"s,^$rbconfig_sitedir,,\"`"
+      svn_cv_ruby_sitedir_archsuffix="`echo "$rbconfig_sitearchdir" | \
+                                        $SED -e "s,^$rbconfig_sitedir,,"`"
     ])
     SWIG_RB_SITE_ARCH_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_archsuffix}"
     AC_MSG_RESULT([$SWIG_RB_SITE_ARCH_DIR])

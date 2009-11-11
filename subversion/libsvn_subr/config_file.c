@@ -2,29 +2,33 @@
  * config_file.c :  parsing configuration files
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 
 
 #include <apr_lib.h>
-#include <apr_md5.h>
 #include <apr_env.h>
 #include "config_impl.h"
 #include "svn_io.h"
 #include "svn_types.h"
-#include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_auth.h"
 #include "svn_subst.h"
 #include "svn_utf.h"
@@ -251,7 +255,7 @@ parse_option(int *pch, parse_context_t *ctx, apr_pool_t *pool)
       ch = EOF;
       err = svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                               "%s:%d: Option must end with ':' or '='",
-                              svn_path_local_style(ctx->file, pool),
+                              svn_dirent_local_style(ctx->file, pool),
                               ctx->line);
     }
   else
@@ -294,7 +298,7 @@ parse_section_name(int *pch, parse_context_t *ctx, apr_pool_t *pool)
       ch = EOF;
       err = svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                               "%s:%d: Section header must end with ']'",
-                              svn_path_local_style(ctx->file, pool),
+                              svn_dirent_local_style(ctx->file, pool),
                               ctx->line);
     }
   else
@@ -315,72 +319,26 @@ svn_config__sys_config_path(const char **path_p,
                             const char *fname,
                             apr_pool_t *pool)
 {
-  /* ### This never actually returns error in practice.  Perhaps the
-     prototype should change? */
-
   *path_p = NULL;
 
-  /* Note that even if fname is null, svn_path_join_many will DTRT. */
+  /* Note that even if fname is null, svn_dirent_join_many will DTRT. */
 
 #ifdef WIN32
   {
     const char *folder;
     SVN_ERR(svn_config__win_config_path(&folder, TRUE, pool));
-    *path_p = svn_path_join_many(pool, folder,
-                                 SVN_CONFIG__SUBDIRECTORY, fname, NULL);
+    *path_p = svn_dirent_join_many(pool, folder,
+                                   SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
 #else  /* ! WIN32 */
 
-  *path_p = svn_path_join_many(pool, SVN_CONFIG__SYS_DIRECTORY, fname, NULL);
+  *path_p = svn_dirent_join_many(pool, SVN_CONFIG__SYS_DIRECTORY, fname, NULL);
 
 #endif /* WIN32 */
 
   return SVN_NO_ERROR;
 }
-
-
-svn_error_t *
-svn_config__user_config_path(const char *config_dir,
-                             const char **path_p,
-                             const char *fname,
-                             apr_pool_t *pool)
-{
-  /* ### This never actually returns error in practice.  Perhaps the
-     prototype should change? */
-
-  *path_p = NULL;
-
-  /* Note that even if fname is null, svn_path_join_many will DTRT. */
-
-  if (config_dir)
-    {
-      *path_p = svn_path_join_many(pool, config_dir, fname, NULL);
-      return SVN_NO_ERROR;
-    }
-
-#ifdef WIN32
-  {
-    const char *folder;
-    SVN_ERR(svn_config__win_config_path(&folder, FALSE, pool));
-    *path_p = svn_path_join_many(pool, folder,
-                                 SVN_CONFIG__SUBDIRECTORY, fname, NULL);
-  }
-
-#else  /* ! WIN32 */
-  {
-    const char *homedir = svn_user_get_homedir(pool);
-    if (! homedir)
-      return SVN_NO_ERROR;
-    *path_p = svn_path_join_many(pool,
-                                 svn_path_canonicalize(homedir, pool),
-                                 SVN_CONFIG__USR_DIRECTORY, fname, NULL);
-  }
-#endif /* WIN32 */
-
-  return SVN_NO_ERROR;
-}
-
 
 
 /*** Exported interfaces. ***/
@@ -393,11 +351,9 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
   svn_error_t *err = SVN_NO_ERROR;
   parse_context_t ctx;
   int ch, count;
-  apr_file_t *f;
+  svn_stream_t *stream;
 
-  /* No need for buffering; a translated stream buffers */
-  err = svn_io_file_open(&f, file, APR_BINARY | APR_READ,
-                         APR_OS_DEFAULT, pool);
+  err = svn_stream_open_readonly(&stream, file, pool, pool);
 
   if (! must_exist && err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -409,8 +365,8 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
 
   ctx.cfg = cfg;
   ctx.file = file;
-  ctx.stream = svn_subst_stream_translated(svn_stream_from_aprfile(f, pool),
-                                           "\n", TRUE, NULL, FALSE, pool);
+  ctx.stream = svn_subst_stream_translated(stream, "\n", TRUE, NULL, FALSE,
+                                           pool);
   ctx.line = 1;
   ctx.have_ungotten_char = FALSE;
   ctx.section = svn_stringbuf_create("", pool);
@@ -430,7 +386,7 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                                      "%s:%d: Section header"
                                      " must start in the first column",
-                                     svn_path_local_style(file, pool),
+                                     svn_dirent_local_style(file, pool),
                                      ctx.line);
           break;
 
@@ -444,7 +400,7 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                                      "%s:%d: Comment"
                                      " must start in the first column",
-                                     svn_path_local_style(file, pool),
+                                     svn_dirent_local_style(file, pool),
                                      ctx.line);
           break;
 
@@ -459,12 +415,12 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
           if (svn_stringbuf_isempty(ctx.section))
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                                      "%s:%d: Section header expected",
-                                     svn_path_local_style(file, pool),
+                                     svn_dirent_local_style(file, pool),
                                      ctx.line);
           else if (count != 0)
             return svn_error_createf(SVN_ERR_MALFORMED_FILE, NULL,
                                      "%s:%d: Option expected",
-                                     svn_path_local_style(file, pool),
+                                     svn_dirent_local_style(file, pool),
                                      ctx.line);
           else
             SVN_ERR(parse_option(&ch, &ctx, pool));
@@ -473,13 +429,31 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
     }
   while (ch != EOF);
 
-  /* Close the file and streams (and other cleanup): */
-  SVN_ERR(svn_stream_close(ctx.stream));
-  SVN_ERR(svn_io_file_close(f, pool));
-
-  return SVN_NO_ERROR;
+  /* Close the streams (and other cleanup): */
+  return svn_stream_close(ctx.stream);
 }
 
+
+/* Helper for ensure_auth_dirs: create SUBDIR under AUTH_DIR, iff
+   SUBDIR does not already exist, but ignore any errors.  Use POOL for
+   temporary allocation. */
+static void
+ensure_auth_subdir(const char *auth_dir,
+                   const char *subdir,
+                   apr_pool_t *pool)
+{
+  svn_error_t *err;
+  const char *subdir_full_path;
+  svn_node_kind_t kind;
+
+  subdir_full_path = svn_dirent_join_many(pool, auth_dir, subdir, NULL);
+  err = svn_io_check_path(subdir_full_path, &kind, pool);
+  if (err || kind == svn_node_none)
+    {
+      svn_error_clear(err);
+      svn_error_clear(svn_io_dir_make(subdir_full_path, APR_OS_DEFAULT, pool));
+    }
+}
 
 /* Helper for svn_config_ensure:  see if ~/.subversion/auth/ and its
    subdirs exist, try to create them, but don't throw errors on
@@ -490,11 +464,11 @@ ensure_auth_dirs(const char *path,
                  apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  const char *auth_dir, *auth_subdir;
+  const char *auth_dir;
   svn_error_t *err;
 
   /* Ensure ~/.subversion/auth/ */
-  auth_dir = svn_path_join_many(pool, path, SVN_CONFIG__AUTH_SUBDIR, NULL);
+  auth_dir = svn_dirent_join_many(pool, path, SVN_CONFIG__AUTH_SUBDIR, NULL);
   err = svn_io_check_path(auth_dir, &kind, pool);
   if (err || kind == svn_node_none)
     {
@@ -513,33 +487,10 @@ ensure_auth_dirs(const char *path,
 
   /* If a provider exists that wants to store credentials in
      ~/.subversion, a subdirectory for the cred_kind must exist. */
-
-  auth_subdir = svn_path_join_many(pool, auth_dir,
-                                   SVN_AUTH_CRED_SIMPLE, NULL);
-  err = svn_io_check_path(auth_subdir, &kind, pool);
-  if (err || kind == svn_node_none)
-    {
-      svn_error_clear(err);
-      svn_error_clear(svn_io_dir_make(auth_subdir, APR_OS_DEFAULT, pool));
-    }
-
-  auth_subdir = svn_path_join_many(pool, auth_dir,
-                                   SVN_AUTH_CRED_USERNAME, NULL);
-  err = svn_io_check_path(auth_subdir, &kind, pool);
-  if (err || kind == svn_node_none)
-    {
-      svn_error_clear(err);
-      svn_error_clear(svn_io_dir_make(auth_subdir, APR_OS_DEFAULT, pool));
-    }
-
-  auth_subdir = svn_path_join_many(pool, auth_dir,
-                                   SVN_AUTH_CRED_SSL_SERVER_TRUST, NULL);
-  err = svn_io_check_path(auth_subdir, &kind, pool);
-  if (err || kind == svn_node_none)
-    {
-      svn_error_clear(err);
-      svn_error_clear(svn_io_dir_make(auth_subdir, APR_OS_DEFAULT, pool));
-    }
+  ensure_auth_subdir(auth_dir, SVN_AUTH_CRED_SIMPLE, pool);
+  ensure_auth_subdir(auth_dir, SVN_AUTH_CRED_USERNAME, pool);
+  ensure_auth_subdir(auth_dir, SVN_AUTH_CRED_SSL_SERVER_TRUST, pool);
+  ensure_auth_subdir(auth_dir, SVN_AUTH_CRED_SSL_CLIENT_CERT_PW, pool);
 }
 
 
@@ -551,12 +502,12 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
   svn_error_t *err;
 
   /* Ensure that the user-specific config directory exists.  */
-  SVN_ERR(svn_config__user_config_path(config_dir, &path, NULL, pool));
+  SVN_ERR(svn_config_get_user_config_path(&path, config_dir, NULL, pool));
 
   if (! path)
     return SVN_NO_ERROR;
 
-  err = svn_io_check_path(path, &kind, pool);
+  err = svn_io_check_resolved_path(path, &kind, pool);
   if (err)
     {
       /* Don't throw an error, but don't continue. */
@@ -591,8 +542,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
   ensure_auth_dirs(path, pool);
 
   /** Ensure that the `README.txt' file exists. **/
-  SVN_ERR(svn_config__user_config_path
-          (config_dir, &path, SVN_CONFIG__USR_README_FILE, pool));
+  SVN_ERR(svn_config_get_user_config_path
+          (&path, config_dir, SVN_CONFIG__USR_README_FILE, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
@@ -749,8 +700,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
     }
 
   /** Ensure that the `servers' file exists. **/
-  SVN_ERR(svn_config__user_config_path
-          (config_dir, &path, SVN_CONFIG_CATEGORY_SERVERS, pool));
+  SVN_ERR(svn_config_get_user_config_path
+          (&path, config_dir, SVN_CONFIG_CATEGORY_SERVERS, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
@@ -766,8 +717,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
     {
       apr_file_t *f;
       const char *contents =
-        "### This file specifies server-specific protocol parameters,"       NL
-        "### including HTTP proxy information, and HTTP timeout settings."   NL
+        "### This file specifies server-specific parameters,"                NL
+        "### including HTTP proxy information, HTTP timeout settings,"       NL
+        "### and authentication settings."                                   NL
         "###"                                                                NL
         "### The currently defined server options are:"                      NL
         "###   http-proxy-host            Proxy host for HTTP connection"    NL
@@ -783,15 +735,83 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 #ifdef SVN_NEON_0_26
         "###   http-auth-types            Auth types to use for HTTP library"NL
 #endif
-        "###   ssl-authority-files        List of files, each of a trusted CAs"
+        "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL
         "###   ssl-trust-default-ca       Trust the system 'default' CAs"    NL
         "###   ssl-client-cert-file       PKCS#12 format client certificate file"
                                                                              NL
         "###   ssl-client-cert-password   Client Key password, if needed."   NL
+        "###   ssl-pkcs11-provider        Name of PKCS#11 provider to use."  NL
         "###   http-library               Which library to use for http/https"
                                                                              NL
         "###                              connections (neon or serf)"        NL
+        "###   store-passwords            Specifies whether passwords used"  NL
+        "###                              to authenticate against a"         NL
+        "###                              Subversion server may be cached"   NL
+        "###                              to disk in any way."               NL
+        "###   store-plaintext-passwords  Specifies whether passwords may"   NL
+        "###                              be cached on disk unencrypted."    NL
+        "###   store-ssl-client-cert-pp   Specifies whether passphrase used" NL
+        "###                              to authenticate against a client"  NL
+        "###                              certificate may be cached to disk" NL
+        "###                              in any way"                        NL
+        "###   store-ssl-client-cert-pp-plaintext"                           NL
+        "###                              Specifies whether client cert"     NL
+        "###                              passphrases may be cached on disk" NL
+        "###                              unencrypted (i.e., as plaintext)." NL
+        "###   store-auth-creds           Specifies whether any auth info"   NL
+        "###                              (passwords as well as server certs)"
+                                                                             NL
+        "###                              may be cached to disk."            NL
+        "###   username                   Specifies the default username."   NL
+        "###"                                                                NL
+        "### Set store-passwords to 'no' to avoid storing passwords on disk" NL
+        "### in any way, including in password stores. It defaults to 'yes',"
+                                                                             NL
+        "### but Subversion will never save your password to disk in plaintext"
+                                                                             NL
+        "### unless you tell it to."                                         NL
+        "### Note that this option only prevents saving of *new* passwords;" NL
+        "### it doesn't invalidate existing passwords.  (To do that, remove" NL
+        "### the cache files by hand as described in the Subversion book.)"  NL
+        "###"                                                                NL
+        "### Set store-plaintext-passwords to 'no' to avoid storing"         NL
+        "### passwords in unencrypted form in the auth/ area of your config" NL
+        "### directory. Set it to 'yes' to allow Subversion to store"        NL
+        "### unencrypted passwords in the auth/ area.  The default is"       NL
+        "### 'ask', which means that Subversion will ask you before"         NL
+        "### saving a password to disk in unencrypted form.  Note that"      NL
+        "### this option has no effect if either 'store-passwords' or "      NL
+        "### 'store-auth-creds' is set to 'no'."                             NL
+        "###"                                                                NL
+        "### Set store-ssl-client-cert-pp to 'no' to avoid storing ssl"      NL
+        "### client certificate passphrases in the auth/ area of your"       NL
+        "### config directory.  It defaults to 'yes', but Subversion will"   NL
+        "### never save your passphrase to disk in plaintext unless you tell"NL
+        "### it to via 'store-ssl-client-cert-pp-plaintext' (see below)."    NL
+        "###"                                                                NL
+        "### Note store-ssl-client-cert-pp only prevents the saving of *new*"NL
+        "### passphrases; it doesn't invalidate existing passphrases.  To do"NL
+        "### that, remove the cache files by hand as described in the"       NL
+        "### Subversion book at http://svnbook.red-bean.com/nightly/en/\\"   NL
+        "###                    svn.serverconfig.netmodel.html\\"            NL
+        "###                    #svn.serverconfig.netmodel.credcache"        NL
+        "###"                                                                NL
+        "### Set store-ssl-client-cert-pp-plaintext to 'no' to avoid storing"NL
+        "### passphrases in unencrypted form in the auth/ area of your"      NL
+        "### config directory.  Set it to 'yes' to allow Subversion to"      NL
+        "### store unencrypted passphrases in the auth/ area.  The default"  NL
+        "### is 'ask', which means that Subversion will prompt before"       NL
+        "### saving a passphrase to disk in unencrypted form.  Note that"    NL
+        "### this option has no effect if either 'store-auth-creds' or "     NL
+        "### 'store-ssl-client-cert-pp' is set to 'no'."                     NL
+        "###"                                                                NL
+        "### Set store-auth-creds to 'no' to avoid storing any Subversion"   NL
+        "### credentials in the auth/ area of your config directory."        NL
+        "### Note that this includes SSL server certificates."               NL
+        "### It defaults to 'yes'.  Note that this option only prevents"     NL
+        "### saving of *new* credentials;  it doesn't invalidate existing"   NL
+        "### caches.  (To do that, remove the cache files by hand.)"         NL
         "###"                                                                NL
         "### HTTP timeouts, if given, are specified in seconds.  A timeout"  NL
         "### of 0, i.e. zero, causes a builtin default to be used."          NL
@@ -800,10 +820,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### demonstrate how to use this file; any resemblance to actual"    NL
         "### servers, living or dead, is entirely coincidental."             NL
         ""                                                                   NL
-        "### In this section, the URL of the repository you're trying to"    NL
-        "### access is matched against the patterns on the right.  If a"     NL
-        "### match is found, the server info is from the section with the"   NL
-        "### corresponding name."                                            NL
+        "### In the 'groups' section, the URL of the repository you're"      NL
+        "### trying to access is matched against the patterns on the right." NL
+        "### If a match is found, the server options are taken from the"     NL
+        "### section with the corresponding name on the left."               NL
         ""                                                                   NL
         "[groups]"                                                           NL
         "# group1 = *.collab.net"                                            NL
@@ -821,12 +841,15 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# http-auth-types = basic;digest;negotiate"                         NL
 #endif
         "# neon-debug-mask = 130"                                            NL
+        "# store-plaintext-passwords = no"                                   NL
+        "# username = harry"                                                 NL
         ""                                                                   NL
         "### Information for the second group:"                              NL
         "# [othergroup]"                                                     NL
         "# http-proxy-host = proxy2.some-domain-name.com"                    NL
         "# http-proxy-port = 9000"                                           NL
-        "# No username and password, so use the defaults below."             NL
+        "# No username and password for the proxy, so use the defaults below."
+                                                                             NL
         ""                                                                   NL
         "### You can set default parameters in the 'global' section."        NL
         "### These parameters apply if no corresponding parameter is set in" NL
@@ -835,6 +858,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Internet, you probably just want to put that server's"          NL
         "### information in the 'global' section and not bother with"        NL
         "### 'groups' or any other sections."                                NL
+        "###"                                                                NL
+        "### Most people might want to configure password caching"           NL
+        "### parameters here, but you can also configure them per server"    NL
+        "### group (per-group settings override global settings)."           NL
         "###"                                                                NL
         "### If you go through a proxy for all but a few sites, you can"     NL
         "### list those exceptions under 'http-proxy-exceptions'.  This only"NL
@@ -856,7 +883,13 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 #endif
         "# No http-timeout, so just use the builtin default."                NL
         "# No neon-debug-mask, so neon debugging is disabled."               NL
-        "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"   NL;
+        "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"   NL
+        "#"                                                                  NL
+        "# Password / passphrase caching parameters:"                        NL
+        "# store-passwords = no"                                             NL
+        "# store-plaintext-passwords = no"                                   NL
+        "# store-ssl-client-cert-pp = no"                                    NL
+        "# store-ssl-client-cert-pp-plaintext = no"                          NL;
 
       err = svn_io_file_open(&f, path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
@@ -874,8 +907,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
     }
 
   /** Ensure that the `config' file exists. **/
-  SVN_ERR(svn_config__user_config_path
-          (config_dir, &path, SVN_CONFIG_CATEGORY_CONFIG, pool));
+  SVN_ERR(svn_config_get_user_config_path
+          (&path, config_dir, SVN_CONFIG_CATEGORY_CONFIG, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
@@ -898,22 +931,46 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         ""                                                                   NL
         "### Section for authentication and authorization customizations."   NL
         "[auth]"                                                             NL
-        "### Set store-passwords to 'no' to avoid storing passwords in the"  NL
-        "### auth/ area of your config directory.  It defaults to 'yes'."    NL
-        "### Note that this option only prevents saving of *new* passwords;" NL
-        "### it doesn't invalidate existing passwords.  (To do that, remove" NL
-        "### the cache files by hand as described in the Subversion book.)"  NL
+        "### Set password stores used by Subversion. They should be"         NL
+        "### delimited by spaces or commas. The order of values determines"  NL
+        "### the order in which password stores are used."                   NL
+        "### Valid password stores:"                                         NL
+        "###   gnome-keyring        (Unix-like systems)"                     NL
+        "###   kwallet              (Unix-like systems)"                     NL
+        "###   keychain             (Mac OS X)"                              NL
+        "###   windows-cryptoapi    (Windows)"                               NL
+#ifdef SVN_HAVE_KEYCHAIN_SERVICES
+        "# password-stores = keychain"                                       NL
+#elif defined(WIN32) && !defined(__MINGW32__)
+        "# password-stores = windows-cryptoapi"                              NL
+#else
+        "# password-stores = gnome-keyring,kwallet"                          NL
+#endif
+        "### To disable all password stores, use an empty list:"             NL
+        "# password-stores ="                                                NL
+#ifdef SVN_HAVE_KWALLET
+        "###"                                                                NL
+        "### Set KWallet wallet used by Subversion. If empty or unset,"      NL
+        "### then the default network wallet will be used."                  NL
+        "# kwallet-wallet ="                                                 NL
+        "###"                                                                NL
+        "### Include PID (Process ID) in Subversion application name when"   NL
+        "### using KWallet. It defaults to 'no'."                            NL
+        "# kwallet-svn-application-name-with-pid = yes"                      NL
+#endif
+        "###"                                                                NL
+        "### The rest of the [auth] section in this file has been deprecated."
+                                                                             NL
+        "### Both 'store-passwords' and 'store-auth-creds' can now be"       NL
+        "### specified in the 'servers' file in your config directory"       NL
+        "### and are documented there. Anything specified in this section "  NL
+        "### is overridden by settings specified in the 'servers' file."     NL
         "# store-passwords = no"                                             NL
-        "### Set store-auth-creds to 'no' to avoid storing any subversion"   NL
-        "### credentials in the auth/ area of your config directory."        NL
-        "### It defaults to 'yes'.  Note that this option only prevents"     NL
-        "### saving of *new* credentials;  it doesn't invalidate existing"   NL
-        "### caches.  (To do that, remove the cache files by hand.)"         NL
         "# store-auth-creds = no"                                            NL
         ""                                                                   NL
         "### Section for configuring external helper applications."          NL
         "[helpers]"                                                          NL
-        "### Set editor to the command used to invoke your text editor."     NL
+        "### Set editor-cmd to the command used to invoke your text editor." NL
         "###   This will override the environment variables that Subversion" NL
         "###   examines by default to find this information ($EDITOR, "      NL
         "###   et al)."                                                      NL
@@ -926,9 +983,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   This will override the compile-time default, which is to use" NL
         "###   Subversion's internal diff3 implementation."                  NL
         "# diff3-cmd = diff3_program (diff3, gdiff3, etc.)"                  NL
-        "### Set diff3-has-program-arg to 'true' or 'yes' if your 'diff3'"   NL
-        "###   program accepts the '--diff-program' option."                 NL
-        "# diff3-has-program-arg = [true | false]"                           NL
+        "### Set diff3-has-program-arg to 'yes' if your 'diff3' program"     NL
+        "###   accepts the '--diff-program' option."                         NL
+        "# diff3-has-program-arg = [yes | no]"                               NL
         "### Set merge-tool-cmd to the command used to invoke your external" NL
         "### merging tool of choice. Subversion will pass 4 arguments to"    NL
         "### the specified command: base theirs mine merged"                 NL
@@ -949,7 +1006,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### passed to the tunnel agent as <user>@<hostname>.)  If the"      NL
         "### built-in ssh scheme were not predefined, it could be defined"   NL
         "### as:"                                                            NL
-        "# ssh = $SVN_SSH ssh"                                               NL
+        "# ssh = $SVN_SSH ssh -q"                                            NL
         "### If you wanted to define a new 'rsh' scheme, to be used with"    NL
         "### 'svn+rsh:' URLs, you could do so as follows:"                   NL
         "# rsh = rsh"                                                        NL
@@ -990,7 +1047,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Automatic properties are defined in the section 'auto-props'."  NL
         "# enable-auto-props = yes"                                          NL
         "### Set interactive-conflicts to 'no' to disable interactive"       NL
-        "### confict resolution prompting.  It defaults to 'yes'."           NL
+        "### conflict resolution prompting.  It defaults to 'yes'."          NL
         "# interactive-conflicts = no"                                       NL
         ""                                                                   NL
         "### Section for configuring automatic properties."                  NL
@@ -1004,11 +1061,11 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### 'enable-auto-props' option."                                    NL
         "# *.c = svn:eol-style=native"                                       NL
         "# *.cpp = svn:eol-style=native"                                     NL
-        "# *.h = svn:eol-style=native"                                       NL
+        "# *.h = svn:keywords=Author Date Id Rev URL;svn:eol-style=native"   NL
         "# *.dsp = svn:eol-style=CRLF"                                       NL
         "# *.dsw = svn:eol-style=CRLF"                                       NL
         "# *.sh = svn:eol-style=native;svn:executable"                       NL
-        "# *.txt = svn:eol-style=native"                                     NL
+        "# *.txt = svn:eol-style=native;svn:keywords=Author Date Id Rev URL;"NL
         "# *.png = svn:mime-type=image/png"                                  NL
         "# *.jpg = svn:mime-type=image/jpeg"                                 NL
         "# Makefile = svn:eol-style=native"                                  NL
@@ -1031,3 +1088,42 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_config_get_user_config_path(const char **path,
+                                const char *config_dir,
+                                const char *fname,
+                                apr_pool_t *pool)
+{
+  *path= NULL;
+
+  /* Note that even if fname is null, svn_dirent_join_many will DTRT. */
+
+  if (config_dir)
+    {
+      *path = svn_dirent_join_many(pool, config_dir, fname, NULL);
+      return SVN_NO_ERROR;
+    }
+
+#ifdef WIN32
+  {
+    const char *folder;
+    SVN_ERR(svn_config__win_config_path(&folder, FALSE, pool));
+    *path = svn_dirent_join_many(pool, folder,
+                                 SVN_CONFIG__SUBDIRECTORY, fname, NULL);
+  }
+
+#else  /* ! WIN32 */
+  {
+    const char *homedir = svn_user_get_homedir(pool);
+    if (! homedir)
+      return SVN_NO_ERROR;
+    *path = svn_dirent_join_many(pool,
+                               svn_dirent_canonicalize(homedir, pool),
+                               SVN_CONFIG__USR_DIRECTORY, fname, NULL);
+  }
+#endif /* WIN32 */
+
+  return SVN_NO_ERROR;
+}
+

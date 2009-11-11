@@ -35,6 +35,20 @@
 #  define SVN_RB_SWIG_SWIGUTIL_EXPORT
 #endif
 
+/* Ruby <=1.8.5 compatibility */
+#ifndef RARRAY_LEN
+#define RARRAY_LEN(x) RARRAY(x)->len
+#endif
+#ifndef RARRAY_PTR
+#define RARRAY_PTR(x) RARRAY(x)->ptr
+#endif
+#ifndef RSTRING_LEN
+#define RSTRING_LEN(x) RSTRING(x)->len
+#endif
+#ifndef RSTRING_PTR
+#define RSTRING_PTR(x) RSTRING(x)->ptr
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -53,6 +67,12 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_initialize(void);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_pool_t *svn_swig_rb_pool(void);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_allocator_t *svn_swig_rb_allocator(void);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_delta_editor(void);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_delta_text_delta_window_handler(void);
@@ -64,7 +84,7 @@ void svn_swig_rb_raise_svn_repos_already_close(void);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_error_new(VALUE code, VALUE message,
-                                VALUE file, VALUE line);
+                                VALUE file, VALUE line, VALUE child);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_error_to_rb_error(svn_error_t *error);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
@@ -196,6 +216,11 @@ svn_error_t *svn_swig_rb_log_receiver(void *baton,
                                       apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_rb_log_entry_receiver(void *baton,
+                                            svn_log_entry_t *entry,
+                                            apr_pool_t *pool);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_rb_repos_authz_func(svn_boolean_t *allowed,
                                           svn_fs_root_t *root,
                                           const char *path,
@@ -223,7 +248,12 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_notify_func2(void *baton,
                               const svn_wc_notify_t *notify,
                               apr_pool_t *pool);
-
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_rb_conflict_resolver_func
+    (svn_wc_conflict_result_t **result,
+     const svn_wc_conflict_description_t *description,
+     void *baton,
+     apr_pool_t *pool);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_rb_commit_callback(svn_revnum_t new_revision,
                                          const char *date,
@@ -446,7 +476,10 @@ svn_error_t *svn_swig_rb_proplist_receiver(void *baton,
                                            apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-svn_error_t *svn_swig_rb_changelist_receiver(void *baton, const char *path);
+svn_error_t *svn_swig_rb_changelist_receiver(void *baton,
+                                             const char *path,
+                                             const char *changelist,
+                                             apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 extern svn_ra_reporter3_t *svn_swig_rb_ra_reporter3;

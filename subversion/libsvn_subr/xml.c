@@ -2,17 +2,22 @@
  * xml.c:  xml helper code shared among the Subversion libraries.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -26,7 +31,8 @@
 #include "svn_xml.h"
 #include "svn_error.h"
 #include "svn_ctype.h"
-#include "utf_impl.h"
+
+#include "private/svn_utf_private.h"
 
 #ifdef SVN_HAVE_OLD_EXPAT
 #include <xmlparse.h>
@@ -94,6 +100,11 @@ svn_xml_is_xml_safe(const char *data, apr_size_t len)
 
 /*** XML escaping. ***/
 
+/* ### ...?
+ *
+ * If *OUTSTR is @c NULL, set *OUTSTR to a new stringbuf allocated
+ * in POOL, else append to the existing stringbuf there.
+ */
 static void
 xml_escape_cdata(svn_stringbuf_t **outstr,
                  const char *data,
@@ -153,7 +164,7 @@ xml_escape_attr(svn_stringbuf_t **outstr,
   const char *p = data, *q;
 
   if (*outstr == NULL)
-    *outstr = svn_stringbuf_create("", pool);
+    *outstr = svn_stringbuf_create_ensure(len, pool);
 
   while (1)
     {
@@ -390,16 +401,18 @@ svn_xml_parse(svn_xml_parser_t *svn_parser,
   int success;
 
   /* Parse some xml data */
-  success = XML_Parse(svn_parser->parser, buf, len, is_final);
+  success = XML_Parse(svn_parser->parser, buf, (int) len, is_final);
 
   /* If expat choked internally, return its error. */
   if (! success)
     {
+      /* Line num is "int" in Expat v1, "long" in v2; hide the difference. */
+      long line = XML_GetCurrentLineNumber(svn_parser->parser);
+
       err = svn_error_createf
         (SVN_ERR_XML_MALFORMED, NULL,
-         _("Malformed XML: %s at line %d"),
-         XML_ErrorString(XML_GetErrorCode(svn_parser->parser)),
-         XML_GetCurrentLineNumber(svn_parser->parser));
+         _("Malformed XML: %s at line %ld"),
+         XML_ErrorString(XML_GetErrorCode(svn_parser->parser)), line);
 
       /* Kill all parsers and return the expat error */
       svn_xml_free_parser(svn_parser);
@@ -558,9 +571,10 @@ svn_xml_make_open_tag_hash(svn_stringbuf_t **str,
                            apr_hash_t *attributes)
 {
   apr_hash_index_t *hi;
+  apr_size_t est_size = strlen(tagname) + 4 + apr_hash_count(attributes) * 30;
 
   if (*str == NULL)
-    *str = svn_stringbuf_create("", pool);
+    *str = svn_stringbuf_create_ensure(est_size, pool);
 
   svn_stringbuf_appendcstr(*str, "<");
   svn_stringbuf_appendcstr(*str, tagname);

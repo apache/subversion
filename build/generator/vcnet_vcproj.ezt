@@ -33,8 +33,11 @@
 [else]				StringPooling="TRUE"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="FALSE"
-[end]				WarningLevel="3"
+[end]				WarningLevel="4"
+				DisableSpecificWarnings="4100;4127;4204;4206;4701;4706"
 				Detect64BitPortabilityProblems="FALSE"
+				AdditionalOptions="
+				/we4002 /we4003 /we4013 /we4020 /we4022 /we4024 /we4028 /we4029 /we4030 /we4031 /we4047 /we4089 /we4115"
 				DebugInformationFormat="3"
 				ProgramDataBaseFileName="$(IntDir)\[target.output_pdb]"
 				CompileAsManaged="0"
@@ -92,7 +95,10 @@
 					PreprocessorDefinitions="SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is configs.name "Debug"]_DEBUG[else]NDEBUG[end]"/>
 			</FileConfiguration>[end][end]
 		</File>[end]
-[for sources]		<File
+		<Filter
+			Name="Source Files"
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+[for sources][is sources.extension ".h"][else]		<File
 			RelativePath="[sources.path]">
 [if-any sources.custom_build][for platforms][for configs]
 			<FileConfiguration
@@ -110,13 +116,21 @@
 				<Tool
 					Name="VCCLCompilerTool"
 					ObjectFile="$(IntDir)/[sources.reldir]/"
-					ProgramDataBaseFileName="$(IntDir)/[sources.reldir]/"/>
+					ProgramDataBaseFileName="$(IntDir)/[sources.reldir]/[target.proj_name]-[sources.reldir].pdb"/>
 			</FileConfiguration>
 [end][end][end]
 		</File>
-[end]
+[end][end]
 [is target_type "2"]		<File RelativePath="..\empty.c"/>[end]
-
+        </Filter>
+		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl">
+[for sources][is sources.extension ".h"]
+		<File
+			RelativePath="[sources.path]" />
+[end][end]
+        </Filter>
 	</Files>
 	<Globals>
 	</Globals>

@@ -4,7 +4,8 @@ require "test/unit"
 require "fileutils"
 
 test_dir = File.expand_path(File.join(File.dirname(__FILE__)))
-base_dir = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+base_src_dir = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+base_dir = Dir.pwd
 top_dir = File.expand_path(File.join(base_dir, "..", "..", "..", ".."))
 
 ext_dir = File.join(base_dir, ".ext")
@@ -20,6 +21,7 @@ require 'test-unit-ext'
 SvnTestUtil.setup_test_environment(top_dir, base_dir, ext_svn_ext_dir)
 
 $LOAD_PATH.unshift(ext_dir)
+$LOAD_PATH.unshift(base_src_dir)
 $LOAD_PATH.unshift(base_dir)
 $LOAD_PATH.unshift(test_dir)
 

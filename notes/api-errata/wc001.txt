@@ -1,0 +1,72 @@
+API ERRATA -- $Id$
+
+Root Cause of Errata: bugfix
+ Library(s) Affected: libsvn_wc
+Function(s) Affected: svn_wc_entry
+                      svn_wc_entries_read
+     New Behavior in: 1.7
+      Related Issues: 3334
+
+
+== Details of Previous Behavior ==
+
+If a file was added without history to a directory, and then that
+directory was switched to a new URL, the child could end up appearing
+switched in a status report.
+
+The child is recorded in DIR/.svn/entries with entry->url referencing
+the *intended* location in the repository for this new child. When a
+switch occurred, the entry->url for DIR is changed to reference the
+location where DIR came from, but the child's URL would *not* get
+updated (because it is not touched during the editor drive of the
+switch operation, since it is not even known to the repository, being
+in a schedule-add state). Thus, the child's URL refers to the original
+location rather than the new, switched location.
+
+During a status drive, the mismatch between DIR's URL and the child's
+URL then appears as a switched node.
+
+Callers of svn_wc_entry() or svn_wc_entries_read() will see these
+mismatched URLs in the returned svn_wc_entry_t structure and its 'url'
+member.
+
+
+== Details of New Behavior ==
+
+In version 1.7, the new working copy format does not have a way to
+store an intended URL that is *different* from the location specified
+or implied by its parent. In this case, the child's URL is derived
+from the repository location of the original or the newly-switched
+parent directory. When the child's entry is fetched, it will have the
+correct value.
+
+The net result is that the child, scheduled for addition, will not
+appear as switched after this change.
+
+
+== Rationale for Change ==
+
+The child's URL *should* have been rewritten as part of the switch
+drive. This is covered somewhat in issue #3334, and the abberant
+behavior is tested in switch_tests.py:tree_conflicts_on_switch_2_1().
+
+
+== Impact on API Users ==
+
+Users of the old API behavior would have been operating with faulty
+data. Thus, it is possible a user of these functions manually detected
+that a "switched" file in a schedule-add state was not truly switched
+(a logical impossibility). The API user may have then ignored the URL
+returned in entry->url and computed it manually. This will continue to
+be a valid approach, so no changes are necessary (but it will be
+redundant since the new implementation will correctly calculate the
+URL).
+
+If API consumers were *not* detecting the situation, then they will
+simply receive new information from the calls.
+
+If a user was relying on this behavior, then I believe there is no
+recourse to detect it in the new implementation (since the state
+necessary (the old URL location) is simply not there). This errata
+takes the position that the API user was relying on buggy behavior in
+Subversion, and that we cannot support this scenario.

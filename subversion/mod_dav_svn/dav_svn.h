@@ -2,17 +2,22 @@
  * dav_svn.h: types, functions, macros for the DAV/SVN Apache module
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -37,6 +42,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
 
 
 /* what the one VCC is called */
@@ -102,6 +108,12 @@ typedef struct {
   /* Whether autoversioning is active for this repository. */
   svn_boolean_t autoversioning;
 
+  /* Whether bulk updates are allowed for this repository. */
+  svn_boolean_t bulk_updates;
+
+  /* Whether HTTP protocol version 2 is allowed to be used. */
+  svn_boolean_t v2_protocol;
+
   /* the open repository */
   svn_repos_t *repos;
 
@@ -122,7 +134,7 @@ typedef struct {
      constants anyway (and sufficiently well-informed internal code
      may therefore compare against those constants' addresses).  If
      'is_svn_client' is false, then 'capabilities' should be empty. */
-  apr_hash_t *capabilities;
+  apr_hash_t *client_capabilities;
 
   /* The path to the activities db */
   const char *activities_db;
@@ -150,7 +162,14 @@ enum dav_svn_private_restype {
   DAV_SVN_RESTYPE_BLN_COLLECTION,       /* .../!svn/bln/ */
   DAV_SVN_RESTYPE_WBL_COLLECTION,       /* .../!svn/wbl/ */
   DAV_SVN_RESTYPE_VCC,                  /* .../!svn/vcc/NAME */
-  DAV_SVN_RESTYPE_PARENTPATH_COLLECTION /* see SVNParentPath directive */
+  DAV_SVN_RESTYPE_PARENTPATH_COLLECTION,/* see SVNParentPath directive */
+
+  /* new types in HTTP protocol v2: */
+  DAV_SVN_RESTYPE_ME,                   /* .../!svn/me   */
+  DAV_SVN_RESTYPE_REV_COLLECTION,       /* .../!svn/rev/ */
+  DAV_SVN_RESTYPE_REVROOT_COLLECTION,   /* .../!svn/rvr/ */
+  DAV_SVN_RESTYPE_TXN_COLLECTION,       /* .../!svn/txn/ */
+  DAV_SVN_RESTYPE_TXNROOT_COLLECTION    /* .../!svn/txr/ */
 };
 
 
@@ -177,7 +196,8 @@ typedef struct {
      name. It may be NULL if this root corresponds to a specific revision.
      It may also be NULL if we have not opened the root yet.
 
-     WORKING and ACTIVITY resources use this field.
+     WORKING and ACTIVITY resources use this field, as well as PRIVATE
+     resources that directly represent either a txn or txn-root.
   */
   const char *txn_name;
 
@@ -247,6 +267,10 @@ struct dav_resource_private {
   /* was this resource auto-checked-out? */
   svn_boolean_t auto_checked_out;
 
+  /* was this resource fetched using our public peg-/working-rev CGI
+     interface (ie: /path/to/item?p=PEGREV]? */
+  svn_boolean_t pegged;
+
   /* Pool to allocate temporary data from */
   apr_pool_t *pool;
 };
@@ -266,6 +290,12 @@ const char *dav_svn__get_fs_parent_path(request_rec *r);
 
 /* for the repository referred to by this request, is autoversioning active? */
 svn_boolean_t dav_svn__get_autoversioning_flag(request_rec *r);
+
+/* for the repository referred to by this request, are bulk updates allowed? */
+svn_boolean_t dav_svn__get_bulk_updates_flag(request_rec *r);
+
+/* for the repository referred to by this request, are bulk updates allowed? */
+svn_boolean_t dav_svn__get_v2_protocol_flag(request_rec *r);
 
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
@@ -325,10 +355,44 @@ const char * dav_svn__get_activities_db(request_rec *r);
 /* Return the root directory */
 const char * dav_svn__get_root_dir(request_rec *r);
 
+
+/** For HTTP protocol v2, these are the new URIs and URI stubs
+    returned to the client in our OPTIONS response.  They all depend
+    on the 'special uri', which is configurable in httpd.conf.  **/
+
+/* Where REPORT requests are sent (typically "!svn/me") */
+const char *dav_svn__get_me_resource_uri(request_rec *r);
+
+/* For accessing revision resources (typically "!svn/rev") */
+const char *dav_svn__get_rev_stub(request_rec *r);
+
+/* For accessing REV/PATH pairs (typically "!svn/bc") */
+const char *dav_svn__get_rev_root_stub(request_rec *r);
+
+/* For accessing transaction resources (typically "!svn/txn") */
+const char *dav_svn__get_txn_stub(request_rec *r);
+
+/* For accessing transaction properties (typically "!svn/txr") */
+const char *dav_svn__get_txn_root_stub(request_rec *r);
+
+
 /*** activity.c ***/
 
-/* activity functions for looking up, storing, and deleting
-   ACTIVITY->TXN mappings */
+/* Create a new transaction based on HEAD in REPOS, setting *PTXN_NAME
+   to the name of that transaction.  Use POOL for allocations. */
+dav_error *
+dav_svn__create_txn(const dav_svn_repos *repos,
+                    const char **ptxn_name,
+                    apr_pool_t *pool);
+
+/* If it exists, abort the transaction named TXN_NAME from REPOS.  Use
+   POOL for allocations. */
+dav_error *
+dav_svn__abort_txn(const dav_svn_repos *repos,
+                   const char *txn_name,
+                   apr_pool_t *pool);
+
+/* Functions for looking up, storing, and deleting ACTIVITY->TXN mappings.  */
 const char *
 dav_svn__get_txn(const dav_svn_repos *repos, const char *activity_id);
 
@@ -340,10 +404,9 @@ dav_svn__store_activity(const dav_svn_repos *repos,
                         const char *activity_id,
                         const char *txn_name);
 
-dav_error *
-dav_svn__create_activity(const dav_svn_repos *repos,
-                         const char **ptxn_name,
-                         apr_pool_t *pool);
+
+/* HTTP protocol v2:  client does POST against 'me' resource. */
+int dav_svn__method_post(request_rec *r);
 
 
 /*** repos.c ***/
@@ -514,6 +577,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "file-revs-report" },
   { SVN_XML_NAMESPACE, "get-locks-report" },
   { SVN_XML_NAMESPACE, "replay-report" },
+  { SVN_XML_NAMESPACE, "get-deleted-rev-report" },
   { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT },
   { NULL, NULL },
 };
@@ -557,6 +621,10 @@ dav_svn__get_locks_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
                           ap_filter_t *output);
 
+dav_error *
+dav_svn__get_deleted_rev_report(const dav_resource *resource,
+                                const apr_xml_doc *doc,
+                                ap_filter_t *output);
 
 /*** authz.c ***/
 
@@ -696,15 +764,30 @@ dav_svn__simple_parse_uri(dav_svn__uri_info *info,
 int dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri);
 
 
-/* Output XML data to OUTPUT using BB.  Use FMT as format string for the
-   output. */
-svn_error_t *
-dav_svn__send_xml(apr_bucket_brigade *bb,
-                  ap_filter_t *output,
-                  const char *fmt,
-                  ...)
-       __attribute__((format(printf, 3, 4)));
+
+/*** Brigade I/O wrappers ***/
 
+/* Write LEN bytes from DATA to OUTPUT using BB.  */
+svn_error_t *dav_svn__brigade_write(apr_bucket_brigade *bb,
+                                    ap_filter_t *output,
+                                    const char *buf,
+                                    apr_size_t len);
+
+/* Write NULL-terminated string STR to OUTPUT using BB.  */
+svn_error_t *dav_svn__brigade_puts(apr_bucket_brigade *bb,
+                                   ap_filter_t *output,
+                                   const char *str);
+
+
+/* Write data to OUTPUT using BB, using FMT as the output format string.  */
+svn_error_t *dav_svn__brigade_printf(apr_bucket_brigade *bb,
+                                     ap_filter_t *output,
+                                     const char *fmt,
+                                     ...)
+  __attribute__((format(printf, 3, 4)));
+
+
+
 
 /* Test PATH for canonicalness (defined as "what won't make the
    svn_path_* functions immediately explode"), returning an
@@ -747,6 +830,51 @@ dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
  * INFO->repos->fs_path, and "SVN-REPOS-NAME" to INFO->repos->repo_basename. */
 void
 dav_svn__operational_log(struct dav_resource_private *info, const char *line);
+
+/* Flush BB if it's okay and useful to do so, but treat PREFERRED_ERR
+ * as a more important error to return (if it is non-NULL).
+ *
+ * This is intended to be used at the end of response processing,
+ * probably called as a direct return generator, like so:
+ *
+ *   return dav_svn__final_flush_or_error(r, bb, output, derr, resource->pool);
+ *
+ * SOME BACKGROUND INFO:
+ *
+ * We don't flush the brigade unless there's something in it to
+ * flush; that way, we have the opportunity to package a dav_error up
+ * for transmission back to the client.
+ *
+ * To understand this, see mod_dav.c:dav_method_report(): as long as
+ * it doesn't think we've sent anything to the client, it'll send
+ * the real error, which is what we'd prefer.  This situation is
+ * described in httpd-2.2.6/modules/dav/main/mod_dav.c, line 4066,
+ * in the comment in dav_method_report() that says:
+ *
+ *    If an error occurred during the report delivery, there's
+ *    basically nothing we can do but abort the connection and
+ *    log an error.  This is one of the limitations of HTTP; it
+ *    needs to "know" the entire status of the response before
+ *    generating it, which is just impossible in these streamy
+ *    response situations.
+ *
+ * In other words, flushing the brigade causes r->sent_bodyct (see
+ * dav_method_report()) to become non-zero, even if we hadn't tried to
+ * send any data to the brigade yet.  So we don't flush unless data
+ * was actually sent.
+ */
+dav_error *
+dav_svn__final_flush_or_error(request_rec *r, apr_bucket_brigade *bb,
+                              ap_filter_t *output, dav_error *preferred_err,
+                              apr_pool_t *pool);
+
+/* Send a "standardized" DAV error response based on the ERR's
+ * namespace and tag.
+ *
+ * NOTE:  This was copied pretty much directory from mod_dav's
+ * dav_error_response_tag() function which is, sadly, not public.
+ */
+int dav_svn__error_response_tag(request_rec *r, dav_error *err);
 
 /*** mirror.c ***/
 

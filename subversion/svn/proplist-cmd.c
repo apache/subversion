@@ -2,17 +2,22 @@
  * proplist-cmd.c -- List properties of files/dirs
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -27,6 +32,7 @@
 #include "svn_client.h"
 #include "svn_error_codes.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "cl.h"
@@ -56,7 +62,7 @@ proplist_receiver_xml(void *baton,
   const char *name_local;
 
   if (! is_url)
-    name_local = svn_path_local_style(path, pool);
+    name_local = svn_dirent_local_style(path, pool);
   else
     name_local = path;
 
@@ -70,9 +76,7 @@ proplist_receiver_xml(void *baton,
   /* "</target>" */
   svn_xml_make_close_tag(&sb, pool, "target");
 
-  SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
-
-  return SVN_NO_ERROR;
+  return svn_cl__error_checked_fputs(sb->data, stdout);
 }
 
 
@@ -88,16 +92,13 @@ proplist_receiver(void *baton,
   const char *name_local;
 
   if (! is_url)
-    name_local = svn_path_local_style(path, pool);
+    name_local = svn_dirent_local_style(path, pool);
   else
     name_local = path;
 
   if (!opt_state->quiet)
     SVN_ERR(svn_cmdline_printf(pool, _("Properties on '%s':\n"), name_local));
-  SVN_ERR(svn_cl__print_prop_hash(prop_hash, (! opt_state->verbose),
-                                  pool));
-
-  return SVN_NO_ERROR;
+  return svn_cl__print_prop_hash(prop_hash, (! opt_state->verbose), pool);
 }
 
 
@@ -105,43 +106,19 @@ proplist_receiver(void *baton,
 svn_error_t *
 svn_cl__proplist(apr_getopt_t *os,
                  void *baton,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   int i;
 
-  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
-     all the targets, we need to build a list of targets made of both
-     ones the user typed, as well as any specified by --changelist.  */
-  if (opt_state->changelist)
-    {
-      SVN_ERR(svn_client_get_changelist(&changelist_targets,
-                                        opt_state->changelist,
-                                        "",
-                                        ctx,
-                                        pool));
-      if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
-                                 _("Unknown changelist '%s'"),
-                                 opt_state->changelist);
-    }
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
+                                                      ctx, scratch_pool));
 
-  if (opt_state->targets && changelist_targets)
-    combined_targets = apr_array_append(pool, opt_state->targets,
-                                        changelist_targets);
-  else if (opt_state->targets)
-    combined_targets = opt_state->targets;
-  else if (changelist_targets)
-    combined_targets = changelist_targets;
-
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        combined_targets, pool));
-
-  /* Add "." if user passed 0 arguments */
-  svn_opt_push_implicit_dot_target(targets, pool);
+  /* Add "." if user passed 0 file arguments */
+  svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
   if (opt_state->revprop)  /* operate on revprops */
     {
@@ -149,51 +126,50 @@ svn_cl__proplist(apr_getopt_t *os,
       const char *URL;
       apr_hash_t *proplist;
 
-
       SVN_ERR(svn_cl__revprop_prepare(&opt_state->start_revision, targets,
-                                      &URL, pool));
+                                      &URL, ctx, scratch_pool));
 
       /* Let libsvn_client do the real work. */
       SVN_ERR(svn_client_revprop_list(&proplist,
                                       URL, &(opt_state->start_revision),
-                                      &rev, ctx, pool));
+                                      &rev, ctx, scratch_pool));
 
       if (opt_state->xml)
         {
           svn_stringbuf_t *sb = NULL;
-          char *revstr = apr_psprintf(pool, "%ld", rev);
+          char *revstr = apr_psprintf(scratch_pool, "%ld", rev);
 
-          SVN_ERR(svn_cl__xml_print_header("properties", pool));
+          SVN_ERR(svn_cl__xml_print_header("properties", scratch_pool));
 
-          svn_xml_make_open_tag(&sb, pool, svn_xml_normal,
+          svn_xml_make_open_tag(&sb, scratch_pool, svn_xml_normal,
                                 "revprops",
                                 "rev", revstr, NULL);
           SVN_ERR(svn_cl__print_xml_prop_hash
-                  (&sb, proplist, (! opt_state->verbose), pool));
-          svn_xml_make_close_tag(&sb, pool, "revprops");
+                  (&sb, proplist, (! opt_state->verbose), scratch_pool));
+          svn_xml_make_close_tag(&sb, scratch_pool, "revprops");
 
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
-          SVN_ERR(svn_cl__xml_print_footer("properties", pool));
+          SVN_ERR(svn_cl__xml_print_footer("properties", scratch_pool));
         }
       else
         {
           SVN_ERR
-            (svn_cmdline_printf(pool,
+            (svn_cmdline_printf(scratch_pool,
                                 _("Unversioned properties on revision %ld:\n"),
                                 rev));
 
           SVN_ERR(svn_cl__print_prop_hash
-                  (proplist, (! opt_state->verbose), pool));
+                  (proplist, (! opt_state->verbose), scratch_pool));
         }
     }
   else  /* operate on normal, versioned properties (not revprops) */
     {
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *iterpool;
       svn_proplist_receiver_t pl_receiver;
 
       if (opt_state->xml)
         {
-          SVN_ERR(svn_cl__xml_print_header("properties", pool));
+          SVN_ERR(svn_cl__xml_print_header("properties", scratch_pool));
           pl_receiver = proplist_receiver_xml;
         }
       else
@@ -204,6 +180,7 @@ svn_cl__proplist(apr_getopt_t *os,
       if (opt_state->depth == svn_depth_unknown)
         opt_state->depth = svn_depth_empty;
 
+      iterpool = svn_pool_create(scratch_pool);
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
@@ -211,7 +188,7 @@ svn_cl__proplist(apr_getopt_t *os,
           const char *truepath;
           svn_opt_revision_t peg_revision;
 
-          svn_pool_clear(subpool);
+          svn_pool_clear(iterpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
           pl_baton.is_url = svn_path_is_url(target);
@@ -219,25 +196,24 @@ svn_cl__proplist(apr_getopt_t *os,
 
           /* Check for a peg revision. */
           SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
-                                     subpool));
+                                     iterpool));
 
           SVN_ERR(svn_cl__try
                   (svn_client_proplist3(truepath, &peg_revision,
                                         &(opt_state->start_revision),
                                         opt_state->depth,
-                                        pl_receiver,
-                                        &pl_baton,
-                                        ctx, subpool),
+                                        opt_state->changelists,
+                                        pl_receiver, &pl_baton,
+                                        ctx, iterpool),
                    NULL, opt_state->quiet,
                    SVN_ERR_UNVERSIONED_RESOURCE,
                    SVN_ERR_ENTRY_NOT_FOUND,
                    SVN_NO_ERROR));
         }
+      svn_pool_destroy(iterpool);
 
       if (opt_state->xml)
-        SVN_ERR(svn_cl__xml_print_footer("properties", pool));
-
-      svn_pool_destroy(subpool);
+        SVN_ERR(svn_cl__xml_print_footer("properties", scratch_pool));
     }
 
   return SVN_NO_ERROR;

@@ -1,16 +1,21 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  *
  * svn_types.swg: This is the main file of the Subversion typemap
@@ -151,6 +156,7 @@
   svn_wc_revision_status_t **,
   svn_wc_status_t **,
   svn_wc_status2_t **,
+  svn_wc_committed_queue_t **,
   void **set_locks_baton
 };
 
@@ -468,7 +474,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     rb_raise(rb_eArgError, "Expecting a string");
   }
   $1 = StringValuePtr($input);
-  $2 = RSTRING(StringValue($input))->len;
+  $2 = RSTRING_LEN(StringValue($input));
 }
 #endif
 
@@ -561,10 +567,10 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
   svn_swig_rb_push_pool(_global_svn_swig_rb_pool);
 }
 
-%typemap(argout) apr_pool_t *pool
+%typemap(freearg) apr_pool_t *pool
 {
   VALUE target;
-  target = _global_vresult_address == &$result ? self : $result;
+  target = _global_vresult_address == &vresult ? self : vresult;
   if (!svn_swig_rb_set_pool(target, _global_svn_swig_rb_pool))
     svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
   svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
@@ -575,7 +581,9 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %apply apr_pool_t *pool {
     apr_pool_t *dir_pool,
     apr_pool_t *file_pool,
-    apr_pool_t *node_pool
+    apr_pool_t *node_pool,
+    apr_pool_t *result_pool,
+    apr_pool_t *scratch_pool
 };
 #endif
 
@@ -583,7 +591,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %apply apr_pool_t *pool {
     apr_pool_t *dir_pool,
     apr_pool_t *file_pool,
-    apr_pool_t *node_pool
+    apr_pool_t *node_pool,
+    apr_pool_t *result_pool
 };
 #endif
 
@@ -730,6 +739,14 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 }
 #endif
 
+#ifdef SWIGRUBY
+%typemap(in) (svn_log_entry_receiver_t receiver, void *receiver_baton)
+{
+  $1 = svn_swig_rb_log_entry_receiver;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+#endif
+
 /* -----------------------------------------------------------------------
    Callback: svn_commit_callback_t
    svn_ra get_commit_editor()
@@ -819,12 +836,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGRUBY
 %typemap(in) (svn_wc_conflict_resolver_func_t conflict_func, void *conflict_baton)
 {
-  /* ### TODO(rb support conflict_fun): implement
   $1 = svn_swig_rb_conflict_resolver_func;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-  */
-  $1 = NULL;
-  $2 = NULL;
 }
 
 %typemap(argout) (svn_wc_conflict_resolver_func_t conflict_func, void *conflict_baton)
@@ -1055,11 +1068,12 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %apply unsigned char digest[ANY] { unsigned char *digest };
 
 #ifdef SWIGRUBY
-/* FIXME: This typemap doesn't work, because svn_txdelta_apply saves
- *        away this local pointer to be used later. When the pointer
- *        is finally used, we get memory corruption / segfaults.
+/*
+ * Skip the md5sum
+ * FIXME: Wrap the md5sum
  */
-%apply unsigned char digest[ANY] { unsigned char *result_digest };
+%typemap(in, numinputs=0) unsigned char *result_digest
+  "$1 = NULL;";
 #endif
 
 #ifdef SWIGPYTHON
@@ -1105,9 +1119,9 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 {
   if (NIL_P($input)) {
     $1 = NULL;
-  } else if (RSTRING($input)->len != APR_MD5_DIGESTSIZE) {
+  } else if (RSTRING_LEN($input) != APR_MD5_DIGESTSIZE) {
     rb_raise(rb_eArgError, "digest size (%d) must be %d",
-             RSTRING($input)->len, APR_MD5_DIGESTSIZE);
+             RSTRING_LEN($input), APR_MD5_DIGESTSIZE);
   } else {
     $1 = ($1_ltype)StringValuePtr($input);
   }
@@ -1135,15 +1149,15 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     }
     else if (SvPOK($input)) {
         char *input = SvPV_nolen($input);
-        if (strcasecmp(input, "BASE") == 0)
+        if (svn_cstring_casecmp(input, "BASE") == 0)
             rev.kind = svn_opt_revision_base;
-        else if (strcasecmp(input, "HEAD") == 0)
+        else if (svn_cstring_casecmp(input, "HEAD") == 0)
             rev.kind = svn_opt_revision_head;
-        else if (strcasecmp(input, "WORKING") == 0)
+        else if (svn_cstring_casecmp(input, "WORKING") == 0)
             rev.kind = svn_opt_revision_working;
-        else if (strcasecmp(input, "COMMITTED") == 0)
+        else if (svn_cstring_casecmp(input, "COMMITTED") == 0)
             rev.kind = svn_opt_revision_committed;
-        else if (strcasecmp(input, "PREV") == 0)
+        else if (svn_cstring_casecmp(input, "PREV") == 0)
             rev.kind = svn_opt_revision_previous;
         else if (*input == '{') {
             svn_boolean_t matched;

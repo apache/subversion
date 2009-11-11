@@ -3,6 +3,12 @@
 #
 # svnmirror-test.sh
 #
+# Script for testing svn-mirror.sh
+#
+# License:
+#    The same as svn itself. for latest version check:
+#    http://svn.collab.net/repos/svn/trunk/subversion/LICENSE
+#
 #######################################################################
 
 SVNMIRROR="$PWD/svnmirror.sh"

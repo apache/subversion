@@ -2,26 +2,28 @@
  * config_auth.c :  authentication files in the user config area
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 
 
-#include <apr_md5.h>
-
-#include "svn_path.h"
-#include "svn_md5.h"
+#include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_io.h"
 
@@ -41,23 +43,24 @@ auth_file_path(const char **path,
                apr_pool_t *pool)
 {
   const char *authdir_path, *hexname;
-  unsigned char digest[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *checksum;
 
   /* Construct the path to the directory containing the creds files,
      e.g. "~/.subversion/auth/svn.simple".  The last component is
      simply the cred_kind.  */
-  SVN_ERR(svn_config__user_config_path(config_dir, &authdir_path,
-                                       SVN_CONFIG__AUTH_SUBDIR, pool));
+  SVN_ERR(svn_config_get_user_config_path(&authdir_path, config_dir,
+                                          SVN_CONFIG__AUTH_SUBDIR, pool));
   if (authdir_path)
     {
-      authdir_path = svn_path_join(authdir_path, cred_kind, pool);
+      authdir_path = svn_dirent_join(authdir_path, cred_kind, pool);
 
       /* Construct the basename of the creds file.  It's just the
          realmstring converted into an md5 hex string.  */
-      apr_md5(digest, realmstring, strlen(realmstring));
-      hexname = svn_md5_digest_to_cstring(digest, pool);
+      SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, realmstring,
+                           strlen(realmstring), pool));
+      hexname = svn_checksum_to_cstring(checksum, pool);
 
-      *path = svn_path_join(authdir_path, hexname, pool);
+      *path = svn_dirent_join(authdir_path, hexname, pool);
     }
   else
     *path = NULL;
@@ -86,20 +89,18 @@ svn_config_read_auth_data(apr_hash_t **hash,
   SVN_ERR(svn_io_check_path(auth_path, &kind, pool));
   if (kind == svn_node_file)
     {
-      apr_file_t *authfile = NULL;
+      svn_stream_t *stream;
 
-      SVN_ERR_W(svn_io_file_open(&authfile, auth_path,
-                                 APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                                 pool),
+      SVN_ERR_W(svn_stream_open_readonly(&stream, auth_path, pool, pool),
                 _("Unable to open auth file for reading"));
 
       *hash = apr_hash_make(pool);
 
-      SVN_ERR_W(svn_hash_read(*hash, authfile, pool),
+      SVN_ERR_W(svn_hash_read2(*hash, stream, SVN_HASH_TERMINATOR, pool),
                 apr_psprintf(pool, _("Error parsing '%s'"),
-                             svn_path_local_style(auth_path, pool)));
+                             svn_dirent_local_style(auth_path, pool)));
 
-      SVN_ERR(svn_io_file_close(authfile, pool));
+      SVN_ERR(svn_stream_close(stream));
     }
 
   return SVN_NO_ERROR;
@@ -114,6 +115,7 @@ svn_config_write_auth_data(apr_hash_t *hash,
                            apr_pool_t *pool)
 {
   apr_file_t *authfile = NULL;
+  svn_stream_t *stream;
   const char *auth_path;
 
   SVN_ERR(auth_file_path(&auth_path, cred_kind, realmstring, config_dir,
@@ -133,11 +135,12 @@ svn_config_write_auth_data(apr_hash_t *hash,
                              APR_OS_DEFAULT, pool),
             _("Unable to open auth file for writing"));
 
-  SVN_ERR_W(svn_hash_write(hash, authfile, pool),
+  stream = svn_stream_from_aprfile2(authfile, FALSE, pool);
+  SVN_ERR_W(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool),
             apr_psprintf(pool, _("Error writing hash to '%s'"),
-                         svn_path_local_style(auth_path, pool)));
+                         svn_dirent_local_style(auth_path, pool)));
 
-  SVN_ERR(svn_io_file_close(authfile, pool));
+  SVN_ERR(svn_stream_close(stream));
 
   /* To be nice, remove the realmstring from the hash again, just in
      case the caller wants their hash unchanged. */

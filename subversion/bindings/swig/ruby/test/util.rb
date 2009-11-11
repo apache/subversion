@@ -1,5 +1,7 @@
 require "fileutils"
 require "pathname"
+require "svn/util"
+require "tmpdir"
 
 require "my-assertions"
 
@@ -13,22 +15,19 @@ require 'greek_tree'
 
 module SvnTestUtil
   def setup_default_variables
-    test_dir = Pathname.new(File.dirname(__FILE__))
-    pwd = Pathname.new(Dir.pwd)
-    @base_dir = test_dir.relative_path_from(pwd).to_s
     @author = ENV["USER"] || "sample-user"
     @password = "sample-password"
     @realm = "sample realm"
-    @repos_path = File.join(@base_dir, "repos")
+    @repos_path = "repos"
     @full_repos_path = File.expand_path(@repos_path)
     @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
-    @wc_base_dir = File.join(@base_dir, "wc-tmp")
+    @wc_base_dir = File.join(Dir.tmpdir, "wc-tmp")
     @wc_path = File.join(@wc_base_dir, "wc")
     @full_wc_path = File.expand_path(@wc_path)
-    @tmp_path = File.join(@base_dir, "tmp")
-    @config_path = File.join(@base_dir, "config")
+    @tmp_path = "tmp"
+    @config_path = "config"
     @greek = Greek.new(@tmp_path, @wc_path, @repos_uri)
   end
 
@@ -101,10 +100,10 @@ module SvnTestUtil
   end
 
   def setup_repository(path=@repos_path, config={}, fs_config={})
+    require "svn/repos"
     FileUtils.rm_rf(path)
     FileUtils.mkdir_p(File.dirname(path))
-    Svn::Repos.create(path, config, fs_config)
-    @repos = Svn::Repos.open(@repos_path)
+    @repos = Svn::Repos.create(path, config, fs_config)
     @fs = @repos.fs
   end
 
@@ -118,7 +117,7 @@ module SvnTestUtil
 
   def setup_wc
     teardown_wc
-    make_context("").checkout(@repos_uri, @wc_path)
+    make_context("") { |ctx| ctx.checkout(@repos_uri, @wc_path) }
   end
 
   def teardown_wc
@@ -179,7 +178,12 @@ realm = #{@realm}
       cred.may_save = false
     end
     setup_auth_baton(ctx.auth_baton)
-    ctx
+    return ctx unless block_given?
+    begin
+      yield ctx
+    ensure
+      ctx.destroy
+    end
   end
 
   def setup_auth_baton(auth_baton)
@@ -188,7 +192,7 @@ realm = #{@realm}
   end
 
   def normalize_line_break(str)
-    if windows?
+    if Svn::Util.windows?
       str.gsub(/\n/, "\r\n")
     else
       str
@@ -196,12 +200,7 @@ realm = #{@realm}
   end
 
   def setup_greek_tree
-    @greek.setup(make_context("setup greek tree"))
-  end
-
-  module_function
-  def windows?
-    /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
+    make_context("setup greek tree") { |ctx| @greek.setup(ctx) }
   end
 
   module Svnserve
@@ -279,7 +278,7 @@ exit 1
     end
   end
 
-  if windows?
+  if Svn::Util.windows?
     require 'windows_util'
     include Windows::Svnserve
     extend Windows::SetupEnvironment

@@ -8,6 +8,9 @@ require SVN::Repos;
 require SVN::Fs;
 use File::Path qw(rmtree);
 use File::Temp qw(tempdir);
+use POSIX qw(locale_h);
+
+setlocale(LC_ALL, "C");
 
 my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1, CLEANUP => 1);
 

@@ -3,24 +3,38 @@
  * consumed by only fs_* libs.
  *
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 #ifndef SVN_FS_UTIL_H
 #define SVN_FS_UTIL_H
 
+#include <apr_pools.h>
+
+#include "svn_types.h"
+#include "svn_error.h"
+#include "svn_fs.h"
+#include "svn_dirent_uri.h"
+#include "svn_path.h"
+
 #include "svn_private_config.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -40,7 +54,8 @@ svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool);
    otherwise, verify that FS refers to an unopened database.  Return
    an appropriate error if the expecation fails to match the
    reality.  */
-svn_error_t *svn_fs__check_fs(svn_fs_t *fs, svn_boolean_t expect_open);
+svn_error_t *
+svn_fs__check_fs(svn_fs_t *fs, svn_boolean_t expect_open);
 
 /* Constructing nice error messages for roots.  */
 
@@ -62,17 +77,17 @@ svn_error_t *svn_fs__check_fs(svn_fs_t *fs, svn_boolean_t expect_open);
 
 /* Build a detailed `file already exists' message for PATH in ROOT.
    ROOT is of type svn_fs_root_t *. */
-#define SVN_FS__ALREADY_EXISTS(root, path_str) (                               \
+#define SVN_FS__ALREADY_EXISTS(root, path_str, pool) (                         \
   root->is_txn_root ?                                                          \
     svn_error_createf                                                          \
       (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
        _("File already exists: filesystem '%s', transaction '%s', path '%s'"), \
-       root->fs->path, root->txn, path_str)                                    \
+       svn_dirent_local_style(root->fs->path, pool), root->txn, path_str)      \
   :                                                                            \
     svn_error_createf                                                          \
       (SVN_ERR_FS_ALREADY_EXISTS, 0,                                           \
        _("File already exists: filesystem '%s', revision %ld, path '%s'"),     \
-       root->fs->path, root->rev, path_str)                                    \
+       svn_dirent_local_style(root->fs->path, pool), root->rev, path_str)      \
   )
 
 /* ROOT is of type svn_fs_root_t *. */
@@ -121,7 +136,7 @@ svn_error_t *svn_fs__check_fs(svn_fs_t *fs, svn_boolean_t expect_open);
 #define SVN_FS__ERR_LOCK_EXPIRED(fs, token)                      \
   svn_error_createf                                              \
     (SVN_ERR_FS_LOCK_EXPIRED, 0,                                 \
-     _("Lock has expired:  lock-token '%s' in filesystem '%s'"), \
+     _("Lock has expired: lock-token '%s' in filesystem '%s'"), \
      token, fs->path)
 
 /* FS is of type "svn fs_t *". */
@@ -160,6 +175,17 @@ char *
 svn_fs__next_entry_name(const char **next_p,
                         const char *path,
                         apr_pool_t *pool);
+
+/* Allocate an svn_fs_path_change2_t structure in POOL, initialize and
+   return it.
+
+   Set the node_rev_id field of the created struct to NODE_REV_ID, and
+   change_kind to CHANGE_KIND.  Set all other fields to their _unknown,
+   NULL or invalid value, respectively. */
+svn_fs_path_change2_t *
+svn_fs__path_change_create_internal(const svn_fs_id_t *node_rev_id,
+                                    svn_fs_path_change_kind_t change_kind,
+                                    apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

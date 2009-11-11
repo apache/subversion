@@ -2,7 +2,8 @@
 # executable.py -- Utilities for dealing with external executables
 #
 
-import os, string
+import os
+import subprocess
 
 def exists(file):
   """Is this an executable file?"""
@@ -13,7 +14,7 @@ def find(file, dirs=None):
      If no directories are given, search according to the PATH
      environment variable."""
   if not dirs:
-    dirs = string.split(os.environ["PATH"], os.pathsep)
+    dirs = os.environ["PATH"].split(os.pathsep)
   for path in dirs:
     if is_executable(os.path.join(path, file)):
       return os.path.join(path, file)
@@ -23,24 +24,20 @@ def find(file, dirs=None):
 
 def output(cmd, strip=None):
   """Run a command and collect all output"""
-  try:
-    # Python 2.x
-    stdin, stdout = os.popen4(cmd)
-    assert(not stdin.close())
-  except AttributeError:
-    try:
-      # Python 1.x on Unix
-      import posix
-      stdout = posix.popen('%s 2>&1' % cmd)
-    except ImportError:
-      # Python 1.x on Windows (no cygwin)
-      # There's no easy way to collect output from stderr, so we'll
-      # just collect stdout.
-      stdout = os.popen(cmd)
-  output = stdout.read()
-  assert(not stdout.close())
+  # Check that cmd is in PATH (otherwise we'd get a generic OSError later)
+  import distutils.spawn
+  if isinstance(cmd, str):
+    cmdname = cmd
+  elif isinstance(cmd, list):
+    cmdname = cmd[0]
+  if distutils.spawn.find_executable(cmdname) is None:
+    return None
+
+  # Run it
+  (output, empty_stderr) = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
+                             stderr=subprocess.STDOUT).communicate()
   if strip:
-    return string.strip(output)
+    return output.strip()
   else:
     return output
 

@@ -1,17 +1,22 @@
 /* reps-table.c : operations on the `representations' table
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -75,7 +80,7 @@ svn_fs_bdb__read_rep(representation_t **rep_p,
                      apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  skel_t *skel;
+  svn_skel_t *skel;
   int db_err;
   DBT query, result;
 
@@ -96,12 +101,10 @@ svn_fs_bdb__read_rep(representation_t **rep_p,
   SVN_ERR(BDB_WRAP(fs, _("reading representation"), db_err));
 
   /* Parse the REPRESENTATION skel.  */
-  skel = svn_fs_base__parse_skel(result.data, result.size, pool);
+  skel = svn_skel__parse(result.data, result.size, pool);
 
   /* Convert to a native type.  */
-  SVN_ERR(svn_fs_base__parse_representation_skel(rep_p, skel, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_base__parse_representation_skel(rep_p, skel, pool);
 }
 
 
@@ -114,21 +117,20 @@ svn_fs_bdb__write_rep(svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT query, result;
-  skel_t *skel;
+  svn_skel_t *skel;
 
   /* Convert from native type to skel. */
-  SVN_ERR(svn_fs_base__unparse_representation_skel(&skel, rep, pool));
+  SVN_ERR(svn_fs_base__unparse_representation_skel(&skel, rep,
+                                                   bfd->format, pool));
 
   /* Now write the record. */
   svn_fs_base__trail_debug(trail, "representations", "put");
-  SVN_ERR(BDB_WRAP(fs, _("storing representation"),
-                   bfd->representations->put
-                   (bfd->representations, trail->db_txn,
-                    svn_fs_base__str_to_dbt(&query, key),
-                    svn_fs_base__skel_to_dbt(&result, skel, pool),
-                    0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("storing representation"),
+                  bfd->representations->put
+                  (bfd->representations, trail->db_txn,
+                   svn_fs_base__str_to_dbt(&query, key),
+                   svn_fs_base__skel_to_dbt(&result, skel, pool),
+                   0));
 }
 
 
@@ -172,9 +174,7 @@ svn_fs_bdb__write_new_rep(const char **key,
      svn_fs_base__str_to_dbt(&result, next_key),
      0);
 
-  SVN_ERR(BDB_WRAP(fs, _("bumping next representation key"), db_err));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("bumping next representation key"), db_err);
 }
 
 
@@ -200,7 +200,5 @@ svn_fs_bdb__delete_rep(svn_fs_t *fs,
        _("No such representation '%s'"), key);
 
   /* Handle any other error conditions.  */
-  SVN_ERR(BDB_WRAP(fs, _("deleting representation"), db_err));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("deleting representation"), db_err);
 }

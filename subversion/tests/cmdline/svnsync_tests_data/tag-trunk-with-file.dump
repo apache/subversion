@@ -81,6 +81,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 16
 Text-content-md5: 0bebeeefa6853d064099b54a81a627e8
+Text-content-sha1: b78087338d3daf51e667056c78fd8089bb51d5ec
 Content-length: 26
 
 PROPS-END
@@ -119,5 +120,6 @@ Node-action: add
 Node-copyfrom-rev: 2
 Node-copyfrom-path: trunk/foo.txt
 Text-copy-source-md5: 0bebeeefa6853d064099b54a81a627e8
+Text-copy-source-sha1: b78087338d3daf51e667056c78fd8089bb51d5ec
 
 
