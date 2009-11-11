@@ -685,6 +685,23 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * @since 1.7
+     */
+    public void copy(CopySource[] sources, String destPath, String message,
+                     boolean copyAsChild, boolean makeParents,
+                     boolean ignoreExternals, Map revpropTable)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.copy(sources, destPath, message, copyAsChild,
+                        makeParents, ignoreExternals, revpropTable);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
+     *                              boolean, boolean, Map)} instead.
      * @since 1.5
      */
     public void copy(CopySource[] sources, String destPath, String message,
@@ -701,7 +718,7 @@ public class SVNClientSynchronized implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
-     *                              boolean)} instead.
+     *                              boolean, boolean, Map)} instead.
      * @since 1.0
      */
     public void copy(String srcPath, String destPath, String message,

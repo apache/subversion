@@ -666,11 +666,36 @@ public interface SVNClientInterface
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents
+     * @param ignoreExternals Whether or not to process external definitions
+     *                        as part of this operation.
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
+     * @throws ClientException If the copy operation fails.
+     * @since 1.7
+     */
+    void copy(CopySource[] sources, String destPath, String message,
+              boolean copyAsChild, boolean makeParents,
+              boolean ignoreExternals, Map revpropTable)
+            throws ClientException;
+
+    /**
+     * Copy versioned paths with the history preserved.
+     *
+     * @param sources A list of <code>CopySource</code> objects.
+     * @param destPath Destination path or URL.
+     * @param message Commit message.  May be <code>null</code> if
+     * <code>destPath</code> is not a URL.
+     * @param copyAsChild Whether to copy <code>srcPaths</code> as
+     * children of <code>destPath</code>.
+     * @param makeParents Whether to create intermediate parents
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
      * @throws ClientException If the copy operation fails.
      * @since 1.5
+     * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
+     *                              boolean, boolean, Map)} instead.
      */
     void copy(CopySource[] sources, String destPath, String message,
               boolean copyAsChild, boolean makeParents, Map revpropTable)
@@ -686,7 +711,7 @@ public interface SVNClientInterface
      * @param revision  source revision
      * @throws ClientException
      * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
-     *                              boolean)} instead.
+     *                              boolean, boolean, Map)} instead.
      */
     void copy(String srcPath, String destPath, String message,
               Revision revision) throws ClientException;

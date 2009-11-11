@@ -574,7 +574,7 @@ JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_copy
 (JNIEnv *env, jobject jthis, jobjectArray jcopySources, jstring jdestPath,
  jstring jmessage, jboolean jcopyAsChild, jboolean jmakeParents,
- jobject jrevpropTable)
+ jboolean jignoreExternals, jobject jrevpropTable)
 {
   JNIEntry(SVNClient, copy);
 
@@ -599,7 +599,8 @@ Java_org_tigris_subversion_javahl_SVNClient_copy
     return;
 
   cl->copy(copySources, destPath, message, jcopyAsChild ? true : false,
-           jmakeParents ? true : false, revprops);
+           jmakeParents ? true : false, jignoreExternals ? true : false,
+           revprops);
 }
 
 JNIEXPORT void JNICALL

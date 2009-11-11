@@ -442,7 +442,7 @@ jlong SVNClient::commit(Targets &targets, const char *message,
 
 void SVNClient::copy(CopySources &copySources, const char *destPath,
                      const char *message, bool copyAsChild, bool makeParents,
-                     RevpropTable &revprops)
+                     bool ignoreExternals, RevpropTable &revprops)
 {
     SVN::Pool requestPool;
 
@@ -462,8 +462,8 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
         return;
 
     svn_commit_info_t *commit_info;
-    SVN_JNI_ERR(svn_client_copy4(&commit_info, srcs, destinationPath.c_str(),
-                                 copyAsChild, makeParents,
+    SVN_JNI_ERR(svn_client_copy5(&commit_info, srcs, destinationPath.c_str(),
+                                 copyAsChild, makeParents, ignoreExternals,
                                  revprops.hash(requestPool), ctx,
                                  requestPool.pool()), );
 }

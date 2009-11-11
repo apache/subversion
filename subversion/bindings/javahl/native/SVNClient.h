@@ -132,7 +132,7 @@ class SVNClient :public SVNBase
             bool makeParents, RevpropTable &revprops);
   void copy(CopySources &copySources, const char *destPath,
             const char *message, bool copyAsChild, bool makeParents,
-            RevpropTable &revprops);
+            bool ignoreExternals, RevpropTable &revprops);
   jlong commit(Targets &targets, const char *message, svn_depth_t depth,
                bool noUnlock, bool keepChangelist,
                StringArray &changelists, RevpropTable &revprops);
