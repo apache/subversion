@@ -2748,13 +2748,19 @@ resolve_conflict_on_entry(const char *path,
       switch (conflict_choice)
         {
         case svn_wc_conflict_choose_base:
-          auto_resolve_src = entry->conflict_old;
+          auto_resolve_src = svn_path_join(
+                              svn_wc_adm_access_path(conflict_dir),
+                              entry->conflict_old, pool);
           break;
         case svn_wc_conflict_choose_mine_full:
-          auto_resolve_src = entry->conflict_wrk;
+          auto_resolve_src = svn_path_join(
+                              svn_wc_adm_access_path(conflict_dir),
+                              entry->conflict_wrk, pool);
           break;
         case svn_wc_conflict_choose_theirs_full:
-          auto_resolve_src = entry->conflict_new;
+          auto_resolve_src = svn_path_join(
+                              svn_wc_adm_access_path(conflict_dir),
+                              entry->conflict_new, pool);
           break;
         case svn_wc_conflict_choose_merged:
           auto_resolve_src = NULL;
@@ -2832,10 +2838,7 @@ resolve_conflict_on_entry(const char *path,
         }
 
       if (auto_resolve_src)
-        SVN_ERR(svn_io_copy_file(
-          svn_path_join(svn_wc_adm_access_path(conflict_dir), auto_resolve_src,
-                        pool),
-          path, TRUE, pool));
+        SVN_ERR(svn_io_copy_file(auto_resolve_src, path, TRUE, pool));
     }
 
   /* Yes indeed, being able to map a function over a list would be nice. */
