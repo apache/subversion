@@ -772,35 +772,32 @@ svn_wc__upgrade_sdb(int *result_format,
                                                     scratch_pool),
                              start_format);
 
-  if (start_format == 12)
+  /* Note: none of these have "break" statements; the fall-through is
+     intentional. */
+  switch (start_format)
     {
-      /* Nothing to do for the 12->13 bump.  */
-      ++start_format;
-    }
+      case 12:
+        /* Nothing to do for the 12->13 bump.  */
+        ++start_format;
 
-  if (start_format == 13)
-    {
-      SVN_ERR(migrate_locks(wcroot_abspath, sdb, scratch_pool));
-      SVN_ERR(svn_sqlite__set_schema_version(sdb, 14, scratch_pool));
-      ++start_format;
-    }
+      case 13:
+        SVN_ERR(migrate_locks(wcroot_abspath, sdb, scratch_pool));
+        SVN_ERR(svn_sqlite__set_schema_version(sdb, 14, scratch_pool));
+        ++start_format;
 
-  if (start_format == 14)
-    {
-      /* Nothing to do here for format 15 */
-      SVN_ERR(svn_sqlite__set_schema_version(sdb, 15, scratch_pool));
-      ++start_format;
-    }
+      case 14:
+        /* Nothing to do here for format 15 */
+        SVN_ERR(svn_sqlite__set_schema_version(sdb, 15, scratch_pool));
+        ++start_format;
 
 #if 0
-  if (start_format == 15)
-    {
-      SVN_ERR(bump_to_16(wcroot_abspath, sdb, scratch_pool));
-      ++start_format;
-    }
+      case 15:
+        SVN_ERR(bump_to_16(wcroot_abspath, sdb, scratch_pool));
+        ++start_format;
 #endif
 
-  /* ### future bumps go here.  */
+      /* ### future bumps go here.  */
+    }
 
   *result_format = start_format;
 
