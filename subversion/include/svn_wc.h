@@ -1748,7 +1748,11 @@ typedef struct svn_wc_conflict_description2_t
   /** If this is text-conflict and involves the merging of two files
    * descended from a common ancestor, here are the paths of up to
    * four fulltext files that can be used to interactively resolve the
-   * conflict.  All four files will be in repository-normal form -- LF
+   * conflict.
+   *
+   * ### Are these paths relative to some directory, or absolute?
+   *
+   * All four files will be in repository-normal form -- LF
    * line endings and contracted keywords.  (If any of these files are
    * not available, they default to NULL.)
    *
