@@ -2878,11 +2878,11 @@ svn_error_t *
 svn_io_file_write(apr_file_t *file, const void *buf,
                   apr_size_t *nbytes, apr_pool_t *pool)
 {
-  return do_io_file_wrapper_cleanup
-    (file, apr_file_write(file, buf, nbytes),
+  return svn_error_return(do_io_file_wrapper_cleanup(
+     file, apr_file_write(file, buf, nbytes),
      N_("Can't write to file '%s'"),
      N_("Can't write to stream"),
-     pool);
+     pool));
 }
 
 
@@ -2912,11 +2912,11 @@ svn_io_file_write_full(apr_file_t *file, const void *buf,
 #undef MAXBUFSIZE
 #endif
 
-  return do_io_file_wrapper_cleanup
-    (file, rv,
+  return svn_error_return(do_io_file_wrapper_cleanup(
+     file, rv,
      N_("Can't write to file '%s'"),
      N_("Can't write to stream"),
-     pool);
+     pool));
 }
 
 
