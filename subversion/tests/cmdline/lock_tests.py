@@ -1433,6 +1433,44 @@ def lock_twice_in_one_wc(sbox):
                                      '.*(([Nn]o)|(Server)).*[lL]ock.*',
                                      'commit', mu2_path, '-m', '')
 
+#----------------------------------------------------------------------
+# Test for issue #3524 'Locking path via ra_serf which doesn't exist in
+# HEAD triggers assert'
+def lock_path_not_in_head(sbox):
+  "lock path that does not exist in HEAD"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  D_path      = os.path.join(wc_dir, 'A', 'D')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+
+  # Commit deletion of A/D and A/B/lambda as r2, then update the WC
+  # back to r1.  Then attempt to lock some paths that no longer exist
+  # in HEAD.  These should fail gracefully.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'delete', lambda_path, D_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     '-m', 'Some deletions', wc_dir)  
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
+  expected_lock_fail_err_re = "(svn: .*405.*)|"
+  "(svn: Path .* doesn't exist in HEAD revision)"
+  # Issue #3524 These lock attemtps trigger an assert over ra_serf:
+  #
+  # working_copies\lock_tests-37>svn lock A\D
+  # ..\..\..\subversion\libsvn_client\ra.c:275: (apr_err=235000)
+  # svn: In file '..\..\..\subversion\libsvn_ra_serf\util.c' line 1120:
+  #  assertion failed (ctx->status_code)
+  #
+  # working_copies\lock_tests-37>svn lock A\B\lambda
+  # ..\..\..\subversion\libsvn_client\ra.c:275: (apr_err=235000)
+  # svn: In file '..\..\..\subversion\libsvn_ra_serf\util.c' line 1120:
+  #  assertion failed (ctx->status_code)
+  svntest.actions.run_and_verify_svn(None, None, expected_lock_fail_err_re,
+                                     'lock', D_path)
+  svntest.actions.run_and_verify_svn(None, None, expected_lock_fail_err_re,
+                                     'lock', lambda_path)
+
 ########################################################################
 # Run the tests
 
@@ -1475,6 +1513,7 @@ test_list = [ None,
                     svntest.main.is_ra_type_dav),
               lock_funky_comment_chars,
               lock_twice_in_one_wc,
+              lock_path_not_in_head,
             ]
 
 if __name__ == '__main__':
