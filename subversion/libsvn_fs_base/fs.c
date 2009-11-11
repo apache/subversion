@@ -61,6 +61,7 @@
 #include "bdb/node-origins-table.h"
 #include "bdb/miscellaneous-table.h"
 #include "bdb/checksum-reps-table.h"
+#include "bdb/successors-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_util.h"
@@ -176,6 +177,7 @@ cleanup_fs(svn_fs_t *fs)
   SVN_ERR(cleanup_fs_db(fs, &bfd->node_origins, "node-origins"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->checksum_reps, "checksum-reps"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->miscellaneous, "miscellaneous"));
+  SVN_ERR(cleanup_fs_db(fs, &bfd->successors, "successors"));
 
   /* Finally, close the environment.  */
   bfd->bdb = 0;
@@ -645,6 +647,13 @@ open_databases(svn_fs_t *fs,
                                                             bfd->bdb->env,
                                                             create)));
     }
+
+  SVN_ERR(BDB_WRAP(fs, (create
+                        ? "creating 'successors' table"
+                        : "opening 'successors' table"),
+                   svn_fs_bdb__open_successors_table(&bfd->successors,
+                                                     bfd->bdb->env,
+                                                     create)));
 
   return SVN_NO_ERROR;
 }

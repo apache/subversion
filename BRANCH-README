@@ -1,0 +1,64 @@
+This branch exists for the tracking of node-revision successor IDs in
+the FS backends.  It is being managed as a reintegrate-able branch,
+with regular catch-up merges from the trunk.
+
+THE IDEA
+========
+
+Currently the Subversion filesystem backends track the direct
+predecessor of every node-revision that has one.  (Only those
+node-revisions which are the first in a line of history for a given
+versioned object don't have predecessors.)  It is this pred-ID
+tracking that allows us to efficiently walk backwards through history
+to find the previous versions of modified files and directories and
+such.
+
+But what we canNOT do is walk *forward*.  We cannot today efficiently
+answer these questions for a given node-revision:
+
+   Q: In what revision was /path/to/foo.c@r15 next changed?
+   Q: To what locations has this /some/fixed/file.c@r45 been copied?
+
+By also storing for each node-revision a list of its successors (the
+exact opposite of the predessor mapping), we provide a basis for
+answering those questions:
+
+   Q: In what revision was /path/to/foo.c@r15 next changed?
+   A: Lookup the node-revision-ID for /path/to/foo.c@r15.  Lookup the
+      successor IDs for that node-revision-IDs.  Sort successors by
+      the revisions in which they appeared, and choose the first of
+      them.
+
+  
+   Q: To what locations has this /some/fixed/file.c@r45 been copied?
+   A: Lookup the node-revision-ID for /some/fixed/file.c@r45.  Lookup
+      the successor IDs for that node-revision-IDs.  For each
+      successor, check for a corresponding copy record.  If you find
+      one, the destination of that copy is one of the places that this
+      node revision was copied; if you don't, this was a normal
+      in-place modification of the file or directory, not a copy.
+
+And, of course, this could lead to expansion of the svn_fs_history_*
+API set, allowing for the likes of svn_fs_history_next() or
+svn_fs_history_copies() or somesuch.  From there we could perhaps
+improve our peg-and-operative-revision resolution algorithm to favor
+one or another flavor of successor (copy or not).
+
+
+STATUS
+======
+
+Only the BDB backend has been tweaked so far.  The code is believed to
+cover the basic maintenance of the successor ID mapping, adding map
+items when new nodes are created, removing them when nodes are
+deleted.  The code assumes that the only node revisions every removed
+from the filesystem are those which have no successors (which might
+not hold up if an obliteration feature is added, depending on the
+implementation).
+
+Currently the branch does not have any FS format version changes
+present.  That would need to be added for the code is released.
+
+Lacking also are C unit tests for this functionality.
+
+And, of course, the FSFS support for this enhancement is non-existent.
