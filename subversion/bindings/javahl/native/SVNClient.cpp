@@ -59,7 +59,7 @@
 #include "svn_diff.h"
 #include "svn_config.h"
 #include "svn_io.h"
-#include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_utf.h"
 #include "svn_private_config.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
@@ -1004,7 +1004,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
     svn_error_t *err;
     SVN::Pool requestPool;
     const char *c_relToDir = relativeToDir ?
-      svn_path_canonicalize(relativeToDir, requestPool.pool()) :
+      svn_dirent_canonicalize(relativeToDir, requestPool.pool()) :
       relativeToDir;
 
     SVN_JNI_NULL_PTR_EX(target1, "target", );
@@ -1023,7 +1023,8 @@ void SVNClient::diff(const char *target1, Revision &revision1,
     apr_file_t *outfile = NULL;
     apr_status_t rv =
         apr_file_open(&outfile,
-                      svn_path_internal_style(outfileName, requestPool.pool()),
+                      svn_dirent_internal_style(outfileName,
+                                                requestPool.pool()),
                       APR_CREATE|APR_WRITE|APR_TRUNCATE , APR_OS_DEFAULT,
                       requestPool.pool());
     if (rv != APR_SUCCESS)
