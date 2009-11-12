@@ -229,6 +229,14 @@ Candidate changes:
      connection, a problem seen and reported by MPlayer developers in #svn.
    Votes:
      +1: stsp
+
+ * r40485, r40486
+   Treat 'svn export $repos/foo .' the same as 'svn export $repos/foo'.
+   Justification:
+     The current broken behavior is unexpected and nonintuitive.  Plus,
+     the fix is easy, and there is an included test.
+   Votes:
+     +1: hwright
  
 Approved changes:
 =================
