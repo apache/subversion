@@ -1068,6 +1068,27 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * @since 1.7
+     */
+    public void getMergeinfoLog(int kind, String pathOrUrl,
+                                Revision pegRevision, String mergeSourceUrl,
+                                Revision srcPegRevision,
+                                boolean discoverChangedPaths, int depth,
+                                String[] revprops, LogMessageCallback callback)
+        throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                                   srcPegRevision, discoverChangedPaths, depth,
+                                   revprops, callback);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #getMergeinfoLog(int, String, Revision, String,
+     *                                         Revision, boolean, int,
+     *                                         String[], LogMessageCallback)}
      * @since 1.5
      */
     public void getMergeinfoLog(int kind, String pathOrUrl,
