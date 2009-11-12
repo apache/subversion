@@ -404,6 +404,24 @@ def export_HEADplus1_fails(sbox):
                                      'export', sbox.repo_url, sbox.wc_dir,
                                      '-r', 38956)
 
+def export_to_explicit_cwd(sbox):
+  "export a single file to '.'"
+  sbox.build(create_wc = False, read_only = True)
+
+  svntest.main.safe_rmtree(sbox.wc_dir)
+  expected_output = svntest.tree.build_generic_tree([
+      Item(status='A ').as_node_tuple('iota'),
+    ]).as_state()
+  expected_disk = svntest.tree.build_generic_tree([
+      Item(contents="This is the file 'iota'.\n").as_node_tuple('iota'),
+    ]).as_state()
+
+  os.mkdir(sbox.wc_dir)
+  os.chdir(sbox.wc_dir)
+  svntest.actions.run_and_verify_export(sbox.repo_url + '/iota',
+                                        '.', expected_output,
+                                        expected_disk)
+
 ########################################################################
 # Run the tests
 
@@ -427,6 +445,7 @@ test_list = [ None,
               export_with_state_deleted,
               export_creates_intermediate_folders,
               export_HEADplus1_fails,
+              export_to_explicit_cwd,
              ]
 
 if __name__ == '__main__':
