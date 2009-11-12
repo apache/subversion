@@ -77,6 +77,7 @@ Partial committers who have asked to be listed as dormant:
 
            kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
       rassilon   Bill Tutt <bill@tutts.org> (Win32, COM, issue-1003-dev br.)
+           pll   Paul lussier <p.lussier@comcast.net>        (releases)
 
 
 Commit access for specific areas:
@@ -105,7 +106,6 @@ Commit access for specific areas:
       niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
         zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
         mprice   Michael Price <ectospheno@gmail.com>        (releases)
-           pll   Paul lussier <p.lussier@comcast.net>        (releases)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
