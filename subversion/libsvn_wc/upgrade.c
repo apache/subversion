@@ -846,13 +846,13 @@ migrate_props(const char *wcroot_abspath,
   SVN_ERR(svn_io_remove_dir2(props_dirpath, TRUE, NULL, NULL, iterpool));
   SVN_ERR(svn_io_remove_dir2(props_base_dirpath, TRUE, NULL, NULL,
                              iterpool));
-  SVN_ERR(svn_io_remove_dir2(svn_dirent_join_many(iterpool, wcroot_abspath,
-                                                  ".svn", TEMP_DIR,
-                                                  PROPS_SUBDIR, NULL),
+  SVN_ERR(svn_io_remove_dir2(svn_dirent_join(wcroot_abspath,
+                                      ".svn/" TEMP_DIR "/" PROPS_SUBDIR,
+                                      iterpool),
                              TRUE, NULL, NULL, iterpool));
-  SVN_ERR(svn_io_remove_dir2(svn_dirent_join_many(iterpool, wcroot_abspath,
-                                                  ".svn", TEMP_DIR,
-                                                  PROP_BASE_SUBDIR, NULL),
+  SVN_ERR(svn_io_remove_dir2(svn_dirent_join(wcroot_abspath,
+                                      ".svn/"  TEMP_DIR "/" PROP_BASE_SUBDIR,
+                                      iterpool),
                              TRUE, NULL, NULL, iterpool));
 
   SVN_ERR(svn_wc__db_close(db));
