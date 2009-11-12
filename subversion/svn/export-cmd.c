@@ -70,9 +70,18 @@ svn_cl__export(apr_getopt_t *os,
 
   /* If only one target was given, split off the basename to use as
      the `to' path.  Else, a `to' path was supplied. */
-  to = APR_ARRAY_IDX(targets, 1, const char *);
-  if (targets->nelts == 1 || strcmp(to, "") == 0)
-    to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
+  if (targets->nelts == 1)
+    {
+      to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
+    }
+  else
+    {
+      to = APR_ARRAY_IDX(targets, 1, const char *);
+
+      /* If given the cwd, pretend we weren't given anything. */
+      if (strcmp("", to) == 0)
+        to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
+    }
 
   if (! opt_state->quiet)
     SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
