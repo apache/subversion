@@ -1808,8 +1808,8 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
         return NULL;
-    SVN_JNI_ERR(svn_wc_check_wc(intPath.c_str(), &wc_format,
-                                requestPool.pool()),
+    SVN_JNI_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, intPath.c_str(),
+                                 requestPool.pool()),
                 NULL);
 
     if (! wc_format)
