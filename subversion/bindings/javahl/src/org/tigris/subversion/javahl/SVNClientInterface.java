@@ -1099,8 +1099,31 @@ public interface SVNClientInterface
      * @param mergeSourceUrl         the source of the merge
      * @param srcPegRevision         peg rev for mergeSourceUrl
      * @param discoverChangedPaths   return paths of changed items
+     * @param depth                  the depth to recurse to
      * @param revProps               the revprops to retrieve
      * @param callback               the object to receive the log messages
+     * @since 1.7
+     */
+    void getMergeinfoLog(int kind, String pathOrUrl,
+                         Revision pegRevision, String mergeSourceUrl,
+                         Revision srcPegRevision, boolean discoverChangedPaths,
+                         int depth, String[] revprops,
+                         LogMessageCallback callback)
+        throws ClientException;
+
+    /**
+     * Retrieve either merged or eligible-to-be-merged revisions.
+     * @param kind                   kind of revisions to receive
+     * @param pathOrUrl              target of merge
+     * @param pegRevision            peg rev for pathOrUrl
+     * @param mergeSourceUrl         the source of the merge
+     * @param srcPegRevision         peg rev for mergeSourceUrl
+     * @param discoverChangedPaths   return paths of changed items
+     * @param revProps               the revprops to retrieve
+     * @param callback               the object to receive the log messages
+     * @deprecated Use {@link #getMergeinfoLog(int, String, Revision, String,
+     *                                         Revision, boolean, int,
+     *                                         String[], LogMessageCallback)}
      * @since 1.5
      */
     void getMergeinfoLog(int kind, String pathOrUrl,

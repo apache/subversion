@@ -852,6 +852,7 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
                                 const char *mergeSourceURL,
                                 Revision &srcPegRevision,
                                 bool discoverChangedPaths,
+                                svn_depth_t depth,
                                 StringArray &revProps,
                                 LogMessageCallback *callback)
 {
@@ -869,36 +870,18 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
     Path srcURL(mergeSourceURL);
     SVN_JNI_ERR(srcURL.error_occured(), );
 
-    switch (type)
-      {
-        case 0:
-            SVN_JNI_ERR(
-                svn_client_mergeinfo_log_eligible(urlPath.c_str(),
-                                                  pegRevision.revision(),
-                                                  srcURL.c_str(),
-                                                  srcPegRevision.revision(),
-                                                  LogMessageCallback::callback,
-                                                  callback,
-                                                  discoverChangedPaths,
-                                                  revProps.array(requestPool),
-                                                  ctx,
-                                                  requestPool.pool()), );
-            return;
-
-        case 1:
-            SVN_JNI_ERR(
-                svn_client_mergeinfo_log_merged(urlPath.c_str(),
-                                                pegRevision.revision(),
-                                                srcURL.c_str(),
-                                                srcPegRevision.revision(),
-                                                LogMessageCallback::callback,
-                                                callback,
-                                                discoverChangedPaths,
-                                                revProps.array(requestPool),
-                                                ctx,
-                                                requestPool.pool()), );
-            return;
-      }
+    SVN_JNI_ERR(svn_client_mergeinfo_log(urlPath.c_str(),
+                                         type == 1 ? true : false,
+                                         pegRevision.revision(),
+                                         srcURL.c_str(),
+                                         srcPegRevision.revision(),
+                                         LogMessageCallback::callback,
+                                         callback,
+                                         discoverChangedPaths,
+                                         depth,
+                                         revProps.array(requestPool),
+                                         ctx,
+                                         requestPool.pool()), );
 
     return;
 }

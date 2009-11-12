@@ -1158,7 +1158,7 @@ Java_org_tigris_subversion_javahl_SVNClient_getMergeinfo
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_getMergeinfoLog
 (JNIEnv *env, jobject jthis, jint jkind, jstring jpathOrUrl,
  jobject jpegRevision, jstring jmergeSourceUrl, jobject jsrcPegRevision,
- jboolean jdiscoverChangedPaths, jobjectArray jrevProps,
+ jboolean jdiscoverChangedPaths, jint jdepth, jobjectArray jrevProps,
  jobject jlogMessageCallback)
 {
   JNIEntry(SVNClient, getMergeinfoLog);
@@ -1193,7 +1193,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_getMergeinfoL
 
   cl->getMergeinfoLog((int)jkind, pathOrUrl, pegRevision, mergeSourceUrl,
                       srcPegRevision, jdiscoverChangedPaths ? true : false,
-                      revProps, &callback);
+                      (svn_depth_t)jdepth, revProps, &callback);
 }
 
 JNIEXPORT void JNICALL
