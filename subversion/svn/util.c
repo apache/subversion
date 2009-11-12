@@ -1283,3 +1283,10 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
                       node->peg_rev);
 }
 
+const char *
+svn_cl__path_join(const char *base,
+                  const char *component,
+                  apr_pool_t *pool)
+{
+  return svn_path_join(base, component, pool);
+}

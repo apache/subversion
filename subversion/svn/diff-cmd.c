@@ -93,7 +93,7 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
-  path = svn_path_join(path, summary->path, pool);
+  path = svn_cl__path_join(path, summary->path, pool);
 
   /* Convert non-urls to local style, so that things like "" show up as "." */
   if (! svn_path_is_url(path))
@@ -122,7 +122,7 @@ summarize_regular(const svn_client_diff_summarize_t *summary,
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
-  path = svn_path_join(path, summary->path, pool);
+  path = svn_uri_join(path, summary->path, pool);
 
   /* Convert non-urls to local style, so that things like "" show up as "." */
   if (! svn_path_is_url(path))
@@ -323,8 +323,8 @@ svn_cl__diff(apr_getopt_t *os,
                                      _("Path '%s' not relative to base URLs"),
                                      path);
 
-          target1 = svn_path_join(old_target, path, iterpool);
-          target2 = svn_path_join(new_target, path, iterpool);
+          target1 = svn_cl__path_join(old_target, path, iterpool);
+          target2 = svn_cl__path_join(new_target, path, iterpool);
 
           if (opt_state->summarize)
             SVN_ERR(svn_client_diff_summarize2
