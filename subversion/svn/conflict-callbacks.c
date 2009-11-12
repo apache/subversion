@@ -634,6 +634,15 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             }
           else if (strcmp(answer, "l") == 0)
             {
+              if (desc->kind == svn_wc_conflict_kind_property)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                              _("Invalid option; cannot "
+                                                "resolve property conflicts "
+                                                "with an external merge tool."
+                                                "\n\n")));
+                  continue;
+                }
               if (desc->base_file && desc->their_file && desc->my_file
                     && desc->merged_file)
                 {
