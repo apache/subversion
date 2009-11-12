@@ -220,5 +220,15 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r40478
+   Try to enable TCP keep-alives in svnserve.
+   Justification:
+     ra_svn clients do this, too. It should not do any harm.
+     Is likely to fix hanging svnserve processes which still linger
+     blocking on reads from sockets after days of inactivity on the
+     connection, a problem seen and reported by MPlayer developers in #svn.
+   Votes:
+     +1: stsp
+ 
 Approved changes:
 =================
