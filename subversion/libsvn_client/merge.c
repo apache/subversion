@@ -5973,6 +5973,20 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
           || (range_end->kind == svn_opt_revision_unspecified))
         return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                                 _("Not all required revisions are specified"));
+
+      /* The BASE, COMMITTED, and PREV revision keywords do not
+         apply to URLs. */
+      if (svn_path_is_url(source)
+          && (range_start->kind == svn_opt_revision_base
+              || range_end->kind == svn_opt_revision_base
+              || range_start->kind == svn_opt_revision_committed
+              || range_end->kind == svn_opt_revision_committed
+              || range_start->kind == svn_opt_revision_previous
+              || range_end->kind == svn_opt_revision_previous))
+        return svn_error_create(
+          SVN_ERR_CLIENT_BAD_REVISION, NULL,
+          _("PREV, BASE, or COMMITTED revision keywords are invalid for URL"));
+
       SVN_ERR(svn_client__get_revision_number(&range_start_rev, &youngest_rev,
                                               ctx->wc_ctx, source_abspath,
                                               ra_session, range_start,
