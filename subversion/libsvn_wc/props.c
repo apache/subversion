@@ -61,7 +61,6 @@
 #include "workqueue.h"
 
 #include "svn_private_config.h"
-#include "private/svn_debug.h"
 
 /* #define TEST_DB_PROPS */
 
@@ -2581,12 +2580,9 @@ svn_wc__internal_propdiff(apr_array_header_t **propchanges,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
   apr_hash_t *baseprops, *props;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
 
   SVN_ERR(svn_wc__load_props(&baseprops, propchanges ? &props : NULL,
                              db, local_abspath, result_pool, scratch_pool));

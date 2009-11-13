@@ -190,7 +190,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   /* Make sure we write the header.  */
   if (eb->header_done == FALSE)
     {
-      char svnver[4] = "SVN\0";
+      char svnver[4] = {'S','V','N','\0'};
       len = 4;
       svnver[3] = eb->version;
       SVN_ERR(svn_stream_write(eb->output, svnver, &len));

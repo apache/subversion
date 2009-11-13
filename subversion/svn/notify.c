@@ -685,7 +685,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 }
 
 
-void
+svn_error_t *
 svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                      void **notify_baton_p,
                      svn_boolean_t is_checkout,
@@ -710,8 +710,9 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
   nb->ext_prop_conflicts = 0;
   nb->ext_tree_conflicts = 0;
   nb->ext_skipped_paths = 0;
-  apr_filepath_get((char **)&nb->path_prefix, 0 /* flags */, pool);
+  SVN_ERR(svn_dirent_get_absolute(&nb->path_prefix, "", pool));
 
   *notify_func_p = notify;
   *notify_baton_p = nb;
+  return SVN_NO_ERROR;
 }

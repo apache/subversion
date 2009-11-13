@@ -57,8 +57,8 @@ svn_cl__delete(apr_getopt_t *os,
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                         FALSE, FALSE, pool);
+    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                 FALSE, FALSE, FALSE, pool));
 
   if (! svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)))
     {

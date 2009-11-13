@@ -128,14 +128,14 @@ extern "C" {
  *
  * - @b Create: A receiver uses svn_editor_create() to create an
  *    "empty" svn_editor_t.  It cannot be used yet, since it still lacks
- *    actual callback functions.  svn_editor_create() sets the @c
- *    svn_editor_t's callback baton and scratch pool that the callback
+ *    actual callback functions.  svn_editor_create() sets the
+ *    #svn_editor_t's callback baton and scratch pool that the callback
  *    functions receive, as well as a cancellation callback and baton
  *    (see "Cancellation" below).
  *
  * - @b Set callbacks: The receiver calls svn_editor_setcb_many() or a
- *    succession of the other svn_editor_setcb_*() functions to tell @c
- *    svn_editor_t which functions to call when driven by the various
+ *    succession of the other svn_editor_setcb_*() functions to tell
+ *    #svn_editor_t which functions to call when driven by the various
  *    operations.  Callback functions are implemented by the receiver and must
  *    adhere to the @c svn_editor_cb_*_t function types as expected by the
  *    svn_editor_setcb_*() functions. See: \n
@@ -155,11 +155,11 @@ extern "C" {
  *      svn_editor_setcb_complete() \n
  *      svn_editor_setcb_abort()
  *
- * - @b Drive: The driver is provided with the completed @c svn_editor_t
+ * - @b Drive: The driver is provided with the completed #svn_editor_t
  *    instance. (It is typically passed to a generic driving
  *    API, which could receive the driving editor calls over the network
- *    by providing a proxy @c svn_editor_t on the remote side.)
- *    The driver invokes the @c svn_editor_t instance's callback functions
+ *    by providing a proxy #svn_editor_t on the remote side.)
+ *    The driver invokes the #svn_editor_t instance's callback functions
  *    according to the restrictions defined below, in order to describe the
  *    entire set of operations necessary to transform the receiver's tree
  *    into the desired target. The callbacks can be invoked using the
@@ -194,7 +194,7 @@ extern "C" {
  *       each callback returns.  See "Pool Usage".
  *    \n\n
  *    If the receiver encounters an error within a callback, it returns an
- *    @c svn_error_t*. The driver receives this and aborts transmission.
+ *    #svn_error_t*. The driver receives this and aborts transmission.
  *
  * - @b Complete/Abort: The driver will end transmission by calling \n
  *    svn_editor_complete() if successful, or \n
@@ -290,7 +290,7 @@ extern "C" {
  *
  * <h3>Pool Usage</h3>
  * The @a result_pool passed to svn_editor_create() is used to allocate
- * the @c svn_editor_t instance, and thus it must not be cleared before the
+ * the #svn_editor_t instance, and thus it must not be cleared before the
  * driver has finished driving the editor.
  *
  * The @a scratch_pool passed to each callback invocation is derived from
@@ -300,20 +300,20 @@ extern "C" {
  * function, you may use your own pool kept in the @a editor_baton.
  *
  * The @a scratch_pool passed to svn_editor_create() may be used to help
- * during construction of the @c svn_editor_t instance, but it is assumed to
+ * during construction of the #svn_editor_t instance, but it is assumed to
  * live only until svn_editor_create() returns.
  * \n\n
  *
  * <h3>Cancellation</h3>
  * To allow graceful interruption by external events (like a user abort),
- * svn_editor_create() can be passed an @c svn_cancel_func_t that is
+ * svn_editor_create() can be passed an #svn_cancel_func_t that is
  * polled every time the driver invokes a callback, just before the
  * actual editor callback implementation is invoked.  If this function
  * decides to return with an error, the driver will receive this error
  * as if the callback function had returned it, i.e. as the result from
  * calling any of the driving functions (e.g. svn_editor_add_directory()).
  * As with any other error, the driver must then invoke svn_editor_abort()
- * and abort the transformation sequence. See @c svn_cancel_func_t.
+ * and abort the transformation sequence. See #svn_cancel_func_t.
  *
  * The @a cancel_baton argument to svn_editor_create() is passed
  * unchanged to each poll of @a cancel_func.
@@ -343,9 +343,9 @@ typedef struct svn_editor_t svn_editor_t;
  *   @a editor_baton originally passed to svn_editor_create(), as well as
  *   a @a scratch_pool argument.
  *
- * - The "driving" functions have an @c svn_editor_t* argument, in order to
+ * - The "driving" functions have an #svn_editor_t* argument, in order to
  *   call the implementations of the function types defined here that are
- *   registered with the given @c svn_editor_t instance.
+ *   registered with the given #svn_editor_t instance.
  *
  * Note that any remaining arguments for these function types are explained
  * in the comment for the "driving" functions. Each function type links to
@@ -485,11 +485,11 @@ typedef svn_error_t *(*svn_editor_cb_abort_t)(
  * @{
  */
 
-/** Allocate an @c svn_editor_t instance from @a result_pool, store
+/** Allocate an #svn_editor_t instance from @a result_pool, store
  * @a editor_baton, @a cancel_func and @a cancel_baton in the new instance
  * and return it in @a editor.
  * @a scratch_pool is used for temporary allocations (if any). Note that
- * this is NOT the same @c scratch_pool that is passed to callback functions.
+ * this is NOT the same @a scratch_pool that is passed to callback functions.
  * @see svn_editor_t
  * @since New in 1.7.
  */
@@ -502,7 +502,7 @@ svn_editor_create(svn_editor_t **editor,
                   apr_pool_t *scratch_pool);
 
 
-/** Sets the @c svn_editor_cb_add_directory_t callback in @a editor
+/** Sets the #svn_editor_cb_add_directory_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
@@ -513,7 +513,7 @@ svn_editor_setcb_add_directory(svn_editor_t *editor,
                                svn_editor_cb_add_directory_t callback,
                                apr_pool_t *scratch_pool);
 
-/** Sets the @c svn_editor_cb_add_file_t callback in @a editor
+/** Sets the #svn_editor_cb_add_file_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
@@ -524,7 +524,7 @@ svn_editor_setcb_add_file(svn_editor_t *editor,
                           svn_editor_cb_add_file_t callback,
                           apr_pool_t *scratch_pool);
 
-/** Sets the @c svn_editor_cb_add_symlink_t callback in @a editor
+/** Sets the #svn_editor_cb_add_symlink_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
@@ -535,7 +535,7 @@ svn_editor_setcb_add_symlink(svn_editor_t *editor,
                              svn_editor_cb_add_symlink_t callback,
                              apr_pool_t *scratch_pool);
 
-/** Sets the @c svn_editor_cb_add_absent_t callback in @a editor
+/** Sets the #svn_editor_cb_add_absent_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
@@ -546,7 +546,7 @@ svn_editor_setcb_add_absent(svn_editor_t *editor,
                             svn_editor_cb_add_absent_t callback,
                             apr_pool_t *scratch_pool);
 
-/** Sets the @c svn_editor_cb_set_props_t callback in @a editor
+/** Sets the #svn_editor_cb_set_props_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
@@ -557,7 +557,7 @@ svn_editor_setcb_set_props(svn_editor_t *editor,
                            svn_editor_cb_set_props_t callback,
                            apr_pool_t *scratch_pool);
 
-/** Sets the @c svn_editor_cb_set_text_t callback in @a editor
+/** Sets the #svn_editor_cb_set_text_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
@@ -568,7 +568,7 @@ svn_editor_setcb_set_text(svn_editor_t *editor,
                           svn_editor_cb_set_text_t callback,
                           apr_pool_t *scratch_pool);
 
-/** Sets the @c svn_editor_cb_set_target_t callback in @a editor
+/** Sets the #svn_editor_cb_set_target_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
@@ -579,7 +579,7 @@ svn_editor_setcb_set_target(svn_editor_t *editor,
                             svn_editor_cb_set_target_t callback,
                             apr_pool_t *scratch_pool);
 
-/** Sets the @c svn_editor_cb_delete_t callback in @a editor
+/** Sets the #svn_editor_cb_delete_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
@@ -590,7 +590,7 @@ svn_editor_setcb_delete(svn_editor_t *editor,
                         svn_editor_cb_delete_t callback,
                         apr_pool_t *scratch_pool);
 
-/** Sets the @c svn_editor_cb_copy_t callback in @a editor
+/** Sets the #svn_editor_cb_copy_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
@@ -601,7 +601,7 @@ svn_editor_setcb_copy(svn_editor_t *editor,
                       svn_editor_cb_copy_t callback,
                       apr_pool_t *scratch_pool);
 
-/** Sets the @c svn_editor_cb_move_t callback in @a editor
+/** Sets the #svn_editor_cb_move_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
@@ -612,7 +612,7 @@ svn_editor_setcb_move(svn_editor_t *editor,
                       svn_editor_cb_move_t callback,
                       apr_pool_t *scratch_pool);
 
-/** Sets the @c svn_editor_cb_complete_t callback in @a editor
+/** Sets the #svn_editor_cb_complete_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
@@ -623,7 +623,7 @@ svn_editor_setcb_complete(svn_editor_t *editor,
                           svn_editor_cb_complete_t callback,
                           apr_pool_t *scratch_pool);
 
-/** Sets the @c svn_editor_cb_abort_t callback in @a editor
+/** Sets the #svn_editor_cb_abort_t callback in @a editor
  * to @a callback.
  * @a scratch_pool is used for temporary allocations (if any).
  * @see also svn_editor_setcb_many().
@@ -678,7 +678,7 @@ svn_editor_setcb_many(svn_editor_t *editor,
  * @{
  */
 
-/** Drive @a editor's @c svn_editor_cb_add_directory_t callback.
+/** Drive @a editor's #svn_editor_cb_add_directory_t callback.
  *
  * Create a new directory at @a relpath. The immediate parent of @a relpath
  * is expected to exist.
@@ -699,7 +699,7 @@ svn_editor_setcb_many(svn_editor_t *editor,
  * added subsequently is given in @a children. @a children is an array of
  * const char*s, each giving the basename of an immediate child.
  *
- * For all restrictions on driving the editor, see @c svn_editor_t.
+ * For all restrictions on driving the editor, see #svn_editor_t.
  */
 svn_error_t *
 svn_editor_add_directory(svn_editor_t *editor,
@@ -708,7 +708,7 @@ svn_editor_add_directory(svn_editor_t *editor,
                          apr_hash_t *props,
                          svn_revnum_t replaces_rev);
 
-/** Drive @a editor's @c svn_editor_cb_add_file_t callback.
+/** Drive @a editor's #svn_editor_cb_add_file_t callback.
  *
  * Create a new file at @a relpath. The immediate parent of @a relpath
  * is expected to exist.
@@ -725,7 +725,7 @@ svn_editor_add_directory(svn_editor_t *editor,
  * by an "add" on the same path. Instead, an "add" with @a replaces_rev set
  * accordingly MUST be used.
  *
- * For all restrictions on driving the editor, see @c svn_editor_t.
+ * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.7.
  */
 svn_error_t *
@@ -734,7 +734,7 @@ svn_editor_add_file(svn_editor_t *editor,
                     apr_hash_t *props,
                     svn_revnum_t replaces_rev);
 
-/** Drive @a editor's @c svn_editor_cb_add_symlink_t callback.
+/** Drive @a editor's #svn_editor_cb_add_symlink_t callback.
  *
  * Create a new symbolic link at @a relpath, with a link target of @a
  * target. The immediate parent of @a relpath is expected to exist.
@@ -742,7 +742,7 @@ svn_editor_add_file(svn_editor_t *editor,
  * For descriptions of @a props and @a replaces_rev, see
  * svn_editor_add_file().
  *
- * For all restrictions on driving the editor, see @c svn_editor_t.
+ * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.7.
  */
 svn_error_t *
@@ -752,7 +752,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
                        apr_hash_t *props,
                        svn_revnum_t replaces_rev);
 
-/** Drive @a editor's @c svn_editor_cb_add_absent_t callback.
+/** Drive @a editor's #svn_editor_cb_add_absent_t callback.
  *
  * Create an "absent" node of kind @a kind at @a relpath. The immediate
  * parent of @a relpath is expected to exist.
@@ -760,7 +760,7 @@ svn_editor_add_symlink(svn_editor_t *editor,
  *
  * For a description of @a replaces_rev, see svn_editor_add_file().
  *
- * For all restrictions on driving the editor, see @c svn_editor_t.
+ * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.7.
  */
 svn_error_t *
@@ -769,7 +769,7 @@ svn_editor_add_absent(svn_editor_t *editor,
                       svn_node_kind_t kind,
                       svn_revnum_t replaces_rev);
 
-/** Drive @a editor's @c svn_editor_cb_set_props_t callback.
+/** Drive @a editor's #svn_editor_cb_set_props_t callback.
  *
  * Set or change properties on the existing node at @a relpath.
  * ### TODO @todo Does this send *all* properties, always?
@@ -781,7 +781,7 @@ svn_editor_add_absent(svn_editor_t *editor,
  * - @a relpath is a symbolic link and an svn_editor_set_target() call will
  *   follow on the same path.
  *
- * For all restrictions on driving the editor, see @c svn_editor_t.
+ * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.7.
  */
 svn_error_t *
@@ -791,14 +791,14 @@ svn_editor_set_props(svn_editor_t *editor,
                      apr_hash_t *props,
                      svn_boolean_t complete);
 
-/** Drive @a editor's @c svn_editor_cb_set_text_t callback.
+/** Drive @a editor's #svn_editor_cb_set_text_t callback.
  *
  * Set/change the text content of a file at @a relpath to @a contents
  * with checksum @a checksum.
  * ### TODO @todo Does this send the *complete* content, always?
  * ### TODO @todo What is REVISION for?
  *
- * For all restrictions on driving the editor, see @c svn_editor_t.
+ * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.7.
  */
 svn_error_t *
@@ -808,13 +808,13 @@ svn_editor_set_text(svn_editor_t *editor,
                     const svn_checksum_t *checksum,
                     svn_stream_t *contents);
 
-/** Drive @a editor's @c svn_editor_cb_set_target_t callback.
+/** Drive @a editor's #svn_editor_cb_set_target_t callback.
  *
  * Set/change the link target that a symbolic link at @a relpath points at
  * to @a target.
  * ### TODO @todo What is REVISION for?
  *
- * For all restrictions on driving the editor, see @c svn_editor_t.
+ * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.7.
  */
 svn_error_t *
@@ -823,12 +823,12 @@ svn_editor_set_target(svn_editor_t *editor,
                       svn_revnum_t revision,
                       const char *target);
 
-/** Drive @a editor's @c svn_editor_cb_delete_t callback.
+/** Drive @a editor's #svn_editor_cb_delete_t callback.
  *
  * Delete the existing node at @a relpath, expected to be identical to
  * revision @a revision of that path.
  *
- * For all restrictions on driving the editor, see @c svn_editor_t.
+ * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.7.
  */
 svn_error_t *
@@ -836,14 +836,14 @@ svn_editor_delete(svn_editor_t *editor,
                   const char *relpath,
                   svn_revnum_t revision);
 
-/** Drive @a editor's @c svn_editor_cb_copy_t callback.
+/** Drive @a editor's #svn_editor_cb_copy_t callback.
  *
  * Copy the node at @a src_relpath, expected to be identical to revision @a
  * src_revision of that path, to @a dst_relpath.
  *
  * For a description of @a replaces_rev, see svn_editor_add_file().
  *
- * For all restrictions on driving the editor, see @c svn_editor_t.
+ * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.7.
  */
 svn_error_t *
@@ -853,13 +853,13 @@ svn_editor_copy(svn_editor_t *editor,
                 const char *dst_relpath,
                 svn_revnum_t replaces_rev);
 
-/** Drive @a editor's @c svn_editor_cb_move_t callback.
+/** Drive @a editor's #svn_editor_cb_move_t callback.
  * Move the node at @a src_relpath, expected to be identical to revision @a
  * src_revision of that path, to @a dst_relpath.
  *
  * For a description of @a replaces_rev, see svn_editor_add_file().
  *
- * For all restrictions on driving the editor, see @c svn_editor_t.
+ * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.7.
  */
 svn_error_t *
@@ -869,22 +869,22 @@ svn_editor_move(svn_editor_t *editor,
                 const char *dst_relpath,
                 svn_revnum_t replaces_rev);
 
-/** Drive @a editor's @c svn_editor_cb_complete_t callback.
+/** Drive @a editor's #svn_editor_cb_complete_t callback.
  *
  * Send word that the tree delta has been completed successfully.
  *
- * For all restrictions on driving the editor, see @c svn_editor_t.
+ * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.7.
  */
 svn_error_t *
 svn_editor_complete(svn_editor_t *editor);
 
-/** Drive @a editor's @c svn_editor_cb_abort_t callback.
+/** Drive @a editor's #svn_editor_cb_abort_t callback.
  *
  * Notify that the tree delta transmission was not successful.
  * ### TODO @todo Shouldn't we add a reason-for-aborting argument?
  *
- * For all restrictions on driving the editor, see @c svn_editor_t.
+ * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.7.
  */
 svn_error_t *

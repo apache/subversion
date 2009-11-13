@@ -49,7 +49,6 @@
 #include "lock.h"
 
 #include "svn_private_config.h"
-#include "private/svn_debug.h"
 
 
 /* Helper for report_revisions_and_depths().

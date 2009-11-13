@@ -814,6 +814,9 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
        */
 
       path = svn_path_internal_style(path, pool);
+
+      /* For kicks and giggles, let's absolutize it. */
+      SVN_ERR(svn_dirent_get_absolute(&path, path, pool));
     }
     /* strip any trailing '/' */
     path = svn_path_canonicalize(path, pool);

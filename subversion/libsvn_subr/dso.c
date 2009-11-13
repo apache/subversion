@@ -107,7 +107,7 @@ svn_dso_load(apr_dso_handle_t **dso, const char *fname)
         {
 #ifdef SVN_DEBUG
           char buf[1024];
-          SVN_DBG(("%s\n", apr_dso_error(*dso, buf, 1024)));
+          fprintf(stderr, "%s\n", apr_dso_error(*dso, buf, 1024));
 #endif
           *dso = NULL;
 

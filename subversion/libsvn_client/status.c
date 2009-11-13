@@ -370,10 +370,10 @@ svn_client_status5(svn_revnum_t *result_rev,
                                     dir_abspath, target_basename,
                                     depth, get_all,
                                     no_ignore, ignores, tweak_status, &sb,
-                                    ignore_externals ? svn_cl__store_externals
-                                                     : NULL,
-                                    ignore_externals ? &externals_store
-                                                     : NULL,
+                                    ignore_externals ? NULL
+                                                     : svn_cl__store_externals,
+                                    ignore_externals ? NULL
+                                                     : &externals_store,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     pool, pool));
 
@@ -471,10 +471,10 @@ svn_client_status5(svn_revnum_t *result_rev,
       err = svn_wc_walk_status(ctx->wc_ctx, target_abspath,
                                depth, get_all, no_ignore, ignores,
                                tweak_status, &sb,
-                               ignore_externals ? svn_cl__store_externals
-                                                : NULL,
-                               ignore_externals ? &externals_store
-                                                : NULL,
+                               ignore_externals ? NULL
+                                                : svn_cl__store_externals,
+                               ignore_externals ? NULL
+                                                : &externals_store,
                                ctx->cancel_func, ctx->cancel_baton,
                                pool);
 

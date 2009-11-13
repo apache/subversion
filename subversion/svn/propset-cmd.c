@@ -102,8 +102,8 @@ svn_cl__propset(apr_getopt_t *os,
                                                       ctx, scratch_pool));
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                         FALSE, FALSE, scratch_pool);
+    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                 FALSE, FALSE, FALSE, scratch_pool));
 
   /* Implicit "." is okay for revision properties; it just helps
      us find the right repository. */
