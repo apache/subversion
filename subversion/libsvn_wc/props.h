@@ -210,12 +210,6 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
                        const char *local_abspath,
                        apr_pool_t *scratch_pool);
 
-/* Flushes wcprops cached in ADM_ACCESS to disk using SCRATCH_POOL for
-   temporary allocations. */
-svn_error_t *
-svn_wc__wcprops_flush(svn_wc_adm_access_t *adm_access,
-                      apr_pool_t *scratch_pool);
-
 /* Install LOCAL_ABSPATHs working props as base props. */
 svn_error_t *
 svn_wc__working_props_committed(svn_wc__db_t *db,

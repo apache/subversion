@@ -341,6 +341,24 @@ resolve_conflict_on_node(svn_wc__db_t *db,
                                                &auto_resolve_src,
                                                temp_dir, svn_io_file_del_none,
                                                pool, pool));
+
+                /* ### If any of these paths isn't absolute, treat it
+                 * ### as relative to CONFLICT_DIR_ABSPATH.
+                 * ### Else we end up erroring out here, e.g. if the file
+                 * ### is just a basename, and does not live in the current
+                 * ### working directory.
+                 * ### The API docs are unclear about whether these paths
+                 * ### must be absolute or not. */
+                if (! svn_dirent_is_absolute(conflict_old))
+                  conflict_old = svn_dirent_join(conflict_dir_abspath,
+                                                 conflict_old, pool);
+                if (! svn_dirent_is_absolute(conflict_working))
+                  conflict_working = svn_dirent_join(conflict_dir_abspath,
+                                                     conflict_working, pool);
+                if (! svn_dirent_is_absolute(conflict_new))
+                  conflict_new = svn_dirent_join(conflict_dir_abspath,
+                                                 conflict_new, pool);
+
                 SVN_ERR(svn_diff_file_diff3_2(&diff,
                                               conflict_old,
                                               conflict_working,

@@ -2,23 +2,20 @@
 set -e
 
 repo=http://svn.collab.net/repos/svn
+svn=svn
 
-# Get the latest versions of the rolling scripts
-svn export $repo/trunk/tools/dist/construct-rolling-environment.sh
-svn export $repo/trunk/tools/dist/roll.sh
-svn export $repo/trunk/tools/dist/dist.sh
-svn export $repo/trunk/tools/dist/gen_nightly_ann.py
-
-while getopts "cd:t:" flag; do
+# Parse our arguments
+while getopts "cd:t:s:" flag; do
   case $flag in
     d) dir="$OPTARG" ;;
     c) clean="1" ;;
     t) target="$OPTARG" ;;
+    s) svn="$OPTARG" ;;
   esac
 done
 
 # Setup directories
-if [ -n "$dir" ]; then cd $dir; fi
+if [ -n "$dir" ]; then cd $dir; else dir="."; fi
 if [ -d "roll" ]; then rm -rf roll; fi
 mkdir roll
 if [ ! -n "$target" ]; then
@@ -26,7 +23,15 @@ if [ ! -n "$target" ]; then
   target="target"
 fi
 
+abscwd=`cd $dir; pwd`
+
 echo "Will place results in: $target"
+
+# Get the latest versions of the rolling scripts
+$svn export $repo/trunk/tools/dist/construct-rolling-environment.sh $dir
+$svn export $repo/trunk/tools/dist/roll.sh $dir
+$svn export $repo/trunk/tools/dist/dist.sh $dir
+$svn export $repo/trunk/tools/dist/gen_nightly_ann.py $dir
 
 # Create the environment
 cd roll
@@ -40,8 +45,8 @@ fi
 
 # Roll the tarballs
 echo '-------------------rolling tarball--------------------'
-head=`svn info $repo/trunk | grep '^Revision' | cut -d ' ' -f 2`
-`dirname $0`/roll.sh trunk $head "-nightly"
+head=`$svn info $repo/trunk | grep '^Revision' | cut -d ' ' -f 2`
+${abscwd}/roll.sh trunk $head "-nightly"
 cd ..
 
 # Create the information page

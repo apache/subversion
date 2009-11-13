@@ -2,13 +2,14 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>Repository Transaction Design</title>
+<title>Repository Transaction Design for Svn Obliterate</title>
 </head>
 
 <body>
 
 <div class="h1">
-<h1 style="text-align: center">Repository Transaction Design</h1>
+<h1 style="text-align: center">Repository Transaction Design for Svn
+  Obliterate</h1>
 </div>
 
 <div class="h1">
@@ -23,9 +24,7 @@
     </li> <!-- server.fs -->
   </ol>
   </li> <!-- server -->
-<!--
-  <li><a href="#license">License &mdash; Copyright</a></li>
--->
+  <li><a href="#refs">References</a></li>
 </ol>
 </div>
 
@@ -374,6 +373,35 @@
   </div> <!-- server.fs (h3) -->
 
 </div> <!-- server (h2) -->
+
+
+<div class="h2" id="refs" title="#refs">
+  <h2>References</h2>
+
+  <p><a href="http://homepages.paradise.net.nz/~ejrh/subversion/mysql/"
+    >Diagram of a schema for MYSQL</a> by Edmund Horner, which is like the
+    BDB schema except with exploding of skels into table columns -
+    transaction_props, transaction_copies, representation_windows.</p>
+
+  <p>FSFS <a
+    href="../../subversion/libsvn_fs_fs/structure"
+    >structure</a> doc</p>
+
+  <p>FS-BDB <a
+    href="../../subversion/libsvn_fs_base/notes/structure"
+    >structure</a> doc: nodes, node-revs, keys, skels, reps, deltifying, txns,
+    changes, copies, locks, merge rules, uuid, summary (structure syntax),
+    misc-table (forward-delta support)</p>
+
+  <p>FS-BDB <a
+    href="../../subversion/libsvn_fs_base/notes/fs-history"
+    >fs-history</a> doc: DAG node-revs, node-rev-ids, copies, copy-ids</p>
+
+  <p><a
+    href=""
+    ></a></p>
+
+</div> <!-- server.fs (h3) -->
 
 
 <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->

@@ -320,11 +320,11 @@ svn_cl__propget(apr_getopt_t *os,
           like_proplist = opt_state->verbose && !opt_state->strict;
 
           if (opt_state->xml)
-            print_properties_xml(pname_utf8, props, subpool);
+            SVN_ERR(print_properties_xml(pname_utf8, props, subpool));
           else
-            print_properties(out, svn_path_is_url(target), pname_utf8, props,
-                             print_filenames, omit_newline, like_proplist,
-                             subpool);
+            SVN_ERR(print_properties(out, svn_path_is_url(target), pname_utf8,
+                                     props, print_filenames, omit_newline,
+                                     like_proplist, subpool));
         }
 
       if (opt_state->xml)

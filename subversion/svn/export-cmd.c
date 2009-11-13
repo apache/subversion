@@ -71,13 +71,21 @@ svn_cl__export(apr_getopt_t *os,
   /* If only one target was given, split off the basename to use as
      the `to' path.  Else, a `to' path was supplied. */
   if (targets->nelts == 1)
-    to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
+    {
+      to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
+    }
   else
-    to = APR_ARRAY_IDX(targets, 1, const char *);
+    {
+      to = APR_ARRAY_IDX(targets, 1, const char *);
+
+      /* If given the cwd, pretend we weren't given anything. */
+      if (strcmp("", to) == 0)
+        to = svn_path_uri_decode(svn_uri_basename(truefrom, pool), pool);
+    }
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE, TRUE,
-                         FALSE, pool);
+    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                 FALSE, TRUE, FALSE, pool));
 
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;

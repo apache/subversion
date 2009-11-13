@@ -441,6 +441,18 @@ write_handler_tee(void *baton, const char *data, apr_size_t *len)
 }
 
 
+static svn_error_t *
+close_handler_tee(void *baton)
+{
+  struct baton_tee *bt = baton;
+
+  SVN_ERR(svn_stream_close(bt->out1));
+  SVN_ERR(svn_stream_close(bt->out2));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_stream_t *
 svn_stream_tee(svn_stream_t *out1,
                svn_stream_t *out2,
@@ -460,6 +472,7 @@ svn_stream_tee(svn_stream_t *out1,
   baton->out2 = out2;
   stream = svn_stream_create(baton, pool);
   svn_stream_set_write(stream, write_handler_tee);
+  svn_stream_set_close(stream, close_handler_tee);
 
   return stream;
 }

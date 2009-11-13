@@ -118,7 +118,8 @@ struct svn_wc__db_t {
   /* Should we ensure the WORK_QUEUE is empty when a WCROOT is opened?  */
   svn_boolean_t enforce_empty_wq;
 
-  /* Map a given working copy directory to its relevant data. */
+  /* Map a given working copy directory to its relevant data.
+     const char *local_abspath -> svn_wc__db_pdh_t *pdh  */
   apr_hash_t *dir_data;
 
   /* As we grow the state of this DB, allocate that state here. */
@@ -146,11 +147,12 @@ typedef struct {
 
 } wcroot_t;
 
-/**
+/**  Pristine Directory Handle
+ *
  * This structure records all the information that we need to deal with
  * a given working copy directory.
  */
-struct svn_wc__db_pdh_t {
+typedef struct svn_wc__db_pdh_t {
   /* This (versioned) working copy directory is obstructing what *should*
      be a file in the parent directory (according to its metadata).
 
@@ -166,14 +168,14 @@ struct svn_wc__db_pdh_t {
   wcroot_t *wcroot;
 
   /* The parent directory's per-dir information. */
-  svn_wc__db_pdh_t *parent;
+  struct svn_wc__db_pdh_t *parent;
 
   /* Whether this process owns a write-lock on this directory. */
   svn_boolean_t locked;
 
   /* Hold onto the old-style access baton that corresponds to this PDH.  */
   svn_wc_adm_access_t *adm_access;
-};
+} svn_wc__db_pdh_t;
 
 /* Assert that the given PDH is usable.
    NOTE: the expression is multiply-evaluated!!  */
@@ -814,9 +816,9 @@ open_db(svn_sqlite__db_t **sdb,
 }
 
 
-/* For a given LOCAL_ABSPATH, figure out what sqlite database (SDB) to use,
-   what WC_ID is implied, and the RELPATH within that wcroot.  If a sqlite
-   database needs to be opened, then use SMODE for it. */
+/* For a given LOCAL_ABSPATH, figure out what sqlite database (PDH) to
+   use and the RELPATH within that wcroot.  If a sqlite database needs
+   to be opened, then use SMODE for it. */
 static svn_error_t *
 parse_local_abspath(svn_wc__db_pdh_t **pdh,
                     const char **local_relpath,

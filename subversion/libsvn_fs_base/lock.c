@@ -98,9 +98,18 @@ txn_body_lock(void *baton, trail_t *trail)
   /* While our locking implementation easily supports the locking of
      nonexistent paths, we deliberately choose not to allow such madness. */
   if (kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                             "Path '%s' doesn't exist in HEAD revision",
-                             args->path);
+    {
+      if (SVN_IS_VALID_REVNUM(args->current_rev))
+        return svn_error_createf(
+          SVN_ERR_FS_OUT_OF_DATE, NULL,
+          _("Path '%s' doesn't exist in HEAD revision"),
+          args->path);
+      else
+        return svn_error_createf(
+          SVN_ERR_FS_NOT_FOUND, NULL,
+          _("Path '%s' doesn't exist in HEAD revision"),
+          args->path);
+    }
 
   /* There better be a username attached to the fs. */
   if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)

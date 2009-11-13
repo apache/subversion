@@ -211,7 +211,7 @@ make_dir_baton(const char *path,
   dir_baton->skip = FALSE;
   dir_baton->pool = pool;
   dir_baton->path = apr_pstrdup(pool, path);
-  dir_baton->wcpath = svn_path_join(edit_baton->target, path, pool);
+  dir_baton->wcpath = svn_dirent_join(edit_baton->target, path, pool);
   dir_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
 
   return dir_baton;
@@ -237,7 +237,7 @@ make_file_baton(const char *path,
   file_baton->skip = FALSE;
   file_baton->pool = pool;
   file_baton->path = apr_pstrdup(pool, path);
-  file_baton->wcpath = svn_path_join(eb->target, path, pool);
+  file_baton->wcpath = svn_dirent_join(eb->target, path, pool);
   file_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
 
   return file_baton;
@@ -483,7 +483,7 @@ delete_entry(const char *path,
           {
             SVN_ERR(eb->diff_callbacks->dir_deleted
                     (local_dir_abspath, &state, &tree_conflicted,
-                     svn_path_join(eb->target, path, pool),
+                     svn_dirent_join(eb->target, path, pool),
                      eb->diff_cmd_baton, pool));
             break;
           }
@@ -499,7 +499,7 @@ delete_entry(const char *path,
           if (eb->dry_run)
             {
               /* Remember what we _would've_ deleted (issue #2584). */
-              const char *wcpath = svn_path_join(eb->target, path, pb->pool);
+              const char *wcpath = svn_dirent_join(eb->target, path, pb->pool);
               apr_hash_set(svn_client__dry_run_deletions(eb->diff_cmd_baton),
                            wcpath, APR_HASH_KEY_STRING, wcpath);
 
@@ -514,7 +514,7 @@ delete_entry(const char *path,
     {
       const char* deleted_path;
       deleted_path_notify_t *dpn = apr_palloc(eb->pool, sizeof(*dpn));
-      deleted_path = svn_path_join(eb->target, path, eb->pool);
+      deleted_path = svn_dirent_join(eb->target, path, eb->pool);
       dpn->kind = kind;
       dpn->action = tree_conflicted ? svn_wc_notify_tree_conflict : action;
       dpn->state = state;

@@ -167,21 +167,23 @@ parse_hunk_header(const char *header, svn_hunk_t *hunk, apr_pool_t *pool)
   return TRUE;
 }
 
-/* A stream line-filter which allows only original text from a hunk. */
+/* A stream line-filter which allows only original text from a hunk,
+ * and filters special lines (which start with a backslash). */
 static svn_error_t *
 original_line_filter(svn_boolean_t *filtered, const char *line, void *baton,
                      apr_pool_t *scratch_pool)
 {
-  *filtered = line[0] == '+';
+  *filtered = (line[0] == '+' || line[0] == '\\');
   return SVN_NO_ERROR;
 }
 
-/* A stream line-filter which allows only modified text from a hunk. */
+/* A stream line-filter which allows only modified text from a hunk,
+ * and filters special lines (which start with a backslash). */
 static svn_error_t *
 modified_line_filter(svn_boolean_t *filtered, const char *line, void *baton,
                      apr_pool_t *scratch_pool)
 {
-  *filtered = line[0] == '-';
+  *filtered = (line[0] == '-' || line[0] == '\\');
   return SVN_NO_ERROR;
 }
 
@@ -248,6 +250,12 @@ parse_next_hunk(svn_hunk_t **hunk,
       last_line = pos;
       SVN_ERR(svn_stream_readline(stream, &line, patch->eol_str, &eof,
                                   iterpool));
+
+      /* Lines starting with a backslash are comments, such as
+       * "\ No newline at end of file". */
+      if (line->data[0] == '\\')
+        continue;
+
       if (! eof)
         {
           /* Update line offset for next iteration.

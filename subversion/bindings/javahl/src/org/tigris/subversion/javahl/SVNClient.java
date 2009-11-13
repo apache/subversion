@@ -539,16 +539,31 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @since 1.5
+     * @since 1.7
      */
     public native void copy(CopySource[] sources, String destPath,
                             String message, boolean copyAsChild,
-                            boolean makeParents, Map revpropTable)
+                            boolean makeParents, boolean ignoreExternals,
+                            Map revpropTable)
             throws ClientException;
 
     /**
      * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
-     *                              boolean, Map)} instead.
+     *                              boolean, boolean, Map)} instead.
+     * @since 1.5
+     */
+    public void copy(CopySource[] sources, String destPath, String message,
+                     boolean copyAsChild, boolean makeParents,
+                     Map revpropTable)
+            throws ClientException
+    {
+        copy(sources, destPath, message, copyAsChild, makeParents, false,
+             revpropTable);
+    }
+
+    /**
+     * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
+     *                              boolean, boolean, Map)} instead.
      * @since 1.0
      */
     public void copy(String srcPath, String destPath, String message,
@@ -809,16 +824,36 @@ public class SVNClient implements SVNClientInterface
             throws SubversionException;
 
     /**
-     * @since 1.5
+     * @since 1.7
      */
     public native void getMergeinfoLog(int kind, String pathOrUrl,
                                        Revision pegRevision,
                                        String mergeSourceUrl,
                                        Revision srcPegRevision,
                                        boolean discoverChangedPaths,
+                                       int depth,
                                        String[] revprops,
                                        LogMessageCallback callback)
         throws ClientException;
+
+    /**
+     * @deprecated Use {@link #getMergeinfoLog(int, String, Revision, String,
+     *                                         Revision, boolean, int,
+     *                                         String[], LogMessageCallback)}
+     *             instead.
+     * @since 1.5
+     */
+    public void getMergeinfoLog(int kind, String pathOrUrl,
+                                Revision pegRevision, String mergeSourceUrl,
+                                Revision srcPegRevision,
+                                boolean discoverChangedPaths,
+                                String[] revprops, LogMessageCallback callback)
+        throws ClientException
+    {
+        getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                        srcPegRevision, discoverChangedPaths, Depth.empty,
+                        revprops, callback);
+    }
 
     /**
      * @deprecated Use {@link #diff(String, Revision, String, Revision,

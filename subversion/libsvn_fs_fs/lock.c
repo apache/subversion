@@ -684,9 +684,18 @@ lock_body(void *baton, apr_pool_t *pool)
   /* While our locking implementation easily supports the locking of
      nonexistent paths, we deliberately choose not to allow such madness. */
   if (kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                             _("Path '%s' doesn't exist in HEAD revision"),
-                             lb->path);
+    {
+      if (SVN_IS_VALID_REVNUM(lb->current_rev))
+        return svn_error_createf(
+          SVN_ERR_FS_OUT_OF_DATE, NULL,
+          _("Path '%s' doesn't exist in HEAD revision"),
+          lb->path);
+      else
+        return svn_error_createf(
+          SVN_ERR_FS_NOT_FOUND, NULL,
+          _("Path '%s' doesn't exist in HEAD revision"),
+          lb->path);
+    }
 
   /* We need to have a username attached to the fs. */
   if (!lb->fs->access_ctx || !lb->fs->access_ctx->username)

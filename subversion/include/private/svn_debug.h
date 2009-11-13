@@ -31,7 +31,7 @@
    ### remain in the code. at that point, we can rejigger this header.  */
 #ifdef SVN_DEBUG
 
-#include "svn_types.h"
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
