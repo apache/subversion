@@ -315,7 +315,7 @@ do_lock(svn_lock_t **lock,
       svn_error_clear(err);
       err = svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
                               _("Lock request failed: %d %s"),
-                              code, req->code_desc, NULL);
+                              code, req->code_desc);
     }
   return err;
 }
