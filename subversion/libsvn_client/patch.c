@@ -187,36 +187,6 @@ resolve_target_path(patch_target_t *target,
   const char *abs_wc_path;
   const char *stripped_path;
 
-#if '/' == SVN_PATH_LOCAL_SEPARATOR
-  /* Contrary to what one might expect, svn_dirent_internal_style() does not
-   * replace backslashes with slashes on UNIX. But it's quite possible that
-   * a patch generated on Windows uses backslashes as path separators.
-   * To apply such patches on UNIX, we need to normalise separators to '/'.
-   * Do a global search-replace if the path from the patch file contains
-   * only backslashes but no forward slashes. This may not be suitable in all
-   * situations, e.g. backslashes might be part of a filename with no leading
-   * directory components. But let's optimise for seamless interoperability
-   * between platforms rather than for people using weird filenames. */
-  {
-    const char *slash;
-    const char *backslash;
-
-    slash = strchr(path_from_patchfile, '/');
-    backslash = strchr(path_from_patchfile, '\\');
-    if (! slash && backslash)
-      {
-        char *p = apr_pstrdup(scratch_pool, path_from_patchfile);
-        path_from_patchfile = p;
-        while (*p)
-          {
-            if (*p == '\\')
-                  *p = '/';
-            p++;
-          }
-      }
-  }
-#endif
-
   target->canon_path_from_patchfile = svn_dirent_internal_style(
                                         path_from_patchfile, result_pool);
   if (target->canon_path_from_patchfile[0] == '\0')
