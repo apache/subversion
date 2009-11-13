@@ -104,9 +104,9 @@ class TestHarness:
     # Print the results, from least interesting to most interesting.
 
     # Helper for Work-In-Progress indications for XFAIL tests.
-    wimptag = b' [[WIMP: '
+    wimptag = ' [[WIMP: '
     def printxfail(x):
-      wip = x.find(wimptag.decode())
+      wip = x.find(wimptag)
       if 0 > wip:
         sys.stdout.write(x)
       else:
