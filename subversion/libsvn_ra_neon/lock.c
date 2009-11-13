@@ -307,6 +307,16 @@ do_lock(svn_lock_t **lock,
 
  cleanup:
   svn_ra_neon__request_destroy(req);
+
+  /* 405 == Method Not Allowed (Occurs when trying to lock a working
+     copy path which no longer exists at HEAD in the repository. */
+  if (code == 405)
+    {
+      svn_error_clear(err);
+      err = svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
+                              _("Lock request failed: %d %s"),
+                              code, req->code_desc, NULL);
+    }
   return err;
 }
 

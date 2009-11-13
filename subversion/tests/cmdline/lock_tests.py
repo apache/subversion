@@ -1453,9 +1453,10 @@ def lock_path_not_in_head(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '-m', 'Some deletions', wc_dir)  
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
-  expected_lock_fail_err_re = "(svn: .*405.*)|"
-  "(svn: Path .* doesn't exist in HEAD revision)"
-  # Issue #3524 These lock attemtps trigger an assert over ra_serf:
+  expected_lock_fail_err_re = "svn: warning:.*" \
+  "((Path .* doesn't exist in HEAD revision)" \
+  "|(Lock request failed: 405 Method Not Allowed))"
+  # Issue #3524 These lock attemtps were triggering an assert over ra_serf:
   #
   # working_copies\lock_tests-37>svn lock A\D
   # ..\..\..\subversion\libsvn_client\ra.c:275: (apr_err=235000)
@@ -1466,10 +1467,10 @@ def lock_path_not_in_head(sbox):
   # ..\..\..\subversion\libsvn_client\ra.c:275: (apr_err=235000)
   # svn: In file '..\..\..\subversion\libsvn_ra_serf\util.c' line 1120:
   #  assertion failed (ctx->status_code)
-  svntest.actions.run_and_verify_svn(None, None, expected_lock_fail_err_re,
-                                     'lock', D_path)
-  svntest.actions.run_and_verify_svn(None, None, expected_lock_fail_err_re,
-                                     'lock', lambda_path)
+  svntest.actions.run_and_verify_svn2(None, None, expected_lock_fail_err_re,
+                                      0, 'lock', D_path)
+  svntest.actions.run_and_verify_svn2(None, None, expected_lock_fail_err_re,
+                                      0, 'lock', lambda_path)
 
 ########################################################################
 # Run the tests
