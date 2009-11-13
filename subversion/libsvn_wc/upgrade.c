@@ -805,7 +805,7 @@ migrate_props(const char *wcroot_abspath,
                                            iterpool));
       if (replaced)
         {
-          apr_hash_t *revert_props;
+          apr_hash_t *revert_props = apr_hash_make(iterpool);
 
           SVN_ERR(svn_stream_open_readonly(&stream, prop_revert_path, iterpool,
                                            iterpool));
@@ -818,7 +818,7 @@ migrate_props(const char *wcroot_abspath,
         }
       else
         {
-          apr_hash_t *base_props;
+          apr_hash_t *base_props = apr_hash_make(iterpool);
 
           SVN_ERR(svn_stream_open_readonly(&stream, prop_base_path, iterpool,
                                            iterpool));
@@ -833,6 +833,7 @@ migrate_props(const char *wcroot_abspath,
                                                         iterpool));
         }
 
+      working_props = apr_hash_make(iterpool);
       SVN_ERR(svn_stream_open_readonly(&stream, prop_working_path, iterpool,
                                        iterpool));
       SVN_ERR(svn_hash_read2(working_props, stream, SVN_HASH_TERMINATOR,
