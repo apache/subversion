@@ -80,19 +80,6 @@ typedef struct {
   /* Path to the temporary file underlying the result stream. */
   const char *patched_path;
 
-  /* The original stream, write-only, not seekable.
-   * This stream is equivalent to the target, except that in appropriate
-   * places it contains the original text as it appears in the patch file.
-   * The data in the underlying file needs to be in repository-normal form,
-   * so EOL transformation and keyword contraction is done transparently. */
-  svn_stream_t *original;
-
-  /* The original stream, without EOL transformation and keyword contraction. */
-  svn_stream_t *original_raw;
-
-  /* Path to the temporary file underlying the original stream. */
-  const char *original_path;
-
   /* The line last read from the target file. */
   svn_linenum_t current_line;
 
@@ -385,15 +372,6 @@ init_patch_target(patch_target_t **target,
         SVN_ERR(svn_io_is_file_executable(&new_target->executable,
                                           new_target->abs_path,
                                           scratch_pool));
-
-      /* We also need a stream to write the original text to. */
-      SVN_ERR(svn_stream_open_unique(&new_target->original_raw,
-                                     &new_target->original_path, NULL,
-                                     svn_io_file_del_on_pool_cleanup,
-                                     result_pool, scratch_pool));
-      new_target->original = svn_subst_stream_translated(
-                               new_target->original_raw, "\n",
-                               TRUE, keywords, FALSE, result_pool);
     }
 
   new_target->patch = patch;
@@ -628,9 +606,9 @@ try_stream_write(svn_stream_t *stream, const char *abspath,
   return SVN_NO_ERROR;
 }
 
-/* Copy lines to the result and original streams of TARGET until the
- * specified LINE has been reached. Indicate in *EOF whether end-of-file
- * was encountered while reading from the target.
+/* Copy lines to the patched stream until the specified LINE has been
+ * reached. Indicate in *EOF whether end-of-file was encountered while
+ * reading from the target.
  * If LINE is zero, copy lines until end-of-file has been reached.
  * Do all allocations in POOL. */
 static svn_error_t *
@@ -655,8 +633,6 @@ copy_lines_to_target(patch_target_t *target, svn_linenum_t line,
         }
 
       SVN_ERR(try_stream_write(target->patched, target->patched_path,
-                               buf->data, buf->len, pool));
-      SVN_ERR(try_stream_write(target->original, target->original_path,
                                buf->data, buf->len, pool));
     }
   svn_pool_destroy(iterpool);
@@ -763,13 +739,8 @@ apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
 
   /* Target file is at the hunk's line.
    * Skip the target's version of the hunk.
-   * We assume the target hunk has the same length as the original hunk.
-   * If that's not the case, we'll get merge conflicts later. */
+   * We assume the target hunk has the same length as the original hunk. */
   SVN_ERR(skip_lines_from_target(target, hunk->original_length, pool));
-
-  /* Copy the original hunk text into the original stream. */
-  SVN_ERR(copy_hunk_text(hunk->original_text, target->original,
-                         target->original_path, target->patch->eol_str, pool));
 
   /* Copy the patched hunk text into the patched stream. */
   SVN_ERR(copy_hunk_text(hunk->modified_text, target->patched,
@@ -883,7 +854,7 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
           if (! target->eof)
             {
               /* We could not copy the entire target file to the temporary file,
-               * and would truncate the target if we moved the temporary file
+               * and would truncate the target if we copied the temporary file
                * on top of it. Cancel any modifications to the target file and
                * report is as skipped. TODO: Dump hunks into reject file? */
               target->modified = FALSE;
@@ -894,9 +865,8 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
           SVN_ERR(svn_stream_close(target->stream));
         }
 
-      /* Close the original and patched streams so that their content
-       * is flushed to disk. This will also close the raw streams. */
-      SVN_ERR(svn_stream_close(target->original));
+      /* Close the patched stream so that its content is flushed to disk.
+       * This will also close the raw stream. */
       SVN_ERR(svn_stream_close(target->patched));
 
       /* Get sizes of the patched temporary file and the working file.
@@ -953,72 +923,29 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
             }
           else
             {
-              svn_config_t *cfg;
-              const char *diff3_cmd;
-              enum svn_wc_merge_outcome_t outcome;
+              target->modified = TRUE;
 
-              if (target->added)
+              if (! dry_run)
                 {
-                  if (! dry_run)
+                  /* Copy the patched file on top of the target file. */
+                  SVN_ERR(svn_io_copy_file(target->patched_path,
+                                           target->abs_path, FALSE, pool));
+                  if (target->added)
                     {
-                      /* The target file didn't exist previously, so copy
-                       * it in place and add it to version control.
+                      /* The target file didn't exist previously,
+                       * so add it to version control.
                        * Suppress notification, we'll do that later.
                        * Also suppress cancellation. */
-                      SVN_ERR(svn_io_copy_file(target->patched_path,
-                                               target->abs_path, FALSE, pool));
                       SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->abs_path,
                                           svn_depth_infinity,
                                           NULL, SVN_INVALID_REVNUM,
                                           NULL, NULL, NULL, NULL, pool));
                     }
-                }
-              else
-                {
-                  /* If the user has specified a merge tool, use it. */
-                  cfg = ctx->config ? apr_hash_get(ctx->config,
-                                                   SVN_CONFIG_CATEGORY_CONFIG,
-                                                   APR_HASH_KEY_STRING) : NULL;
-                  svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
-                                 SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
-                  /* Merge the patch into the working file. */
-                  SVN_ERR(svn_wc_merge4(&outcome,
-                                        ctx->wc_ctx,
-                                        target->original_path,
-                                        target->patched_path,
-                                        target->abs_path,
-                                        _(".svnpatch.original"),
-                                        _(".svnpatch.modified"),
-                                        _(".svnpatch.working"),
-                                        NULL, NULL,  /* left/right versions */
-                                        dry_run,
-                                        diff3_cmd,
-                                        NULL, /* TODO mergeoptions */
-                                        NULL, /* property diffs */
-                                        ctx->conflict_func,
-                                        ctx->conflict_baton,
-                                        NULL, NULL, /* cancellation */
-                                        pool));
-                  switch (outcome)
-                    {
-                      case svn_wc_merge_unchanged:
-                        target->modified = FALSE;
-                        break;
-                      case svn_wc_merge_merged:
-                        target->modified = TRUE;
-                        break;
-                      case svn_wc_merge_conflict:
-                        target->modified = TRUE;
-                        target->conflicted = TRUE;
-                        break;
-                      case svn_wc_merge_no_merge:
-                        /* Unversioned obstruction. */
-                        target->skipped = TRUE;
-                        break;
-                      default:
-                        SVN_ERR_MALFUNCTION();
-                    }
+                  /* Restore the target's executable bit if necessary. */
+                  SVN_ERR(svn_io_set_file_executable(target->abs_path,
+                                                     target->executable,
+                                                     FALSE, pool));
                 }
             }
         }
