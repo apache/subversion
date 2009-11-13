@@ -707,7 +707,7 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
                          apr_pool_t *pool);
 
 /* Join a BASE path with a COMPONENT, allocating the result in POOL.
- * COMPONENT need not be a single single component: it can be any apth,
+ * COMPONENT need not be a single single component: it can be any path,
  * absolute or relative to BASE.
  *
  * This function exists to gather the cases when it could not be determined
