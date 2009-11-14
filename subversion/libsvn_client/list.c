@@ -86,11 +86,11 @@ get_dir_contents(apr_uint32_t dirent_fields,
 
       svn_pool_clear(iterpool);
 
-      path = svn_path_join(dir, item->key, iterpool);
+      path = svn_relpath_join(dir, item->key, iterpool);
 
       if (locks)
         {
-          const char *abs_path = svn_path_join(fs_path, path, iterpool);
+          const char *abs_path = svn_uri_join(fs_path, path, iterpool);
           lock = apr_hash_get(locks, abs_path, APR_HASH_KEY_STRING);
         }
       else

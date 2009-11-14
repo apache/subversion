@@ -5973,6 +5973,20 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
           || (range_end->kind == svn_opt_revision_unspecified))
         return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                                 _("Not all required revisions are specified"));
+
+      /* The BASE, COMMITTED, and PREV revision keywords do not
+         apply to URLs. */
+      if (svn_path_is_url(source)
+          && (range_start->kind == svn_opt_revision_base
+              || range_end->kind == svn_opt_revision_base
+              || range_start->kind == svn_opt_revision_committed
+              || range_end->kind == svn_opt_revision_committed
+              || range_start->kind == svn_opt_revision_previous
+              || range_end->kind == svn_opt_revision_previous))
+        return svn_error_create(
+          SVN_ERR_CLIENT_BAD_REVISION, NULL,
+          _("PREV, BASE, or COMMITTED revision keywords are invalid for URL"));
+
       SVN_ERR(svn_client__get_revision_number(&range_start_rev, &youngest_rev,
                                               ctx->wc_ctx, source_abspath,
                                               ra_session, range_start,
@@ -6907,9 +6921,9 @@ record_mergeinfo_for_dir_merge(const svn_merge_range_t *merged_range,
           if (!child_repos_path)
             child_repos_path = "";
 
-          child_merge_src_canon_path = svn_path_join(mergeinfo_path,
-                                                     child_repos_path,
-                                                     iterpool);
+          child_merge_src_canon_path = svn_uri_join(mergeinfo_path,
+                                                    child_repos_path,
+                                                    iterpool);
           /* Filter any ranges from each child's natural history before
              setting mergeinfo describing the merge. */
           SVN_ERR(filter_natural_history_from_mergeinfo(
@@ -8620,10 +8634,10 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
       svn_pool_clear(iterpool);
 
       source_path = path + strlen(target_repos_rel_path);
-      if (source_path[0] == '/') /* Remove leading '/' for svn_path_join. */
+      if (source_path[0] == '/') /* Remove leading '/' for svn_uri_join. */
         source_path++;
-      source_path = svn_path_join(source_repos_rel_path, source_path,
-        iterpool);
+      source_path = svn_uri_join(source_repos_rel_path, source_path,
+                                 iterpool);
 
       /* Convert this target path's natural history into mergeinfo. */
       SVN_ERR(svn_client__mergeinfo_from_segments(&target_history_as_mergeinfo,
@@ -8759,10 +8773,10 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
           svn_pool_clear(iterpool);
 
           target_path = source_path + strlen(source_repos_rel_path);
-          if (target_path[0] == '/') /* Remove leading '/' for svn_path_join */
+          if (target_path[0] == '/') /* Remove leading '/' for svn_uri_join. */
             target_path++;
-          target_path = svn_path_join(target_repos_rel_path, target_path,
-                                      iterpool);
+          target_path = svn_uri_join(target_repos_rel_path, target_path,
+                                     iterpool);
 
           err = svn_client__repos_location_segments(&segments,
                                                     ra_session,

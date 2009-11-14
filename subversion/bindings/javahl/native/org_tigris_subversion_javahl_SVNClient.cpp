@@ -574,7 +574,7 @@ JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_copy
 (JNIEnv *env, jobject jthis, jobjectArray jcopySources, jstring jdestPath,
  jstring jmessage, jboolean jcopyAsChild, jboolean jmakeParents,
- jobject jrevpropTable)
+ jboolean jignoreExternals, jobject jrevpropTable)
 {
   JNIEntry(SVNClient, copy);
 
@@ -599,7 +599,8 @@ Java_org_tigris_subversion_javahl_SVNClient_copy
     return;
 
   cl->copy(copySources, destPath, message, jcopyAsChild ? true : false,
-           jmakeParents ? true : false, revprops);
+           jmakeParents ? true : false, jignoreExternals ? true : false,
+           revprops);
 }
 
 JNIEXPORT void JNICALL
@@ -1157,7 +1158,7 @@ Java_org_tigris_subversion_javahl_SVNClient_getMergeinfo
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_getMergeinfoLog
 (JNIEnv *env, jobject jthis, jint jkind, jstring jpathOrUrl,
  jobject jpegRevision, jstring jmergeSourceUrl, jobject jsrcPegRevision,
- jboolean jdiscoverChangedPaths, jobjectArray jrevProps,
+ jboolean jdiscoverChangedPaths, jint jdepth, jobjectArray jrevProps,
  jobject jlogMessageCallback)
 {
   JNIEntry(SVNClient, getMergeinfoLog);
@@ -1192,7 +1193,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_getMergeinfoL
 
   cl->getMergeinfoLog((int)jkind, pathOrUrl, pegRevision, mergeSourceUrl,
                       srcPegRevision, jdiscoverChangedPaths ? true : false,
-                      revProps, &callback);
+                      (svn_depth_t)jdepth, revProps, &callback);
 }
 
 JNIEXPORT void JNICALL

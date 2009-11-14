@@ -74,16 +74,16 @@ svn_delta_version(void);
  *
  * Since text deltas can be very large, the interface here allows us
  * to produce and consume them in pieces.  Each piece, represented by
- * an @c svn_txdelta_window_t structure, describes how to produce the
+ * an #svn_txdelta_window_t structure, describes how to produce the
  * next section of the target string.
  *
  * To compute a new text delta:
  *
  * - We call svn_txdelta() on the streams we want to compare.  That
- *   returns us an @c svn_txdelta_stream_t object.
+ *   returns us an #svn_txdelta_stream_t object.
  *
  * - We then call svn_txdelta_next_window() on the stream object
- *   repeatedly.  Each call returns a new @c svn_txdelta_window_t
+ *   repeatedly.  Each call returns a new #svn_txdelta_window_t
  *   object, which describes the next portion of the target string.
  *   When svn_txdelta_next_window() returns zero, we are done building
  *   the target string.
@@ -113,7 +113,7 @@ enum svn_delta_action {
      * If you start at @a offset, and append @a length bytes one at a time,
      * it'll work out --- you're adding new bytes to the end at the
      * same rate you're reading them from the middle.  Thus, if your
-     * current target text is "abcdefgh", and you get an @c svn_txdelta_target
+     * current target text is "abcdefgh", and you get an #svn_txdelta_target
      * instruction whose @a offset is 6 and whose @a length is 7,
      * the resulting string is "abcdefghghghghg".  This trick is actually
      * useful in encoding long runs of consecutive characters, long runs
@@ -144,7 +144,7 @@ typedef struct svn_txdelta_op_t
 } svn_txdelta_op_t;
 
 
-/** An @c svn_txdelta_window_t object describes how to reconstruct a
+/** An #svn_txdelta_window_t object describes how to reconstruct a
  * contiguous section of the target string (the "target view") using a
  * specified contiguous region of the source string (the "source
  * view").  It contains a series of instructions which assemble the
@@ -282,7 +282,7 @@ typedef struct svn_txdelta_stream_t svn_txdelta_stream_t;
 
 
 /** A typedef for a function that will set @a *window to the next
- * window from a @c svn_txdelta_stream_t object.  If there are no more
+ * window from a #svn_txdelta_stream_t object.  If there are no more
  * delta windows, NULL will be used.  The returned window, if any,
  * will be allocated in @a pool.  @a baton is the baton specified
  * when the stream was created.
@@ -295,7 +295,7 @@ typedef svn_error_t *
                                 apr_pool_t *pool);
 
 /** A typedef for a function that will return the md5 checksum of the
- * fulltext deltified by a @c svn_txdelta_stream_t object.  Will
+ * fulltext deltified by a #svn_txdelta_stream_t object.  Will
  * return NULL if the final null window hasn't yet been returned by
  * the stream.  The returned value will be allocated in the same pool
  * as the stream.  @a baton is the baton specified when the stream was
@@ -477,7 +477,7 @@ svn_txdelta_to_svndiff(svn_stream_t *output,
  * data into a text delta, invoking @a handler with @a handler_baton
  * whenever a new window is ready.  If @a error_on_early_close is @c
  * TRUE, attempting to close this stream before it has handled the entire
- * svndiff data set will result in @c SVN_ERR_SVNDIFF_UNEXPECTED_END,
+ * svndiff data set will result in #SVN_ERR_SVNDIFF_UNEXPECTED_END,
  * else this error condition will be ignored.
  */
 svn_stream_t *
@@ -565,7 +565,7 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
  *
  * So instead of representing the tree delta explicitly, we define a
  * standard way for a consumer to process each piece of a tree delta
- * as soon as the producer creates it.  The @c svn_delta_editor_t
+ * as soon as the producer creates it.  The #svn_delta_editor_t
  * structure is a set of callback functions to be defined by a delta
  * consumer, and invoked by a delta producer.  Each invocation of a
  * callback function describes a piece of the delta --- a file's
@@ -578,7 +578,7 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
 /** A structure full of callback functions the delta source will invoke
  * as it produces the delta.
  *
- * Note: Don't try to allocate one of these yourself.  Instead, always
+ * @note Don't try to allocate one of these yourself.  Instead, always
  * use svn_delta_default_editor() or some other constructor, to ensure
  * that unused slots are filled in with no-op functions.
  *
@@ -661,7 +661,7 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * or directory being added).  In that case, @a copyfrom_path must be
  * either a path relative to the root of the edit, or a URI from the
  * repository being edited.  If @a copyfrom_path is @c NULL, then @a
- * copyfrom_revision must be @c SVN_INVALID_REVNUM; it is invalid to
+ * copyfrom_revision must be #SVN_INVALID_REVNUM; it is invalid to
  * pass a mix of valid and invalid copyfrom arguments.
  *
  *
@@ -706,7 +706,7 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
  *
  * 6. When the producer calls @c apply_textdelta, it must make all of
  *    the window handler calls (including the @c NULL window at the
- *    end) before issuing any other @c svn_delta_editor_t calls.
+ *    end) before issuing any other #svn_delta_editor_t calls.
  *
  * So, the producer needs to use directory and file batons as if it
  * is doing a single depth-first traversal of the tree, with the
@@ -1028,7 +1028,7 @@ svn_delta_noop_window_handler(svn_txdelta_window_t *window,
  *
  * The @a editor will call @a cancel_func with @a cancel_baton when each of
  * its functions is called, continuing on to call the corresponding wrapped
- * function if @a cancel_func returns @c SVN_NO_ERROR.
+ * function if @a cancel_func returns #SVN_NO_ERROR.
  *
  * If @a cancel_func is @c NULL, set @a *editor to @a wrapped_editor and
  * @a *edit_baton to @a wrapped_baton.
@@ -1052,26 +1052,26 @@ svn_delta_get_cancellation_editor(svn_cancel_func_t cancel_func,
  * wrapped_editor.
  *
  * @a requested_depth must be one of the following depth values:
- * @c svn_depth_infinity, @c svn_depth_empty, @c svn_depth_files,
- * @c svn_depth_immediates, or @c svn_depth_unknown.
+ * #svn_depth_infinity, #svn_depth_empty, #svn_depth_files,
+ * #svn_depth_immediates, or #svn_depth_unknown.
  *
- * If filtering is deemed unncessary (or if @a requested_depth is @c
- * svn_depth_unknown), @a *editor and @a *edit_baton will be set to @a
+ * If filtering is deemed unncessary (or if @a requested_depth is
+ * #svn_depth_unknown), @a *editor and @a *edit_baton will be set to @a
  * wrapped_editor and @a wrapped_baton, respectively; otherwise,
  * they'll be set to new objects allocated from @a pool.
  *
  * @note Because the svn_delta_editor_t interface's @c delete_entry()
  * function doesn't carry node kind information, a depth-based
- * filtering editor being asked to filter for @c svn_depth_files but
+ * filtering editor being asked to filter for #svn_depth_files but
  * receiving a @c delete_entry() call on an immediate child of the
  * editor's target is unable to know if that deletion should be
  * allowed or filtered out -- a delete of a top-level file is okay in
  * this case, a delete of a top-level subdirectory is not.  As such,
  * this filtering editor takes a conservative approach, and ignores
- * top-level deletion requests when filtering for @c svn_depth_files.
+ * top-level deletion requests when filtering for #svn_depth_files.
  * Fortunately, most non-depth-aware (pre-1.5) Subversion editor
  * drivers can be told to drive non-recursively (where non-recursive
- * means essentially @c svn_depth_files), which means they won't
+ * means essentially #svn_depth_files), which means they won't
  * transmit out-of-scope editor commands anyway.
  *
  * @since New in 1.5.
@@ -1187,8 +1187,8 @@ typedef svn_error_t *(*svn_file_rev_handler_t)(
 /**
  * The old file rev handler interface.
  *
- * @note @c svn_file_rev_handler_old_t is a placeholder type for both
- * @c svn_repos_file_rev_handler_t and @c svn_ra_file_rev_handler_t.  It is
+ * @note #svn_file_rev_handler_old_t is a placeholder type for both
+ * #svn_repos_file_rev_handler_t and #svn_ra_file_rev_handler_t.  It is
  * reproduced here for dependency reasons.
  *
  * @deprecated This type is provided for the svn_compat_wrap_file_rev_handler()
@@ -1212,8 +1212,8 @@ typedef svn_error_t *(*svn_file_rev_handler_old_t)(
  * @note This is used by compatibility wrappers, which exist in more than
  * Subversion core library.
  *
- * @note @c svn_file_rev_handler_old_t is a placeholder type for both
- * @c svn_repos_file_rev_handler_t and @c svn_ra_file_rev_handler_t.  It is
+ * @note #svn_file_rev_handler_old_t is a placeholder type for both
+ * #svn_repos_file_rev_handler_t and #svn_ra_file_rev_handler_t.  It is
  * reproduced here for dependency reasons.
  *
  * @since New in 1.5.

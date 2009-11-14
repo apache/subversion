@@ -534,12 +534,13 @@ svn_cl__merge_file_externally(const char *base_path,
  * If don't want a summary line at the end of notifications, set
  * SUPPRESS_FINAL_LINE.
  */
-void svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
-                          void **notify_baton_p,
-                          svn_boolean_t is_checkout,
-                          svn_boolean_t is_export,
-                          svn_boolean_t suppress_final_line,
-                          apr_pool_t *pool);
+svn_error_t *
+svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
+                     void **notify_baton_p,
+                     svn_boolean_t is_checkout,
+                     svn_boolean_t is_export,
+                     svn_boolean_t suppress_final_line,
+                     apr_pool_t *pool);
 
 /* Print conflict stats accumulated in NOTIFY_BATON.
  * Return any error encountered during printing.
@@ -704,6 +705,18 @@ const char *
 svn_cl__node_description(const svn_wc_conflict_version_t *node,
                          const char *wc_repos_root_URL,
                          apr_pool_t *pool);
+
+/* Join a BASE path with a COMPONENT, allocating the result in POOL.
+ * COMPONENT need not be a single single component: it can be any path,
+ * absolute or relative to BASE.
+ *
+ * This function exists to gather the cases when it could not be determined
+ * if BASE is an uri, dirent or relative.
+ */
+const char *
+svn_cl__path_join(const char *base, 
+                  const char *component, 
+                  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

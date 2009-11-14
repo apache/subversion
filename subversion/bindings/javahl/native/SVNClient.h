@@ -98,8 +98,9 @@ class SVNClient :public SVNBase
   jobject getMergeinfo(const char *target, Revision &pegRevision);
   void getMergeinfoLog(int type, const char *pathOrURL,
                        Revision &pegRevision, const char *mergeSourceURL,
-                       Revision &srcPegREvision, bool discoverChangedPaths,
-                       StringArray &revProps, LogMessageCallback *callback);
+                       Revision &srcPegRevision, bool discoverChangedPaths,
+                       svn_depth_t depth, StringArray &revProps,
+                       LogMessageCallback *callback);
   jobjectArray suggestMergeSources(const char *path, Revision &pegRevision);
   void merge(const char *path1, Revision &revision1, const char *path2,
              Revision &revision2, const char *localPath, bool force,
@@ -132,7 +133,7 @@ class SVNClient :public SVNBase
             bool makeParents, RevpropTable &revprops);
   void copy(CopySources &copySources, const char *destPath,
             const char *message, bool copyAsChild, bool makeParents,
-            RevpropTable &revprops);
+            bool ignoreExternals, RevpropTable &revprops);
   jlong commit(Targets &targets, const char *message, svn_depth_t depth,
                bool noUnlock, bool keepChangelist,
                StringArray &changelists, RevpropTable &revprops);

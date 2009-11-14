@@ -105,13 +105,6 @@ extern "C" {
 /** Context data structure for interacting with the administrative data. */
 typedef struct svn_wc__db_t svn_wc__db_t;
 
-/** Pristine Directory Handle
- *
- * Handle for working with pristine files associated with a specific
- * directory on the local filesystem.
- */
-typedef struct svn_wc__db_pdh_t svn_wc__db_pdh_t;
-
 
 /**
  * Enumerated constants for how to open a WC datastore.
@@ -1527,7 +1520,7 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
  *
  * For the BASE node implied by LOCAL_ABSPATH, its location in the repository
  * returned in *REPOS_ROOT_URL and *REPOS_UUID will be returned in
- * *REPOS_RELPATH. Any of three OUT parameters may be NULL, indicating no
+ * *REPOS_RELPATH. Any of the OUT parameters may be NULL, indicating no
  * interest in that piece of information.
  *
  * All returned data will be allocated in RESULT_POOL. All temporary

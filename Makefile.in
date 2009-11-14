@@ -580,7 +580,7 @@ external-extraclean:
 # DOCUMENTATION RULES
 
 # Every single document in every format.
-doc: doc-misc-docs doc-api doc-javahl
+doc: doc-api doc-javahl
 
 # Generate API documentation for the C libraries.
 ### This could also generate POD for swig-perl, etc.
@@ -596,24 +596,7 @@ doc-javahl:
 	  -link http://java.sun.com/javase/6/docs/api/ \
 	  org.tigris.subversion.javahl
 
-# Build all types of a certain doc.
-doc-misc-docs: doc-misc-docs-html doc-misc-docs-pdf doc-misc-docs-ps
-
-# Build all docs of a certain type.
-doc-all-html: doc-misc-docs-html
-doc-all-pdf: doc-misc-docs-pdf
-doc-all-ps: doc-misc-docs-ps
-
-# Assumes you have {xsltproc, fop, stylesheets} installed.
-doc-misc-docs-html:
-	cd $(top_srcdir)/doc/misc-docs && $(MAKE) all-html
-doc-misc-docs-pdf:
-	cd $(top_srcdir)/doc/misc-docs && $(MAKE) pdf
-doc-misc-docs-ps:
-	cd $(top_srcdir)/doc/misc-docs && $(MAKE) ps
-
 doc-clean:
-	cd $(top_srcdir)/doc/misc-docs && $(MAKE) clean
 	rm -rf $(top_srcdir)/doc/doxygen
 	rm -rf $(top_srcdir)/doc/javadoc
 
