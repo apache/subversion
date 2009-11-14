@@ -648,12 +648,15 @@ open_databases(svn_fs_t *fs,
                                                             create)));
     }
 
-  SVN_ERR(BDB_WRAP(fs, (create
-                        ? "creating 'successors' table"
-                        : "opening 'successors' table"),
-                   svn_fs_bdb__open_successors_table(&bfd->successors,
-                                                     bfd->bdb->env,
-                                                     create)));
+  if (format >= SVN_FS_BASE__MIN_SUCCESSOR_IDS_FORMAT)
+    {
+      SVN_ERR(BDB_WRAP(fs, (create
+                            ? "creating 'successors' table"
+                            : "opening 'successors' table"),
+                       svn_fs_bdb__open_successors_table(&bfd->successors,
+                                                         bfd->bdb->env,
+                                                         create)));
+    }
 
   return SVN_NO_ERROR;
 }

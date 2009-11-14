@@ -44,7 +44,10 @@ extern "C" {
    ends.  See the SVN_FS_BASE__MIN_*_FORMAT defines to get a sense of
    what changes and features were added in which versions of this
    back-end's format.  */
-#define SVN_FS_BASE__FORMAT_NUMBER                4
+#define SVN_FS_BASE__FORMAT_NUMBER                5
+
+/* Minimum format number that supports successor ids */
+#define SVN_FS_BASE__MIN_SUCCESSOR_IDS_FORMAT     5
 
 /* Minimum format number that supports representation sharing.  This
    also brings in the support for storing SHA1 checksums.   */
