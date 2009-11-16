@@ -15,8 +15,10 @@ echo "========= configure"
             --with-apxs=/usr/sbin/apxs \
             --without-berkeley-db \
             --with-apr=/usr \
-            --with-jdk \
             --with-apr-util=/usr \
+            --with-jdk=/opt/java/jdk1.6.0_15 \
+	    --with-junit=/home/bt/junit-4.4.jar \
+	    --with-sqlite=/home/bt/sqlite-3.6.17/sqlite3.c \
             || exit $?
 
 echo "========= make"

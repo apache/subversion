@@ -13,8 +13,8 @@ echo "========= mount RAM disc"
 mkdir -p subversion/tests/cmdline/svn-test-work
 test -e ../mount-ramdrive && ../mount-ramdrive
 
-echo "========= make check"
-make check FS_TYPE=$1 CLEANUP=1 || exit $?
+echo "========= make davautocheck"
+make davautocheck FS_TYPE=$1 CLEANUP=1 || exit $?
 
 # the bindings are checked with svncheck-bindings.sh
 exit 0
