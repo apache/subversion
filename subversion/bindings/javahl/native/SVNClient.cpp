@@ -1473,8 +1473,9 @@ jobject SVNClient::revProperty(jobject jthis, const char *path,
     const char *URL;
     svn_string_t *propval;
     svn_revnum_t set_rev;
-    SVN_JNI_ERR(svn_client_url_from_path(&URL, intPath.c_str(),
-                                         requestPool.pool()),
+    SVN_JNI_ERR(svn_client_url_from_path2(&URL, intPath.c_str(), ctx,
+                                          requestPool.pool(),
+                                          requestPool.pool()),
                 NULL);
 
     if (URL == NULL)
@@ -1659,8 +1660,9 @@ void SVNClient::setRevProperty(jobject jthis, const char *path,
         return;
 
     const char *URL;
-    SVN_JNI_ERR(svn_client_url_from_path(&URL, intPath.c_str(),
-                                         requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_url_from_path2(&URL, intPath.c_str(), ctx,
+                                          requestPool.pool(),
+                                          requestPool.pool()), );
 
     if (URL == NULL)
     {
@@ -1869,13 +1871,14 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), NULL);
 
+    svn_client_ctx_t *ctx = getContext(NULL);
     const char *URL;
     svn_revnum_t set_rev;
-    SVN_JNI_ERR(svn_client_url_from_path(&URL, intPath.c_str(),
-                                         requestPool.pool()),
+    SVN_JNI_ERR(svn_client_url_from_path2(&URL, intPath.c_str(), ctx,
+                                          requestPool.pool(),
+                                          requestPool.pool()),
                 NULL);
 
-    svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
         return NULL;
 
