@@ -219,6 +219,7 @@ parse_next_hunk(svn_hunk_t **hunk,
   svn_boolean_t eof, in_hunk, hunk_seen;
   apr_off_t pos, last_line;
   apr_off_t start, end;
+  svn_stream_t *diff_text;
   svn_stream_t *original_text;
   svn_stream_t *modified_text;
   svn_linenum_t original_lines;
@@ -330,6 +331,13 @@ parse_next_hunk(svn_hunk_t **hunk,
       apr_file_t *f;
       apr_int32_t flags = APR_READ | APR_BUFFERED;
 
+      /* Create a stream which returns the hunk text itself. */
+      SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
+                               result_pool));
+      diff_text = svn_stream_from_aprfile_range_readonly(f, FALSE,
+                                                         start, end,
+                                                         result_pool);
+
       /* Create a stream which returns the original hunk text. */
       SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
                                result_pool));
@@ -350,6 +358,7 @@ parse_next_hunk(svn_hunk_t **hunk,
       svn_stream_set_line_transformer_callback(modified_text,
                                                remove_leading_char_transformer);
       /* Set the hunk's texts. */
+      (*hunk)->diff_text = diff_text;
       (*hunk)->original_text = original_text;
       (*hunk)->modified_text = modified_text;
     }
@@ -368,6 +377,7 @@ close_hunk(svn_hunk_t *hunk)
 {
   SVN_ERR(svn_stream_close(hunk->original_text));
   SVN_ERR(svn_stream_close(hunk->modified_text));
+  SVN_ERR(svn_stream_close(hunk->diff_text));
   return SVN_NO_ERROR;
 }
 
