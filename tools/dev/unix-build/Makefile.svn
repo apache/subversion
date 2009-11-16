@@ -584,7 +584,7 @@ $(SVN_OBJDIR)/.retrieved:
 		co="co"; \
 	fi; \
 	if [ ! -d $(SVN_WC) ]; then \
-		svn $${co} https://svn.collab.net/repos/svn/$${branchdir} \
+		svn $${co} https://svn.apache.org/repos/asf/subversion/$${branchdir} \
 			$(SVN_WC); \
 	fi
 	touch $@
