@@ -80,6 +80,18 @@ typedef struct {
   /* Path to the temporary file underlying the result stream. */
   const char *patched_path;
 
+  /* The reject stream, write-only, not seekable.
+   * Hunks that are rejected will be written to this stream.
+   * The data in the underlying file needs to be in repository-normal form,
+   * so EOL transformation and keyword contraction is done transparently. */
+  svn_stream_t *reject;
+
+  /* The reject stream, without EOL transformation and keyword contraction. */
+  svn_stream_t *reject_raw;
+
+  /* Path to the temporary file underlying the reject stream. */
+  const char *reject_path;
+
   /* The line last read from the target file. */
   svn_linenum_t current_line;
 
@@ -101,8 +113,8 @@ typedef struct {
    * to delete a line from an empty file). */
   svn_boolean_t modified;
 
-  /* True if at least one hunk application resulted in a conflict. */
-  svn_boolean_t conflicted;
+  /* True if at least one hunk was rejected. */
+  svn_boolean_t had_rejects;
 
   /* True if the target file had local modifications before the
    * patch was applied to it. */
@@ -350,6 +362,8 @@ init_patch_target(patch_target_t **target,
   if (! new_target->skipped)
     {
       apr_hash_t *keywords;
+      const char *diff_header;
+      apr_size_t len;
 
       /* TODO: Get keywords from patch target. How?
        * Can't call svn_wc__get_keywords() here? */
@@ -372,12 +386,28 @@ init_patch_target(patch_target_t **target,
         SVN_ERR(svn_io_is_file_executable(&new_target->executable,
                                           new_target->abs_path,
                                           scratch_pool));
+
+      /* We'll also need a stream to write rejected hunks to. */
+      SVN_ERR(svn_stream_open_unique(&new_target->reject_raw,
+                                     &new_target->reject_path, NULL,
+                                     svn_io_file_del_on_pool_cleanup,
+                                     result_pool, scratch_pool));
+      new_target->reject = svn_subst_stream_translated(
+                               new_target->reject_raw, "\n",
+                               TRUE, keywords, FALSE, result_pool);
+      diff_header = apr_psprintf(scratch_pool, "--- %s%s+++ %s%s",
+                                 new_target->canon_path_from_patchfile,
+                                 new_target->eol_str,
+                                 new_target->canon_path_from_patchfile,
+                                 new_target->eol_str);
+      len = strlen(diff_header);
+      SVN_ERR(svn_stream_write(new_target->reject, diff_header, &len));
     }
 
   new_target->patch = patch;
   new_target->current_line = 1;
   new_target->modified = FALSE;
-  new_target->conflicted = FALSE;
+  new_target->had_rejects = FALSE;
   new_target->added = FALSE;
   new_target->deleted = FALSE;
   new_target->eof = FALSE;
@@ -490,9 +520,7 @@ scan_for_match(svn_boolean_t *match, svn_linenum_t *matched_line,
 }
 
 /* Determine the *LINE at which a HUNK applies to the TARGET file.
- * If no correct line can be determined, fall back to the original
- * line offset specified in HUNK -- the user will have to resolve
- * conflicts in this case.
+ * If no correct line can be determined, set *LINE to zero.
  * When this function returns, neither TARGET->CURRENT_LINE nor the
  * file offset in the target file will have changed.
  * Do temporary allocations in POOL. */
@@ -566,18 +594,14 @@ determine_hunk_line(svn_linenum_t *line, patch_target_t *target,
             *line = matched_line;
           else if (early_offset == late_offset)
             {
-              /* But don't try to be smart about breaking a tie.
-               * Just apply the hunk where it thinks it should be going.
-               * There will be conflicts. */
-              *line = hunk_start;
+              /* But don't try to be smart about breaking a tie. */
+              *line = 0;
             }
         }
       else
         {
-          /* We found no match at all.
-           * Just apply the hunk where it thinks it should be going.
-           * There will be conflicts. */
-          *line = hunk_start;
+          /* We found no match at all. */
+          *line = 0;
         }
     }
 
@@ -707,6 +731,28 @@ copy_hunk_text(svn_stream_t *hunk_text, svn_stream_t *target,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+reject_hunk(patch_target_t *target, const svn_hunk_t *hunk, apr_pool_t *pool)
+{
+  const char *hunk_header;
+  apr_size_t len;
+
+  hunk_header = apr_psprintf(pool, "@@ -%lu,%lu +%lu,%lu @@%s",
+                             hunk->original_start, hunk->original_length,
+                             hunk->modified_start, hunk->modified_length,
+                             target->eol_str);
+  len = strlen(hunk_header);
+  SVN_ERR(svn_stream_write(target->reject, hunk_header, &len));
+
+  SVN_ERR(copy_hunk_text(hunk->diff_text, target->reject,
+                         target->reject_path,
+                         target->patch->eol_str, pool));
+
+  target->had_rejects = TRUE;
+  return SVN_NO_ERROR;
+}
+
 /* Apply a HUNK to a patch TARGET. Do all allocations in POOL. */
 static svn_error_t *
 apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
@@ -717,12 +763,18 @@ apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
     {
       /* Determine the line the hunk should be applied at. */
       SVN_ERR(determine_hunk_line(&hunk_line, target, hunk, pool));
+      if (hunk_line == 0)
+        {
+          /* The hunk does not apply, reject it. */
+          SVN_ERR(reject_hunk(target, hunk, pool));
+          return SVN_NO_ERROR;
+        }
 
       if (target->current_line > hunk_line)
         {
           /* If we already passed the line that the hunk should be applied to,
            * the hunks in the patch file are out of order. */
-          /* TODO: Warn, create reject file? */
+          SVN_ERR(reject_hunk(target, hunk, pool));
           return SVN_NO_ERROR;
         }
 
@@ -732,7 +784,7 @@ apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
       if (target->eof)
         {
           /* File is shorter than it should be. */
-          /* TODO: Warn, create reject file? */
+          SVN_ERR(reject_hunk(target, hunk, pool));
           return SVN_NO_ERROR;
         }
     }
@@ -794,7 +846,7 @@ maybe_send_patch_target_notification(const patch_target_t *target,
     }
   else
     {
-      if (target->conflicted)
+      if (target->had_rejects)
         notify->content_state = svn_wc_notify_state_conflicted;
       else if (target->local_mods)
         notify->content_state = svn_wc_notify_state_merged;
@@ -856,7 +908,7 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
               /* We could not copy the entire target file to the temporary file,
                * and would truncate the target if we copied the temporary file
                * on top of it. Cancel any modifications to the target file and
-               * report is as skipped. TODO: Dump hunks into reject file? */
+               * report is as skipped. */
               target->modified = FALSE;
               target->skipped = TRUE;
             }
@@ -865,9 +917,10 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
           SVN_ERR(svn_stream_close(target->stream));
         }
 
-      /* Close the patched stream so that its content is flushed to disk.
-       * This will also close the raw stream. */
+      /* Close the patched and reject streams so that their content is
+       * flushed to disk. This will also close the raw streams. */
       SVN_ERR(svn_stream_close(target->patched));
+      SVN_ERR(svn_stream_close(target->reject));
 
       /* Get sizes of the patched temporary file and the working file.
        * We'll need those to figure out whether we should add or delete
@@ -949,6 +1002,17 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
                 }
             }
         }
+
+      /* Write out rejected hunks, if any. */
+      if (target->had_rejects)
+        {
+          SVN_ERR(svn_io_copy_file(target->reject_path,
+                                   apr_psprintf(pool, "%s.svnpatch.rej",
+                                                target->abs_path),
+                                   FALSE, pool));
+          /* ### TODO mark file as conflicted. */
+        }
+
     }
 
   SVN_ERR(maybe_send_patch_target_notification(target, wc_path, ctx, pool));
