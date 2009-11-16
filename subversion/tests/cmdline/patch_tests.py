@@ -839,11 +839,11 @@ def patch_unidiff_strip1(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              XFail(patch_unidiff, is_os_windows),
+              patch_unidiff,
               patch_unidiff_absolute_paths,
-              XFail(patch_unidiff_offset, is_os_windows),
-              XFail(patch_chopped_leading_spaces, is_os_windows),
-              XFail(patch_unidiff_strip1, is_os_windows),
+              patch_unidiff_offset,
+              patch_chopped_leading_spaces,
+              patch_unidiff_strip1,
             ]
 
 if __name__ == '__main__':
