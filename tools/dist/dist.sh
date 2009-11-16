@@ -203,7 +203,7 @@ export TZ
 echo "Exporting $REPOS_PATH r$REVISION into sandbox..."
 (cd "$DIST_SANDBOX" && \
  ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
-     "http://svn.collab.net/repos/svn/$REPOS_PATH" \
+     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH" \
      "$DISTNAME" --username none --password none)
 
 rm -f "$DISTPATH/STATUS"
@@ -214,7 +214,7 @@ rm -f "$DISTPATH/STATUS"
 rm -rf "$DISTPATH/www"
 mkdir "$DISTPATH/www"
 ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
-    "http://svn.collab.net/repos/svn/trunk/www/hacking.html" \
+    "http://svn.apache.org/repos/asf/subversion/trunk/www/hacking.html" \
     --username none --password none "$DISTPATH/www/hacking.html"
 
 # Remove contrib/ from our distribution tarball.  Some of it is of

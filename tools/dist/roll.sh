@@ -10,7 +10,7 @@ else
   BRANCH=trunk
 fi
 
-rs=http://svn.collab.net/repos/svn
+rs=http://svn.apache.org/repos/asf/subversion
 
 if [ "$VERSION" != "trunk" ]; then
   if [ -n "`svn diff --summarize $rs/branches/$BRANCH/CHANGES@$REV $rs/trunk/CHANGES@$REV | grep ^M`" ]; then
