@@ -24,7 +24,6 @@ package org.tigris.subversion.javahl;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 
 import org.tigris.subversion.javahl.Revision;
 import org.tigris.subversion.javahl.SubversionException;

@@ -22,12 +22,7 @@
  */
 package org.tigris.subversion.javahl;
 
-import org.tigris.subversion.javahl.*;
-
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -43,7 +38,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.Map;
 
-import junit.framework.Assert;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
