@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-repo=http://svn.collab.net/repos/svn
+repo=http://svn.apache.org/repos/asf/subversion
 svn=svn
 
 # Parse our arguments
