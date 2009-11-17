@@ -1887,4 +1887,13 @@ public interface SVNClientInterface
      */
     String getVersionInfo(String path, String trailUrl, boolean lastChanged)
             throws ClientException;
+
+    /**
+     * Recursively upgrade a working copy to a new metadata storage format.
+     * @param path                  path of the working copy
+     * @throws ClientException
+     * @since 1.7
+     */
+    void upgrade(String path)
+            throws ClientException;
 }
