@@ -530,13 +530,13 @@ print_dirs_changed_tree(svn_repos_node_t *node,
 
   /* Recursively handle the node's children. */
   subpool = svn_pool_create(pool);
-  full_path = svn_path_join(path, tmp_node->name, subpool);
+  full_path = svn_dirent_join(path, tmp_node->name, subpool);
   SVN_ERR(print_dirs_changed_tree(tmp_node, full_path, subpool));
   while (tmp_node->sibling)
     {
       svn_pool_clear(subpool);
       tmp_node = tmp_node->sibling;
-      full_path = svn_path_join(path, tmp_node->name, subpool);
+      full_path = svn_dirent_join(path, tmp_node->name, subpool);
       SVN_ERR(print_dirs_changed_tree(tmp_node, full_path, subpool));
     }
   svn_pool_destroy(subpool);
@@ -609,13 +609,13 @@ print_changed_tree(svn_repos_node_t *node,
 
   /* Recursively handle the node's children. */
   subpool = svn_pool_create(pool);
-  full_path = svn_path_join(path, node->name, subpool);
+  full_path = svn_dirent_join(path, node->name, subpool);
   SVN_ERR(print_changed_tree(node, full_path, copy_info, subpool));
   while (node->sibling)
     {
       svn_pool_clear(subpool);
       node = node->sibling;
-      full_path = svn_path_join(path, node->name, subpool);
+      full_path = svn_dirent_join(path, node->name, subpool);
       SVN_ERR(print_changed_tree(node, full_path, copy_info, subpool));
     }
   svn_pool_destroy(subpool);
@@ -1125,16 +1125,16 @@ print_diff_tree(svn_fs_root_t *root,
   /* Recursively handle the node's children. */
   subpool = svn_pool_create(pool);
   SVN_ERR(print_diff_tree(root, base_root, node,
-                          svn_path_join(path, node->name, subpool),
-                          svn_path_join(base_path, node->name, subpool),
+                          svn_dirent_join(path, node->name, subpool),
+                          svn_dirent_join(base_path, node->name, subpool),
                           c, tmpdir, subpool));
   while (node->sibling)
     {
       svn_pool_clear(subpool);
       node = node->sibling;
       SVN_ERR(print_diff_tree(root, base_root, node,
-                              svn_path_join(path, node->name, subpool),
-                              svn_path_join(base_path, node->name, subpool),
+                              svn_dirent_join(path, node->name, subpool),
+                              svn_dirent_join(base_path, node->name, subpool),
                               c, tmpdir, subpool));
     }
   svn_pool_destroy(subpool);
