@@ -182,6 +182,7 @@ class SVNClient :public SVNBase
                       const char *original_value, bool force);
   jstring getVersionInfo(const char *path, const char *trailUrl,
                          bool lastChanged);
+  void upgrade(const char *path);
   jobject propertyGet(jobject jthis, const char *path, const char *name,
                       Revision &revision, Revision &pegRevision);
   void diff(const char *target1, Revision &revision1,

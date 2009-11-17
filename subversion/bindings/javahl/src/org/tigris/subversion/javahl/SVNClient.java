@@ -1359,6 +1359,12 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
+     * @since 1.7
+     */
+    public native void upgrade(String path)
+            throws ClientException;
+
+    /**
      * Enable logging in the JNI-code
      * @param logLevel      the level of information to log (See
      *                      SVNClientLogLevel)
