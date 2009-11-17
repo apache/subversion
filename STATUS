@@ -79,7 +79,7 @@ Candidate changes:
    Branch:
      ^/branches/1.6.x-issue3432
    Votes:
-     +1: pburba
+     +1: pburba, stsp
 
  * r35958, r36030, r38373, r38836, r38837, r38842
    Several fixes to the Win32 exception handler. This change also makes it
