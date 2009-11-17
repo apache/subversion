@@ -4806,6 +4806,10 @@ def update_wc_of_dir_to_rev_not_containing_this_dir(sbox):
                                      "up", other_wc_dir)
 
 #----------------------------------------------------------------------
+# Test for issue #3525 'Locked file which is scheduled for delete causes
+# tree conflict'
+#
+# Marked as XFail until that issue is fixed.
 def update_deleted_locked_files(sbox):
   "verify update of deleted locked files"
 
@@ -4813,13 +4817,12 @@ def update_deleted_locked_files(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-
   iota = os.path.join(wc_dir, 'iota')
   E = os.path.join(wc_dir, 'A', 'B', 'E')
   alpha = os.path.join(E, 'alpha')
 
-  svntest.main.run_svn(None, 'lock', iota, alpha)
-  svntest.main.run_svn(None, 'delete', iota, E)
+  svntest.main.run_svn(None, 'lock', alpha)#iota, alpha)
+  svntest.main.run_svn(None, 'delete', E)#iota, E)
 
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
@@ -4835,6 +4838,8 @@ def update_deleted_locked_files(sbox):
                         'A/B/E/alpha',
                         'A/B/E/beta',
                         status='D ')
+  # Issue #3525 manifests itself here; the update causes a spurious
+  # tree conflict.
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
