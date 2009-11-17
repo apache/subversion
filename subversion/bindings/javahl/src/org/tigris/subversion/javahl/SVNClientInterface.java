@@ -1798,13 +1798,35 @@ public interface SVNClientInterface
      * @param callback      callback to receive the file content and the other
      *                      information
      * @throws ClientException
+     * @deprecated Use {@link #blame(String, Revision, Revision, Revision,
+     *                               boolean, boolean, BlameCallback3)}
+     *                               instead.
      * @since 1.5
      */
-
     void blame(String path, Revision pegRevision, Revision revisionStart,
                Revision revisionEnd, boolean ignoreMimeType,
                boolean includeMergedRevisions,
                BlameCallback2 callback) throws ClientException;
+
+    /**
+     * Retrieve the content together with the author, the revision and the date
+     * of the last change of each line
+     * @param path          the path
+     * @param pegRevision   the revision to interpret the path
+     * @param revisionStart the first revision to show
+     * @param revisionEnd   the last revision to show
+     * @param ignoreMimeType whether or not to ignore the mime-type
+     * @param includeMergedRevisions whether or not to include extra merge
+     *                      information
+     * @param callback      callback to receive the file content and the other
+     *                      information
+     * @throws ClientException
+     * @since 1.7
+     */
+    void blame(String path, Revision pegRevision, Revision revisionStart,
+               Revision revisionEnd, boolean ignoreMimeType,
+               boolean includeMergedRevisions,
+               BlameCallback3 callback) throws ClientException;
 
     /**
      * Set directory for the configuration information, taking the
