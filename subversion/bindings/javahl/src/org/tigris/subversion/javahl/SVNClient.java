@@ -31,6 +31,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Date;
 import java.text.ParseException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 /**
  * This is the main client class.  All Subversion client APIs are
@@ -1332,13 +1334,30 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #blame(String, Revision, Revision, Revision,
+     *                               boolean, boolean, BlameCallback3)}
+     *                               instead.
      * @since 1.5
+     */
+    public void blame(String path, Revision pegRevision,
+                      Revision revisionStart, Revision revisionEnd,
+                      boolean ignoreMimeType, boolean includeMergedRevisions,
+                      BlameCallback2 callback)
+            throws ClientException
+    {
+        BlameCallback2Wrapper cw = new BlameCallback2Wrapper(callback);
+        blame(path, pegRevision, revisionStart, revisionEnd, ignoreMimeType,
+              includeMergedRevisions, cw);
+    }
+
+    /**
+     * @since 1.7
      */
     public native void blame(String path, Revision pegRevision,
                              Revision revisionStart,
                              Revision revisionEnd, boolean ignoreMimeType,
                              boolean includeMergedRevisions,
-                             BlameCallback2 callback)
+                             BlameCallback3 callback)
             throws ClientException;
 
     /**
@@ -1632,6 +1651,43 @@ public class SVNClient implements SVNClientInterface
                                String line)
         {
             oldCallback.singleLine(date, revision, author, line);
+        }
+    }
+
+    /**
+     * A private wrapper for compatibility of blame implementations.
+     */
+    private class BlameCallback2Wrapper implements BlameCallback3
+    {
+        private BlameCallback2 oldCallback;
+
+        public BlameCallback2Wrapper(BlameCallback2 callback)
+        {
+            oldCallback = callback;
+        }
+
+        public void singleLine(long lineNum, long revision, Map revProps,
+                               long mergedRevision, Map mergedRevProps,
+                               String mergedPath, String line,
+                               boolean localChange)
+            throws ClientException
+        {
+            DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+
+            try {
+                oldCallback.singleLine(
+                    df.parse((String) revProps.get("svn:date")),
+                    revision,
+                    (String) revProps.get("svn:author"),
+                    mergedRevProps == null ? null
+                        : df.parse((String) mergedRevProps.get("svn:date")),
+                    mergedRevision,
+                    mergedRevProps == null ? null
+                        : (String) mergedRevProps.get("svn:author"),
+                    mergedPath, line);
+            } catch (ParseException e) {
+                throw ClientException.fromException(e);
+            }
         }
     }
 }

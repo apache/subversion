@@ -25,6 +25,7 @@
  */
 
 #include "BlameCallback.h"
+#include "ProplistCallback.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
 /**
@@ -48,40 +49,32 @@ svn_error_t *
 BlameCallback::callback(void *baton,
                         apr_int64_t line_no,
                         svn_revnum_t revision,
-                        const char *author,
-                        const char *date,
+                        apr_hash_t *rev_props,
                         svn_revnum_t merged_revision,
-                        const char *merged_author,
-                        const char *merged_date,
+                        apr_hash_t *merged_rev_props,
                         const char *merged_path,
                         const char *line,
+                        svn_boolean_t local_change,
                         apr_pool_t *pool)
 {
   if (baton)
-    return ((BlameCallback *)baton)->singleLine(revision, author, date,
-                                                merged_revision, merged_author,
-                                                merged_date, merged_path, line,
-                                                pool);
+    return ((BlameCallback *)baton)->singleLine(line_no, revision, rev_props,
+                                                merged_revision,
+                                                merged_rev_props, merged_path,
+                                                line, local_change, pool);
 
   return SVN_NO_ERROR;
 }
 
 /**
  * Callback called for a single line in the file, for which the blame
- * information was requested
- * @param revision  the revision number, when the line was last changed
- *                  or -1, if not changed during the request revision
- *                  interval
- * @param author    the author, who performed the last change of the line
- * @param date      the date of the last change of the line
- * @param line      the content of the line
- * @param pool      memory pool for the use of this function
+ * information was requested.  See the Java-doc for more information.
  */
 svn_error_t *
-BlameCallback::singleLine(svn_revnum_t revision, const char *author,
-                          const char *date, svn_revnum_t mergedRevision,
-                          const char *mergedAuthor, const char *mergedDate,
-                          const char *mergedPath, const char *line,
+BlameCallback::singleLine(apr_int64_t line_no, svn_revnum_t revision,
+                          apr_hash_t *revProps, svn_revnum_t mergedRevision,
+                          apr_hash_t *mergedRevProps, const char *mergedPath,
+                          const char *line, svn_boolean_t localChange,
                           apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
@@ -91,14 +84,13 @@ BlameCallback::singleLine(svn_revnum_t revision, const char *author,
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/BlameCallback2");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/BlameCallback3");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
       mid = env->GetMethodID(clazz, "singleLine",
-                             "(Ljava/util/Date;JLjava/lang/String;"
-                             "Ljava/util/Date;JLjava/lang/String;"
-                             "Ljava/lang/String;Ljava/lang/String;)V");
+                             "(JJLjava/util/Map;JLjava/util/Map;"
+                             "Ljava/lang/String;Ljava/lang/String;Z)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         return SVN_NO_ERROR;
 
@@ -108,36 +100,14 @@ BlameCallback::singleLine(svn_revnum_t revision, const char *author,
     }
 
   // convert the parameters to their Java relatives
-  jstring jauthor = JNIUtil::makeJString(author);
+  jobject jrevProps = ProplistCallback::makeMapFromHash(revProps, pool);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
-  jobject jdate = NULL;
-  if (date != NULL && *date != '\0')
+  jobject jmergedRevProps = NULL;
+  if (mergedRevProps != NULL)
     {
-      apr_time_t timeTemp;
-      svn_error_t *err = svn_time_from_cstring(&timeTemp, date, pool);
-      if (err != SVN_NO_ERROR)
-        return err;
-
-      jdate = JNIUtil::createDate(timeTemp);
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
-    }
-
-  jstring jmergedAuthor = JNIUtil::makeJString(mergedAuthor);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  jobject jmergedDate = NULL;
-  if (mergedDate != NULL && *mergedDate != '\0')
-    {
-      apr_time_t timeTemp;
-      svn_error_t *err = svn_time_from_cstring(&timeTemp, mergedDate, pool);
-      if (err != SVN_NO_ERROR)
-        return err;
-
-      jmergedDate = JNIUtil::createDate(timeTemp);
+      jmergedRevProps = ProplistCallback::makeMapFromHash(mergedRevProps, pool);
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
     }
@@ -151,26 +121,18 @@ BlameCallback::singleLine(svn_revnum_t revision, const char *author,
     return SVN_NO_ERROR;
 
   // call the Java method
-  env->CallVoidMethod(m_callback, mid, jdate, (jlong)revision, jauthor,
-                      jmergedDate, (jlong)mergedRevision, jmergedAuthor,
-                      jmergedPath, jline);
+  env->CallVoidMethod(m_callback, mid, (jlong)line_no, (jlong)revision,
+                      jrevProps, (jlong)mergedRevision, jmergedRevProps,
+                      jmergedPath, jline, (jboolean)localChange);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
   // cleanup the temporary Java objects
-  env->DeleteLocalRef(jauthor);
+  env->DeleteLocalRef(jrevProps);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
-  env->DeleteLocalRef(jdate);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  env->DeleteLocalRef(jmergedAuthor);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  env->DeleteLocalRef(jmergedDate);
+  env->DeleteLocalRef(jmergedRevProps);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 

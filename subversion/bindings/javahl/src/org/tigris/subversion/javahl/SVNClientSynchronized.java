@@ -1710,9 +1710,11 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #blame(String, Revision, Revision, Revision,
+     *                               boolean, boolean, BlameCallback3)}
+     *                               instead.
      * @since 1.5
      */
-
     public void blame(String path,
                       Revision pegRevision,
                       Revision revisionStart,
@@ -1720,6 +1722,26 @@ public class SVNClientSynchronized implements SVNClientInterface
                       boolean ignoreMimeType,
                       boolean includeMergedRevisions,
                       BlameCallback2 callback)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.blame(path, pegRevision, revisionStart, revisionEnd,
+                         ignoreMimeType, includeMergedRevisions, callback);
+        }
+    }
+
+
+    /**
+     * @since 1.7
+     */
+    public void blame(String path,
+                      Revision pegRevision,
+                      Revision revisionStart,
+                      Revision revisionEnd,
+                      boolean ignoreMimeType,
+                      boolean includeMergedRevisions,
+                      BlameCallback3 callback)
             throws ClientException
     {
         synchronized(clazz)

@@ -43,20 +43,23 @@ class BlameCallback
   static svn_error_t *callback(void *baton,
                                apr_int64_t line_no,
                                svn_revnum_t revision,
-                               const char *author,
-                               const char *date,
+                               apr_hash_t *rev_props,
                                svn_revnum_t merged_revision,
-                               const char *merged_author,
-                               const char *merged_date,
+                               apr_hash_t *merged_rev_props,
                                const char *merged_path,
                                const char *line,
+                               svn_boolean_t local_change,
                                apr_pool_t *pool);
 
  protected:
-  svn_error_t *singleLine(svn_revnum_t revision, const char *author,
-                          const char *date, svn_revnum_t mergedRevision,
-                          const char *mergedAuthor, const char *mergedDate,
-                          const char *mergedPath, const char *line,
+  svn_error_t *singleLine(apr_int64_t line_no,
+                          svn_revnum_t revision,
+                          apr_hash_t *rev_props,
+                          svn_revnum_t merged_revision,
+                          apr_hash_t *merged_rev_props,
+                          const char *merged_path,
+                          const char *line,
+                          svn_boolean_t local_change,
                           apr_pool_t *pool);
 
  private:

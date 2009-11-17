@@ -1540,7 +1540,7 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_blame4(intPath.c_str(), pegRevision.revision(),
+    SVN_JNI_ERR(svn_client_blame5(intPath.c_str(), pegRevision.revision(),
                                   revisionStart.revision(),
                                   revisionEnd.revision(),
                                   svn_diff_file_options_create(pool),
