@@ -6966,10 +6966,10 @@ record_mergeinfo_for_dir_merge(const svn_merge_range_t *merged_range,
                 SVN_ERR(svn_rangelist_reverse(child_merge_rangelist,
                                               iterpool));
 
-                SVN_ERR(svn_rangelist_remove(&child_merge_rangelist,
-                                             merge_b->implicit_src_gap,
-                                             child_merge_rangelist, FALSE,
-                                             iterpool));
+              SVN_ERR(svn_rangelist_remove(&child_merge_rangelist,
+                                           merge_b->implicit_src_gap,
+                                           child_merge_rangelist, FALSE,
+                                           iterpool));
               if (is_rollback)
                 SVN_ERR(svn_rangelist_reverse(child_merge_rangelist,
                                               iterpool));
