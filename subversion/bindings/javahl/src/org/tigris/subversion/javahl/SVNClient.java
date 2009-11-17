@@ -888,13 +888,32 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #diff(String, Revision, String, Revision,
+     *                              String, String, int, boolean, boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.5
+     */
+    public void diff(String target1, Revision revision1, String target2,
+                     Revision revision2, String relativeToDir,
+                     String outFileName, int depth, String[] changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force)
+            throws ClientException
+    {
+        diff(target1, revision1, target2, revision2, relativeToDir,
+             outFileName, depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, false);
+    }
+
+    /**
+     * @since 1.7
      */
     public native void diff(String target1, Revision revision1, String target2,
                             Revision revision2, String relativeToDir,
-                            String outFileName, int depth, String[] changelists,
-                            boolean ignoreAncestry, boolean noDiffDeleted,
-                            boolean force)
+                            String outFileName, int depth,
+                            String[] changelists, boolean ignoreAncestry,
+                            boolean noDiffDeleted, boolean force,
+                            boolean copiesAsAdds)
             throws ClientException;
 
     /**
@@ -916,14 +935,32 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #diff(String, Revision, Revision, Revision,
+     *                              String, String, int, boolean, boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.5
+     */
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String relativeToDir, String outFileName, int depth,
+                     String[] changelists, boolean ignoreAncestry,
+                     boolean noDiffDeleted, boolean force)
+            throws ClientException
+    {
+        diff(target, pegRevision, startRevision, endRevision, relativeToDir,
+             outFileName, depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, false);
+    }
+
+    /**
+     * @since 1.7
      */
     public native void diff(String target, Revision pegRevision,
                             Revision startRevision, Revision endRevision,
                             String relativeToDir, String outFileName,
                             int depth, String[] changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
-                            boolean force)
+                            boolean force, boolean copiesAsAdds)
             throws ClientException;
 
     /**
