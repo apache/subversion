@@ -2532,7 +2532,8 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
         svn_wc_adm_access_t *adm_access =
             svn_wc__adm_retrieve_internal2(db, local_abspath, iterpool);
 
-        SVN_ERR(svn_wc__adm_destroy(adm_access, iterpool));
+        if (adm_access)
+          SVN_ERR(svn_wc__adm_destroy(adm_access, iterpool));
       }
 
       /* If caller wants us to recursively nuke everything on disk, go
