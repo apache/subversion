@@ -1449,6 +1449,23 @@ Java_org_tigris_subversion_javahl_SVNClient_getVersionInfo
   return cl->getVersionInfo(path, trailUrl, jlastChanged ? true:false);
 }
 
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_upgrade
+  (JNIEnv *env, jobject jthis, jstring jpath)
+{
+  JNIEntry(SVNClient, upgrade);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->upgrade(path);
+}
+
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_enableLogging
 (JNIEnv *env, jclass jclazz, jint jlogLevel, jstring jpath)

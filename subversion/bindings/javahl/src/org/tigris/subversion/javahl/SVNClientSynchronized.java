@@ -1836,4 +1836,15 @@ public class SVNClientSynchronized implements SVNClientInterface
         }
     }
 
+    /**
+     * @since 1.7
+     */
+    public void upgrade(String path)
+        throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.upgrade(path);
+        }
+    }
 }

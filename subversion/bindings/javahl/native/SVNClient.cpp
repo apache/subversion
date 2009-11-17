@@ -1862,6 +1862,21 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     return JNIUtil::makeJString(value.str().c_str());
 }
 
+void SVNClient::upgrade(const char *path)
+{
+    SVN::Pool requestPool;
+    SVN_JNI_NULL_PTR_EX(path, "path", );
+
+    svn_client_ctx_t *ctx = getContext(NULL);
+    if (ctx == NULL)
+        return;
+
+    Path checkedPath(path);
+    SVN_JNI_ERR(checkedPath.error_occured(), );
+
+    SVN_JNI_ERR(svn_client_upgrade(path, ctx, requestPool.pool()), );
+}
+
 jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
                                       Revision &revision)
 {
