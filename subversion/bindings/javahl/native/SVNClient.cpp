@@ -982,7 +982,8 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                      Revision *pegRevision, const char *relativeToDir,
                      const char *outfileName, svn_depth_t depth,
                      StringArray &changelists,
-                     bool ignoreAncestry, bool noDiffDelete, bool force)
+                     bool ignoreAncestry, bool noDiffDelete, bool force,
+                     bool showCopiesAsAdds)
 {
     svn_error_t *err;
     SVN::Pool requestPool;
@@ -1022,7 +1023,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
 
     if (pegRevision)
     {
-        err = svn_client_diff_peg4(diffOptions,
+        err = svn_client_diff_peg5(diffOptions,
                                    path1.c_str(),
                                    pegRevision->revision(),
                                    revision1.revision(),
@@ -1031,6 +1032,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    depth,
                                    ignoreAncestry,
                                    noDiffDelete,
+                                   showCopiesAsAdds,
                                    force,
                                    SVN_APR_LOCALE_CHARSET,
                                    outfile,
@@ -1052,7 +1054,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
             SVN_JNI_ERR(err, );
         }
 
-        err = svn_client_diff4(diffOptions,
+        err = svn_client_diff5(diffOptions,
                                path1.c_str(),
                                revision1.revision(),
                                path2.c_str(),
@@ -1061,6 +1063,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                depth,
                                ignoreAncestry,
                                noDiffDelete,
+                               showCopiesAsAdds,
                                force,
                                SVN_APR_LOCALE_CHARSET,
                                outfile,
@@ -1087,21 +1090,24 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      const char *relativeToDir, const char *outfileName,
                      svn_depth_t depth, StringArray &changelists,
-                     bool ignoreAncestry, bool noDiffDelete, bool force)
+                     bool ignoreAncestry, bool noDiffDelete, bool force,
+                     bool showCopiesAsAdds)
 {
     diff(target1, revision1, target2, revision2, NULL, relativeToDir,
-         outfileName, depth, changelists, ignoreAncestry, noDiffDelete, force);
+         outfileName, depth, changelists, ignoreAncestry, noDiffDelete, force,
+         showCopiesAsAdds);
 }
 
 void SVNClient::diff(const char *target, Revision &pegRevision,
                      Revision &startRevision, Revision &endRevision,
                      const char *relativeToDir, const char *outfileName,
                      svn_depth_t depth, StringArray &changelists,
-                     bool ignoreAncestry, bool noDiffDelete, bool force)
+                     bool ignoreAncestry, bool noDiffDelete, bool force,
+                     bool showCopiesAsAdds)
 {
     diff(target, startRevision, NULL, endRevision, &pegRevision,
          relativeToDir, outfileName, depth, changelists,
-         ignoreAncestry, noDiffDelete, force);
+         ignoreAncestry, noDiffDelete, force, showCopiesAsAdds);
 }
 
 void
