@@ -2,10 +2,10 @@
  * swigutil_py.h :  utility functions and stuff for the SWIG Python bindings
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -248,6 +248,16 @@ const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
 SVN_SWIG_SWIGUTIL_EXPORT
 const apr_array_header_t *svn_swig_py_revnums_to_array(PyObject *source,
                                                        apr_pool_t *pool);
+
+/* helper function to convert a Python sequence of SWIG wrapper objects
+   into an APR array of pointers to the wrapped structs. The structs themselves
+   are not copied. */
+SVN_SWIG_SWIGUTIL_EXPORT
+const apr_array_header_t *
+svn_swig_py_struct_ptr_list_to_array(PyObject *source,
+                                     swig_type_info *type_descriptor,
+                                     apr_pool_t *pool);
+
 
 /* make an editor that "thunks" from C callbacks up to Python */
 SVN_SWIG_SWIGUTIL_EXPORT

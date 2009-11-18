@@ -2,10 +2,10 @@
  * fs_loader.c:  Front-end to the various FS back ends
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -39,6 +39,7 @@
 #include "svn_string.h"
 #include "svn_private_config.h"
 
+#include "private/svn_fs_private.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_utf_private.h"
 
@@ -655,6 +656,15 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
 }
 
 svn_error_t *
+svn_fs__begin_obliteration_txn(svn_fs_txn_t **txn_p,
+                               svn_fs_t *fs,
+                               svn_revnum_t rev,
+                               apr_pool_t *pool)
+{
+  return fs->vtable->begin_obliteration_txn(txn_p, fs, rev, pool);
+}
+
+svn_error_t *
 svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
                   svn_fs_txn_t *txn, apr_pool_t *pool)
 {
@@ -673,6 +683,19 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
 #ifdef PACK_AFTER_EVERY_COMMIT
   SVN_ERR(svn_fs_pack(fs_path, NULL, NULL, NULL, NULL, pool));
 #endif
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__commit_obliteration_txn(svn_revnum_t rev, svn_fs_txn_t *txn,
+                                apr_pool_t *pool)
+{
+  /* TODO: ### Perhaps here is a good place to unpack the revision ... */
+
+  SVN_ERR(txn->vtable->commit_obliteration(rev, txn, pool));
+
+  /* ### ... and here to re-pack it, if it was packed. */
 
   return SVN_NO_ERROR;
 }

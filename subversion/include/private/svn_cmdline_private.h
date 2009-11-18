@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -91,9 +91,9 @@ svn_cmdline__parse_config_option(apr_array_header_t *config_options,
                                  const char *opt_arg,
                                  apr_pool_t *pool);
 
-/** Sets the config options in @a config_options, an apr array containing 
+/** Sets the config options in @a config_options, an apr array containing
  * svn_cmdline__config_argument_t* elements to the configuration in @a cfg,
- * a hash mapping of <tt>const char *</tt> configuration file names to 
+ * a hash mapping of <tt>const char *</tt> configuration file names to
  * @c svn_config_t *'s. Write warnings to stderr.
  *
  * Use @a prefix as prefix and @a argument_name in warning messages.

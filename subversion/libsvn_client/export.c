@@ -2,10 +2,10 @@
  * export.c:  export a tree.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -142,8 +142,8 @@ copy_one_versioned_file(const char *from_abspath,
 
   if (revision->kind != svn_opt_revision_working)
     {
-      SVN_ERR(svn_wc_get_pristine_contents(&source, from_abspath,
-                                           scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc_get_pristine_contents2(&source, wc_ctx, from_abspath,
+                                            scratch_pool, scratch_pool));
       SVN_ERR(svn_wc_get_prop_diffs2(NULL, &props, wc_ctx, from_abspath,
                                      scratch_pool, scratch_pool));
     }
@@ -196,13 +196,20 @@ copy_one_versioned_file(const char *from_abspath,
     }
   else
     {
-      tm = entry->cmt_date;
+      SVN_ERR(svn_wc__node_get_changed_info(NULL, &tm, NULL, wc_ctx,
+                                            from_abspath, scratch_pool,
+                                            scratch_pool));
     }
 
   if (keywords)
     {
-      const char *fmt;
+      svn_revnum_t changed_rev;
+      const char *suffix;
       const char *author;
+
+      SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, NULL, &author,
+                                            wc_ctx, from_abspath, scratch_pool,
+                                            scratch_pool));
 
       if (local_mod)
         {
@@ -210,18 +217,17 @@ copy_one_versioned_file(const char *from_abspath,
              to the revision number, and set the author to
              "(local)" since we can't always determine the
              current user's username */
-          fmt = "%ldM";
+          suffix = "M";
           author = _("(local)");
         }
       else
         {
-          fmt = "%ld";
-          author = entry->cmt_author;
+          suffix = "";
         }
 
       SVN_ERR(svn_subst_build_keywords2
               (&kw, keywords->data,
-               apr_psprintf(scratch_pool, fmt, entry->cmt_rev),
+               apr_psprintf(scratch_pool, "%ld%s", changed_rev, suffix),
                entry->url, tm, author, scratch_pool));
     }
 
@@ -356,9 +362,9 @@ copy_versioned_files(const char *from,
             {
               if (depth == svn_depth_infinity)
                 {
-                  const char *new_from = svn_path_join(from, child_basename,
+                  const char *new_from = svn_dirent_join(from, child_basename,
                                                        iterpool);
-                  const char *new_to = svn_path_join(to, child_basename,
+                  const char *new_to = svn_dirent_join(to, child_basename,
                                                      iterpool);
 
                   SVN_ERR(copy_versioned_files(new_from, new_to,
@@ -373,14 +379,14 @@ copy_versioned_files(const char *from,
               const char *new_to_abspath;
 
               SVN_ERR(svn_dirent_get_absolute(&new_from_abspath,
-                                              svn_path_join(from,
-                                                            child_basename,
-                                                            iterpool),
+                                              svn_dirent_join(from,
+                                                              child_basename,
+                                                              iterpool),
                                               iterpool));
               SVN_ERR(svn_dirent_get_absolute(&new_to_abspath,
-                                              svn_path_join(to,
-                                                            child_basename,
-                                                            iterpool),
+                                              svn_dirent_join(to,
+                                                              child_basename,
+                                                              iterpool),
                                               iterpool));
 
               SVN_ERR(copy_one_versioned_file(new_from_abspath, new_to_abspath,
@@ -414,14 +420,14 @@ copy_versioned_files(const char *from,
 
                   ext_item = APR_ARRAY_IDX(ext_items, i,
                                            svn_wc_external_item2_t *);
-                  new_from = svn_path_join(from, ext_item->target_dir,
-                                           iterpool);
-                  new_to = svn_path_join(to, ext_item->target_dir,
-                                         iterpool);
+                  new_from = svn_dirent_join(from, ext_item->target_dir,
+                                             iterpool);
+                  new_to = svn_dirent_join(to, ext_item->target_dir, iterpool);
 
-                   /* The target dir might have multiple components.  Guarantee
-                      the path leading down to the last component. */
-                  if (svn_path_component_count(ext_item->target_dir) > 1)
+                   /* The target dir might have parents that don't exist.
+                      Guarantee the path upto the last component. */
+                  if (!svn_dirent_is_root(ext_item->target_dir,
+                                          strlen(ext_item->target_dir)))
                     {
                       const char *parent = svn_dirent_dirname(new_to, iterpool);
                       SVN_ERR(svn_io_make_dir_recursively(parent, iterpool));
@@ -471,7 +477,7 @@ open_root_internal(const char *path,
   if (kind == svn_node_none)
     SVN_ERR(svn_io_make_dir_recursively(path, pool));
   else if (kind == svn_node_file)
-    return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                              _("'%s' exists and is not a directory"),
                              svn_dirent_local_style(path, pool));
   else if ((kind != svn_node_dir) || (! force))
@@ -607,14 +613,14 @@ add_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct dir_baton *db = apr_pcalloc(pool, sizeof(*db));
   struct edit_baton *eb = pb->edit_baton;
-  const char *full_path = svn_path_join(eb->root_path, path, pool);
+  const char *full_path = svn_dirent_join(eb->root_path, path, pool);
   svn_node_kind_t kind;
 
   SVN_ERR(svn_io_check_path(full_path, &kind, pool));
   if (kind == svn_node_none)
     SVN_ERR(svn_io_dir_make(full_path, APR_OS_DEFAULT, pool));
   else if (kind == svn_node_file)
-    return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                              _("'%s' exists and is not a directory"),
                              svn_dirent_local_style(full_path, pool));
   else if (! (kind == svn_node_dir && eb->force))
@@ -652,8 +658,8 @@ add_file(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
-  const char *full_path = svn_path_join(eb->root_path, path, pool);
-  const char *full_url = svn_path_join(eb->root_url, path, pool);
+  const char *full_path = svn_dirent_join(eb->root_path, path, pool);
+  const char *full_url = svn_uri_join(eb->root_url, path, pool);
 
   fb->edit_baton = eb;
   fb->path = full_path;

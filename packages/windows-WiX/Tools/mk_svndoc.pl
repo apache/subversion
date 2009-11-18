@@ -3,10 +3,10 @@
 # FILE       mk_svndoc
 # PURPOSE    Making MS HTML-help from the Subversion source documentation
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -47,7 +47,7 @@ my %g_FilesToCpAndConv=
         'COPYING', 'subversion\SubversionLicense.txt',
         'README', 'subversion\Readme.dist',
         'doc\user\lj_article.txt', 'doc\lj_article.txt',
-        'doc\programmer\WritingChangeLogs.txt', 'doc\WritingChangeLogs.txt', 
+        'doc\programmer\WritingChangeLogs.txt', 'doc\WritingChangeLogs.txt',
     );
 
 # Programs needed for making the documentation
@@ -204,12 +204,12 @@ sub CheckForProgs
     if ($bMissingProgs)
       {
         my $Msg="One or more required programs needed for making the docs are missing:\n\n";
-   
+
         for (@MissingProgs)
           {
             $Msg=$Msg . "  - $_\n";
           }
-          
+
           $Msg=$Msg . "\nPlease, check that everything are installed properly as described in\n";
           $Msg=$Msg . "the documentation in packages\\windows-innosetup\\tools\\readme.txt\n";
           Win32::MsgBox($Msg, 0+MB_ICONSTOP, 'ERROR: Missing required programs.');
@@ -247,7 +247,7 @@ sub CopyAndEolU2W
               {
                 chomp($_);
                 $_ = "$_\r\n";
-                
+
                 if ($FileCnt)
                   {
                     $FileCnt = $FileCnt . $_;

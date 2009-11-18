@@ -3,10 +3,10 @@
  *                "we can't lose 'em, but we can shun 'em!"
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -847,4 +847,42 @@ svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
   return svn_stream_copy3(svn_stream_disown(from, scratch_pool),
                           svn_stream_disown(to, scratch_pool),
                           NULL, NULL, scratch_pool);
+}
+
+/*** From path.c ***/
+
+const char *
+svn_path_internal_style(const char *path, apr_pool_t *pool)
+{
+  if (svn_path_is_url(path))
+    return svn_uri_canonicalize(path, pool);
+  else
+    return svn_dirent_internal_style(path, pool);
+}
+
+
+const char *
+svn_path_local_style(const char *path, apr_pool_t *pool)
+{
+  if (svn_path_is_url(path))
+    return apr_pstrdup(pool, path);
+  else
+    return svn_dirent_local_style(path, pool);
+}
+
+const char *
+svn_path_canonicalize(const char *path, apr_pool_t *pool)
+{
+  if (svn_path_is_url(path))
+    return svn_uri_canonicalize(path, pool);
+  else
+    return svn_dirent_canonicalize(path, pool);
+}
+
+svn_boolean_t
+svn_path_is_canonical(const char *path, apr_pool_t *pool)
+{
+  return svn_uri_is_canonical(path, pool) ||
+      svn_dirent_is_canonical(path, pool) ||
+      svn_relpath_is_canonical(path, pool);
 }

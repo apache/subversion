@@ -2,10 +2,10 @@
  * hash.c :  dumping and reading hash tables to/from files.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -490,7 +490,7 @@ svn_hash_from_cstring_keys(apr_hash_t **hash_p,
 
 
 svn_error_t *
-svn_hash__clear(apr_hash_t *hash)
+svn_hash__clear(apr_hash_t *hash, apr_pool_t *pool)
 {
 #if APR_VERSION_AT_LEAST(1, 3, 0)
   apr_hash_clear(hash);
@@ -499,7 +499,7 @@ svn_hash__clear(apr_hash_t *hash)
   const void *key;
   apr_ssize_t klen;
 
-  for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
     {
       apr_hash_this(hi, &key, &klen, NULL);
       apr_hash_set(hash, key, klen, NULL);

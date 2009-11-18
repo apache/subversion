@@ -2,10 +2,10 @@
  * activity.c: DeltaV activity handling
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -284,7 +284,7 @@ dav_svn__create_txn(const dav_svn_repos *repos,
 
 
 dav_error *
-dav_svn__abort_txn(const dav_svn_repos *repos, 
+dav_svn__abort_txn(const dav_svn_repos *repos,
                    const char *txn_name,
                    apr_pool_t *pool)
 {

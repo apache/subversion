@@ -2,10 +2,10 @@
  * externals.c:  handle the svn:externals property
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -102,20 +102,13 @@ relegate_dir_external(const char *path,
                       apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
-  svn_wc_adm_access_t *adm_access;
+  const char *local_abspath;
 
-  SVN_ERR(svn_wc__adm_open_in_context(&adm_access, wc_ctx, path, TRUE, -1,
-                                      cancel_func, cancel_baton, pool));
-  err = svn_wc_remove_from_revision_control(adm_access,
-                                            SVN_WC_ENTRY_THIS_DIR,
-                                            TRUE, FALSE,
-                                            cancel_func,
-                                            cancel_baton,
-                                            pool);
-
-  /* ### Ugly. Unlock only if not going to return an error. Revisit */
-  if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
-    SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  err = svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
+                                             TRUE, FALSE,
+                                             cancel_func, cancel_baton,
+                                             pool);
 
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
@@ -175,21 +168,20 @@ switch_dir_external(const char *path,
   svn_node_kind_t kind;
   svn_error_t *err;
   apr_pool_t *subpool = svn_pool_create(pool);
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   /* If path is a directory, try to update/switch to the correct URL
      and revision. */
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind == svn_node_dir)
     {
-      svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
 
-      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, path, TRUE,
-                                          0, ctx->cancel_func,
-                                          ctx->cancel_baton, subpool));
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access,
-                           FALSE, subpool));
-      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
+      SVN_ERR(svn_wc__maybe_get_entry(&entry, ctx->wc_ctx, local_abspath,
+                                      svn_node_dir, FALSE, FALSE, subpool,
+                                      subpool));
 
       if (entry && entry->url)
         {
@@ -303,6 +295,7 @@ switch_file_external(const char *path,
   svn_wc_adm_access_t *target_adm_access;
   const char *anchor;
   const char *anchor_abspath;
+  const char *local_abspath;
   const char *target;
   const svn_wc_entry_t *entry;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
@@ -319,6 +312,7 @@ switch_file_external(const char *path,
   SVN_ERR(svn_wc_get_actual_target2(&anchor, &target, ctx->wc_ctx, path,
                                     subpool, subpool));
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, subpool));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
 
   /* Try to get a access baton for the anchor using the input access
      baton.  If this fails and returns SVN_ERR_WC_NOT_LOCKED, then try
@@ -357,7 +351,9 @@ switch_file_external(const char *path,
         return svn_error_return(err);
     }
 
-  SVN_ERR(svn_wc_entry(&entry, path, target_adm_access, FALSE, subpool));
+  SVN_ERR(svn_wc__maybe_get_entry(&entry, ctx->wc_ctx, local_abspath,
+                                  svn_node_unknown, FALSE, FALSE, subpool,
+                                  subpool));
 
   /* Only one notification is done for the external, so don't notify
      for any following steps.  Use the following trick to add the file
@@ -411,7 +407,7 @@ switch_file_external(const char *path,
       /* Try to create an empty file.  If there is a file already
          there, then don't touch it. */
       SVN_ERR(svn_io_file_open(&f,
-                               path,
+                               local_abspath,
                                APR_WRITE | APR_CREATE | APR_EXCL,
                                APR_OS_DEFAULT,
                                subpool));
@@ -420,7 +416,7 @@ switch_file_external(const char *path,
       if (err)
         goto cleanup;
 
-      err = svn_wc_add3(path, target_adm_access, svn_depth_infinity,
+      err = svn_wc_add4(ctx->wc_ctx, local_abspath, svn_depth_infinity,
                         NULL, /* const char *copyfrom_url */
                         SVN_INVALID_REVNUM, /* svn_revnum_t copyfrom_rev */
                         ctx->cancel_func, ctx->cancel_baton,
@@ -431,7 +427,7 @@ switch_file_external(const char *path,
         goto cleanup;
       revert_file = TRUE;
 
-      err = svn_wc__set_file_external_location(target_adm_access, target,
+      err = svn_wc__set_file_external_location(ctx->wc_ctx, local_abspath,
                                                url, peg_revision, revision,
                                                repos_root_url, subpool);
       if (err)
@@ -464,36 +460,31 @@ switch_file_external(const char *path,
   if (close_adm_access)
     SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
 
-  /* ### should destroy the subpool... */
-
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 
  cleanup:
   if (revert_file)
     {
-      svn_error_t *e =
-        svn_wc_revert3(path, target_adm_access, svn_depth_empty,
+      svn_error_clear(
+        svn_wc_revert4(ctx->wc_ctx, local_abspath, svn_depth_empty,
                        use_commit_times,
                        NULL, /* apr_array_header_t *changelists */
                        ctx->cancel_func,
                        ctx->cancel_baton,
                        NULL, /* svn_wc_notify_func2_t */
                        NULL, /* void *notify_baton */
-                       subpool);
-      if (e)
-        svn_error_clear(e);
+                       subpool));
     }
 
   if (remove_from_revision_control)
     {
-      svn_error_t *e = svn_wc_remove_from_revision_control(target_adm_access,
-                                                           target,
-                                                           TRUE, FALSE,
-                                                           ctx->cancel_func,
-                                                           ctx->cancel_baton,
-                                                           subpool);
-      if (e)
-        svn_error_clear(e);
+      svn_error_clear(
+        svn_wc_remove_from_revision_control2(ctx->wc_ctx, local_abspath,
+                                             TRUE, FALSE,
+                                             ctx->cancel_func,
+                                             ctx->cancel_baton,
+                                             subpool));
     }
 
   if (unlink_file)
@@ -502,8 +493,7 @@ switch_file_external(const char *path,
   if (close_adm_access)
     SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
 
-  /* ### should destroy the subpool */
-
+  svn_pool_destroy(subpool);
   return svn_error_return(err);
 }
 
@@ -558,17 +548,35 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
                               const char *parent_dir_url,
                               apr_pool_t *pool)
 {
-  const char *uncanonicalized_url = item->url;
-  const char *canonicalized_url;
+  const char *url = item->url;
   apr_uri_t parent_dir_parsed_uri;
   apr_status_t status;
 
-  canonicalized_url = svn_path_canonicalize(uncanonicalized_url, pool);
+  if ((url[0] == '/') && (url[1] == '/'))
+    {
+      /* "//schema-relative" and in some cases "///schema-relative".
+         This last format is supported on file:// schema relative. */
+      url = apr_pstrcat(
+                        pool,
+                        url[2] == '/' ? "///" : "//",
+                        svn_relpath_canonicalize(url+2, pool),
+                        NULL);
+    }
+  else if (svn_path_is_url(url) || *url == '/')
+    {
+      /* "http://server/path" and "/path" */
+      url = svn_uri_canonicalize(url, pool);
+    }
+  else
+    {
+      /* "^/path" and "../path" */
+      url = svn_relpath_canonicalize(url, pool);
+    }
 
   /* If the URL is already absolute, there is nothing to do. */
-  if (svn_path_is_url(canonicalized_url))
+  if (svn_path_is_url(url))
     {
-      item->url = canonicalized_url;
+      item->url = url;
       return SVN_NO_ERROR;
     }
 
@@ -590,8 +598,8 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
      not the hostname.  This allows an external to refer to another
      repository in the same server relative to the location of this
      repository, say using SVNParentPath. */
-  if ((0 == strncmp("../", uncanonicalized_url, 3)) ||
-      (0 == strncmp("^/", uncanonicalized_url, 2)))
+  if ((0 == strncmp("../", url, 3)) ||
+      (0 == strncmp("^/", url, 2)))
     {
       apr_array_header_t *base_components;
       apr_array_header_t *relative_components;
@@ -599,11 +607,11 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
 
       /* Decompose either the parent directory's URL path or the
          repository root's URL path into components.  */
-      if (0 == strncmp("../", uncanonicalized_url, 3))
+      if (0 == strncmp("../", url, 3))
         {
           base_components = svn_path_decompose(parent_dir_parsed_uri.path,
                                                pool);
-          relative_components = svn_path_decompose(canonicalized_url, pool);
+          relative_components = svn_path_decompose(url, pool);
         }
       else
         {
@@ -623,8 +631,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
 
           base_components = svn_path_decompose(repos_root_parsed_uri.path,
                                                pool);
-          relative_components = svn_path_decompose(canonicalized_url + 2,
-                                                   pool);
+          relative_components = svn_path_decompose(url + 2, pool);
         }
 
       for (i = 0; i < relative_components->nelts; ++i)
@@ -658,35 +665,31 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
   /* The remaining URLs are relative to the either the scheme or
      server root and can only refer to locations inside that scope, so
      backpaths are not allowed. */
-  if (svn_path_is_backpath_present(canonicalized_url + 2))
+  if (svn_path_is_backpath_present(url + 2))
     return svn_error_createf(SVN_ERR_BAD_URL, 0,
                              _("The external relative URL '%s' cannot have "
                                "backpaths, i.e. '..'"),
-                             uncanonicalized_url);
+                             item->url);
 
   /* Relative to the scheme. */
-  if (0 == strncmp("//", uncanonicalized_url, 2))
+  if (0 == strncmp("//", url, 2))
     {
       const char *scheme;
 
       SVN_ERR(uri_scheme(&scheme, repos_root_url, pool));
-      item->url = svn_path_canonicalize(apr_pstrcat(pool,
-                                                    scheme,
-                                                    ":",
-                                                    uncanonicalized_url,
-                                                    NULL),
-                                        pool);
+      item->url = svn_uri_canonicalize(apr_pstrcat(pool,
+                                                   scheme,
+                                                   ":",
+                                                   url,
+                                                   NULL),
+                                       pool);
       return SVN_NO_ERROR;
     }
 
   /* Relative to the server root. */
-  if (uncanonicalized_url[0] == '/')
+  if (url[0] == '/')
     {
-      parent_dir_parsed_uri.path = (char *)canonicalized_url;
-      parent_dir_parsed_uri.query = NULL;
-      parent_dir_parsed_uri.fragment = NULL;
-
-      item->url = apr_uri_unparse(pool, &parent_dir_parsed_uri, 0);
+      item->url = svn_uri_join(parent_dir_url, url, pool);
 
       return SVN_NO_ERROR;
     }
@@ -694,7 +697,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
   return svn_error_createf(SVN_ERR_BAD_URL, 0,
                            _("Unrecognized format for the relative external "
                              "URL '%s'"),
-                           uncanonicalized_url);
+                           item->url);
 }
 
 /* This implements the 'svn_hash_diff_func_t' interface.
@@ -707,8 +710,8 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
   struct handle_external_item_change_baton *ib = baton;
   svn_wc_external_item2_t *old_item, *new_item;
   const char *parent;
-  const char *path = svn_path_join(ib->parent_dir,
-                                   (const char *) key, ib->iter_pool);
+  const char *path = svn_dirent_join(ib->parent_dir,
+                                     (const char *) key, ib->iter_pool);
   svn_ra_session_t *ra_session;
   svn_node_kind_t kind;
   svn_client__ra_session_from_path_results ra_cache = { 0 };
@@ -773,13 +776,14 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                                                new_item->url, NULL,
                                                &(new_item->peg_revision),
                                                &(new_item->revision), ib->ctx,
-                                               ib->pool));
+                                               ib->iter_pool));
 
-      SVN_ERR(svn_ra_get_uuid2(ra_session, &ra_cache.repos_uuid, ib->pool));
+      SVN_ERR(svn_ra_get_uuid2(ra_session, &ra_cache.repos_uuid,
+                               ib->iter_pool));
       SVN_ERR(svn_ra_get_repos_root2(ra_session, &ra_cache.repos_root_url,
-                                     ib->pool));
+                                     ib->iter_pool));
       SVN_ERR(svn_ra_check_path(ra_session, "", ra_cache.ra_revnum, &kind,
-                                ib->pool));
+                                ib->iter_pool));
 
       if (svn_node_none == kind)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -888,7 +892,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       svn_wc_adm_access_t *adm_access;
       svn_boolean_t close_access_baton_when_done;
 
-      const char *what_to_remove;
+      const char *remove_target_abspath;
 
       /* Determine if a directory or file external is being removed.
          Try to handle the case when the user deletes the external by
@@ -921,29 +925,32 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
               svn_error_clear(err);
             }
           close_access_baton_when_done = FALSE;
-          what_to_remove = target;
+          SVN_ERR(svn_dirent_get_absolute(&remove_target_abspath, target,
+                                          ib->iter_pool));
         }
       else
         {
           close_access_baton_when_done = TRUE;
-          what_to_remove = SVN_WC_ENTRY_THIS_DIR;
+          SVN_ERR(svn_dirent_get_absolute(&remove_target_abspath,
+                                          svn_wc_adm_access_path(adm_access),
+                                          ib->iter_pool));
         }
 
       /* We don't use relegate_dir_external() here, because we know that
          nothing else in this externals description (at least) is
          going to need this directory, and therefore it's better to
          leave stuff where the user expects it. */
-      err = svn_wc_remove_from_revision_control
-        (adm_access, what_to_remove, TRUE, FALSE,
-         ib->ctx->cancel_func, ib->ctx->cancel_baton, ib->iter_pool);
+      err = svn_wc_remove_from_revision_control2(
+                        ib->ctx->wc_ctx, remove_target_abspath, TRUE, FALSE,
+                        ib->ctx->cancel_func, ib->ctx->cancel_baton,
+                        ib->iter_pool);
 
       if (ib->ctx->notify_func2)
         {
-          svn_wc_notify_t *notify = 
-              svn_wc_create_notify(
-                        svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                                        what_to_remove, ib->iter_pool),
-                        svn_wc_notify_update_external_removed, ib->iter_pool);
+          svn_wc_notify_t *notify =
+              svn_wc_create_notify(remove_target_abspath,
+                                   svn_wc_notify_update_external_removed,
+                                   ib->iter_pool);
 
           notify->kind = svn_node_dir;
           notify->err = err;
@@ -1037,8 +1044,8 @@ handle_external_item_change_wrapper(const void *key, apr_ssize_t klen,
     {
       if (ib->ctx->notify_func2)
         {
-          const char *path = svn_path_join(ib->parent_dir, key,
-                                           ib->iter_pool);
+          const char *path = svn_dirent_join(ib->parent_dir, key,
+                                             ib->iter_pool);
           svn_wc_notify_t *notifier =
           svn_wc_create_notify(path,
                                svn_wc_notify_failed_external,
@@ -1233,7 +1240,9 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
 
 svn_error_t *
 svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
-                             svn_wc_traversal_info_t *traversal_info,
+                             apr_hash_t *externals_old,
+                             apr_hash_t *externals_new,
+                             apr_hash_t *ambient_depths,
                              const char *from_url,
                              const char *to_path,
                              const char *repos_root_url,
@@ -1242,11 +1251,7 @@ svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
-  apr_hash_t *externals_old, *externals_new, *ambient_depths;
   struct handle_externals_desc_change_baton cb = { 0 };
-
-  svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
-  svn_wc_traversed_depths(&ambient_depths, traversal_info);
 
   /* Sanity check; see r30124. */
   if (! svn_path_is_url(from_url))
@@ -1350,7 +1355,7 @@ svn_client__do_external_status(apr_hash_t *externals_new,
           svn_pool_clear(iterpool);
 
           external = APR_ARRAY_IDX(exts, i, svn_wc_external_item2_t *);
-          fullpath = svn_path_join(path, external->target_dir, iterpool);
+          fullpath = svn_dirent_join(path, external->target_dir, iterpool);
 
           /* If the external target directory doesn't exist on disk,
              just skip it. */
@@ -1408,6 +1413,42 @@ svn_cl__store_externals(void *baton,
     apr_hash_set(eb->depths,
                  local_abspath, APR_HASH_KEY_STRING,
                  svn_depth_to_word(depth));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_client__external_info_gatherer(void *baton,
+                                   const char *local_abspath,
+                                   const svn_string_t *old_val,
+                                   const svn_string_t *new_val,
+                                   svn_depth_t depth,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_client__external_func_baton_t *efb = baton;
+  const char *dup_val = NULL;
+  const char *dup_path = apr_pstrdup(efb->result_pool, local_abspath);
+
+  if (old_val)
+    {
+      dup_val = apr_pstrmemdup(efb->result_pool, old_val->data, old_val->len);
+
+      apr_hash_set(efb->externals_old, dup_path, APR_HASH_KEY_STRING, dup_val);
+    }
+
+  if (new_val)
+    {
+      /* In most cases the value is identical */
+      if (old_val != new_val)
+        dup_val = apr_pstrmemdup(efb->result_pool, new_val->data, new_val->len);
+
+      apr_hash_set(efb->externals_new, dup_path, APR_HASH_KEY_STRING, dup_val);
+    }
+
+  apr_hash_set(efb->ambient_depths, dup_path, APR_HASH_KEY_STRING,
+               svn_depth_to_word(depth));
 
   return SVN_NO_ERROR;
 }

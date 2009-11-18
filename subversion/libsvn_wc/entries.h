@@ -2,10 +2,10 @@
  * entries.h :  manipulating entries
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -30,6 +30,7 @@
 #include "svn_types.h"
 
 #include "wc_db.h"
+#include "private/svn_sqlite.h"
 
 
 #ifdef __cplusplus
@@ -37,9 +38,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-#define SVN_WC__ENTRIES_TOPLEVEL       "wc-entries"
-#define SVN_WC__ENTRIES_ENTRY          "entry"
-
 /* String representations for svn_node_kind.  This maybe should be
    abstracted farther out? */
 #define SVN_WC__ENTRIES_ATTR_FILE_STR   "file"
@@ -55,7 +53,6 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_NAME               "name"
 #define SVN_WC__ENTRY_ATTR_REVISION           "revision"
 #define SVN_WC__ENTRY_ATTR_URL                "url"
-#define SVN_WC__ENTRY_ATTR_REPOS              "repos"
 #define SVN_WC__ENTRY_ATTR_KIND               "kind"
 #define SVN_WC__ENTRY_ATTR_TEXT_TIME          "text-time"
 #define SVN_WC__ENTRY_ATTR_CHECKSUM           "checksum"
@@ -72,42 +69,12 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_CMT_REV            "committed-rev"
 #define SVN_WC__ENTRY_ATTR_CMT_DATE           "committed-date"
 #define SVN_WC__ENTRY_ATTR_CMT_AUTHOR         "last-author"
-#define SVN_WC__ENTRY_ATTR_UUID               "uuid"
-#define SVN_WC__ENTRY_ATTR_INCOMPLETE         "incomplete"
-#define SVN_WC__ENTRY_ATTR_LOCK_TOKEN         "lock-token"
-#define SVN_WC__ENTRY_ATTR_LOCK_OWNER         "lock-owner"
-#define SVN_WC__ENTRY_ATTR_LOCK_COMMENT       "lock-comment"
-#define SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE "lock-creation-date"
-#define SVN_WC__ENTRY_ATTR_CHANGELIST         "changelist"
-#define SVN_WC__ENTRY_ATTR_KEEP_LOCAL         "keep-local"
 #define SVN_WC__ENTRY_ATTR_WORKING_SIZE       "working-size"
-#define SVN_WC__ENTRY_ATTR_TREE_CONFLICT_DATA "tree-conflicts"
-#define SVN_WC__ENTRY_ATTR_FILE_EXTERNAL      "file-external"
 
 /* Attribute values for 'schedule' */
 #define SVN_WC__ENTRY_VALUE_ADD        "add"
 #define SVN_WC__ENTRY_VALUE_DELETE     "delete"
 #define SVN_WC__ENTRY_VALUE_REPLACE    "replace"
-
-
-
-/* Initialize an entries file based on URL at INITIAL_REV, in the adm
-   area for PATH.  The adm area must not already have an entries
-   file.  UUID is the repository UUID, and may be NULL.  REPOS is the
-   repository root URL and, if not NULL, must be a prefix of URL.
-   DEPTH is the initial depth of the working copy, it must be a
-   definite depth, not svn_depth_unknown.
-
-   If initial rev is valid and non-zero, then mark the 'this_dir'
-   entry as being incomplete.
-*/
-svn_error_t *svn_wc__entries_init(const char *path,
-                                  const char *uuid,
-                                  const char *url,
-                                  const char *repos,
-                                  svn_revnum_t initial_rev,
-                                  svn_depth_t depth,
-                                  apr_pool_t *pool);
 
 
 /* Set *NEW_ENTRY to a new entry, taking attributes from ATTS, whose
@@ -127,7 +94,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 /* Note: we use APR_INT64_C because APR 0.9 lacks APR_UINT64_C */
 #define SVN_WC__ENTRY_MODIFY_REVISION           APR_INT64_C(0x0000000000000001)
 #define SVN_WC__ENTRY_MODIFY_URL                APR_INT64_C(0x0000000000000002)
-#define SVN_WC__ENTRY_MODIFY_REPOS              APR_INT64_C(0x0000000000000004)
+/* OPEN */
 #define SVN_WC__ENTRY_MODIFY_KIND               APR_INT64_C(0x0000000000000008)
 #define SVN_WC__ENTRY_MODIFY_TEXT_TIME          APR_INT64_C(0x0000000000000010)
 /* OPEN */
@@ -144,14 +111,13 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_CMT_REV            APR_INT64_C(0x0000000000010000)
 #define SVN_WC__ENTRY_MODIFY_CMT_DATE           APR_INT64_C(0x0000000000020000)
 #define SVN_WC__ENTRY_MODIFY_CMT_AUTHOR         APR_INT64_C(0x0000000000040000)
-#define SVN_WC__ENTRY_MODIFY_UUID               APR_INT64_C(0x0000000000080000)
+/* OPEN */
 #define SVN_WC__ENTRY_MODIFY_INCOMPLETE         APR_INT64_C(0x0000000000100000)
 #define SVN_WC__ENTRY_MODIFY_ABSENT             APR_INT64_C(0x0000000000200000)
 /* OPEN */
-#define SVN_WC__ENTRY_MODIFY_CHANGELIST         APR_INT64_C(0x0000000040000000)
 #define SVN_WC__ENTRY_MODIFY_KEEP_LOCAL         APR_INT64_C(0x0000000080000000)
 #define SVN_WC__ENTRY_MODIFY_WORKING_SIZE       APR_INT64_C(0x0000000100000000)
-#define SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA APR_INT64_C(0x0000000200000000)
+/* OPEN */
 #define SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL      APR_INT64_C(0x0000000400000000)
 /* No #define for DEPTH, because it's only meaningful on this-dir anyway. */
 
@@ -161,7 +127,9 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_FORCE              APR_INT64_C(0x4000000000000000)
 
 
-/* Modify an entry for NAME in access baton ADM_ACCESS by folding in
+/* TODO ### Rewrite doc string to mention DB, LOCAL_ABSPATH; not ADM_ACCESS, NAME.
+
+   Modify an entry for NAME in access baton ADM_ACCESS by folding in
    ("merging") changes, and sync those changes to disk.  New values
    for the entry are pulled from their respective fields in ENTRY, and
    MODIFY_FLAGS is a bitmask to specify which of those fields to pay
@@ -180,16 +148,20 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
      ### base / working / base and working version(s) ?
    of the node.
 
-   Perform all allocations in POOL.  */
-svn_error_t *
-svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
-                     const char *name,
-                     svn_wc_entry_t *entry,
-                     apr_uint64_t modify_flags,
-                     apr_pool_t *pool);
+   Perform all allocations in SCRATCH_POOL.
 
+   -----
 
-/* A cross between svn_wc__get_entry() and svn_wc__entry_modify(). */
+   A cross between svn_wc__get_entry() and svn_wc__entry_modify().
+
+   If PARENT_STUB is TRUE, then this function will modify a directory's
+   stub entry in the parent. If PARENT_STUB is FALSE, then it will operate
+   on a directory's real entry.
+
+   PARENT_STUB must be FALSE if KIND==FILE.
+
+   If KIND is svn_kind_unknown, then PARENT_STUB is interpreted based on
+   what is found on disk.  */
 svn_error_t *
 svn_wc__entry_modify2(svn_wc__db_t *db,
                       const char *local_abspath,
@@ -211,9 +183,7 @@ svn_wc__entry_remove(svn_wc__db_t *db,
 
 /* Tweak the information for LOCAL_ABSPATH in DB.  If NEW_URL is non-null,
  * make this the entry's new url.  If NEW_REV is valid, make this the
- * entry's working revision. If REPOS is non-NULL, set the repository root
- * on the entry to REPOS, provided it is a prefix of the entry's URL (and
- * if it is the THIS_DIR entry, all child URLs also match.)
+ * entry's working revision.
  *
  * If ALLOW_REMOVAL is TRUE the tweaks might cause the entry NAME to
  * be removed from the hash, if ALLOW_REMOVAL is FALSE this will not
@@ -227,10 +197,10 @@ svn_wc__entry_remove(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__tweak_entry(svn_wc__db_t *db,
                     const char *local_abspath,
+                    svn_node_kind_t kind,
+                    svn_boolean_t parent_stub,
                     const char *new_url,
-                    const char *repos,
                     svn_revnum_t new_rev,
-                    svn_boolean_t this_dir,
                     svn_boolean_t allow_removal,
                     apr_pool_t *scratch_pool);
 
@@ -283,17 +253,6 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
 
-/** Same as svn_wc_entry() except that the entry returned
- * is a non @c NULL entry.
- *
- * Returns an error when svn_wc_entry() would have returned a @c NULL entry.
- */
-svn_error_t *
-svn_wc__entry_versioned(const svn_wc_entry_t **entry,
-                        const char *path,
-                        svn_wc_adm_access_t *adm_access,
-                        svn_boolean_t show_hidden,
-                        apr_pool_t *pool);
 
 /* Is ENTRY in a 'hidden' state in the sense of the 'show_hidden'
  * switches on svn_wc_entries_read(), svn_wc_walk_entries*(), etc.? */
@@ -312,16 +271,19 @@ svn_wc__set_depth(svn_wc__db_t *db,
 /* For internal use by entries.c to read/write old-format working copies. */
 svn_error_t *
 svn_wc__read_entries_old(apr_hash_t **entries,
-                         const char *path,
+                         const char *dir_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
 /* For internal use by upgrade.c to write entries in the wc-ng format.  */
 svn_error_t *
-svn_wc__entries_write_new(svn_wc__db_t *db,
-                          const char *dir_abspath,
-                          apr_hash_t *entries,
-                          apr_pool_t *scratch_pool);
+svn_wc__write_upgraded_entries(svn_wc__db_t *db,
+                               svn_sqlite__db_t *sdb,
+                               apr_int64_t repos_id,
+                               apr_int64_t wc_id,
+                               const char *dir_abspath,
+                               apr_hash_t *entries,
+                               apr_pool_t *scratch_pool);
 
 
 /* ### return a flag corresponding to the classic "DELETED" concept.  */

@@ -2,10 +2,10 @@
  * replay.c :  routines for replaying revisions
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -118,7 +118,7 @@ add_file_or_directory(const char *file_or_directory,
                                     "<S:add-%s name=\"%s\" "
                                     "copyfrom-path=\"%s\" "
                                     "copyfrom-rev=\"%ld\"/>" DEBUG_CR,
-                                    file_or_directory, qname, 
+                                    file_or_directory, qname,
                                     qcopy, copyfrom_rev));
 
   return SVN_NO_ERROR;

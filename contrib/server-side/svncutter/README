@@ -1,0 +1,5 @@
+svncutter is a tool for performing various surgical operations on
+Subversion dump files.
+
+This directory exists to hold svncutter and some unit tests that don't exist
+yet.

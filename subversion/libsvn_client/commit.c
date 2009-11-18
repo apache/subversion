@@ -2,10 +2,10 @@
  * commit.c:  wrappers around wc commit functionality.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -1227,14 +1227,17 @@ static svn_error_t *
 check_nonrecursive_dir_delete(void *baton, void *this_item, apr_pool_t *pool)
 {
   struct check_dir_delete_baton *btn = baton;
-  svn_wc_adm_access_t *adm_access;
   const char *target_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, *(const char **)this_item,
                                   pool));
-  SVN_ERR_W(svn_wc_adm_probe_retrieve(&adm_access, btn->base_dir_access,
-                                      target_abspath, pool),
-            _("Are all the targets part of the same working copy?"));
+
+  {
+    svn_wc_adm_access_t *adm_access;
+    SVN_ERR_W(svn_wc_adm_probe_retrieve(&adm_access, btn->base_dir_access,
+                                        target_abspath, pool),
+              _("Are all the targets part of the same working copy?"));
+  }
 
   /* ### TODO(sd): This check is slightly too strict.  It should be
      ### possible to:
@@ -1261,16 +1264,20 @@ check_nonrecursive_dir_delete(void *baton, void *this_item, apr_pool_t *pool)
 
       if (kind == svn_node_dir)
         {
+          /* ### Looking at schedule is probably enough, no need for
+                 pristine compare etc. */
           SVN_ERR(svn_wc_status3(&status, btn->wc_ctx, target_abspath, pool,
                                  pool));
           if (status->text_status == svn_wc_status_deleted ||
               status->text_status == svn_wc_status_replaced)
             {
-              apr_hash_t* entries;
+              const apr_array_header_t *children;
 
-              SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
+              SVN_ERR(svn_wc__node_get_children(&children, btn->wc_ctx,
+                                                target_abspath, TRUE, pool,
+                                                pool));
 
-              if (apr_hash_count(entries) > 1)
+              if (children->nelts > 0)
                 return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                     _("Cannot non-recursively commit a "
                                       "directory deletion of a directory "
@@ -1500,7 +1507,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
                   if (strcmp(parent_dir, target) == 0)
                     break; /* Reached root directory */
-                  
+
                   target = parent_dir;
                 }
             }
@@ -1655,7 +1662,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   /* Perform the commit. */
   cmt_err = svn_client__do_commit(base_url, commit_items, editor, edit_baton,
-                                  notify_prefix, &tempfiles, &checksums, ctx, 
+                                  notify_prefix, &tempfiles, &checksums, ctx,
                                   pool);
 
   /* Handle a successful commit. */

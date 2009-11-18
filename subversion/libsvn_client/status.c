@@ -2,10 +2,10 @@
  * status.c:  return the status of a working copy dirent
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -241,8 +241,6 @@ svn_client_status5(svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)  /* ### aka scratch_pool */
 {
-  const svn_delta_editor_t *editor;
-  void *edit_baton, *set_locks_baton;
   struct status_baton sb;
   const char *dir, *dir_abspath;
   const char *target_abspath;
@@ -250,11 +248,13 @@ svn_client_status5(svn_revnum_t *result_rev,
   apr_array_header_t *ignores;
   svn_error_t *err;
   apr_hash_t *changelist_hash = NULL;
-  svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
   struct svn_cl__externals_store externals_store = { NULL };
 
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
+
+  if (result_rev)
+    *result_rev = SVN_INVALID_REVNUM;
 
   sb.real_status_func = status_func;
   sb.real_status_baton = status_baton;
@@ -275,7 +275,7 @@ svn_client_status5(svn_revnum_t *result_rev,
     {
       /* This error code is checked for in svn to continue after an error */
       svn_error_clear(err);
-      return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+      return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                _("'%s' is not a working copy"),
                                svn_dirent_local_style(path, pool));
     }
@@ -304,7 +304,7 @@ svn_client_status5(svn_revnum_t *result_rev,
 
             if (err || kind != svn_node_dir)
               {
-                return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                          _("'%s' is not a working copy"),
                                          svn_dirent_local_style(path, pool));
               }
@@ -313,7 +313,7 @@ svn_client_status5(svn_revnum_t *result_rev,
                "status on '..' where '..' is not versioned". */
             if (strcmp(path, "..") == 0)
               {
-                return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                          _("'%s' is not a working copy"),
                                          svn_dirent_local_style(path, pool));
               }
@@ -341,17 +341,6 @@ svn_client_status5(svn_revnum_t *result_rev,
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
   SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
-  SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, &set_locks_baton,
-                                    &edit_revision, ctx->wc_ctx,
-                                    dir_abspath, target_basename,
-                                    depth, get_all,
-                                    no_ignore, ignores, tweak_status, &sb,
-                                    ctx->cancel_func, ctx->cancel_baton,
-                                    ignore_externals ? svn_cl__store_externals
-                                                     : NULL,
-                                    ignore_externals ? &externals_store
-                                                     : NULL,
-                                    pool, pool));
 
   /* If we want to know about out-of-dateness, we crawl the working copy and
      let the RA layer drive the editor for real.  Otherwise, we just close the
@@ -362,6 +351,9 @@ svn_client_status5(svn_revnum_t *result_rev,
       const char *URL;
       svn_node_kind_t kind;
       svn_boolean_t server_supports_depth;
+      const svn_delta_editor_t *editor;
+      void *edit_baton, *set_locks_baton;
+      svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
 
       /* Get full URL from the ANCHOR. */
       SVN_ERR(svn_client_url_from_path2(&URL, dir_abspath, ctx,
@@ -372,6 +364,18 @@ svn_client_status5(svn_revnum_t *result_rev,
           (SVN_ERR_ENTRY_MISSING_URL, NULL,
            _("Entry '%s' has no URL"),
            svn_dirent_local_style(dir, pool));
+
+      SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, &set_locks_baton,
+                                    &edit_revision, ctx->wc_ctx,
+                                    dir_abspath, target_basename,
+                                    depth, get_all,
+                                    no_ignore, ignores, tweak_status, &sb,
+                                    ignore_externals ? NULL
+                                                     : svn_cl__store_externals,
+                                    ignore_externals ? NULL
+                                                     : &externals_store,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    pool, pool));
 
       /* Open a repository session to the URL. */
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL,
@@ -449,35 +453,43 @@ svn_client_status5(svn_revnum_t *result_rev,
                                           depth, TRUE, (! server_supports_depth),
                                           FALSE, NULL, NULL, NULL, NULL, pool));
         }
+
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify
+            = svn_wc_create_notify(target_abspath, svn_wc_notify_status_completed, pool);
+          notify->revision = edit_revision;
+          (ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+        }
+
+      /* If the caller wants the result revision, give it to them. */
+      if (result_rev)
+        *result_rev = edit_revision;
     }
   else
     {
-      err = editor->close_edit(edit_baton, pool);
+      err = svn_wc_walk_status(ctx->wc_ctx, target_abspath,
+                               depth, get_all, no_ignore, ignores,
+                               tweak_status, &sb,
+                               ignore_externals ? NULL
+                                                : svn_cl__store_externals,
+                               ignore_externals ? NULL
+                                                : &externals_store,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               pool);
 
       if (err && err->apr_err == SVN_ERR_WC_MISSING)
         {
           /* This error code is checked for in svn to continue after
              this error */
           svn_error_clear(err);
-          return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+          return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                _("'%s' is not a working copy"),
                                svn_dirent_local_style(path, pool));
         }
 
       SVN_ERR(err);
     }
-
-  if (ctx->notify_func2 && update)
-    {
-      svn_wc_notify_t *notify
-        = svn_wc_create_notify(target_abspath, svn_wc_notify_status_completed, pool);
-      notify->revision = edit_revision;
-      (ctx->notify_func2)(ctx->notify_baton2, notify, pool);
-    }
-
-  /* If the caller wants the result revision, give it to them. */
-  if (result_rev)
-    *result_rev = edit_revision;
 
   /* If there are svn:externals set, we don't want those to show up as
      unversioned or unrecognized, so patch up the hash.  If caller wants

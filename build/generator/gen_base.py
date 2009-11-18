@@ -550,12 +550,13 @@ class TargetSWIG(TargetLib):
     # Extract SWIG module name from .i file name
     module_name = iname[:4] != 'svn_' and iname[:-2] or iname[4:-2]
 
-    lib_extension = self.gen_obj._extension_map['pyd', 'target']
+    lib_extension = self.gen_obj._extension_map['lib', 'target']
     if self.lang == "ruby":
       lib_filename = module_name + lib_extension
     elif self.lang == "perl":
       lib_filename = '_' + module_name.capitalize() + lib_extension
     else:
+      lib_extension = self.gen_obj._extension_map['pyd', 'target']
       lib_filename = '_' + module_name + lib_extension
 
     self.name = self.lang + '_' + module_name
@@ -950,7 +951,7 @@ class IncludeDependencyInfo:
                  self._domain["apr.swg"][0]: '%',
                  fname: '%' }
         for h in self._deps[fname].keys():
-          if (_is_public_include(h) 
+          if (_is_public_include(h)
               or h == os.path.join('subversion', 'include', 'private',
                                     'svn_debug.h')):
             hdrs[_swig_include_wrapper(h)] = '%'

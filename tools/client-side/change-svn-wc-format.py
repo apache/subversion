@@ -3,10 +3,10 @@
 # change-svn-wc-format.py: Change the format of a Subversion working copy.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -111,7 +111,7 @@ class WCFormatConverter:
     else:
       if self.verbosity:
         print("Skipping file '%s'" % format.path)
-        
+
     if self.verbosity:
       print("Checking whether WC format can be converted")
     try:
@@ -286,7 +286,7 @@ class Entry:
       # because 11 does not use has-props and cachable-props (but 10 does).
       # Naively downgrading in that situation causes properties to disappear
       # from the wc.
-      # 
+      #
       # Downgrading from the 1.7 SQLite-based format to format 10 is not
       # implemented.
       }

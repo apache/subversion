@@ -2,10 +2,10 @@
  * notify.c:  feedback handlers for cmdline client.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -130,7 +130,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   svn_error_t *err;
 
   if (n->url)
-    path_local = svn_uri_local_style(n->url, pool);
+    path_local = n->url;
   else
     {
       if (n->path_prefix)
@@ -169,6 +169,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
             goto print_error;
         }
       break;
+
+    case svn_wc_notify_update_add_deleted:
+    case svn_wc_notify_update_update_deleted:
+      /* ### Before 1.7.0 these notifications where suppressed in the wc
+         ### library.. how should we notify these?
+
+         ### Fall through in deleted notification. */
 
     case svn_wc_notify_update_delete:
     case svn_wc_notify_update_external_removed:
@@ -650,6 +657,12 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           goto print_error;
       break;
 
+    case svn_wc_notify_upgraded_path:
+        err = svn_cmdline_printf(pool, _("Upgraded '%s'.\n"), path_local);
+        if (err)
+          goto print_error;
+      break;
+
     default:
       break;
     }
@@ -672,7 +685,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 }
 
 
-void
+svn_error_t *
 svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                      void **notify_baton_p,
                      svn_boolean_t is_checkout,
@@ -697,8 +710,9 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
   nb->ext_prop_conflicts = 0;
   nb->ext_tree_conflicts = 0;
   nb->ext_skipped_paths = 0;
-  apr_filepath_get((char **)&nb->path_prefix, 0 /* flags */, pool);
+  SVN_ERR(svn_dirent_get_absolute(&nb->path_prefix, "", pool));
 
   *notify_func_p = notify;
   *notify_baton_p = nb;
+  return SVN_NO_ERROR;
 }

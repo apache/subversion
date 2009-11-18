@@ -2,10 +2,10 @@
  * repos.c: mod_dav_svn repository provider functions for Subversion
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -327,7 +327,7 @@ parse_me_resource_uri(dav_resource_combined *comb,
 
   comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
   comb->priv.restype = DAV_SVN_RESTYPE_ME;
-  
+
   /* We're keeping these the same as the VCC resource, to make things
      smoother for our report requests. */
   comb->res.exists = TRUE;
@@ -688,7 +688,7 @@ parse_uri(dav_resource_combined *comb,
                     }
                   else if (uri[len3] == '\0')
                     {
-                      if ((defn->numcomponents == 0) 
+                      if ((defn->numcomponents == 0)
                           && (! defn->has_repos_path))
                         {
                           if ((*defn->parse)(comb, "", label, use_checked_in))
@@ -699,7 +699,7 @@ parse_uri(dav_resource_combined *comb,
                           /* URI was "/root/!svn/XXX". The location
                              exists, but has restricted usage. */
                           comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
-                          
+
                           /* Store the resource type so that we can
                              PROPFIND on this collection. */
                           comb->priv.restype = defn->restype;
@@ -1222,7 +1222,7 @@ dav_svn_split_uri(request_rec *r,
   if (fs_path != NULL)
     {
       /* the repos_name is the last component of root_path. */
-      *repos_name = svn_uri_basename(root_path, r->pool);
+      *repos_name = svn_dirent_basename(root_path, r->pool);
 
       /* 'relative' is already correct for SVNPath; the root_path
          already contains the name of the repository, so relative is
@@ -1725,14 +1725,14 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
   if (! ((r->method_number == M_PUT)
          || (r->method_number == M_PROPPATCH)))
     return NULL;
-  
+
   /* Do an out-of-dateness check. */
   if ((serr = svn_fs_node_created_rev(&created_rev, comb->priv.root.root,
                                       comb->priv.repos_path, r->pool)))
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                 "Could not get created rev of "
                                 "resource", r->pool);
-  
+
   if (comb->priv.version_name < created_rev)
     {
       serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
@@ -1937,9 +1937,9 @@ get_resource(request_rec *r,
     {
       /* ...then the URL to the repository is actually one implicit
          component longer... */
-      root_path = svn_path_join(root_path, repos_name, r->pool);
+      root_path = svn_uri_join(root_path, repos_name, r->pool);
       /* ...and we need to specify exactly what repository to open. */
-      fs_path = svn_path_join(fs_parent_path, repos_name, r->pool);
+      fs_path = svn_dirent_join(fs_parent_path, repos_name, r->pool);
     }
 
   /* Start building and filling a 'combination' object. */
@@ -2028,16 +2028,16 @@ get_resource(request_rec *r,
   repos->activities_db = dav_svn__get_activities_db(r);
   if (repos->activities_db == NULL)
     /* If not specified, use default ($repos/dav/activities.d). */
-    repos->activities_db = svn_path_join(repos->fs_path,
+    repos->activities_db = svn_dirent_join(repos->fs_path,
                                          DEFAULT_ACTIVITY_DB,
                                          r->pool);
   else if (fs_parent_path != NULL)
     /* If this is a ParentPath-based repository, treat the specified
        path as a similar parent directory. */
-    repos->activities_db = svn_path_join(repos->activities_db,
-                                         svn_uri_basename(repos->fs_path,
-                                                          r->pool),
-                                         r->pool);
+    repos->activities_db = svn_dirent_join(repos->activities_db,
+                                           svn_dirent_basename(repos->fs_path,
+                                                               r->pool),
+                                           r->pool);
 
   /* Remember various bits for later URL construction */
   repos->base_url = ap_construct_url(r->pool, "", r);
@@ -2261,7 +2261,7 @@ get_resource(request_rec *r,
     }
 
   /* HTTPv2: for write-requests, out-of-dateness checks happen via
-     Base-Version header rather via CHECKOUT requests.  
+     Base-Version header rather via CHECKOUT requests.
 
      If a Base-Version header is present on a write request, we need
      to do the out-of-dateness check *here*, rather than in other
@@ -2269,7 +2269,7 @@ get_resource(request_rec *r,
      methods annoyingly trap and genericize our error messages.  */
   if ((err = do_out_of_date_check(comb, r)) != NULL)
     return err;
-  
+
   *resource = &comb->res;
   return NULL;
 
@@ -2319,7 +2319,7 @@ get_parent_resource(const dav_resource *resource,
   dav_resource *parent;
   dav_resource_private *parentinfo;
   svn_stringbuf_t *path = resource->info->uri_path;
-  
+
   /* Initialize the return value. */
   *parent_resource = NULL;
 
@@ -3021,7 +3021,7 @@ set_headers(request_rec *r, const dav_resource *resource)
          bytes"), but many browsers have grown to expect "text/plain"
          to mean "*shrug*", and kick off their own MIME type detection
          routines when they see it.  So we'll use "text/plain".
-      
+
          ### Why not just avoid sending a Content-type at all?  Is
          ### that just bad form for HTTP?  */
       if (! mimetype)
@@ -3375,11 +3375,27 @@ deliver(const dav_resource *resource, ap_filter_t *output)
       svn_pool_destroy(entry_pool);
 
       if (gen_html)
-        ap_fputs(output, bb,
-                 " </ul>\n <hr noshade><em>Powered by "
-                 "<a href=\"http://subversion.tigris.org/\">Subversion</a> "
-                 "version " SVN_VERSION "."
-                 "</em>\n</body></html>");
+        {
+          if (strcmp(ap_psignature("FOO", resource->info->r), "") != 0)
+            {
+              /* Apache's signature generation code didn't eat our prefix.
+                 ServerSignature must be enabled.  Print our version info.
+
+                 WARNING: This is a kludge!! ap_psignature() doesn't promise
+                 to return the empty string when ServerSignature is off.  We
+                 know it does by code inspection, but this behavior is subject
+                 to change. (Perhaps we should try to get the Apache folks to
+                 make this promise, though.  Seems harmless/useful enough...)
+              */
+              ap_fputs(output, bb,
+                       " </ul>\n <hr noshade><em>Powered by "
+                       "<a href=\"http://subversion.tigris.org/\">Subversion"
+                       "</a> version " SVN_VERSION "."
+                       "</em>\n</body></html>");
+            }
+          else
+            ap_fputs(output, bb, " </ul>\n</body></html>");
+        }
       else
         ap_fputs(output, bb, "  </index>\n</svn>\n");
 
@@ -3650,15 +3666,15 @@ copy_resource(const dav_resource *src,
         return err;
     }
 
-  serr = svn_path_get_absolute(&src_repos_path,
-                               svn_repos_path(src->info->repos->repos,
-                                              src->pool),
-                               src->pool);
+  serr = svn_dirent_get_absolute(&src_repos_path,
+                                 svn_repos_path(src->info->repos->repos,
+                                                src->pool),
+                                 src->pool);
   if (!serr)
-    serr = svn_path_get_absolute(&dst_repos_path,
-                                 svn_repos_path(dst->info->repos->repos,
-                                                dst->pool),
-                                 dst->pool);
+    serr = svn_dirent_get_absolute(&dst_repos_path,
+                                   svn_repos_path(dst->info->repos->repos,
+                                                  dst->pool),
+                                   dst->pool);
 
   if (!serr)
     {
@@ -3722,7 +3738,7 @@ remove_resource(dav_resource *resource, dav_response **response)
                                       resource->info->root.activity_id);
     }
 
-  /* Handle deletions of transaction collections (early exit) */    
+  /* Handle deletions of transaction collections (early exit) */
   if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
       && resource->info->restype == DAV_SVN_RESTYPE_TXN_COLLECTION)
     {
@@ -4258,7 +4274,7 @@ int dav_svn__method_post(request_rec *r)
                       "ignored", 0, &resource);
   if (derr != NULL)
     return derr->status;
-  
+
   if (resource->info->restype != DAV_SVN_RESTYPE_ME)
     return HTTP_BAD_REQUEST;
 
@@ -4269,9 +4285,9 @@ int dav_svn__method_post(request_rec *r)
 
   /* Build a "201 Created" response with header that tells the client
      our new transaction's name. */
-  repos_root_uri = dav_svn__build_uri(resource->info->repos, 
+  repos_root_uri = dav_svn__build_uri(resource->info->repos,
                                       DAV_SVN__BUILD_URI_PUBLIC,
-                                      SVN_IGNORED_REVNUM, "", 0, 
+                                      SVN_IGNORED_REVNUM, "", 0,
                                       resource->pool);
   apr_table_set(resource->info->r->headers_out, SVN_DAV_TXN_NAME_HEADER,
                 txn_name);

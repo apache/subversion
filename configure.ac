@@ -86,8 +86,8 @@ AC_PATH_PROG(PKG_CONFIG, pkg-config)
 
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
-NEON_ALLOWED_LIST="0\.25 0\.26 0\.27\.2 0\.28"
-NEON_RECOMMENDED_VER=0.28.6
+NEON_ALLOWED_LIST="0\.25 0\.26 0\.27\.2 0\.28 0\.29"
+NEON_RECOMMENDED_VER="0.29.0"
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
@@ -493,7 +493,7 @@ if test -n "$PKG_CONFIG"; then
     DBUS_VERSION="`$PKG_CONFIG --modversion dbus-1`"
     AC_MSG_RESULT([$DBUS_VERSION])
     # D-Bus 0.* requires DBUS_API_SUBJECT_TO_CHANGE
-    if test -n ["`echo "$DBUS_VERSION" | $GREP '^0\.[[:digit:]]\+'`"]; then
+    if test -n ["`echo "$DBUS_VERSION" | $EGREP '^0\.[[:digit:]]+'`"]; then
       DBUS_CPPFLAGS="$DBUS_CPPFLAGS -DDBUS_API_SUBJECT_TO_CHANGE"
     fi
     DBUS_LIBS="`$PKG_CONFIG --libs dbus-1`"
@@ -615,7 +615,15 @@ if test "$enable_nls" = "yes"; then
   fi
 fi
 
-AH_BOTTOM(
+AH_BOTTOM([/*
+ * Subversion developers may want to use some additional debugging facilities
+ * while working on the code. We'll pull that in here, so individual source
+ * files don't have to include this header manually.
+ */
+#ifdef SVN_DEBUG
+#include "private/svn_debug.h"
+#endif
+
 #define N_(x) x
 #define U_(x) x
 #ifdef ENABLE_NLS
@@ -629,7 +637,7 @@ AH_BOTTOM(
 #define gettext(x) (x)
 #define dgettext(domain, x) (x)
 #endif
-)
+])
 
 dnl Used to simulate makefile conditionals.
 GETTEXT_CODESET=\#
@@ -849,6 +857,9 @@ AS_HELP_STRING([--enable-maintainer-mode],
 
         CFLAGS_KEEP="$CFLAGS"
         AC_LANG_PUSH([C])
+
+        CFLAGS="-Wdeclaration-after-statement $CFLAGS_KEEP"
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
         CFLAGS="-Wextra-tokens $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])

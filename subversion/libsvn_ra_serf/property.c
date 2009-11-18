@@ -2,10 +2,10 @@
  * property.c : property routines for ra_serf
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -29,7 +29,6 @@
 #include "svn_xml.h"
 #include "svn_props.h"
 #include "svn_dirent_uri.h"
-#include "svn_path.h"
 
 #include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
@@ -333,7 +332,7 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
         {
           if (strcmp(ctx->depth, "1") == 0)
             {
-              ctx->current_path = svn_path_canonicalize(info->val, ctx->pool);
+              ctx->current_path = svn_uri_canonicalize(info->val, ctx->pool);
             }
           else
             {
@@ -661,7 +660,7 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
       if (SVN_IS_VALID_REVNUM(rev))
         {
           SVN_ERR_ASSERT(((*prop_ctx)->label)
-                         && (strcmp((*prop_ctx)->label, 
+                         && (strcmp((*prop_ctx)->label,
                                     apr_ltoa(pool, rev)) == 0));
         }
       else
@@ -1023,7 +1022,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                                    revision, "DAV:",
                                                    "baseline-collection");
         }
-      
+
       if (!basecoll_url)
         {
           return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
@@ -1036,10 +1035,10 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
       if (latest_revnum)
         {
           const char *version_name;
-          
+
           version_name = svn_ra_serf__get_prop(props, baseline_url,
                                                "DAV:", SVN_DAV__VERSION_NAME);
-          
+
           if (!version_name)
             {
               return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,

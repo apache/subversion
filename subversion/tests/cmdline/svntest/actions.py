@@ -5,10 +5,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -1545,8 +1545,12 @@ def remove_admin_tmp_dir(wc_dir):
 def lock_admin_dir(wc_dir):
   "Lock a SVN administrative directory"
 
-  path = os.path.join(wc_dir, main.get_admin_name(), 'lock')
-  main.file_append(path, "stop looking!")
+  db = svntest.sqlite3.connect(os.path.join(wc_dir, main.get_admin_name(),
+                                            'wc.db'))
+  db.execute('insert into wc_lock (wc_id, local_dir_relpath) values (?, ?)',
+             (1, ''))
+  db.commit()
+  db.close()
 
 def get_wc_uuid(wc_dir):
   "Return the UUID of the working copy at WC_DIR."

@@ -2,10 +2,10 @@
  * info-cmd.c -- Display information about a resource
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -542,14 +542,18 @@ svn_cl__info(apr_getopt_t *os,
               SVN_ERR(svn_cmdline_fprintf
                       (stderr, subpool,
                        _("%s:  (Not a versioned resource)\n\n"),
-                       svn_dirent_local_style(target, pool)));
+                       svn_path_is_url(truepath)
+                         ? truepath
+                         : svn_dirent_local_style(truepath, pool)));
             }
           else if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
             {
               SVN_ERR(svn_cmdline_fprintf
                       (stderr, subpool,
                        _("%s:  (Not a valid URL)\n\n"),
-                       svn_dirent_local_style(target, pool)));
+                       svn_path_is_url(truepath)
+                         ? truepath
+                         : svn_dirent_local_style(truepath, pool)));
             }
           else
             {

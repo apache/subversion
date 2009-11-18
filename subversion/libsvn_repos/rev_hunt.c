@@ -2,10 +2,10 @@
  *                their properties.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -1178,8 +1178,8 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
 static int
 compare_path_revisions(const void *a, const void *b)
 {
-  struct path_revision *a_pr = *(struct path_revision **)a;
-  struct path_revision *b_pr = *(struct path_revision **)b;
+  struct path_revision *a_pr = *(struct path_revision *const *)a;
+  struct path_revision *b_pr = *(struct path_revision *const *)b;
 
   if (a_pr->revnum == b_pr->revnum)
     return 0;

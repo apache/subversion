@@ -2,10 +2,10 @@
  * stream.c:   svn_stream operations
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -216,7 +216,7 @@ line_filter(svn_stream_t *stream, svn_boolean_t *filtered, const char *line,
     }
 
   scratch_pool = svn_pool_create(pool);
-  SVN_ERR(stream->line_filter_cb(filtered, line, scratch_pool));
+  SVN_ERR(stream->line_filter_cb(filtered, line, stream->baton, scratch_pool));
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
@@ -229,7 +229,8 @@ line_transformer(svn_stream_t *stream, svn_stringbuf_t **buf,
                  const char *line, apr_pool_t *pool, apr_pool_t *scratch_pool)
 {
   *buf = NULL;  /* so we can assert that the callback has set it non-null */
-  SVN_ERR(stream->line_transformer_cb(buf, line, pool, scratch_pool));
+  SVN_ERR(stream->line_transformer_cb(buf, line, stream->baton,
+                                      pool, scratch_pool));
 
   /* Die if the line transformer didn't provide any output. */
   SVN_ERR_ASSERT(*buf);
@@ -307,7 +308,7 @@ svn_stream_readline(svn_stream_t *stream,
     *stringbuf = svn_stringbuf_dup(str, pool);
 
   /* Done. RIP iterpool. */
-  svn_pool_destroy(iterpool); 
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -335,18 +336,18 @@ svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
           if (err)
              break;
         }
-               
+
       err = svn_stream_read(from, buf, &len);
       if (err)
       	 break;
-      	 
+
       if (len > 0)
         err = svn_stream_write(to, buf, &len);
 
       if (err || (len != SVN__STREAM_CHUNK_SIZE))
           break;
     }
-    
+
   err2 = svn_error_compose_create(svn_stream_close(from),
                                   svn_stream_close(to));
 
@@ -420,6 +421,62 @@ svn_stream_empty(apr_pool_t *pool)
 }
 
 
+
+/*** Stream duplication support ***/
+struct baton_tee {
+  svn_stream_t *out1;
+  svn_stream_t *out2;
+};
+
+
+static svn_error_t *
+write_handler_tee(void *baton, const char *data, apr_size_t *len)
+{
+  struct baton_tee *bt = baton;
+
+  SVN_ERR(svn_stream_write(bt->out1, data, len));
+  SVN_ERR(svn_stream_write(bt->out2, data, len));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+close_handler_tee(void *baton)
+{
+  struct baton_tee *bt = baton;
+
+  SVN_ERR(svn_stream_close(bt->out1));
+  SVN_ERR(svn_stream_close(bt->out2));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_stream_t *
+svn_stream_tee(svn_stream_t *out1,
+               svn_stream_t *out2,
+               apr_pool_t *pool)
+{
+  struct baton_tee *baton;
+  svn_stream_t *stream;
+
+  if (out1 == NULL)
+    return out2;
+
+  if (out2 == NULL)
+    return out1;
+
+  baton = apr_palloc(pool, sizeof(*baton));
+  baton->out1 = out1;
+  baton->out2 = out2;
+  stream = svn_stream_create(baton, pool);
+  svn_stream_set_write(stream, write_handler_tee);
+  svn_stream_set_close(stream, close_handler_tee);
+
+  return stream;
+}
+
 
 
 /*** Ownership detaching stream ***/
@@ -480,7 +537,7 @@ read_handler_apr(void *baton, char *buffer, apr_size_t *len)
     {
       /* Get the current file position and make sure it is in range. */
       apr_off_t pos;
-      
+
       pos = 0;
       SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &pos, btn->pool));
       if (pos < btn->start)
@@ -500,7 +557,7 @@ read_handler_apr(void *baton, char *buffer, apr_size_t *len)
         {
           /* We're in range, but don't read over the end of the range. */
           if (pos + *len > btn->end)
-              *len = btn->end - pos; 
+              *len = btn->end - pos;
         }
     }
 

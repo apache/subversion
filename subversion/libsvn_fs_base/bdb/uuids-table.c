@@ -1,10 +1,10 @@
 /* uuids-table.c : operations on the `uuids' table
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -140,7 +140,7 @@ svn_error_t *svn_fs_bdb__set_uuid(svn_fs_t *fs,
   key.size = sizeof(idx);
 
   svn_fs_base__clear_dbt(&value);
-  value.size = strlen(uuid);
+  value.size = (u_int32_t) strlen(uuid);
   value.data = apr_pstrmemdup(pool, uuid, value.size + 1);
 
   svn_fs_base__trail_debug(trail, "uuids", "put");

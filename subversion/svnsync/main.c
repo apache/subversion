@@ -1,9 +1,9 @@
 /*
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -749,7 +749,7 @@ do_initialize(svn_ra_session_t *to_session,
      consistent while allowing folks to see what the latest revision is.  */
   SVN_ERR(copy_revprops(from_session, to_session, latest, FALSE,
                         baton->quiet, &normalized_rev_props_count, pool));
-  
+
   SVN_ERR(log_properties_normalized(normalized_rev_props_count, 0, pool));
 
   /* TODO: It would be nice if we could set the dest repos UUID to be
@@ -1651,7 +1651,7 @@ main(int argc, const char *argv[])
             break;
           case svnsync_opt_config_options:
             if (!config_options)
-              config_options = 
+              config_options =
                     apr_array_make(pool, 1,
                                    sizeof(svn_cmdline__config_argument_t*));
 

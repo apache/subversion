@@ -2,10 +2,10 @@
  * revert-cmd.c -- Subversion revert command
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -41,7 +41,7 @@
 svn_error_t *
 svn_cl__revert(apr_getopt_t *os,
                void *baton,
-               apr_pool_t *pool)
+               apr_pool_t *scratch_pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -50,25 +50,25 @@ svn_cl__revert(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, scratch_pool));
 
   /* Revert has no implicit dot-target `.', so don't you put that code here! */
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                         FALSE, FALSE, pool);
+    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                 FALSE, FALSE, FALSE, scratch_pool));
 
   /* Revert is especially conservative, by default it is as
      nonrecursive as possible. */
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_empty;
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
 
   err = svn_client_revert2(targets, opt_state->depth,
-                           opt_state->changelists, ctx, pool);
+                           opt_state->changelists, ctx, scratch_pool);
 
   if (err
       && (err->apr_err == SVN_ERR_WC_NOT_LOCKED)

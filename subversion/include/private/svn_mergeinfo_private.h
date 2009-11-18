@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -97,6 +97,17 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
                                           svn_mergeinfo_catalog_t in_catalog,
                                           const char *prefix,
                                           apr_pool_t *pool);
+
+/* Makes a deep copy of MERGEINFO in *OUT_MERGEINFO.  If SUFFIX_REL_PATH is
+   a valid relative path then add it to the end of each key path in
+   *OUT_MERGEINFO.  *OUT_MERGEINFO is allocated in RESULT_POOL.  SCRATCH_POOL
+   is used for any temporary allocations. */
+svn_error_t *
+svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
+                                       svn_mergeinfo_t mergeinfo,
+                                       const char *suffix,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
 
 /* Create a string representation of CATALOG in *OUTPUT, allocated in POOL.
    The hash keys of CATALOG and the merge source paths of each key's mergeinfo

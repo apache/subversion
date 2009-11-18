@@ -2,10 +2,10 @@
  * revision_status.c: report the revision range and status of a working copy
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -94,10 +94,6 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                         apr_pool_t *scratch_pool)
 {
   struct status_baton sb;
-  const char *anchor_abspath, *target_basename;
-  const svn_delta_editor_t *editor;
-  void *edit_baton;
-  svn_revnum_t edit_revision;
   svn_wc_revision_status_t *result = apr_palloc(result_pool, sizeof(*result));
   *result_p = result;
 
@@ -117,23 +113,17 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
   sb.wc_url = NULL;
   sb.pool = scratch_pool;
 
-  SVN_ERR(svn_wc_get_actual_target2(&anchor_abspath, &target_basename, wc_ctx,
-                                    local_abspath, scratch_pool,
-                                    scratch_pool));
-  
-  SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, NULL,
-                                    &edit_revision, wc_ctx,
-                                    anchor_abspath, target_basename,
-                                    svn_depth_infinity,
-                                    TRUE  /* get_all */,
-                                    FALSE /* no_ignore */,
-                                    NULL  /* ignore_patterns */,
-                                    analyze_status, &sb,
-                                    cancel_func, cancel_baton,
-                                    NULL, NULL, /* external updates */
-                                    scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc_walk_status(wc_ctx,
+                             local_abspath,
+                             svn_depth_infinity,
+                             TRUE  /* get_all */,
+                             FALSE /* no_ignore */,
+                             NULL  /* ignore_patterns */,
+                             analyze_status, &sb,
+                             NULL, NULL,
+                             cancel_func, cancel_baton,
+                             scratch_pool));
 
-  SVN_ERR(editor->close_edit(edit_baton, scratch_pool));
 
   if ((! result->switched) && (trail_url != NULL))
     {
@@ -152,6 +142,14 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
             result->switched = TRUE;
         }
     }
+
+  /* ### 1.6+: If result->sparse_checkout is FALSE the answer is not final
+         We can still have excluded nodes!
+
+     ### TODO: Check every node below local_abspath for excluded
+
+     ### BH: What about absent? You don't know if you have a complete tree
+             without checking for absent too */
 
   return SVN_NO_ERROR;
 }

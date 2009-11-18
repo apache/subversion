@@ -1,10 +1,10 @@
 /* log.c --- retrieving log messages
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -74,7 +74,7 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
   /* Otherwise, we have to check the readability of each changed
      path, or at least enough to answer the question asked. */
   subpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(NULL, changes); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
@@ -847,7 +847,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *combined_mergeinfo,
 
   /* Merge all the mergeinfos which are, or are children of, one of
      our paths of interest into one giant delta mergeinfo.  */
-  for (hi = apr_hash_first(NULL, added_mergeinfo_catalog);
+  for (hi = apr_hash_first(subpool, added_mergeinfo_catalog);
        hi; hi = apr_hash_next(hi))
     {
       const void *key;
@@ -1156,8 +1156,8 @@ struct rangelist_path
 static int
 compare_rangelist_paths(const void *a, const void *b)
 {
-  struct rangelist_path *rpa = *((struct rangelist_path **) a);
-  struct rangelist_path *rpb = *((struct rangelist_path **) b);
+  struct rangelist_path *rpa = *((struct rangelist_path *const *) a);
+  struct rangelist_path *rpb = *((struct rangelist_path *const *) b);
   svn_merge_range_t *mra = APR_ARRAY_IDX(rpa->rangelist, 0,
                                          svn_merge_range_t *);
   svn_merge_range_t *mrb = APR_ARRAY_IDX(rpb->rangelist, 0,
@@ -1657,7 +1657,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
                   || (strcmp(APR_ARRAY_IDX(paths, 0, const char *),
                              "/") == 0)))))
     {
-      int send_count = 0;
+      apr_uint64_t send_count = 0;
       int i;
       apr_pool_t *iterpool = svn_pool_create(pool);
 

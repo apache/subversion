@@ -2,10 +2,10 @@
  * propdel-cmd.c -- Remove property from files/dirs
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -91,8 +91,8 @@ svn_cl__propdel(apr_getopt_t *os,
 
   if (! opt_state->quiet)
     {
-      svn_cl__get_notifier(&nwb.real_func, &nwb.real_baton, FALSE,
-                           FALSE, FALSE, pool);
+      SVN_ERR(svn_cl__get_notifier(&nwb.real_func, &nwb.real_baton, FALSE,
+                                   FALSE, FALSE, pool));
       ctx->notify_func2 = notify_wrapper;
       ctx->notify_baton2 = &nwb;
     }

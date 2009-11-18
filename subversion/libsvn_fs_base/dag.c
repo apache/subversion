@@ -1,10 +1,10 @@
 /* dag.c : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -257,7 +257,7 @@ txn_body_dag_init_fs(void *baton,
 svn_error_t *
 svn_fs_base__dag_init_fs(svn_fs_t *fs)
 {
-  return svn_fs_base__retry_txn(fs, txn_body_dag_init_fs, NULL, 
+  return svn_fs_base__retry_txn(fs, txn_body_dag_init_fs, NULL,
                                 TRUE, fs->pool);
 }
 
@@ -479,7 +479,7 @@ make_entry(dag_node_t **child_p,
   /* Create the new node's NODE-REVISION */
   memset(&new_noderev, 0, sizeof(new_noderev));
   new_noderev.kind = is_dir ? svn_node_dir : svn_node_file;
-  new_noderev.created_path = svn_path_join(parent_path, name, pool);
+  new_noderev.created_path = svn_uri_join(parent_path, name, pool);
   SVN_ERR(svn_fs_base__create_node
           (&new_node_id, svn_fs_base__dag_get_fs(parent), &new_noderev,
            svn_fs_base__id_copy_id(svn_fs_base__dag_get_id(parent)),
@@ -761,7 +761,7 @@ svn_fs_base__dag_clone_child(dag_node_t **child_p,
       noderev->predecessor_id = cur_entry->id;
       if (noderev->predecessor_count != -1)
         noderev->predecessor_count++;
-      noderev->created_path = svn_path_join(parent_path, name, pool);
+      noderev->created_path = svn_uri_join(parent_path, name, pool);
       SVN_ERR(svn_fs_base__create_successor(&new_node_id, fs, cur_entry->id,
                                             noderev, copy_id, txn_id,
                                             trail, pool));
@@ -1427,7 +1427,7 @@ svn_fs_base__dag_copy(dag_node_t *to_node,
       noderev->predecessor_id = svn_fs_base__id_copy(src_id, pool);
       if (noderev->predecessor_count != -1)
         noderev->predecessor_count++;
-      noderev->created_path = svn_path_join
+      noderev->created_path = svn_uri_join
         (svn_fs_base__dag_get_created_path(to_node), entry, pool);
       SVN_ERR(svn_fs_base__create_successor(&id, fs, src_id, noderev,
                                             copy_id, txn_id, trail, pool));

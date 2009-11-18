@@ -1,10 +1,10 @@
 /* skel.c --- parsing and unparsing skeletons
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -590,6 +590,25 @@ svn_skel__prepend(svn_skel_t *skel, svn_skel_t *list_skel)
 }
 
 
+void svn_skel__prepend_int(apr_int64_t value,
+                           svn_skel_t *skel,
+                           apr_pool_t *result_pool)
+{
+  const char *str = apr_psprintf(result_pool, "%" APR_INT64_T_FMT, value);
+
+  svn_skel__prepend_str(str, skel, result_pool);
+}
+
+
+void svn_skel__prepend_str(const char *value,
+                           svn_skel_t *skel,
+                           apr_pool_t *result_pool)
+{
+  svn_skel_t *atom = svn_skel__str_atom(value, result_pool);
+
+  svn_skel__prepend(atom, skel);
+}
+
 
 /* Examining skels.  */
 
@@ -627,11 +646,19 @@ svn_skel__list_length(const svn_skel_t *skel)
 
 /* Parsing and unparsing into high-level types. */
 
+apr_int64_t svn_skel__parse_int(const svn_skel_t *skel,
+                                apr_pool_t *scratch_pool)
+{
+  /* We need to duplicate the SKEL contents in order to get a NUL-terminated
+     version of it. The SKEL may not have valid memory at DATA[LEN].  */
+  return apr_atoi64(apr_pstrmemdup(scratch_pool, skel->data, skel->len));
+}
+
 
 svn_error_t *
 svn_skel__parse_proplist(apr_hash_t **proplist_p,
                          const svn_skel_t *skel,
-                         apr_pool_t *pool)
+                         apr_pool_t *pool /* result_pool */)
 {
   apr_hash_t *proplist = NULL;
   svn_skel_t *elt;
@@ -641,8 +668,7 @@ svn_skel__parse_proplist(apr_hash_t **proplist_p,
     return skel_err("proplist");
 
   /* Create the returned structure */
-  if (skel->children)
-    proplist = apr_hash_make(pool);
+  proplist = apr_hash_make(pool);
   for (elt = skel->children; elt; elt = elt->next->next)
     {
       svn_string_t *value = svn_string_ncreate(elt->next->data,

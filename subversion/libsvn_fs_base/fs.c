@@ -1,10 +1,10 @@
 /* fs.c --- creating, opening and closing filesystems
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -486,6 +486,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__set_uuid,
   svn_fs_base__revision_root,
   svn_fs_base__begin_txn,
+  svn_fs_base__begin_obliteration_txn,
   svn_fs_base__open_txn,
   svn_fs_base__purge_txn,
   svn_fs_base__list_transactions,

@@ -2,10 +2,10 @@
  * update.c :  entry point for update RA functions for ra_serf
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -1751,12 +1751,12 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->sess))
         {
           const char *fs_path;
-          const char *full_path = svn_path_join(ctx->sess->repos_url.path,
-                                                info->name, info->pool);
+          const char *full_path = svn_uri_join(ctx->sess->repos_url.path,
+                                               info->name, info->pool);
           SVN_ERR(svn_ra_serf__get_relative_path(&fs_path, full_path,
                                                  ctx->sess, NULL, info->pool));
           info->delta_base = svn_string_createf(info->pool, "%s/%ld/%s",
-                                                ctx->sess->rev_root_stub, 
+                                                ctx->sess->rev_root_stub,
                                                 info->base_rev, fs_path);
         }
 
@@ -2647,7 +2647,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   if (SVN_IS_VALID_REVNUM(revision))
     {
       const char *baseline_url, *rel_path;
-      
+
       SVN_ERR(svn_ra_serf__get_baseline_info(&baseline_url, &rel_path,
                                              session, conn, fetch_url,
                                              revision, NULL, pool));

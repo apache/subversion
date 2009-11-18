@@ -2,10 +2,10 @@
  * locks.c :  entry point for locking RA functions for ra_serf
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -382,6 +382,14 @@ handle_lock(serf_request_t *request,
             }
           return err;
         }
+
+      /* 405 == Method Not Allowed (Occurs when trying to lock a working
+         copy path which no longer exists at HEAD in the repository. */
+      if (sl.code == 405)
+        return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE,
+                                 NULL,
+                                 _("Lock request failed: %d %s"),
+                                   ctx->status_code, ctx->reason);
 
       headers = serf_bucket_response_get_headers(response);
 

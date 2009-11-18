@@ -2,10 +2,10 @@
  * blame.c:  return blame messages
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -693,14 +693,14 @@ svn_client_blame5(const char *target,
           SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, target_abspath, pool,
                                     pool));
           SVN_ERR(svn_stream_open_readonly(&wcfile, target, pool, pool));
-          
+
           keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
                                   APR_HASH_KEY_STRING);
 
           if (keywords)
             SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, NULL, NULL,
                                               0, NULL, pool));
-  
+
           wcfile = svn_subst_stream_translated(wcfile, "\n", TRUE, kw, FALSE,
                                                pool);
 

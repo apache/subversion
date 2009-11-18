@@ -2,10 +2,10 @@
  * debug.c :  small functions to help SVN developers
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -21,9 +21,9 @@
  * ====================================================================
  */
 
-/* These functions are only available to SVN developers.  */
-#ifdef SVN_DEBUG
-
+/* These functions are only available to SVN developers and should never
+   be used in release code. One of the reasons to avoid this code in release
+   builds is that this code is not thread-safe. */
 #include <stdarg.h>
 
 #include "svn_types.h"
@@ -77,6 +77,3 @@ svn_dbg__printf(const char *fmt, ...)
   (void) vfprintf(output, fmt, ap);
   va_end(ap);
 }
-
-
-#endif /* SVN_DEBUG */

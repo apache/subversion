@@ -1,10 +1,10 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -486,7 +486,7 @@ parent_path_path(parent_path_t *parent_path,
   if (parent_path->parent)
     path_so_far = parent_path_path(parent_path->parent, pool);
   return parent_path->entry
-    ? svn_path_join(path_so_far, parent_path->entry, pool)
+    ? svn_uri_join(path_so_far, parent_path->entry, pool)
          : path_so_far;
 }
 
@@ -503,7 +503,7 @@ parent_path_relpath(parent_path_t *child,
   while (this_node != ancestor)
     {
       assert(this_node != NULL);
-      path_so_far = svn_path_join(this_node->entry, path_so_far, pool);
+      path_so_far = svn_relpath_join(this_node->entry, path_so_far, pool);
       this_node = this_node->parent;
     }
   return path_so_far;
@@ -695,7 +695,7 @@ open_path(parent_path_t **parent_path_p,
       entry = svn_fs__next_entry_name(&next, rest, pool);
 
       /* Calculate the path traversed thus far. */
-      path_so_far = svn_path_join(path_so_far, entry, pool);
+      path_so_far = svn_uri_join(path_so_far, entry, pool);
 
       if (*entry == '\0')
         {
@@ -1474,7 +1474,7 @@ svn_fs_base__miscellaneous_get(const char **val,
 
   mga.key = key;
   mga.val = val;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_miscellaneous_get, &mga, 
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_miscellaneous_get, &mga,
                                  FALSE, scratch_pool));
   if (*val)
     *val = apr_pstrdup(pool, *val);
@@ -1729,7 +1729,7 @@ deltify_mutable(svn_fs_t *fs,
           apr_hash_this(hi, &key, NULL, &val);
           entry = val;
           SVN_ERR(deltify_mutable(fs, root,
-                                  svn_path_join(path, key, subpool),
+                                  svn_uri_join(path, key, subpool),
                                   entry->id, entry->kind, txn_id, subpool));
         }
 
@@ -2271,9 +2271,9 @@ merge(svn_stringbuf_t *conflict_p,
              a modification. In any of these cases, flag a conflict. */
           if (s_entry == NULL || t_entry == NULL)
             return conflict_err(conflict_p,
-                                svn_path_join(target_path,
-                                              a_entry->name,
-                                              iterpool));
+                                svn_uri_join(target_path,
+                                                a_entry->name,
+                                                iterpool));
 
           /* If either SOURCE-ENTRY or TARGET-ENTRY is not a direct
              modification of ANCESTOR-ENTRY, declare a conflict. */
@@ -2286,9 +2286,9 @@ merge(svn_stringbuf_t *conflict_p,
               || strcmp(svn_fs_base__id_copy_id(t_entry->id),
                         svn_fs_base__id_copy_id(a_entry->id)) != 0)
             return conflict_err(conflict_p,
-                                svn_path_join(target_path,
-                                              a_entry->name,
-                                              iterpool));
+                                svn_uri_join(target_path,
+                                                a_entry->name,
+                                                iterpool));
 
           /* Fetch the nodes for our entries. */
           SVN_ERR(svn_fs_base__dag_get_node(&s_ent_node, fs,
@@ -2303,14 +2303,14 @@ merge(svn_stringbuf_t *conflict_p,
               || (svn_fs_base__dag_node_kind(t_ent_node) == svn_node_file)
               || (svn_fs_base__dag_node_kind(a_ent_node) == svn_node_file))
             return conflict_err(conflict_p,
-                                svn_path_join(target_path,
-                                              a_entry->name,
-                                              iterpool));
+                                svn_uri_join(target_path,
+                                                a_entry->name,
+                                                iterpool));
 
           /* Direct modifications were made to the directory
              ANCESTOR-ENTRY in both SOURCE and TARGET.  Recursively
              merge these modifications. */
-          new_tpath = svn_path_join(target_path, t_entry->name, iterpool);
+          new_tpath = svn_uri_join(target_path, t_entry->name, iterpool);
           SVN_ERR(merge(conflict_p, new_tpath,
                         t_ent_node, s_ent_node, a_ent_node,
                         txn_id, &sub_mergeinfo_increment, trail, iterpool));
@@ -2346,9 +2346,9 @@ merge(svn_stringbuf_t *conflict_p,
       /* If NAME exists in TARGET, declare a conflict. */
       if (t_entry)
         return conflict_err(conflict_p,
-                            svn_path_join(target_path,
-                                          t_entry->name,
-                                          iterpool));
+                            svn_uri_join(target_path,
+                                            t_entry->name,
+                                            iterpool));
 
       SVN_ERR(svn_fs_base__dag_get_node(&s_ent_node, fs,
                                         s_entry->id, trail, iterpool));
@@ -2522,7 +2522,7 @@ verify_locks(const char *txn_name,
       /* If this path has already been verified as part of a recursive
          check of one of its parents, no need to do it again.  */
       if (last_recursed
-          && svn_path_is_child(last_recursed->data, path, subpool))
+          && svn_uri_is_child(last_recursed->data, path, subpool))
         continue;
 
       /* Fetch the change associated with our path.  */
@@ -2770,6 +2770,18 @@ svn_fs_base__commit_txn(const char **conflict_p,
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_base__commit_obliteration_txn(svn_revnum_t rev,
+                                     svn_fs_txn_t *txn,
+                                     apr_pool_t *pool)
+{
+  /* svn_fs_t *fs = txn->fs; */
+
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
+  /* return SVN_NO_ERROR; */
 }
 
 
@@ -3207,6 +3219,9 @@ fs_same_p(svn_boolean_t *same_p,
   return SVN_NO_ERROR;
 }
 
+/* Copy the node at FROM_PATH under FROM_ROOT to TO_PATH under
+   TO_ROOT.  If PRESERVE_HISTORY is set, then the copy is recorded in
+   the copies table.  Perform temporary allocations in POOL. */
 static svn_error_t *
 copy_helper(svn_fs_root_t *from_root,
             const char *from_path,
@@ -4356,7 +4371,7 @@ txn_body_history_prev(void *baton, trail_t *trail)
       if (strcmp(path, copy_dst) == 0)
         remainder = "";
       else
-        remainder = svn_path_is_child(copy_dst, path, trail->pool);
+        remainder = svn_uri_is_child(copy_dst, path, trail->pool);
 
       if (remainder)
         {
@@ -4369,8 +4384,8 @@ txn_body_history_prev(void *baton, trail_t *trail)
                   (&dst_rev, fs,
                    svn_fs_base__id_txn_id(copy->dst_noderev_id),
                    trail, trail->pool));
-          src_path = svn_path_join(copy->src_path, remainder,
-                                   trail->pool);
+          src_path = svn_uri_join(copy->src_path, remainder,
+                                     trail->pool);
           if (copy->kind == copy_kind_soft)
             retry = TRUE;
         }
@@ -4779,8 +4794,8 @@ prev_location(const char **prev_path,
   SVN_ERR(base_copied_from(&copy_src_rev, &copy_src_path,
                            copy_root, copy_path, pool));
   if (! strcmp(copy_path, path) == 0)
-    remainder = svn_path_is_child(copy_path, path, pool);
-  *prev_path = svn_path_join(copy_src_path, remainder, pool);
+    remainder = svn_uri_is_child(copy_path, path, pool);
+  *prev_path = svn_uri_join(copy_src_path, remainder, pool);
   *prev_rev = copy_src_rev;
   return SVN_NO_ERROR;
 }
@@ -4996,7 +5011,7 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
   SVN_ERR_ASSERT(svn_fs_base__dag_node_kind(node) == svn_node_dir);
 
   SVN_ERR(svn_fs_base__dag_dir_entries(&entries, node, trail, trail->pool));
-  for (hi = apr_hash_first(NULL, entries); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(trail->pool, entries); hi; hi = apr_hash_next(hi))
     {
       void *val;
       svn_fs_dirent_t *dirent;
@@ -5041,8 +5056,8 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
           SVN_ERR(svn_mergeinfo_parse(&child_mergeinfo, pval->data,
                                       result_pool));
           apr_hash_set(args->result_catalog,
-                       svn_path_join(args->node_path, dirent->name,
-                                     result_pool),
+                       svn_uri_join(args->node_path, dirent->name,
+                                       result_pool),
                        APR_HASH_KEY_STRING,
                        child_mergeinfo);
         }
@@ -5102,7 +5117,7 @@ crawl_directory_for_mergeinfo(svn_fs_t *fs,
     return SVN_NO_ERROR;
 
   iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(NULL, children_atop_mergeinfo_trees);
+  for (hi = apr_hash_first(pool, children_atop_mergeinfo_trees);
        hi;
        hi = apr_hash_next(hi))
     {
@@ -5111,7 +5126,7 @@ crawl_directory_for_mergeinfo(svn_fs_t *fs,
       svn_pool_clear(iterpool);
       apr_hash_this(hi, &key, NULL, &val);
       crawl_directory_for_mergeinfo(fs, val,
-                                    svn_path_join(node_path, key, iterpool),
+                                    svn_uri_join(node_path, key, iterpool),
                                     result_catalog, iterpool);
     }
   svn_pool_destroy(iterpool);
@@ -5137,7 +5152,7 @@ append_to_merged_froms(svn_mergeinfo_t *output,
       const void *key;
       void *val;
       apr_hash_this(hi, &key, NULL, &val);
-      apr_hash_set(*output, svn_path_join(key, rel_path, pool),
+      apr_hash_set(*output, svn_uri_join(key, rel_path, pool),
                    APR_HASH_KEY_STRING, svn_rangelist_dup(val, pool));
     }
   return SVN_NO_ERROR;

@@ -2,10 +2,10 @@
  * cache-test.c -- test the in-memory cache
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -37,10 +37,11 @@
 /* Implements svn_cache__dup_func_t */
 static svn_error_t *
 dup_revnum(void **out,
-           void *in,
+           const void *in,
            apr_pool_t *pool)
 {
-  svn_revnum_t *in_rn = in, *duped = apr_palloc(pool, sizeof(*duped));
+  const svn_revnum_t *in_rn = in;
+  svn_revnum_t *duped = apr_palloc(pool, sizeof(*duped));
 
   *duped = *in_rn;
 

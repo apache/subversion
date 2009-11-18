@@ -2,10 +2,10 @@
  * ra_serf.h : Private declarations for the Serf-based DAV RA module.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -348,10 +348,19 @@ static const svn_ra_serf__dav_props_t href_props[] =
 
 /** Serf utility functions **/
 
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+apr_status_t
+svn_ra_serf__conn_setup(apr_socket_t *sock,
+                        serf_bucket_t **read_bkt,
+                        serf_bucket_t **write_bkt,
+                        void *baton,
+                        apr_pool_t *pool);
+#else
 serf_bucket_t *
 svn_ra_serf__conn_setup(apr_socket_t *sock,
                         void *baton,
                         apr_pool_t *pool);
+#endif
 
 serf_bucket_t*
 svn_ra_serf__accept_response(serf_request_t *request,
@@ -1428,7 +1437,7 @@ typedef svn_error_t *
                                   serf_bucket_t *hdrs_bkt);
 
 /**
- * This function will be called when a response is received, so that the 
+ * This function will be called when a response is received, so that the
  * protocol handler can validate the Authentication related response headers
  * (if needed).
  */

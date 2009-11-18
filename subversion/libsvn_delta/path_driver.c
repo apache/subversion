@@ -2,10 +2,10 @@
  * path_driver.c -- drive an editor across a set of paths
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -194,7 +194,7 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
            current one.  For the first iteration, this is just the
            empty string. ***/
       if (i > 0)
-        common = svn_path_get_longest_ancestor(last_path, path, iterpool);
+        common = svn_relpath_get_longest_ancestor(last_path, path, iterpool);
       common_len = strlen(common);
 
       /*** Step B - Close any directories between the last path and
@@ -214,7 +214,10 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
 
       /*** Step C - Open any directories between the common ancestor
            and the parent of the current path. ***/
-      svn_uri_split(path, &pdir, &bname, iterpool);
+      if (*path == '/')
+        svn_uri_split(path, &pdir, &bname, iterpool);
+      else
+        svn_relpath_split(path, &pdir, &bname, iterpool);
       if (strlen(pdir) > common_len)
         {
           const char *piece = pdir + common_len + 1;

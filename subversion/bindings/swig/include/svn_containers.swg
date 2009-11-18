@@ -1,9 +1,9 @@
 /*
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -555,7 +555,11 @@
         PyErr_SetString(PyExc_TypeError, "not a sequence");
         SWIG_fail;
     }
+    
     targlen = PySequence_Length($input);
+    if (targlen < 0)
+        return NULL;
+
     $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
     ($1)->nelts = targlen;
     while (targlen--) {
@@ -672,6 +676,16 @@
 /* -----------------------------------------------------------------------
    Input of apr_array_header_t * <svn_opt_revision_range_t *>
 */
+#ifdef SWIGPYTHON
+%typemap(in) apr_array_header_t *REVISION_RANGE_LIST {
+  $1 = (apr_array_header_t *) svn_swig_py_struct_ptr_list_to_array($input,
+    $descriptor(svn_opt_revision_range_t *), _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif
+
 #ifdef SWIGRUBY
 %typemap(in) apr_array_header_t *REVISION_RANGE_LIST {
   $1 = svn_swig_rb_array_to_apr_array_revision_range($input, _global_pool);

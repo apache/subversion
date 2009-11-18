@@ -2,10 +2,10 @@
  * info.c:  return system-generated metadata about paths or URLs.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -82,16 +82,17 @@ build_info_from_dirent(svn_info_t **info,
    allocated in POOL.  Pointer fields are copied by reference, not dup'd.
    PATH is the path of the WC node that ENTRY represents. */
 static svn_error_t *
-build_info_from_entry(svn_info_t **info,
-                      svn_wc_context_t *wc_ctx,
-                      const svn_wc_entry_t *entry,
-                      const char *path,
-                      apr_pool_t *pool)
+build_info_for_entry(svn_info_t **info,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *pool)
 {
-  const char *local_abspath;
   svn_info_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+  const svn_wc_entry_t *entry;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
+                                      svn_node_unknown, TRUE, FALSE,
+                                      pool, pool));
 
   SVN_ERR(svn_wc__node_get_kind(&tmpinfo->kind, wc_ctx, local_abspath, TRUE,
                                 pool));
@@ -101,9 +102,10 @@ build_info_from_entry(svn_info_t **info,
   tmpinfo->kind                 = entry->kind;
   tmpinfo->repos_UUID           = entry->uuid;
   tmpinfo->repos_root_URL       = entry->repos;
-  tmpinfo->last_changed_rev     = entry->cmt_rev;
-  tmpinfo->last_changed_date    = entry->cmt_date;
-  tmpinfo->last_changed_author  = entry->cmt_author;
+  SVN_ERR(svn_wc__node_get_changed_info(&tmpinfo->last_changed_rev,
+                                        &tmpinfo->last_changed_date,
+                                        &tmpinfo->last_changed_author,
+                                        wc_ctx, local_abspath, pool, pool));
 
   /* entry-specific stuff */
   tmpinfo->has_wc_info          = TRUE;
@@ -225,10 +227,10 @@ push_dir_info(svn_ra_session_t *ra_session,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      path = svn_path_join(dir, name, subpool);
+      path = svn_uri_join(dir, name, subpool);
       URL  = svn_path_url_add_component2(session_URL, name, subpool);
 
-      fs_path = svn_path_is_child(repos_root, URL, subpool);
+      fs_path = svn_uri_is_child(repos_root, URL, subpool);
       fs_path = apr_pstrcat(subpool, "/", fs_path, NULL);
       fs_path = svn_path_uri_decode(fs_path, subpool);
 
@@ -268,97 +270,64 @@ struct found_entry_baton
   svn_wc_context_t *wc_ctx;
 };
 
-/* An svn_wc_entry_callbacks2_t callback function. */
+/* An svn_wc__node_found_func_t callback function. */
 static svn_error_t *
-info_found_entry_callback(const char *path,
-                          const svn_wc_entry_t *entry,
-                          void *walk_baton,
-                          apr_pool_t *pool)
+info_found_node_callback(const char *local_abspath,
+                         void *walk_baton,
+                         apr_pool_t *pool)
 {
   struct found_entry_baton *fe_baton = walk_baton;
-  const char *local_abspath;
 
-  /* We're going to receive dirents twice;  we want to ignore the
-     first one (where it's a child of a parent dir), and only print
-     the second one (where we're looking at THIS_DIR.)  */
-  if ((entry->kind == svn_node_dir)
-      && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR)))
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   if (svn_wc__changelist_match(fe_baton->wc_ctx, local_abspath,
                                fe_baton->changelist_hash, pool))
     {
       svn_info_t *info;
+      const svn_wc_conflict_description2_t *tmp_conflict;
+      svn_error_t *err;
 
-      SVN_ERR(build_info_from_entry(&info, fe_baton->wc_ctx, entry, path,
-                                    pool));
-      SVN_ERR(svn_wc__get_tree_conflict(&info->tree_conflict, fe_baton->wc_ctx,
+      err = build_info_for_entry(&info, fe_baton->wc_ctx, local_abspath,
+                                 pool);
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          /* Check for a tree conflict, and if there is one, send a minimal
+             info struct. */
+          const svn_wc_conflict_description2_t *tree_conflict;
+
+          SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, fe_baton->wc_ctx,
+                                            local_abspath, pool, pool));
+
+          if (tree_conflict)
+            {
+              svn_error_clear(err);
+
+              SVN_ERR(build_info_for_unversioned(&info, pool));
+              SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
+                                                  NULL,
+                                                  fe_baton->wc_ctx,
+                                                  local_abspath, FALSE,
+                                                  pool, pool));
+            }
+          else
+            return svn_error_return(err);
+        }
+      else if (err)
+        return svn_error_return(err);
+
+      SVN_ERR(svn_wc__get_tree_conflict(&tmp_conflict, fe_baton->wc_ctx,
                                         local_abspath, pool, pool));
-      SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, path, info, pool));
+      if (tmp_conflict)
+        info->tree_conflict = svn_wc__cd2_to_cd(tmp_conflict, pool);
+      SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, local_abspath,
+                                 info, pool));
     }
   return SVN_NO_ERROR;
 }
-
-/* An svn_wc_entry_callbacks2_t callback function.
-   Handle an error encountered by the walker.
-   If the error is "unversioned resource" and, upon checking the
-   parent dir's tree conflict data, we find that PATH is a tree
-   conflict victim, cancel the error and send a minimal info struct.
-   Otherwise re-raise the error.
-*/
-static svn_error_t *
-info_error_handler(const char *path,
-                   svn_error_t *err,
-                   void *walk_baton,
-                   apr_pool_t *pool)
-{
-  if (err && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
-    {
-      struct found_entry_baton *fe_baton = walk_baton;
-      svn_wc_conflict_description_t *tree_conflict;
-      const char *local_abspath;
-
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-      SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, fe_baton->wc_ctx,
-                                        local_abspath, pool, pool));
-
-      if (tree_conflict)
-        {
-          svn_info_t *info;
-
-          svn_error_clear(err);
-
-          SVN_ERR(build_info_for_unversioned(&info, pool));
-          info->tree_conflict = tree_conflict;
-
-          SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
-                                              NULL,
-                                              fe_baton->wc_ctx,
-                                              local_abspath,
-                                              pool, pool));
-
-          SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, path, info,
-                                     pool));
-          return SVN_NO_ERROR;
-        }
-    }
-
-  return svn_error_return(err);
-}
-
-static const svn_wc_entry_callbacks2_t
-entry_walk_callbacks =
-  {
-    info_found_entry_callback,
-    info_error_handler
-  };
 
 
 /* Helper function:  push the svn_wc_entry_t for WCPATH at
    RECEIVER/BATON, and possibly recurse over more entries. */
 static svn_error_t *
-crawl_entries(const char *wcpath,
+crawl_entries(const char *local_abspath,
               svn_info_receiver_t receiver,
               void *receiver_baton,
               svn_depth_t depth,
@@ -366,22 +335,50 @@ crawl_entries(const char *wcpath,
               svn_client_ctx_t *ctx,
               apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
-  int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   struct found_entry_baton fe_baton;
-
-  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, wcpath, FALSE,
-                                       adm_lock_level, ctx->cancel_func,
-                                       ctx->cancel_baton, pool));
+  svn_error_t *err;
 
   fe_baton.changelist_hash = changelist_hash;
   fe_baton.receiver = receiver;
   fe_baton.receiver_baton = receiver_baton;
   fe_baton.wc_ctx = ctx->wc_ctx;
-  return svn_wc_walk_entries3(wcpath, adm_access,
-                              &entry_walk_callbacks, &fe_baton,
-                              depth, FALSE, ctx->cancel_func,
-                              ctx->cancel_baton, pool);
+
+  err = svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
+                                   info_found_node_callback, &fe_baton, depth,
+                                   ctx->cancel_func, ctx->cancel_baton, pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      /* Check for a tree conflict on the root node of the info, and if there
+         is one, send a minimal info struct. */
+      const svn_wc_conflict_description2_t *tree_conflict;
+
+      SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, ctx->wc_ctx,
+                                        local_abspath, pool, pool));
+
+      if (tree_conflict)
+        {
+          svn_info_t *info;
+          svn_error_clear(err);
+
+          SVN_ERR(build_info_for_unversioned(&info, pool));
+          info->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, pool);
+
+          SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
+                                              NULL,
+                                              ctx->wc_ctx,
+                                              local_abspath, FALSE,
+                                              pool, pool));
+
+          SVN_ERR(receiver(receiver_baton, local_abspath, info, pool));
+        }
+      else
+        return svn_error_return(err);
+    }
+  else if (err)
+    return svn_error_return(err);
+
+  return SVN_NO_ERROR;
 }
 
 /* Set *SAME_P to TRUE if URL exists in the head of the repository and
@@ -419,7 +416,7 @@ same_resource_in_head(svn_boolean_t *same_p,
       *same_p = FALSE;
       return SVN_NO_ERROR;
     }
-  else 
+  else
     SVN_ERR(err);
 
   /* ### Currently, the URLs should always be equal, since we can't
@@ -430,7 +427,7 @@ same_resource_in_head(svn_boolean_t *same_p,
 }
 
 svn_error_t *
-svn_client_info2(const char *path_or_url,
+svn_client_info3(const char *abspath_or_url,
                  const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *revision,
                  svn_info_receiver_t receiver,
@@ -463,8 +460,10 @@ svn_client_info2(const char *path_or_url,
       if (changelists && changelists->nelts)
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
                                            changelists, pool));
-      return crawl_entries(path_or_url, receiver, receiver_baton,
-                           depth, changelist_hash, ctx, pool);
+
+      return svn_error_return(
+        crawl_entries(abspath_or_url, receiver, receiver_baton,
+                      depth, changelist_hash, ctx, pool));
     }
 
   /* Go repository digging instead. */
@@ -473,7 +472,7 @@ svn_client_info2(const char *path_or_url,
      return RA session to the possibly-renamed URL as it exists in REVISION.
      The ra_session returned will be anchored on this "final" URL. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
-                                           &url, path_or_url, NULL,
+                                           &url, abspath_or_url, NULL,
                                            peg_revision,
                                            revision, ctx, pool));
 

@@ -1,10 +1,10 @@
 /* caching.c : in-memory caching
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -37,10 +37,10 @@
 /* Implements svn_cache__dup_func_t */
 static svn_error_t *
 dup_id(void **out,
-       void *in,
+       const void *in,
        apr_pool_t *pool)
 {
-  svn_fs_id_t *id = in;
+  const svn_fs_id_t *id = in;
   *out = svn_fs_fs__id_copy(id, pool);
   return SVN_NO_ERROR;
 }
@@ -84,19 +84,18 @@ deserialize_id(void **out,
 /* Implements svn_cache__dup_func_t */
 static svn_error_t *
 dup_dir_listing(void **out,
-                void *in,
+                const void *in,
                 apr_pool_t *pool)
 {
-  apr_hash_t *new_entries = apr_hash_make(pool), *entries = in;
+  apr_hash_t *new_entries = apr_hash_make(pool);
+  apr_hash_t *entries = (void*)in; /* Cast away const only */
   apr_hash_index_t *hi;
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      void *val;
-      svn_fs_dirent_t *dirent, *new_dirent;
+      svn_fs_dirent_t *dirent = svn_apr_hash_index_val(hi);
+      svn_fs_dirent_t *new_dirent;
 
-      apr_hash_this(hi, NULL, NULL, &val);
-      dirent = val;
       new_dirent = apr_palloc(pool, sizeof(*new_dirent));
       new_dirent->name = apr_pstrdup(pool, dirent->name);
       new_dirent->kind = dirent->kind;
@@ -147,10 +146,10 @@ manifest_deserialize(void **out,
 /* Implements svn_cache__dup_func_t */
 static svn_error_t *
 dup_pack_manifest(void **out,
-                  void *in,
+                  const void *in,
                   apr_pool_t *pool)
 {
-  apr_array_header_t *manifest = in;
+  const apr_array_header_t *manifest = in;
 
   *out = apr_array_copy(pool, manifest);
   return SVN_NO_ERROR;

@@ -2,10 +2,10 @@
  * props.h :  properties
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -41,7 +41,6 @@ typedef enum svn_wc__props_kind_t
 {
   svn_wc__props_base = 0,
   svn_wc__props_revert,
-  svn_wc__props_wcprop,
   svn_wc__props_working
 } svn_wc__props_kind_t;
 
@@ -85,9 +84,12 @@ svn_wc__internal_propset(svn_wc__db_t *db,
                          apr_pool_t *scratch_pool);
 
 
-/* Given ADM_ACCESS/PATH and an array of PROPCHANGES based on
+/* Given LOCAL_ABSPATH/DB and an array of PROPCHANGES based on
    SERVER_BASEPROPS, merge the changes into the working copy.
-   Append all necessary log entries to ENTRY_ACCUM.
+   Append all necessary log entries except the property changes to
+   ENTRY_ACCUM. Return the new property collections to the caller
+   via NEW_BASE_PROPS and NEW_ACTUAL_PROPS, so the caller can combine
+   the property update with other operations.
 
    If BASE_PROPS or WORKING_PROPS is NULL, use the props from the
    working copy.
@@ -99,26 +101,41 @@ svn_wc__internal_propset(svn_wc__db_t *db,
    if TRUE, change both the base and working properties.
 
    If conflicts are found when merging, place them into a temporary
-   .prej file within SVN, and write log commands to move this file
-   into PATH, or append the conflicts to the file's already-existing
-   .prej file in ADM_ACCESS.  Modify base properties unconditionally,
+   .prej file, and write log commands to move this file into LOCAL_ABSPATH's
+   parent directory, or append the conflicts to the file's already-existing
+   .prej file.  Modify base properties unconditionally,
    if BASE_MERGE is TRUE, they do not generate conficts.
+
+   TODO ### LEFT_VERSION and RIGHT_VERSION ...
+
+   TODO ### DRY_RUN ...
+
+   TODO ### CONFLICT_FUNC/CONFLICT_BATON ...
 
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.  */
-svn_error_t *svn_wc__merge_props(svn_wc_notify_state_t *state,
-                                 svn_wc_adm_access_t *adm_access,
-                                 const char *path,
-                                 apr_hash_t *server_baseprops,
-                                 apr_hash_t *base_props,
-                                 apr_hash_t *working_props,
-                                 const apr_array_header_t *propchanges,
-                                 svn_boolean_t base_merge,
-                                 svn_boolean_t dry_run,
-                                 svn_wc_conflict_resolver_func_t conflict_func,
-                                 void *conflict_baton,
-                                 apr_pool_t *pool,
-                                 svn_stringbuf_t **entry_accum);
+svn_error_t *
+svn_wc__merge_props(svn_stringbuf_t **entry_accum,
+                    svn_wc_notify_state_t *state,
+                    apr_hash_t **new_base_props,
+                    apr_hash_t **new_actual_props,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    const svn_wc_conflict_version_t *left_version,
+                    const svn_wc_conflict_version_t *right_version,
+                    apr_hash_t *server_baseprops,
+                    apr_hash_t *base_props,
+                    apr_hash_t *working_props,
+                    const apr_array_header_t *propchanges,
+                    svn_boolean_t base_merge,
+                    svn_boolean_t dry_run,
+                    svn_wc_conflict_resolver_func_t conflict_func,
+                    void *conflict_baton,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
 
 /* Set a single 'wcprop' NAME to VALUE for versioned object LOCAL_ABSPATH.
    If VALUE is null, remove property NAME.  */
@@ -128,25 +145,25 @@ svn_error_t *svn_wc__wcprop_set(svn_wc__db_t *db,
                                 const svn_string_t *value,
                                 apr_pool_t *scratch_pool);
 
-/* Returns TRUE if PROPS contains the svn:special property */
-svn_boolean_t svn_wc__has_special_property(apr_hash_t *props);
-
 /* Given PROPERTIES is array of @c svn_prop_t structures. Returns TRUE if any
    of the PROPERTIES are the known "magic" ones that might require
    changing the working file. */
 svn_boolean_t svn_wc__has_magic_property(const apr_array_header_t *properties);
 
-/* Extend LOG_ACCUM with log entries to install PROPS and, if WRITE_BASE_PROPS
-   is true, BASE_PROPS for the PATH in ADM_ACCESS, updating the wc entry
-   to reflect the changes.  BASE_PROPS must be supplied even if
-   WRITE_BASE_PROPS is false.  Use POOL for temporary allocations. */
-svn_error_t *svn_wc__install_props(svn_stringbuf_t **log_accum,
-                                   svn_wc_adm_access_t *adm_access,
-                                   const char *path,
-                                   apr_hash_t *base_props,
-                                   apr_hash_t *props,
-                                   svn_boolean_t write_base_props,
-                                   apr_pool_t *pool);
+/* Add a working queue item to install PROPS and, if INSTALL_PRISTINE_PROPS is
+   true, BASE_PROPS for the LOCAL_ABSPATH in DB, updating the node to reflect
+   the changes.  PRISTINE_PROPS must be supplied even if INSTALL_PRISTINE_PROPS
+   is false. If FORCE_BASE_INSTALL properties are always installed in BASE_NODE,
+   even though WORKING is used as pristine for the current node.
+   Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_wc__install_props(svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_hash_t *pristine_props,
+                      apr_hash_t *props,
+                      svn_boolean_t install_pristine_props,
+                      svn_boolean_t force_base_install,
+                      apr_pool_t *scratch_pool);
 
 /* Extend LOG_ACCUM with log entries to save the current baseprops of PATH
    as revert props.
@@ -156,25 +173,27 @@ svn_error_t *svn_wc__install_props(svn_stringbuf_t **log_accum,
 */
 svn_error_t *
 svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
-                                  const char *path,
-                                  svn_wc_adm_access_t *adm_access,
-                                  svn_boolean_t destroy_baseprops,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  const char *adm_abspath,
                                   apr_pool_t *pool);
 
 /* Extends LOG_ACCUM to make the revert props back into base props,
    deleting the revert props. */
 svn_error_t *
 svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
-                                   const char *path,
-                                   svn_wc_adm_access_t *adm_access,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   const char *adm_abspath,
                                    apr_pool_t *pool);
 
 /* Extends LOG_ACCUM to delete PROPS_KIND props installed for PATH. */
 svn_error_t *
 svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
-                           const char *path,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           const char *adm_abspath,
                            svn_wc__props_kind_t props_kind,
-                           svn_wc_adm_access_t *adm_access,
                            apr_pool_t *pool);
 
 /* Delete PROPS_KIND props for LOCAL_ABSPATH */
@@ -191,38 +210,50 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
                        const char *local_abspath,
                        apr_pool_t *scratch_pool);
 
-/* Flushes wcprops cached in ADM_ACCESS to disk using SCRATCH_POOL for
-   temporary allocations. */
-svn_error_t *
-svn_wc__wcprops_flush(svn_wc_adm_access_t *adm_access,
-                      apr_pool_t *scratch_pool);
-
 /* Install LOCAL_ABSPATHs working props as base props. */
 svn_error_t *
 svn_wc__working_props_committed(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 apr_pool_t *scratch_pool);
 
-/* Load the base, working and revert props for ENTRY at PATH returning
-   them in *BASE_PROPS_P, *PROPS_P and *REVERT_PROPS_P respectively.
-   Any of BASE_PROPS, PROPS and REVERT_PROPS may be NULL.
+/* Load the base and working props for ENTRY at PATH returning
+   them in *BASE_PROPS_P and *PROPS_P respectively.
+   Any of BASE_PROPS and PROPS may be NULL.
    Returned hashes/values are allocated in RESULT_POOL. All temporary
    allocations are made in SCRATCH_POOL.  */
 svn_error_t *
 svn_wc__load_props(apr_hash_t **base_props_p,
                    apr_hash_t **props_p,
-                   apr_hash_t **revert_props_p,
                    svn_wc__db_t *db,
                    const char *local_abspath,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool);
 
+/* Load the revert props for ENTRY at PATH returning them in *REVERT_PROPS_P.
+   Returned hash/values are allocated in RESULT_POOL. All temporary
+   allocations are made in SCRATCH_POOL.  */
+svn_error_t *
+svn_wc__load_revert_props(apr_hash_t **revert_props_p,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_wc__marked_as_binary(svn_boolean_t *marked,
                          const char *local_abspath,
                          svn_wc__db_t *db,
                          apr_pool_t *scratch_pool);
+
+
+/* Temporary helper for determining where to store pristine properties.
+   All calls will eventually be replaced by direct wc_db operations
+   of the right type. */
+svn_error_t *
+svn_wc__prop_pristine_is_working(svn_boolean_t *working,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

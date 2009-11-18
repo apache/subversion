@@ -16,6 +16,7 @@ test programs.
 '''
 
 import os, sys
+from datetime import datetime
 
 import getopt
 try:
@@ -83,7 +84,8 @@ class TestHarness:
       TextColors.disable()
 
   def run(self, list):
-    'Run all test programs given in LIST.'
+    '''Run all test programs given in LIST. Print a summary of results, if
+       there is a log file. Return zero iff all test programs passed.'''
     self._open_log('w')
     failed = 0
     for cnt, prog in enumerate(list):
@@ -99,7 +101,9 @@ class TestHarness:
     self._open_log('rb')
     log_lines = self.log.readlines()
 
-    # Print summaries from least interesting to most interesting.
+    # Print the results, from least interesting to most interesting.
+
+    # Helper for Work-In-Progress indications for XFAIL tests.
     wimptag = ' [[WIMP: '
     def printxfail(x):
       wip = x.find(wimptag)
@@ -108,56 +112,61 @@ class TestHarness:
       else:
         sys.stdout.write('%s\n       [[%s'
                          % (x[:wip], x[wip + len(wimptag):]))
+
     passed = [x for x in log_lines if x[:6] == 'PASS: ']
+
     skipped = [x for x in log_lines if x[:6] == 'SKIP: ']
     if skipped:
       print('At least one test was SKIPPED, checking ' + self.logfile)
       for x in skipped:
         sys.stdout.write(x)
+
     xfailed = [x for x in log_lines if x[:6] == 'XFAIL:']
-    passwimp = [x for x in log_lines
-                if x[:6] == 'XFAIL:' and 0 <= x.find(wimptag)]
     if xfailed:
       print('At least one test XFAILED, checking ' + self.logfile)
       for x in xfailed:
         printxfail(x)
+
+    xpassed = [x for x in log_lines if x[:6] == 'XPASS:']
+    if xpassed:
+      print('At least one test XPASSED, checking ' + self.logfile)
+      for x in xpassed:
+        printxfail(x)
+
     failed_list = [x for x in log_lines if x[:6] == 'FAIL: ']
     if failed_list:
       print('At least one test FAILED, checking ' + self.logfile)
       for x in failed_list:
         sys.stdout.write(x)
-    xpassed = [x for x in log_lines if x[:6] == 'XPASS:']
-    failwimp = [x for x in log_lines
-                if x[:6] == 'XPASS:' and 0 <= x.find(wimptag)]
+
+    # Print summaries, from least interesting to most interesting.
+    print('Summary of test results:')
+    if passed:
+      print('  %d test%s PASSED'
+            % (len(passed), 's'*min(len(passed) - 1, 1)))
+    if skipped:
+      print('  %d test%s SKIPPED'
+            % (len(skipped), 's'*min(len(skipped) - 1, 1)))
+    if xfailed:
+      passwimp = [x for x in xfailed if 0 <= x.find(wimptag)]
+      if passwimp:
+        print('  %d test%s XFAILED (%d WORK-IN-PROGRESS)'
+              % (len(xfailed), 's'*min(len(xfailed) - 1, 1), len(passwimp)))
+      else:
+        print('  %d test%s XFAILED'
+              % (len(xfailed), 's'*min(len(xfailed) - 1, 1)))
     if xpassed:
-      print('At least one test XPASSED, checking ' + self.logfile)
-      for x in xpassed:
-        printxfail(x)
-    if passed or skipped or xfailed or failed_list or xpassed:
-      print('Summary of test results:')
-      if passed:
-        print('  %d test%s PASSED'
-              % (len(passed), 's'*min(len(passed) - 1, 1)))
-      if skipped:
-        print('  %d test%s SKIPPED'
-              % (len(skipped), 's'*min(len(skipped) - 1, 1)))
-      if xfailed:
-        if passwimp:
-          print('  %d test%s XFAILED (%d WORK-IN-PROGRESS)'
-                % (len(xfailed), 's'*min(len(xfailed) - 1, 1), len(passwimp)))
-        else:
-          print('  %d test%s XFAILED'
-                % (len(xfailed), 's'*min(len(xfailed) - 1, 1)))
-      if failed_list:
-        print('  %d test%s FAILED'
-              % (len(failed_list), 's'*min(len(failed_list) - 1, 1)))
-      if xpassed:
-        if failwimp:
-          print('  %d test%s XPASSED (%d WORK-IN-PROGRESS)'
-                % (len(xpassed), 's'*min(len(xpassed) - 1, 1), len(failwimp)))
-        else:
-          print('  %d test%s XPASSED'
-                % (len(xpassed), 's'*min(len(xpassed) - 1, 1)))
+      failwimp = [x for x in xpassed if 0 <= x.find(wimptag)]
+      if failwimp:
+        print('  %d test%s XPASSED (%d WORK-IN-PROGRESS)'
+              % (len(xpassed), 's'*min(len(xpassed) - 1, 1), len(failwimp)))
+      else:
+        print('  %d test%s XPASSED'
+              % (len(xpassed), 's'*min(len(xpassed) - 1, 1)))
+    if failed_list:
+      print('  %d test%s FAILED'
+            % (len(failed_list), 's'*min(len(failed_list) - 1, 1)))
+
     self._close_log()
     return failed
 
@@ -182,17 +191,22 @@ class TestHarness:
       else:
         return arg
 
+    if self.log:
+      log = self.log
+    else:
+      log = sys.stdout
+
     progdir, progbase = os.path.split(prog)
     if self.log:
       # Using write here because we don't want even a trailing space
       test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
       sys.stdout.write('Running all tests in %s' % (test_info, ))
       sys.stdout.write('.'*(35 - len(test_info)))
-      self.log.write('START: %s\n' % progbase)
-      self.log.flush()
-    else:
-      print('START: %s' % progbase)
 
+    log.write('START: %s\n' % progbase)
+    log.flush()
+
+    start_time = datetime.now()
     if progbase[-3:] == '.py':
       progname = sys.executable
       cmdline = [quote(progname),
@@ -244,21 +258,30 @@ class TestHarness:
     else:
       os.chdir(old_cwd)
 
-    # We always return 1 for failed tests, if some other failure than 1
+    # We always return 1 for failed tests. Some other failure than 1
     # probably means the test didn't run at all and probably didn't
-    # output any failure info.
-    if failed == 1:
-      print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
-    elif failed and self.log:
-      self.log.write('FAIL:  %s: Unknown test failure see tests.log.\n\n' % progbase)
-      self.log.flush()
-      print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
-    else:
-      print(TextColors.SUCCESS + 'success' + TextColors.ENDC)
+    # output any failure info. In that case, log a generic failure message.
+    # ### Even if failure==1 it could be that the test didn't run at all.
+    if failed and failed != 1:
+      if self.log:
+        log.write('FAIL:  %s: Unknown test failure; see tests.log.\n' % progbase)
+        log.flush()
+      else:
+        log.write('FAIL:  %s: Unknown test failure.\n' % progbase)
+
+    # Log the elapsed time.
+    elapsed_time = str(datetime.now() - start_time)
+    log.write('END: %s\n' % progbase)
+    log.write('ELAPSED: %s %s\n' % (progbase, elapsed_time))
+    log.write('\n')
+
+    # If we printed a "Running all tests in ..." line, add the test result.
     if self.log:
-      self.log.write('END: %s\n\n' % progbase)
-    else:
-      print('END: %s\n' % progbase)
+      if failed:
+        print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
+      else:
+        print(TextColors.SUCCESS + 'success' + TextColors.ENDC)
+
     return failed
 
   def _run_prog(self, progname, arglist):

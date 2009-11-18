@@ -2,10 +2,10 @@
  * copy.c:  copy/move wrappers around wc 'copy' functionality.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -107,9 +107,9 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
       else
         {
           SVN_ERR(svn_client__entry_location(&src_url, &src_revnum,
-                                             src_path_or_url,
-                                             svn_opt_revision_working, entry,
-                                             pool));
+                                             ctx->wc_ctx, local_abspath,
+                                             svn_opt_revision_working,
+                                             pool, pool));
         }
     }
   else
@@ -137,10 +137,14 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
       else
         {
           svn_boolean_t inherited;
+          const char *local_abspath;
+
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, src_path_or_url,
+                                          pool));
           SVN_ERR(svn_client__get_wc_mergeinfo(&src_mergeinfo, &inherited,
                                                svn_mergeinfo_inherited,
-                                               entry, src_path_or_url, NULL,
-                                               NULL, ctx, pool));
+                                               local_abspath, NULL,
+                                               NULL, ctx, pool, pool));
         }
     }
 
@@ -152,9 +156,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
    MERGEINFO to any mergeinfo pre-existing in the WC. */
 static svn_error_t *
 extend_wc_mergeinfo(const char *target_abspath,
-                    const svn_wc_entry_t *entry,
                     apr_hash_t *mergeinfo,
-                    svn_wc_adm_access_t *adm_access,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
@@ -192,25 +194,30 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *first_dst;
+  const char *first_src;
   const char *top_dst;
+  svn_boolean_t src_is_url;
+  svn_boolean_t dst_is_url;
   char *top_src;
   int i;
 
   /* Because all the destinations are in the same directory, we can easily
      determine their common ancestor. */
   first_dst = APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *)->dst;
+  dst_is_url = svn_path_is_url(first_dst);
+
   if (copy_pairs->nelts == 1)
     top_dst = apr_pstrdup(subpool, first_dst);
-  else if (svn_path_is_url(first_dst))
-    top_dst = svn_uri_dirname(first_dst, subpool);
   else
-    top_dst = svn_dirent_dirname(first_dst, subpool);
+    top_dst = dst_is_url ? svn_uri_dirname(first_dst, subpool)
+                         : svn_dirent_dirname(first_dst, subpool);
 
   /* Sources can came from anywhere, so we have to actually do some
      work for them.  */
-  top_src = apr_pstrdup(subpool,
-                        APR_ARRAY_IDX(copy_pairs, 0,
-                                      svn_client__copy_pair_t *)->src);
+  first_src = APR_ARRAY_IDX(copy_pairs, 0,
+                                      svn_client__copy_pair_t *)->src;
+  src_is_url = svn_path_is_url(first_src);
+  top_src = apr_pstrdup(subpool, first_src);
   for (i = 1; i < copy_pairs->nelts; i++)
     {
       /* We don't need to clear the subpool here for several reasons:
@@ -224,7 +231,11 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
       */
       const svn_client__copy_pair_t *pair =
         APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
-      top_src = svn_path_get_longest_ancestor(top_src, pair->src, subpool);
+
+      top_src =
+           src_is_url
+               ? svn_uri_get_longest_ancestor(top_src, pair->src, subpool)
+               : svn_dirent_get_longest_ancestor(top_src, pair->src, subpool);
     }
 
   if (src_ancestor)
@@ -234,7 +245,10 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
     *dst_ancestor = apr_pstrdup(pool, top_dst);
 
   if (common_ancestor)
-    *common_ancestor = svn_path_get_longest_ancestor(top_src, top_dst, pool);
+    *common_ancestor =
+               src_is_url
+                    ? svn_uri_get_longest_ancestor(top_src, top_dst, pool)
+                    : svn_dirent_get_longest_ancestor(top_src, top_dst, pool);
 
   svn_pool_destroy(subpool);
 
@@ -268,6 +282,8 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
 
   for (i = 0; i < copy_pairs->nelts; i++)
     {
+      const char *dst_parent_abspath;
+      const char *dst_abspath;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_pool_clear(iterpool);
@@ -277,12 +293,12 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
       /* Perform the copy */
-
-      /* ### This is not a move, so we won't have locked the source, so we
-         ### won't detect any outstanding locks. If the source is locked and
-         ### requires cleanup should we abort the copy? */
-
-      err = svn_wc_copy2(pair->src, dst_access, pair->base_name,
+      SVN_ERR(svn_dirent_get_absolute(&pair->src_abs, pair->src, pool));
+      SVN_ERR(svn_dirent_get_absolute(&dst_parent_abspath, pair->dst_parent,
+                                      pool));
+      dst_abspath = svn_dirent_join(dst_parent_abspath, pair->base_name,
+                                    iterpool);
+      err = svn_wc_copy3(ctx->wc_ctx, pair->src_abs, dst_abspath,
                          ctx->cancel_func, ctx->cancel_baton,
                          ctx->notify_func2, ctx->notify_baton2, iterpool);
       if (err)
@@ -313,6 +329,9 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
     {
       svn_wc_adm_access_t *src_access, *dst_access;
       const char *src_parent;
+      const char *dst_abspath;
+      const char *dst_parent_abspath;
+
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_pool_clear(iterpool);
@@ -328,6 +347,9 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
                                ctx->cancel_func, ctx->cancel_baton,
                                iterpool));
 
+      SVN_ERR(svn_dirent_get_absolute(&dst_parent_abspath, pair->dst_parent,
+                                      iterpool));
+
       /* Need to avoid attempting to open the same dir twice when source
          and destination overlap. */
       if (strcmp(src_parent, pair->dst_parent) == 0)
@@ -336,16 +358,13 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         }
       else
         {
-          const char *src_parent_abs, *dst_parent_abs;
+          const char *src_parent_abs;
 
           SVN_ERR(svn_dirent_get_absolute(&src_parent_abs, src_parent,
                                           iterpool));
-          SVN_ERR(svn_dirent_get_absolute(&dst_parent_abs, pair->dst_parent,
-                                          iterpool));
-
           if ((pair->src_kind == svn_node_dir)
-              && (svn_path_is_child(src_parent_abs, dst_parent_abs,
-                                    iterpool)))
+              && (svn_dirent_is_child(src_parent_abs, dst_parent_abspath,
+                                      iterpool)))
             {
               SVN_ERR(svn_wc_adm_retrieve(&dst_access, src_access,
                                           pair->dst_parent, iterpool));
@@ -361,16 +380,19 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         }
 
       /* Perform the copy and then the delete. */
-      err = svn_wc_copy2(pair->src, dst_access, pair->base_name,
+      SVN_ERR(svn_dirent_get_absolute(&pair->src_abs, pair->src, pool));
+      dst_abspath = svn_dirent_join(dst_parent_abspath, pair->base_name,
+                                    iterpool);
+      err = svn_wc_copy3(ctx->wc_ctx, pair->src_abs, dst_abspath,
                          ctx->cancel_func, ctx->cancel_baton,
                          ctx->notify_func2, ctx->notify_baton2, iterpool);
       if (err)
         break;
 
       /* Perform the delete. */
-      SVN_ERR(svn_wc_delete3(pair->src, src_access,
+      SVN_ERR(svn_wc_delete4(ctx->wc_ctx, pair->src_abs, FALSE, FALSE,
                              ctx->cancel_func, ctx->cancel_baton,
-                             ctx->notify_func2, ctx->notify_baton2, FALSE,
+                             ctx->notify_func2, ctx->notify_baton2,
                              iterpool));
 
       if (dst_access != src_access)
@@ -433,7 +455,7 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
         }
       else if (dst_parent_kind != svn_node_dir)
         {
-          return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+          return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                    _("Path '%s' is not a directory"),
                                    svn_dirent_local_style(pair->dst_parent,
                                                         pool));
@@ -575,13 +597,13 @@ path_driver_cb_func(void **dir_baton,
 }
 
 
-/* Starting with the path DIR relative to the root of RA_SESSION, work up
- * through DIR's parents until an existing node is found. Push each
- * nonexistent path onto the array NEW_DIRS, allocating in POOL.
- * Raise an error if the existing node is not a directory.
- *
- * ### The multiple requests for HEAD revision (SVN_INVALID_REVNUM) make
- * this implementation susceptible to race conditions. */
+/* Starting with the path DIR relative to the RA_SESSION's session
+   URL, work up through DIR's parents until an existing node is found.
+   Push each nonexistent path onto the array NEW_DIRS, allocating in
+   POOL.  Raise an error if the existing node is not a directory.
+
+   ### Multiple requests for HEAD (SVN_INVALID_REVNUM) make this
+   ### implementation susceptible to race conditions.  */
 static svn_error_t *
 find_absent_parents1(svn_ra_session_t *ra_session,
                      const char *dir,
@@ -607,22 +629,23 @@ find_absent_parents1(svn_ra_session_t *ra_session,
 
   if (kind != svn_node_dir)
     return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                _("Path '%s' already exists, but is not a directory"),
-                dir);
+                             _("Path '%s' already exists, but is not a "
+                               "directory"), dir);
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
-/* Starting with the URL *TOP_DST_URL which is also the root of RA_SESSION,
- * work up through its parents until an existing node is found. Push each
- * nonexistent URL onto the array NEW_DIRS, allocating in POOL.
- * Raise an error if the existing node is not a directory.
- *
- * Set *TOP_DST_URL and the RA session's root to the existing node's URL.
- *
- * ### The multiple requests for HEAD revision (SVN_INVALID_REVNUM) make
- * this implementation susceptible to race conditions. */
+/* Starting with the URL *TOP_DST_URL which is also the root of
+   RA_SESSION, work up through its parents until an existing node is
+   found. Push each nonexistent URL onto the array NEW_DIRS,
+   allocating in POOL.  Raise an error if the existing node is not a
+   directory.
+ 
+   Set *TOP_DST_URL and the RA session's root to the existing node's URL.
+  
+   ### Multiple requests for HEAD (SVN_INVALID_REVNUM) make this
+   ### implementation susceptible to race conditions.  */
 static svn_error_t *
 find_absent_parents2(svn_ra_session_t *ra_session,
                      const char **top_dst_url,
@@ -772,8 +795,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       const char *dir;
 
       new_dirs = apr_array_make(pool, 0, sizeof(const char *));
-      dir = svn_path_is_child(top_url, svn_uri_dirname(pair->dst, pool),
-                              pool);
+      dir = svn_uri_is_child(top_url, svn_uri_dirname(pair->dst, pool),
+                             pool);
 
       /* Imagine a situation where the user tries to copy an existing source
          directory to nonexistent directory with --parents options specified:
@@ -782,7 +805,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
          where src exists and dst does not.  The svn_uri_dirname() call above
          will produce a string equivalent to top_url, which means
-         svn_path_is_child() will return NULL.  In this case, do not try to add
+         svn_uri_is_child() will return NULL.  In this case, do not try to add
          dst to the new_dirs list since it will be added to the commit items
          array later in this function. */
 
@@ -807,7 +830,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                                                path_driver_info_t *);
 
       if (strcmp(pair->dst, repos_root) != 0
-          && svn_path_is_child(pair->dst, pair->src, pool) != NULL)
+          && svn_uri_is_child(pair->dst, pair->src, pool) != NULL)
         {
           info->resurrection = TRUE;
           top_url = svn_uri_dirname(top_url, pool);
@@ -852,13 +875,13 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
       /* Get the portions of the SRC and DST URLs that are relative to
          TOP_URL, and URI-decode those sections. */
-      src_rel = svn_path_is_child(top_url, pair->src, pool);
+      src_rel = svn_uri_is_child(top_url, pair->src, pool);
       if (src_rel)
         src_rel = svn_path_uri_decode(src_rel, pool);
       else
         src_rel = "";
 
-      dst_rel = svn_path_is_child(top_url, pair->dst, pool);
+      dst_rel = svn_uri_is_child(top_url, pair->dst, pool);
       if (dst_rel)
         dst_rel = svn_path_uri_decode(dst_rel, pool);
       else
@@ -911,7 +934,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
               const char *url = APR_ARRAY_IDX(new_dirs, i, const char *);
 
               item = svn_client_commit_item3_create(pool);
-              item->url = svn_path_join(top_url, url, pool);
+              item->url = svn_uri_join(top_url, url, pool);
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
             }
@@ -923,7 +946,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                                                    path_driver_info_t *);
 
           item = svn_client_commit_item3_create(pool);
-          item->url = svn_path_join(top_url, info->dst_path, pool);
+          item->url = svn_uri_join(top_url, info->dst_path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
           apr_hash_set(action_hash, info->dst_path, APR_HASH_KEY_STRING,
@@ -932,7 +955,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
           if (is_move && (! info->resurrection))
             {
               item = apr_pcalloc(pool, sizeof(*item));
-              item->url = svn_path_join(top_url, info->src_path, pool);
+              item->url = svn_uri_join(top_url, info->src_path, pool);
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
               apr_hash_set(action_hash, info->src_path, APR_HASH_KEY_STRING,
@@ -1034,10 +1057,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  svn_node_kind_t base_kind;
   void *commit_baton;
   apr_hash_t *committables;
-  svn_wc_adm_access_t *adm_access, *dir_access;
+  svn_wc_adm_access_t *adm_access;
   apr_array_header_t *commit_items;
   const svn_wc_entry_t *entry;
   apr_pool_t *iterpool;
@@ -1084,8 +1106,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
-      top_dst_url = svn_path_get_longest_ancestor(top_dst_url, pair->dst,
-                                                  pool);
+      top_dst_url = svn_uri_get_longest_ancestor(top_dst_url, pair->dst,
+                                                 pool);
     }
 
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, top_dst_url,
@@ -1118,12 +1140,14 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, iterpool));
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src_abs,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          iterpool, iterpool));
       pair->src_revnum = entry->revision;
 
-      dst_rel = svn_path_uri_decode(svn_path_is_child(top_dst_url,
-                                                      pair->dst,
-                                                      iterpool),
+      dst_rel = svn_path_uri_decode(svn_uri_is_child(top_dst_url,
+                                                     pair->dst,
+                                                     iterpool),
                                     iterpool);
       SVN_ERR(svn_ra_check_path(ra_session, dst_rel, SVN_INVALID_REVNUM,
                                 &dst_kind, iterpool));
@@ -1182,14 +1206,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                            message, ctx, pool));
 
   /* Crawl the working copy for commit items. */
-  SVN_ERR(svn_io_check_path(top_src_path, &base_kind, pool));
-  if (base_kind == svn_node_dir)
-    SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, top_src_path, pool));
-  else
-    dir_access = adm_access;
-
   SVN_ERR(svn_client__get_copy_committables(&committables,
-                                            copy_pairs, dir_access,
+                                            copy_pairs,
                                             ctx, pool));
 
   /* ### todo: There should be only one hash entry, which currently
@@ -1249,7 +1267,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, adm_access,
                                          pair->src, pair->src_revnum,
                                          FALSE, ctx, iterpool));
-      SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, pool));
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src_abs,
+                                          svn_node_unknown, FALSE, FALSE,
+                                          pool, pool));
       SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
                                           src_abspath, iterpool, iterpool));
       if (wc_mergeinfo && mergeinfo)
@@ -1317,7 +1337,6 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                         svn_boolean_t same_repositories,
                         svn_boolean_t ignore_externals,
                         svn_ra_session_t *ra_session,
-                        svn_wc_adm_access_t *adm_access,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
@@ -1344,12 +1363,9 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
          way to do this; see its doc for more about the controversy.) */
       if (same_repositories)
         {
-          svn_wc_adm_access_t *dst_access;
-          SVN_ERR(svn_wc_adm_open3(&dst_access, adm_access, pair->dst, TRUE,
-                                   -1, ctx->cancel_func, ctx->cancel_baton,
-                                   pool));
-          SVN_ERR(svn_wc_entry(&dst_entry, pair->dst, dst_access, FALSE,
-                               pool));
+          SVN_ERR(svn_wc__get_entry_versioned(&dst_entry, ctx->wc_ctx,
+                                              dst_abspath, svn_node_unknown,
+                                              FALSE, FALSE, pool, pool));
 
           if (pair->src_op_revision.kind == svn_opt_revision_head)
             {
@@ -1376,29 +1392,28 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
           /* Schedule dst_path for addition in parent, with copy history.
              (This function also recursively puts a 'copied' flag on every
              entry). */
-          SVN_ERR(svn_wc_add3(pair->dst, adm_access, svn_depth_infinity,
+          SVN_ERR(svn_wc_add4(ctx->wc_ctx, dst_abspath, svn_depth_infinity,
                               pair->src, src_revnum,
                               ctx->cancel_func, ctx->cancel_baton,
                               ctx->notify_func2, ctx->notify_baton2, pool));
 
           /* ### Recording of implied mergeinfo should really occur
              ### *before* the notification callback is invoked by
-             ### svn_wc_add3(), but can't occur before we add the new
+             ### svn_wc_add4(), but can't occur before we add the new
              ### source path. */
           SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo, NULL,
                                              pair->src, src_revnum,
                                              FALSE, ctx, pool));
-          SVN_ERR(extend_wc_mergeinfo(dst_abspath, dst_entry, src_mergeinfo,
-                                      dst_access, ctx, pool));
+          SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
         }
       else  /* different repositories */
         {
-          /* ### Someday, we would just call svn_wc_add3(), as above,
+          /* ### Someday, we would just call svn_wc_add4(), as above,
              but with no copyfrom args.  I.e. in the
              directory-foreign-UUID case, we still want everything
              scheduled for addition, URLs rewritten, and wcprop cache
              deleted, but WITHOUT any copied flags or copyfrom urls.
-             Unfortunately, svn_wc_add3() is such a mess that it chokes
+             Unfortunately, svn_wc_add4() is such a mess that it chokes
              at the moment when we pass a NULL copyfromurl. */
 
           return svn_error_createf
@@ -1421,8 +1436,8 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                                      svn_io_file_del_on_pool_cleanup, pool,
                                      pool));
 
-      SVN_ERR(svn_client__path_relative_to_session(&src_rel, ra_session,
-                                                   pair->src, pool));
+      SVN_ERR(svn_ra_get_path_relative_to_session(ra_session, &src_rel,
+                                                  pair->src, pool));
       SVN_ERR(svn_ra_get_file(ra_session, src_rel, src_revnum, fstream,
                               &real_rev, &new_props, pool));
       SVN_ERR(svn_stream_close(fstream));
@@ -1435,8 +1450,8 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
       SVN_ERR(svn_stream_open_readonly(&new_base_contents, new_text_path,
                                        pool, pool));
-      SVN_ERR(svn_wc_add_repos_file3
-        (pair->dst, adm_access,
+      SVN_ERR(svn_wc_add_repos_file4
+        (ctx->wc_ctx, dst_abspath,
          new_base_contents, NULL, new_props, NULL,
          same_repositories ? pair->src : NULL,
          same_repositories ? src_revnum : SVN_INVALID_REVNUM,
@@ -1444,12 +1459,10 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
          ctx->notify_func2, ctx->notify_baton2,
          pool));
 
-      SVN_ERR(svn_wc_entry(&dst_entry, pair->dst, adm_access, FALSE, pool));
       SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo,
                                          NULL, pair->src, src_revnum,
                                          FALSE, ctx, pool));
-      SVN_ERR(extend_wc_mergeinfo(dst_abspath, dst_entry, src_mergeinfo,
-                                  adm_access, ctx, pool));
+      SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
 
       /* Ideally, svn_wc_add_repos_file3() would take a notify function
          and baton, and we wouldn't have to make this call here.
@@ -1544,8 +1557,8 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       svn_pool_clear(iterpool);
 
       /* Next, make sure that the path exists in the repository. */
-      SVN_ERR(svn_client__path_relative_to_session(&src_rel, ra_session,
-                                                   pair->src, iterpool));
+      SVN_ERR(svn_ra_get_path_relative_to_session(ra_session, &src_rel,
+                                                  pair->src, iterpool));
       SVN_ERR(svn_ra_check_path(ra_session, src_rel, pair->src_revnum,
                                 &pair->src_kind, pool));
       if (pair->src_kind == svn_node_none)
@@ -1581,7 +1594,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
         }
       else if (dst_parent_kind != svn_node_dir)
         {
-          return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+          return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                    _("Path '%s' is not a directory"),
                                    svn_dirent_local_style(dst_parent, pool));
         }
@@ -1600,10 +1613,14 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       const svn_wc_entry_t *ent;
+      const char *dst_abspath;
 
       svn_pool_clear(iterpool);
+      SVN_ERR(svn_dirent_get_absolute(&dst_abspath, pair->dst, iterpool));
 
-      SVN_ERR(svn_wc_entry(&ent, pair->dst, adm_access, TRUE, iterpool));
+      SVN_ERR(svn_wc__maybe_get_entry(&ent, ctx->wc_ctx, dst_abspath,
+                                      svn_node_unknown, TRUE, FALSE,
+                                      iterpool, iterpool));
       if (ent)
         {
           /* TODO(#2843): Rework the error report. Maybe we can simplify the
@@ -1676,8 +1693,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
                                                     svn_client__copy_pair_t *),
                                       same_repositories,
                                       ignore_externals,
-                                      ra_session, adm_access,
-                                      ctx, iterpool));
+                                      ra_session, ctx, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -1701,7 +1717,7 @@ try_copy(svn_commit_info_t **commit_info_p,
          svn_client_ctx_t *ctx,
          apr_pool_t *pool)
 {
-  apr_array_header_t *copy_pairs = 
+  apr_array_header_t *copy_pairs =
                         apr_array_make(pool, sources->nelts,
                                        sizeof(svn_client__copy_pair_t *));
   svn_boolean_t srcs_are_urls, dst_is_url;
@@ -1753,7 +1769,8 @@ try_copy(svn_commit_info_t **commit_info_p,
                                             src_is_url,
                                             TRUE,
                                             iterpool));
-          src_basename = svn_uri_basename(pair->src, iterpool);
+          src_basename = src_is_url ? svn_uri_basename(pair->src, iterpool)
+                                    : svn_dirent_basename(pair->src, iterpool);
           if (srcs_are_urls && ! dst_is_url)
             src_basename = svn_path_uri_decode(src_basename, iterpool);
 
@@ -1764,7 +1781,9 @@ try_copy(svn_commit_info_t **commit_info_p,
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                _("Cannot mix repository and working copy sources"));
 
-          pair->dst = svn_path_join(dst_path_in, src_basename, pool);
+          pair->dst = dst_is_url
+                          ? svn_uri_join(dst_path_in, src_basename, pool)
+                          : svn_dirent_join(dst_path_in, src_basename, pool);
           APR_ARRAY_PUSH(copy_pairs, svn_client__copy_pair_t *) = pair;
         }
 
@@ -1802,7 +1821,7 @@ try_copy(svn_commit_info_t **commit_info_p,
 
           svn_pool_clear(iterpool);
 
-          if (svn_path_is_child(pair->src, pair->dst, iterpool))
+          if (svn_dirent_is_child(pair->src, pair->dst, iterpool))
             return svn_error_createf
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                _("Cannot copy path '%s' into its own child '%s'"),
@@ -2031,17 +2050,22 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
       const char *src_path = APR_ARRAY_IDX(sources, 0,
                                            svn_client_copy_source_t *)->path;
       const char *src_basename;
+      svn_boolean_t src_is_uri = svn_path_is_url(src_path);
+      svn_boolean_t dst_is_uri = svn_path_is_url(dst_path);
 
       svn_error_clear(err);
       svn_pool_clear(subpool);
 
-      src_basename = svn_uri_basename(src_path, subpool);
+      src_basename = src_is_uri ? svn_uri_basename(src_path, subpool)
+                                : svn_dirent_basename(src_path, subpool);
       if (svn_path_is_url(src_path) && ! svn_path_is_url(dst_path))
         src_basename = svn_path_uri_decode(src_basename, subpool);
 
       err = try_copy(&commit_info,
                      sources,
-                     svn_path_join(dst_path, src_basename, subpool),
+                     dst_is_uri
+                         ? svn_uri_join(dst_path, src_basename, subpool)
+                         : svn_dirent_join(dst_path, src_basename, subpool),
                      FALSE /* is_move */,
                      TRUE /* force, set to avoid deletion check */,
                      make_parents,
@@ -2118,14 +2142,19 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
     {
       const char *src_path = APR_ARRAY_IDX(src_paths, 0, const char *);
       const char *src_basename;
+      svn_boolean_t src_is_uri = svn_path_is_url(src_path);
+      svn_boolean_t dst_is_uri = svn_path_is_url(dst_path);
 
       svn_error_clear(err);
       svn_pool_clear(subpool);
 
-      src_basename = svn_uri_basename(src_path, pool);
+      src_basename = src_is_uri ? svn_uri_basename(src_path, pool)
+                                : svn_dirent_basename(src_path, pool);
 
       err = try_copy(&commit_info, sources,
-                     svn_path_join(dst_path, src_basename, pool),
+                     dst_is_uri
+                         ? svn_uri_join(dst_path, src_basename, pool)
+                         : svn_dirent_join(dst_path, src_basename, pool),
                      TRUE /* is_move */,
                      force,
                      make_parents,

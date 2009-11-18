@@ -6,10 +6,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -29,7 +29,11 @@
 # moves working copies between wc-1 and wc-ng.
 #
 
-import os, sys, tarfile, shutil
+import os
+import re
+import shutil
+import sys
+import tarfile
 
 import svntest
 
@@ -39,6 +43,12 @@ SkipUnless = svntest.testcase.SkipUnless
 
 wc_is_too_old_regex = (".*Working copy format of '.*' is too old \(\d+\); " +
                     "please run 'svn upgrade'")
+
+
+def get_current_format():
+  # Get current format from subversion/libsvn_wc/wc.h
+  format_file = open(os.path.join(os.path.dirname(__file__), "..", "..", "libsvn_wc", "wc.h")).read()
+  return int(re.search("\n#define SVN_WC__VERSION (\d+)\n", format_file).group(1))
 
 
 def replace_sbox_with_tarfile(sbox, tar_filename):
@@ -58,10 +68,8 @@ def replace_sbox_with_tarfile(sbox, tar_filename):
 
 
 def check_format(sbox, expected_format):
-  import sqlite3
-
   for root, dirs, files in os.walk(sbox.wc_dir):
-    db = sqlite3.connect(os.path.join(root, '.svn', 'wc.db'))
+    db = svntest.sqlite3.connect(os.path.join(root, '.svn', 'wc.db'))
     c = db.cursor()
     c.execute('pragma user_version;')
     found_format = c.fetchone()[0]
@@ -76,9 +84,7 @@ def check_format(sbox, expected_format):
 
 
 def check_dav_cache(dir_path, wc_id, expected_dav_caches):
-  import sqlite3
-
-  db = sqlite3.connect(os.path.join(dir_path, '.svn', 'wc.db'))
+  db = svntest.sqlite3.connect(os.path.join(dir_path, '.svn', 'wc.db'))
   c = db.cursor()
 
   for local_relpath, expected_dav_cache in expected_dav_caches.items():
@@ -110,6 +116,7 @@ def run_and_verify_status_no_server(wc_dir, expected_status):
     svvtest.tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
 
+
 def basic_upgrade(sbox):
   "basic upgrade behavior"
 
@@ -126,7 +133,7 @@ def basic_upgrade(sbox):
                                      'upgrade', sbox.wc_dir)
 
   # Actually check the format number of the upgraded working copy
-  check_format(sbox, 12)
+  check_format(sbox, get_current_format())
 
   # Now check the contents of the working copy
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
@@ -147,7 +154,7 @@ def upgrade_1_5_body(sbox, subcommand):
                                      'upgrade', sbox.wc_dir)
 
   # Check the format of the working copy
-  check_format(sbox, 12)
+  check_format(sbox, get_current_format())
 
   # Now check the contents of the working copy
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
@@ -206,20 +213,13 @@ def upgrade_wcprops(sbox):
 ########################################################################
 # Run the tests
 
-def has_sqlite():
-  try:
-    import sqlite3
-    return True
-  except ImportError:
-    return False
-
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(basic_upgrade, has_sqlite),
-              SkipUnless(upgrade_1_5, has_sqlite),
-              XFail(SkipUnless(update_1_5, has_sqlite)),
+              basic_upgrade,
+              upgrade_1_5,
+              XFail(update_1_5),
               logs_left_1_5,
-              SkipUnless(upgrade_wcprops, has_sqlite),
+              upgrade_wcprops,
              ]
 
 

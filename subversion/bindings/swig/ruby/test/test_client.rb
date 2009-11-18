@@ -500,20 +500,26 @@ class SvnClientTest < Test::Unit::TestCase
     path = File.join(dir_path, file)
     content = "Hello"
 
+    wc_path2 = @wc_path + '2'
+    path2 = File.join(wc_path2, dir, file)
+    wc_path3 = @wc_path + '3'
+    path3 = File.join(wc_path3, dir, file)
+
     make_context(log) do |ctx|
       ctx.mkdir(dir_path)
       File.open(path, "w"){|f| f.print(content)}
       ctx.add(path)
       ctx.commit(@wc_path)
 
-      FileUtils.rm_rf(@wc_path)
-      ctx.checkout(@repos_uri, @wc_path)
-      assert(File.exist?(path))
+      ctx.checkout(@repos_uri, wc_path2)
+      assert(File.exist?(path2))
 
-      FileUtils.rm_rf(@wc_path)
-      ctx.co(@repos_uri, @wc_path, nil, nil, false)
-      assert(!File.exist?(path))
+      ctx.co(@repos_uri, wc_path3, nil, nil, false)
+      assert(!File.exist?(path3))
     end
+  ensure
+    FileUtils.rm_rf(wc_path3)
+    FileUtils.rm_rf(wc_path2)
   end
 
   def test_update
@@ -1081,15 +1087,11 @@ class SvnClientTest < Test::Unit::TestCase
       end
 
       ctx.set_cancel_func(nil)
-      access = Svn::Wc::AdmAccess.open(nil, @wc_path, true, -1)
       assert_nothing_raised do
         ctx.cleanup(@wc_path)
       end
       assert_nothing_raised do
         ctx.commit(@wc_path)
-      end
-      assert_raises(Svn::Error::SvnError) do
-        access.close
       end
     end
   end
@@ -2290,7 +2292,7 @@ class SvnClientTest < Test::Unit::TestCase
       assert_equal({changelist2=>[path2].map{|f| File.expand_path(f)}}, yield(ctx, changelist2))
       assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)}}, yield(ctx, [changelist1]))
       assert_equal({changelist2=>[path2].map{|f| File.expand_path(f)}}, yield(ctx, [changelist2]))
-      assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)},changelist2=>[path2].map{|f| File.expand_path(f)},nil=>[@wc_path].map{|f| File.expand_path(f)}}, 
+      assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)},changelist2=>[path2].map{|f| File.expand_path(f)},nil=>[@wc_path].map{|f| File.expand_path(f)}},
 		   yield(ctx, nil))
       assert_equal({}, yield(ctx, []))
       assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)},changelist2=>[path2].map{|f| File.expand_path(f)}},
@@ -2372,7 +2374,7 @@ class SvnClientTest < Test::Unit::TestCase
         ctx.ci(@wc_path)
       end
 
-      ctx.resolve(:path=>dir_path, :depth=>:infinite, :conflict_choice=>choice)
+      ctx.resolve(:path=>dir_path, :depth=>:infinity, :conflict_choice=>choice)
       yield ctx, path
     end
   end

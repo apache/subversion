@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -53,12 +53,12 @@ StatusCallback::~StatusCallback()
 
 svn_error_t *
 StatusCallback::callback(void *baton,
-                         const char *path,
-                         svn_wc_status2_t *status,
+                         const char *local_abspath,
+                         const svn_wc_status2_t *status,
                          apr_pool_t *pool)
 {
   if (baton)
-    return ((StatusCallback *)baton)->doStatus(path, status);
+    return ((StatusCallback *)baton)->doStatus(local_abspath, status);
 
   return SVN_NO_ERROR;
 }
@@ -67,7 +67,8 @@ StatusCallback::callback(void *baton,
  * Callback called for a single status item.
  */
 svn_error_t *
-StatusCallback::doStatus(const char *path, svn_wc_status2_t *status)
+StatusCallback::doStatus(const char *local_abspath,
+                         const svn_wc_status2_t *status)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -90,7 +91,7 @@ StatusCallback::doStatus(const char *path, svn_wc_status2_t *status)
         return SVN_NO_ERROR;
     }
 
-  jobject jStatus = createJavaStatus(path, status);
+  jobject jStatus = createJavaStatus(local_abspath, status);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
@@ -105,8 +106,8 @@ StatusCallback::doStatus(const char *path, svn_wc_status2_t *status)
 }
 
 jobject
-StatusCallback::createJavaStatus(const char *path,
-                                 svn_wc_status2_t *status)
+StatusCallback::createJavaStatus(const char *local_abspath,
+                                 const svn_wc_status2_t *status)
 {
   JNIEnv *env = JNIUtil::getEnv();
   jclass clazz = env->FindClass(JAVA_PACKAGE"/Status");
@@ -129,7 +130,7 @@ StatusCallback::createJavaStatus(const char *path,
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     }
-  jstring jPath = JNIUtil::makeJString(path);
+  jstring jPath = JNIUtil::makeJString(local_abspath);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 

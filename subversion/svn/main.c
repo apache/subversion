@@ -2,10 +2,10 @@
  * main.c:  Subversion command line client.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -113,7 +113,8 @@ typedef enum {
   opt_accept,
   opt_show_revs,
   opt_reintegrate,
-  opt_trust_server_cert
+  opt_trust_server_cert,
+  opt_show_copies_as_adds
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -228,7 +229,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
   {"record-only",   opt_record_only, 0,
-                    N_("mark revisions as merged (use with -r)")},
+                    N_("merge only mergeinfo differences")},
   {"old",           opt_old_cmd, 1, N_("use ARG as the older target")},
   {"new",           opt_new_cmd, 1, N_("use ARG as the newer target")},
   {"revprop",       opt_revprop, 0,
@@ -292,6 +293,22 @@ const apr_getopt_option_t svn_cl__options[] =
                        "('merged', 'eligible')")},
   {"reintegrate",   opt_reintegrate, 0,
                     N_("lump-merge all of source URL's unmerged changes")},
+  {"strip",         'p', 1,
+                    N_("number of leading path components to strip\n"
+                       "                             "
+                       "from pathnames. Specifying -p0 gives the entire\n"
+                       "                             "
+                       "path unmodified. Specifying -p1 causes the path\n"
+                       "                             "
+                       "    doc/fudge/crunchy.html\n"
+                       "                             "
+                       "to be interpreted as\n"
+                       "                             "
+                       "    fudge/crunchy.html\n"
+                       "                             "
+                       "while -p2 would give just crunchy.html\n")},
+  {"show-copies-as-adds", opt_show_copies_as_adds, 0,
+                    N_("don't diff copied or moved files with their source")},
 
   /* Long-opt Aliases
    *
@@ -476,8 +493,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd, 'x',
-     opt_no_diff_deleted, opt_notice_ancestry, opt_summarize, opt_changelist,
-     opt_force, opt_xml} },
+     opt_no_diff_deleted, opt_show_copies_as_adds, opt_notice_ancestry,
+     opt_summarize, opt_changelist, opt_force, opt_xml} },
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
      "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -662,7 +679,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  is not provided, display revisions which have been merged from\n"
      "  SOURCE to TARGET; otherwise, display the type of information\n"
      "  specified by the --show-revs option.\n"),
-    {'r', opt_show_revs} },
+    {'r', 'R', opt_depth, opt_show_revs} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
     ("Create a new directory under version control.\n"
@@ -697,6 +714,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  All the SRCs must be of the same type.\n"),
     {'r', 'q', opt_force, opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
 
+#ifdef SVN_WITH_EXPERIMENTAL_OBLITERATE
+  { "obliterate", svn_cl__obliterate, {0}, N_
+    ("Permanently delete a specific node-revision from the repository.\n"
+     "usage: obliterate URL@REV\n"),
+    {0} },
+#endif
+
   { "patch", svn_cl__patch, {0}, N_
     ("Apply a patch to a working copy.\n"
      "usage: patch PATCHFILE [WCPATH]\n"
@@ -706,8 +730,28 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  A unidiff file suitable for application to a working copy can be\n"
      "  produced with the 'svn diff' command or third-party diffing tools.\n"
      "  Any non-unidiff content of PATCHFILE is ignored.\n"
+     "\n"
+     "  If a change does not match at its exact line offset, it may be applied\n"
+     "  earlier or later in the file if a match is found elsewhere for the\n"
+     "  surrounding lines of context provided in the unidiff.\n"
+     "  If no matching context can be found for a change, the change will\n"
+     "  produce a text conflict at its exact line offset.\n"
+     "\n"
+     "  For each patched file a line will be printed with characters reporting\n"
+     "  the action taken. These characters have the following meaning:\n"
+     "\n"
+     "    A  Added\n"
+     "    D  Deleted\n"
+     "    U  Updated\n"
+     "    C  Conflict\n"
+     "    G  Merged\n"
+     "\n"
+     "  If a unidiff removes all content from a file, that file is scheduled\n"
+     "  for deletion. If a unidiff creates a new file, that file is scheduled\n"
+     "  for addition. Use 'svn revert' to undo deletions and additions you\n"
+     "  do not agree with.\n"
      ),
-    {'q', opt_dry_run} },
+    {'q', opt_dry_run, opt_accept, opt_merge_cmd, 'p'} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1450,6 +1494,9 @@ main(int argc, const char *argv[])
       case opt_no_diff_deleted:
         opt_state.no_diff_deleted = TRUE;
         break;
+      case opt_show_copies_as_adds:
+        opt_state.show_copies_as_adds = TRUE;
+        break;
       case opt_notice_ancestry:
         opt_state.notice_ancestry = TRUE;
         break;
@@ -1500,7 +1547,7 @@ main(int argc, const char *argv[])
         break;
       case opt_config_options:
         if (!opt_state.config_options)
-          opt_state.config_options = 
+          opt_state.config_options =
                    apr_array_make(pool, 1, sizeof(svn_cmdline__config_argument_t*));
 
         err = svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool);
@@ -1596,6 +1643,24 @@ main(int argc, const char *argv[])
         break;
       case opt_reintegrate:
         opt_state.reintegrate = TRUE;
+        break;
+      case 'p':
+        {
+          char *end;
+          opt_state.strip_count = (int) strtol(opt_arg, &end, 10);
+          if (end == opt_arg || *end != '\0')
+            {
+              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                     _("Non-numeric strip argument given"));
+              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            }
+          if (opt_state.strip_count < 0)
+            {
+              err = svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                    _("Argument to --strip must be positive"));
+              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            }
+        }
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

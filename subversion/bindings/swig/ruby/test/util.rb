@@ -1,5 +1,7 @@
 require "fileutils"
 require "pathname"
+require "svn/util"
+require "tmpdir"
 
 require "my-assertions"
 
@@ -21,7 +23,7 @@ module SvnTestUtil
     @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
-    @wc_base_dir = "wc-tmp"
+    @wc_base_dir = File.join(Dir.tmpdir, "wc-tmp")
     @wc_path = File.join(@wc_base_dir, "wc")
     @full_wc_path = File.expand_path(@wc_path)
     @tmp_path = "tmp"
@@ -190,7 +192,7 @@ realm = #{@realm}
   end
 
   def normalize_line_break(str)
-    if windows?
+    if Svn::Util.windows?
       str.gsub(/\n/, "\r\n")
     else
       str
@@ -199,11 +201,6 @@ realm = #{@realm}
 
   def setup_greek_tree
     make_context("setup greek tree") { |ctx| @greek.setup(ctx) }
-  end
-
-  module_function
-  def windows?
-    /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
   end
 
   module Svnserve
@@ -281,7 +278,7 @@ exit 1
     end
   end
 
-  if windows?
+  if Svn::Util.windows?
     require 'windows_util'
     include Windows::Svnserve
     extend Windows::SetupEnvironment

@@ -2,10 +2,10 @@
  * svn_private_config.hw : Template for svn_private_config.h on Win32.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -90,4 +90,13 @@
 #ifdef SVN_WANT_BDB
 #define APU_WANT_DB
 #include <apu_want.h>
+#endif
+
+/*
+ * Subversion developers may want to use some additional debugging facilities
+ * while working on the code. We'll pull that in here, so individual source
+ * files don't have to include this header manually.
+ */
+#ifdef SVN_DEBUG
+#include "private/svn_debug.h"
 #endif

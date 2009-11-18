@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -666,11 +666,36 @@ public interface SVNClientInterface
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents
+     * @param ignoreExternals Whether or not to process external definitions
+     *                        as part of this operation.
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
+     * @throws ClientException If the copy operation fails.
+     * @since 1.7
+     */
+    void copy(CopySource[] sources, String destPath, String message,
+              boolean copyAsChild, boolean makeParents,
+              boolean ignoreExternals, Map revpropTable)
+            throws ClientException;
+
+    /**
+     * Copy versioned paths with the history preserved.
+     *
+     * @param sources A list of <code>CopySource</code> objects.
+     * @param destPath Destination path or URL.
+     * @param message Commit message.  May be <code>null</code> if
+     * <code>destPath</code> is not a URL.
+     * @param copyAsChild Whether to copy <code>srcPaths</code> as
+     * children of <code>destPath</code>.
+     * @param makeParents Whether to create intermediate parents
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
      * @throws ClientException If the copy operation fails.
      * @since 1.5
+     * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
+     *                              boolean, boolean, Map)} instead.
      */
     void copy(CopySource[] sources, String destPath, String message,
               boolean copyAsChild, boolean makeParents, Map revpropTable)
@@ -686,7 +711,7 @@ public interface SVNClientInterface
      * @param revision  source revision
      * @throws ClientException
      * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
-     *                              boolean)} instead.
+     *                              boolean, boolean, Map)} instead.
      */
     void copy(String srcPath, String destPath, String message,
               Revision revision) throws ClientException;
@@ -1074,8 +1099,31 @@ public interface SVNClientInterface
      * @param mergeSourceUrl         the source of the merge
      * @param srcPegRevision         peg rev for mergeSourceUrl
      * @param discoverChangedPaths   return paths of changed items
+     * @param depth                  the depth to recurse to
      * @param revProps               the revprops to retrieve
      * @param callback               the object to receive the log messages
+     * @since 1.7
+     */
+    void getMergeinfoLog(int kind, String pathOrUrl,
+                         Revision pegRevision, String mergeSourceUrl,
+                         Revision srcPegRevision, boolean discoverChangedPaths,
+                         int depth, String[] revprops,
+                         LogMessageCallback callback)
+        throws ClientException;
+
+    /**
+     * Retrieve either merged or eligible-to-be-merged revisions.
+     * @param kind                   kind of revisions to receive
+     * @param pathOrUrl              target of merge
+     * @param pegRevision            peg rev for pathOrUrl
+     * @param mergeSourceUrl         the source of the merge
+     * @param srcPegRevision         peg rev for mergeSourceUrl
+     * @param discoverChangedPaths   return paths of changed items
+     * @param revProps               the revprops to retrieve
+     * @param callback               the object to receive the log messages
+     * @deprecated Use {@link #getMergeinfoLog(int, String, Revision, String,
+     *                                         Revision, boolean, int,
+     *                                         String[], LogMessageCallback)}
      * @since 1.5
      */
     void getMergeinfoLog(int kind, String pathOrUrl,
@@ -1136,7 +1184,33 @@ public interface SVNClientInterface
      * @param ignoreAncestry ignore if files are not related
      * @param noDiffDeleted no output on deleted files
      * @param force         diff even on binary files
+     * @param copiesAsAdds  if set, copied files will be shown in their
+     *                      entirety, not as diffs from their sources
      * @throws ClientException
+     * @since 1.7
+     */
+    void diff(String target1, Revision revision1, String target2,
+              Revision revision2, String relativeToDir, String outFileName,
+              int depth, String[] changelists, boolean ignoreAncestry,
+              boolean noDiffDeleted, boolean force, boolean copiesAsAdds)
+            throws ClientException;
+
+    /**
+     * Display the differences between two paths
+     * @param target1       first path or url
+     * @param revision1     first revision
+     * @param target2       second path or url
+     * @param revision2     second revision
+     * @param relativeToDir index path is relative to this path
+     * @param outFileName   file name where difference are written
+     * @param depth         how deep to traverse into subdirectories
+     * @param ignoreAncestry ignore if files are not related
+     * @param noDiffDeleted no output on deleted files
+     * @param force         diff even on binary files
+     * @throws ClientException
+     * @deprecated Use {@link #diff(String, Revision, String, Revision,
+     *                              String, String, int, boolean, boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.5
      */
     void diff(String target1, Revision revision1, String target2,
@@ -1180,7 +1254,34 @@ public interface SVNClientInterface
      * @param ignoreAncestry ignore if files are not related
      * @param noDiffDeleted no output on deleted files
      * @param force         diff even on binary files
+     * @param copiesAsAdds  if set, copied files will be shown in their
+     *                      entirety, not as diffs from their sources
      * @throws ClientException
+     * @since 1.7
+     */
+    void diff(String target, Revision pegRevision, Revision startRevision,
+              Revision endRevision, String relativeToDir, String outFileName,
+              int depth, String[] changelists, boolean ignoreAncestry,
+              boolean noDiffDeleted, boolean force, boolean copiesAsAdds)
+            throws ClientException;
+
+    /**
+     * Display the differences between two paths.
+     * @param target        path or url
+     * @param pegRevision   revision tointerpret target
+     * @param startRevision first Revision to compare
+     * @param endRevision   second Revision to compare
+     * @param relativeToDir index path is relative to this path
+     * @param outFileName   file name where difference are written
+     * @param depth         how deep to traverse into subdirectories
+     * @param changelists  if non-null, filter paths using changelists
+     * @param ignoreAncestry ignore if files are not related
+     * @param noDiffDeleted no output on deleted files
+     * @param force         diff even on binary files
+     * @throws ClientException
+     * @deprecated Use {@link #diff(String, Revision, Revision, Revision,
+     *                              String, String, int, boolean, boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.5
      */
     void diff(String target, Revision pegRevision, Revision startRevision,
@@ -1697,13 +1798,35 @@ public interface SVNClientInterface
      * @param callback      callback to receive the file content and the other
      *                      information
      * @throws ClientException
+     * @deprecated Use {@link #blame(String, Revision, Revision, Revision,
+     *                               boolean, boolean, BlameCallback3)}
+     *                               instead.
      * @since 1.5
      */
-
     void blame(String path, Revision pegRevision, Revision revisionStart,
                Revision revisionEnd, boolean ignoreMimeType,
                boolean includeMergedRevisions,
                BlameCallback2 callback) throws ClientException;
+
+    /**
+     * Retrieve the content together with the author, the revision and the date
+     * of the last change of each line
+     * @param path          the path
+     * @param pegRevision   the revision to interpret the path
+     * @param revisionStart the first revision to show
+     * @param revisionEnd   the last revision to show
+     * @param ignoreMimeType whether or not to ignore the mime-type
+     * @param includeMergedRevisions whether or not to include extra merge
+     *                      information
+     * @param callback      callback to receive the file content and the other
+     *                      information
+     * @throws ClientException
+     * @since 1.7
+     */
+    void blame(String path, Revision pegRevision, Revision revisionStart,
+               Revision revisionEnd, boolean ignoreMimeType,
+               boolean includeMergedRevisions,
+               BlameCallback3 callback) throws ClientException;
 
     /**
      * Set directory for the configuration information, taking the
@@ -1838,5 +1961,14 @@ public interface SVNClientInterface
      * @since 1.2
      */
     String getVersionInfo(String path, String trailUrl, boolean lastChanged)
+            throws ClientException;
+
+    /**
+     * Recursively upgrade a working copy to a new metadata storage format.
+     * @param path                  path of the working copy
+     * @throws ClientException
+     * @since 1.7
+     */
+    void upgrade(String path)
             throws ClientException;
 }

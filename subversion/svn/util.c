@@ -4,10 +4,10 @@
  * in here.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -58,6 +58,8 @@
 #include "svn_time.h"
 #include "svn_private_config.h"
 #include "cl.h"
+
+#include "private/svn_token.h"
 
 
 
@@ -1028,70 +1030,70 @@ svn_cl__xml_print_footer(const char *tagname,
 }
 
 
+/* A map for svn_node_kind_t values to XML strings */
+static const svn_token_map_t map_node_kind_xml[] =
+{
+  { "none", svn_node_none },
+  { "file", svn_node_file },
+  { "dir",  svn_node_dir },
+  { "",     svn_node_unknown },
+  { NULL,   0 }
+};
+
+/* A map for svn_node_kind_t values to human-readable strings */
+static const svn_token_map_t map_node_kind_human[] =
+{
+  { N_("none"), svn_node_none },
+  { N_("file"), svn_node_file },
+  { N_("dir"),  svn_node_dir },
+  { "",         svn_node_unknown },
+  { NULL,       0 }
+};
+
 const char *
 svn_cl__node_kind_str_xml(svn_node_kind_t kind)
 {
-  switch (kind)
-    {
-    case svn_node_none:
-      return "none";
-    case svn_node_dir:
-      return "dir";
-    case svn_node_file:
-      return "file";
-    default:
-      return "";
-    }
+  return svn_token__to_word(map_node_kind_xml, kind);
 }
 
 const char *
 svn_cl__node_kind_str_human_readable(svn_node_kind_t kind)
 {
-  switch (kind)
-    {
-    case svn_node_none:
-      return _("none");
-    case svn_node_dir:
-      return _("dir");
-    case svn_node_file:
-      return _("file");
-    default:
-      return "";
-    }
+  return _(svn_token__to_word(map_node_kind_human, kind));
 }
 
+
+/* A map for svn_wc_operation_t values to XML strings */
+static const svn_token_map_t map_wc_operation_xml[] =
+{
+  { "none",   svn_wc_operation_none },
+  { "update", svn_wc_operation_update },
+  { "switch", svn_wc_operation_switch },
+  { "merge",  svn_wc_operation_merge },
+  { NULL,     0 }
+};
+
+/* A map for svn_wc_operation_t values to human-readable strings */
+static const svn_token_map_t map_wc_operation_human[] =
+{
+  { N_("none"),   svn_wc_operation_none },
+  { N_("update"), svn_wc_operation_update },
+  { N_("switch"), svn_wc_operation_switch },
+  { N_("merge"),  svn_wc_operation_merge },
+  { NULL,         0 }
+};
 
 const char *
 svn_cl__operation_str_xml(svn_wc_operation_t operation, apr_pool_t *pool)
 {
-  switch(operation){
-	case svn_wc_operation_none:
-      return "none";
-    case svn_wc_operation_update:
-      return "update";
-    case svn_wc_operation_switch:
-      return "switch";
-    case svn_wc_operation_merge:
-      return "merge";
-  }
-  return "unknown_operation";
+  return svn_token__to_word(map_wc_operation_xml, operation);
 }
 
 const char *
 svn_cl__operation_str_human_readable(svn_wc_operation_t operation,
                                      apr_pool_t *pool)
 {
-  switch(operation){
-	case svn_wc_operation_none:
-      return _("none");
-    case svn_wc_operation_update:
-      return _("update");
-    case svn_wc_operation_switch:
-      return _("switch");
-    case svn_wc_operation_merge:
-      return _("merge");
-  }
-  return _("unknown operation");
+  return _(svn_token__to_word(map_wc_operation_human, operation));
 }
 
 
@@ -1140,11 +1142,12 @@ svn_cl__changelist_paths(apr_array_header_t **paths,
                          const apr_array_header_t *targets,
                          svn_depth_t depth,
                          svn_client_ctx_t *ctx,
-                         apr_pool_t *pool)
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   apr_array_header_t *found;
-  apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_t *paths_hash;
+  apr_pool_t *iterpool;
   int i;
 
   if (! (changelists && changelists->nelts))
@@ -1153,19 +1156,20 @@ svn_cl__changelist_paths(apr_array_header_t **paths,
       return SVN_NO_ERROR;
     }
 
-  found = apr_array_make(pool, 8, sizeof(const char *));
+  found = apr_array_make(scratch_pool, 8, sizeof(const char *));
+  iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
       SVN_ERR(svn_client_get_changelists(target, changelists, depth,
-                                         changelist_receiver, (void *)found,
-                                         ctx, subpool));
+                                         changelist_receiver, found,
+                                         ctx, iterpool));
     }
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
-  SVN_ERR(svn_hash_from_cstring_keys(&paths_hash, found, pool));
-  return svn_hash_keys(paths, paths_hash, pool);
+  SVN_ERR(svn_hash_from_cstring_keys(&paths_hash, found, result_pool));
+  return svn_error_return(svn_hash_keys(paths, paths_hash, result_pool));
 }
 
 svn_cl__show_revs_t
@@ -1266,7 +1270,7 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
    * Otherwise show the complete URL, and if we can't, show dots. */
 
   if (node->repos_url &&
-      (wc_repos_root_URL == NULL || 
+      (wc_repos_root_URL == NULL ||
        strcmp(node->repos_url, wc_repos_root_URL) != 0))
     root_str = node->repos_url;
 
@@ -1279,3 +1283,10 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
                       node->peg_rev);
 }
 
+const char *
+svn_cl__path_join(const char *base,
+                  const char *component,
+                  apr_pool_t *pool)
+{
+  return svn_path_join(base, component, pool);
+}

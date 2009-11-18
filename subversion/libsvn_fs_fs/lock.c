@@ -1,10 +1,10 @@
 /* lock.c :  functions for manipulating filesystem locks.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -189,10 +189,9 @@ write_digest_file(apr_hash_t *children,
       svn_stringbuf_t *children_list = svn_stringbuf_create("", pool);
       for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
         {
-          const void *key;
-          apr_ssize_t klen;
-          apr_hash_this(hi, &key, &klen, NULL);
-          svn_stringbuf_appendbytes(children_list, key, klen);
+          svn_stringbuf_appendbytes(children_list,
+                                    svn_apr_hash_index_key(hi),
+                                    svn_apr_hash_index_klen(hi));
           svn_stringbuf_appendbytes(children_list, "\n", 1);
         }
       hash_store(hash, CHILDREN_KEY, sizeof(CHILDREN_KEY)-1,
@@ -560,11 +559,10 @@ walk_digest_files(svn_fs_t *fs,
   subpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
+      const char *digest = svn_apr_hash_index_key(hi);
       svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, NULL, NULL);
       SVN_ERR(walk_digest_files
-              (fs, digest_path_from_digest(fs, key, subpool),
+              (fs, digest_path_from_digest(fs, digest, subpool),
                get_locks_func, get_locks_baton, have_write_lock, subpool));
     }
   svn_pool_destroy(subpool);
@@ -686,9 +684,18 @@ lock_body(void *baton, apr_pool_t *pool)
   /* While our locking implementation easily supports the locking of
      nonexistent paths, we deliberately choose not to allow such madness. */
   if (kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                             _("Path '%s' doesn't exist in HEAD revision"),
-                             lb->path);
+    {
+      if (SVN_IS_VALID_REVNUM(lb->current_rev))
+        return svn_error_createf(
+          SVN_ERR_FS_OUT_OF_DATE, NULL,
+          _("Path '%s' doesn't exist in HEAD revision"),
+          lb->path);
+      else
+        return svn_error_createf(
+          SVN_ERR_FS_NOT_FOUND, NULL,
+          _("Path '%s' doesn't exist in HEAD revision"),
+          lb->path);
+    }
 
   /* We need to have a username attached to the fs. */
   if (!lb->fs->access_ctx || !lb->fs->access_ctx->username)

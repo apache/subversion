@@ -7,10 +7,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -1471,10 +1471,18 @@ def diff_renamed_file(sbox):
   exit_code, diff_output, err_output = svntest.main.run_svn(None,
                                                             'diff', '-r', '1',
                                                             pi2_path)
-
   if check_diff_output(diff_output,
                        pi2_path,
                        'M') :
+    raise svntest.Failure
+
+  # Repos->WC diff of the file ignoring copyfrom
+  exit_code, diff_output, err_output = svntest.main.run_svn(
+                                         None, 'diff', '-r', '1',
+                                         '--show-copies-as-adds', pi2_path)
+  if check_diff_output(diff_output,
+                       pi2_path,
+                       'A') :
     raise svntest.Failure
 
   svntest.main.file_append(pi2_path, "new pi")
@@ -1493,6 +1501,20 @@ def diff_renamed_file(sbox):
                        'M') :
     raise svntest.Failure
 
+  # Repos->WC of the directory ignoring copyfrom
+  exit_code, diff_output, err_output = svntest.main.run_svn(
+    None, 'diff', '-r', '1', '--show-copies-as-adds', os.path.join('A', 'D'))
+
+  if check_diff_output(diff_output,
+                       pi_path,
+                       'D') :
+    raise svntest.Failure
+
+  if check_diff_output(diff_output,
+                       pi2_path,
+                       'A') :
+    raise svntest.Failure
+
   # WC->WC of the file
   exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff',
                                                             pi2_path)
@@ -1501,11 +1523,20 @@ def diff_renamed_file(sbox):
                        'M') :
     raise svntest.Failure
 
+  # WC->WC of the file ignoring copyfrom
+  exit_code, diff_output, err_output = svntest.main.run_svn(
+                                         None, 'diff',
+                                         '--show-copies-as-adds', pi2_path)
+  if check_diff_output(diff_output,
+                       pi2_path,
+                       'A') :
+    raise svntest.Failure
+
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg')
 
-  # Repos->WC diff of file after the rename.
+  # Repos->WC diff of file after the rename
   exit_code, diff_output, err_output = svntest.main.run_svn(None,
                                                             'diff', '-r', '1',
                                                             pi2_path)
@@ -1514,7 +1545,19 @@ def diff_renamed_file(sbox):
                        'M') :
     raise svntest.Failure
 
-  # Repos->repos diff after the rename.
+  # Repos->WC diff of file after the rename. The local file is not
+  # a copy anymore (it has schedule "normal"), so --show-copies-as-adds
+  # should have no effect.
+  exit_code, diff_output, err_output = svntest.main.run_svn(
+                                         None, 'diff', '-r', '1',
+                                         '--show-copies-as-adds', pi2_path)
+  if check_diff_output(diff_output,
+                       pi2_path,
+                       'M') :
+    raise svntest.Failure
+
+  # Repos->repos diff after the rename
+  ### --show-copies-as-adds has no effect
   exit_code, diff_output, err_output = svntest.main.run_svn(None, 'diff',
                                                             '-r', '2:3',
                                                             pi2_path)
@@ -1773,7 +1816,7 @@ def diff_renamed_dir(sbox):
 
   # Check a repos->wc diff
   exit_code, diff_output, err_output = svntest.main.run_svn(
-    None, 'diff', os.path.join('A', 'D'))
+    None, 'diff', '--show-copies-as-adds', os.path.join('A', 'D'))
 
   if check_diff_output(diff_output,
                        os.path.join('A', 'D', 'G', 'pi'),
@@ -1946,7 +1989,7 @@ def diff_schedule_delete(sbox):
   ]
 
   expected_output_r1_base = make_diff_header("foo", "revision 0",
-                                                "revision 3") + [
+                                                "working copy") + [
   "@@ -0,0 +1,2 @@\n",
   "+xxx\n",
   "+yyy\n"
@@ -2149,8 +2192,7 @@ def diff_repos_wc_add_with_props(sbox):
 
   sbox.build()
 
-  diff_foo_r1_r3 = make_diff_header("foo", "revision 0",
-                                                "revision 3") + [
+  diff_foo = [
     "@@ -0,0 +1 @@\n",
     "+content\n",
     "\n",
@@ -2160,7 +2202,7 @@ def diff_repos_wc_add_with_props(sbox):
     "## -0,0 +1 ##\n",
     "+propvalue\n",
     ]
-  diff_X_r1_r3 = [
+  diff_X = [
     "\n",
     "Property changes on: X\n",
     "___________________________________________________________________\n",
@@ -2168,7 +2210,7 @@ def diff_repos_wc_add_with_props(sbox):
     "## -0,0 +1 ##\n",
     "+propvalue\n",
     ]
-  diff_bar_r1_r3 = make_diff_header("X/bar", "revision 0", "revision 3") + [
+  diff_X_bar = [
     "@@ -0,0 +1 @@\n",
     "+content\n",
     "\n",
@@ -2179,8 +2221,17 @@ def diff_repos_wc_add_with_props(sbox):
     "+propvalue\n",
     ]
 
-  expected_output_r1_r3 = diff_X_r1_r3 + diff_bar_r1_r3 + diff_foo_r1_r3
-  expected_output_r1_r3_a = diff_foo_r1_r3 + diff_bar_r1_r3 + diff_X_r1_r3
+  diff_foo_r1_base = make_diff_header("foo", "revision 0",
+                                              "revision 3") + diff_foo
+  diff_foo_base_r3 = make_diff_header("foo", "revision 0",
+                                             "revision 3") + diff_foo
+  diff_X_bar_r1_base = make_diff_header("X/bar", "revision 0",
+                                                 "revision 3") + diff_X_bar
+  diff_X_bar_base_r3 = make_diff_header("X/bar", "revision 0",
+                                                 "revision 3") + diff_X_bar
+
+  expected_output_r1_base = diff_X + diff_X_bar_r1_base + diff_foo_r1_base
+  expected_output_base_r3 = diff_foo_base_r3 + diff_X_bar_base_r3 + diff_X
 
   os.chdir(sbox.wc_dir)
 
@@ -2203,9 +2254,9 @@ def diff_repos_wc_add_with_props(sbox):
 
   # Now, if we diff r1 to WORKING or BASE, we should see the content
   # addition for foo and X/bar, and property additions for all three.
-  svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
+  svntest.actions.run_and_verify_svn(None, expected_output_r1_base, [],
                                      'diff', '-r', '1')
-  svntest.actions.run_and_verify_svn(None, expected_output_r1_r3, [],
+  svntest.actions.run_and_verify_svn(None, expected_output_r1_base, [],
                                      'diff', '-r', '1:BASE')
 
   # Update the BASE and WORKING revisions to r1.
@@ -2213,7 +2264,7 @@ def diff_repos_wc_add_with_props(sbox):
                                      'up', '-r', '1')
 
   # If we diff BASE to r3, we should see the same output as above.
-  svntest.actions.run_and_verify_svn(None, expected_output_r1_r3_a, [],
+  svntest.actions.run_and_verify_svn(None, expected_output_base_r3, [],
                                      'diff', '-r', 'BASE:3')
 
 
@@ -2307,11 +2358,7 @@ def diff_base_repos_moved(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', '')
 
-  # Check that a base->repos diff shows deleted and added lines.
-  # It's not clear whether we expect a file-change diff or
-  # a file-delete plus file-add.  The former is currently produced if we
-  # explicitly request a diff of the file itself, and the latter if we
-  # request a tree diff which just happens to contain the file.
+  # Check that a base->repos diff with copyfrom shows deleted and added lines.
   exit_code, out, err = svntest.actions.run_and_verify_svn(
     None, svntest.verify.AnyOutput, [], 'diff', '-rBASE:1', newfile)
 
@@ -2323,7 +2370,6 @@ def diff_base_repos_moved(sbox):
   if (out[2][:3] != '---' or out[2].find('kappa)') == -1 or
       out[3][:3] != '+++' or out[3].find('iota)') == -1):
     raise svntest.Failure
-
 
 #----------------------------------------------------------------------
 # A diff of an added file within an added directory should work, and
@@ -2951,7 +2997,7 @@ def diff_external_diffcmd(sbox):
     "iota\t(revision 1)\n",
     "-L\n",
     "iota\t(working copy)\n",
-    os.path.join('.svn', 'text-base', 'iota.svn-base') + "\n",
+    os.path.abspath(os.path.join('.svn', 'text-base', 'iota.svn-base')) + "\n",
     os.path.abspath("iota") + "\n"])
 
   # Check that the output of diff corresponds with the expected arguments,

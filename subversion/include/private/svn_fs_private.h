@@ -3,10 +3,10 @@
  * be consumed by libsvn_fs* and non-libsvn_fs* modules.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -57,6 +57,39 @@ extern "C" {
  * @since New in 1.6. */
 apr_hash_t *
 svn_fs__access_get_lock_tokens(svn_fs_access_t *access_ctx);
+
+
+/**
+ * Same as svn_fs_begin_txn2(), except it begins an obliteration-txn
+ * that can be used to replace revision @a rev. @a rev must be a valid
+ * revision number at the time of this call. This transaction cannot be
+ * committed with a normal commit but only with
+ * svn_fs__commit_obliteration_txn().
+ *
+ * @note You usually don't want to call this directly.
+ * Instead, call svn_repos__obliterate_path_rev(), which honors the
+ * repository's hook configurations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_fs__begin_obliteration_txn(svn_fs_txn_t **txn_p,
+                               svn_fs_t *fs,
+                               svn_revnum_t rev,
+                               apr_pool_t *pool);
+
+
+/** Commit the obliteration-txn @a txn. Similar to svn_fs_commit_txn() but
+ * replaces the revision @a rev, which must be the same revision as was
+ * specified when the transaction was begun. No conflict is possible.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_fs__commit_obliteration_txn(svn_revnum_t rev,
+                                svn_fs_txn_t *txn,
+                                apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

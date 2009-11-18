@@ -8,10 +8,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -2281,7 +2281,7 @@ def exclude_keeps_hidden_entries(sbox):
   svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', 'D')
   # we could grep the 'entries' file, but...
   # or we could use 'info', but info_excluded() is XFail.
-  expected_stderr = ".*svn: 'C' is already under version control.*"
+  expected_stderr = ".*svn: '.*C' is already under version control.*"
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'mkdir', 'C')
 
@@ -2296,10 +2296,10 @@ def info_excluded(sbox):
   #     D         A
   #     % svn info A
   #     A:  (Not a versioned resource)
-  #     
+  #
   #     ..\..\..\subversion\svn\info-cmd.c:562: (apr_err=200000)
   #     svn: A problem occurred; see other errors for details
-  # 
+  #
   # It should acknowledge the existence (in the repos) of ./A and print some
   # info about it, like it does if '--set-depth empty' is used instead.
 

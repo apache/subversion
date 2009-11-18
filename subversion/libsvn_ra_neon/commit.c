@@ -2,10 +2,10 @@
  * commit.c :  routines for committing changes to the server
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -693,7 +693,7 @@ static svn_error_t * commit_delete_entry(const char *path,
                                          apr_pool_t *pool)
 {
   resource_baton_t *parent = parent_baton;
-  const char *name = svn_uri_basename(path, pool);
+  const char *name = svn_relpath_basename(path, pool);
   apr_hash_t *extra_headers = NULL;
   const char *child;
   int code;
@@ -841,7 +841,7 @@ static svn_error_t * commit_add_dir(const char *path,
   resource_baton_t *parent = parent_baton;
   resource_baton_t *child;
   int code;
-  const char *name = svn_uri_basename(path, dir_pool);
+  const char *name = svn_relpath_basename(path, dir_pool);
   apr_pool_t *workpool = svn_pool_create(dir_pool);
   version_rsrc_t *rsrc = NULL;
 
@@ -921,7 +921,7 @@ static svn_error_t * commit_open_dir(const char *path,
 {
   resource_baton_t *parent = parent_baton;
   resource_baton_t *child = apr_pcalloc(dir_pool, sizeof(*child));
-  const char *name = svn_uri_basename(path, dir_pool);
+  const char *name = svn_relpath_basename(path, dir_pool);
   apr_pool_t *workpool = svn_pool_create(dir_pool);
   version_rsrc_t *rsrc = NULL;
 
@@ -986,7 +986,7 @@ static svn_error_t * commit_add_file(const char *path,
 {
   resource_baton_t *parent = parent_baton;
   resource_baton_t *file;
-  const char *name = svn_uri_basename(path, file_pool);
+  const char *name = svn_relpath_basename(path, file_pool);
   apr_pool_t *workpool = svn_pool_create(file_pool);
   version_rsrc_t *rsrc = NULL;
 
@@ -1123,7 +1123,7 @@ static svn_error_t * commit_open_file(const char *path,
 {
   resource_baton_t *parent = parent_baton;
   resource_baton_t *file;
-  const char *name = svn_uri_basename(path, file_pool);
+  const char *name = svn_relpath_basename(path, file_pool);
   apr_pool_t *workpool = svn_pool_create(file_pool);
   version_rsrc_t *rsrc = NULL;
 
@@ -1188,8 +1188,6 @@ commit_apply_txdelta(void *file_baton,
   resource_baton_t *file = file_baton;
   put_baton_t *baton;
   svn_stream_t *stream;
-  const char *tempfile_name;
-  svn_checksum_t *checksum;
 
   baton = apr_pcalloc(file->pool, sizeof(*baton));
   baton->ras = file->cc->ras;
@@ -1204,24 +1202,9 @@ commit_apply_txdelta(void *file_baton,
   /* ### oh, hell. Neon's request body support is either text (a C string),
      ### or a FILE*. since we are getting binary data, we must use a FILE*
      ### for now. isn't that special? */
-
-  /* Create a temp file in the system area to hold the contents. Note that
-     we need a file since we will be rewinding it. The file will be closed
-     and deleted when the pool is cleaned up.  Avoid temp file name
-     collisions by requesting unique temp file name based on the checksum
-     of FILE->RSRC->LOCAL_PATH. */
-  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5,
-                       file->rsrc->local_path,
-                       strlen(file->rsrc->local_path),
-                       pool));
-  tempfile_name = apr_psprintf(pool, "tempfile.%s",
-                               svn_checksum_to_cstring_display(checksum,
-                                                               pool));  
-
-  SVN_ERR(svn_io_open_uniquely_named(&baton->tmpfile, NULL, NULL,
-                                     tempfile_name, ".tmp",
-                                     svn_io_file_del_on_pool_cleanup,
-                                     file->pool, pool));
+  SVN_ERR(svn_io_open_unique_file3(&baton->tmpfile, NULL, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   file->pool, pool));
 
   stream = svn_stream_create(baton, pool);
   svn_stream_set_write(stream, commit_stream_write);

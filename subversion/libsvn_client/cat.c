@@ -2,10 +2,10 @@
  * cat.c:  implementation of the 'cat' command
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -56,7 +56,6 @@ cat_local_file(svn_wc_context_t *wc_ctx,
                void *cancel_baton,
                apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
   apr_hash_t *kw = NULL;
   svn_subst_eol_style_t style;
   apr_hash_t *props;
@@ -85,8 +84,8 @@ cat_local_file(svn_wc_context_t *wc_ctx,
 
   if (revision->kind != svn_opt_revision_working)
     {
-      SVN_ERR(svn_wc_get_pristine_contents(&input, local_abspath, scratch_pool,
-                                           scratch_pool));
+      SVN_ERR(svn_wc_get_pristine_contents2(&input, wc_ctx, local_abspath,
+                                            scratch_pool, scratch_pool));
       SVN_ERR(svn_wc_get_prop_diffs2(NULL, &props, wc_ctx, local_abspath,
                                      scratch_pool, scratch_pool));
     }
@@ -112,10 +111,6 @@ cat_local_file(svn_wc_context_t *wc_ctx,
   special = apr_hash_get(props, SVN_PROP_SPECIAL,
                          APR_HASH_KEY_STRING);
 
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      scratch_pool, scratch_pool));
-
   if (eol_style)
     svn_subst_eol_style_from_value(&style, &eol, eol_style->data);
 
@@ -127,13 +122,23 @@ cat_local_file(svn_wc_context_t *wc_ctx,
     }
   else
     {
-      tm = entry->cmt_date;
+      SVN_ERR(svn_wc__node_get_changed_info(NULL, &tm, NULL, wc_ctx,
+                                            local_abspath, scratch_pool,
+                                            scratch_pool));
     }
 
   if (keywords)
     {
+      svn_revnum_t changed_rev;
       const char *rev_str;
       const char *author;
+      const char *url;
+
+      SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, NULL, &author, wc_ctx,
+                                            local_abspath, scratch_pool,
+                                            scratch_pool));
+      SVN_ERR(svn_wc__node_get_url(&url, wc_ctx, local_abspath, scratch_pool,
+                                   scratch_pool));
 
       if (local_mod)
         {
@@ -141,17 +146,16 @@ cat_local_file(svn_wc_context_t *wc_ctx,
              to the revision number, and set the author to
              "(local)" since we can't always determine the
              current user's username */
-          rev_str = apr_psprintf(scratch_pool, "%ldM", entry->cmt_rev);
+          rev_str = apr_psprintf(scratch_pool, "%ldM", changed_rev);
           author = _("(local)");
         }
       else
         {
-          rev_str = apr_psprintf(scratch_pool, "%ld", entry->cmt_rev);
-          author = entry->cmt_author;
+          rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
         }
 
-      SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, rev_str,
-                                        entry->url, tm, author, scratch_pool));
+      SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, rev_str, url, tm,
+                                        author, scratch_pool));
     }
 
   /* Our API contract says that OUTPUT will not be closed. The two paths

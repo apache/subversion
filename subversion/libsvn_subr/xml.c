@@ -2,10 +2,10 @@
  * xml.c:  xml helper code shared among the Subversion libraries.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -401,7 +401,7 @@ svn_xml_parse(svn_xml_parser_t *svn_parser,
   int success;
 
   /* Parse some xml data */
-  success = XML_Parse(svn_parser->parser, buf, len, is_final);
+  success = XML_Parse(svn_parser->parser, buf, (int) len, is_final);
 
   /* If expat choked internally, return its error. */
   if (! success)

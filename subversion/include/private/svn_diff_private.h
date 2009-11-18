@@ -2,10 +2,10 @@
  * svn_diff_private.h: libsvn_diff related functions
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -41,11 +41,37 @@ typedef struct svn_hunk_t {
   svn_stream_t *diff_text;
 
   /* The original and modified texts in the hunk range.
-   * Derived from the diff text. The lines are read verbatim
-   * from the patch file, so the first character of each line
-   * read from these streams is a space or a '-' in case of
-   * the original text, or a space and a '+' in case of the
-   * modified text. */
+   * Derived from the diff text.
+   *
+   * For example, consider a hunk such as:
+   *   @@ -1,5 +1,5 @@
+   *    #include <stdio.h>
+   *    int main(int argc, char *argv[])
+   *    {
+   *   -        printf("Hello World!\n");
+   *   +        printf("I like Subversion!\n");
+   *    }
+   *
+   * Then, the original text described by the hunk is:
+   *   #include <stdio.h>
+   *   int main(int argc, char *argv[])
+   *   {
+   *           printf("Hello World!\n");
+   *   }
+   *
+   * And the modified text described by the hunk is:
+   *   #include <stdio.h>
+   *   int main(int argc, char *argv[])
+   *   {
+   *           printf("I like Subversion!\n");
+   *   }
+   *
+   * Because these streams make use of line filtering and transformation,
+   * they should only be read line-by-line with svn_stream_readline().
+   * Reading them with svn_stream_read() will not yield the expected result,
+   * because it will return the unidiff text from the patch file unmodified.
+   * The streams support resetting.
+   */
   svn_stream_t *original_text;
   svn_stream_t *modified_text;
 
@@ -73,6 +99,10 @@ typedef struct svn_patch_t {
 
   /* EOL string used in patch file. */
   const char *eol_str;
+
+  /* An array containing an svn_hunk_t object for each hunk parsed
+   * from the patch. */
+  apr_array_header_t *hunks;
 } svn_patch_t;
 
 /* Return the next *PATCH in PATCH_FILE. The patch file is assumed to
@@ -87,24 +117,9 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/* Return the next *HUNK from a PATCH.
- * If no hunk can be found, set *HUNK to NULL.
- * Allocate results in RESULT_POOL.
- * Use SCRATCH_POOL for all other allocations. */
+/* Dispose of PATCH, closing any streams used by it. */
 svn_error_t *
-svn_diff__parse_next_hunk(svn_hunk_t **hunk,
-                          svn_patch_t *patch,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
-
-/* 
- * This function should be called before clearing or destroying the pool
- * HUNK was allocated in (i.e. the result pool passed to
- * svn_diff__parse_next_hunk()).
- * It ensures that all streams which were opened for the hunk are closed.
- **/
-svn_error_t *
-svn_diff__destroy_hunk(svn_hunk_t *hunk);
+svn_diff__close_patch(svn_patch_t *patch);
 
 #ifdef __cplusplus
 }

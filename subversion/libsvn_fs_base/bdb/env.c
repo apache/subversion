@@ -1,10 +1,10 @@
 /* env.h : managing the BDB environment
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -298,6 +298,8 @@ create_env(bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
      because it must survive the cache pool cleanup. */
   path_size = strlen(path) + 1;
   path_bdb_size = strlen(path_bdb) + 1;
+  /* Using calloc() to ensure the padding bytes in bdb->key (which is used as
+   * a hash key) are zeroed. */
   bdb = calloc(1, sizeof(*bdb) + path_size + path_bdb_size);
 
   /* We must initialize this now, as our callers may assume their bdb
@@ -431,7 +433,7 @@ static svn_error_t *
 bdb_cache_key(bdb_env_key_t *keyp, apr_file_t **dbconfig_file,
               const char *path, apr_pool_t *pool)
 {
-  const char *dbcfg_file_name = svn_path_join(path, BDB_CONFIG_FILE, pool);
+  const char *dbcfg_file_name = svn_dirent_join(path, BDB_CONFIG_FILE, pool);
   apr_file_t *dbcfg_file;
   apr_status_t apr_err;
   apr_finfo_t finfo;

@@ -2,10 +2,10 @@
  * ra_loader.c:  logic for loading different RA library implementations
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -529,6 +529,54 @@ svn_error_t *svn_ra_get_session_url(svn_ra_session_t *session,
   return session->vtable->get_session_url(session, url, pool);
 }
 
+svn_error_t *svn_ra_get_path_relative_to_session(svn_ra_session_t *session,
+                                                 const char **rel_path,
+                                                 const char *url,
+                                                 apr_pool_t *pool)
+{
+  const char *sess_url;
+  SVN_ERR(session->vtable->get_session_url(session, &sess_url, pool));
+  if (strcmp(sess_url, url) == 0)
+    {
+      *rel_path = "";
+    }
+  else
+    {
+      *rel_path = svn_uri_is_child(sess_url, url, pool);
+      if (! *rel_path)
+        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                 _("'%s' isn't a child of session URL '%s'"),
+                                 url, sess_url);
+      *rel_path = svn_path_uri_decode(*rel_path, pool);
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_ra_get_path_relative_to_root(svn_ra_session_t *session,
+                                              const char **rel_path,
+                                              const char *url,
+                                              apr_pool_t *pool)
+{
+  const char *root_url;
+  SVN_ERR(session->vtable->get_repos_root(session, &root_url, pool));
+  if (strcmp(root_url, url) == 0)
+    {
+      *rel_path = "";
+    }
+  else
+    {
+      *rel_path = svn_uri_is_child(root_url, url, pool);
+      if (! *rel_path)
+        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                 _("'%s' isn't a child of repository root "
+                                   "URL '%s'"),
+                                 url, root_url);
+      *rel_path = svn_path_uri_decode(*rel_path, pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_get_latest_revnum(svn_ra_session_t *session,
                                       svn_revnum_t *latest_revnum,
                                       apr_pool_t *pool)
@@ -919,7 +967,7 @@ svn_error_t *svn_ra_lock(svn_ra_session_t *session,
 {
   apr_hash_index_t *hi;
 
-  for (hi = apr_hash_first(NULL, path_revs); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
       const void *path;
       apr_hash_this(hi, &path, NULL, NULL);
@@ -944,7 +992,7 @@ svn_error_t *svn_ra_unlock(svn_ra_session_t *session,
 {
   apr_hash_index_t *hi;
 
-  for (hi = apr_hash_first(NULL, path_tokens); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
       const void *path;
       apr_hash_this(hi, &path, NULL, NULL);
@@ -1084,6 +1132,19 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                                              pool);
     }
   return err;
+}
+
+svn_error_t *
+svn_ra__obliterate(svn_ra_session_t *session,
+                   svn_revnum_t rev,
+                   const char *path,
+                   apr_pool_t *pool)
+{
+  const char *session_url;
+
+  SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
+
+  return session->vtable->obliterate_path_rev(session, rev, path, pool);
 }
 
 

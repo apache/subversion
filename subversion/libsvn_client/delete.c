@@ -2,10 +2,10 @@
  * delete.c:  wrappers around wc delete functionality.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -85,16 +85,38 @@ svn_client__can_delete(const char *path,
                        apr_pool_t *pool)
 {
   svn_opt_revision_t revision;
+  const svn_wc_entry_t *entry;
+  const char* local_abspath;
+
   revision.kind = svn_opt_revision_unspecified;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  /* A file external should not be deleted since the file external is
+     implemented as a switched file and it would delete the file the
+     file external is switched to, which is not the behavior the user
+     would probably want. */
+  SVN_ERR(svn_wc__maybe_get_entry(&entry, ctx->wc_ctx, local_abspath,
+                                  svn_node_unknown, FALSE, FALSE, pool, pool));
+
+  if (entry != NULL && entry->file_external_path)
+    return svn_error_createf(SVN_ERR_WC_CANNOT_DELETE_FILE_EXTERNAL, NULL,
+                             _("Cannot remove the file external at '%s'; "
+                               "please propedit or propdel the svn:externals "
+                               "description that created it"),
+                             svn_dirent_local_style(local_abspath, pool));
+
 
   /* Use an infinite-depth status check to see if there's anything in
      or under PATH which would make it unsafe for deletion.  The
      status callback function find_undeletables() makes the
      determination, returning an error if it finds anything that shouldn't
      be deleted. */
-  return svn_client_status5(NULL, path, &revision, find_undeletables, NULL,
-                            svn_depth_infinity, FALSE, FALSE, FALSE, FALSE,
-                            NULL, ctx, pool);
+  return svn_error_return(svn_client_status5(NULL, path, &revision,
+                                             find_undeletables, NULL,
+                                             svn_depth_infinity, FALSE,
+                                             FALSE, FALSE, FALSE,
+                                             NULL, ctx, pool));
 }
 
 
@@ -132,7 +154,8 @@ delete_urls(svn_commit_info_t **commit_info_p,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Condense our list of deletion targets. */
-  SVN_ERR(svn_path_condense_targets(&common, &targets, paths, TRUE, pool));
+  SVN_ERR(svn_uri_condense_targets(&common, &targets, paths, TRUE,
+                                   pool, pool));
   if (! targets->nelts)
     {
       const char *bname;
@@ -153,7 +176,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
           const char *path = APR_ARRAY_IDX(targets, i, const char *);
 
           item = svn_client_commit_item3_create(pool);
-          item->url = svn_path_join(common, path, pool);
+          item->url = svn_uri_join(common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
@@ -220,7 +243,6 @@ delete_urls(svn_commit_info_t **commit_info_p,
 
 svn_error_t *
 svn_client__wc_delete(const char *path,
-                      svn_wc_adm_access_t *adm_access,
                       svn_boolean_t force,
                       svn_boolean_t dry_run,
                       svn_boolean_t keep_local,
@@ -229,18 +251,22 @@ svn_client__wc_delete(const char *path,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   if (!force && !keep_local)
     /* Verify that there are no "awkward" files */
-    SVN_ERR(svn_client__can_delete(path, ctx, pool));
+    SVN_ERR(svn_client__can_delete(local_abspath, ctx, pool));
 
   if (!dry_run)
     /* Mark the entry for commit deletion and perform wc deletion */
-    return svn_wc_delete3(path, adm_access,
-                          ctx->cancel_func, ctx->cancel_baton,
-                          notify_func, notify_baton, keep_local, pool);
-  else
-    return SVN_NO_ERROR;
+    return svn_error_return(svn_wc_delete4(ctx->wc_ctx, local_abspath,
+                                           keep_local, TRUE,
+                                           ctx->cancel_func, ctx->cancel_baton,
+                                           notify_func, notify_baton, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -280,10 +306,10 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
 
           /* Let the working copy library handle the PATH. */
           SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx,
-                                              parent_path, TRUE, 0,
+                                              parent_path, TRUE, -1,
                                               ctx->cancel_func,
                                               ctx->cancel_baton, subpool));
-          SVN_ERR(svn_client__wc_delete(path, adm_access, force,
+          SVN_ERR(svn_client__wc_delete(path, force,
                                         FALSE, keep_local,
                                         ctx->notify_func2,
                                         ctx->notify_baton2,

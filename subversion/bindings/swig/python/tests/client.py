@@ -27,6 +27,10 @@ class SubversionClientTestCase(unittest.TestCase):
     self.change_author = author
     self.changed_paths = changed_paths
 
+  def log_entry_receiver(self, log_entry, pool):
+    """An implementation of svn_log_entry_receiver_t."""
+    self.received_revisions.append(log_entry.revision)
+
   def setUp(self):
     """Set up authentication and client context"""
     self.client_ctx = client.svn_client_create_context()
@@ -47,6 +51,20 @@ class SubversionClientTestCase(unittest.TestCase):
     ]
 
     self.client_ctx.auth_baton = core.svn_auth_open(providers)
+
+    self.cleanup_dirs = []
+
+  def tearDown(self):
+    # We have to free client_ctx first, since it may be holding handles
+    # to WC DBs
+    del self.client_ctx
+    for dir in self.cleanup_dirs:
+      core.svn_io_remove_dir(dir)
+
+  def allocate_temp_dir(self, suffix = ""):
+    temp_dir_name = core.svn_dirent_internal_style(tempfile.mkdtemp(suffix))
+    self.cleanup_dirs.append(temp_dir_name)
+    return temp_dir_name
 
   def testBatonPlay(self):
     """Test playing with C batons"""
@@ -129,7 +147,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = tempfile.mktemp('-checkout')
+    path = self.allocate_temp_dir('-checkout')
 
     self.assertRaises(ValueError, client.checkout2,
                       REPOS_URL, path, None, None, True, True,
@@ -187,6 +205,27 @@ class SubversionClientTestCase(unittest.TestCase):
       self.assert_(dir in self.changed_paths)
       self.assertEqual(self.changed_paths[dir].action, 'A')
 
+  def test_log5(self):
+    """Test svn_client_log5."""
+    start = core.svn_opt_revision_t()
+    start.kind = core.svn_opt_revision_number
+    start.value.number = 0
+
+    end = core.svn_opt_revision_t()
+    end.kind = core.svn_opt_revision_number
+    end.value.number = 4
+
+    rev_range = core.svn_opt_revision_range_t()
+    rev_range.start = start
+    rev_range.end = end
+
+    self.received_revisions = []
+
+    client.log5((REPOS_URL,), end, (rev_range,), 0, False, True, False, (),
+        self.log_entry_receiver, self.client_ctx)
+
+    self.assertEqual(self.received_revisions, range(0, 5))
+
   def test_uuid_from_url(self):
     """Test svn_client_uuid_from_url on a file:// URL"""
     self.assert_(isinstance(
@@ -200,7 +239,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = tempfile.mktemp('-url_from_path')
+    path = self.allocate_temp_dir('-url_from_path')
 
     client.checkout2(REPOS_URL, path, rev, rev, True, True,
                      self.client_ctx)
@@ -212,7 +251,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = tempfile.mktemp('uuid_from_path')
+    path = self.allocate_temp_dir('-uuid_from_path')
 
     client.checkout2(REPOS_URL, path, rev, rev, True, True,
                      self.client_ctx)
@@ -237,7 +276,7 @@ class SubversionClientTestCase(unittest.TestCase):
     # in the repository.
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
-    wc_path = core.svn_path_canonicalize(tempfile.mktemp())
+    wc_path = self.allocate_temp_dir('-info_file')
 
     client.checkout2(REPOS_URL, wc_path, rev, rev, True, True,
                      self.client_ctx)
@@ -282,7 +321,46 @@ class SubversionClientTestCase(unittest.TestCase):
       self.assertEqual(self.info.size, 8)
     finally:
       wc.adm_close(adm_access)
-      core.svn_io_remove_dir(wc_path)
+
+  def test_merge_peg3(self):
+    """Test svn_client_merge_peg3."""
+    head = core.svn_opt_revision_t()
+    head.kind = core.svn_opt_revision_head
+    wc_path = self.allocate_temp_dir('-merge_peg3')
+
+    client.checkout3(REPOS_URL, wc_path, head, head, core.svn_depth_infinity,
+                     True, False, self.client_ctx)
+
+    # Let's try to backport a change from the v1x branch
+    trunk_path = core.svn_dirent_join(wc_path, 'trunk')
+    v1x_path = core.svn_dirent_join(wc_path, 'branches/v1x')
+
+    start = core.svn_opt_revision_t()
+    start.kind = core.svn_opt_revision_number
+    start.value.number = 8
+
+    end = core.svn_opt_revision_t()
+    end.kind = core.svn_opt_revision_number
+    end.value.number = 9
+
+    range = core.svn_opt_revision_range_t()
+    range.start = start
+    range.end = end
+
+    client.merge_peg3(v1x_path, (range,), end, trunk_path,
+                      core.svn_depth_infinity, False, False, False, False,
+                      None, self.client_ctx)
+
+    # Did it take effect?
+    readme_path_native = core.svn_dirent_local_style(
+      core.svn_dirent_join(trunk_path, 'README.txt')
+    )
+
+    readme = open(readme_path_native, 'r')
+    readme_text = readme.read()
+    readme.close()
+
+    self.assertEqual(readme_text, 'This is a test.\n')
 
 def suite():
     return unittest.makeSuite(SubversionClientTestCase, 'test',

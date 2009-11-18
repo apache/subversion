@@ -238,8 +238,10 @@ perusal order:</p>
 </li>
 </ol>
 
-<p>Subversion tries to stay portable by using only ANSI/ISO C and by
-using the Apache Portable Runtime (APR) library.  APR is the
+<p>Subversion tries to stay portable by using
+only <a href="http://en.wikipedia.org/wiki/ANSI_C">ANSI/ISO C</a>
+(a.k.a <a href="http://en.wikipedia.org/wiki/ANSI_C#C90">C90</a>) and
+by using the Apache Portable Runtime (APR) library.  APR is the
 portability layer used by the Apache httpd server, and more
 information can be found at <a href="http://apr.apache.org/"
 >http://apr.apache.org/</a>.</p>
@@ -912,20 +914,41 @@ principles:</p>
        it at the start of each iteration, then destroy it after the loop 
        is done, like so:</p>
        <pre>
-         apr_pool_t *subpool = svn_pool_create(pool);
+         apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
          for (i = 0; i &lt; n; ++i)
          {
-           svn_pool_clear(subpool);
-           do_operation(..., subpool);
+           svn_pool_clear(iterpool);
+           do_operation(..., iterpool);
          }
 
-         svn_pool_destroy(subpool);
+         svn_pool_destroy(iterpool);
        </pre>
 </li>
 </ol>
 
-<p>By using a loop subpool for loop-bounded data, you ensure O(1) instead
+<p>Supporting the above rules, we use the following pool names as conventions
+to represent various pool lifetimes:</p>
+<ul>
+<li><p><code>result_pool</code> - The pool in which the output of a function
+should be allocated.  A result pool declaration should <strong>always</strong>
+be found in a function argument list, and never inside a local block.  (But
+not all functions need or have result pools.)
+</p></li>
+
+<li><p><code>scratch_pool</code> - The pool in which all function-local data
+should be allocated.  This pool is also provided by the caller, who may
+choose to clear this pool immediately when control returns to it.
+</p></li>
+
+<li><p><code>iterpool</code> - An <em>iteration</em> pool, used inside loops,
+as per the above example.</p></li>
+</ul>
+
+<p>(Note: Some legacy code uses a single <code>pool</code> function argument,
+which operates as both the result and scratch pools.)</p>
+
+<p>By using an iterpool for loop-bounded data, you ensure O(1) instead
 of O(N) memory leakage should the function return abruptly from
 within the loop (say, due to error).  That's why you shouldn't make a
 subpool for data which persists throughout a function, but instead
@@ -942,21 +965,22 @@ example, pool choices indicate a lot about what's going on in this
 code:</p>
 
 <pre>
-      apr_hash_t *persistent_objects = apr_hash_make(pool);
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_hash_t *persistent_objects = apr_hash_make(result_pool);
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
       for (i = 0; i &lt; n; ++i)
       {
         const char *intermediate_result;
         const char *key, *val;
         
-        svn_pool_clear(subpool);
-        SVN_ERR(do_something(&amp;intermediate_result, ..., subpool));
-        SVN_ERR(get_result(intermediate_result, &amp;key, &amp;val, ..., pool));
+        svn_pool_clear(iterpool);
+        SVN_ERR(do_something(&amp;intermediate_result, ..., iterpool));
+        SVN_ERR(get_result(intermediate_result, &amp;key, &amp;val, ...,
+                           result_pool));
         apr_hash_set(persistent_objects, key, APR_HASH_KEY_STRING, val);
       }
-      svn_pool_destroy(subpool);
 
+      svn_pool_destroy(iterpool);
       return persistent_objects;
 </pre>
 
@@ -2403,6 +2427,22 @@ central place to describe the following aspects of your branch:</p>
 
 </ul>
 
+<p>Here is an example BRANCH-README file that demonstrates what we're
+talking about:</p>
+
+<pre style="margin-left: 0.25in;">
+This branch exists for the resolution of issue #8810, per the ideas
+documented in /trunk/notes/frobnobbing-feature.txt.  It is being
+managed as a reintegrate-able branch, with regular catch-up merges
+from the trunk.
+
+TODO:
+
+  * compose regression tests        [DONE]
+  * add frob identification logic   [STARTED (fitz)]
+  * add nobbing bits                []
+</pre>
+
 <p>Why all the fuss?  Because this project idealizes communication and
 collaboration, understanding that the latter is more likely to happen
 when the former is a point of emphasis.</p>
@@ -3177,8 +3217,12 @@ to download and test it separately.  The trick is to extract the
 release manager, and thus can be signed as described above.
 To verify that the files are identical, you may use either the MD5 checksums
 or the release manager's signature, both of which should be provided with the
-tarballs.
-</p>
+tarballs.</p>
+
+<p>But, if the checksum is not identical it doesn't have to be the case that
+the file signature is wrong, or the file has been tampered with. It could very
+well be the case that you don't have an identical gzip version as the release
+manager.</p>
 </div>
 
 <div class="h2" id="custom-releases" title="custom-releases">

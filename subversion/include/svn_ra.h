@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -71,7 +71,7 @@ svn_ra_version(void);
  * then it is returned in @a value. Otherwise, @a *value is set to @c NULL.
  */
 typedef svn_error_t *(*svn_ra_get_wc_prop_func_t)(void *baton,
-                                                  const char *relpath,
+                                                  const char *path,
                                                   const char *name,
                                                   const svn_string_t **value,
                                                   apr_pool_t *pool);
@@ -660,6 +660,31 @@ svn_ra_get_session_url(svn_ra_session_t *ra_session,
                        const char **url,
                        apr_pool_t *pool);
 
+
+/** Convert @a url into a path relative to the URL at which @a ra_session
+ * is parented, setting @a *rel_path to that value.  If @a url is not
+ * a child of the session URL, return @c SVN_ERR_RA_ILLEGAL_URL.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_ra_get_path_relative_to_session(svn_ra_session_t *ra_session,
+                                    const char **rel_path,
+                                    const char *url,
+                                    apr_pool_t *pool);
+
+/** Convert @a url into a path relative to the repository root URL of
+ * the repository with which @a ra_session is associated, setting @a
+ * *rel_path to that value.  If @a url is not a child of repository
+ * root URL, return @c SVN_ERR_RA_ILLEGAL_URL.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_ra_get_path_relative_to_root(svn_ra_session_t *ra_session,
+                                 const char **rel_path,
+                                 const char *url,
+                                 apr_pool_t *pool);
 
 /**
  * Get the latest revision number from the repository of @a session.
@@ -1312,7 +1337,7 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * If @a limit is non-zero only invoke @a receiver on the first @a limit
  * logs.
  *
- * If @a discover_changed_paths, then each call to receiver passes a
+ * If @a discover_changed_paths, then each call to @a receiver passes a
  * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths argument;
  * the hash's keys are all the paths committed in that revision.
  * Otherwise, each call to receiver passes NULL for @a changed_paths.
@@ -1750,24 +1775,6 @@ svn_ra_replay(svn_ra_session_t *session,
               apr_pool_t *pool);
 
 /**
- * Set @a *has to TRUE if the server represented by @a session has
- * @a capability (one of the capabilities beginning with
- * @c "SVN_RA_CAPABILITY_"), else set @a *has to FALSE.
- *
- * If @a capability isn't recognized, throw @c SVN_ERR_UNKNOWN_CAPABILITY,
- * with the effect on @a *has undefined.
- *
- * Use @a pool for all allocation.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_ra_has_capability(svn_ra_session_t *session,
-                      svn_boolean_t *has,
-                      const char *capability,
-                      apr_pool_t *pool);
-
-/**
  * Given @a path at revision @a peg_revision, set @a *revision_deleted to the
  * revision @a path was first deleted, within the inclusive revision range
  * defined by @a peg_revision and @a end_revision.  @a path is relative
@@ -1789,6 +1796,30 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                        svn_revnum_t end_revision,
                        svn_revnum_t *revision_deleted,
                        apr_pool_t *pool);
+
+/**
+ * @defgroup Capabilities Dynamically query the server's capabilities.
+ *
+ * @{
+ */
+
+/**
+ * Set @a *has to TRUE if the server represented by @a session has
+ * @a capability (one of the capabilities beginning with
+ * @c "SVN_RA_CAPABILITY_"), else set @a *has to FALSE.
+ *
+ * If @a capability isn't recognized, throw @c SVN_ERR_UNKNOWN_CAPABILITY,
+ * with the effect on @a *has undefined.
+ *
+ * Use @a pool for all allocation.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_ra_has_capability(svn_ra_session_t *session,
+                      svn_boolean_t *has,
+                      const char *capability,
+                      apr_pool_t *pool);
 
 /**
  * The capability of understanding @c svn_depth_t (e.g., the server
@@ -1841,6 +1872,9 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
  * because we pass a list of client capabilities to the start-commit
  * hook as a single, colon-separated string.
  */
+
+/** @} */
+
 
 /**
  * Append a textual list of all available RA modules to the stringbuf

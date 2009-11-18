@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -98,8 +98,9 @@ class SVNClient :public SVNBase
   jobject getMergeinfo(const char *target, Revision &pegRevision);
   void getMergeinfoLog(int type, const char *pathOrURL,
                        Revision &pegRevision, const char *mergeSourceURL,
-                       Revision &srcPegREvision, bool discoverChangedPaths,
-                       StringArray &revProps, LogMessageCallback *callback);
+                       Revision &srcPegRevision, bool discoverChangedPaths,
+                       svn_depth_t depth, StringArray &revProps,
+                       LogMessageCallback *callback);
   jobjectArray suggestMergeSources(const char *path, Revision &pegRevision);
   void merge(const char *path1, Revision &revision1, const char *path2,
              Revision &revision2, const char *localPath, bool force,
@@ -132,7 +133,7 @@ class SVNClient :public SVNBase
             bool makeParents, RevpropTable &revprops);
   void copy(CopySources &copySources, const char *destPath,
             const char *message, bool copyAsChild, bool makeParents,
-            RevpropTable &revprops);
+            bool ignoreExternals, RevpropTable &revprops);
   jlong commit(Targets &targets, const char *message, svn_depth_t depth,
                bool noUnlock, bool keepChangelist,
                StringArray &changelists, RevpropTable &revprops);
@@ -181,18 +182,21 @@ class SVNClient :public SVNBase
                       const char *original_value, bool force);
   jstring getVersionInfo(const char *path, const char *trailUrl,
                          bool lastChanged);
+  void upgrade(const char *path);
   jobject propertyGet(jobject jthis, const char *path, const char *name,
                       Revision &revision, Revision &pegRevision);
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
             const char *relativeToDir, const char *outfileName,
             svn_depth_t depth, StringArray &changelists,
-            bool ignoreAncestry, bool noDiffDelete, bool force);
+            bool ignoreAncestry, bool noDiffDelete, bool force,
+            bool showCopiesAsAdds);
   void diff(const char *target, Revision &pegevision,
             Revision &startRevision, Revision &endRevision,
             const char *relativeToDir, const char *outfileName,
             svn_depth_t depth, StringArray &changelists,
-            bool ignoreAncestry, bool noDiffDelete, bool force);
+            bool ignoreAncestry, bool noDiffDelete, bool force,
+            bool showCopiesAsAdds);
   void diffSummarize(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      svn_depth_t depth, StringArray &changelists,
@@ -222,7 +226,8 @@ class SVNClient :public SVNBase
             const char *target2, Revision &revision2,
             Revision *pegRevision, const char *relativeToDir,
             const char *outfileName, svn_depth_t depth, StringArray &changelists,
-            bool ignoreAncestry, bool noDiffDelete, bool force);
+            bool ignoreAncestry, bool noDiffDelete, bool force,
+            bool showCopiesAsAdds);
 
   Notify *m_notify;
   Notify2 *m_notify2;

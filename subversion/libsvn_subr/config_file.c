@@ -2,10 +2,10 @@
  * config_file.c :  parsing configuration files
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -1061,11 +1061,11 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### 'enable-auto-props' option."                                    NL
         "# *.c = svn:eol-style=native"                                       NL
         "# *.cpp = svn:eol-style=native"                                     NL
-        "# *.h = svn:eol-style=native"                                       NL
+        "# *.h = svn:keywords=Author Date Id Rev URL;svn:eol-style=native"   NL
         "# *.dsp = svn:eol-style=CRLF"                                       NL
         "# *.dsw = svn:eol-style=CRLF"                                       NL
         "# *.sh = svn:eol-style=native;svn:executable"                       NL
-        "# *.txt = svn:eol-style=native"                                     NL
+        "# *.txt = svn:eol-style=native;svn:keywords=Author Date Id Rev URL;"NL
         "# *.png = svn:mime-type=image/png"                                  NL
         "# *.jpg = svn:mime-type=image/jpeg"                                 NL
         "# Makefile = svn:eol-style=native"                                  NL

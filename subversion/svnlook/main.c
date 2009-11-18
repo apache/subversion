@@ -2,10 +2,10 @@
  * main.c: Subversion server inspection tool.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -68,6 +68,7 @@ static svn_opt_subcommand_t
   subcommand_date,
   subcommand_diff,
   subcommand_dirschanged,
+  subcommand_filesize,
   subcommand_help,
   subcommand_history,
   subcommand_info,
@@ -214,6 +215,12 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    N_("usage: svnlook dirs-changed REPOS_PATH\n\n"
       "Print the directories that were themselves changed (property edits)\n"
       "or whose file children were changed.\n"),
+   {'r', 't'} },
+
+  {"filesize", subcommand_filesize, {0},
+   N_("usage: svnlook filesize REPOS_PATH PATH_IN_REPOS\n\n"
+      "Print the size (in bytes) of the file located at PATH_IN_REPOS as\n"
+      "it is represented in the repository.\n"),
    {'r', 't'} },
 
   {"help", subcommand_help, {"?", "h"},
@@ -523,13 +530,13 @@ print_dirs_changed_tree(svn_repos_node_t *node,
 
   /* Recursively handle the node's children. */
   subpool = svn_pool_create(pool);
-  full_path = svn_path_join(path, tmp_node->name, subpool);
+  full_path = svn_dirent_join(path, tmp_node->name, subpool);
   SVN_ERR(print_dirs_changed_tree(tmp_node, full_path, subpool));
   while (tmp_node->sibling)
     {
       svn_pool_clear(subpool);
       tmp_node = tmp_node->sibling;
-      full_path = svn_path_join(path, tmp_node->name, subpool);
+      full_path = svn_dirent_join(path, tmp_node->name, subpool);
       SVN_ERR(print_dirs_changed_tree(tmp_node, full_path, subpool));
     }
   svn_pool_destroy(subpool);
@@ -602,13 +609,13 @@ print_changed_tree(svn_repos_node_t *node,
 
   /* Recursively handle the node's children. */
   subpool = svn_pool_create(pool);
-  full_path = svn_path_join(path, node->name, subpool);
+  full_path = svn_dirent_join(path, node->name, subpool);
   SVN_ERR(print_changed_tree(node, full_path, copy_info, subpool));
   while (node->sibling)
     {
       svn_pool_clear(subpool);
       node = node->sibling;
-      full_path = svn_path_join(path, node->name, subpool);
+      full_path = svn_dirent_join(path, node->name, subpool);
       SVN_ERR(print_changed_tree(node, full_path, copy_info, subpool));
     }
   svn_pool_destroy(subpool);
@@ -1118,16 +1125,16 @@ print_diff_tree(svn_fs_root_t *root,
   /* Recursively handle the node's children. */
   subpool = svn_pool_create(pool);
   SVN_ERR(print_diff_tree(root, base_root, node,
-                          svn_path_join(path, node->name, subpool),
-                          svn_path_join(base_path, node->name, subpool),
+                          svn_dirent_join(path, node->name, subpool),
+                          svn_dirent_join(base_path, node->name, subpool),
                           c, tmpdir, subpool));
   while (node->sibling)
     {
       svn_pool_clear(subpool);
       node = node->sibling;
       SVN_ERR(print_diff_tree(root, base_root, node,
-                              svn_path_join(path, node->name, subpool),
-                              svn_path_join(base_path, node->name, subpool),
+                              svn_dirent_join(path, node->name, subpool),
+                              svn_dirent_join(base_path, node->name, subpool),
                               c, tmpdir, subpool));
     }
   svn_pool_destroy(subpool);
@@ -1172,7 +1179,14 @@ print_tree(svn_fs_root_t *root,
     for (i = 0; i < indentation; i++)
       SVN_ERR(svn_cmdline_fputs(" ", stdout, pool));
 
-  name = full_paths ? path : svn_uri_basename(path, pool);
+  /* ### The path format is inconsistent.. needs fix */
+  if (full_paths)
+    name = path;
+  else if (*path == '/')
+    name = svn_uri_basename(path, pool);
+  else
+    name = svn_relpath_basename(path, pool);
+
   if (svn_path_is_empty(name))
     name = "/"; /* basename of '/' is "" */
 
@@ -1207,7 +1221,10 @@ print_tree(svn_fs_root_t *root,
           svn_fs_dirent_t *entry = svn_apr_hash_index_val(hi);
 
           svn_pool_clear(subpool);
-          SVN_ERR(print_tree(root, svn_uri_join(path, entry->name, pool),
+          SVN_ERR(print_tree(root,
+                             (*path == '/')
+                                 ? svn_uri_join(path, entry->name, pool)
+                                 : svn_relpath_join(path, entry->name, pool),
                              entry->id, (entry->kind == svn_node_dir),
                              indentation + 1, show_ids, full_paths,
                              recurse, subpool));
@@ -1372,6 +1389,27 @@ verify_path(svn_node_kind_t *kind,
   return SVN_NO_ERROR;
 }
 
+
+/* Print the size (in bytes) of a file. */
+static svn_error_t *
+do_filesize(svnlook_ctxt_t *c, const char *path, apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
+  svn_node_kind_t kind;
+  svn_filesize_t length;
+
+  SVN_ERR(get_root(&root, c, pool));
+  SVN_ERR(verify_path(&kind, root, path, pool));
+
+  if (kind != svn_node_file)
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_FILE, NULL, _("Path '%s' is not a file"), path);
+
+  /* Else. */
+
+  SVN_ERR(svn_fs_file_length(&length, root, path, pool));
+  return svn_cmdline_printf(pool, "%" SVN_FILESIZE_T_FMT "\n", length);
+}
 
 /* Print the contents of the file at PATH in the repository.
    Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist, or with
@@ -1883,6 +1921,23 @@ subcommand_dirschanged(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_dirs_changed(c, pool));
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_filesize(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+
+  if (opt_state->arg1 == NULL)
+    return svn_error_createf
+      (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
+       _("Missing repository path argument"));
+
+  SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
+  SVN_ERR(do_filesize(c, opt_state->arg1, pool));
   return SVN_NO_ERROR;
 }
 

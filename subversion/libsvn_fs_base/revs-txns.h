@@ -1,10 +1,10 @@
 /* revs-txns.h : internal interface to revision and transactions operations
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -186,6 +186,13 @@ svn_error_t *svn_fs_base__change_rev_prop(svn_fs_t *fs, svn_revnum_t rev,
 svn_error_t *svn_fs_base__begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs,
                                     svn_revnum_t rev, apr_uint32_t flags,
                                     apr_pool_t *pool);
+
+/* Begin a new transaction in filesystem FS, to replace an existing
+   revision REV.  The new transaction is returned in *TXN_P.  Allocate
+   the new transaction structure from POOL. */
+svn_error_t *svn_fs_base__begin_obliteration_txn(svn_fs_txn_t **txn_p,
+                                                 svn_fs_t *fs, svn_revnum_t rev,
+                                                 apr_pool_t *pool);
 
 svn_error_t *svn_fs_base__open_txn(svn_fs_txn_t **txn, svn_fs_t *fs,
                                    const char *name, apr_pool_t *pool);

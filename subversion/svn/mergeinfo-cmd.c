@@ -2,10 +2,10 @@
  * mergeinfo-cmd.c -- Query merge-relative info.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -55,7 +55,6 @@ print_log_rev(void *baton,
   return SVN_NO_ERROR;
 }
 
-
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__mergeinfo(apr_getopt_t *os,
@@ -67,6 +66,9 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *source, *target;
   svn_opt_revision_t src_peg_revision, tgt_peg_revision;
+  /* Default to depth empty. */
+  svn_depth_t depth = opt_state->depth == svn_depth_unknown
+    ? svn_depth_empty : opt_state->depth;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -115,17 +117,19 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   /* Do the real work, depending on the requested data flavor. */
   if (opt_state->show_revs == svn_cl__show_revs_merged)
     {
-      SVN_ERR(svn_client_mergeinfo_log_merged(target, &tgt_peg_revision,
-                                              source, &src_peg_revision,
-                                              print_log_rev, NULL,
-                                              FALSE, NULL, ctx, pool));
+      SVN_ERR(svn_client_mergeinfo_log(target, TRUE, &tgt_peg_revision,
+                                       source, &src_peg_revision,
+                                       print_log_rev, NULL,
+                                       TRUE, depth, NULL, ctx,
+                                       pool));
     }
   else if (opt_state->show_revs == svn_cl__show_revs_eligible)
     {
-      SVN_ERR(svn_client_mergeinfo_log_eligible(target, &tgt_peg_revision,
-                                                source, &src_peg_revision,
-                                                print_log_rev, NULL,
-                                                FALSE, NULL, ctx, pool));
+      SVN_ERR(svn_client_mergeinfo_log(target, FALSE, &tgt_peg_revision,
+                                       source, &src_peg_revision,
+                                       print_log_rev, NULL,
+                                       TRUE, depth, NULL, ctx,
+                                       pool));
     }
   return SVN_NO_ERROR;
 }

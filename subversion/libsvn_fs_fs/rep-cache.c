@@ -1,10 +1,10 @@
 /* rep-sharing.c --- the rep-sharing cache for fsfs
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -49,6 +49,10 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *db_path;
 
+  /* Be idempotent. */
+  if (ffd->rep_cache_db)
+    return SVN_NO_ERROR;
+
   /* Open (or create) the sqlite database.  It will be automatically
      closed when fs->pool is destoyed. */
   db_path = svn_dirent_join(fs->path, REP_CACHE_DB_NAME, pool);
@@ -70,11 +74,9 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  if (ffd->rep_cache_db == NULL)
-    {
-      *rep = NULL;
-      return SVN_NO_ERROR;
-    }
+  SVN_ERR_ASSERT(ffd->rep_sharing_allowed);
+  if (! ffd->rep_cache_db)
+    SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
 
   /* We only allow SHA1 checksums in this table. */
   if (checksum->kind != svn_checksum_sha1)
@@ -112,8 +114,9 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
   representation_t *old_rep;
   svn_sqlite__stmt_t *stmt;
 
-  if (ffd->rep_cache_db == NULL)
-    return SVN_NO_ERROR;
+  SVN_ERR_ASSERT(ffd->rep_sharing_allowed);
+  if (! ffd->rep_cache_db)
+    SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
 
   /* We only allow SHA1 checksums in this table. */
   if (rep->sha1_checksum == NULL)

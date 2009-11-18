@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -41,12 +41,13 @@ class StatusCallback
   ~StatusCallback();
 
   static svn_error_t* callback(void *baton,
-                               const char *path,
-                               svn_wc_status2_t *status,
+                               const char *local_abspath,
+                               const svn_wc_status2_t *status,
                                apr_pool_t *pool);
 
  protected:
-  svn_error_t *doStatus(const char *path, svn_wc_status2_t *status);
+  svn_error_t *doStatus(const char *local_abspath,
+                        const svn_wc_status2_t *status);
 
  private:
   /**
@@ -54,8 +55,8 @@ class StatusCallback
    */
   jobject m_callback;
 
-  jobject createJavaStatus(const char *path,
-                           svn_wc_status2_t *status);
+  jobject createJavaStatus(const char *local_abspath,
+                           const svn_wc_status2_t *status);
 };
 
 #endif // STATUSCALLBACK_H

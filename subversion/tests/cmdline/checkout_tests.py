@@ -7,10 +7,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -312,7 +312,7 @@ def forced_checkout_with_versioned_obstruction(sbox):
     "Expected error during co", None, svntest.verify.AnyOutput,
     "co", "--force", repo_url, other_wc_dir)
 
-  test_stderr("UUID mismatch: existing directory '.*A'", serr)
+  test_stderr("(Failed to add directory|UUID mismatch:).*'.*A'", serr)
 
   #ensure that other_wc_dir_A is not affected by this forced checkout.
   svntest.actions.run_and_verify_svn("empty status output", None,

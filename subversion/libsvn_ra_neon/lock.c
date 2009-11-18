@@ -2,10 +2,10 @@
  * lock.c :  routines for managing lock states in the DAV server
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -276,7 +276,7 @@ do_lock(svn_lock_t **lock,
      " <D:locktype><D:write /></D:locktype>" DEBUG_CR
      "%s" /* maybe owner */
      "</D:lockinfo>",
-     comment ? apr_pstrcat(pool, 
+     comment ? apr_pstrcat(pool,
                            "<D:owner>",
                            apr_xml_quote_string(pool, comment, 0),
                            "</D:owner>",
@@ -307,6 +307,16 @@ do_lock(svn_lock_t **lock,
 
  cleanup:
   svn_ra_neon__request_destroy(req);
+
+  /* 405 == Method Not Allowed (Occurs when trying to lock a working
+     copy path which no longer exists at HEAD in the repository. */
+  if (code == 405)
+    {
+      svn_error_clear(err);
+      err = svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
+                              _("Lock request failed: %d %s"),
+                              code, req->code_desc);
+    }
   return err;
 }
 

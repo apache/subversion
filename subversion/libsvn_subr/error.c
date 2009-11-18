@@ -1,10 +1,10 @@
 /* error.c:  common exception handling for Subversion
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -336,7 +336,7 @@ static svn_boolean_t is_tracing_link(svn_error_t *err)
 svn_error_t *
 svn_error_purge_tracing(svn_error_t *err)
 {
-#ifdef SVN_ERR__TRACING  
+#ifdef SVN_ERR__TRACING
   svn_error_t *tmp_err = err;
   svn_error_t *new_err = NULL, *new_err_leaf = NULL;
 
@@ -364,7 +364,7 @@ svn_error_purge_tracing(svn_error_t *err)
       /* Advance to the next link in the original chain. */
       tmp_err = tmp_err->child;
     }
-  
+
   /* If we get here, there had better be a real link in this error chain. */
   SVN_ERR_ASSERT(new_err_leaf);
 
@@ -526,10 +526,6 @@ svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
 {
   char buf[256];
 
-  /* Skip over any trace records.  */
-  while (is_tracing_link(err))
-    err = err->child;
-
   svn_error_clear(svn_cmdline_fprintf
                   (stream, err->pool,
                    _("%swarning: %s\n"),
@@ -540,6 +536,9 @@ svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
 const char *
 svn_err_best_message(svn_error_t *err, char *buf, apr_size_t bufsize)
 {
+  /* Skip over any trace records.  */
+  while (is_tracing_link(err))
+    err = err->child;
   if (err->message)
     return err->message;
   else

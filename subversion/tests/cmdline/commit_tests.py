@@ -6,10 +6,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -1404,13 +1404,13 @@ def commit_multiple_wc_nested(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
-# Same as commit_multiple_wc_nested except that the two WCs are not nested. 
+# Same as commit_multiple_wc_nested except that the two WCs are not nested.
 def commit_multiple_wc(sbox):
   "commit from two working copies"
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   # Cleanup original wc
   svntest.sandbox._cleanup_test_path(wc_dir)
 
@@ -1465,7 +1465,7 @@ def commit_multiple_wc_multiple_repos(sbox):
   # Create another repository
   repo2, url2 = sbox.add_repo_path("repo2")
   svntest.main.copy_repos(sbox.repo_dir, repo2, 1, 1)
-  
+
   # Cleanup original wc
   svntest.sandbox._cleanup_test_path(wc_dir)
 
@@ -1504,7 +1504,7 @@ def commit_multiple_wc_multiple_repos(sbox):
   # Verify status unchanged
   svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
-  
+
 #----------------------------------------------------------------------
 
 def commit_nonrecursive(sbox):

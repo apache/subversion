@@ -2,10 +2,10 @@
  * path-test.c -- test the path functions
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -1387,8 +1387,8 @@ test_path_local_style(apr_pool_t *pool)
     { ".",                    "." },
     { "http://host/dir",      "http://host/dir" }, /* Not with local separator */
 #if defined(WIN32) || defined(__CYGWIN__)
-    { "a:/",                 "a:" }, /* Wrong for dirent, but expected for svn_path_*() */
-    { "a:/file",             "a:\\file" },
+    { "a:/",                 "A:\\" },
+    { "a:/file",             "A:\\file" },
     { "dir/file",            "dir\\file" },
     { "/",                   "\\" },
     { "//server/share/dir",  "\\\\server\\share\\dir" },
@@ -1429,10 +1429,9 @@ test_path_internal_style(apr_pool_t *pool)
     { ".",                    "" },
     { "http://host/dir",      "http://host/dir" },
     { "/",                    "/" },
-    { "a:/",                  "a:" },
 #if defined(WIN32) || defined(__CYGWIN__)
-    { "a:\\",                 "a:" }, /* Wrong for dirent, but expected for svn_path_*() */
-    { "a:\\file",             "a:/file" },
+    { "a:\\",                 "A:/" },
+    { "a:\\file",             "A:/file" },
     { "dir\\file",            "dir/file" },
     { "\\",                   "/" },
     { "\\\\server/share/dir",  "//server/share/dir" },

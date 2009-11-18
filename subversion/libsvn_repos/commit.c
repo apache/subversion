@@ -1,10 +1,10 @@
 /* commit.c --- editor for committing changes to a filesystem.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -254,7 +254,7 @@ delete_entry(const char *path,
   if (SVN_IS_VALID_REVNUM(revision) && (revision < cr_rev))
     return out_of_date(full_path, kind);
 
-  /* This routine is a mindless wrapper.  We call svn_fs_delete_tree
+  /* This routine is a mindless wrapper.  We call svn_fs_delete()
      because that will delete files and recursively delete
      directories.  */
   return svn_fs_delete(eb->txn_root, full_path, pool);
@@ -306,7 +306,7 @@ add_directory(const char *path,
       const char *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
-      int repos_url_len;
+      size_t repos_url_len;
 
       /* Copy requires recursive write access to the destination path
          and write access to the parent path. */
@@ -451,7 +451,7 @@ add_file(const char *path,
       const char *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
-      int repos_url_len;
+      size_t repos_url_len;
 
       /* Copy requires recursive write to the destination path and
          parent path. */
@@ -825,8 +825,8 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   eb->base_path = apr_pstrdup(subpool, base_path);
   eb->repos = repos;
   eb->repos_url = repos_url;
-  eb->repos_name = svn_uri_basename(svn_repos_path(repos, subpool),
-                                    subpool);
+  eb->repos_name = svn_dirent_basename(svn_repos_path(repos, subpool),
+                                       subpool);
   eb->fs = svn_repos_fs(repos);
   eb->txn = txn;
   eb->txn_owner = txn == NULL;

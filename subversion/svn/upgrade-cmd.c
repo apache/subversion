@@ -1,11 +1,11 @@
 /*
- * unlcok-cmd.c -- Upgrade a working copy.
+ * upgrade-cmd.c -- Upgrade a working copy.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -31,7 +31,6 @@
 #include "svn_client.h"
 #include "svn_error_codes.h"
 #include "svn_error.h"
-#include "svn_cmdline.h"
 #include "cl.h"
 #include "svn_private_config.h"
 
@@ -43,33 +42,37 @@
 svn_error_t *
 svn_cl__upgrade(apr_getopt_t *os,
                 void *baton,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
   int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, pool));
+                                                      ctx, scratch_pool));
 
   /* Add "." if user passed 0 arguments */
-  svn_opt_push_implicit_dot_target(targets, pool);
+  svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+  if (! opt_state->quiet)
+    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                 FALSE, FALSE, FALSE, scratch_pool));
 
-  subpool = svn_pool_create(pool);
+  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
+
+  iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-      SVN_ERR(svn_client_upgrade(target, ctx, subpool));
+      SVN_ERR(svn_client_upgrade(target, ctx, scratch_pool));
     }
+  svn_pool_destroy(iterpool);
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }

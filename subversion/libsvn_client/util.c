@@ -2,10 +2,10 @@
  * util.c :  utility functions for the libsvn_client library
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -156,9 +156,9 @@ wc_path_to_repos_urls(const char **url,
                                       svn_node_unknown, FALSE, FALSE,
                                       scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_client__entry_location(url, NULL, local_abspath,
-                                     svn_opt_revision_unspecified, entry,
-                                     result_pool));
+  SVN_ERR(svn_client__entry_location(url, NULL, wc_ctx, local_abspath,
+                                     svn_opt_revision_unspecified,
+                                     result_pool, scratch_pool));
 
   /* If we weren't provided a REPOS_ROOT, we'll try to read one from
      the entry.  The entry might not hold a URL -- in that case, we'll
@@ -180,6 +180,8 @@ svn_client__path_relative_to_root(const char **rel_path,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
+  /* ### TODO: Rework this to use svn_ra_get_path_relative_to_root(). */
+
   SVN_ERR_ASSERT(repos_root != NULL || ra_session != NULL);
 
   /* If we have a WC path... */
@@ -209,8 +211,8 @@ svn_client__path_relative_to_root(const char **rel_path,
          back from this, the two URLs have no commonality (which
          should only happen if our caller provided us a REPOS_ROOT and
          a PATH_OR_URL of something not in that repository).  */
-      const char *rel_url = svn_path_is_child(repos_root, abspath_or_url,
-                                              scratch_pool);
+      const char *rel_url = svn_uri_is_child(repos_root, abspath_or_url,
+                                             scratch_pool);
       if (! rel_url)
         {
           return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,

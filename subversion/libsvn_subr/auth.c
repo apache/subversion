@@ -2,10 +2,10 @@
  * auth.c: authentication support functions for Subversion
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -415,8 +415,8 @@ svn_auth_get_platform_specific_provider
                           dso,
                           version_function_name) == 0)
             {
-              svn_version_func_t version_function;
-              version_function = (svn_version_func_t) version_function_symbol;
+              svn_version_func_t version_function
+                = version_function_symbol;
               const svn_version_checklist_t check_list[] =
                 {
                   { library_label, version_function },
@@ -430,18 +430,14 @@ svn_auth_get_platform_specific_provider
             {
               if (strcmp(provider_type, "simple") == 0)
                 {
-                  svn_auth_simple_provider_func_t provider_function;
-                  provider_function =
-                    (svn_auth_simple_provider_func_t)
-                    provider_function_symbol;
+                  svn_auth_simple_provider_func_t provider_function
+                    = provider_function_symbol;
                   provider_function(provider, pool);
                 }
               else if (strcmp(provider_type, "ssl_client_cert_pw") == 0)
                 {
-                  svn_auth_ssl_client_cert_pw_provider_func_t provider_function;
-                  provider_function =
-                    (svn_auth_ssl_client_cert_pw_provider_func_t)
-                    provider_function_symbol;
+                  svn_auth_ssl_client_cert_pw_provider_func_t provider_function
+                    = provider_function_symbol;
                   provider_function(provider, pool);
                 }
             }

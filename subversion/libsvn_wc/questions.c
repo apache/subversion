@@ -2,10 +2,10 @@
  * questions.c:  routines for asking questions about working copies
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -127,7 +127,7 @@ compare_and_verify(svn_boolean_t *modified_p,
       svn_checksum_t *checksum;
       svn_stream_t *v_stream;  /* versioned_file */
       svn_stream_t *b_stream;  /* base_file */
-      svn_checksum_t *node_checksum;
+      const svn_checksum_t *node_checksum;
 
       SVN_ERR(svn_stream_open_readonly(&b_stream, base_file_abspath,
                                        scratch_pool, scratch_pool));
@@ -141,7 +141,7 @@ compare_and_verify(svn_boolean_t *modified_p,
                                        NULL, &node_checksum, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL,
                                        db, versioned_file_abspath,
                                        scratch_pool, scratch_pool));
 
@@ -249,7 +249,7 @@ svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
 }
 
 svn_error_t *
-svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
+svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
                                  svn_boolean_t force_comparison,
@@ -316,7 +316,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
                                  NULL, NULL, &last_mod_time, NULL, NULL,
                                  &translated_size , NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool);
       if (err)
@@ -350,10 +350,8 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
      yet committed. */
   /* We used to stat for the working base here, but we just give
      compare_and_verify a try; we'll check for errors afterwards */
-  SVN_ERR(svn_dirent_get_absolute(&textbase_abspath,
-                                  svn_wc__text_base_path(local_abspath, FALSE,
-                                                         scratch_pool),
-                                  scratch_pool));
+  SVN_ERR(svn_wc__text_base_path(&textbase_abspath, db, local_abspath, FALSE,
+                                 scratch_pool));
 
   /* Check all bytes, and verify checksum if requested. */
   err = compare_and_verify(modified_p,
@@ -380,7 +378,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
           svn_error_clear(err);
           return err2;
         }
-      
+
       return err;
     }
 
@@ -395,7 +393,7 @@ svn_wc_text_modified_p2(svn_boolean_t *modified_p,
                         svn_boolean_t force_comparison,
                         apr_pool_t *scratch_pool)
 {
-  return svn_wc__text_modified_internal_p(modified_p, wc_ctx->db,
+  return svn_wc__internal_text_modified_p(modified_p, wc_ctx->db,
                                           local_abspath, force_comparison,
                                           TRUE, scratch_pool);
 }
@@ -412,91 +410,119 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
 {
   svn_node_kind_t kind;
   svn_wc__db_kind_t node_kind;
-  const char *prop_rej_file;
-  const char *conflict_old;
-  const char *conflict_new;
-  const char *conflict_working;
-  const char* dir_path = svn_dirent_dirname(local_abspath, scratch_pool);
+  const apr_array_header_t *conflicts;
+  int i;
+  const char* dir_path;
+  svn_boolean_t conflicted;
 
   SVN_ERR(svn_wc__db_read_info(NULL, &node_kind, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               &conflict_old, &conflict_new,
-                               &conflict_working, &prop_rej_file,
-                               NULL, NULL,
+                               &conflicted, NULL,
                                db, local_abspath, scratch_pool,
                                scratch_pool));
 
+  if (node_kind == svn_wc__db_kind_dir)
+    dir_path = local_abspath;
+  else
+    dir_path = svn_dirent_dirname(local_abspath, scratch_pool);
+
   if (text_conflicted_p)
-    {
-      *text_conflicted_p = FALSE;
-
-      /* Look for any text conflict, exercising only as much effort as
-         necessary to obtain a definitive answer.  This only applies to
-         files, but we don't have to explicitly check that entry is a
-         file, since these attributes would never be set on a directory
-         anyway.  A conflict file entry notation only counts if the
-         conflict file still exists on disk.  */
-
-      /* ### the conflict paths are currently relative.  sure would be nice
-         ### if we store them as absolute paths... */
-
-      if (conflict_old)
-        {
-          const char *path = svn_dirent_join(dir_path, conflict_old,
-                                             scratch_pool);
-          SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
-          *text_conflicted_p = (kind == svn_node_file);
-        }
-
-      if ((! *text_conflicted_p) && (conflict_new))
-        {
-          const char *path = svn_dirent_join(dir_path, conflict_new,
-                                             scratch_pool);
-          SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
-          *text_conflicted_p = (kind == svn_node_file);
-        }
-
-      if ((! *text_conflicted_p) && (conflict_working))
-        {
-          const char *path = svn_dirent_join(dir_path, conflict_working,
-                                             scratch_pool);
-          SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
-          *text_conflicted_p = (kind == svn_node_file);
-        }
-    }
-
-  /* What about prop conflicts? */
+    *text_conflicted_p = FALSE;
   if (prop_conflicted_p)
+    *prop_conflicted_p = FALSE;
+  if (tree_conflicted_p)
+    *tree_conflicted_p = FALSE;
+
+  if (!conflicted)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
+                                    scratch_pool, scratch_pool));
+
+  for (i = 0; i < conflicts->nelts; i++)
     {
-      *prop_conflicted_p = FALSE;
+      const svn_wc_conflict_description2_t *cd;
+      cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
 
-      if (prop_rej_file)
+      switch (cd->kind)
         {
-          /* A dir's .prej file is _inside_ the dir. */
-          const char *path;
+          case svn_wc_conflict_kind_text:
+            /* Look for any text conflict, exercising only as much effort as
+               necessary to obtain a definitive answer.  This only applies to
+               files, but we don't have to explicitly check that entry is a
+               file, since these attributes would never be set on a directory
+               anyway.  A conflict file entry notation only counts if the
+               conflict file still exists on disk.  */
 
-          if (node_kind == svn_wc__db_kind_dir)
-            path = svn_dirent_join(local_abspath, prop_rej_file, scratch_pool);
-          else
-            path = svn_dirent_join(dir_path, prop_rej_file, scratch_pool);
+            if (!text_conflicted_p || *text_conflicted_p)
+              break;
 
-          SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
-          *prop_conflicted_p = (kind == svn_node_file);
+            if (cd->base_file)
+              {
+                const char *path = svn_dirent_join(dir_path, cd->base_file,
+                                                   scratch_pool);
+
+                SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+
+                *text_conflicted_p = (kind == svn_node_file);
+
+                if (*text_conflicted_p)
+                  break;
+              }
+
+            if (cd->their_file)
+              {
+                const char *path = svn_dirent_join(dir_path, cd->their_file,
+                                                   scratch_pool);
+
+                SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+
+                *text_conflicted_p = (kind == svn_node_file);
+
+                if (*text_conflicted_p)
+                  break;
+              }
+
+            if (cd->my_file)
+              {
+                const char *path = svn_dirent_join(dir_path, cd->my_file,
+                                                   scratch_pool);
+
+                SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+
+                *text_conflicted_p = (kind == svn_node_file);
+              }
+            break;
+
+          case svn_wc_conflict_kind_property:
+            if (!prop_conflicted_p || *prop_conflicted_p)
+              break;
+
+            if (cd->their_file)
+              {
+                const char *path = svn_dirent_join(dir_path, cd->their_file,
+                                                   scratch_pool);
+
+                SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+
+                *prop_conflicted_p = (kind == svn_node_file);
+              }
+
+            break;
+
+          case svn_wc_conflict_kind_tree:
+            if (tree_conflicted_p)
+              *tree_conflicted_p = TRUE;
+
+            break;
+
+          default:
+            /* Ignore other conflict types */
+            break;
         }
     }
-
-  /* Find out whether it's a tree conflict victim. */
-  if (tree_conflicted_p)
-    {
-      svn_wc_conflict_description_t *conflict;
-
-      SVN_ERR(svn_wc__db_op_get_tree_conflict(&conflict, db, local_abspath,
-                                              scratch_pool, scratch_pool));
-      *tree_conflicted_p = (conflict != NULL);
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -550,12 +576,10 @@ svn_wc__internal_is_replaced(svn_boolean_t *replaced,
 
   SVN_ERR(svn_wc__db_read_info(
             &status, NULL, NULL,
-            NULL, NULL, NULL,
-            NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL,
             NULL, NULL, &base_shadowed,
-            NULL, NULL, NULL, NULL,
             NULL, NULL,
             db, local_abspath,
             scratch_pool, scratch_pool));
