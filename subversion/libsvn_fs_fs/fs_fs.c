@@ -790,7 +790,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
   if (!err)
     {
       apr_off_t offset = 0;
-      err = svn_io_file_seek(*file, APR_END, &offset, 0);
+      err = svn_io_file_seek(*file, APR_END, &offset, pool);
     }
 
   if (err)
