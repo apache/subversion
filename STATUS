@@ -15,7 +15,7 @@ Status of 1.6.7:
 
 Candidate changes:
 
- * r37478, r37543, r37544, r37545, r37547
+ * r877552, r877617, r877618, r877619, r877621
    Support using `svnversion` on files and improve some messages printed by
    `svnversion`.
    Justification:
@@ -44,44 +44,44 @@ Candidate changes:
      +1: arfrever
      -0: rhuijben, cmpilato (Introduces new features and changes output)
 
- * r38004, r38014, r38028, r38122
+ * r878078, r878088, r878102, r878196
    Make KWallet window attached to terminal window.
    Justification:
      Without this change, KWallet window can appear behind terminal window
      and is left after killing terminal.
    Votes:
      +1: arfrever
-     -0: psamuelson, stsp (without r38122) (code is ugly and Linux-specific -
+     -0: psamuelson, stsp (without r878196) (code is ugly and Linux-specific -
                                             would getenv("WINDOWID") work
                                             instead?)
 
- * r38142, r38267, r38269, r36788, r37129, r37521, r37591, r37523, r38195,
-   r38247, r38325, r38349, r38352
+ * r878216, r878341, r878343, r876862, r877203, r877595, r877665, r877597, r878269,
+   r878321, r878399, r878423, r878426
    Fix issue #3432 'Merge can record mergeinfo from natural history gaps'
    Justification:
      Gaps in merge sources can lead to the creation of invalid mergeinfo
      or the removal of valid mergeinfo.
    Notes:     
-     The fix itself in r38325 is relatively simple, but recent refactoring
+     The fix itself in r878399 is relatively simple, but recent refactoring
      of the merge code on trunk makes it look a lot worse than it is.
      Unless otherwise noted, all of the following are nominated simply to
      avoid a conflict nightmare:
-     r38142, r38267, r38269 - New test and test tweaks for the issue.
-     r36788 - Comment changes only.
-     r37129 - Scope reduction of a pool.
-     r37521 - Minor bug fix and some refactoring.
-     r37591 - Comment changes only.
-     r37523 - Merge code refactoring.
-     r38195 - Pool use cleanup, no functional change.
-     r38247 - More merge code refactoring.
-     r38349 - Variable rename to avoid shadowing a previous local.
-     r38352 - Remove an unused variable.
+     r878216, r878341, r878343 - New test and test tweaks for the issue.
+     r876862 - Comment changes only.
+     r877203 - Scope reduction of a pool.
+     r877595 - Minor bug fix and some refactoring.
+     r877665 - Comment changes only.
+     r877597 - Merge code refactoring.
+     r878269 - Pool use cleanup, no functional change.
+     r878321 - More merge code refactoring.
+     r878423 - Variable rename to avoid shadowing a previous local.
+     r878426 - Remove an unused variable.
    Branch:
      ^/branches/1.6.x-issue3432
    Votes:
      +1: pburba, stsp
 
- * r35958, r36030, r38373, r38836, r38837, r38842
+ * r876032, r876104, r878447, r878910, r878911, r878916
    Several fixes to the Win32 exception handler. This change also makes it
    available on Windows Vista and 7 where it was previously blocked by a
    version check.
@@ -90,7 +90,7 @@ Candidate changes:
      have development tools installed. (Most users on Windows).
    Notes:
      Most of these revisions cancel out each other. The real changes are in
-     r38373 (removing version check) and r38836,r38842 (fixing formatting
+     r878447 (removing version check) and r878910,r878916 (fixing formatting
      specifier). It's probably easier to review the combined patch than the
      individual revisions.
    Branch:
@@ -100,7 +100,7 @@ Candidate changes:
      +0: pburba - I don't have a Vista or Win7 box to try this out on, but it
          works fine on my XP box.
 
- * r39019
+ * r879093
    Fix bug where svn_[rangelist|mergeinfo]_[merge|intersect|remove|diff]
    APIs can modify their *non*-output arguments.
    Justification:
@@ -118,12 +118,12 @@ Candidate changes:
            and also it seems to sneak in another bug fix in
            fix_deleted_subtree_ranges(). I suggest splitting up this patch.)
 
- * r39614
+ * r879688
    Support Berkeley DB 4.8.
    Votes:
      +1: arfrever, dlr
 
- * r39692
+ * r879766
    Fix issue #3498: Subversion password stores freeze Eclipse
    Justification:
      All subclipse users are in great need of this.
@@ -135,7 +135,7 @@ Candidate changes:
      +1: stylesen
      +0: julianfoad (reviewed, not tested)
 
- * r39828, r39842
+ * r879902, r879916
    Disables file synchronization mutexes in fsfs on Windows. These mutexes
    were added to make POSIX systems lock files that were in use by other
    threads in the same process.
@@ -160,20 +160,20 @@ Candidate changes:
    Votes:
      +1: hwright, arfrever
 
- * r35558 (from ^/branches/http-protocol-v2@r35558), r40296
+ * r875632 (from ^/branches/http-protocol-v2@r875632), r880370
    Fix issue #3519: ra_serf using Label header unsupported by mod_dav_svn.
    Justification:
      This is the cause of the switch-tests.py 19 failures we've been ignoring
      for our 1.6.x releases.
    Notes:
-     r35558 (from the http-protocol-v2 branch) is a plumbing change.
-     r40296 (from trunk) is the real fix.
+     r875632 (from the http-protocol-v2 branch) is a plumbing change.
+     r880370 (from trunk) is the real fix.
    Branch:
      ^/branches/1.6.x-issue3519
    Votes:
      +1: cmpilato
 
- * r40200, r40201
+ * r880274, r880275
    Provide examples for specifying an auto-prop value for the svn:keywords
    property which contains several fields separated by whitespace.
    Also tolerate (but don't advertise) quotes around property values in
@@ -184,7 +184,7 @@ Candidate changes:
      quoting characters.
    Notes:
      There is a trivial text conflict in autoprop_tests.py. To resolve it,
-     use 'postpone' or 'edit', and keep lines added by merge-right.r40201
+     use 'postpone' or 'edit', and keep lines added by merge-right.r880275
      except the one reading:
                     'escapetest',
      If correctly resolved, the 'filenames' list looks like this:
@@ -198,7 +198,7 @@ Candidate changes:
    Votes:
      +1: stsp, arfrever
 
- * r40400
+ * r880474
    Really fix issue #2580 on Win32.
    Justification:
      svn+ssh:// isn't usable on Windows in certain situations.
@@ -207,7 +207,7 @@ Candidate changes:
    Votes:
      +1: stsp, dlr
 
- * r40451, r40452
+ * r880525, r880526
    Fix 'svn resolve --accept=theirs-conflict' for targets which live inside
    a subdirectory of the current working directory.
    Justification:
@@ -215,12 +215,12 @@ Candidate changes:
    Notes:
      A backport branch is at ^/branches/1.6.x-r40452.
      1.6.x has an additional bug which does not occur on trunk, requiring
-     additional fixes exclusive to 1.6.x. See the log message of r40458
-     (which shows what the bug is), and see r40459 (which fixes the bug).
+     additional fixes exclusive to 1.6.x. See the log message of r880532
+     (which shows what the bug is), and see r880533 (which fixes the bug).
    Votes:
      +1: stsp
 
- * r40478
+ * r880552
    Try to enable TCP keep-alives in svnserve.
    Justification:
      ra_svn clients do this, too. It should not do any harm.
