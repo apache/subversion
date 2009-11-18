@@ -230,20 +230,12 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r40485, r40486
-   Treat 'svn export $repos/foo .' the same as 'svn export $repos/foo'.
-   Justification:
-     The current broken behavior is unexpected and nonintuitive.  Plus,
-     the fix is easy, and there is an included test.
-   Votes:
-     +1: hwright
- 
+Approved changes:
+=================
+
   * r881905
     Fix a segmentation fault in libsvn_fs_fs/fs_fs.c.
     Justification:
       Passing NULL (or rather, 0) for a pool is a bad idea.
     Votes:
-      +1: steveking, stsp
-
-Approved changes:
-=================
+      +1: steveking, stsp, hwright
