@@ -1744,3 +1744,92 @@ svn_wc__temp_get_relpath(const char **rel_path,
   }
 }
 
+
+svn_error_t *
+svn_wc__acquire_write_lock(svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_kind_t kind;
+  apr_pool_t *iterpool;
+  const apr_array_header_t *children;
+  int i;
+
+  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
+                               scratch_pool));
+  if (kind == svn_wc__db_kind_file)
+    local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  /* The current lock paradigm is that each directory holds a lock for itself,
+     and there are no inherited locks.  In the eventual wc-ng paradigm, a
+     lock on a directory, would imply a infinite-depth lock on the children.
+     But since we aren't quite there yet, we do the infinite locking
+     manually (and be sure to release them in svn_wc__release_write_lock(). */
+
+  SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
+                                   scratch_pool, scratch_pool));
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < children->nelts; i ++)
+    {
+      const char *child_relpath = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath;
+
+      svn_pool_clear(iterpool);
+      child_abspath = svn_dirent_join(local_abspath, child_relpath, iterpool);
+
+      SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, child_abspath, FALSE,
+                                   iterpool));
+      if (kind == svn_wc__db_kind_dir)
+        SVN_ERR(svn_wc__acquire_write_lock(wc_ctx, child_abspath, iterpool));
+    }
+
+  SVN_ERR(svn_wc__db_wclock_set(wc_ctx->db, local_abspath, iterpool));
+  SVN_ERR(svn_wc__db_temp_mark_locked(wc_ctx->db, local_abspath, iterpool));
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_kind_t kind;
+  apr_pool_t *iterpool;
+  const apr_array_header_t *children;
+  int i;
+
+  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
+                               scratch_pool));
+  if (kind == svn_wc__db_kind_file)
+    local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  /* We need to recursively remove locks (see comment in
+     svn_wc__acquire_write_lock(). */
+
+  SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
+                                   scratch_pool, scratch_pool));
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < children->nelts; i ++)
+    {
+      const char *child_relpath = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath;
+
+      svn_pool_clear(iterpool);
+      child_abspath = svn_dirent_join(local_abspath, child_relpath, iterpool);
+
+      SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, child_abspath, FALSE,
+                                   iterpool));
+      if (kind == svn_wc__db_kind_dir)
+        SVN_ERR(svn_wc__release_write_lock(wc_ctx, child_abspath, iterpool));
+    }
+
+  SVN_ERR(svn_wc__db_wclock_remove(wc_ctx->db, local_abspath, iterpool));
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
