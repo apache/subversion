@@ -578,7 +578,6 @@ svn_client_add4(const char *path,
                 apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_wc_adm_access_t *adm_access;
   const char *parent_abspath;
   const char *local_abspath;
 
@@ -596,6 +595,8 @@ svn_client_add4(const char *path,
   else
     parent_abspath = svn_dirent_dirname(local_abspath, pool);
 
+  SVN_ERR(svn_wc__acquire_write_lock(ctx->wc_ctx, parent_abspath, pool));
+
   if (add_parents)
     {
       apr_pool_t *subpool;
@@ -605,18 +606,14 @@ svn_client_add4(const char *path,
       svn_pool_destroy(subpool);
     }
 
-  SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, parent_abspath,
-                                      TRUE, 0, ctx->cancel_func,
-                                      ctx->cancel_baton, pool));
-
   err = add(local_abspath, depth, force, no_ignore, ctx, pool);
 
-  /* ### Currently we rely on the fact that this close (like all other access
-         baton close operations), closes all batons opened by svn_wc_add4(). */
+  /* ### Currently we rely on the fact that this releases all our write locks
+     ### recursively. */
   return svn_error_return(
             svn_error_compose_create(
-                 err,
-                 svn_wc_adm_close2(adm_access, pool)));
+              err,
+              svn_wc__release_write_lock(ctx->wc_ctx, parent_abspath, pool)));
 }
 
 

@@ -514,6 +514,26 @@ svn_wc__node_get_lock_token(const char **lock_token,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
+
+/**
+ * Recursively acquire write locks for @a local_abspath, using @a wc_ctx
+ * for working copy access.
+ */
+svn_error_t *
+svn_wc__acquire_write_lock(svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool);
+
+
+/**
+ * Recursively release write locks for @a local_abspath, using @a wc_ctx
+ * for working copy access.
+ */
+svn_error_t *
+svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

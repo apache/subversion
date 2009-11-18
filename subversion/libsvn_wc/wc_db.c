@@ -5644,7 +5644,7 @@ svn_wc__db_temp_mark_locked(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
 
-  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+  pdh = get_or_create_pdh(db, local_dir_abspath, TRUE, scratch_pool);
   pdh->locked = TRUE;
 
   return SVN_NO_ERROR;
