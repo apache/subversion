@@ -14,7 +14,7 @@ delay a release, etc.
 Candidate changes for 1.5.8:
 ============================
 
- * r36106
+ * r876180
    Resolves issue #3374, "svn cp --parents path URL encoding issues"
    For
      svn cp --parent ^/fö ^/dö/fö
@@ -28,7 +28,7 @@ Candidate changes for 1.5.8:
      -0: gstein (encoding issues are tricky; I'd rather tell people to
                  upgrade to 1.6.0, rather than 1.5.6)
 
- * r36111
+ * r876185
    On Windows don't retry deleting a file 100 times when this file is really
    not a file but just a directory.
    Justification:
@@ -40,7 +40,7 @@ Candidate changes for 1.5.8:
                  the user wants the fix, they can upgrade to 1.6.0 rather
                  than 1.5.6)
 
- * r36527
+ * r876601
    Yet another merge performance improvement: Potentially reduce server
    queries about subtree mergeinfo during reverse merges.
    Justification:
@@ -49,7 +49,7 @@ Candidate changes for 1.5.8:
    Votes:
      +1: pburba
 
- * r36730, r36766, r36775
+ * r876804, r876840, r876849
    Fix issue #3383 'Foreign repository merge can add mergeinfo from the
    foreign repos'
    Justification:
@@ -58,28 +58,28 @@ Candidate changes for 1.5.8:
      in the merge target.  The latter might cause real problems, making it
      appear merges have been done that actually have not or vice-versa.
    Notes:
-     r36775 is the fix, the other revisions are expansion of an existing
+     r876849 is the fix, the other revisions are expansion of an existing
      merge test to cover this issue.  There are some minor conflicts, a
      backport branch can be found at
      http://svn.collab.net/repos/svn/branches/1.5.x-r36775.
    Votes:
      +1: pburba, arfrever
 
- * r37072, r37083
+ * r877146, r877157
    Fix issue #3392 'Parsing error with reverse merges and non-inheritable
    mergeinfo'
    Justification:
      Can cause repeat merges to break in the presence of non-inheritable
      mergeinfo.
    Notes:
-     r37072 is a test for the issue, r37083 is the fix.  There is a backport
+     r877146 is a test for the issue, r877157 is the fix.  There is a backport
      branch at http://svn.collab.net/repos/svn/branches/1.5.x-issue3392, but
-     it is dependent on r36879 being merged first.  (If this change *must* be
-     merged before r36879 I'll create a branch to do so - pburba)
+     it is dependent on r876953 being merged first.  (If this change *must* be
+     merged before r876953 I'll create a branch to do so - pburba)
    Votes:
      +1: pburba, arfrever
 
- * r37137
+ * r877211
    Make some sweeping pool lifetime fixes in the BDB backend.
    Justification:
      Bringing 'svn ls -v' over HTTP on a directory with 10000 files
@@ -92,7 +92,7 @@ Candidate changes for 1.5.8:
    Votes:
      +1: cmpilato, arfrever
 
- * r37768
+ * r877842
    Make svnadmin load tolerate mergeinfo with "\r\n".
    Justification:
      Prior to this change you cannot load a dump file that contains Windows
@@ -101,7 +101,7 @@ Candidate changes for 1.5.8:
    Votes:
      +1: pburba, cmpilato
 
- * r37779
+ * r877853
    Fix a potential segfault when doing noop file merges.
    Justification:
      Not common, but a segfault is a segfault.  See
@@ -113,7 +113,7 @@ Candidate changes for 1.5.8:
    Votes:
      +1: pburba
 
- * r38068
+ * r878142
    Fix issue #3119, "File '...' already exists" when it obviously doesn't,
    during commit.
    Justification:
@@ -121,7 +121,7 @@ Candidate changes for 1.5.8:
    Votes:
      +1: stylesen
 
- * r38686-7
+ * r878760-7
    Fix serious bugs in libsvn_ra_svn and svnsync.  (If svnsync errors
    while syncing from svnserve to mod_dav_svn, it commits a
    half-written transaction rather than aborting it.)
@@ -129,13 +129,13 @@ Candidate changes for 1.5.8:
      A potentially large audience of users may unknowingly be creating
      corrupt repository mirrors!
    Notes:
-     Running 'svn merge -r36685:36687 ^/truenk' creates a spurious
+     Running 'svn merge -r876759:876761 ^/truenk' creates a spurious
      one-line conflict for some reason, perhaps due to linefeeds.
      Easy to clean up.
    Votes:
      +1: sussman
 
- * r39019
+ * r879093
    Fix bug where svn_[rangelist|mergeinfo]_[merge|intersect|remove|diff]
    APIs can modify their *non*-output arguments.
    Justification:
@@ -148,14 +148,14 @@ Candidate changes for 1.5.8:
    Votes:
      +1: pburba
 
- * r36023
+ * r876097
    Resolve symlinks when checking ~/.subversion
    Justification:
      It gives flexibility to users to link different .subversion folders.
    Votes:
      +1: stylesen, stsp
 
- * r39219
+ * r879293
    Perform MIME type matching case-insensitively.  (Issue #3479)
    Justification:
      The broken behavior is inconsistent with the way MIME mapping
@@ -163,14 +163,14 @@ Candidate changes for 1.5.8:
    Votes:
      +1: cmpilato
 
- * r40008
+ * r880082
    Respect Apache's ServerSignature directive.
    Justification:
      Many subversion server administrators want it.
    Votes:
      +1: stylesen
 
- * r40200, r40201
+ * r880274, r880275
    Provide examples for specifying an auto-prop value for the svn:keywords
    property which contains several fields separated by whitespace.
    Also tolerate (but don't advertise) quotes around property values in
@@ -187,7 +187,7 @@ Candidate changes for 1.5.8:
 Approved changes:
 =================
 
- * r36851, r36857
+ * r876925, r876931
    'svnadmin upgrade'-ing pre-1.2 repositories fails for lack of
    'db/format' file.
    Justification:
