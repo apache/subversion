@@ -238,5 +238,12 @@ Candidate changes:
    Votes:
      +1: hwright
  
+  * r881905
+    Fix a segmentation fault in libsvn_fs_fs/fs_fs.c.
+    Justification:
+      Passing NULL (or rather, 0) for a pool is a bad idea.
+    Votes:
+      +1: steveking, stsp
+
 Approved changes:
 =================
