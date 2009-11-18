@@ -1476,7 +1476,7 @@ def diff_renamed_file(sbox):
                        'M') :
     raise svntest.Failure
 
-  # Repos->WC diff of the file ignoring copyfrom
+  # Repos->WC diff of the file showing copies as adds
   exit_code, diff_output, err_output = svntest.main.run_svn(
                                          None, 'diff', '-r', '1',
                                          '--show-copies-as-adds', pi2_path)
@@ -1487,7 +1487,7 @@ def diff_renamed_file(sbox):
 
   svntest.main.file_append(pi2_path, "new pi")
 
-  # Repos->WC of the directory
+  # Repos->WC of the containing directory
   exit_code, diff_output, err_output = svntest.main.run_svn(
     None, 'diff', '-r', '1', os.path.join('A', 'D'))
 
@@ -1501,7 +1501,7 @@ def diff_renamed_file(sbox):
                        'M') :
     raise svntest.Failure
 
-  # Repos->WC of the directory ignoring copyfrom
+  # Repos->WC of the containing directory showing copies as adds
   exit_code, diff_output, err_output = svntest.main.run_svn(
     None, 'diff', '-r', '1', '--show-copies-as-adds', os.path.join('A', 'D'))
 
@@ -1523,7 +1523,7 @@ def diff_renamed_file(sbox):
                        'M') :
     raise svntest.Failure
 
-  # WC->WC of the file ignoring copyfrom
+  # WC->WC of the file showing copies as adds
   exit_code, diff_output, err_output = svntest.main.run_svn(
                                          None, 'diff',
                                          '--show-copies-as-adds', pi2_path)
