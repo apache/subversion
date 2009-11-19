@@ -510,7 +510,7 @@ class LogMessage(object):
 log_separator = '-' * 72 + '\n'
 log_header_re = re.compile\
                 ('^(r[0-9]+) \| ([^|]+) \| ([^|]+) \| ([0-9]+)[^0-9]')
-field_re = re.compile('^(Patch|Review(ed)?|Suggested|Found) by:\s*(.*)')
+field_re = re.compile('^(Patch|Review(ed)?|Suggested|Found) by:\s*\S.*$')
 field_aliases = { 'Reviewed' : 'Review' }
 parenthetical_aside_re = re.compile('^\s*\(.*\)\s*$')
 
@@ -565,6 +565,8 @@ def graze(input):
                                          + (field.alias or field.name)
                                          + ' by:\s+|\s+)([^\s(].*)')
                 m = in_field_re.match(line)
+                if m is None:
+                  sys.stderr.write("Error matching: %s\n" % (line))
                 user, real, email = Contributor.parse(m.group(2))
                 if user == 'me':
                   user = log.committer
