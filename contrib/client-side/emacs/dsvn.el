@@ -2001,7 +2001,7 @@ files instead."
 
 (defun svn-merge-columns-list (columns fmt)
   (let ((first-lines (mapcar #'car columns)))
-    (and (eval `(or ',@first-lines))
+    (and (eval `(or ,@first-lines))
 	 (cons (mapconcat (lambda (str) (format fmt (or str "")))
 			  first-lines " | ")
 	       (svn-merge-columns-list (mapcar #'cdr columns) fmt)))))
