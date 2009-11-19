@@ -615,15 +615,7 @@ if test "$enable_nls" = "yes"; then
   fi
 fi
 
-AH_BOTTOM([/*
- * Subversion developers may want to use some additional debugging facilities
- * while working on the code. We'll pull that in here, so individual source
- * files don't have to include this header manually.
- */
-#ifdef SVN_DEBUG
-#include "private/svn_debug.h"
-#endif
-
+AH_BOTTOM(
 #define N_(x) x
 #define U_(x) x
 #ifdef ENABLE_NLS
@@ -637,7 +629,7 @@ AH_BOTTOM([/*
 #define gettext(x) (x)
 #define dgettext(domain, x) (x)
 #endif
-])
+)
 
 dnl Used to simulate makefile conditionals.
 GETTEXT_CODESET=\#
