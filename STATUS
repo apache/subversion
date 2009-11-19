@@ -51,7 +51,7 @@ Candidate changes:
      and is left after killing terminal.
    Votes:
      +1: arfrever
-     -0: psamuelson, stsp (without r878196) (code is ugly and Linux-specific -
+     -0: peters, stsp (without r878196) (code is ugly and Linux-specific -
                                             would getenv("WINDOWID") work
                                             instead?)
 
