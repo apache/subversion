@@ -497,6 +497,8 @@ def delete_missing(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #854:
 # Revert . inside an svn added empty directory should generate an error.
+# Not anymore!  wc-ng uses absolute paths for everything, which means we
+# can handle this case without too much trouble.
 
 def revert_inside_newly_added_dir(sbox):
   "revert inside a newly added dir"
@@ -511,9 +513,9 @@ def revert_inside_newly_added_dir(sbox):
   svntest.main.run_svn(None, 'add', 'foo')
 
   # Now change into the newly added directory, revert and make sure
-  # an error is output.
+  # no error is output.
   os.chdir('foo')
-  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '.')
 
 #----------------------------------------------------------------------

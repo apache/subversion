@@ -68,18 +68,12 @@ revert(const char *path,
        svn_client_ctx_t *ctx,
        apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access, *target_access;
-  const char *target, *local_abspath;
+  const char *local_abspath;
   svn_error_t *err;
-  int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
-
-  SVN_ERR(svn_wc__adm_open_anchor_in_context(
-                                 &adm_access, &target_access, &target,
-                                 ctx->wc_ctx, path, TRUE, adm_lock_level,
-                                 ctx->cancel_func, ctx->cancel_baton,
-                                 pool));
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__acquire_write_lock(ctx->wc_ctx, local_abspath, pool));
 
   err = svn_wc_revert4(ctx->wc_ctx,
                        local_abspath,
@@ -108,7 +102,8 @@ revert(const char *path,
         return svn_error_return(err);
     }
 
-  return svn_wc_adm_close2(adm_access, pool);
+  return svn_error_return(
+    svn_wc__release_write_lock(ctx->wc_ctx, local_abspath, pool));
 }
 
 
