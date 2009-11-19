@@ -743,6 +743,7 @@ migrate_props(const char *wcroot_abspath,
      if (node is replaced):
        revert  -> BASE
        working -> ACTUAL
+       base    -> WORKING
      else if (prop pristine is working [as defined in props.c] ):
        base    -> WORKING
        working -> ACTUAL
@@ -781,6 +782,7 @@ migrate_props(const char *wcroot_abspath,
       svn_boolean_t pristine_is_working;
       svn_boolean_t replaced;
       apr_hash_t *working_props;
+      apr_hash_t *base_props;
       svn_stream_t *stream;
 
       svn_pool_clear(iterpool);
@@ -800,6 +802,12 @@ migrate_props(const char *wcroot_abspath,
                                          child_relpath),
                             iterpool);
 
+      base_props = apr_hash_make(iterpool);
+      SVN_ERR(svn_stream_open_readonly(&stream, prop_base_path, iterpool,
+                                       iterpool));
+      SVN_ERR(svn_hash_read2(base_props, stream, SVN_HASH_TERMINATOR,
+                             iterpool));
+
       /* if node is replaced ... */
       SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, child_abspath,
                                            iterpool));
@@ -815,16 +823,12 @@ migrate_props(const char *wcroot_abspath,
           SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, child_abspath,
                                                         revert_props, FALSE,
                                                         iterpool));
+          SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, child_abspath,
+                                                        base_props, TRUE,
+                                                        iterpool));
         }
       else
         {
-          apr_hash_t *base_props = apr_hash_make(iterpool);
-
-          SVN_ERR(svn_stream_open_readonly(&stream, prop_base_path, iterpool,
-                                           iterpool));
-          SVN_ERR(svn_hash_read2(base_props, stream, SVN_HASH_TERMINATOR,
-                                 iterpool));
-
           SVN_ERR(svn_wc__prop_pristine_is_working(&pristine_is_working, db,
                                                    child_abspath, iterpool));
           SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, child_abspath,
