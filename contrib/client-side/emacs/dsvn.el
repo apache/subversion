@@ -1,12 +1,11 @@
 ;;; dsvn.el --- Subversion interface
 
-;; Copyright 2006-2008 Virtutech AB
+;; Copyright 2006-2009 Virtutech AB
 
 ;; Author: David Kågedal <david@virtutech.com>
 ;;	Mattias Engdegård <mattias@virtutech.com>
 ;; Maintainer: Mattias Engdegård <mattias@virtutech.com>
 ;; Created: 27 Jan 2006
-;; Version: 1.8
 ;; Keywords: docs
 
 ;; This program is free software; you can redistribute it and/or
