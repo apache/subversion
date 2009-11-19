@@ -1757,7 +1757,7 @@ svn_wc__acquire_write_lock(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
                                scratch_pool));
-  if (kind == svn_wc__db_kind_file)
+  if (kind != svn_wc__db_kind_dir)
     local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
   /* The current lock paradigm is that each directory holds a lock for itself,
@@ -1804,7 +1804,7 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
                                scratch_pool));
-  if (kind == svn_wc__db_kind_file)
+  if (kind != svn_wc__db_kind_dir)
     local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
   /* We need to recursively remove locks (see comment in
