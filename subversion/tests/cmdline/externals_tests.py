@@ -1396,6 +1396,62 @@ def export_sparse_wc_with_externals(sbox):
 
   svntest.main.safe_rmtree(export_target)
 
+#----------------------------------------------------------------------
+
+# Change external from one repo to another
+def relegate_external(sbox):
+  "relegate external from one repo to another"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  A_path = os.path.join(wc_dir, 'A')
+
+  # setup an external within the same repository
+  externals_desc = '^/A/B/E        external'
+  change_external(A_path, externals_desc)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up',
+                                     repo_url, wc_dir)
+
+  # create another repository
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 2)
+
+  # point external to the other repository
+  externals_desc = other_repo_url + '/A/B/E        external\n'
+  (fd, tmp_f) = tempfile.mkstemp()
+  svntest.main.file_append(tmp_f, externals_desc)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'pset', '-F', tmp_f,
+                                     'svn:externals', A_path)
+
+  # Update "relegates", i.e. throws-away and recreates, the external
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/external'       : Item(), # No A?
+      'A/external/alpha' : Item(status='A '),
+      'A/external/beta'  : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A', props={'svn:externals' : externals_desc})
+  expected_disk.add({
+      'A/external'       : Item(),
+      'A/external/alpha' : Item('This is the file \'alpha\'.\n'),
+      'A/external/beta'  : Item('This is the file \'beta\'.\n'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A', status=' M')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
+
+  ### TODO: Commit the propset and update a pristine working copy from
+  ### r2 to r3.
+
 ########################################################################
 # Run the tests
 
@@ -1423,6 +1479,7 @@ test_list = [ None,
               XFail(update_lose_file_external),
               XFail(switch_relative_external),
               export_sparse_wc_with_externals,
+              XFail(relegate_external),
              ]
 
 if __name__ == '__main__':
