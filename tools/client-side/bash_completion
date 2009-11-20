@@ -134,6 +134,7 @@ function _svn_lls()
 #   status/previous are those at the end of the line, not at the entry position
 # - url completion should select more cases where it is relevant
 # - url completion of http:// schemas could suggest sub directories?
+# - add completion for experimental 'obliterate' feature?
 _svn()
 {
 	local cur cmds cmdOpts pOpts mOpts rOpts qOpts nOpts optsParam opt
