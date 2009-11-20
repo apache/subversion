@@ -23,7 +23,7 @@
 
 pragma auto_vacuum = 1;
 
-/* A table mapping representation hashes to locations in a rev file. */
+/* A table for storing revision properties. */
 create table revprop (revision integer UNIQUE not null,
                       properties BLOB not null);
 
