@@ -102,7 +102,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *repos_root;
   svn_error_t *err;
   svn_revnum_t revnum;
-  int levels_to_lock;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t use_commit_times;
@@ -125,22 +124,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   if (depth == svn_depth_unknown)
     depth_is_sticky = FALSE;
 
-  /* ### Ah, the irony.  We'd like to base our levels_to_lock on the
-     ### depth we're going to use for the update.  But that may depend
-     ### on the depth in the working copy, which we can't discover
-     ### without calling adm_open.  We could expend an extra call,
-     ### with levels_to_lock=0, to get the real depth (but only if we
-     ### need to) and then make the real call... but it's not worth
-     ### the complexity right now.  If the requested depth tells us to
-     ### lock the entire tree when we don't actually need to, that's a
-     ### performance hit, but (except for access contention) it is not
-     ### a correctness problem. */
-
-  /* We may have to crop the subtree if the depth is sticky, so lock the
-     entire tree in such a situation*/
-  levels_to_lock = depth_is_sticky
-    ? -1 : SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
-
   /* Sanity check.  Without this, the update is meaningless. */
   SVN_ERR_ASSERT(path);
 
@@ -157,7 +140,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
        */
       SVN_ERR(svn_wc__adm_open_anchor_in_context(&adm_access, &dir_access,
                                                  &target, ctx->wc_ctx, path,
-                                                 TRUE, levels_to_lock,
+                                                 TRUE,
+                                                 -1, /* recursive lock */
                                                  ctx->cancel_func,
                                                  ctx->cancel_baton, pool));
     }
@@ -166,8 +150,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       /* Assume the exact root is specified (required for externals to work,
          as these would otherwise try to open the parent working copy again) */
       SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, path, TRUE,
-                                          levels_to_lock, ctx->cancel_func,
-                                          ctx->cancel_baton, pool));
+                                          -1, /* recursive lock */
+                                          ctx->cancel_func, ctx->cancel_baton,
+                                          pool));
       dir_access = adm_access;
       target = "";
     }
