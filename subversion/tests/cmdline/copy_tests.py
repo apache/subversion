@@ -4132,11 +4132,6 @@ def commit_copy_depth_empty(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', a, new_a)
 
-  ### svn: Commit succeeded, but other errors follow:
-  ### svn: Error bumping revisions post-commit (details follow):
-  ### svn: Unable to lock '<snip>\new_A\B'
-
-  # Then the working copy is locked and can't be unlocked with svn cleanup.
   svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                      new_a, '--depth', 'empty',
                                      '-m', 'Copied directory')
@@ -4355,7 +4350,7 @@ test_list = [ None,
               find_copyfrom_information_upstairs,
               path_move_and_copy_between_wcs_2475,
               path_copy_in_repo_2475,
-              XFail(commit_copy_depth_empty),
+              commit_copy_depth_empty,
               copy_below_copy,
               XFail(move_below_move)
              ]
