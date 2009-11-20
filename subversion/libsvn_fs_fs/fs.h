@@ -59,6 +59,10 @@ extern "C" {
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
 #define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Oldest revision which
                                                     has not been packed. */
+#define PATH_MIN_UNPACKED_REVPROP "min-unpacked-revprop" /* Oldest revision 
+                                                            property which has 
+                                                            not been packed. */
+#define PATH_REVPROPS_DB "revprops.db"
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -85,7 +89,7 @@ extern "C" {
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   4
+#define SVN_FS_FS__FORMAT_NUMBER   5
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -113,6 +117,9 @@ extern "C" {
 
 /* The minimum format number that supports packed shards. */
 #define SVN_FS_FS__MIN_PACKED_FORMAT 4
+
+  /* The minimum format number that supports packed revprop shards. */
+#define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 5
 
 /* The minimum format number that stores node kinds in changed-paths lists. */
 #define SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT 4
@@ -238,8 +245,14 @@ typedef struct
   /* The sqlite database used for rep caching. */
   svn_sqlite__db_t *rep_cache_db;
 
+   /* The sqlite database used for revprops. */
+   svn_sqlite__db_t *revprop_db;
+
   /* The oldest revision not in a pack file. */
   svn_revnum_t min_unpacked_rev;
+
+   /* The oldest revision property not in a pack db. */
+   svn_revnum_t min_unpacked_revprop;
 
   /* Whether rep-sharing is supported by the filesystem
    * and allowed by the configuration. */
