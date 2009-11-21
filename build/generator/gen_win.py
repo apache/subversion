@@ -1486,6 +1486,7 @@ class WinGeneratorBase(GeneratorBase):
     import transform_sql
     sql_sources = [
       os.path.join('subversion', 'libsvn_fs_fs', 'rep-cache-db'),
+      os.path.join('subversion', 'libsvn_fs_fs', 'revprops-db'),
       os.path.join('subversion', 'libsvn_wc', 'wc-metadata'),
       os.path.join('subversion', 'libsvn_wc', 'wc-checks'),
       ]
