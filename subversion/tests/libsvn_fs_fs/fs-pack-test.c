@@ -28,6 +28,7 @@
 #include "../../libsvn_fs_fs/fs.h"
 
 #include "svn_pools.h"
+#include "svn_props.h"
 #include "svn_fs.h"
 
 #include "../svn_test_fs.h"
@@ -341,6 +342,52 @@ commit_packed_fs(const svn_test_opts_t *opts,
 }
 #undef REPO_NAME
 
+/* Get/set revprop while repository is being packed in background. */
+#define REPO_NAME "test-get-set-revprop-packed-fs"
+#define SHARD_SIZE 4
+#define MAX_REV 1
+static svn_error_t *
+get_set_revprop_packed_fs(const svn_test_opts_t *opts,
+                          apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  const char *conflict;
+  svn_revnum_t after_rev;
+  svn_string_t *prop_value;
+  apr_pool_t *subpool;
+
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0)
+      || (opts->server_minor_version && (opts->server_minor_version < 7)))
+    return SVN_NO_ERROR;
+
+  /* Create the packed FS and open it. */
+  SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE, pool));
+  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
+
+  subpool = svn_pool_create(pool);
+  /* Do a commit to trigger packing. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, MAX_REV + 1, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "iota", "new-iota",  subpool));
+  SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Pack the repository. */
+  SVN_ERR(svn_fs_pack(REPO_NAME, NULL, NULL, NULL, NULL, pool));
+
+  /* Try to get revprop for revision 0. */
+  SVN_ERR(svn_fs_revision_prop(&prop_value, fs, 0, SVN_PROP_REVISION_AUTHOR, pool));
+  
+  /* Try to change revprop for revision 0. */
+  SVN_ERR(svn_fs_change_rev_prop(fs, 0, SVN_PROP_REVISION_AUTHOR,
+                                 svn_string_create("tweaked-author", pool), pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -356,5 +403,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "read from a packed FSFS filesystem"),
     SVN_TEST_OPTS_PASS(commit_packed_fs,
                        "commit to a packed FSFS filesystem"),
+    SVN_TEST_OPTS_XFAIL(get_set_revprop_packed_fs,
+                        "get/set revprop while packing FSFS filesystem"),
     SVN_TEST_NULL
   };
