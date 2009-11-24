@@ -858,106 +858,84 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
                     const char *path,
                     apr_pool_t *pool)
 {
+  const char *local_abspath;
+  svn_wc__db_kind_t kind = svn_wc__db_kind_unknown;
+  svn_node_kind_t wckind;
+  svn_error_t *err;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
   if (strcmp(associated->path, path) == 0)
-    {
-      *adm_access = associated;
-    }
+    *adm_access = associated;
   else
-    {
-      const char *abspath;
+    *adm_access = svn_wc__adm_retrieve_internal2(associated->db, local_abspath,
+                                                 pool);
 
-      SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
-
-      *adm_access = svn_wc__adm_retrieve_internal2(associated->db, abspath,
-                                                   pool);
-
-      /* Relative paths can play stupid games with the lookup, and we might
-         try to return the wrong baton. Look for that case, and zap it.
-
-         The specific case observed happened during "svn status .. -u -v".
-         svn_wc_status2() would do dirname("..") returning "". When that
-         came into this function, we'd map it to an absolute path and find
-         it in the DB, then return it. The (apparently) *desired* behavior
-         is to not find "" in the set of batons.
-
-         Sigh.  */
-      if (*adm_access != NULL
-          && strcmp(path, (*adm_access)->path) != 0)
-        *adm_access = NULL;
-    }
+  /* We found what we're looking for, so bail. */
+  if (*adm_access)
+    return SVN_NO_ERROR;
 
   /* Most of the code expects access batons to exist, so returning an error
      generally makes the calling code simpler as it doesn't need to check
      for NULL batons. */
-  if (! *adm_access)
+  /* We are going to send a SVN_ERR_WC_NOT_LOCKED, but let's provide
+     a bit more information to our caller */
+
+  err = svn_io_check_path(path, &wckind, pool);
+
+  /* If we can't check the path, we can't make a good error message.  */
+  if (err)
     {
-      /* We are going to send a SVN_ERR_WC_NOT_LOCKED, but let's provide
-         a bit more information to our caller */
-
-      const char *local_abspath;
-      svn_wc__db_kind_t kind = svn_wc__db_kind_unknown;
-      svn_node_kind_t wckind;
-      svn_error_t *err;
-
-      err = svn_io_check_path(path, &wckind, pool);
-
-      /* If we can't check the path, we can't make a good error
-         message.  */
-      if (err)
-        {
-          return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, err,
-                                   _("Unable to check path existence for '%s'"),
-                                   svn_dirent_local_style(path, pool));
-        }
-
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-      if (associated)
-        {
-          err = svn_wc__db_read_kind(&kind, svn_wc__adm_get_db(associated),
-                                     local_abspath, TRUE, pool);
-
-          if (err)
-            {
-              kind = svn_wc__db_kind_unknown;
-              svn_error_clear(err);
-            }
-        }
-
-      if (kind == svn_wc__db_kind_dir && wckind == svn_node_file)
-        {
-          err = svn_error_createf(
-                   SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                   _("Expected '%s' to be a directory but found a file"),
-                   svn_dirent_local_style(path, pool));
-
-          return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
-        }
-      else if (kind != svn_wc__db_kind_dir && kind != svn_wc__db_kind_unknown)
-        {
-          err = svn_error_createf(
-                   SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                   _("Can't retrieve an access baton for non-directory '%s'"),
-                   svn_dirent_local_style(path, pool));
-
-          return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
-        }
-      else if (kind == svn_wc__db_kind_unknown || wckind == svn_node_none)
-        {
-          err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                  _("Directory '%s' is missing"),
-                                  svn_dirent_local_style(path, pool));
-
-          return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
-        }
-
-      /* If all else fails, return our useless generic error.  */
-      return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
-                               _("Working copy '%s' is not locked"),
+      return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, err,
+                               _("Unable to check path existence for '%s'"),
                                svn_dirent_local_style(path, pool));
     }
 
-  return SVN_NO_ERROR;
+  if (associated)
+    {
+      err = svn_wc__db_read_kind(&kind, svn_wc__adm_get_db(associated),
+                                 local_abspath, TRUE, pool);
+
+      if (err)
+        {
+          kind = svn_wc__db_kind_unknown;
+          svn_error_clear(err);
+        }
+    }
+
+  if (kind == svn_wc__db_kind_dir && wckind == svn_node_file)
+    {
+      err = svn_error_createf(
+               SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+               _("Expected '%s' to be a directory but found a file"),
+               svn_dirent_local_style(path, pool));
+
+      return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
+    }
+
+  if (kind != svn_wc__db_kind_dir && kind != svn_wc__db_kind_unknown)
+    {
+      err = svn_error_createf(
+               SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+               _("Can't retrieve an access baton for non-directory '%s'"),
+               svn_dirent_local_style(path, pool));
+
+      return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
+    }
+
+  if (kind == svn_wc__db_kind_unknown || wckind == svn_node_none)
+    {
+      err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                              _("Directory '%s' is missing"),
+                              svn_dirent_local_style(path, pool));
+
+      return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
+    }
+
+  /* If all else fails, return our useless generic error.  */
+  return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
+                           _("Working copy '%s' is not locked"),
+                           svn_dirent_local_style(path, pool));
 }
 
 
