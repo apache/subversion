@@ -68,12 +68,13 @@ revert(const char *path,
        svn_client_ctx_t *ctx,
        apr_pool_t *pool)
 {
-  const char *local_abspath;
+  const char *local_abspath, *anchor_abspath;
   svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc__acquire_write_lock(ctx->wc_ctx, local_abspath, pool));
+  SVN_ERR(svn_wc__acquire_write_lock(&anchor_abspath, ctx->wc_ctx,
+                                     local_abspath, pool, pool));
 
   err = svn_wc_revert4(ctx->wc_ctx,
                        local_abspath,
@@ -103,7 +104,7 @@ revert(const char *path,
     }
 
   return svn_error_return(
-    svn_wc__release_write_lock(ctx->wc_ctx, local_abspath, pool));
+    svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool));
 }
 
 

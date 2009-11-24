@@ -130,10 +130,9 @@ svn_wc__open_writable_base(svn_stream_t **stream,
                            apr_pool_t *scratch_pool);
 
 
-/* Blow away the admistrative directory associated with the access baton
-   ADM_ACCESS. This closes ADM_ACCESS, but it is safe to close ADM_ACCESS
-   again, after calling this function. */
-svn_error_t *svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
+/* Blow away the admistrative directory associated with DIR_ABSPATH */
+svn_error_t *svn_wc__adm_destroy(svn_wc__db_t *db,
+                                 const char *dir_abspath,
                                  apr_pool_t *scratch_pool);
 
 

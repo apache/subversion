@@ -1746,19 +1746,51 @@ svn_wc__temp_get_relpath(const char **rel_path,
 
 
 svn_error_t *
-svn_wc__acquire_write_lock(svn_wc_context_t *wc_ctx,
+svn_wc__acquire_write_lock(const char **anchor_abspath,
+                           svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
+                           apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_kind_t kind;
   apr_pool_t *iterpool;
   const apr_array_header_t *children;
+  svn_boolean_t parent_is_anchor = FALSE;
   int i;
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
-                               scratch_pool));
-  if (kind != svn_wc__db_kind_dir)
-    local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+  if (anchor_abspath)
+    {
+      const char *parent_abspath, *basename;
+      svn_error_t *err;
+
+      svn_dirent_split(local_abspath, &parent_abspath, &basename, scratch_pool);
+      err = svn_wc__db_read_children(&children, wc_ctx->db, parent_abspath,
+                                     scratch_pool, scratch_pool);
+      if (err)
+        svn_error_clear(err);
+      else
+        {
+          int i;
+          for (i = 0; i < children->nelts; ++i)
+            if (! strcmp(APR_ARRAY_IDX(children, i, const char *), basename))
+              break;
+          if (i < children->nelts)
+            parent_is_anchor = TRUE;
+        }
+      local_abspath = parent_is_anchor ? parent_abspath : local_abspath;
+      *anchor_abspath = apr_pstrdup(result_pool, local_abspath);
+    }
+
+  if (! parent_is_anchor)
+    {
+      SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
+                                   scratch_pool));
+      if (kind != svn_wc__db_kind_dir)
+        local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+      SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
+                                       scratch_pool, scratch_pool));
+    }
 
   /* The current lock paradigm is that each directory holds a lock for itself,
      and there are no inherited locks.  In the eventual wc-ng paradigm, a
@@ -1766,8 +1798,6 @@ svn_wc__acquire_write_lock(svn_wc_context_t *wc_ctx,
      But since we aren't quite there yet, we do the infinite locking
      manually (and be sure to release them in svn_wc__release_write_lock(). */
 
-  SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
-                                   scratch_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < children->nelts; i ++)
     {
@@ -1780,7 +1810,8 @@ svn_wc__acquire_write_lock(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, child_abspath, FALSE,
                                    iterpool));
       if (kind == svn_wc__db_kind_dir)
-        SVN_ERR(svn_wc__acquire_write_lock(wc_ctx, child_abspath, iterpool));
+        SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, child_abspath,
+                                           NULL, iterpool));
     }
 
   SVN_ERR(svn_wc__db_wclock_set(wc_ctx->db, local_abspath, iterpool));
