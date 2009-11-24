@@ -521,6 +521,9 @@ svn_wc__node_get_lock_token(const char **lock_token,
  * recursively acquire write locks for the anchor of @a local_abspath
  * and return the anchor path in @a *anchor_abspath.  Use @a wc_ctx
  * for working copy access.
+ *
+ * ### @a anchor_abspath should be removed when we move to centralised
+ * ### metadata as it will be unnecessary.
  */
 svn_error_t *
 svn_wc__acquire_write_lock(const char **anchor_abspath,
