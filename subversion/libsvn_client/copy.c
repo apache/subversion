@@ -278,7 +278,8 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
   /* ### If we didn't potentially use DST_ACCESS as the SRC_ACCESS, we
      ### could use a read lock here. */
   SVN_ERR(svn_wc__adm_open_in_context(&dst_access, ctx->wc_ctx, dst_parent,
-                           TRUE, 0, ctx->cancel_func, ctx->cancel_baton, pool));
+                           TRUE, -1, ctx->cancel_func, ctx->cancel_baton,
+                           pool));
 
   for (i = 0; i < copy_pairs->nelts; i++)
     {
@@ -1602,7 +1603,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
 
   /* Probe the wc at the longest common dst ancestor. */
   SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, top_dst_path,
-                                       TRUE, 0, ctx->cancel_func,
+                                       TRUE, -1, ctx->cancel_func,
                                        ctx->cancel_baton, pool));
 
   /* We've already checked for physical obstruction by a working file.
