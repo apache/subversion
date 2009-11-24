@@ -670,6 +670,14 @@ svn_repos_replay2(svn_fs_root_t *root,
   struct path_driver_cb_baton cb_baton;
   size_t base_path_len;
 
+  /* Special-case r0, which we know is an empty revision; if we don't
+     special-case it we might end up trying to compare it to "r-1". */
+  if (svn_fs_is_revision_root(root) && svn_fs_revision_root_revision(root) == 0)
+    {
+      SVN_ERR(editor->set_target_revision(edit_baton, 0, pool));
+      return;
+    }
+
   /* Fetch the paths changed under ROOT. */
   SVN_ERR(svn_fs_paths_changed2(&fs_changes, root, pool));
 
