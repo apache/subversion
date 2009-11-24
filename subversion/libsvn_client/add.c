@@ -595,7 +595,8 @@ svn_client_add4(const char *path,
   else
     parent_abspath = svn_dirent_dirname(local_abspath, pool);
 
-  SVN_ERR(svn_wc__acquire_write_lock(ctx->wc_ctx, parent_abspath, pool));
+  SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, parent_abspath,
+                                     pool, pool));
 
   if (add_parents)
     {

@@ -611,25 +611,20 @@ svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
-svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
+svn_wc__adm_destroy(svn_wc__db_t *db,
+                    const char *dir_abspath,
                     apr_pool_t *scratch_pool)
 {
-  const char *path, *local_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *adm_abspath;
 
-  SVN_ERR(svn_wc__write_check(db, svn_wc__adm_access_abspath(adm_access),
-                              scratch_pool));
+  SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
 
   /* Well, the coast is clear for blowing away the administrative
-     directory, which also removes the lock file */
-  path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access), NULL,
-                           scratch_pool);
-  local_abspath = svn_wc__adm_access_abspath(adm_access);
+     directory, which also removes the lock */
+  SVN_ERR(svn_wc__db_temp_forget_directory(db, dir_abspath, scratch_pool));
 
-  SVN_ERR(svn_wc_adm_close2(adm_access, scratch_pool));
-  SVN_ERR(svn_wc__db_temp_forget_directory(db, local_abspath, scratch_pool));
-
-  SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, scratch_pool));
+  adm_abspath = svn_wc__adm_child(dir_abspath, NULL, scratch_pool);
+  SVN_ERR(svn_io_remove_dir2(adm_abspath, FALSE, NULL, NULL, scratch_pool));
 
   return SVN_NO_ERROR;
 }
