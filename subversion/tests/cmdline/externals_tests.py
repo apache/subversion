@@ -1479,7 +1479,7 @@ test_list = [ None,
               XFail(update_lose_file_external),
               XFail(switch_relative_external),
               export_sparse_wc_with_externals,
-              XFail(relegate_external),
+              relegate_external,
              ]
 
 if __name__ == '__main__':
