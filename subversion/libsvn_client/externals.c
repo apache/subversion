@@ -329,7 +329,7 @@ switch_file_external(const char *path,
           svn_error_clear(err);
           close_adm_access = TRUE;
           SVN_ERR(svn_wc__adm_open_in_context(&target_adm_access, ctx->wc_ctx,
-                                              anchor, TRUE, 1,
+                                              anchor, TRUE, -1,
                                               ctx->cancel_func,
                                               ctx->cancel_baton, subpool));
 
