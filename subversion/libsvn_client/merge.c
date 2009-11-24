@@ -2291,7 +2291,7 @@ merge_dir_deleted(const char *local_dir_abspath,
                notes/tree-conflicts/detection.txt.
              */
 
-            svn_dirent_split(path, &parent_path, NULL, subpool);
+            parent_path = svn_dirent_dirname(path, subpool);
             /* Passing NULL for the notify_func and notify_baton because
                repos_diff.c:delete_entry() will do it for us. */
             err = svn_client__wc_delete(path, merge_b->force,

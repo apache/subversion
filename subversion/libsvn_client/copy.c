@@ -341,7 +341,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      svn_dirent_split(pair->src, &src_parent, NULL, iterpool);
+      src_parent = svn_dirent_dirname(pair->src, iterpool);
 
       SVN_ERR(svn_wc__adm_open_in_context(&src_access, ctx->wc_ctx, src_parent,
                                TRUE, pair->src_kind == svn_node_dir ? -1 : 0,
@@ -622,7 +622,7 @@ find_absent_parents1(svn_ra_session_t *ra_session,
       svn_pool_clear(iterpool);
 
       APR_ARRAY_PUSH(new_dirs, const char *) = dir;
-      svn_dirent_split(dir, &dir, NULL, pool);
+      dir = svn_dirent_dirname(dir, pool);
 
       SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM,
                                 &kind, iterpool));
