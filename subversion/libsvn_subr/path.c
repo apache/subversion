@@ -769,14 +769,13 @@ uri_escape(const char *path, const char table[], apr_pool_t *pool)
         svn_stringbuf_appendbytes(retstr, path + copied,
                                   i - copied);
 
-      /* Now, sprintf() in our escaped character, making sure our
-         buffer is big enough to hold the '%' and two digits.  We cast
-         the C to unsigned char here because the 'X' format character
-         will be tempted to treat it as an unsigned int...which causes
-         problem when messing with 0x80-0xFF chars.  We also need space
-         for a null as sprintf will write one. */
+      /* Now, snprintf() in our escaped character, consisting of the
+         '%' and two digits.  We cast the C to unsigned char here because
+         the 'X' format character will be tempted to treat it as an unsigned
+         int...which causes problem when messing with 0x80-0xFF chars.
+         We also need space for a null as snprintf will write one. */
       svn_stringbuf_ensure(retstr, retstr->len + 4);
-      sprintf(retstr->data + retstr->len, "%%%02X", (unsigned char)c);
+      snprintf(retstr->data + retstr->len, 4, "%%%02X", (unsigned char)c);
       retstr->len += 3;
 
       /* Finally, update our copy counter. */
@@ -791,7 +790,7 @@ uri_escape(const char *path, const char table[], apr_pool_t *pool)
   if (i - copied)
     svn_stringbuf_appendbytes(retstr, path + copied, i - copied);
 
-  /* retstr is null-terminated either by sprintf or the svn_stringbuf
+  /* retstr is null-terminated either by snprintf or the svn_stringbuf
      functions. */
 
   return retstr->data;
@@ -1031,7 +1030,7 @@ illegal_path_escape(const char *path, apr_pool_t *pool)
       /*### The backslash separator doesn't work too great with Windows,
          but it's what we'll use for consistency with invalid utf8
          formatting (until someone has a better idea) */
-      sprintf(retstr->data + retstr->len, "\\%03o", (unsigned char)c);
+      snprintf(retstr->data + retstr->len, 5, "\\%03o", (unsigned char)c);
       retstr->len += 4;
 
       /* Finally, update our copy counter. */
@@ -1046,7 +1045,7 @@ illegal_path_escape(const char *path, apr_pool_t *pool)
   if (i - copied)
     svn_stringbuf_appendbytes(retstr, path + copied, i - copied);
 
-  /* retstr is null-terminated either by sprintf or the svn_stringbuf
+  /* retstr is null-terminated either by snprintf or the svn_stringbuf
      functions. */
 
   return retstr->data;

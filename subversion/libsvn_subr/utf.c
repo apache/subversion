@@ -399,7 +399,7 @@ fuzzy_escape(const char *src, apr_size_t len, apr_pool_t *pool)
       src++;
     }
 
-  /* Allocate that amount. */
+  /* Allocate that amount, plus one slot for NUL. */
   new = apr_palloc(pool, new_len + 1);
 
   new_orig = new;
@@ -413,7 +413,7 @@ fuzzy_escape(const char *src, apr_size_t len, apr_pool_t *pool)
              function escapes different characters.  Please keep in sync!
              ### If we add another fuzzy escape somewhere, we should abstract
              ### this out to a common function. */
-          sprintf(new, "?\\%03u", (unsigned char) *src_orig);
+          snprintf(new, 6, "?\\%03u", (unsigned char) *src_orig);
           new += 5;
         }
       else
