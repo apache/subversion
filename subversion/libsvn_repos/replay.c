@@ -675,7 +675,7 @@ svn_repos_replay2(svn_fs_root_t *root,
   if (svn_fs_is_revision_root(root) && svn_fs_revision_root_revision(root) == 0)
     {
       SVN_ERR(editor->set_target_revision(edit_baton, 0, pool));
-      return;
+      return SVN_NO_ERROR;
     }
 
   /* Fetch the paths changed under ROOT. */
