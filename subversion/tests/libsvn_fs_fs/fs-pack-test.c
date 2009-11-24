@@ -403,7 +403,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "read from a packed FSFS filesystem"),
     SVN_TEST_OPTS_PASS(commit_packed_fs,
                        "commit to a packed FSFS filesystem"),
-    SVN_TEST_OPTS_XFAIL(get_set_revprop_packed_fs,
-                        "get/set revprop while packing FSFS filesystem"),
+    SVN_TEST_OPTS_PASS(get_set_revprop_packed_fs,
+                       "get/set revprop while packing FSFS filesystem"),
     SVN_TEST_NULL
   };

@@ -2719,11 +2719,11 @@ set_revision_proplist(svn_fs_t *fs,
   return svn_error_return(svn_sqlite__insert(NULL, stmt));
 }
 
-svn_error_t *
-svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
-                             svn_fs_t *fs,
-                             svn_revnum_t rev,
-                             apr_pool_t *pool)
+static svn_error_t *
+revision_proplist(apr_hash_t **proplist_p,
+                  svn_fs_t *fs,
+                  svn_revnum_t rev,
+                  apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_hash_t *proplist;
@@ -2802,6 +2802,30 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
     }
 
   *proplist_p = proplist;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
+                             svn_fs_t *fs,
+                             svn_revnum_t rev,
+                             apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  err = revision_proplist(proplist_p, fs, rev, pool);
+  if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
+    {
+      /* If a pack is occurring simultaneously, the min-unpacked-revprop value
+         could change, so reload it and then attempt to fetch these revprops
+         again. */
+      svn_error_clear(err);
+      SVN_ERR(update_min_unpacked_revprop(fs, pool));
+      SVN_ERR(revision_proplist(proplist_p, fs, rev, pool));
+    }
+  else if (err)
+    return svn_error_return(err);
 
   return SVN_NO_ERROR;
 }
