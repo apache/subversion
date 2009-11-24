@@ -1770,7 +1770,6 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
         svn_error_clear(err);
       else
         {
-          int i;
           for (i = 0; i < children->nelts; ++i)
             if (! strcmp(APR_ARRAY_IDX(children, i, const char *), basename))
               break;
