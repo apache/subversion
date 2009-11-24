@@ -328,8 +328,12 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      svn_wc_adm_access_t *src_access, *dst_access;
+      svn_wc_adm_access_t *src_access;
+      svn_wc_adm_access_t *dst_access;
+      svn_boolean_t close_dst_access = FALSE;
+      svn_boolean_t close_src_access = FALSE;
       const char *src_parent;
+      const char *src_parent_abspath;
       const char *dst_abspath;
       const char *dst_parent_abspath;
 
@@ -342,42 +346,60 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
       src_parent = svn_dirent_dirname(pair->src, iterpool);
-
-      SVN_ERR(svn_wc__adm_open_in_context(&src_access, ctx->wc_ctx, src_parent,
-                               TRUE, pair->src_kind == svn_node_dir ? -1 : 0,
-                               ctx->cancel_func, ctx->cancel_baton,
-                               iterpool));
-
+      SVN_ERR(svn_dirent_get_absolute(&src_parent_abspath, src_parent,
+                                      iterpool));
       SVN_ERR(svn_dirent_get_absolute(&dst_parent_abspath, pair->dst_parent,
                                       iterpool));
 
-      /* Need to avoid attempting to open the same dir twice when source
-         and destination overlap. */
-      if (strcmp(src_parent, pair->dst_parent) == 0)
+      /* We now need to open the right combination of batons.
+         Four cases:
+           1) src_parent == dst_parent
+           2) src_parent is parent of dst_parent
+           3) dst_parent is parent of src_parent
+           4) src_parent and dst_parent are disjoint */
+      if (strcmp(src_parent_abspath, dst_parent_abspath) == 0)
         {
+          SVN_ERR(svn_wc__adm_open_in_context(&src_access, ctx->wc_ctx,
+                                              src_parent, TRUE, -1,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, iterpool));
           dst_access = src_access;
+          close_src_access = TRUE;
+        }
+      else if (svn_dirent_is_child(src_parent_abspath, dst_parent_abspath,
+                                   iterpool))
+        {
+          SVN_ERR(svn_wc__adm_open_in_context(&src_access, ctx->wc_ctx,
+                                              src_parent, TRUE, -1,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, iterpool));
+          SVN_ERR(svn_wc_adm_retrieve(&dst_access, src_access,
+                                      pair->dst_parent, iterpool));
+          close_src_access = TRUE;
+        }
+      else if (svn_dirent_is_child(dst_parent_abspath, src_parent_abspath,
+                                   iterpool))
+        {
+          SVN_ERR(svn_wc__adm_open_in_context(&dst_access, ctx->wc_ctx,
+                                              pair->dst_parent, TRUE, -1,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, iterpool));
+          SVN_ERR(svn_wc_adm_retrieve(&src_access, dst_access, src_parent,
+                                      iterpool));
+          close_dst_access = TRUE;
         }
       else
         {
-          const char *src_parent_abs;
-
-          SVN_ERR(svn_dirent_get_absolute(&src_parent_abs, src_parent,
-                                          iterpool));
-          if ((pair->src_kind == svn_node_dir)
-              && (svn_dirent_is_child(src_parent_abs, dst_parent_abspath,
-                                      iterpool)))
-            {
-              SVN_ERR(svn_wc_adm_retrieve(&dst_access, src_access,
-                                          pair->dst_parent, iterpool));
-            }
-          else
-            {
-              SVN_ERR(svn_wc__adm_open_in_context(&dst_access, ctx->wc_ctx,
-                                                  pair->dst_parent, TRUE, 0,
-                                                  ctx->cancel_func,
-                                                  ctx->cancel_baton,
-                                                  iterpool));
-            }
+          SVN_ERR(svn_wc__adm_open_in_context(&src_access, ctx->wc_ctx,
+                                              src_parent, TRUE, -1,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, iterpool));
+          SVN_ERR(svn_wc__adm_open_in_context(&dst_access, ctx->wc_ctx,
+                                              pair->dst_parent, TRUE, -1,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, iterpool));
+          close_dst_access = TRUE;
+          close_src_access = TRUE;
         }
 
       /* Perform the copy and then the delete. */
@@ -396,9 +418,10 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
                              ctx->notify_func2, ctx->notify_baton2,
                              iterpool));
 
-      if (dst_access != src_access)
+      if (close_dst_access)
         SVN_ERR(svn_wc_adm_close2(dst_access, iterpool));
-      SVN_ERR(svn_wc_adm_close2(src_access, iterpool));
+      if (close_src_access)
+        SVN_ERR(svn_wc_adm_close2(src_access, iterpool));
     }
   svn_pool_destroy(iterpool);
 
