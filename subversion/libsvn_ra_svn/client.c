@@ -483,8 +483,24 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
    * See also the long dicussion in issue #2580 if you really
    * want to know various reasons for these problems and
    * the different opinions on this issue.
+   *
+   * On Win32, APR does not support KILL_ONLY_ONCE. It only has
+   * KILL_ALWAYS and KILL_NEVER. Other modes are converted to 
+   * KILL_ALWAYS, which immediately calls TerminateProcess().
+   * This instantly kills the tunnel, leaving sshd and svnserve
+   * on a remote machine running indefinitely. These processes
+   * accumulate. The problem is most often seen with a fast client
+   * machine and a modest internet connection, as the tunnel
+   * is killed before being able to gracefully complete the 
+   * session. In that case, svn is unusable 100% of the time on
+   * the windows machine. Thus, on Win32, we use KILL_NEVER and
+   * take the lesser of two evils.
    */
+#ifdef WIN32
+  apr_pool_note_subprocess(pool, proc, APR_KILL_NEVER);
+#else
   apr_pool_note_subprocess(pool, proc, APR_KILL_ONLY_ONCE);
+#endif
 
   /* APR pipe objects inherit by default.  But we don't want the
    * tunnel agent's pipes held open by future child processes

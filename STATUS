@@ -184,15 +184,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r880474
-   Really fix issue #2580 on Win32.
-   Justification:
-     svn+ssh:// isn't usable on Windows in certain situations.
-   Notes:
-     Discussion on dev@: http://svn.haxx.se/dev/archive-2009-10/0438.shtml
-   Votes:
-     +1: stsp, dlr, cmpilato
-
  * ^/subversion/branches/1.6.x-future-proof
    Make 1.6.7 (and subsequent Subversion releases) recognize Subversion 1.7+
    working copies.
