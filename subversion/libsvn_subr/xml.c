@@ -301,8 +301,8 @@ svn_xml_fuzzy_escape(const char *string, apr_pool_t *pool)
          ### should probably share code, even though they escape
          ### different characters.
       */
-      snprintf(escaped_char, sizeof(escaped_char), "?\\%03u",
-               (unsigned char) *q);
+      apr_snprintf(escaped_char, sizeof(escaped_char), "?\\%03u",
+                   (unsigned char) *q);
       svn_stringbuf_appendcstr(outstr, escaped_char);
 
       p = q + 1;

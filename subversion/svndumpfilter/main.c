@@ -89,7 +89,7 @@ write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
   namelen = strlen(name);
   svn_stringbuf_appendbytes(*strbuf, "K ", 2);
 
-  bytes_used = snprintf(buf, sizeof(buf), "%d", namelen);
+  bytes_used = apr_snprintf(buf, sizeof(buf), "%d", namelen);
   svn_stringbuf_appendbytes(*strbuf, buf, bytes_used);
   svn_stringbuf_appendbytes(*strbuf, "\n", 1);
 
@@ -99,7 +99,7 @@ write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
   /* Output value length, then value. */
   svn_stringbuf_appendbytes(*strbuf, "V ", 2);
 
-  bytes_used = snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT, value->len);
+  bytes_used = apr_snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT, value->len);
   svn_stringbuf_appendbytes(*strbuf, buf, bytes_used);
   svn_stringbuf_appendbytes(*strbuf, "\n", 1);
 
@@ -359,14 +359,14 @@ output_revision(struct revision_baton_t *rb)
       svn_stringbuf_appendcstr(props, "PROPS-END\n");
       svn_stringbuf_appendcstr(rb->header,
                                SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH);
-      bytes_used = snprintf(buf, sizeof(buf), ": %" APR_SIZE_T_FMT,
-                            props->len);
+      bytes_used = apr_snprintf(buf, sizeof(buf), ": %" APR_SIZE_T_FMT,
+                                props->len);
       svn_stringbuf_appendbytes(rb->header, buf, bytes_used);
       svn_stringbuf_appendbytes(rb->header, "\n", 1);
     }
 
   svn_stringbuf_appendcstr(rb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
-  bytes_used = snprintf(buf, sizeof(buf), ": %" APR_SIZE_T_FMT, props->len);
+  bytes_used = apr_snprintf(buf, sizeof(buf), ": %" APR_SIZE_T_FMT, props->len);
   svn_stringbuf_appendbytes(rb->header, buf, bytes_used);
   svn_stringbuf_appendbytes(rb->header, "\n", 1);
 
@@ -622,8 +622,8 @@ output_node(struct node_baton_t *nb)
     {
       svn_stringbuf_appendcstr(nb->header,
                                SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH);
-      bytes_used = snprintf(buf, sizeof(buf), ": %" APR_SIZE_T_FMT,
-                            nb->props->len);
+      bytes_used = apr_snprintf(buf, sizeof(buf), ": %" APR_SIZE_T_FMT,
+                                nb->props->len);
       svn_stringbuf_appendbytes(nb->header, buf, bytes_used);
       svn_stringbuf_appendbytes(nb->header, "\n", 1);
     }
@@ -631,14 +631,14 @@ output_node(struct node_baton_t *nb)
     {
       svn_stringbuf_appendcstr(nb->header,
                                SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH);
-      bytes_used = snprintf(buf, sizeof(buf), ": %" SVN_FILESIZE_T_FMT,
-                            nb->tcl);
+      bytes_used = apr_snprintf(buf, sizeof(buf), ": %" SVN_FILESIZE_T_FMT,
+                                nb->tcl);
       svn_stringbuf_appendbytes(nb->header, buf, bytes_used);
       svn_stringbuf_appendbytes(nb->header, "\n", 1);
     }
   svn_stringbuf_appendcstr(nb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
-  bytes_used = snprintf(buf, sizeof(buf), ": %" SVN_FILESIZE_T_FMT,
-                       (svn_filesize_t) (nb->props->len + nb->tcl));
+  bytes_used = apr_snprintf(buf, sizeof(buf), ": %" SVN_FILESIZE_T_FMT,
+                            (svn_filesize_t) (nb->props->len + nb->tcl));
   svn_stringbuf_appendbytes(nb->header, buf, bytes_used);
   svn_stringbuf_appendbytes(nb->header, "\n", 1);
 
