@@ -3196,15 +3196,17 @@ absent_file_or_dir(const char *path,
   const char *local_abspath;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  svn_wc_entry_t tmp_entry;
-  svn_boolean_t in_parent = (kind == svn_node_dir);
+  const char *repos_relpath;
+  const char *repos_root_url;
+  const char *repos_uuid;
 
   local_abspath = svn_dirent_join(pb->local_abspath, name, pool);
+
   /* Extra check: an item by this name may not exist, but there may
      still be one scheduled for addition.  That's a genuine
      tree-conflict.  */
-
   {
+    svn_boolean_t in_parent = (kind == svn_node_dir);
     const svn_wc_entry_t *entry;
     svn_boolean_t hidden;
     SVN_ERR(svn_wc__get_entry(&entry, eb->db, local_abspath, TRUE, kind,
@@ -3222,31 +3224,18 @@ absent_file_or_dir(const char *path,
          svn_dirent_local_style(path, pool));
   }
 
-  /* Immediately create an entry for the new item in the parent.  Note
-     that the parent must already be either added or opened, and thus
-     it's in an 'incomplete' state just like the new item.  */
-  tmp_entry.kind = kind;
+  SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                     &repos_uuid, eb->db, pb->local_abspath,
+                                     pool, pool));
+  repos_relpath = svn_dirent_join(repos_relpath, name, pool);
 
-  /* Note that there may already exist a 'ghost' entry in the parent
-     with the same name, in a 'deleted' state.  If so, it's fine to
-     overwrite it... but we need to make sure we get rid of the
-     'deleted' flag when doing so: */
-  tmp_entry.deleted = FALSE;
+  SVN_ERR(svn_wc__db_base_add_absent_node
+          (eb->db, local_abspath,
+           repos_relpath, repos_root_url, repos_uuid, *(eb->target_revision),
+           kind == svn_node_dir ? svn_wc__db_kind_dir : svn_wc__db_kind_file,
+           svn_wc__db_status_absent, pool));
 
-  /* Post-update processing knows to leave this entry if its revision
-     is equal to the target revision of the overall update. */
-  tmp_entry.revision = *(eb->target_revision);
-
-  /* And, of course, marking as absent is the whole point. */
-  tmp_entry.absent = TRUE;
-
-  return svn_wc__entry_modify2(eb->db, local_abspath, kind, in_parent,
-                               &tmp_entry,
-                               (SVN_WC__ENTRY_MODIFY_KIND    |
-                                SVN_WC__ENTRY_MODIFY_REVISION |
-                                SVN_WC__ENTRY_MODIFY_DELETED |
-                                SVN_WC__ENTRY_MODIFY_ABSENT),
-                               pool);
+  return SVN_NO_ERROR;
 }
 
 

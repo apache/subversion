@@ -1845,7 +1845,10 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
 
-  return insert_base_node(&ibb, pdh->wcroot->sdb, scratch_pool);
+  SVN_ERR(insert_base_node(&ibb, pdh->wcroot->sdb, scratch_pool));
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
 }
 
 
