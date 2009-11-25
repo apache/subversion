@@ -3199,6 +3199,8 @@ absent_file_or_dir(const char *path,
   const char *repos_relpath;
   const char *repos_root_url;
   const char *repos_uuid;
+  svn_wc__db_kind_t db_kind
+    = kind == svn_node_dir ? svn_wc__db_kind_dir : svn_wc__db_kind_file;
 
   local_abspath = svn_dirent_join(pb->local_abspath, name, pool);
 
@@ -3229,11 +3231,11 @@ absent_file_or_dir(const char *path,
                                      pool, pool));
   repos_relpath = svn_dirent_join(repos_relpath, name, pool);
 
-  SVN_ERR(svn_wc__db_base_add_absent_node
-          (eb->db, local_abspath,
-           repos_relpath, repos_root_url, repos_uuid, *(eb->target_revision),
-           kind == svn_node_dir ? svn_wc__db_kind_dir : svn_wc__db_kind_file,
-           svn_wc__db_status_absent, pool));
+  SVN_ERR(svn_wc__db_base_add_absent_node(eb->db, local_abspath,
+                                          repos_relpath, repos_root_url,
+                                          repos_uuid, *(eb->target_revision),
+                                          db_kind, svn_wc__db_status_absent,
+                                          pool));
 
   return SVN_NO_ERROR;
 }
