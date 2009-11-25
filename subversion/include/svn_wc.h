@@ -457,7 +457,9 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
  * Use @a pool only for local processing, not to allocate @a *adm_access.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
                       svn_wc_adm_access_t *associated,
