@@ -457,7 +457,8 @@ get_shared_txn(svn_fs_t *fs, const char *txn_id, svn_boolean_t create_new)
     }
 
   assert(strlen(txn_id) < sizeof(txn->txn_id));
-  strcpy(txn->txn_id, txn_id);
+  strncpy(txn->txn_id, txn_id, sizeof(txn->txn_id) - 1);
+  txn->txn_id[sizeof(txn->txn_id) - 1] = '\0';
   txn->being_written = FALSE;
 
   /* Link this transaction into the head of the list.  We will typically
@@ -6627,9 +6628,17 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
       copy_id = svn_fs_fs__id_copy_id(id);
 
       if (svn_fs_fs__key_compare(node_id, max_node_id) > 0)
-        strcpy(max_node_id, node_id);
+        {
+          assert(strlen(node_id) < MAX_KEY_SIZE);
+          strncpy(max_node_id, node_id, MAX_KEY_SIZE - 1);
+          max_node_id[MAX_KEY_SIZE - 1] = '\0';
+        }
       if (svn_fs_fs__key_compare(copy_id, max_copy_id) > 0)
-        strcpy(max_copy_id, copy_id);
+        {
+          assert(strlen(copy_id) < MAX_KEY_SIZE);
+          strncpy(max_copy_id, copy_id, MAX_KEY_SIZE - 1);
+          max_copy_id[MAX_KEY_SIZE - 1] = '\0';
+        }
 
       if (kind == svn_node_file)
         continue;
