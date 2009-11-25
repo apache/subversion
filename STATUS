@@ -184,11 +184,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r879688
-   Support Berkeley DB 4.8.
-   Votes:
-     +1: arfrever, dlr, cmpilato
-
  * r880274, r880275
    Provide examples for specifying an auto-prop value for the svn:keywords
    property which contains several fields separated by whitespace.
