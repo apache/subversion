@@ -1064,11 +1064,11 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### 'enable-auto-props' option."                                    NL
         "# *.c = svn:eol-style=native"                                       NL
         "# *.cpp = svn:eol-style=native"                                     NL
-        "# *.h = svn:eol-style=native"                                       NL
+        "# *.h = svn:keywords=Author Date Id Rev URL;svn:eol-style=native"   NL
         "# *.dsp = svn:eol-style=CRLF"                                       NL
         "# *.dsw = svn:eol-style=CRLF"                                       NL
         "# *.sh = svn:eol-style=native;svn:executable"                       NL
-        "# *.txt = svn:eol-style=native"                                     NL
+        "# *.txt = svn:eol-style=native;svn:keywords=Author Date Id Rev URL;"NL
         "# *.png = svn:mime-type=image/png"                                  NL
         "# *.jpg = svn:mime-type=image/jpeg"                                 NL
         "# Makefile = svn:eol-style=native"                                  NL

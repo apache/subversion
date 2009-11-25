@@ -82,6 +82,23 @@ trim_string(char **pstr)
   str[i] = '\0';
 }
 
+/* Remove leading and trailing single- or double quotes from a C string,
+ * in place. */
+static void
+unquote_string(char **pstr)
+{
+  char *str = *pstr;
+  size_t i = strlen(str);
+
+  if (i > 0 && ((*str == '"' && str[i - 1] == '"') ||
+                (*str == '\'' && str[i - 1] == '\'')))
+    {
+      str[i - 1] = '\0';
+      str++;
+    }
+  *pstr = str;
+}
+
 /* Split PROPERTY and store each individual value in PROPS.
    Allocates from POOL. */
 static void
@@ -163,6 +180,7 @@ auto_props_enumerator(const char *name,
           *equal_sign = '\0';
           equal_sign++;
           trim_string(&equal_sign);
+          unquote_string(&equal_sign);
           this_value = equal_sign;
         }
       else
