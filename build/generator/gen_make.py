@@ -156,6 +156,9 @@ class Generator(gen_base.GeneratorBase):
          and not target.external_lib \
          and target.filename[-3:] != '.la':
         cfiles.append(target.filename)
+    for script in self.scripts:
+      if script.endswith('.py'):
+        cfiles.append(script + 'c')
     data.cfiles = sorted(cfiles)
 
     # here are all the SQL files and their generated headers. the Makefile
