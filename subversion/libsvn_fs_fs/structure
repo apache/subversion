@@ -328,7 +328,7 @@ trailer).  If no base location is given for a delta, the base is the
 empty stream.  After the initial line comes raw svndiff data, followed
 by a cosmetic trailer "ENDREP\n".
 
-If the a representation is for the text contents of a directory node,
+If the representation is for the text contents of a directory node,
 the expanded contents are in hash dump format mapping entry names to
 "<type> <id>" pairs, where <type> is "file" or "dir" and <id> gives
 the ID of the child node-rev.
@@ -356,13 +356,13 @@ defined:
             <digest> gives hex MD5 digest of expanded rep
             ### in formats >=4, also present:
             <sha1-digest> gives hex SHA1 digest of expanded rep
-            <uniqifier> see representation_t->uniqifier in fs.h
+            <uniquifier> see representation_t->uniquifier in fs.h
   cpath     FS pathname node was created at
   copyfrom  "<rev> <path>" of copyfrom data
   copyroot  "<rev> <created-path>" of the root of this copy
   minfo-cnt The number of nodes under (and including) this node
              which have svn:mergeinfo.
-  minfo-here Exists if if this node itself has svn:mergeinfo.
+  minfo-here Exists if this node itself has svn:mergeinfo.
 
 The predecessor of a node-rev crosses both soft and true copies;
 together with the count field, it allows efficient determination of
