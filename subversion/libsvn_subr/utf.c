@@ -413,7 +413,7 @@ fuzzy_escape(const char *src, apr_size_t len, apr_pool_t *pool)
              function escapes different characters.  Please keep in sync!
              ### If we add another fuzzy escape somewhere, we should abstract
              ### this out to a common function. */
-          snprintf(new, 6, "?\\%03u", (unsigned char) *src_orig);
+          apr_snprintf(new, 6, "?\\%03u", (unsigned char) *src_orig);
           new += 5;
         }
       else
