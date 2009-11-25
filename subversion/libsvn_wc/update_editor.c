@@ -1165,7 +1165,7 @@ prep_directory(struct dir_baton *db,
       adm_access_pool = svn_wc_adm_access_pool(db->edit_baton->adm_access);
 
       SVN_ERR(svn_wc__adm_open_in_context(&adm_access, db->edit_baton->wc_ctx,
-                                          rel_path, TRUE, 0,
+                                          rel_path, TRUE, -1,
                                           db->edit_baton->cancel_func,
                                           db->edit_baton->cancel_baton,
                                           adm_access_pool));
