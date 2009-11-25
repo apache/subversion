@@ -77,7 +77,7 @@ Candidate changes:
      r878423 - Variable rename to avoid shadowing a previous local.
      r878426 - Remove an unused variable.
    Branch:
-     ^/branches/1.6.x-issue3432
+     ^/subversion/branches/1.6.x-issue3432
    Votes:
      +1: pburba, stsp
 
@@ -94,7 +94,7 @@ Candidate changes:
      specifier). It's probably easier to review the combined patch than the
      individual revisions.
    Branch:
-     ^/branches/1.6.x-r38836.
+     ^/subversion/branches/1.6.x-r38836.
    Votes:
      +1: rhuijben
      +0: pburba - I don't have a Vista or Win7 box to try this out on, but it
@@ -111,17 +111,12 @@ Candidate changes:
    Branch:
      Resolves a minor conflict in libsvn_client/merge.c where the code
      changed was refactored on trunk.
-     ^/branches/1.6.x-r39109
+     ^/subversion/branches/1.6.x-r39109
    Votes:
      +1: pburba
      -0: julianfoad (reviewed the changes in mergeinfo.c only;
            and also it seems to sneak in another bug fix in
            fix_deleted_subtree_ranges(). I suggest splitting up this patch.)
-
- * r879688
-   Support Berkeley DB 4.8.
-   Votes:
-     +1: arfrever, dlr
 
  * r879766
    Fix issue #3498: Subversion password stores freeze Eclipse
@@ -130,7 +125,7 @@ Candidate changes:
    Branch:
      Resolves a minor conflict in libsvn_auth_gnome_keyring/gnome_keyring.c
      where the code changed was refactored on trunk.
-     ^/branches/1.6.x-r39692
+     ^/subversion/branches/1.6.x-r39692
    Votes:
      +1: stylesen
      +0: julianfoad (reviewed, not tested)
@@ -150,17 +145,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * ^/branches/1.6.x-future-proof
-   Make 1.6.7 (and subsequent Subversion releases) recognize Subversion 1.7+
-   working copies.
-   Justification:
-     Throwing a decent error is a Good Thing, especially in a world where we
-     are getting ready to drastically alter the way working copies are stored
-     and recognized.
-   Votes:
-     +1: hwright, arfrever
-
- * r875632 (from ^/branches/http-protocol-v2@r875632), r880370
+ * r875632 (from ^/subversion/branches/http-protocol-v2@r875632), r880370
    Fix issue #3519: ra_serf using Label header unsupported by mod_dav_svn.
    Justification:
      This is the cause of the switch-tests.py 19 failures we've been ignoring
@@ -169,9 +154,40 @@ Candidate changes:
      r875632 (from the http-protocol-v2 branch) is a plumbing change.
      r880370 (from trunk) is the real fix.
    Branch:
-     ^/branches/1.6.x-issue3519
+     ^/subversion/branches/1.6.x-issue3519
    Votes:
      +1: cmpilato
+
+ * r880525, r880526
+   Fix 'svn resolve --accept=theirs-conflict' for targets which live inside
+   a subdirectory of the current working directory.
+   Justification:
+     'svn resolve --accept=theirs-conflict' cannot be used reliably.
+   Notes:
+     A backport branch is at ^/subversion/branches/1.6.x-r40452.
+     1.6.x has an additional bug which does not occur on trunk, requiring
+     additional fixes exclusive to 1.6.x. See the log message of r880532
+     (which shows what the bug is), and see r880533 (which fixes the bug).
+   Votes:
+     +1: stsp
+
+ * r880552
+   Try to enable TCP keep-alives in svnserve.
+   Justification:
+     ra_svn clients do this, too. It should not do any harm.
+     Is likely to fix hanging svnserve processes which still linger
+     blocking on reads from sockets after days of inactivity on the
+     connection, a problem seen and reported by MPlayer developers in #svn.
+   Votes:
+     +1: stsp
+
+Approved changes:
+=================
+
+ * r879688
+   Support Berkeley DB 4.8.
+   Votes:
+     +1: arfrever, dlr, cmpilato
 
  * r880274, r880275
    Provide examples for specifying an auto-prop value for the svn:keywords
@@ -196,7 +212,7 @@ Candidate changes:
                    'spacetest',
                    'quotetest']
    Votes:
-     +1: stsp, arfrever
+     +1: stsp, arfrever, cmpilato
 
  * r880474
    Really fix issue #2580 on Win32.
@@ -205,30 +221,14 @@ Candidate changes:
    Notes:
      Discussion on dev@: http://svn.haxx.se/dev/archive-2009-10/0438.shtml
    Votes:
-     +1: stsp, dlr
+     +1: stsp, dlr, cmpilato
 
- * r880525, r880526
-   Fix 'svn resolve --accept=theirs-conflict' for targets which live inside
-   a subdirectory of the current working directory.
+ * ^/subversion/branches/1.6.x-future-proof
+   Make 1.6.7 (and subsequent Subversion releases) recognize Subversion 1.7+
+   working copies.
    Justification:
-     'svn resolve --accept=theirs-conflict' cannot be used reliably.
-   Notes:
-     A backport branch is at ^/branches/1.6.x-r40452.
-     1.6.x has an additional bug which does not occur on trunk, requiring
-     additional fixes exclusive to 1.6.x. See the log message of r880532
-     (which shows what the bug is), and see r880533 (which fixes the bug).
+     Throwing a decent error is a Good Thing, especially in a world where we
+     are getting ready to drastically alter the way working copies are stored
+     and recognized.
    Votes:
-     +1: stsp
-
- * r880552
-   Try to enable TCP keep-alives in svnserve.
-   Justification:
-     ra_svn clients do this, too. It should not do any harm.
-     Is likely to fix hanging svnserve processes which still linger
-     blocking on reads from sockets after days of inactivity on the
-     connection, a problem seen and reported by MPlayer developers in #svn.
-   Votes:
-     +1: stsp
-
-Approved changes:
-=================
+     +1: hwright, arfrever, cmpilato
