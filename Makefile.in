@@ -366,10 +366,9 @@ fast-clean: doc-clean
              rm -rf .libs);                                          \
           fi                                                         \
         done
-	rm -f $(CLEAN_FILES)
+	echo $(CLEAN_FILES) | xargs rm -f
 	find $(CTYPES_PYTHON_SRC_DIR) $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) \
-		$(abs_srcdir)/build -name "*.pyc" -exec rm {} ';'
-	find $(abs_srcdir)/subversion/tests/ -mindepth 2 -maxdepth 3 \
+		$(abs_srcdir)/build $(top_srcdir)/subversion/tests/cmdline/svntest \
 		-name "*.pyc" -exec rm {} ';'
 
 # clean all but bulky test output, returning to before './configure' was run.
