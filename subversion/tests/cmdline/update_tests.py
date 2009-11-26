@@ -3839,6 +3839,9 @@ def eof_in_interactive_conflict_resolver(sbox):
   # Set up a custom config directory which *doesn't* turn off
   # interactive resolution
   config_contents = '''\
+[auth]
+password-stores =
+
 [miscellany]
 interactive-conflicts = true
 '''
