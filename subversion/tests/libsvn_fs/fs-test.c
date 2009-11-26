@@ -4741,13 +4741,12 @@ obliterate_1(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs__begin_obliteration_txn(&txn, fs, 3, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_fs_revision_root(&root, fs, 3, subpool));
-  /* try svn_fs_fs__dag_clone_root(&dag_node, root->fs, root->txn, pool); */
-  SVN_ERR(svn_fs_revision_link(root, txn_root, "", subpool));
   SVN_ERR(svn_fs_delete(txn_root, "A/D/H/chi", subpool));
   SVN_ERR(svn_fs__commit_obliteration_txn(3, txn, subpool));
   svn_pool_clear(subpool);
 
-  return SVN_NO_ERROR;
+  return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                          "Feature and test are still under development");
 }
 
 /* ------------------------------------------------------------------------ */
@@ -4829,7 +4828,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_node_origin_rev"),
     SVN_TEST_OPTS_PASS(small_file_integrity,
                        "create and modify small file"),
-    SVN_TEST_OPTS_SKIP(obliterate_1, TRUE,  /* Skipped as not impl. yet */
-                       "obliterate 1"),
+    SVN_TEST_OPTS_WIMP(obliterate_1,
+                       "obliterate 1", "obliterate is in development"),
     SVN_TEST_NULL
   };
