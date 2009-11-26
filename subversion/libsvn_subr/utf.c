@@ -399,7 +399,7 @@ fuzzy_escape(const char *src, apr_size_t len, apr_pool_t *pool)
       src++;
     }
 
-  /* Allocate that amount, plus one slot for NULL. */
+  /* Allocate that amount, plus one slot for '\0' character. */
   new = apr_palloc(pool, new_len + 1);
 
   new_orig = new;
