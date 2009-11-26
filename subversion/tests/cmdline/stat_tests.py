@@ -636,6 +636,9 @@ def timestamp_behaviour(sbox):
   config_dir = os.path.join(os.path.abspath(svntest.main.temp_dir),
                             'use_commit_config')
   config_contents = '''\
+[auth]
+password-stores =
+
 [miscellany]
 use-commit-times = yes
 '''
