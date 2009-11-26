@@ -4499,36 +4499,47 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
                             pool);
 }
 
-/* ### Not sure if this creates the right kind of txn for obliterate
- * - need to construct it differently from a normal txn? */
+/* Create and set *TXN_P to a new transaction in FS that is a mutable clone
+ * of revision REPLACING_REV and is intended to replace it.
+ *
+ * Ways to implement it:
+ * 1. Call svn_fs_fs__create_txn(based_on_rev),
+ *    then adjust txn's content to match replacing_rev's content. (Can't
+ *    simply apply the same changes; have to make it a clone so all copy
+ *    id's etc. are identical.)
+ * 2. Construct a txn the way __create_txn() would, but clone the root node
+ *    of REPLACING_REV rather than making a versioned copy of it.
+ */
 static svn_error_t *
 svn_fs_fs__create_obliteration_txn(svn_fs_txn_t **txn_p,
                                    svn_fs_t *fs,
-                                   svn_revnum_t rev,
+                                   svn_revnum_t replacing_rev,
                                    apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_fs_txn_t *txn;
-  svn_fs_id_t *root_id;
+  svn_fs_id_t *old_root_id;
+  svn_revnum_t based_on_rev = replacing_rev - 1;
 
   txn = apr_pcalloc(pool, sizeof(*txn));
 
   /* Get the txn_id. */
-  if (ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
-    SVN_ERR(create_txn_dir(&txn->id, fs, rev, pool));
-  else
-    SVN_ERR(create_txn_dir_pre_1_5(&txn->id, fs, rev, pool));
+  SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT);
+  SVN_ERR(create_txn_dir(&txn->id, fs, based_on_rev, pool));
 
   txn->fs = fs;
-  txn->base_rev = rev;
+  txn->base_rev = based_on_rev;
 
   txn->vtable = &txn_vtable;
   *txn_p = txn;
 
-  /* Create a new root node for this transaction. */
-  SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, rev, pool));
-  /* ### Need to clone the rev root instead of create_new_txn_... */
-  SVN_ERR(create_new_txn_noderev_from_rev(fs, txn->id, root_id, pool));
+  /* Find the root of the replaced ("old") revision. */
+  SVN_ERR(svn_fs_fs__rev_get_root(&old_root_id, fs, replacing_rev, pool));
+
+  /* Create a new root node for this transaction, based on replacing-rev. */
+  /* ### Not like this... This makes the new txn's root node be a "new
+   * version" of the old one's root node. I need it to be a "clone" instead. */
+  SVN_ERR(create_new_txn_noderev_from_rev(fs, txn->id, old_root_id, pool));
 
   /* Create an empty rev file. */
   SVN_ERR(svn_io_file_create(path_txn_proto_rev(fs, txn->id, pool), "",
@@ -7259,17 +7270,18 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
 svn_error_t *
 svn_fs_fs__begin_obliteration_txn(svn_fs_txn_t **txn_p,
                                   svn_fs_t *fs,
-                                  svn_revnum_t rev,
+                                  svn_revnum_t replacing_rev,
                                   apr_pool_t *pool)
 {
   apr_array_header_t *props = apr_array_make(pool, 0, sizeof(svn_prop_t));
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
-  SVN_ERR(svn_fs_fs__create_obliteration_txn(txn_p, fs, rev, pool));
+  SVN_ERR(svn_fs_fs__create_obliteration_txn(txn_p, fs, replacing_rev, pool));
 
   /* ### Not sure if we need to do anything to this txn such as
-   * - setting temporary txn props (as done in svn_fs_fs__begin_txn()) */
+   * - setting temporary txn props (as done in svn_fs_fs__begin_txn())
+   * - recording its intended revision number so we can check it later */
 
   /* ### This "change txn props" call is just because if the txn props file
    * doesn't exist, a call to svn_fs_fs__txn_proplist() later fails. */
