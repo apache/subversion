@@ -66,7 +66,6 @@ Global options:
                              For example:
                                  servers:global:http-library=serf
 
-
 switch (sw): Update the working copy to a different URL.
 usage: 1. switch URL[@PEGREV] [PATH]
        2. switch --relocate FROM TO [PATH...]
@@ -149,5 +148,4 @@ Global options:
                                  FILE:SECTION:OPTION=[VALUE]
                              For example:
                                  servers:global:http-library=serf
-
 
