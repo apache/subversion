@@ -181,5 +181,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r884842
+   Fix a bug in svnsync causing stale sync-locks on mirror repositories.
+   Justification:
+     Stale sync locks on mirrors are bad.
+   Notes:
+     http://mail-archives.apache.org/mod_mbox/subversion-dev/200911.mbox/browser
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
