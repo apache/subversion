@@ -179,7 +179,7 @@ static const apr_getopt_option_t svnsync_options[] =
                           "                             "
                           "For example:\n"
                           "                             "
-                          "    servers:global:http-library=serf\n")},
+                          "    servers:global:http-library=serf")},
     {"version",        svnsync_opt_version, 0,
                        N_("show program version information")},
     {"help",           'h', 0,
