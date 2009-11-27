@@ -317,6 +317,7 @@ escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
         *(new_ptr++) = LIKE_ESCAPE_CHAR[0];
       *new_ptr = *old_ptr;
     }
+  *new_ptr = '\0';
 
   return result;
 }
