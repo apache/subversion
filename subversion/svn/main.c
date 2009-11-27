@@ -244,7 +244,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "For example:\n"
                        "                             "
-                       "    servers:global:http-library=serf\n")},
+                       "    servers:global:http-library=serf")},
   {"auto-props",    opt_autoprops, 0, N_("enable automatic properties")},
   {"no-auto-props", opt_no_autoprops, 0, N_("disable automatic properties")},
   {"native-eol",    opt_native_eol, 1,
@@ -306,7 +306,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "    fudge/crunchy.html\n"
                        "                             "
-                       "while -p2 would give just crunchy.html\n")},
+                       "while -p2 would give just crunchy.html")},
   {"show-copies-as-adds", opt_show_copies_as_adds, 0,
                     N_("don't diff copied or moved files with their source")},
 
