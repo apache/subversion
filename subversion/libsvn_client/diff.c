@@ -269,7 +269,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
       {
         svn_stream_t *os = svn_stream_from_aprfile2(file, TRUE, pool);
         svn_diff_t *diff;
-        svn_diff_file_options_t options;
+        svn_diff_file_options_t options = { 0 };
         const svn_string_t *tmp;
         const svn_string_t *orig;
         const svn_string_t *val;
