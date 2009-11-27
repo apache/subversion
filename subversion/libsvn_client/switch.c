@@ -81,7 +81,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   const svn_boolean_t close_adm_access = ! adm_access;
   const char *diff3_cmd;
   svn_boolean_t use_commit_times;
-  svn_boolean_t sleep_here;
+  svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const svn_delta_editor_t *switch_editor;
   void *switch_edit_baton;
