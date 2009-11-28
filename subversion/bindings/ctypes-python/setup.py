@@ -473,6 +473,7 @@ setup(cmdclass={'build': build, 'clean': clean},
       author_email='dev@subversion.tigris.org',
       url='http://subversion.tigris.org',
       packages=['csvn', 'csvn.core', 'csvn.ext'],
+      license='Apache License, Version 2.0',
      )
 
 # TODO: We need to create our own bdist_rpm implementation so that we can pass
