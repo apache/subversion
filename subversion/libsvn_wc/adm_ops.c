@@ -2435,7 +2435,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
       if (destroy_wf)
         {
           /* Don't kill local mods. */
-          if (text_modified_p || (! wc_special && local_special))
+          if ((! wc_special && local_special) || text_modified_p)
             return svn_error_create(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL, NULL);
           else  /* The working file is still present; remove it. */
             SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
