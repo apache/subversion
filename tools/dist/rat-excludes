@@ -42,3 +42,4 @@ tools/dist/rat-excludes
 **/*.pal
 **/*.patch
 **/*.txt
+**/*.svg
