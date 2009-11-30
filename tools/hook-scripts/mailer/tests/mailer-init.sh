@@ -56,7 +56,7 @@ svn ps svn:new_svn_prop val file2
 svn ps prop1 propval1 file2
 svn ps prop3 propval3 dir1
 echo change C2 >> dir2/file5
-svn commit -m "two file changes"
+svn commit -m "two file changes.  Fixes Blah#123"
 
 # copy a file and a dir and change property
 svn cp file1 dir2/file7
@@ -84,7 +84,7 @@ echo file9 > file9
 svn add file9
 svn mkdir dir4
 echo change C4 >> dir1/file3
-svn commit -m "mixed addition and change"
+svn commit -m "mixed addition and change.  Fixes Blaz#456 Blah#987"
 
 # add a file, add a dir, delete a file, delete a dir, and make a change
 echo file10 > dir1/file10

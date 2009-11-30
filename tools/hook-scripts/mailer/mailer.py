@@ -348,10 +348,12 @@ class Commit(Messenger):
 
     self.changelist = sorted(editor.get_changes().items())
 
+    log = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or ''
+
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
     for path, change in self.changelist:
-      for (group, params) in self.cfg.which_groups(path):
+      for (group, params) in self.cfg.which_groups(path, log):
         # turn the params into a hashable object and stash it away
         param_list = sorted(params.items())
         # collect the set of paths belonging to this group
@@ -422,7 +424,7 @@ class PropChange(Messenger):
 
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
-    for (group, params) in self.cfg.which_groups(''):
+    for (group, params) in self.cfg.which_groups('', None):
       # turn the params into a hashable object and stash it away
       param_list = sorted(params.items())
       self.groups[group, tuple(param_list)] = params
@@ -512,7 +514,7 @@ class Lock(Messenger):
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
     for path in self.dirlist:
-      for (group, params) in self.cfg.which_groups(path):
+      for (group, params) in self.cfg.which_groups(path, None):
         # turn the params into a hashable object and stash it away
         param_list = sorted(params.items())
         # collect the set of paths belonging to this group
@@ -1263,32 +1265,56 @@ class Config:
       else:
         exclude_paths_re = None
 
-      self._group_re.append((group, re.compile(for_paths),
-                             exclude_paths_re, params))
+      # check search_logmsg re
+      search_logmsg = getattr(sub, 'search_logmsg', None)
+      if search_logmsg is not None:
+        search_logmsg_re = re.compile(search_logmsg)
+      else:
+        search_logmsg_re = None
+
+      self._group_re.append((group,
+                             re.compile(for_paths),
+                             exclude_paths_re,
+                             params,
+                             search_logmsg_re))
 
     # after all the groups are done, add in the default group
     try:
       self._group_re.append((None,
                              re.compile(self.defaults.for_paths),
                              None,
-                             self._default_params))
+                             self._default_params,
+                             None))
     except AttributeError:
       # there is no self.defaults.for_paths
       pass
 
-  def which_groups(self, path):
+  def which_groups(self, path, logmsg):
     "Return the path's associated groups."
     groups = []
-    for group, pattern, exclude_pattern, repos_params in self._group_re:
+    for group, pattern, exclude_pattern, repos_params, search_logmsg_re in self._group_re:
       match = pattern.match(path)
       if match:
         if exclude_pattern and exclude_pattern.match(path):
           continue
         params = repos_params.copy()
         params.update(match.groupdict())
-        groups.append((group, params))
+
+        if search_logmsg_re is None:
+          groups.append((group, params))
+        else:
+          if logmsg is None:
+            logmsg = ''
+
+          for match in search_logmsg_re.finditer(logmsg):
+            # Add captured variables to (a copy of) params
+            msg_params = params.copy()
+            msg_params.update(match.groupdict())
+            groups.append((group, msg_params))
+
     if not groups:
       groups.append((None, self._default_params))
+
     return groups
 
 
