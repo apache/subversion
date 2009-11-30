@@ -16750,8 +16750,8 @@ def merge_automatic_conflict_resolution(sbox):
                                        None, None, 1, 0,
                                        '--accept', 'base')
 
-# Test for issue #3440 'Skipped paths don't get correct override
-# mergeinfo during merge'.
+# Test for issue #3440 'Skipped paths get incorrect override mergeinfo
+# during merge'.
 def skipped_files_get_correct_mergeinfo(sbox):
   "skipped files get correct mergeinfo set"
 
@@ -17132,7 +17132,7 @@ test_list = [ None,
               SkipUnless(record_only_merge,
                          server_has_mergeinfo),
               XFail(merge_automatic_conflict_resolution),
-              XFail(skipped_files_get_correct_mergeinfo),
+              skipped_files_get_correct_mergeinfo,
              ]
 
 if __name__ == '__main__':
