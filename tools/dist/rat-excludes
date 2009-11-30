@@ -22,7 +22,7 @@ notes/test-writing
 notes/txdelta_sanity
 notes/unicode-composition-for-filenames
 notes/wc-improvements
-notes/wc-ng-design
+notes/wc-ng/*
 notes/webdav-acl-notes
 notes/webdav-general-summary
 notes/webdav-protocol
@@ -41,6 +41,7 @@ subversion/bindings/ctypes-python/test/test.dumpfile
 subversion/bindings/ctypes-python/csvn/__init__.py
 subversion/bindings/ctypes-python/csvn/ext/__init__.py
 tools/dist/rat-excludes
+doc/doxygen.conf
 **/*.dump
 **/*.icns
 **/*.odp
