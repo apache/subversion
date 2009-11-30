@@ -27,6 +27,7 @@ notes/webdav-acl-notes
 notes/webdav-general-summary
 notes/webdav-protocol
 notes/webdav-proxy
+subversion/tests/cmdline/getopt_tests_data/*
 subversion/bindings/swig/NOTES
 subversion/libsvn_fs_base/notes/TODO
 subversion/libsvn_fs_base/notes/fs-history
