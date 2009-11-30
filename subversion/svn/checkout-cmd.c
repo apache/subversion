@@ -150,7 +150,7 @@ svn_cl__checkout(apr_getopt_t *os,
         {
           target_dir = svn_uri_basename(true_url, subpool);
           target_dir = svn_path_uri_decode(target_dir, subpool);
-          target_dir = svn_path_join(local_dir, target_dir, subpool);
+          target_dir = svn_dirent_join(local_dir, target_dir, subpool);
         }
 
       /* Checkout doesn't accept an unspecified revision, so default to
