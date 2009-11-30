@@ -34,8 +34,8 @@ abs_srcdir="$6"
 abs_builddir="$7"
 
 svn_libdir="$8"
-apr_prefix="$9"
-apu_prefix="${10}"
+apr_config="$9"
+apu_config="${10}"
 
 cp_relpath="subversion/bindings/ctypes-python"
 output="$cp_relpath/svn_all.py"
@@ -49,9 +49,6 @@ else
 fi
 
 ### most of this should be done at configure time and passed in
-apr_config="$apr_prefix/bin/apr-1-config"
-apu_config="$apr_prefix/bin/apu-1-config"
-
 apr_cppflags="`$apr_config --includes --cppflags`"
 apr_include_dir="`$apr_config --includedir`"
 apr_ldflags="`$apr_config --ldflags --link-ld`"
