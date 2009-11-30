@@ -325,6 +325,15 @@ def basic_mkdir_wc_with_parents(sbox):
   svntest.actions.run_and_verify_svn("mkdir dir/subdir", None, [],
                                      'mkdir', '--parents', Y_Z_path)
 
+  # Verify the WC status, because there was a regression in which parts of
+  # the WC were left locked.
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+    'Y'      : Item(status='A ', wc_rev=0),
+    'Y/Z'    : Item(status='A ', wc_rev=0),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 #----------------------------------------------------------------------
 def basic_corruption(sbox):
