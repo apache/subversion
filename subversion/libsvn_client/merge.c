@@ -6945,11 +6945,18 @@ record_mergeinfo_for_dir_merge(const svn_merge_range_t *merged_range,
           /* If we are here we know we will be recording some mergeinfo, but
              before we do set override mergeinfo on skipped paths so they
              don't incorrectly inherit the mergeinfo we are about to set.
-             We only need to do this once. */
+             We only need to do this once.  If we are dealing with a subtree
+             (i.e. i != 0) that was skipped then don't record mergeinfo on
+             it.  The earlier call to record_skips will already have taken
+             care of this. */
           if (i == 0)
             SVN_ERR(record_skips(mergeinfo_path,
                                  child_merge_rangelist,
                                  is_rollback, notify_b, merge_b, iterpool));
+          else if (notify_b->skipped_abspaths
+                   && apr_hash_get(notify_b->skipped_abspaths, child->abspath,
+                                   APR_HASH_KEY_STRING))
+            continue;
 
           SVN_ERR(calculate_merge_inheritance(child_merge_rangelist,
                                               child->abspath,
