@@ -5901,7 +5901,9 @@ combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
    associated URL, SOURCE_URL) and PEG_REVISION (which specifies the
    line of history from which merges will be pulled) and
    RANGES_TO_MERGE (a list of svn_opt_revision_range_t's which provide
-   revision ranges).
+   revision ranges).  Note that SOURCE may itself be either a working
+   copy path or a URL; in the latter case, SOURCE_URL is probably
+   identical to SOURCE.
 
    If PEG_REVISION is unspecified, treat that it as HEAD.
 
@@ -5939,6 +5941,13 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
   apr_pool_t *subpool;
   int i;
   youngest_opt_rev.kind = svn_opt_revision_head;
+
+  /* ### FIXME:  SOURCE might be a URL, yet we're doing a bunch of
+     ### working-copy-path operations on it!!  We probably don't run
+     ### into trouble because it happens to be the case that these
+     ### operations are just as sloppy/forgiving as we are about
+     ### handling URL inputs where local paths are expected, but
+     ### that's a shaky limb to stand on.  */
 
   SVN_ERR(svn_dirent_get_absolute(&source_abspath, source, pool));
 
