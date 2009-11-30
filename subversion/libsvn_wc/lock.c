@@ -1738,10 +1738,10 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
 
   if (anchor_abspath)
     {
-      const char *parent_abspath, *basename;
+      const char *parent_abspath, *base;
       svn_error_t *err;
 
-      svn_dirent_split(local_abspath, &parent_abspath, &basename, scratch_pool);
+      svn_dirent_split(local_abspath, &parent_abspath, &base, scratch_pool);
       err = svn_wc__db_read_children(&children, wc_ctx->db, parent_abspath,
                                      scratch_pool, scratch_pool);
       if (err)
@@ -1749,7 +1749,7 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
       else
         {
           for (i = 0; i < children->nelts; ++i)
-            if (! strcmp(APR_ARRAY_IDX(children, i, const char *), basename))
+            if (! strcmp(APR_ARRAY_IDX(children, i, const char *), base))
               break;
           if (i < children->nelts)
             parent_is_anchor = TRUE;
