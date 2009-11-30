@@ -2488,24 +2488,20 @@ typedef struct
   /* The number of operative notifications received. */
   apr_uint32_t nbr_operative_notifications;
 
-  /* The list of merged paths; either absolute or relative to the
-     current working directory */
-  apr_hash_t *merged_paths;
+  /* The list of absolute merged paths. */
+  apr_hash_t *merged_abspaths;
 
-  /* The list of any skipped paths, which should be examined and
+  /* The list of absolute skipped paths, which should be examined and
      cleared after each invocation of the callback.  The paths
-     are  either absolute or relative to the current working
-     directory. */
-  apr_hash_t *skipped_paths;
+     are absolute. */
+  apr_hash_t *skipped_abspaths;
 
-  /* A list of the root paths of any added subtrees which might require
-     their own explicit mergeinfo.  The paths are either absolute or
-     relative to the current working directory. */
-  apr_hash_t *added_paths;
+  /* A list of the absolute root paths of any added subtrees which might
+     require their own explicit mergeinfo. */
+  apr_hash_t *added_abspaths;
 
-  /* A list of tree conflict victim paths which may be NULL.  The paths
-     are all either absolute or relative to the current working directory. */
-  apr_hash_t *tree_conflicted_paths;
+  /* A list of tree conflict victim absolute paths which may be NULL. */
+  apr_hash_t *tree_conflicted_abspaths;
 
   /* Flag indicating whether it is a single file merge or not. */
   svn_boolean_t is_single_file_merge;
@@ -2663,10 +2659,10 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
         {
           const char *merged_path = apr_pstrdup(notify_b->pool, notify->path);
 
-          if (notify_b->merged_paths == NULL)
-            notify_b->merged_paths = apr_hash_make(notify_b->pool);
+          if (notify_b->merged_abspaths == NULL)
+            notify_b->merged_abspaths = apr_hash_make(notify_b->pool);
 
-          apr_hash_set(notify_b->merged_paths, merged_path,
+          apr_hash_set(notify_b->merged_abspaths, merged_path,
                        APR_HASH_KEY_STRING, merged_path);
         }
 
@@ -2674,10 +2670,10 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
         {
           const char *skipped_path = apr_pstrdup(notify_b->pool, notify->path);
 
-          if (notify_b->skipped_paths == NULL)
-            notify_b->skipped_paths = apr_hash_make(notify_b->pool);
+          if (notify_b->skipped_abspaths == NULL)
+            notify_b->skipped_abspaths = apr_hash_make(notify_b->pool);
 
-          apr_hash_set(notify_b->skipped_paths, skipped_path,
+          apr_hash_set(notify_b->skipped_abspaths, skipped_path,
                        APR_HASH_KEY_STRING, skipped_path);
         }
 
@@ -2686,11 +2682,13 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           const char *tree_conflicted_path = apr_pstrdup(notify_b->pool,
                                                          notify->path);
 
-          if (notify_b->tree_conflicted_paths == NULL)
-            notify_b->tree_conflicted_paths = apr_hash_make(notify_b->pool);
+          if (notify_b->tree_conflicted_abspaths == NULL)
+            notify_b->tree_conflicted_abspaths =
+              apr_hash_make(notify_b->pool);
 
-          apr_hash_set(notify_b->tree_conflicted_paths, tree_conflicted_path,
-                       APR_HASH_KEY_STRING, tree_conflicted_path);
+          apr_hash_set(notify_b->tree_conflicted_abspaths,
+                       tree_conflicted_path, APR_HASH_KEY_STRING,
+                       tree_conflicted_path);
         }
 
       if (notify->action == svn_wc_notify_update_add)
@@ -2700,20 +2698,20 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           const char *added_path_parent = NULL;
 
           /* Stash the root path of any added subtrees. */
-          if (notify_b->added_paths == NULL)
+          if (notify_b->added_abspaths == NULL)
             {
-              notify_b->added_paths = apr_hash_make(notify_b->pool);
+              notify_b->added_abspaths = apr_hash_make(notify_b->pool);
               is_root_of_added_subtree = TRUE;
             }
           else
             {
               added_path_parent = svn_dirent_dirname(added_path, pool);
-              if (!apr_hash_get(notify_b->added_paths, added_path_parent,
+              if (!apr_hash_get(notify_b->added_abspaths, added_path_parent,
                                 APR_HASH_KEY_STRING))
                 is_root_of_added_subtree = TRUE;
             }
           if (is_root_of_added_subtree)
-            apr_hash_set(notify_b->added_paths, added_path,
+            apr_hash_set(notify_b->added_abspaths, added_path,
                          APR_HASH_KEY_STRING, added_path);
         }
     }
@@ -4426,8 +4424,8 @@ record_skips(const char *mergeinfo_path,
 {
   apr_hash_index_t *hi;
   apr_hash_t *merges;
-  apr_size_t nbr_skips = (notify_b->skipped_paths != NULL ?
-                          apr_hash_count(notify_b->skipped_paths) : 0);
+  apr_size_t nbr_skips = (notify_b->skipped_abspaths != NULL ?
+                          apr_hash_count(notify_b->skipped_abspaths) : 0);
 
   if (nbr_skips == 0)
     return SVN_NO_ERROR;
@@ -4435,14 +4433,11 @@ record_skips(const char *mergeinfo_path,
   merges = apr_hash_make(pool);
 
   /* Override the mergeinfo for child paths which weren't actually merged. */
-  for (hi = apr_hash_first(pool, notify_b->skipped_paths); hi;
+  for (hi = apr_hash_first(pool, notify_b->skipped_abspaths); hi;
        hi = apr_hash_next(hi))
     {
-      const char *skipped_path = svn_apr_hash_index_key(hi);
-      const char *skipped_abspath;
+      const char *skipped_abspath = svn_apr_hash_index_key(hi);
       svn_wc_status2_t *status;
-
-      SVN_ERR(svn_dirent_get_absolute(&skipped_abspath, skipped_path, pool));
 
       /* Before we override, make sure this is a versioned path, it
          might be an unversioned obstruction. */
@@ -5089,7 +5084,7 @@ single_file_merge_get_file(const char **filename,
    and set *HEADER_SENT to TRUE. */
 static APR_INLINE void
 single_file_merge_notify(void *notify_baton,
-                         const char *target_wcpath,
+                         const char *local_abspath,
                          svn_wc_notify_action_t action,
                          svn_wc_notify_state_t text_state,
                          svn_wc_notify_state_t prop_state,
@@ -5097,7 +5092,7 @@ single_file_merge_notify(void *notify_baton,
                          svn_boolean_t *header_sent,
                          apr_pool_t *pool)
 {
-  svn_wc_notify_t *notify = svn_wc_create_notify(target_wcpath, action, pool);
+  svn_wc_notify_t *notify = svn_wc_create_notify(local_abspath, action, pool);
   notify->kind = svn_node_file;
   notify->content_state = text_state;
   notify->prop_state = prop_state;
@@ -6556,8 +6551,8 @@ do_file_merge(const char *url1,
          self-referential mergeinfo, but don't record mergeinfo if
          TARGET_WCPATH was skipped. */
       if (filtered_rangelist->nelts
-          && (!notify_b->skipped_paths
-              || (apr_hash_count(notify_b->skipped_paths) == 0)))
+          && (!notify_b->skipped_abspaths
+              || (apr_hash_count(notify_b->skipped_abspaths) == 0)))
         {
           apr_hash_t *merges = apr_hash_make(subpool);
 
@@ -6736,14 +6731,14 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
 
 /* SUBTREES is one of the following notification_receiver_baton_t members:
    merged_paths, skipped_paths, or added_paths.  Return true if any path in
-   SUBTRESS is equal to, or is a subtree of, PATH.  Return false otherwise.
-   If PATH or SUBTREES are NULL return false. */
+   SUBTRESS is equal to, or is a subtree of, LOCAL_ABSPATH.  Return false
+   otherwise.  If LOCAL_ABSPATH or SUBTREES are NULL return false. */
 static svn_boolean_t
-path_is_subtree(const char *path,
+path_is_subtree(const char *local_abspath,
                 apr_hash_t *subtrees,
                 apr_pool_t *pool)
 {
-  if (path && subtrees)
+  if (local_abspath && subtrees)
     {
       apr_hash_index_t *hi;
 
@@ -6752,25 +6747,27 @@ path_is_subtree(const char *path,
            hi = apr_hash_next(hi))
         {
           const char *path_touched_by_merge = svn_apr_hash_index_key(hi);
-          if (svn_dirent_is_ancestor(path, path_touched_by_merge))
+          if (svn_dirent_is_ancestor(local_abspath, path_touched_by_merge))
             return TRUE;
         }
     }
   return FALSE;
 }
 
-/* Return true if PATH is equal to or a subtree of any of the paths in
-   NOTIFY_B->MERGED_PATHS, NOTIFY_B->SKIPPED_PATHS, NOTIFY_B->ADDED_PATHS,
+/* Return true if LOCAL_ABDPATH is equal to or a subtree of any of the paths
+   in NOTIFY_B->MERGED_PATHS, NOTIFY_B->SKIPPED_PATHS, NOTIFY_B->ADDED_PATHS,
    or NOTIFY_B->CONFLICTED_PATHS.  Return false otherwise. */
 static svn_boolean_t
-subtree_touched_by_merge(const char *path,
+subtree_touched_by_merge(const char *local_abspath,
                          notification_receiver_baton_t *notify_b,
                          apr_pool_t *pool)
 {
-  return (path_is_subtree(path, notify_b->merged_paths, pool)
-          || path_is_subtree(path, notify_b->skipped_paths, pool)
-          || path_is_subtree(path, notify_b->added_paths, pool)
-          || path_is_subtree(path, notify_b->tree_conflicted_paths, pool));
+  return (path_is_subtree(local_abspath, notify_b->merged_abspaths, pool)
+          || path_is_subtree(local_abspath, notify_b->skipped_abspaths, pool)
+          || path_is_subtree(local_abspath, notify_b->added_abspaths, pool)
+          || path_is_subtree(local_abspath,
+                             notify_b->tree_conflicted_abspaths,
+                             pool));
 }
 
 /* Helper for do_directory_merge() when performing mergeinfo unaware merges.
@@ -6859,14 +6856,14 @@ record_mergeinfo_for_dir_merge(const svn_merge_range_t *merged_range,
 
   /* Regardless of what subtrees in MERGE_B->TARGET_ABSPATH might be missing
      could this merge have been operative? */
-  if ((notify_b->merged_paths
-       && apr_hash_count(notify_b->merged_paths))
-      || (notify_b->skipped_paths
-          && apr_hash_count(notify_b->skipped_paths))
-      || (notify_b->added_paths
-          && apr_hash_count(notify_b->added_paths))
-      || (notify_b->tree_conflicted_paths
-          && apr_hash_count(notify_b->tree_conflicted_paths)))
+  if ((notify_b->merged_abspaths
+       && apr_hash_count(notify_b->merged_abspaths))
+      || (notify_b->skipped_abspaths
+          && apr_hash_count(notify_b->skipped_abspaths))
+      || (notify_b->added_abspaths
+          && apr_hash_count(notify_b->added_abspaths))
+      || (notify_b->tree_conflicted_abspaths
+          && apr_hash_count(notify_b->tree_conflicted_abspaths)))
     operative_merge = TRUE;
 
   /* If this couldn't be an operative merge then don't bother with
@@ -7065,21 +7062,18 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
   apr_hash_index_t *hi;
 
   /* If no paths were added by the merge then we have nothing to do. */
-  if (!notify_b->added_paths)
+  if (!notify_b->added_abspaths)
     return SVN_NO_ERROR;
 
   iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, notify_b->added_paths); hi;
+  for (hi = apr_hash_first(pool, notify_b->added_abspaths); hi;
        hi = apr_hash_next(hi))
     {
-      const char *added_path = svn_apr_hash_index_key(hi);
-      const char *added_abspath;
+      const char *added_abspath = svn_apr_hash_index_key(hi);
       const char *dir_abspath;
       const svn_string_t *added_path_parent_propval;
 
       apr_pool_clear(iterpool);
-      SVN_ERR(svn_dirent_get_absolute(&added_abspath, added_path,
-                                      iterpool));
       dir_abspath = svn_dirent_dirname(added_abspath, iterpool);
 
       /* Rather than using svn_client__get_wc_mergeinfo() and analyzing the
@@ -7950,10 +7944,10 @@ do_merge(apr_array_header_t *merge_sources,
   notify_baton.wrapped_baton = ctx->notify_baton2;
   notify_baton.nbr_notifications = 0;
   notify_baton.nbr_operative_notifications = 0;
-  notify_baton.merged_paths = NULL;
-  notify_baton.skipped_paths = NULL;
-  notify_baton.added_paths = NULL;
-  notify_baton.tree_conflicted_paths = NULL;
+  notify_baton.merged_abspaths = NULL;
+  notify_baton.skipped_abspaths = NULL;
+  notify_baton.added_abspaths = NULL;
+  notify_baton.tree_conflicted_abspaths = NULL;
   notify_baton.is_single_file_merge = FALSE;
   notify_baton.children_with_mergeinfo = NULL;
   notify_baton.cur_ancestor_index = -1;
