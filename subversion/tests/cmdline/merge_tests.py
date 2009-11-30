@@ -16750,6 +16750,163 @@ def merge_automatic_conflict_resolution(sbox):
                                        None, None, 1, 0,
                                        '--accept', 'base')
 
+# Test for issue #3440 'Skipped paths don't get correct override
+# mergeinfo during merge'.
+def skipped_files_get_correct_mergeinfo(sbox):
+  "skipped files get correct mergeinfo set"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  A_COPY_path   = os.path.join(wc_dir, "A_COPY")
+  psi_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
+  psi_path      = os.path.join(wc_dir, "A", "D", "H", "psi")
+
+  # Setup our basic 'trunk' and 'branch':
+  # r2 - Copy A to A_COPY
+  # r3 - Text change to A/D/H/psi
+  # r4 - Text change to A/D/G/rho
+  # r5 - Text change to A/B/E/beta
+  # r6 - Text change to A/D/H/omega
+  wc_disk, wc_status = set_up_branch(sbox, False, 1)
+
+  # r7 Make another text change to A/D/H/psi
+  svntest.main.file_write(psi_path, "Even newer content")
+  expected_output = wc.State(wc_dir, {'A/D/H/psi' : Item(verb='Sending')})
+  svntest.main.run_svn(None, 'commit', '-m', 'another change to A/D/H/psi',
+                       wc_dir)
+
+  # Merge r3 from A to A_COPY, this will create explicit mergeinfo of
+  # '/A:3' on A_COPY.  Commit this merge as r8.
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[3]], 'U    ' +
+                                                           psi_COPY_path +
+                                                           '\n'),
+                                     [], 'merge', '-c3',
+                                     sbox.repo_url + '/A',
+                                     A_COPY_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'initial merge', wc_dir)
+
+  # Update WC to uniform revision and then delete, via the OS, A_COPY/D/H/psi
+  # and then merge all available revisions from A to A_COPY.  A_COPY/D/H/psi
+  # should be reported as skipped and get explicit mergeinfo set on it
+  # reflecting what it previously inherited from A_COPY after the first
+  # merge, i.e. '/A/D/H/psi:3'.  Issue #3440 occurred when empty mergeinfo
+  # was set on A_COPY/D/H/psi, making it appear that r3 was never merged.
+  svntest.actions.run_and_verify_svn(None, ["At revision 8.\n"], [],
+                                     'up', wc_dir)
+  os.remove(psi_COPY_path)
+  expected_status = wc.State(A_COPY_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='M '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='M '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='!M'),
+    'D/H/omega' : Item(status='M '),
+    })
+  expected_status.tweak(wc_rev=8)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:2-8'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    #'D/H/psi'  : Nothing here, this file was deleted via the OS.
+    'D/H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State(A_COPY_path,
+                           {'D/H/psi' : Item()})
+  expected_output = wc.State(A_COPY_path,
+                             {'B/E/beta'  : Item(status='U '),
+                              'D/G/rho'   : Item(status='U '),
+                              'D/H/omega' : Item(status='U '),})
+  svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1)
+  # run_and_verify_merge cannot check the properties on A_COPY/D/H/psi
+  # since that file is not on disk, so we'll check the file's mergeinfo
+  # directly with svn propget.
+  svntest.actions.run_and_verify_svn(
+    'Incorrect override mergeinfo set on skipped path',
+    ["/A/D/H/psi:3\n"], [], 'pg', 'svn:mergeinfo', psi_COPY_path)
+
+  # Now test another aspect of issue #3440, that a skipped path with
+  # explicit mergeinfo doesn't get it's mergeinfo updated.
+  #
+  # First revert all changes to the WC and then merge -r2:6 from A/D/H/psi
+  # to A_COPY/D/H/psi, creating explicit mergeinfo of '/A/D/H/psi:3-6' on
+  # the latter.  Commit this merge as r9 and then update the WC.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '-R', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-r2:6',
+                                     sbox.repo_url + '/A/D/H/psi',
+                                     psi_COPY_path)
+  svntest.main.run_svn(None, 'commit', '-m',
+                       'subtree merge to create explicit mergeinfo',
+                       wc_dir)
+  svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [],
+                                     'up', wc_dir)
+
+  # Remove A_COPY/D/H/psi again and then merge all available revisions
+  # from A to A_COPY.  The results should be mostly similar to the
+  # previous merge we did above, execept that A_COPY/D/H/psi should not
+  # have it's mergeinfo changed.
+  os.remove(psi_COPY_path)
+  expected_status.tweak(wc_rev=9)
+  expected_status.tweak('D/H/psi', status='! ')
+  expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A:2-9'})
+  svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1)
+
+  # run_and_verify_merge cannot check the properties on A_COPY/D/H/psi
+  # since that file is not on disk, so we'll check the file's mergeinfo
+  # directly with svn propget.  Issue #3440 also occurred here, when an
+  # the missing file's mergeinfo was updated, making it appear that r2
+  # and r7-9 were also merged into A_COPY/D/H/psi, which is clearly not
+  # the case since psi isn't present.
+  svntest.actions.run_and_verify_svn(
+    'Mergeinfo on skipped path altered',
+    ["/A/D/H/psi:3-6\n"], [], 'pg', 'svn:mergeinfo', psi_COPY_path)
+
 ########################################################################
 # Run the tests
 
@@ -16975,6 +17132,7 @@ test_list = [ None,
               SkipUnless(record_only_merge,
                          server_has_mergeinfo),
               XFail(merge_automatic_conflict_resolution),
+              XFail(skipped_files_get_correct_mergeinfo),
              ]
 
 if __name__ == '__main__':
