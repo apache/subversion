@@ -35,6 +35,7 @@ subversion/libsvn_fs_fs/structure
 subversion/libsvn_ra_svn/protocol
 subversion/bindings/javahl/doc/index.html
 subversion/bindings/swig/python/tests/trac/__init__.py
+tools/dist/rat-excludes
 **/*.dump
 **/*.icns
 **/*.odp
