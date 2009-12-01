@@ -40,6 +40,7 @@ SkipUnless = svntest.testcase.SkipUnless
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
+from svntest.main import is_fs_case_insensitive
 from svntest.actions import fill_file_with_lines
 from svntest.actions import make_conflict_marker_text
 from svntest.actions import inject_conflict_into_expected_state
@@ -16907,6 +16908,148 @@ def skipped_files_get_correct_mergeinfo(sbox):
     'Mergeinfo on skipped path altered',
     ["/A/D/H/psi:3-6\n"], [], 'pg', 'svn:mergeinfo', psi_COPY_path)
 
+# Test for issue #3115 'Case only renames resulting from merges don't
+# work or break the WC on case-insensitive file systems'.
+def committed_case_only_move_and_revert(sbox):
+  "committed case only move causes revert to fail"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox, True)
+
+  # Some paths we'll care about
+  A_COPY_path = os.path.join(wc_dir, "A_COPY")
+
+  # r3: A case-only file rename on the server
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 3.\n'],
+                                     [], 'move',
+                                     sbox.repo_url + '/A/mu',
+                                     sbox.repo_url + '/A/MU',
+                                     '-m', 'Move A/mu to A/MU')
+
+  # Now merge that rename into the WC
+  expected_output = wc.State(A_COPY_path, {
+    'mu' : Item(status='D '),
+    'MU' : Item(status='A '),
+    })
+  expected_status = wc.State(A_COPY_path, {
+    ''          : Item(status=' M', wc_rev=2),
+    'B'         : Item(status='  ', wc_rev=2),
+    'mu'        : Item(status='D ', wc_rev=2),
+    'MU'        : Item(status='A ', wc_rev='-', copied='+'),
+    'B/E'       : Item(status='  ', wc_rev=2),
+    'B/E/alpha' : Item(status='  ', wc_rev=2),
+    'B/E/beta'  : Item(status='  ', wc_rev=2),
+    'B/lambda'  : Item(status='  ', wc_rev=2),
+    'B/F'       : Item(status='  ', wc_rev=2),
+    'C'         : Item(status='  ', wc_rev=2),
+    'D'         : Item(status='  ', wc_rev=2),
+    'D/G'       : Item(status='  ', wc_rev=2),
+    'D/G/pi'    : Item(status='  ', wc_rev=2),
+    'D/G/rho'   : Item(status='  ', wc_rev=2),
+    'D/G/tau'   : Item(status='  ', wc_rev=2),
+    'D/gamma'   : Item(status='  ', wc_rev=2),
+    'D/H'       : Item(status='  ', wc_rev=2),
+    'D/H/chi'   : Item(status='  ', wc_rev=2),
+    'D/H/psi'   : Item(status='  ', wc_rev=2),
+    'D/H/omega' : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:3'}),
+    'B'         : Item(),
+    'MU'        : Item("This is the file 'mu'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    })
+  expected_skip = wc.State(A_COPY_path, { })
+  svntest.actions.run_and_verify_merge(A_COPY_path, '2', '3',
+                                       sbox.repo_url + '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 0)
+
+  # Commit the merge
+  expected_output = svntest.wc.State(wc_dir, {
+    'A_COPY'    : Item(verb='Sending'),
+    'A_COPY/mu' : Item(verb='Deleting'),
+    'A_COPY/MU' : Item(verb='Adding'),
+    })
+  wc_status.tweak('A_COPY', wc_rev=4)
+  wc_status.remove('A_COPY/mu')
+  wc_status.add({'A_COPY/MU': Item(status='  ', wc_rev=4)})
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, wc_dir)
+
+  # In issue #3115 the WC gets corrupted and any subsequent revert
+  # attempts fail with this error:
+  #  svn.exe revert -R "svn-test-work\working_copies\merge_tests-139"
+  #  ..\..\..\subversion\svn\revert-cmd.c:81: (apr_err=2)
+  #  ..\..\..\subversion\libsvn_client\revert.c:167: (apr_err=2)
+  #  ..\..\..\subversion\libsvn_client\revert.c:103: (apr_err=2)
+  #  ..\..\..\subversion\libsvn_wc\adm_ops.c:2232: (apr_err=2)
+  #  ..\..\..\subversion\libsvn_wc\adm_ops.c:2232: (apr_err=2)
+  #  ..\..\..\subversion\libsvn_wc\adm_ops.c:2232: (apr_err=2)
+  #  ..\..\..\subversion\libsvn_wc\adm_ops.c:2176: (apr_err=2)
+  #  ..\..\..\subversion\libsvn_wc\adm_ops.c:2053: (apr_err=2)
+  #  ..\..\..\subversion\libsvn_wc\adm_ops.c:1869: (apr_err=2)
+  #  ..\..\..\subversion\libsvn_wc\workqueue.c:520: (apr_err=2)
+  #  ..\..\..\subversion\libsvn_wc\workqueue.c:490: (apr_err=2)
+  #  svn: Error restoring text for 'C:\SVN\src-trunk\Debug\subversion\tests
+  #    \cmdline\svn-test-work\working_copies\merge_tests-139\A_COPY\MU'
+  svntest.actions.run_and_verify_svn(None, [], [], 'revert', '-R', wc_dir)
+
+  # r5: A case-only directory rename on the server
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 5.\n'],
+                                     [], 'move',
+                                     sbox.repo_url + '/A/C',
+                                     sbox.repo_url + '/A/c',
+                                     '-m', 'Move A/C to A/c')
+  expected_output = wc.State(A_COPY_path, {
+    'C' : Item(status='D '),
+    'c' : Item(status='A '),
+    })
+  expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A:3,5'})
+  expected_disk.add({'c' : Item()})
+  expected_status.tweak('MU', status='  ', wc_rev=4, copied=None)
+  expected_status.remove('mu')
+  expected_status.tweak('C', status='D ')
+  expected_status.tweak('', wc_rev=4)
+  expected_status.add({'c' : Item(status='A ', copied='+', wc_rev='-')})
+  # This merge succeeds, but A_COPY/c is in a strange state, added with
+  # history but missing:
+  #
+  #   M      merge_tests-139\A_COPY
+  #  !  +    merge_tests-139\A_COPY\c
+  #  R  +    merge_tests-139\A_COPY\C
+  svntest.actions.run_and_verify_merge(A_COPY_path, '4', '5',
+                                       sbox.repo_url + '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 0)
+
 ########################################################################
 # Run the tests
 
@@ -17133,6 +17276,9 @@ test_list = [ None,
                          server_has_mergeinfo),
               XFail(merge_automatic_conflict_resolution),
               skipped_files_get_correct_mergeinfo,
+              XFail(committed_case_only_move_and_revert,
+                    is_fs_case_insensitive),
+
              ]
 
 if __name__ == '__main__':
