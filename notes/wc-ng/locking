@@ -4,9 +4,8 @@
 Introduction
 ============
 One of the major performance problems with the first-generation working copy
-library was the locking strategy.  Each directory could have a write or read
-lock, which excluded other processes from performing certain actions on
-that directory.
+library was the locking strategy.  Each directory could have a write lock that
+excluded other processes from performing certain actions on that directory.
 
 The locks were implemented as physical `lock' files which had to be placed and
 removed in the administrative area of each directory.  For many operations,
@@ -15,6 +14,17 @@ directories, even if those directories would never be touched by the operation.
 For working copies of even modest size, these crawls could easily dominate the
 running time of the client, and were made even worse by high-latency
 filesystems, such as NFS.
+
+Read-only locks didn't really exist; read-only access was implemented as a
+`snapshot' of the working copy.  This snapshot was potentially out-of-date
+as soon as it was created; a snapshot of a working copy being modified under
+write locks might become out-of-date while it was being created. There was no
+mechanism to upgrade a read-only lock to a write lock and there was no way to
+determine whether a read-only lock was up-to-date or out-of-date.
+
+The snapshot approach to read-only locks worked well for the command line
+client as that only needs short lived handles on the database.  It worked less
+well for GUI clients which need long lived handles.
 
 By centralizing the working copy metadata as part of wc-ng, we can also
 centralize our locking strategy and take advantage of the transaction and
