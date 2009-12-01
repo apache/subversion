@@ -1426,10 +1426,12 @@ merge_file_changed(const char *local_dir_abspath,
     if (prop_state)
       *prop_state = svn_wc_notify_state_unchanged;
 
-  /* Easy out: We are only applying mergeinfo changes to existing paths. */
+  /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
       svn_pool_destroy(subpool);
+      if (content_state);
+        *content_state = svn_wc_notify_state_unchanged;
       return SVN_NO_ERROR;
     }
 
@@ -1556,10 +1558,16 @@ merge_file_added(const char *local_dir_abspath,
   apr_hash_t *new_props;
   const char *mine_abspath;
 
-  /* Easy out: We are only applying mergeinfo changes to existing paths. */
+  /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
       svn_pool_destroy(subpool);
+      if (content_state)
+        *content_state = svn_wc_notify_state_unchanged;
+      if (prop_state)
+        *prop_state = svn_wc_notify_state_unchanged;
+      if (tree_conflicted)
+        *tree_conflicted = FALSE;
       return SVN_NO_ERROR;
     }
 
@@ -1859,10 +1867,14 @@ merge_file_deleted(const char *local_dir_abspath,
   svn_node_kind_t kind;
   const char *mine_abspath;
 
-  /* Easy out: We are only applying mergeinfo changes to existing paths. */
+  /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
       svn_pool_destroy(subpool);
+      if (state)
+        *state = svn_wc_notify_state_unchanged;
+      if (tree_conflicted)
+        *tree_conflicted = FALSE;
       return SVN_NO_ERROR;
     }
 
@@ -2000,10 +2012,14 @@ merge_dir_added(const char *local_dir_abspath,
   svn_boolean_t is_deleted;
   svn_error_t *err;
 
-  /* Easy out: We are only applying mergeinfo changes to existing paths. */
+  /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
       svn_pool_destroy(subpool);
+      if (state)
+        *state = svn_wc_notify_state_unchanged;
+      if (tree_conflicted)
+        *tree_conflicted = FALSE;
       return SVN_NO_ERROR;
     }
 
@@ -2213,10 +2229,14 @@ merge_dir_deleted(const char *local_dir_abspath,
   svn_boolean_t is_versioned;
   svn_boolean_t is_deleted;
 
-  /* Easy out: We are only applying mergeinfo changes to existing paths. */
+  /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
       svn_pool_destroy(subpool);
+      if (state)
+        *state = svn_wc_notify_state_unchanged;
+      if (tree_conflicted)
+        *tree_conflicted = FALSE;
       return SVN_NO_ERROR;
     }
 
