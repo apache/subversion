@@ -1430,7 +1430,7 @@ merge_file_changed(const char *local_dir_abspath,
   if (merge_b->record_only)
     {
       svn_pool_destroy(subpool);
-      if (content_state);
+      if (content_state)
         *content_state = svn_wc_notify_state_unchanged;
       return SVN_NO_ERROR;
     }
