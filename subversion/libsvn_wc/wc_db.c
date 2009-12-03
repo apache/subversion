@@ -5580,6 +5580,7 @@ svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
 svn_error_t *
 svn_wc__db_wclock_set(svn_wc__db_t *db,
                       const char *local_abspath,
+                      int levels_to_lock,
                       apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -5587,6 +5588,7 @@ svn_wc__db_wclock_set(svn_wc__db_t *db,
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
                                  STMT_INSERT_WC_LOCK, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, levels_to_lock));
   err = svn_sqlite__insert(NULL, stmt);
   if (err)
     return svn_error_createf(SVN_ERR_WC_LOCKED, err,

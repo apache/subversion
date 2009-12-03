@@ -377,7 +377,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
      function bumps a working copy all the way to current.  */
   SVN_ERR(svn_wc__db_temp_reset_format(SVN_WC__VERSION, db, dir_abspath,
                                        scratch_pool));
-  SVN_ERR(svn_wc__db_wclock_set(db, dir_abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_wclock_set(db, dir_abspath, 0, scratch_pool));
   SVN_ERR(svn_wc__write_upgraded_entries(db, sdb, repos_id, wc_id,
                                          dir_abspath, entries,
                                          scratch_pool));
