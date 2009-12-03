@@ -306,7 +306,8 @@ static const char * const data_loading_sql[] = {
 
   WC_METADATA_SQL_13,
   WC_METADATA_SQL_14,
-  WC_METADATA_SQL_15
+  WC_METADATA_SQL_15,
+  WC_METADATA_SQL_16
 };
 
 

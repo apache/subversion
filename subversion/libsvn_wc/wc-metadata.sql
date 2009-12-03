@@ -456,8 +456,26 @@ WHERE depth = 'exclude';
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 16 introduces new handling for conflict information.  */
+/* Format 16 introduces some new columns for pristines and locks.  */
 -- format: 16
+
+/* An md5 column for the pristine table. */
+ALTER TABLE PRISTINE
+ADD COLUMN md5_checksum  TEXT;
+
+/* Add the locked_levels column to record the depth of a lock. */
+ALTER TABLE WC_LOCK
+ADD COLUMN locked_levels INTEGER NOT NULL DEFAULT -1;;
+
+/* Default the depth of existing locks to 0. */
+UPDATE wc_lock
+SET locked_levels = 0;
+
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 17 introduces new handling for conflict information.  */
+-- format: 17
 
 
 /* ------------------------------------------------------------------------- */

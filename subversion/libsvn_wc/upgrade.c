@@ -933,13 +933,18 @@ svn_wc__upgrade_sdb(int *result_format,
         ++start_format;
 
       case 15:
-        SVN_ERR(migrate_props(wcroot_abspath, sdb, scratch_pool));
+        /* Nothing to do here for format 16 */
         SVN_ERR(svn_sqlite__set_schema_version(sdb, 16, scratch_pool));
         ++start_format;
 
-#if 0
       case 16:
-        SVN_ERR(bump_to_16(wcroot_abspath, sdb, scratch_pool));
+        SVN_ERR(migrate_props(wcroot_abspath, sdb, scratch_pool));
+        SVN_ERR(svn_sqlite__set_schema_version(sdb, 17, scratch_pool));
+        ++start_format;
+
+#if 0
+      case 17:
+        SVN_ERR(bump_to_17(wcroot_abspath, sdb, scratch_pool));
         ++start_format;
 #endif
 
