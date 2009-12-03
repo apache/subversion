@@ -42,7 +42,9 @@ Candidate changes:
      '/nonexistent' doesn't exist
    Votes:
      +1: arfrever
-     -0: rhuijben, cmpilato (Introduces new features and changes output)
+     -0: cmpilato (Introduces new features and changes output)
+     -1: rhuijben (Introduces new features and changes output;
+                   I think it should be removed from STATUS)
 
  * r878078, r878088, r878102, r878196
    Make KWallet window attached to terminal window.
@@ -136,7 +138,7 @@ Candidate changes:
    threads in the same process.
    
    Windows implements per filehandle locking, so it doesn't need these
-   locks. We usually see the opposite problem in Subversion.
+   locks. We usually see the opposite problem in Subversion on Windows.
    Justification:
      This gives a measurable performance boost (5% decrease in running time
      on running the testsuite in parallel mode (on trunk). The difference
@@ -156,7 +158,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-issue3519
    Votes:
-     +1: cmpilato
+     +1: cmpilato, rhuijben
 
  * r880525, r880526
    Fix 'svn resolve --accept=theirs-conflict' for targets which live inside
@@ -190,13 +192,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+Approved changes:
+=================
+
  * r886164, r886197
    Stop claiming in the 'svn update' and 'svn switch' usage messages that
    --set-depth can't be used to make directories more shallow.  It can.
    Justification:
       "Thou shalt not lie."
    Votes:
-     +1: cmpilato, pburba
-
-Approved changes:
-=================
+     +1: cmpilato, pburba, rhuijben
