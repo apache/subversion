@@ -131,6 +131,12 @@ svn_client__entry_location(const char **url,
 {
   const svn_wc_entry_t *entry;
 
+  /* This function doesn't contact the repository, so error out if
+     asked to do so. */
+  if (peg_rev_kind == svn_opt_revision_date
+      || peg_rev_kind == svn_opt_revision_head)
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
+
   SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
                                       svn_node_unknown, FALSE, FALSE,
                                       scratch_pool, scratch_pool));
@@ -145,7 +151,18 @@ svn_client__entry_location(const char **url,
     {
       *url = apr_pstrdup(result_pool, entry->url);
       if (revnum)
-        *revnum = entry->revision;
+        {
+          if (peg_rev_kind == svn_opt_revision_committed)
+            *revnum = entry->cmt_rev;
+          else if (peg_rev_kind == svn_opt_revision_previous)
+            *revnum = entry->cmt_rev - 1;
+          else
+            /* Local modifications are not relevant here, so consider
+               svn_opt_revision_unspecified, svn_opt_revision_number,
+               svn_opt_revision_base, and svn_opt_revision_working
+               as the same. */
+            *revnum = entry->revision;
+        }
     }
   else
     {
