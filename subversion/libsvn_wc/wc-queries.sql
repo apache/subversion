@@ -281,8 +281,8 @@ UPDATE ACTUAL_NODE SET
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_INSERT_WC_LOCK
-INSERT INTO WC_LOCK (wc_id, local_dir_relpath)
-VALUES (?1, ?2);
+INSERT INTO WC_LOCK (wc_id, local_dir_relpath, locked_levels)
+VALUES (?1, ?2, ?3);
 
 -- STMT_SELECT_WC_LOCK
 SELECT local_dir_relpath FROM WC_LOCK

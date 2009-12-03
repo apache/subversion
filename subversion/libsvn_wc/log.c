@@ -1374,7 +1374,7 @@ cleanup_internal(svn_wc__db_t *db,
   SVN_ERR(can_be_cleaned(&wc_format, db, adm_abspath, iterpool));
 
   /* Lock this working copy directory, or steal an existing lock */
-  err = svn_wc__db_wclock_set(db, adm_abspath, iterpool);
+  err = svn_wc__db_wclock_set(db, adm_abspath, 0, iterpool);
   if (err && err->apr_err == SVN_ERR_WC_LOCKED)
     svn_error_clear(err);
   else if (err)

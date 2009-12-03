@@ -310,7 +310,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
   if (write_lock)
     {
-      SVN_ERR(svn_wc__db_wclock_set(db, lock->abspath, scratch_pool));
+      SVN_ERR(svn_wc__db_wclock_set(db, lock->abspath, 0, scratch_pool));
       SVN_ERR(svn_wc__db_temp_mark_locked(db, lock->abspath, scratch_pool));
     }
 
@@ -1791,7 +1791,7 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
                                            NULL, iterpool));
     }
 
-  SVN_ERR(svn_wc__db_wclock_set(wc_ctx->db, local_abspath, iterpool));
+  SVN_ERR(svn_wc__db_wclock_set(wc_ctx->db, local_abspath, 0, iterpool));
   SVN_ERR(svn_wc__db_temp_mark_locked(wc_ctx->db, local_abspath, iterpool));
 
   svn_pool_destroy(iterpool);

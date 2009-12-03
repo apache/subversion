@@ -1817,6 +1817,7 @@ svn_wc__db_wq_completed(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_wclock_set(svn_wc__db_t *db,
                       const char *local_abspath,
+                      int levels_to_lock,
                       apr_pool_t *scratch_pool);
 
 svn_error_t *
