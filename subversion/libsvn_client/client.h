@@ -77,9 +77,21 @@ svn_client__derive_location(const char **url,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-/* Get the repository URL and revision number for LOCAL_ABSPATH,
-   which is sometimes the path's copyfrom info rather than its actual
-   URL and revision. */
+/* Get the repository URL and revision number for LOCAL_ABSPATH and put them
+   in *URL and *REVNUM.  REVNUM may be null, in which case it is ignored.
+
+   If PEG_REV_KIND is svn_opt_revision_working, then use the LOCAL_ABSPATH's
+   copyfrom info to populate *URL and *REVNUM.
+
+   If PEG_REV_KIND is svn_opt_revision_date or svn_opt_revision_head then
+   return SVN_ERR_CLIENT_BAD_REVISION.
+
+   If PEG_REV_KIND is svn_opt_revision_committed or svn_opt_revision_previous
+   then set *REVNUM to the last committed or previous revision respectively.
+
+   If PEG_REV_NUM is svn_opt_revision_unspecified, svn_opt_revision_number,
+   svn_opt_revision_base, or svn_opt_revision_working then set *REVNUM
+   to the base revision. */
 svn_error_t *
 svn_client__entry_location(const char **url,
                            svn_revnum_t *revnum,
