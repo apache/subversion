@@ -346,8 +346,6 @@ def recursive_mergeinfo(sbox):
                                            '--depth', 'infinity')
 
 # Test for issue #3180 'svn mergeinfo ignores peg rev for WC target'.
-#
-# This test is marked as XFail until this issue is fixed.
 def mergeinfo_on_pegged_wc_path(sbox):
   "svn mergeinfo on pegged working copy target"
 
@@ -386,8 +384,7 @@ def mergeinfo_on_pegged_wc_path(sbox):
                                      '-m', 'Merge r5')
 
   # Ask for merged revisions to A_COPY pegged at various values.
-  # This currently fails as the pegged revision is ignored and
-  # the working rev is always used.
+  # Prior to issue #3180 fix the peg revision was ignored.
   #
   # A_COPY pegged to non-existent revision
   svntest.actions.run_and_verify_mergeinfo(
@@ -433,8 +430,8 @@ test_list = [ None,
               mergeinfo_on_unknown_url,
               non_inheritable_mergeinfo,
               SkipUnless(recursive_mergeinfo, server_has_mergeinfo),
-              XFail(SkipUnless(mergeinfo_on_pegged_wc_path,
-                               server_has_mergeinfo)),
+              SkipUnless(mergeinfo_on_pegged_wc_path,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
