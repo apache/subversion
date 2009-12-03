@@ -211,7 +211,8 @@ static const char * const upgrade_sql[] = {
   WC_METADATA_SQL_12,
   WC_METADATA_SQL_13,
   WC_METADATA_SQL_14,
-  WC_METADATA_SQL_15
+  WC_METADATA_SQL_15,
+  WC_METADATA_SQL_16
 };
 
 WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
