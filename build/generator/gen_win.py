@@ -23,6 +23,12 @@
 #
 
 import os
+try:
+  # Python >=2.5
+  from hashlib import md5 as hashlib_md5
+except ImportError:
+  # Python <2.5
+  from md5 import md5 as hashlib_md5
 import sys
 import fnmatch
 import re
@@ -314,6 +320,20 @@ class WinGeneratorBase(GeneratorBase):
     else:
       print("%s not found; skipping SWIG file generation..." % self.swig_exe)
 
+  def makeguid(self, data):
+    "Generate a windows style GUID"
+    ### blah. this function can generate invalid GUIDs. leave it for now,
+    ### but we need to fix it. we can wrap the apr UUID functions, or
+    ### implement this from scratch using the algorithms described in
+    ### http://www.webdav.org/specs/draft-leach-uuids-guids-01.txt
+
+    myhash = hashlib_md5(data).hexdigest()
+
+    guid = ("{%s-%s-%s-%s-%s}" % (myhash[0:8], myhash[8:12],
+                                  myhash[12:16], myhash[16:20],
+                                  myhash[20:32])).upper()
+    return guid
+
   def path(self, *paths):
     """Convert build path to msvc path and prepend root"""
     return msvc_path_join(self.rootpath, *list(map(msvc_path, paths)))
@@ -370,6 +390,9 @@ class WinGeneratorBase(GeneratorBase):
           else:
             dll_targets.append(self.create_dll_target(target))
     install_targets.extend(dll_targets)
+    
+    for target in install_targets:
+      target.project_guid = self.makeguid(target.name)
 
     # sort these for output stability, to watch out for regressions.
     install_targets.sort(key = lambda t: t.name)

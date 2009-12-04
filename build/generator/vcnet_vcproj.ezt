@@ -2,7 +2,8 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="[version]"
-	Name="[target.proj_name]">
+	Name="[target.proj_name]"
+	ProjectGUID="[project_guid]">
 	<Platforms>
 [for platforms]		<Platform
 			Name="[platforms]"/>
