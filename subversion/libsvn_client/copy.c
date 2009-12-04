@@ -1747,19 +1747,6 @@ try_copy(svn_commit_info_t **commit_info_p,
   svn_boolean_t srcs_are_urls, dst_is_url;
   int i;
 
-  /* Check to see if the supplied peg revisions make sense. */
-  for (i = 0; i < sources->nelts; i++)
-    {
-      svn_client_copy_source_t *source =
-        ((svn_client_copy_source_t **) (sources->elts))[i];
-
-      if (svn_path_is_url(source->path)
-          && (SVN_CLIENT__REVKIND_NEEDS_WC(source->peg_revision->kind)))
-        return svn_error_create
-          (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-           _("Revision type requires a working copy path, not a URL"));
-    }
-
   /* Are either of our paths URLs?
    * Just check the first src_path.  If there are more than one, we'll check
    * for homogeneity among them down below. */
