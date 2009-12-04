@@ -99,7 +99,7 @@ class Generator(gen_win.WinGeneratorBase):
                                             gen_base.TargetProject)),
       'instrument_apr_pools' : self.instrument_apr_pools,
       'instrument_purify_quantify' : self.instrument_purify_quantify,
-      'version' : self.vsnet_proj_ver,
+      'version' : self.vcproj_version,
       }
 
     self.write_with_template(fname, 'vcnet_vcproj.ezt', data)
@@ -251,14 +251,16 @@ class Generator(gen_win.WinGeneratorBase):
     guidvals = sorted(guids.values())
 
     data = {
-      'version': self.vsnet_version,
+      'version': self.sln_version,
+      'vs_version' : self.vs_version,
+      'dependency_location' : 'solution',
       'targets' : targets,
       'configs' : configs,
       'platforms' : self.platforms,
       'guids' : guidvals,
       }
 
-    if self.vsnet_version == '10.00' or self.vsnet_version == '9.00':
-      self.write_with_template('subversion_vcnet.sln', 'vc2005_sln.ezt', data)
+    if self.vs_version == '2002' or self.vs_version == '2003':
+      self.write_with_template('subversion_vcnet.sln', 'templates/vcnet_vc7_sln.ezt', data)
     else:
-      self.write_with_template('subversion_vcnet.sln', 'vcnet_sln.ezt', data)
+      self.write_with_template('subversion_vcnet.sln', 'templates/vcnet_sln.ezt', data)
