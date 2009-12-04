@@ -15,37 +15,6 @@ Status of 1.6.7:
 
 Candidate changes:
 
- * r877552, r877617, r877618, r877619, r877621
-   Support using `svnversion` on files and improve some messages printed by
-   `svnversion`.
-   Justification:
-     Some messages printed by `svnversion` are inconsistent and sometimes
-     incorrect:
-     $ svnversion /usr
-     exported
-     $ svnversion /bin/ls
-     '/bin/ls' not versioned, and not exported
-     $ svnversion VERSIONED_FILE
-     'VERSIONED_FILE' not versioned, and not exported
-     $ svnversion /nonexistent
-     subversion/libsvn_wc/questions.c:90: (apr_err=2)
-     svn: '/nonexistent' does not exist
-     ^^^
-     Messages with these revisions backported:
-     $ svnversion /usr
-     Unversioned directory
-     $ svnversion /bin/ls
-     Unversioned file
-     $ svnversion VERSIONED_FILE
-     NUMBER
-     $ svnversion /nonexistent
-     '/nonexistent' doesn't exist
-   Votes:
-     +1: arfrever
-     -0: cmpilato (Introduces new features and changes output)
-     -1: rhuijben (Introduces new features and changes output;
-                   I think it should be removed from STATUS)
-
  * r878078, r878088, r878102, r878196
    Make KWallet window attached to terminal window.
    Justification:
@@ -191,6 +160,39 @@ Candidate changes:
      http://mail-archives.apache.org/mod_mbox/subversion-dev/200911.mbox/browser
    Votes:
      +1: stsp
+
+Veto-blocked changes:
+
+ * r877552, r877617, r877618, r877619, r877621
+   Support using `svnversion` on files and improve some messages printed by
+   `svnversion`.
+   Justification:
+     Some messages printed by `svnversion` are inconsistent and sometimes
+     incorrect:
+     $ svnversion /usr
+     exported
+     $ svnversion /bin/ls
+     '/bin/ls' not versioned, and not exported
+     $ svnversion VERSIONED_FILE
+     'VERSIONED_FILE' not versioned, and not exported
+     $ svnversion /nonexistent
+     subversion/libsvn_wc/questions.c:90: (apr_err=2)
+     svn: '/nonexistent' does not exist
+     ^^^
+     Messages with these revisions backported:
+     $ svnversion /usr
+     Unversioned directory
+     $ svnversion /bin/ls
+     Unversioned file
+     $ svnversion VERSIONED_FILE
+     NUMBER
+     $ svnversion /nonexistent
+     '/nonexistent' doesn't exist
+   Votes:
+     +1: arfrever
+     -0: cmpilato (Introduces new features and changes output)
+     -1: rhuijben (Introduces new features and changes output;
+                   I think it should be removed from STATUS)
 
 Approved changes:
 =================
