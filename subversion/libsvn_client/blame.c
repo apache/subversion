@@ -604,14 +604,17 @@ svn_client_blame5(const char *target,
   apr_pool_t *iterpool;
   svn_stream_t *last_stream;
   svn_stream_t *stream;
-  const char *target_abspath;
+  const char *target_abspath_or_url;
 
   if (start->kind == svn_opt_revision_unspecified
       || end->kind == svn_opt_revision_unspecified)
     return svn_error_create
       (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
-  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
+  if (svn_path_is_url(target))
+    target_abspath_or_url = target;
+  else
+    SVN_ERR(svn_dirent_get_absolute(&target_abspath_or_url, target, pool));
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &end_revnum,
@@ -620,8 +623,8 @@ svn_client_blame5(const char *target,
                                            ctx, pool));
 
   SVN_ERR(svn_client__get_revision_number(&start_revnum, NULL, ctx->wc_ctx,
-                                          target_abspath, ra_session, start,
-                                          pool));
+                                          target_abspath_or_url, ra_session,
+                                          start, pool));
 
   if (end_revnum < start_revnum)
     return svn_error_create
@@ -679,7 +682,8 @@ svn_client_blame5(const char *target,
          working copy file with keywords unexpanded */
       svn_wc_status2_t *status;
 
-      SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, target_abspath, pool, pool));
+      SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, target_abspath_or_url, pool,
+                             pool));
 
       if (status->text_status != svn_wc_status_normal)
         {
@@ -690,8 +694,8 @@ svn_client_blame5(const char *target,
           const char *temppath;
           apr_hash_t *kw = NULL;
 
-          SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, target_abspath, pool,
-                                    pool));
+          SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, target_abspath_or_url,
+                                    pool, pool));
           SVN_ERR(svn_stream_open_readonly(&wcfile, target, pool, pool));
 
           keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
