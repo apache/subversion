@@ -1,9 +1,9 @@
 Microsoft Visual Studio Solution File, Format Version [version]
-# Visual Studio [is version "10.00"]2008[else]2005[end]
+# Visual Studio [vs_version]
 [for targets]Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "[targets.name]", "[targets.path]", "[targets.guid]"
-	ProjectSection(ProjectDependencies) = postProject
+[is dependency_location "solution"]	ProjectSection(ProjectDependencies) = postProject
 [for targets.depends]		[targets.depends.guid] = [targets.depends.guid]
-[end]	EndProjectSection
+[end][end]	EndProjectSection
 EndProject
 [end]Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{F6BDBE6F-7C7B-458B-8801-0B351C85ED6E}"
 EndProject

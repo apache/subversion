@@ -81,8 +81,10 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.openssl_path = None
     self.junit_path = None
     self.swig_path = None
-    self.vsnet_version = '7.00'
-    self.vsnet_proj_ver = '7.00'
+    self.vs_version = '2002'
+    self.sln_version = '7.00'
+    self.vcproj_version = '7.00'
+    self.vcproj_extension = '.vcproj'
     self.sqlite_path = 'sqlite-amalgamation'
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None,
@@ -153,19 +155,34 @@ class GeneratorBase(gen_base.GeneratorBase):
         self.disable_shared = 1
       elif opt == '--vsnet-version':
         if val == '2002' or re.match('7(\.\d+)?', val):
-          self.vsnet_version = '7.00'
-          self.vsnet_proj_ver = '7.00'
+          self.vs_version = '2002'
+          self.sln_version = '7.00'
+          self.vcproj_version = '7.00'
+          self.vcproj_extension = '.vcproj'
         elif val == '2003' or re.match('8(\.\d+)?', val):
-          self.vsnet_version = '8.00'
-          self.vsnet_proj_ver = '7.10'
+          self.vs_version = '2003'
+          self.sln_version = '8.00'
+          self.vcproj_version = '7.10'
+          self.vcproj_extension = '.vcproj'
         elif val == '2005' or re.match('9(\.\d+)?', val):
-          self.vsnet_version = '9.00'
-          self.vsnet_proj_ver = '8.00'
+          self.vs_version = '2005'
+          self.sln_version = '9.00'
+          self.vcproj_version = '8.00'
+          self.vcproj_extension = '.vcproj'
         elif val == '2008' or re.match('10(\.\d+)?', val):
-          self.vsnet_version = '10.00'
-          self.vsnet_proj_ver = '9.00'
+          self.vs_version = '2008'
+          self.sln_version = '10.00'
+          self.vcproj_version = '9.00'
+          self.vcproj_extension = '.vcproj'
+        elif val == '2010':
+          self.vs_version = '2010'
+          self.sln_version = '11.00'
+          self.vcproj_version = '10.0'
+          self.vcproj_extension = '.vcxproj'
         else:
-          self.vsnet_version = val
+          sys.stderr.write('WARNING: Unknown VS.NET version "%s",'
+                           ' assuming "%s"\n' % (val, '7.00'))
+
 
   def __init__(self, fname, verfname, options):
 
@@ -209,19 +226,7 @@ class WinGeneratorBase(GeneratorBase):
       sys.stderr.write("BDB not found, BDB fs will not be built\n")
 
     if subdir == 'vcnet-vcproj':
-      if self.vsnet_version == '7.00':
-        sys.stderr.write('Generating for VS.NET 2002\n')
-      elif self.vsnet_version == '8.00':
-        sys.stderr.write('Generating for VS.NET 2003\n')
-      elif self.vsnet_version == '9.00':
-        sys.stderr.write('Generating for VS.NET 2005\n')
-      elif self.vsnet_version == '10.00':
-        sys.stderr.write('Generating for VS.NET 2008\n')
-      else:
-        sys.stderr.write('WARNING: Unknown VS.NET version "%s",'
-                         ' assuming "%s"\n' % (self.vsnet_version, '7.00'))
-        self.vsnet_version = '7.00'
-        self.vsnet_proj_ver = '7.00'
+      sys.stderr.write('Generating for Visual Studio %s\n' % self.vs_version)
 
     # Find the right Ruby include and libraries dirs and
     # library name to link SWIG bindings with
@@ -303,9 +308,9 @@ class WinGeneratorBase(GeneratorBase):
     #Here we can add additional platforms to compile for
     self.platforms = ['Win32']
 
-    # VS2002 and VS2003 only allow a single platform per project file
+    # VC 2002 and VC 2003 only allow a single platform per project file
     if subdir == 'vcnet-vcproj':
-      if self.vsnet_version != '7.00' and self.vsnet_version != '8.00':
+      if self.vcproj_version != '7.00' and self.vcproj_version != '7.10':
         self.platforms = ['Win32','x64']
 
     #Here we can add additional modes to compile for
@@ -1149,12 +1154,12 @@ class WinGeneratorBase(GeneratorBase):
 
   def move_proj_file(self, path, name, params=()):
     ### Move our slightly templatized pre-built project files into place --
-    ### these projects include apr, zlib, neon, locale, config, etc.
+    ### these projects include zlib, neon, serf, locale, config, etc.
 
     dest_file = os.path.join(path, name)
     source_template = name + '.ezt'
     data = {
-      'version' : self.vsnet_proj_ver,
+      'version' : self.vcproj_version,
       'configs' : self.configs,
       'platforms' : self.platforms
       }
