@@ -959,14 +959,6 @@ check_paths(const struct diff_parameters *params,
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                             _("Not all required revisions are specified"));
 
-  if ((svn_path_is_url(params->path1)
-       && SVN_CLIENT__REVKIND_NEEDS_WC(params->revision1->kind))
-      || (svn_path_is_url(params->path2)
-          && SVN_CLIENT__REVKIND_NEEDS_WC(params->revision2->kind)))
-    return svn_error_create(
-      SVN_ERR_CLIENT_BAD_REVISION, NULL,
-      _("PREV, BASE, or COMMITTED revision keywords are invalid for URL"));
-
   /* Revisions can be said to be local or remote.  BASE and WORKING,
      for example, are local.  */
   is_local_rev1 =

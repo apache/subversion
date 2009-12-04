@@ -334,14 +334,6 @@ svn_client_log5(const apr_array_header_t *targets,
   /* Use the passed URL, if there is one.  */
   url_or_path = APR_ARRAY_IDX(targets, 0, const char *);
   is_url = svn_path_is_url(url_or_path);
-
-  if (is_url && SVN_CLIENT__REVKIND_NEEDS_WC(peg_revision->kind))
-    {
-      return svn_error_create
-        (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-         _("Revision type requires a working copy path, not a URL"));
-    }
-
   session_opt_rev.kind = svn_opt_revision_unspecified;
 
   for (i = 0; i < revision_ranges->nelts; i++)
@@ -391,15 +383,6 @@ svn_client_log5(const apr_array_header_t *targets,
           return svn_error_create
             (SVN_ERR_CLIENT_BAD_REVISION, NULL,
              _("Missing required revision specification"));
-        }
-
-      if (is_url
-          && (SVN_CLIENT__REVKIND_NEEDS_WC(range->start.kind)
-              || SVN_CLIENT__REVKIND_NEEDS_WC(range->end.kind)))
-        {
-          return svn_error_create
-            (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-             _("Revision type requires a working copy path, not a URL"));
         }
 
       /* Determine the revision to open the RA session to. */
