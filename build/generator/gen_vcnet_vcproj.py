@@ -23,13 +23,6 @@
 #
 
 import os
-try:
-  # Python >=2.5
-  from hashlib import md5 as hashlib_md5
-except ImportError:
-  # Python <2.5
-  from md5 import md5 as hashlib_md5
-
 import gen_base
 import gen_win
 import ezt
@@ -61,19 +54,19 @@ class Generator(gen_win.WinGeneratorBase):
     "Write a Project (.vcproj)"
 
     if isinstance(target, gen_base.TargetProject):
-      config_type=10
+      target_type=10
     elif isinstance(target, gen_base.TargetExe):
       #EXE
-      config_type=1
+      target_type=1
     elif isinstance(target, gen_base.TargetJava):
-      config_type=10
+      target_type=10
     elif isinstance(target, gen_base.TargetLib):
       if target.msvc_static:
-        config_type=4
+        target_type=4
       else:
-        config_type=2
+        target_type=2
     elif isinstance(target, gen_base.TargetI18N):
-      config_type=4
+      target_type=4
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
 
@@ -88,8 +81,8 @@ class Generator(gen_win.WinGeneratorBase):
 
     data = {
       'target' : target,
-      'target_type' : config_type,
-#      'target_number' : targval,
+      'target_type' : target_type,
+      'project_guid' : target.project_guid,
       'rootpath' : self.rootpath,
       'platforms' : self.platforms,
       'configs' : configs,
@@ -110,20 +103,6 @@ class Generator(gen_win.WinGeneratorBase):
       }
 
     self.write_with_template(fname, 'vcnet_vcproj.ezt', data)
-
-  def makeguid(self, data):
-    "Generate a windows style GUID"
-    ### blah. this function can generate invalid GUIDs. leave it for now,
-    ### but we need to fix it. we can wrap the apr UUID functions, or
-    ### implement this from scratch using the algorithms described in
-    ### http://www.webdav.org/specs/draft-leach-uuids-guids-01.txt
-
-    myhash = hashlib_md5(data).hexdigest()
-
-    guid = ("{%s-%s-%s-%s-%s}" % (myhash[0:8], myhash[8:12],
-                                  myhash[12:16], myhash[16:20],
-                                  myhash[20:32])).upper()
-    return guid
 
   def getguid(self, path):
     "Try to get a project's guid from its project file"
@@ -188,10 +167,8 @@ class Generator(gen_win.WinGeneratorBase):
       guid = None
       proj_path = self.get_external_project(target, 'vcproj')
       if proj_path is not None:
-        guid = self.getguid(proj_path)
-      if guid is None:
-        guid = self.makeguid(target.name)
-      guids[target.name] = guid
+        target.project_guid = self.getguid(proj_path)
+      guids[target.name] = target.project_guid
 
     self.gen_proj_names(install_targets)
 
