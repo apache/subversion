@@ -33,6 +33,11 @@ import sys
 import os
 import getopt
 
+ASCII_TABLE = "".join([chr(n) for n in xrange(256)])
+# remove all special characters upto ascii value 31, except line feed (10)
+# and carriage return (13)
+CHARS_TO_REMOVE = ASCII_TABLE[0:10] + ASCII_TABLE[11:13] + ASCII_TABLE[14:32]
+
 def xml_encode(data):
     """encode the xml characters in the data"""
     encode = {
@@ -44,6 +49,15 @@ def xml_encode(data):
     }
     for char in encode.keys():
         data = data.replace(char, encode[char])
+    return data
+
+def escape_special_characters(data):
+    """remove special characters in test failure reasons"""
+    if not data:
+        return data
+    for char in CHARS_TO_REMOVE:
+        data = data.replace(char, '%%%0x' % ord(char))
+    data = data.replace(']]>', ']]]]><![CDATA[>')
     return data
 
 def start_junit():
@@ -72,6 +86,7 @@ def junit_testcase_fail(test_name, casename, reason=None):
     """mark the test case as FAILED"""
     casename = xml_encode(casename)
     sub_test_name = test_name.replace('.', '-')
+    reason = escape_special_characters(reason)
     case = """<testcase time="ELAPSED_CASE_%s" name="%s" classname="%s">
       <failure type="Failed"><![CDATA[%s]]></failure>
     </testcase>""" % (test_name, casename, sub_test_name, reason)
@@ -81,6 +96,7 @@ def junit_testcase_xfail(test_name, casename, reason=None):
     """mark the test case as XFAILED"""
     casename = xml_encode(casename)
     sub_test_name = test_name.replace('.', '-')
+    reason = escape_special_characters(reason)
     case = """<testcase time="ELAPSED_CASE_%s" name="%s" classname="%s">
       <system-out><![CDATA[%s]]></system-out>
     </testcase>""" % (test_name, casename, sub_test_name, reason)
