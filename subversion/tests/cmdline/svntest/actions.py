@@ -1547,8 +1547,9 @@ def lock_admin_dir(wc_dir):
 
   db = svntest.sqlite3.connect(os.path.join(wc_dir, main.get_admin_name(),
                                             'wc.db'))
-  db.execute('insert into wc_lock (wc_id, local_dir_relpath) values (?, ?)',
-             (1, ''))
+  db.execute('insert into wc_lock (wc_id, local_dir_relpath, locked_levels) '
+             + 'values (?, ?, ?)',
+             (1, '', 0))
   db.commit()
   db.close()
 

@@ -5600,23 +5600,56 @@ svn_wc__db_wclock_set(svn_wc__db_t *db,
 }
 
 
+static svn_error_t *
+is_wclocked(svn_boolean_t *locked,
+            svn_wc__db_t *db,
+            const char *local_abspath,
+            apr_int64_t recurse_depth,
+            apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  svn_error_t *err;
+
+  err = get_statement_for_path(&stmt, db, local_abspath,
+                               STMT_SELECT_WC_LOCK, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+    {
+      svn_error_clear(err);
+      *locked = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    {
+      apr_int64_t locked_levels = svn_sqlite__column_int64(stmt, 0);
+
+      /* The directory in question is considered locked if we find a lock
+         with depth -1 or the depth of the lock is greater than or equal to
+         the depth we've recursed. */
+      *locked = (locked_levels == -1 || locked_levels >= recurse_depth);
+      return svn_error_return(svn_sqlite__reset(stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return svn_error_return(is_wclocked(locked, db,
+                                      svn_dirent_dirname(local_abspath,
+                                                         scratch_pool),
+                                      recurse_depth + 1, scratch_pool));
+}
+
+
 svn_error_t *
 svn_wc__db_wclocked(svn_boolean_t *locked,
                     svn_wc__db_t *db,
                     const char *local_abspath,
                     apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_SELECT_WC_LOCK, scratch_pool));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  *locked = have_row;
-
-  return SVN_NO_ERROR;
+  return svn_error_return(is_wclocked(locked, db, local_abspath, 0,
+                                      scratch_pool));
 }
 
 
