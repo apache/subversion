@@ -1,3 +1,4 @@
+[define COPYRIGHT]
 #
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -18,7 +19,7 @@
 # under the License.
 #
 #
-Microsoft Visual Studio Solution File, Format Version [version]
+[end]Microsoft Visual Studio Solution File, Format Version [version]
 # Visual Studio [vs_version]
 [for targets]Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "[targets.name]", "[targets.path]", "[targets.guid]"
 [is dependency_location "solution"]	ProjectSection(ProjectDependencies) = postProject
