@@ -285,7 +285,7 @@ INSERT INTO WC_LOCK (wc_id, local_dir_relpath, locked_levels)
 VALUES (?1, ?2, ?3);
 
 -- STMT_SELECT_WC_LOCK
-SELECT local_dir_relpath FROM WC_LOCK
+SELECT locked_levels FROM WC_LOCK
 WHERE wc_id = ?1 AND local_dir_relpath = ?2;
 
 -- STMT_DELETE_WC_LOCK
