@@ -89,9 +89,7 @@ usage: 1. switch URL[@PEGREV] [PATH]
      are applied to the obstructing path.
 
      Use the --set-depth option to set a new working copy depth on the
-     targets of this operation.  Currently, the depth of a working copy
-     directory can only be increased (telescoped more deeply); you cannot
-     make a directory more shallow.
+     targets of this operation.
 
   2. Rewrite working copy URL metadata to reflect a syntactic change only.
      This is used when repository's root URL changes (such as a scheme

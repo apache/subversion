@@ -927,9 +927,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     are applied to the obstructing path.\n"
      "\n"
      "     Use the --set-depth option to set a new working copy depth on the\n"
-     "     targets of this operation.  Currently, the depth of a working copy\n"
-     "     directory can only be increased (telescoped more deeply); you cannot\n"
-     "     make a directory more shallow.\n"
+     "     targets of this operation.\n"
      "\n"
      "  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n"
      "     This is used when repository's root URL changes (such as a scheme\n"
@@ -983,9 +981,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  in the first column with code 'E'.\n"
      "\n"
      "  Use the --set-depth option to set a new working copy depth on the\n"
-     "  targets of this operation.  Currently, the depth of a working copy\n"
-     "  directory can only be increased (telescoped more deeply); you cannot\n"
-     "  make a directory more shallow.\n"),
+     "  targets of this operation.\n"),
     {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force,
      opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept} },
 

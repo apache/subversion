@@ -194,11 +194,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r886164, r886197
-   Stop claiming in the 'svn update' and 'svn switch' usage messages that
-   --set-depth can't be used to make directories more shallow.  It can.
-   Justification:
-      "Thou shalt not lie."
-   Votes:
-     +1: cmpilato, pburba, rhuijben
