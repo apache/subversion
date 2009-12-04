@@ -547,15 +547,13 @@ svn_client__repos_locations(const char **start_url,
   const char *url;
   const char *start_path = NULL;
   const char *end_path = NULL;
-  const char *local_abspath;
+  const char *local_abspath_or_url;
   svn_revnum_t peg_revnum = SVN_INVALID_REVNUM;
   svn_revnum_t start_revnum, end_revnum;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
   apr_array_header_t *revs;
   apr_hash_t *rev_locs;
   apr_pool_t *subpool = svn_pool_create(pool);
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
 
   /* Ensure that we are given some real revision data to work with.
      (It's okay if the END is unspecified -- in that case, we'll just
@@ -571,7 +569,9 @@ svn_client__repos_locations(const char **start_url,
     {
       const svn_wc_entry_t *entry;
 
-      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath_or_url, path, subpool));
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx,
+                                          local_abspath_or_url,
                                           svn_node_unknown, FALSE, FALSE,
                                           pool, pool));
       if (entry->copyfrom_url && revision->kind == svn_opt_revision_working)
@@ -597,6 +597,7 @@ svn_client__repos_locations(const char **start_url,
     }
   else
     {
+      local_abspath_or_url = path;
       url = path;
     }
 
@@ -613,17 +614,17 @@ svn_client__repos_locations(const char **start_url,
   /* Resolve the opt_revision_ts. */
   if (peg_revnum == SVN_INVALID_REVNUM)
     SVN_ERR(svn_client__get_revision_number(&peg_revnum, &youngest_rev,
-                                            ctx->wc_ctx, local_abspath,
+                                            ctx->wc_ctx, local_abspath_or_url,
                                             ra_session, revision, pool));
 
   SVN_ERR(svn_client__get_revision_number(&start_revnum, &youngest_rev,
-                                          ctx->wc_ctx, local_abspath,
+                                          ctx->wc_ctx, local_abspath_or_url,
                                           ra_session, start, pool));
   if (end->kind == svn_opt_revision_unspecified)
     end_revnum = start_revnum;
   else
     SVN_ERR(svn_client__get_revision_number(&end_revnum, &youngest_rev,
-                                            ctx->wc_ctx, local_abspath,
+                                            ctx->wc_ctx, local_abspath_or_url,
                                             ra_session, end, pool));
 
   /* Set the output revision variables. */

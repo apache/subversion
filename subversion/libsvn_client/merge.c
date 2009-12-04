@@ -5952,26 +5952,23 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
   svn_revnum_t trim_revision = SVN_INVALID_REVNUM;
   svn_opt_revision_t youngest_opt_rev;
   apr_array_header_t *merge_range_ts, *segments;
-  const char *source_abspath;
+  const char *source_abspath_or_url;
   apr_pool_t *subpool;
   int i;
   youngest_opt_rev.kind = svn_opt_revision_head;
 
-  /* ### FIXME:  SOURCE might be a URL, yet we're doing a bunch of
-     ### working-copy-path operations on it!!  We probably don't run
-     ### into trouble because it happens to be the case that these
-     ### operations are just as sloppy/forgiving as we are about
-     ### handling URL inputs where local paths are expected, but
-     ### that's a shaky limb to stand on.  */
-
-  SVN_ERR(svn_dirent_get_absolute(&source_abspath, source, pool));
+  if(!svn_path_is_url(source))
+    SVN_ERR(svn_dirent_get_absolute(&source_abspath_or_url, source, pool));
+  else
+    source_abspath_or_url = source;
 
   /* Initialize our return variable. */
   *merge_sources_p = apr_array_make(pool, 1, sizeof(merge_source_t *));
 
   /* Resolve our PEG_REVISION to a real number. */
   SVN_ERR(svn_client__get_revision_number(&peg_revnum, &youngest_rev,
-                                          ctx->wc_ctx, source_abspath,
+                                          ctx->wc_ctx,
+                                          source_abspath_or_url,
                                           ra_session, peg_revision, pool));
   if (! SVN_IS_VALID_REVNUM(peg_revnum))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
@@ -6013,11 +6010,13 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
           _("PREV, BASE, or COMMITTED revision keywords are invalid for URL"));
 
       SVN_ERR(svn_client__get_revision_number(&range_start_rev, &youngest_rev,
-                                              ctx->wc_ctx, source_abspath,
+                                              ctx->wc_ctx,
+                                              source_abspath_or_url,
                                               ra_session, range_start,
                                               subpool));
       SVN_ERR(svn_client__get_revision_number(&range_end_rev, &youngest_rev,
-                                              ctx->wc_ctx, source_abspath,
+                                              ctx->wc_ctx,
+                                              source_abspath_or_url,
                                               ra_session, range_end,
                                               subpool));
 
