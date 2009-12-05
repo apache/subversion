@@ -313,7 +313,6 @@ svn_client_log5(const apr_array_header_t *targets,
 {
   svn_ra_session_t *ra_session;
   const char *url_or_path;
-  svn_boolean_t is_url;
   svn_boolean_t has_log_revprops;
   const char *actual_url;
   apr_array_header_t *condensed_targets;
@@ -333,7 +332,6 @@ svn_client_log5(const apr_array_header_t *targets,
 
   /* Use the passed URL, if there is one.  */
   url_or_path = APR_ARRAY_IDX(targets, 0, const char *);
-  is_url = svn_path_is_url(url_or_path);
   session_opt_rev.kind = svn_opt_revision_unspecified;
 
   for (i = 0; i < revision_ranges->nelts; i++)
@@ -406,7 +404,7 @@ svn_client_log5(const apr_array_header_t *targets,
     }
 
   /* Use the passed URL, if there is one.  */
-  if (is_url)
+  if (svn_path_is_url(url_or_path))
     {
       /* Initialize this array, since we'll be building it below */
       condensed_targets = apr_array_make(pool, 1, sizeof(const char *));
