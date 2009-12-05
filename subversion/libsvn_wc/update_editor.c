@@ -3346,8 +3346,6 @@ locate_copyfrom(svn_wc__db_t *db,
   ancestor_relpath = svn_relpath_get_longest_ancestor(dir_repos_relpath,
                                                       copyfrom_relpath,
                                                       scratch_pool);
-  if (strlen(ancestor_relpath) == 0)
-    return SVN_NO_ERROR;
 
   /* Move 'up' the working copy to what ought to be the common ancestor dir. */
   levels_up = svn_path_component_count(dir_repos_relpath)
