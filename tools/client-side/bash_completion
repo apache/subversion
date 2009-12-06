@@ -535,6 +535,9 @@ _svn()
 	    # Thus the handling is reprogrammed here...
 	    # The code assumes that property names look like *:*,
 	    # but it also works reasonably well with simple names.
+	    #
+	    # This hack is broken in bash4... not sure what to do about it,
+            # especially while keeping the bash3 compatibility:-(
 	    local choices=
 
 	    if [[ $cur == *:* ]]
