@@ -3221,7 +3221,9 @@ fix_deleted_subtree_ranges(const char *url1,
 
    If IMPLICIT_MERGEINFO is not NULL then START and END are limits on the
    the natural history sought, must both be valid revision numbers, and
-   START must be greater than END.
+   START must be greater than END.  If TARGET_ABSPATH's base revision
+   is older than START, then the base revision is used as the younger
+   bound in place of START.
 
    Allocate *RECORDED_MERGEINFO and *IMPLICIT_MERGEINFO in RESULT_POOL.
    Use SCRATCH_POOL for any temporary allocations. */
@@ -3291,29 +3293,12 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                                                        ctx, scratch_pool));
         }
 
-      /* Our underlying APIs can't yet handle the case where the peg
-         revision isn't the youngest of the three revisions.  So we'll
-         just verify that the source in the peg revision is related to the
-         the source in the youngest requested revision (which is all the
-         underlying APIs would do in this case right now anyway). */
+      /* Do not ask for implicit mergeinfo from TARGET_ABSPATH's future.
+         TARGET_ABSPATH might not even exist, and even if it does the
+         working copy is *at* TARGET_REV so its implicit history ends
+         at TARGET_REV! */
       if (target_rev < start)
-        {
-          const char *start_url;
-          svn_opt_revision_t requested, unspec, pegrev, *start_revision;
-          unspec.kind = svn_opt_revision_unspecified;
-          requested.kind = svn_opt_revision_number;
-          requested.value.number = start;
-          pegrev.kind = svn_opt_revision_number;
-          pegrev.value.number = target_rev;
-
-          SVN_ERR(svn_client__repos_locations(&start_url, &start_revision,
-                                              NULL, NULL, ra_session, url,
-                                              &pegrev, &requested,
-                                              &unspec, ctx, scratch_pool));
-          /* ### FIXME: Having a low-brain moment.  Shouldn't we check
-             that START_URL matches our session URL at this point?  */
-          target_rev = start;
-        }
+        start = target_rev;
 
       /* Fetch the implicit mergeinfo. */
       peg_revision.kind = svn_opt_revision_number;
