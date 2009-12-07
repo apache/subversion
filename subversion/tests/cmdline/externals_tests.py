@@ -398,6 +398,10 @@ def update_lose_external(sbox):
   # Set and commit the property
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
+  # The code should handle a missing local externals item
+  svntest.main.safe_rmtree(os.path.join(other_wc_dir, "A", "D", "exdir_A", \
+                                        "D"))
+
   # Update other working copy, see if lose & preserve things appropriately
   svntest.actions.run_and_verify_svn(None, None, [], 'up', other_wc_dir)
 
