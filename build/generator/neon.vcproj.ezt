@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding = "Windows-1252"?>
+[define COPYRIGHT]
 <!--
      Licensed to the Apache Software Foundation (ASF) under one
      or more contributor license agreements.  See the NOTICE file
@@ -17,7 +17,7 @@
      specific language governing permissions and limitations
      under the License.
 -->
-
+[end]<?xml version="1.0" encoding = "Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="[version]"
