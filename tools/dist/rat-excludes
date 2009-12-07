@@ -51,3 +51,4 @@ doc/doxygen.conf
 **/*.patch
 **/*.txt
 **/*.svg
+**/*.rtf
