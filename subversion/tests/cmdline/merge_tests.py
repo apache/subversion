@@ -17050,6 +17050,109 @@ def committed_case_only_move_and_revert(sbox):
                                        None, None, None, None,
                                        None, 1, 0)
 
+# This is a test for issue #3221 'Unable to merge into working copy of
+# deleted branch'.
+#
+# Marked as XFail until issue #3221 is fixed.
+def merge_into_wc_for_deleted_branch(sbox):
+  "merge into WC of deleted branch should work"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Copy 'A' to 'A_COPY' then make some changes under 'A'
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  # Some paths we'll care about
+  A_COPY_path = os.path.join(wc_dir, "A_COPY")
+  gamma_path  = os.path.join(wc_dir, "A", "D", "gamma")
+  
+  # r7 - Delete the branch on the repository, obviously it still
+  # exists in our WC.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'delete', sbox.repo_url + '/A_COPY',
+                                     '-m', 'Delete A_COPY directly in repos')
+
+  # r8 - Make another change under 'A'.
+  svntest.main.file_write(gamma_path, "Content added after A_COPY deleted")
+  expected_output = wc.State(wc_dir, {'A/D/gamma' : Item(verb='Sending')})
+  svntest.main.run_svn(None, 'commit',
+                       '-m', 'Change made on A after A_COPY was deleted',
+                       wc_dir)
+
+  # Now merge all available revisions from A to A_COPY:
+  expected_output = wc.State(A_COPY_path, {
+    'B/E/beta'  : Item(status='U '),
+    'D/G/rho'   : Item(status='U '),
+    'D/H/omega' : Item(status='U '),
+    'D/H/psi'   : Item(status='U '),
+    'D/gamma'   : Item(status='U '),
+    })
+  expected_status = wc.State(A_COPY_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='M '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='M '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='M '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='M '),
+    'D/H/omega' : Item(status='M '),
+    })
+  expected_status.tweak(wc_rev=2)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:2-8'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("Content added after A_COPY deleted"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State(A_COPY_path, { })
+  # Issue #3221: This merge fails with:
+  #   ..\..\..\subversion\svn\util.c:900: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_client\merge.c:9383: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_client\merge.c:8029: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_client\merge.c:7577: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_client\merge.c:4132: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_client\merge.c:3312: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_client\ra.c:659: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_repos\rev_hunt.c:696: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_repos\rev_hunt.c:539: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_fs_fs\tree.c:2818: (apr_err=160013)
+  #   svn: File not found: revision 8, path '/A_COPY'
+  svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
+                                       sbox.repo_url + '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 0)  
+  
 ########################################################################
 # Run the tests
 
@@ -17278,7 +17381,7 @@ test_list = [ None,
               skipped_files_get_correct_mergeinfo,
               XFail(committed_case_only_move_and_revert,
                     is_fs_case_insensitive),
-
+              XFail(merge_into_wc_for_deleted_branch),
              ]
 
 if __name__ == '__main__':
