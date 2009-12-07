@@ -1540,6 +1540,8 @@ svn_dirent_get_absolute(const char **pabsolute,
   apr_status_t apr_err;
   const char *path_apr;
 
+  SVN_ERR_ASSERT(! svn_path_is_url(relative));
+
   /* Merge the current working directory with the relative dirent. */
   SVN_ERR(svn_path_cstring_from_utf8(&path_apr, relative, pool));
 
