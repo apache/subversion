@@ -92,6 +92,9 @@ class Sandbox:
     return clone
 
   def build(self, name=None, create_wc=True, read_only=False):
+    """Make a 'Greek Tree' repo (or refer to the central one if READ_ONLY),
+       and check out a WC from it (unless CREATE_WC is false). Change the
+       sandbox's name to NAME. See actions.make_repo_and_wc() for details."""
     self._set_name(name, read_only)
     if svntest.actions.make_repo_and_wc(self, create_wc, read_only):
       raise svntest.Failure("Could not build repository and sandbox '%s'"
@@ -105,6 +108,13 @@ class Sandbox:
       svntest.main.safe_rmtree(path)
 
   def add_repo_path(self, suffix, remove=True):
+    """Generate a path, under the general repositories directory, with
+       a name that ends in SUFFIX, e.g. suffix="2" -> ".../basic_tests.2".
+       If REMOVE is true, remove anything currently on disk at that path.
+       Remember that path so that the automatic clean-up mechanism can
+       delete it at the end of the test. Generate a repository URL to
+       refer to a repository at that path. Do not create a repository.
+       Return (REPOS-PATH, REPOS-URL)."""
     path = (os.path.join(svntest.main.general_repo_dir, self.name)
             + '.' + suffix)
     url = svntest.main.test_area_url + '/' + svntest.main.pathname2url(path)
@@ -112,6 +122,12 @@ class Sandbox:
     return path, url
 
   def add_wc_path(self, suffix, remove=True):
+    """Generate a path, under the general working copies directory, with
+       a name that ends in SUFFIX, e.g. suffix="2" -> ".../basic_tests.2".
+       If REMOVE is true, remove anything currently on disk at that path.
+       Remember that path so that the automatic clean-up mechanism can
+       delete it at the end of the test. Do not create a working copy.
+       Return the generated WC-PATH."""
     path = self.wc_dir + '.' + suffix
     self.add_test_path(path, remove)
     return path
