@@ -53,8 +53,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-11-19 13:40+0800\n"
-"PO-Revision-Date: 2009-11-19 13:45+0800\n"
+"POT-Creation-Date: 2009-12-07 10:09+0800\n"
+"PO-Revision-Date: 2009-12-07 11:22+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1128,9 +1128,6 @@ msgstr "“%s”已纳入版本控制"
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "“%s” 的入口存在(尽管丢失了工作文件)"
 
-msgid "Revision type requires a working copy path, not a URL"
-msgstr "版本类型需要工作目录，不是 URL"
-
 msgid "Cannot mix repository and working copy sources"
 msgstr "不能在源中混合版本库和工作副本"
 
@@ -1401,9 +1398,6 @@ msgstr ""
 "当合并 r%ld:%ld 到 “%s” 时出现了一个或更多的冲突\n"
 "请解决所有冲突后，再次运行合并，处理剩余的未合并版本"
 
-msgid "PREV, BASE, or COMMITTED revision keywords are invalid for URL"
-msgstr "对于 URL，版本关键字 PREV，BASE，或 COMMITTED 非法"
-
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr "使用两个 URL 与合并信息修改不兼容"
 
@@ -1558,6 +1552,9 @@ msgstr "路径 “%s” 没有提交过"
 #, c-format
 msgid "Unrecognized revision type requested for '%s'"
 msgstr "“%s” 的请求版本类型无法识别"
+
+msgid "PREV, BASE, or COMMITTED revision keywords are invalid for URL"
+msgstr "对于 URL，版本关键字 PREV，BASE，或 COMMITTED 非法"
 
 #, c-format
 msgid "'%s' is not a working copy"
@@ -4579,7 +4576,7 @@ msgstr "不能初始化 SQLite 共享缓存"
 
 #, c-format
 msgid "Expected SQLite database not found: %s"
-msgstr "未发现期望的 SQLite 数据库：%s"
+msgstr "未发现期待的 SQLite 数据库：%s"
 
 #, c-format
 msgid "File '%s' has inconsistent newlines"
@@ -4772,7 +4769,7 @@ msgstr "无效的 “conflict_result” 参数"
 #, c-format
 msgid ""
 "Tree conflicts can only be resolved to 'working' state; '%s' not resolved"
-msgstr "树冲突只能被解决到 'working' 状态，'%s' 没有被解决"
+msgstr "树冲突只能解决为 “working” 状态；“%s” 还没有解决"
 
 #, c-format
 msgid "'%s' already exists and is in the way"
@@ -4833,7 +4830,7 @@ msgstr "只能修剪目录"
 msgid ""
 "Cannot crop '%s': it is going to be removed from repository. Try commit "
 "instead"
-msgstr "无法修剪 “%s”: 它将要从版本库中删除。请先提交"
+msgstr "无法修剪 “%s”: 它将要从版本库中删除；请先提交"
 
 #, c-format
 msgid ""
@@ -5267,15 +5264,15 @@ msgid ""
 "already exists"
 msgstr "无法新增目录“%s”: 同名未版本控制目录对象已存在"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Failed to add directory '%s': a separate working copy with the same name "
 "already exists"
-msgstr "增加目录 '%s' 失败: 同名受版本控制的目录已存在"
+msgstr "增加目录 '%s' 失败: 同名且独立的工作副本已存在"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Switched directory '%s' does not match expected URL '%s'"
-msgstr "URL '%s' 对于现有目录 '%s' 不匹配，期望的 URL 是 '%s'"
+msgstr "已经切换的目录 '%s' 与期望的 URL '%s' 不匹配"
 
 #, c-format
 msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
@@ -5293,11 +5290,11 @@ msgstr "无法将“%s”标记为不存在: 同名项目已加入增加调度"
 msgid "No fetch_func supplied to update_editor"
 msgstr "没有为 update_editor 提供 fetch_func"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Failed to add file '%s': object of the same name as the administrative "
 "directory"
-msgstr "无法增加目录“%s”: 对象与管理目录同名"
+msgstr "无法增加文件“%s”: 对象与管理目录同名"
 
 #, c-format
 msgid ""
@@ -5309,15 +5306,15 @@ msgid ""
 "Failed to add file '%s': an unversioned file of the same name already exists"
 msgstr "增加文件 '%s' 失败: 同名未版本控制的文件已存在"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Failed to add file '%s': a file from another repository with the same name "
 "already exists"
-msgstr "无法新增文件“%s”: 同名非文件对象已存在"
+msgstr "无法新增文件“%s”: 来自其它版本库的同名文件对象已存在"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Switched file '%s' does not match expected URL '%s'"
-msgstr "URL '%s' 对于现有目录 '%s' 不匹配，期望的 URL 是 '%s'"
+msgstr "已经切换的文件 '%s' 与期望的 URL '%s' 不匹配"
 
 #, c-format
 msgid ""
@@ -5342,9 +5339,8 @@ msgid ""
 "1.6"
 msgstr "有日志存在时无法升级；请使用 Subversion 1.6 执行“svn cleanup”"
 
-#, fuzzy
 msgid "'svn upgrade' can only be run from the root of the working copy."
-msgstr "服务器只能从版本库的根重放"
+msgstr "只能在工作副本的根目录执行 'svn upgrade'"
 
 #, c-format
 msgid "'%s' is not a directory"
@@ -5358,9 +5354,8 @@ msgid "Cannot find a URL for '%s'"
 msgstr "不能为“%s”找到 URL"
 
 #. Verify the checksum kind for pristine storage.
-#, fuzzy
 msgid "Only SHA1 checksums can be used as keys in the pristine file storage.\n"
-msgstr "在表 rep_cache 中，只有 SHA1 校验和才能用作键。\n"
+msgstr "在原始的文件存储中，只有 SHA1 校验和才能用作键。\n"
 
 #, c-format
 msgid ""
@@ -5368,17 +5363,17 @@ msgid ""
 "copy again"
 msgstr "“%s”的工作副本格式太旧(%d)；请重新取出工作副本"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "This client is too old to work with the working copy at\n"
 "'%s' (format %d).\n"
 "You need to get a newer Subversion client. For more details, see\n"
 "  http://subversion.tigris.org/faq.html#working-copy-format-change\n"
 msgstr ""
-"此客户端对于工作副本 “%s” 太旧。你需要取得更新的 Subversion 客户端，或者降级\n"
-"工作副本。参见 http://subversion.tigris.org/faq.html#working-copy-format-"
-"change\n"
-"以获得更详细的信息。"
+"此客户端对于工作副本“%s”太旧(格式 %d)。\n"
+"你需要取得更新的 Subversion 客户端。参见\n"
+"  http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+"以获得更详细的信息。\n"
 
 #, c-format
 msgid "No REPOSITORY table entry for id '%ld'"
@@ -5392,9 +5387,9 @@ msgstr "'%s' 的父亲应该存在。"
 msgid "Parent(s) of '%s' should have repository information."
 msgstr "'%s' 的父亲应该包含版本库的信息。"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Missing a row in WCROOT."
-msgstr "WCROOT 中的 '%s' 丢失了一行。"
+msgstr "WCROOT 中丢失了一行。"
 
 #, c-format
 msgid "Missing a row in WCROOT for '%s'."
@@ -5404,9 +5399,9 @@ msgstr "WCROOT 中的 '%s' 丢失了一行。"
 msgid "The node '%s' has a corrupt checksum value."
 msgstr "节点 '%s' 的校验和损坏。"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Can't store properties for '%s' in '%s'."
-msgstr "不能在 “%s” 设置权限"
+msgstr "不能存储 '%s' 的属性，在 '%s' 中。"
 
 #, c-format
 msgid "Corrupt data for '%s'"
@@ -5420,9 +5415,9 @@ msgstr "期望节点“%s”被增加。"
 msgid "Expected node '%s' to be deleted."
 msgstr "期望节点“%s”被删除。"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Repository '%s' not found in the database"
-msgstr "HEAD 版本中找不到路径 “%s”"
+msgstr "在数据库中找不到版本库“%s”"
 
 #, c-format
 msgid "There is no work queue for '%s'."
@@ -5644,13 +5639,13 @@ msgstr ""
 "非法选项；没有已合并的版本来比较差异。\n"
 "\n"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Invalid option; cannot resolve property conflicts with an external merge "
 "tool.\n"
 "\n"
 msgstr ""
-"非法选项；不能为二进制文件冲突选择基准。\n"
+"非法选项；不能使用外部合并工具来解决属性冲突。\n"
 "\n"
 
 #, c-format
@@ -6146,13 +6141,12 @@ msgstr "比较差异时提示原始信息"
 msgid "ignore ancestry when calculating merges"
 msgstr "合并时忽略原始信息"
 
-#, fuzzy
 msgid ""
 "ignore externals definitions\n"
 "                             [aliases: --ie]"
 msgstr ""
-"只能对修改列表 ARG 成员操作\n"
-"                             [aliases: --cl]"
+"忽略外部定义\n"
+"                             [aliases: --ie]"
 
 msgid "use ARG as diff command"
 msgstr "使用 ARG 作为比较命令"
@@ -6185,12 +6179,12 @@ msgid ""
 "set user configuration option in the format:\n"
 "                                 FILE:SECTION:OPTION=[VALUE]\n"
 "                             For example:\n"
-"                                 servers:global:http-library=serf\n"
+"                                 servers:global:http-library=serf"
 msgstr ""
 "以下属格式设置用户配置选项：\n"
 "                                 FILE:SECTION:OPTION=[VALUE]\n"
 "                             例如：\n"
-"                                 servers:global:http-library=serf\n"
+"                                 servers:global:http-library=serf"
 
 msgid "enable automatic properties"
 msgstr "启用自动属性"
@@ -6282,12 +6276,12 @@ msgid ""
 "                                 doc/fudge/crunchy.html\n"
 "                             to be interpreted as\n"
 "                                 fudge/crunchy.html\n"
-"                             while -p2 would give just crunchy.html\n"
+"                             while -p2 would give just crunchy.html"
 msgstr ""
 "需要从路径中裁剪的前导路径组件数量。\n"
 "                指定 -p0 不修改路径。指定 -p1 会将路径 doc/fudge/crunchy."
 "html\n"
-"                被转换为 fudge/crunchy.html。指定 -p2 会得到 crunchy.html 。\n"
+"                被转换为 fudge/crunchy.html。指定 -p2 会得到 crunchy.html 。"
 
 msgid "don't diff copied or moved files with their source"
 msgstr "请不要将复制或移动的文件与其源文件比较"
@@ -7044,7 +7038,7 @@ msgid ""
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
 "      Subversion 1.5 and greater support the above formats and the\n"
 "      following formats where the URLs may have peg revisions:\n"
-"                http://example.com/repos/zig foo\n"
+"                http://example.com/repos/zig@42 foo\n"
 "        -r 1234 http://example.com/repos/zig foo/bar\n"
 "      Relative URLs are supported in Subversion 1.5 and greater for\n"
 "      all above formats and are indicated by starting the URL with one\n"
@@ -7055,6 +7049,8 @@ msgid ""
 "        /    to the server root\n"
 "      The ambiguous format 'relative_path relative_path' is taken as\n"
 "      'relative_url relative_path' with peg revision support.\n"
+"      Lines in externals definitions starting with the '#' character\n"
+"      are considered comments and are ignored.\n"
 "    svn:needs-lock - If present, indicates that the file should be locked\n"
 "      before it is modified.  Makes the working copy file read-only\n"
 "      when it is not locked.  Use 'svn propdel svn:needs-lock PATH...'\n"
@@ -7099,7 +7095,7 @@ msgstr ""
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
 "      Subversion 1.5 和更高的版本支持以上格式，以及下列格式，URL 中可以有\n"
 "      peg 版本：\n"
-"                http://example.com/repos/zig foo\n"
+"                http://example.com/repos/zig@42 foo\n"
 "        -r 1234 http://example.com/repos/zig foo/bar\n"
 "      Subversion 1.5 和更高的版本在上述格式中支持相对 URL，在用 URL 开始用\n"
 "      下述字符串之一来指示：\n"
@@ -7109,6 +7105,7 @@ msgstr ""
 "        /    相对于服务器根\n"
 "      相对路径“relative_path relative_path”这种不明确的格式来自\n"
 "      “relative_url relative_path”和 peg 版本支持。\n"
+"      以字符 '#' 开始的外部定义行被认为是注释，并且忽略。\n"
 "    svn:needs-lock - 此属性表明文件在修改前应该加锁。\n"
 "      如果没有加锁，则此文件在工作副本中应被设为只读。使用\n"
 "      “svn propdel svn:needs-lock PATH...” 清除。\n"
@@ -7361,9 +7358,7 @@ msgid ""
 "     are applied to the obstructing path.\n"
 "\n"
 "     Use the --set-depth option to set a new working copy depth on the\n"
-"     targets of this operation.  Currently, the depth of a working copy\n"
-"     directory can only be increased (telescoped more deeply); you cannot\n"
-"     make a directory more shallow.\n"
+"     targets of this operation.\n"
 "\n"
 "  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n"
 "     This is used when repository's root URL changes (such as a scheme\n"
@@ -7399,8 +7394,7 @@ msgstr ""
 "同，\n"
 "     将视为工作副本发生本地修改。版本库中的所有属性都应用于障碍路径。\n"
 "\n"
-"     使用 “--set-depth” 选项设置此操作目标的工作副本之新深度。目前工作副本的\n"
-"     深度只能增加(嵌入更深)；你不能让目录收缩。\n"
+"     使用 “--set-depth” 选项设置此操作目标的工作副本之新深度。\n"
 "\n"
 "  2、重写工作副本的 URL 元数据，以反映单纯的 URL 改变。当版本库的根 URL 改\n"
 "     变(比如方案或者主机名称变动)，但是工作副本仍旧对应同一版本库的同一目录\n"
@@ -7429,7 +7423,6 @@ msgstr ""
 "\n"
 "    使用 --force 终止锁定。\n"
 
-#, fuzzy
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -7467,9 +7460,7 @@ msgid ""
 "  in the first column with code 'E'.\n"
 "\n"
 "  Use the --set-depth option to set a new working copy depth on the\n"
-"  targets of this operation.  Currently, the depth of a working copy\n"
-"  directory can only be increased (telescoped more deeply); you cannot\n"
-"  make a directory more shallow.\n"
+"  targets of this operation.\n"
 msgstr ""
 "将版本库的修改合并到工作副本中。\n"
 "用法: update [PATH...]\n"
@@ -7496,8 +7487,7 @@ msgstr ""
 "  不同，将视为工作副本发生本地修改。版本库中的所有属性都应用于障碍路径。\n"
 "  用第一列字符 “E” 来报告障碍路径。\n"
 "\n"
-"  使用“--set-depth”选项设置此操作目标的工作副本之新深度。目前工作副本的\n"
-"  深度只能增加(嵌入更深)；你不能让目录收缩。\n"
+"  使用“--set-depth”选项设置此操作目标的工作副本之新深度。\n"
 
 msgid ""
 "Upgrade the metadata storage format for a working copy.\n"
@@ -7558,13 +7548,11 @@ msgstr "“%s” 是非法 --accept 取值"
 msgid "'%s' is not a valid --show-revs value"
 msgstr "“%s” 是非法 --show-revs 取值"
 
-#, fuzzy
 msgid "Non-numeric strip argument given"
-msgstr "--limit 取值不是数字"
+msgstr "提供的修剪参数不是数字"
 
-#, fuzzy
 msgid "Argument to --strip must be positive"
-msgstr "--limit 取值必须为正"
+msgstr "--strip 参数的取值必须为正"
 
 #, c-format
 msgid "Subcommand argument required\n"
@@ -7902,17 +7890,15 @@ msgstr "设定属性 “%s” 于版本库版本 %ld\n"
 msgid "property '%s' deleted from repository revision %ld\n"
 msgstr "删除属性 “%s” 于版本库版本 %ld\n"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Upgraded '%s'.\n"
-msgstr "跳过“%s”\n"
+msgstr "已升级的“%s”。\n"
 
-#, fuzzy
 msgid "Wrong number of arguments"
-msgstr "指定的目标数目错误"
+msgstr "参数数目错误"
 
-#, fuzzy
 msgid "Target must specify the revision as a number"
-msgstr "指定版本编号 ARG"
+msgstr "目标版本必须是数字"
 
 msgid "Target must specify a URL"
 msgstr "目标必须是 URL"
@@ -8793,27 +8779,27 @@ msgstr "排除前缀: \n"
 
 #, c-format
 msgid "Including (and dropping empty revisions for) prefixes:\n"
-msgstr "包含 (以及丢弃空版本) 的前缀: \n"
+msgstr "包含(以及丢弃空版本)的前缀: \n"
 
 #, c-format
 msgid "Including prefixes:\n"
 msgstr "包含的前缀: \n"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Excluding (and dropping empty revisions for) prefix patterns:\n"
-msgstr "排除 (以及丢弃空版本) 的前缀: \n"
+msgstr "排除(以及丢弃空版本)的前缀匹配模式: \n"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Excluding prefix patterns:\n"
-msgstr "排除前缀: \n"
+msgstr "排除前缀匹配模式: \n"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Including (and dropping empty revisions for) prefix patterns:\n"
-msgstr "包含 (以及丢弃空版本) 的前缀: \n"
+msgstr "包含(以及丢弃空版本)的前缀匹配模式: \n"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Including prefix patterns:\n"
-msgstr "包含的前缀: \n"
+msgstr "包含的前缀匹配模式: \n"
 
 #, c-format
 msgid ""
@@ -8976,17 +8962,15 @@ msgstr ""
 "\n"
 "显示本身改变 (编辑属性) 的目录，或是其中的文件修改过的目录。\n"
 
-#, fuzzy
 msgid ""
 "usage: svnlook filesize REPOS_PATH PATH_IN_REPOS\n"
 "\n"
 "Print the size (in bytes) of the file located at PATH_IN_REPOS as\n"
 "it is represented in the repository.\n"
 msgstr ""
-"用法: svnadmin lslocks REPOS_PATH [PATH-IN-REPOS]\n"
+"用法: svnlook filesize REPOS_PATH PATH_IN_REPOS\n"
 "\n"
-"显示位于 PATH-IN-REPOS 或其子孙上的所有锁的描述(如果没有提供 PATH-IN-REPOS，\n"
-"那么显示版本库根的信息)。\n"
+"显示位于 PATH_IN_REPOS 的文件在版本库中展现的大小(字节)\n"
 
 msgid ""
 "usage: svnlook help [SUBCOMMAND...]\n"
@@ -9604,9 +9588,8 @@ msgstr ""
 msgid "Destination repository is already synchronizing from '%s'"
 msgstr "目标版本库已经与“%s”同步"
 
-#, fuzzy
 msgid "Destination repository has more revisions than source repository"
-msgstr "目标版本库没有初始化"
+msgstr "目标版本库的版本数量比源版本库多"
 
 #, c-format
 msgid "Path '%s' is not a URL"
