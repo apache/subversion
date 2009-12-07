@@ -3482,7 +3482,21 @@ def merge_file_replace_to_mixed_rev_wc(sbox):
                                         None, wc_dir)
 
 
-  # merge changes from r3:1
+  # merge changes from r3:1...
+  #
+  # ...but first:
+  #
+  # Since "." is at revision 2, r3 is not part of "."'s implicit mergeinfo.
+  # Merge tracking permits only reverse merges from explicit or implicit
+  # mergeinfo, so only r2 would be reverse merged if we left the WC as is.
+  # Normally we'd simply update the whole working copy, but since that would
+  # defeat the purpose of this test (see the comment below), instead we'll
+  # update only "." using --depth empty.  This preserves the intent of the
+  # orginal mixed-rev test for this issue, but allows the merge tracking
+  # logic to consider r3 as valid for reverse merging.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--depth', 'empty', wc_dir)
+  expected_status.tweak('', wc_rev=3)
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G/rho': Item(status='R ')
     })
@@ -17052,8 +17066,6 @@ def committed_case_only_move_and_revert(sbox):
 
 # This is a test for issue #3221 'Unable to merge into working copy of
 # deleted branch'.
-#
-# Marked as XFail until issue #3221 is fixed.
 def merge_into_wc_for_deleted_branch(sbox):
   "merge into WC of deleted branch should work"
 
@@ -17132,7 +17144,7 @@ def merge_into_wc_for_deleted_branch(sbox):
     'D/H/omega' : Item("New content"),
     })
   expected_skip = wc.State(A_COPY_path, { })
-  # Issue #3221: This merge fails with:
+  # Issue #3221: Previously this merge failed with:
   #   ..\..\..\subversion\svn\util.c:900: (apr_err=160013)
   #   ..\..\..\subversion\libsvn_client\merge.c:9383: (apr_err=160013)
   #   ..\..\..\subversion\libsvn_client\merge.c:8029: (apr_err=160013)
@@ -17381,7 +17393,7 @@ test_list = [ None,
               skipped_files_get_correct_mergeinfo,
               XFail(committed_case_only_move_and_revert,
                     is_fs_case_insensitive),
-              XFail(merge_into_wc_for_deleted_branch),
+              merge_into_wc_for_deleted_branch,
              ]
 
 if __name__ == '__main__':
