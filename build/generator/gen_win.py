@@ -180,8 +180,8 @@ class GeneratorBase(gen_base.GeneratorBase):
           self.vcproj_version = '10.0'
           self.vcproj_extension = '.vcxproj'
         else:
-          sys.stderr.write('WARNING: Unknown VS.NET version "%s",'
-                           ' assuming "%s"\n' % (val, '7.00'))
+          print('WARNING: Unknown VS.NET version "%s",'
+                 ' assuming "%s"\n' % (val, '7.00'))
 
 
   def __init__(self, fname, verfname, options):
@@ -221,12 +221,12 @@ class WinGeneratorBase(GeneratorBase):
     GeneratorBase.__init__(self, fname, verfname, options)
 
     if self.bdb_lib is not None:
-      sys.stderr.write("Found %s.lib in %s\n" % (self.bdb_lib, self.bdb_path))
+      print("Found %s.lib in %s\n" % (self.bdb_lib, self.bdb_path))
     else:
-      sys.stderr.write("BDB not found, BDB fs will not be built\n")
+      print("BDB not found, BDB fs will not be built\n")
 
     if subdir == 'vcnet-vcproj':
-      sys.stderr.write('Generating for Visual Studio %s\n' % self.vs_version)
+      print('Generating for Visual Studio %s\n' % self.vs_version)
 
     # Find the right Ruby include and libraries dirs and
     # library name to link SWIG bindings with
@@ -1184,8 +1184,8 @@ class WinGeneratorBase(GeneratorBase):
       else:
         msg = 'Could not detect perl version.'
         self.perl_lib = 'perl56.lib'
-      sys.stderr.write('%s\n  Perl bindings will be linked with %s\n'
-                       % (msg, self.perl_lib))
+      print('%s\n  Perl bindings will be linked with %s\n'
+             % (msg, self.perl_lib))
     finally:
       fp.close()
 
@@ -1207,8 +1207,8 @@ class WinGeneratorBase(GeneratorBase):
       else:
         msg = 'Could not detect Ruby version.'
         self.ruby_lib = 'msvcrt-ruby18.lib'
-      sys.stderr.write('%s\n  Ruby bindings will be linked with %s\n'
-                       % (msg, self.ruby_lib))
+      print('%s\n  Ruby bindings will be linked with %s\n'
+             % (msg, self.ruby_lib))
     finally:
       proc.close()
 
@@ -1260,8 +1260,7 @@ class WinGeneratorBase(GeneratorBase):
     except (ImportError, EnvironmentError):
       pass
     if self.jdk_path:
-      sys.stderr.write("Found JDK version %s in %s\n"
-                       % (jdk_ver, self.jdk_path))
+      print("Found JDK version %s in %s\n" % (jdk_ver, self.jdk_path))
 
   def _find_swig(self):
     # Require 1.3.24. If not found, assume 1.3.25.
@@ -1289,20 +1288,20 @@ class WinGeneratorBase(GeneratorBase):
         version = tuple(map(int, vermatch.groups()))
         # build/ac-macros/swig.m4 explains the next incantation
         vernum = int('%d%02d%03d' % version)
-        sys.stderr.write('Found installed SWIG version %d.%d.%d\n' % version)
+        print('Found installed SWIG version %d.%d.%d\n' % version)
         if vernum < minimum_vernum:
-          sys.stderr.write('WARNING: Subversion requires version %s\n'
-                           % minimum_version)
+          print('WARNING: Subversion requires version %s\n'
+                 % minimum_version)
 
         libdir = self._find_swig_libdir()
       else:
-        sys.stderr.write('Could not find installed SWIG,'
-                         ' assuming version %s\n' % default_version)
+        print('Could not find installed SWIG,'
+               ' assuming version %s\n' % default_version)
         self.swig_libdir = ''
       outfp.close()
     except OSError:
-      sys.stderr.write('Could not find installed SWIG,'
-                       ' assuming version %s\n' % default_version)
+      print('Could not find installed SWIG,'
+             ' assuming version %s\n' % default_version)
       self.swig_libdir = ''
 
     self.swig_vernum = vernum
@@ -1313,10 +1312,10 @@ class WinGeneratorBase(GeneratorBase):
     try:
       libdir = fp.readline().rstrip()
       if libdir:
-        sys.stderr.write('Using SWIG library directory %s\n' % libdir)
+        print('Using SWIG library directory %s\n' % libdir)
         return libdir
       else:
-        sys.stderr.write('WARNING: could not find SWIG library directory\n')
+        print('WARNING: could not find SWIG library directory\n')
     finally:
       fp.close()
     return ''
@@ -1335,7 +1334,7 @@ class WinGeneratorBase(GeneratorBase):
       else:
         msg = 'Could not find ML, ZLib build will not use ASM sources'
         self.have_ml = 0
-      sys.stderr.write('%s\n' % (msg,))
+      print('%s\n' % (msg,))
     finally:
       fp.close()
 
@@ -1364,7 +1363,7 @@ class WinGeneratorBase(GeneratorBase):
         msg = 'WARNING: Error while determining neon version\n'
         self.neon_lib = None
 
-    sys.stderr.write(msg)
+    print(msg)
 
   def _get_serf_version(self):
     "Retrieves the serf version from serf.h"
@@ -1414,11 +1413,11 @@ class WinGeneratorBase(GeneratorBase):
                   (self.serf_ver, '.'.join(str(v) for v in minimal_serf_version))
           else:
             msg = 'Found serf version %s\n' % self.serf_ver
-        sys.stderr.write(msg)
+        print(msg)
       else:
-        sys.stderr.write('openssl not found, ra_serf will not be built\n')
+        print('openssl not found, ra_serf will not be built\n')
     else:
-      sys.stderr.write('serf not found, ra_serf will not be built\n')
+      print('serf not found, ra_serf will not be built\n')
 
   def _find_apr(self):
     "Find the APR library and version"
@@ -1506,7 +1505,7 @@ class WinGeneratorBase(GeneratorBase):
                        "(%s found)\n" % self.sqlite_version);
       sys.exit(1)
     else:
-      sys.stderr.write(msg % self.sqlite_version)
+      print(msg % self.sqlite_version)
 
   def _create_sqlite_headers(self):
     "Transform sql files into header files"
