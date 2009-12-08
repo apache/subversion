@@ -2056,6 +2056,7 @@ def excluded_path_update_operation(sbox):
   B_path = os.path.join(A_path, 'B')
   L_path = os.path.join(A_path, 'L')
   E_path = os.path.join(B_path, 'E')
+  iota_path = os.path.join(wc_dir, 'iota')
 
   # Simply exclude a subtree
   expected_output = svntest.wc.State(wc_dir, {
@@ -2130,6 +2131,38 @@ def excluded_path_update_operation(sbox):
                                         None, None,
                                         None, None, None, None,
                                         B_path)
+
+  # Test issue #
+  # Exclude a file then set depth of WC to infinity, the file should return.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='D '),
+    })
+  expected_status.remove('iota');
+  expected_disk.remove('iota');
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'exclude', iota_path)
+
+  # Update the whole WC to depth=infinity.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='A '),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_disk = svntest.main.greek_state.copy()
+  # This update currently fails when iota is reported as added, but shows in
+  # status as unversioned.  See issue #3544 'svn update does not restore
+  # excluded files'.  This test is marked as XFail until that issue is fixed.
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'infinity', wc_dir)
 
 def excluded_path_misc_operation(sbox):
   """make sure other subcommands handle exclude"""
@@ -2504,7 +2537,7 @@ test_list = [ None,
               pull_in_tree_with_depth_option,
               fold_tree_with_unversioned_modified_items,
               depth_empty_update_on_file,
-              excluded_path_update_operation,
+              XFail(excluded_path_update_operation),
               excluded_path_misc_operation,
               excluded_receive_remote_removal,
               exclude_keeps_hidden_entries,
