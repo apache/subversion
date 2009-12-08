@@ -67,10 +67,13 @@ analyze_status(void *baton,
         sb->result->max_rev = item_rev;
     }
 
-  sb->result->switched |= status->switched;
-  sb->result->modified |= (status->text_status != svn_wc_status_normal);
-  sb->result->modified |= (status->prop_status != svn_wc_status_normal
-                           && status->prop_status != svn_wc_status_none);
+  if (status->entry->depth != svn_depth_exclude)
+    {
+      sb->result->switched |= status->switched;
+      sb->result->modified |= (status->text_status != svn_wc_status_normal);
+      sb->result->modified |= (status->prop_status != svn_wc_status_normal
+                               && status->prop_status != svn_wc_status_none);
+    }
   sb->result->sparse_checkout |= (status->entry->depth != svn_depth_infinity);
 
   if (sb->local_abspath
@@ -118,6 +121,7 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                              svn_depth_infinity,
                              TRUE  /* get_all */,
                              FALSE /* no_ignore */,
+                             TRUE, /* get_excluded */
                              NULL  /* ignore_patterns */,
                              analyze_status, &sb,
                              NULL, NULL,
