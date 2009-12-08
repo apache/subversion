@@ -1468,7 +1468,7 @@ def run_and_verify_resolved(expected_paths, *args):
 
 # This allows a test to *quickly* bootstrap itself.
 def make_repo_and_wc(sbox, create_wc = True, read_only = False):
-  """Create a fresh repository and checkout a wc from it.
+  """Create a fresh 'Greek Tree' repository and check out a WC from it.
 
   If read_only is False, a dedicated repository will be created, named
   TEST_NAME. The repository will live in the global dir 'general_repo_dir'.
