@@ -22,7 +22,7 @@
 	ProjectType="Visual C++"
 	Version="[version]"
 	Name="__CONFIG__"
-	ProjectGUID="{638FEA9B-E592-4B88-93B7-08B8A32CAD1F}"
+	ProjectGUID="[project_guid]"
 	Keyword="MakeFileProj">
 	<Platforms>
 [for platforms]		<Platform

@@ -22,7 +22,7 @@
 	ProjectType="Visual C++"
 	Version="[version]"
 	Name="zlib"
-	ProjectGUID="{41FE336A-F191-4F4E-A17C-602C627EA1E1}"
+	ProjectGUID="[project_guid]"
 	Keyword="MakeFileProj">
 	<Platforms>
 [for platforms]		<Platform

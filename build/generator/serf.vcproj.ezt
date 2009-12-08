@@ -22,7 +22,7 @@
     ProjectType="Visual C++"
     Version="[version]"
     Name="serf"
-    ProjectGUID="{F1EC01C7-C056-410B-A564-777D73A9AEE8}"
+    ProjectGUID="[project_guid]"
     Keyword="MakeFileProj">
     <Platforms>
 [for platforms]		<Platform

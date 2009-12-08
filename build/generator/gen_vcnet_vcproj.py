@@ -50,22 +50,27 @@ class Generator(gen_win.WinGeneratorBase):
 
     return vcproj
 
-  def write_project(self, target, fname):
-    "Write a Project (.vcproj)"
+  def write_project(self, target, fname, depends):
+    "Write a Project (.vcproj/.vcxproj)"
 
     if isinstance(target, gen_base.TargetProject):
+      config_type='Utility'
       target_type=10
     elif isinstance(target, gen_base.TargetExe):
-      #EXE
+      config_type='Application'
       target_type=1
     elif isinstance(target, gen_base.TargetJava):
+      config_type='Utility'
       target_type=10
     elif isinstance(target, gen_base.TargetLib):
       if target.msvc_static:
+        config_type='StaticLibrary'
         target_type=4
       else:
+        config_type='DynamicLibrary'
         target_type=2
     elif isinstance(target, gen_base.TargetI18N):
+      config_type='Makefile'
       target_type=4
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
@@ -78,6 +83,10 @@ class Generator(gen_win.WinGeneratorBase):
     configs = self.get_configs(target)
 
     sources = self.get_proj_sources(False, target)
+    
+    for src in sources:
+      if src.custom_build is not None:
+        src.custom_build = src.custom_build.replace('$(InputPath)', '%(FullPath)')
 
     data = {
       'target' : target,
@@ -85,12 +94,14 @@ class Generator(gen_win.WinGeneratorBase):
       'project_guid' : target.project_guid,
       'rootpath' : self.rootpath,
       'platforms' : self.platforms,
+      'config_type' : config_type,
       'configs' : configs,
       'includes' : self.get_win_includes(target),
       'sources' : sources,
       'default_platform' : self.platforms[0],
       'default_config' : configs[0].name,
       'def_file' : self.get_def_file(target),
+      'depends' : depends,
       'is_exe' : ezt.boolean(isinstance(target, gen_base.TargetExe)),
       'is_external' : ezt.boolean((isinstance(target, gen_base.TargetProject)
                                    or isinstance(target, gen_base.TargetI18N))
@@ -102,23 +113,11 @@ class Generator(gen_win.WinGeneratorBase):
       'version' : self.vcproj_version,
       }
 
-    self.write_with_template(fname, 'vcnet_vcproj.ezt', data)
-
-  def getguid(self, path):
-    "Try to get a project's guid from its project file"
-    try:
-      proj = open(path)
-      line = proj.readline()
-      while len(line) > 0:
-        l = line.lower()
-        pos = l.find('projectguid="{')
-        if pos >= 0:
-          guid = line[pos+13:pos+13+38]
-          return guid
-        line = proj.readline()
-      proj.close()
-    except IOError:
-      return None
+    if self.vcproj_extension == '.vcproj':
+      self.write_with_template(fname, 'templates/vcnet_vcproj.ezt', data)
+    else:
+      self.write_with_template(fname, 'templates/vcnet_vcxproj.ezt', data)
+      self.write_with_template(fname + '.filters', 'templates/vcnet_vcxproj_filters.ezt', data)
 
   def write(self):
     "Write a Solution (.sln)"
@@ -138,15 +137,21 @@ class Generator(gen_win.WinGeneratorBase):
 
     # apr doesn't supply vcproj files, the user must convert them
     # manually before loading the generated solution
-    self.move_proj_file(os.path.join('build', 'win32'), 'svn_config.vcproj',
+    self.move_proj_file(os.path.join('build', 'win32'), 
+                        'svn_config' + self.vcproj_extension,
                           (
                             ('sql', sql),
+                            ('project_guid', self.makeguid('__CONFIG__')),
                           )
                         )
-    self.move_proj_file(os.path.join('build', 'win32'), 'svn_locale.vcproj')
-    self.write_zlib_project_file('zlib.vcproj')
-    self.write_neon_project_file('neon.vcproj')
-    self.write_serf_project_file('serf.vcproj')
+    self.move_proj_file(os.path.join('build', 'win32'),
+                        'svn_locale' + self.vcproj_extension,
+                        (
+                          ('project_guid', self.makeguid('svn_locale')),
+                        ))
+    self.write_zlib_project_file('zlib' + self.vcproj_extension)
+    self.write_neon_project_file('neon' + self.vcproj_extension)
+    self.write_serf_project_file('serf' + self.vcproj_extension)
 
     install_targets = self.get_install_targets()
 
@@ -154,39 +159,30 @@ class Generator(gen_win.WinGeneratorBase):
 
     guids = { }
 
-    # VC.NET uses GUIDs to refer to projects. Get them up front
+    # Visual Studio uses GUIDs to refer to projects. Get them up front
     # because we need them already assigned on the dependencies for
     # each target we work with.
     for target in install_targets:
-      # These aren't working yet
-      if isinstance(target, gen_base.TargetProject) and target.cmd:
-        continue
       # If there is a GUID in an external project, then use it
       # rather than generating our own that won't match and will
       # cause dependency failures.
-      guid = None
-      proj_path = self.get_external_project(target, 'vcproj')
+      proj_path = self.get_external_project(target, self.vcproj_extension[1:])
       if proj_path is not None:
-        target.project_guid = self.getguid(proj_path)
+        target.project_guid = self.makeguid(target.name)
       guids[target.name] = target.project_guid
 
     self.gen_proj_names(install_targets)
 
+    for target in install_targets:
+      fname = self.get_external_project(target, self.vcproj_extension[1:])
+      if fname is None:
+        fname = os.path.join(self.projfilesdir, "%s%s" % 
+                             (target.proj_name, self.vcproj_extension))
+      target.fname = fname
+
     # Traverse the targets and generate the project files
     for target in install_targets:
       name = target.name
-      # These aren't working yet
-      if isinstance(target, gen_base.TargetProject) and target.cmd:
-        continue
-
-      fname = self.get_external_project(target, 'vcproj')
-      if fname is None:
-        fname = os.path.join(self.projfilesdir,
-                             "%s_vcnet.vcproj" % target.proj_name)
-        self.write_project(target, fname)
-
-      if '-' in fname:
-        fname = '"%s"' % fname
 
       depends = [ ]
       if not isinstance(target, gen_base.TargetI18N):
@@ -194,9 +190,19 @@ class Generator(gen_win.WinGeneratorBase):
 
       deplist = [ ]
       for i in range(len(depends)):
+        if depends[i].fname.startswith(self.projfilesdir):
+          path = depends[i].fname[len(self.projfilesdir) + 1:]
+        else:
+          path = '..\\..\\..\\' + depends[i].fname
         deplist.append(gen_win.ProjectItem(guid=guids[depends[i].name],
                                            index=i,
+                                           path=path,
                                            ))
+
+      fname = self.get_external_project(target, self.vcproj_extension[1:])
+      if fname is None:
+        fname = target.fname
+        self.write_project(target, fname, deplist)
 
       groupname = ''
 
@@ -234,12 +240,6 @@ class Generator(gen_win.WinGeneratorBase):
                             group=groupname,
                             ))
 
-    # the path name in the .sln template is already enclosed with ""
-    # therefore, remove them from the path itself
-    for target in targets:
-      target.path = target.path.rstrip('"')
-      target.path = target.path.lstrip('"')
-
     targets.sort(key = lambda x: x.name)
 
     configs = [ ]
@@ -250,10 +250,16 @@ class Generator(gen_win.WinGeneratorBase):
     # sort the values for output stability.
     guidvals = sorted(guids.values())
 
+    # Before VS2010 dependencies are managed at the solution level
+    if self.vcproj_extension == '.vcproj':
+      dependency_location = 'solution'
+    else:
+      dependency_location = 'project'
+
     data = {
       'version': self.sln_version,
       'vs_version' : self.vs_version,
-      'dependency_location' : 'solution',
+      'dependency_location' : dependency_location,
       'targets' : targets,
       'configs' : configs,
       'platforms' : self.platforms,

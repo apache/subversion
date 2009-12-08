@@ -1107,6 +1107,7 @@ class WinGeneratorBase(GeneratorBase):
                                                    'contrib/masmx86/*.asm'))),
                          ('zlib_headers',
                           glob.glob(os.path.join(zlib_path, '*.h'))),
+                         ('project_guid', self.makeguid('zlib')),
                         ))
 
   def write_neon_project_file(self, name):
@@ -1127,6 +1128,7 @@ class WinGeneratorBase(GeneratorBase):
                          ('openssl_path',
                           self.openssl_path
                             and os.path.abspath(self.openssl_path)),
+                         ('project_guid', self.makeguid('neon')),
                         ))
 
   def write_serf_project_file(self, name):
@@ -1150,6 +1152,7 @@ class WinGeneratorBase(GeneratorBase):
                             and os.path.abspath(self.openssl_path)),
                          ('apr_path', os.path.abspath(self.apr_path)),
                          ('apr_util_path', os.path.abspath(self.apr_util_path)),
+                         ('project_guid', self.makeguid('serf')),
                         ))
 
   def move_proj_file(self, path, name, params=()):
