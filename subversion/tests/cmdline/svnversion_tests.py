@@ -207,9 +207,6 @@ def ignore_externals(sbox):
 #----------------------------------------------------------------------
 
 # Test for issue #3461 'excluded subtrees are not detected by svnversion'
-#
-# Marked as XFail until svnversion detects excluded subtrees,
-# i.e. issue #3461 is fixed.
 def svnversion_with_excluded_subtrees(sbox):
   "test 'svnversion' with excluded subtrees"
   sbox.build()
@@ -248,7 +245,7 @@ def svnversion_with_excluded_subtrees(sbox):
 test_list = [ None,
               svnversion_test,
               ignore_externals,
-              XFail(svnversion_with_excluded_subtrees),
+              svnversion_with_excluded_subtrees,
              ]
 
 if __name__ == '__main__':

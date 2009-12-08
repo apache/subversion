@@ -800,6 +800,7 @@ get_dir_status(const struct walk_status_baton *wb,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
                svn_boolean_t skip_this_dir,
+               svn_boolean_t get_excluded,
                svn_wc_status_func4_t status_func,
                void *status_baton,
                svn_cancel_func_t cancel_func,
@@ -821,6 +822,7 @@ handle_dir_entry(const struct walk_status_baton *wb,
                  svn_depth_t depth,
                  svn_boolean_t get_all,
                  svn_boolean_t no_ignore,
+                 svn_boolean_t get_excluded,
                  svn_wc_status_func4_t status_func,
                  void *status_baton,
                  svn_cancel_func_t cancel_func,
@@ -839,8 +841,8 @@ handle_dir_entry(const struct walk_status_baton *wb,
         {
           SVN_ERR(get_dir_status(wb, local_abspath, dir_entry, NULL, ignores,
                                  depth, get_all, no_ignore, FALSE,
-                                 status_func, status_baton, cancel_func,
-                                 cancel_baton, pool));
+                                 get_excluded, status_func, status_baton,
+                                 cancel_func, cancel_baton, pool));
         }
       else
         {
@@ -925,6 +927,9 @@ handle_externals(const struct walk_status_baton *wb,
    status will not be reported.  However, upon recursing, all subdirs
    *will* be reported, regardless of this parameter's value.
 
+   If GET_EXCLUDED is TRUE, then statuses for the roots of excluded
+   subtrees are reported, otherwise they are ignored.
+
    Other arguments are the same as those passed to
    svn_wc_get_status_editor5().  */
 static svn_error_t *
@@ -937,6 +942,7 @@ get_dir_status(const struct walk_status_baton *wb,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
                svn_boolean_t skip_this_dir,
+               svn_boolean_t get_excluded,
                svn_wc_status_func4_t status_func,
                void *status_baton,
                svn_cancel_func_t cancel_func,
@@ -1057,7 +1063,7 @@ get_dir_status(const struct walk_status_baton *wb,
           SVN_ERR(svn_wc__db_node_hidden(&hidden, wb->db, node_abspath,
                                          iterpool));
 
-          if (!hidden)
+          if (!hidden || get_excluded)
             {
               err = svn_wc__get_entry(&entry, wb->db, node_abspath, FALSE,
                                       dirent_p ? dirent_p->kind
@@ -1103,7 +1109,7 @@ get_dir_status(const struct walk_status_baton *wb,
                                                            ? depth
                                                            : svn_depth_empty,
                                        get_all,
-                                       no_ignore,
+                                       no_ignore, get_excluded,
                                        status_func, status_baton,
                                        cancel_func, cancel_baton, iterpool));
               continue;
@@ -1462,8 +1468,8 @@ make_dir_baton(void **dir_baton,
                              status_in_parent->entry, NULL,
                              ignores, d->depth == svn_depth_files ?
                              svn_depth_files : svn_depth_immediates,
-                             TRUE, TRUE, TRUE, hash_stash, d->statii, NULL,
-                             NULL, pool));
+                             TRUE, TRUE, TRUE, FALSE, hash_stash, d->statii,
+                             NULL, NULL, pool));
 
       /* If we found a depth here, it should govern. */
       this_dir_status = apr_hash_get(d->statii, d->local_abspath,
@@ -1647,7 +1653,7 @@ handle_statii(struct edit_baton *eb,
                                  local_abspath,
                                  dir_entry, NULL,
                                  ignores, depth, eb->get_all,
-                                 eb->no_ignore, TRUE, status_func,
+                                 eb->no_ignore, TRUE, FALSE, status_func,
                                  status_baton, eb->cancel_func,
                                  eb->cancel_baton, subpool));
         }
@@ -1903,6 +1909,7 @@ close_directory(void *dir_baton,
                                          tgt_status->entry, NULL,
                                          eb->ignores, eb->default_depth,
                                          eb->get_all, eb->no_ignore, TRUE,
+                                         FALSE,
                                          eb->status_func, eb->status_baton,
                                          eb->cancel_func, eb->cancel_baton,
                                          pool));
@@ -2084,6 +2091,7 @@ close_edit(void *edit_baton,
                              eb->default_depth,
                              eb->get_all,
                              eb->no_ignore,
+                             FALSE,
                              eb->ignores,
                              eb->status_func,
                              eb->status_baton,
@@ -2204,6 +2212,7 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                    svn_depth_t depth,
                    svn_boolean_t get_all,
                    svn_boolean_t no_ignore,
+                   svn_boolean_t get_excluded,
                    const apr_array_header_t *ignore_patterns,
                    svn_wc_status_func4_t status_func,
                    void *status_baton,
@@ -2248,6 +2257,7 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                              get_all,
                              TRUE,
                              TRUE,
+                             get_excluded,
                              status_func,
                              status_baton,
                              cancel_func,
@@ -2265,6 +2275,7 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                              get_all,
                              no_ignore,
                              FALSE,
+                             get_excluded,
                              status_func,
                              status_baton,
                              cancel_func,
@@ -2282,6 +2293,7 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                              get_all,
                              no_ignore,
                              TRUE,
+                             get_excluded,
                              status_func,
                              status_baton,
                              cancel_func,
