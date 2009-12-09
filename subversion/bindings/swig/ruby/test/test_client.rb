@@ -1016,22 +1016,32 @@ class SvnClientTest < Test::Unit::TestCase
       end
       assert_equal_log_entries([
                                 [
-                                 {branch_path_relative_uri => ["D", nil, -1]},
-                                 rev4,
+                                 {branch_path_relative_uri => ["M", nil, -1]},
+                                 rev2,
                                  {
                                    "svn:author" => @author,
                                    "svn:log" => log,
                                  },
                                  false,
                                 ]
-                               ] * 2, merged_entries)
+                               ], merged_entries)
 
       ctx.propdel("svn:mergeinfo", trunk)
       merged_entries = []
       ctx.log_merged(trunk, rev4, branch_uri, rev4) do |entry|
         merged_entries << entry
       end
-      assert_equal_log_entries([], merged_entries)
+      assert_equal_log_entries([
+                                [
+                                 {branch_path_relative_uri => ["M", nil, -1]},
+                                 rev2,
+                                 {
+                                   "svn:author" => @author,
+                                   "svn:log" => log,
+                                 },
+                                 false,
+                                ]
+                               ], merged_entries)
 
       ctx.revert(trunk)
       File.open(trunk_path, "a") {|f| f.print(src)}
