@@ -1840,6 +1840,16 @@ svn_fs_deltify_revision(svn_fs_t *fs,
                         svn_revnum_t revision,
                         apr_pool_t *pool);
 
+/** Obliterate the text associated with @revision of @a path in @a fs,
+ * where @a path must be a file.  The text is replaced with the text
+ * of the previous version of the file.
+ */
+svn_error_t *
+svn_fs_obliterate(svn_fs_t *fs,
+                  const char *path,
+                  svn_revnum_t revision,
+                  apr_pool_t *pool);
+
 
 /** Set @a *value_p to the value of the property named @a propname on
  * revision @a rev in the filesystem @a fs.  If @a rev has no property by

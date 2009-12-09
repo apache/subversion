@@ -8,3 +8,16 @@ restricted to file text obliteration.  It could probably be extended
 to file and directory properties, but anything that changes the tree
 structure or anything that needs new node-rev-ids is not going to
 work.
+
+At present the svn_fs.h interface exists to allow testing; I haven't
+really thought much about what it should look like.
+
+- Does it work?  It passes the one regression test in fs-test.
+
+- Is it safe to run on a live repository?  I don't know.
+
+- Does it break younger revisions?  I don't know.  Probably not,
+  because the old rep remains it the database.
+
+- The old rep is not deleted, can it leak?  I don't know.  Could diff
+  leak it?  Does diff even work properly?

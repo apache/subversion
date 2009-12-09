@@ -4749,6 +4749,126 @@ obliterate_1(const svn_test_opts_t *opts,
                           "Feature and test are still under development");
 }
 
+
+static svn_error_t *
+obliterate_2(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t youngest_rev = 0;
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-obliterate-2", opts, pool));
+
+  /* Revision 1 */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "A", subpool));
+  SVN_ERR(svn_fs_make_file(txn_root, "A/foo", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/foo", "1\n", subpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+  {
+    svn_test__tree_entry_t expected[] = {
+      { "A", 0 },
+      { "A/foo", "1\n" }
+    };
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, subpool));
+    SVN_ERR(svn_test__validate_tree(rev_root, expected,
+                                    sizeof(expected)/sizeof(expected[0]),
+                                    subpool));
+  }
+
+  /* Revision 2 */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/foo", "2\n", subpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+  {
+    svn_test__tree_entry_t expected[] = {
+      { "A", 0 },
+      { "A/foo", "2\n" }
+    };
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, subpool));
+    SVN_ERR(svn_test__validate_tree(rev_root, expected,
+                                    sizeof(expected)/sizeof(expected[0]),
+                                    subpool));
+  }
+
+  /* Revision 3 */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_copy(rev_root, "A", txn_root, "B", pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+  {
+    svn_test__tree_entry_t expected[] = {
+      { "A", 0 },
+      { "A/foo", "2\n" },
+      { "B", 0 },
+      { "B/foo", "2\n" },
+    };
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, subpool));
+    SVN_ERR(svn_test__validate_tree(rev_root, expected,
+                                    sizeof(expected)/sizeof(expected[0]),
+                                    subpool));
+  }
+
+  /* Revision 4 */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/foo", "3\n", subpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+  {
+    svn_test__tree_entry_t expected[] = {
+      { "A", 0 },
+      { "A/foo", "3\n" },
+      { "B", 0 },
+      { "B/foo", "2\n" },
+    };
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, subpool));
+    SVN_ERR(svn_test__validate_tree(rev_root, expected,
+                                    sizeof(expected)/sizeof(expected[0]),
+                                    subpool));
+  }
+
+  /* Obliterate A/foo@2 affects both A/foo and B/foo */
+  SVN_ERR(svn_fs_obliterate(fs, "A/foo", 2, subpool));
+  {
+    svn_test__tree_entry_t expected[] = {
+      { "A", 0 },
+      { "A/foo", "1\n" },
+      { "B", 0 },
+      { "B/foo", "1\n" },
+    };
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, 2, subpool));
+    SVN_ERR(svn_test__validate_tree(rev_root, expected, 2,
+                                    subpool));
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, 3, subpool));
+    SVN_ERR(svn_test__validate_tree(rev_root, expected,
+                                    sizeof(expected)/sizeof(expected[0]),
+                                    subpool));
+  }
+  {
+    svn_test__tree_entry_t expected[] = {
+      { "A", 0 },
+      { "A/foo", "3\n" },
+      { "B", 0 },
+      { "B/foo", "1\n" },
+    };
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, 4, subpool));
+    SVN_ERR(svn_test__validate_tree(rev_root, expected,
+                                    sizeof(expected)/sizeof(expected[0]),
+                                    subpool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -4830,5 +4950,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "create and modify small file"),
     SVN_TEST_OPTS_WIMP(obliterate_1,
                        "obliterate 1", "obliterate is in development"),
+    SVN_TEST_OPTS_PASS(obliterate_2,
+                       "obliterate experiment"),
     SVN_TEST_NULL
   };

@@ -491,6 +491,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__purge_txn,
   svn_fs_base__list_transactions,
   svn_fs_base__deltify,
+  svn_fs_base__obliterate,
   svn_fs_base__lock,
   svn_fs_base__generate_lock_token,
   svn_fs_base__unlock,

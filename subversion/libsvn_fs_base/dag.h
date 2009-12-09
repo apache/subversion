@@ -539,6 +539,12 @@ svn_error_t *svn_fs_base__dag_deltify(dag_node_t *target,
                                       trail_t *trail,
                                       apr_pool_t *pool);
 
+/* Obliterate NODE's representation by constructing an empty delta
+   to PRED_NODE. */
+svn_error_t *svn_fs_base__dag_obliterate(dag_node_t *node,
+                                         dag_node_t *pred_node,
+                                         trail_t *trail,
+                                         apr_pool_t *pool);
 
 /* Index NODE's backing data representations by their checksum.  Do
    this as part of TRAIL.  Use POOL for allocations. */
