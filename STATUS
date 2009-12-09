@@ -161,6 +161,15 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r888979
+   Make 'svnadmin load --parent-dir PATH' smart enough to know to prepend a
+   leading slash onto PATH when using it as a prefix for fixed-up mergeinfo.
+   Justification:
+     This bug is the reason why all the mergeinfo in our project
+     history at the moment is syntactically invalid.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 
  * r877552, r877617, r877618, r877619, r877621
