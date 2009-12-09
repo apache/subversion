@@ -110,17 +110,17 @@ module SvnTestUtil
   end
 
   def setup_tmp(path=@tmp_path)
-    FileUtils.rm_rf(path)
+    remove_recursively_with_retry(path)
     FileUtils.mkdir_p(path)
   end
 
   def teardown_tmp(path=@tmp_path)
-    FileUtils.rm_rf(path)
+    remove_recursively_with_retry(path)
   end
 
   def setup_repository(path=@repos_path, config={}, fs_config={})
     require "svn/repos"
-    FileUtils.rm_rf(path)
+    remove_recursively_with_retry(path)
     FileUtils.mkdir_p(File.dirname(path))
     @repos = Svn::Repos.create(path, config, fs_config)
     @fs = @repos.fs
@@ -129,7 +129,7 @@ module SvnTestUtil
   def teardown_repository(path=@repos_path)
     @fs.close unless @fs.nil?
     @repos.close unless @repos.nil?
-    Svn::Repos.delete(path) if File.exists?(path)
+    remove_recursively_with_retry(path)
     @repos = nil
     @fs = nil
   end
@@ -140,7 +140,7 @@ module SvnTestUtil
   end
 
   def teardown_wc
-    FileUtils.rm_rf(@wc_base_dir)
+    remove_recursively_with_retry(@wc_base_dir)
   end
 
   def setup_config
@@ -149,7 +149,7 @@ module SvnTestUtil
   end
 
   def teardown_config
-    FileUtils.rm_rf(@config_path)
+    remove_recursively_with_retry(@config_path)
   end
 
   def add_authentication
@@ -220,6 +220,18 @@ realm = #{@realm}
 
   def setup_greek_tree
     make_context("setup greek tree") { |ctx| @greek.setup(ctx) }
+  end
+
+  def remove_recursively_with_retry(path)
+    retries = 0
+    while (retries+=1) < 100 && File.exist?(path)
+      begin
+        FileUtils.rm_r(path, :secure=>true)
+      rescue
+        sleep 0.1
+      end
+    end
+    assert(!File.exist?(path), "#{Dir.glob(path+'/**/*').join("\n")} should not exist after #{retries} attempts to delete")
   end
 
   module Svnserve
