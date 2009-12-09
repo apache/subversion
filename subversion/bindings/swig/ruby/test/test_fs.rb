@@ -443,7 +443,7 @@ class SvnFsTest < Test::Unit::TestCase
     fs_type = Svn::Fs::TYPE_FSFS
     config = {Svn::Fs::CONFIG_FS_TYPE => fs_type}
 
-    yield(:create, [path, config])
+    yield(:create, [path, config], Proc.new{})
 
     assert_nothing_raised do
       yield(:recover, [path], Proc.new{})

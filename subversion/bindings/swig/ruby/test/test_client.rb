@@ -537,8 +537,8 @@ class SvnClientTest < Test::Unit::TestCase
       assert(!File.exist?(path3))
     end
   ensure
-    FileUtils.rm_rf(wc_path3)
-    FileUtils.rm_rf(wc_path2)
+    remove_recursively_with_retry(wc_path3)
+    remove_recursively_with_retry(wc_path2)
   end
 
   def test_update

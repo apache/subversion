@@ -570,7 +570,9 @@ EOE
 
   def test_translated_file2_eol
     assert_translated_eol(:translated_file2) do |file, source|
-      file.read
+      result = file.read
+      file.close
+      result
     end
   end
 
@@ -636,7 +638,9 @@ EOE
         stream.close
         nil
       else
-        stream.read
+        result = stream.read
+        stream.close
+        result
       end
     end
   end
