@@ -1,0 +1,10 @@
+This is an experimental BDB obliterate based on the deltify code. It
+replaces a file's rep with an empty delta to the previous rep, thus
+effectively making the file contents equal to the previous version
+of the file.
+
+This is a partial implementation of the cc1 model in notes/obliterate,
+restricted to file text obliteration.  It could probably be extended
+to file and directory properties, but anything that changes the tree
+structure or anything that needs new node-rev-ids is not going to
+work.
