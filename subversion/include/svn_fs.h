@@ -1842,7 +1842,10 @@ svn_fs_deltify_revision(svn_fs_t *fs,
 
 /** Obliterate the text associated with @revision of @a path in @a fs,
  * where @a path must be a file.  The text is replaced with the text
- * of the previous version of the file.
+ * of the previous version of the file, or with an empty text if there
+ * is no previous version.
+ *
+ * ### Exists for testing, no idea if this is the final interface.
  */
 svn_error_t *
 svn_fs_obliterate(svn_fs_t *fs,

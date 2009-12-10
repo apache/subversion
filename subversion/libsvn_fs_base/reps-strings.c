@@ -1628,6 +1628,8 @@ svn_error_t *svn_fs_base__rep_obliterate(svn_fs_t *fs,
                                          trail_t *trail,
                                          apr_pool_t *pool)
 {
+  const char *new_str;
+  representation_t *empty;
   svn_stream_t *new_stream;
   struct write_svndiff_strings_baton new_baton;
   svn_stream_t *pred_stream1, *pred_stream2;
@@ -1648,13 +1650,20 @@ svn_error_t *svn_fs_base__rep_obliterate(svn_fs_t *fs,
   apr_array_header_t *chunks;
   int i;
 
-  /* ### Temporary error, really need an empty rep here to support
-      obliteration of the first version. */
   if (!pred_key)
-    return svn_error_createf
-      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       _("Attempting to obliterate '%s' without a predecessor "),
-       key);
+    {
+      /* No predecessor so just write a new empty rep */
+      SVN_ERR(svn_fs_bdb__string_append(fs, &new_str, 0, NULL, trail, pool));
+      empty = make_fulltext_rep(new_str, NULL,
+                                svn_checksum_empty_checksum(svn_checksum_md5,
+                                                            pool),
+                                svn_checksum_empty_checksum(svn_checksum_sha1,
+                                                            pool),
+                                pool);
+      SVN_ERR(svn_fs_bdb__write_rep(fs, key, empty, trail, pool));
+
+      return SVN_NO_ERROR;
+    }
 
   if (!strcmp(key, pred_key))
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -1667,7 +1676,7 @@ svn_error_t *svn_fs_base__rep_obliterate(svn_fs_t *fs,
   new_stream = svn_stream_create(&new_baton, pool);
   svn_stream_set_write(new_stream, write_svndiff_strings);
 
-  /* ### Is there a simpler way to write an empty delta? */
+  /* ### Is there a simpler way to write a no-change delta? */
   SVN_ERR(svn_fs_base__rep_contents_read_stream(&pred_stream1, fs, pred_key,
                                                 TRUE, trail, pool));
   SVN_ERR(svn_fs_base__rep_contents_read_stream(&pred_stream2, fs, pred_key,
@@ -1738,26 +1747,6 @@ svn_error_t *svn_fs_base__rep_obliterate(svn_fs_t *fs,
 
   new_rep.contents.delta.chunks = chunks;
   SVN_ERR(svn_fs_bdb__write_rep(fs, key, &new_rep, trail, pool));
-
-#if 0
-  /* ### Might have younger revs referring to the old rep? */
-  {
-    representation_t *old_rep;
-    apr_array_header_t *orig_str_keys;
-    SVN_ERR(svn_fs_bdb__read_rep(&old_rep, fs, key, trail, pool));
-    if (old_rep->kind == rep_kind_fulltext)
-      {
-        const char *str_key = old_rep->contents.fulltext.string_key;
-        orig_str_keys = apr_array_make(pool, 1, sizeof(str_key));
-        APR_ARRAY_PUSH(orig_str_keys, const char *) = str_key;
-      }
-    else if (old_rep->kind == rep_kind_delta)
-      SVN_ERR(delta_string_keys(&orig_str_keys, old_rep, pool));
-    else /* unknown kind */
-      return UNKNOWN_NODE_KIND(key);
-    SVN_ERR(delete_strings(orig_str_keys, fs, trail, pool));
-  }
-#endif
 
   return SVN_NO_ERROR;
 }

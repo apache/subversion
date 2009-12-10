@@ -168,9 +168,11 @@ svn_error_t *svn_fs_base__rep_deltify(svn_fs_t *fs,
                                       trail_t *trail,
                                       apr_pool_t *pool);
 
-/* Obliterate KEY's data by creating a new rep by constructing an
-   empty delta from PRED_KEY's data.  KEY's data remains in the
-   database in case some other key's data is derived from it. */
+/* Obliterate KEY's data by creating a new rep that consists of a
+   no-change delta from PRED_KEY's data.  If PRED_KEY is null then
+   construct an empty fulltext instead of a delta.  KEY's old data
+   remains in the database in case some other key's data is derived
+   from it. */
 svn_error_t *svn_fs_base__rep_obliterate(svn_fs_t *fs,
                                          const char *key,
                                          const char *pred_key,

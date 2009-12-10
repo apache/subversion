@@ -4896,8 +4896,7 @@ obliterate_2(const svn_test_opts_t *opts, apr_pool_t *pool)
         "abcdefghijklmnopqrstuvwxyz0123456789" },
     };
     SVN_ERR(svn_fs_revision_root(&rev_root, fs, 2, subpool));
-    SVN_ERR(svn_test__validate_tree(rev_root, expected, 2,
-                                    subpool));
+    SVN_ERR(svn_test__validate_tree(rev_root, expected, 2, subpool));
     SVN_ERR(svn_fs_revision_root(&rev_root, fs, 3, subpool));
     SVN_ERR(svn_test__validate_tree(rev_root, expected,
                                     sizeof(expected)/sizeof(expected[0]),
@@ -4919,6 +4918,19 @@ obliterate_2(const svn_test_opts_t *opts, apr_pool_t *pool)
         "abcdefghijklmnopqrstuvwxyz0123456789" },
     };
     SVN_ERR(svn_fs_revision_root(&rev_root, fs, 4, subpool));
+    SVN_ERR(svn_test__validate_tree(rev_root, expected,
+                                    sizeof(expected)/sizeof(expected[0]),
+                                    subpool));
+  }
+  svn_pool_clear(subpool);
+
+  SVN_ERR(svn_fs_obliterate(fs, "A/foo", 1, subpool));
+  {
+    svn_test__tree_entry_t expected[] = {
+      { "A", 0 },
+      { "A/foo", "" },
+    };
+    SVN_ERR(svn_fs_revision_root(&rev_root, fs, 1, subpool));
     SVN_ERR(svn_test__validate_tree(rev_root, expected,
                                     sizeof(expected)/sizeof(expected[0]),
                                     subpool));

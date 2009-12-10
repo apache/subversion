@@ -539,8 +539,9 @@ svn_error_t *svn_fs_base__dag_deltify(dag_node_t *target,
                                       trail_t *trail,
                                       apr_pool_t *pool);
 
-/* Obliterate NODE's representation by constructing an empty delta
-   to PRED_NODE. */
+/* Obliterate NODE's data by constructing a new representation that
+   consists of a no-change delta from PRED_NODE.  If PRED_NODE is null
+   then construct a representation with an empty fulltext instead. */
 svn_error_t *svn_fs_base__dag_obliterate(dag_node_t *node,
                                          dag_node_t *pred_node,
                                          trail_t *trail,
