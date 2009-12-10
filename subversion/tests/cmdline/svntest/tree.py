@@ -315,6 +315,7 @@ class SVNTreeNode:
     return cmp(self.name, other.name)
 
   def as_state(self, prefix=None):
+    """Return an svntest.wc.State instance that is equivalent to this tree."""
     root = self
     if self.path == root_node_name:
       assert prefix is None
