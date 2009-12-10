@@ -224,35 +224,51 @@ character.
 Node-revision IDs
 -----------------
 
+A node-rev ID consists of the following three fields:
+
+    node_revision_id ::= node_id '.' copy_id '.' txn_id
+
+At this level, the form of the ID is the same as for BDB - see the
+section called "ID's" in <../libsvn_fs_base/notes/structure>.
+
 In order to support efficient lookup of node-revisions by their IDs
 and to simplify the allocation of fresh node-IDs during a transaction,
-we treat the fields of a node-ID in new and interesting ways.
+we treat the fields of a node-rev ID in new and interesting ways.
 
-Within a revision file, node-revs have a txn-id field of the form
-"r<rev>/<offset>", to support easy lookup.  New node-revision IDs
-assigned within a transaction have the txn-id field of "t<txnid>".
+Within a new transaction:
 
-When a new node-id or copy-id is assigned in a transaction, the ID
-used is a "_" followed by a base36 number unique to the transaction.
-During the final phase of a commit, node-revision IDs are rewritten
-to have repository-wide unique node-ID and copy-ID fields, and to have
-"r<rev>/<offset>" txn-id fields.
+  New node-revision IDs assigned within a transaction have a txn-id
+  field of the form "t<txnid>".
 
-In Format 3 and above, this uniqueness is done by changing a temporary
-id of "_<base36>" to "<rev>-<base36>".  Note that this means that the
-originating revision of a line of history or a copy can be determined
-by looking at the node ID.
+  When a new node-id or copy-id is assigned in a transaction, the ID
+  used is a "_" followed by a base36 number unique to the transaction.
 
-In Format 2 and below, the "current" file contains global base36
-node-ID and copy-ID counters; during the commit, the counter value is
-added to the transaction-specific base36 ID, and the value in
-"current" is adjusted.
+Within a revision:
 
-(It is legal for Format 3 repositories to contain Format 2-style IDs;
-this just prevents I/O-less node-origin-rev lookup for those nodes.)
+  Within a revision file, node-revs have a txn-id field of the form
+  "r<rev>/<offset>", to support easy lookup. The <offset> is the (ASCII
+  decimal) number of bytes from the start of the revision file to the
+  start of the node-rev.
+
+  During the final phase of a commit, node-revision IDs are rewritten
+  to have repository-wide unique node-ID and copy-ID fields, and to have
+  "r<rev>/<offset>" txn-id fields.
+
+  In Format 3 and above, this uniqueness is done by changing a temporary
+  id of "_<base36>" to "<rev>-<base36>".  Note that this means that the
+  originating revision of a line of history or a copy can be determined
+  by looking at the node ID.
+
+  In Format 2 and below, the "current" file contains global base36
+  node-ID and copy-ID counters; during the commit, the counter value is
+  added to the transaction-specific base36 ID, and the value in
+  "current" is adjusted.
+
+  (It is legal for Format 3 repositories to contain Format 2-style IDs;
+  this just prevents I/O-less node-origin-rev lookup for those nodes.)
 
 The temporary assignment of node-ID and copy-ID fields has
-implications for svn_fs_compare_ids and svn_fs_check_related.  The IDs
+implications for svn_fs_compare_ids and svn_fs_check_related.  The ID
 _1.0.t1 is not related to the ID _1.0.t2 even though they have the
 same node-ID, because temporary node-IDs are restricted in scope to
 the transactions they belong to.
