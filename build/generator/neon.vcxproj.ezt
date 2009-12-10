@@ -45,10 +45,10 @@
   <PropertyGroup>
 [for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">.\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">.\</IntDir>
-    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c build_zlib.bat [configs]</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c build_zlib.bat [configs] rebuild</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c build_zlib.bat [configs] clean</NMakeCleanCommandLine>
-    <NMakeOutput Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">[zlib_path]\[is configs "Release"]zlibstat.lib[else]zlibstatD.lib[end]</NMakeOutput>
+    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">nmake /nologo /f neon.mak ALL [is configs "Debug"]DEBUG_BUILD=1 [end]EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstat[is configs "Debug"]D[end].lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">nmake /nologo /f neon.mak CLEAN ALL [is configs "Debug"]DEBUG_BUILD=1 [end]EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstat[is configs "Debug"]D[end].lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">nmake /nologo /f neon.mak CLEAN [is configs "Debug"]DEBUG_BUILD=1 [end]EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstat[is configs "Debug"]D[end].lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]</NMakeCleanCommandLine>
+    <NMakeOutput Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">[is configs "Release"]libneon.lib[else]libneonD.lib[end]</NMakeOutput>
 [end][end]  </PropertyGroup>
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>
