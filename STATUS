@@ -161,7 +161,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r888979
+ * r888979, r889081
    Make 'svnadmin load --parent-dir PATH' smart enough to know to prepend a
    leading slash onto PATH when using it as a prefix for fixed-up mergeinfo.
    Justification:
