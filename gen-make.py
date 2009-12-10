@@ -203,7 +203,7 @@ def _usage_exit():
   print("           only build static libraries")
   print("")
   print("  --vsnet-version=VER")
-  print("           generate for VS.NET version VER (2002, 2003, 2005 or 2008)")
+  print("           generate for VS.NET version VER (2002, 2003, 2005, 2008 or 2010)")
   print("           [only valid in combination with '-t vcproj']")
   print("")
   print("  --with-apr_memcache=DIR")
