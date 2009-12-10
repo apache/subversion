@@ -91,7 +91,7 @@ svn_error_t *svn_fs_base__txn_get_revision(svn_revnum_t *revision,
                                            apr_pool_t *pool);
 
 
-/* Retrieve information about the Subversion transaction SVN_TXN from
+/* Retrieve information about the Subversion transaction TXN_NAME from
    the `transactions' table of FS, as part of TRAIL.
    Set *ROOT_ID_P to the ID of the transaction's root directory.
    Set *BASE_ROOT_ID_P to the ID of the root directory of the
