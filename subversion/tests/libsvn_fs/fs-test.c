@@ -4766,36 +4766,55 @@ obliterate_2(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_fs_make_dir(txn_root, "A", subpool));
   SVN_ERR(svn_fs_make_file(txn_root, "A/foo", subpool));
-  SVN_ERR(svn_test__set_file_contents(txn_root, "A/foo", "1\n", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/foo",
+                                      "abcdefghijklmnopqrstuvwxyz0123456789"
+                                      "abcdefghijklmnopqrstuvwxyz0123456789"
+                                      "abcdefghijklmnopqrstuvwxyz0123456789"
+                                      "abcdefghijklmnopqrstuvwxyz0123456789",
+                                      subpool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
-  svn_pool_clear(subpool);
   {
     svn_test__tree_entry_t expected[] = {
       { "A", 0 },
-      { "A/foo", "1\n" }
+      { "A/foo",
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789" },
     };
     SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, subpool));
     SVN_ERR(svn_test__validate_tree(rev_root, expected,
                                     sizeof(expected)/sizeof(expected[0]),
                                     subpool));
   }
+  svn_pool_clear(subpool);
 
   /* Revision 2 */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
-  SVN_ERR(svn_test__set_file_contents(txn_root, "A/foo", "2\n", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/foo",
+                                      "abcdefghijklmnopqrstuvwxyz0123456789"
+                                      "-abcdefghijklmnopqrstuvwxyz0123456789"
+                                      "abcdefghijklmnopqrstuvwxyz0123456789"
+                                      "-abcdefghijklmnopqrstuvwxyz0123456789",
+                                      subpool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
-  svn_pool_clear(subpool);
+  SVN_ERR(svn_fs_deltify_revision(fs, youngest_rev, subpool));
   {
     svn_test__tree_entry_t expected[] = {
       { "A", 0 },
-      { "A/foo", "2\n" }
+      { "A/foo",
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "-abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "-abcdefghijklmnopqrstuvwxyz0123456789" },
     };
     SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, subpool));
     SVN_ERR(svn_test__validate_tree(rev_root, expected,
                                     sizeof(expected)/sizeof(expected[0]),
                                     subpool));
   }
+  svn_pool_clear(subpool);
 
   /* Revision 3 */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
@@ -4803,47 +4822,78 @@ obliterate_2(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_copy(rev_root, "A", txn_root, "B", pool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
-  svn_pool_clear(subpool);
+  SVN_ERR(svn_fs_deltify_revision(fs, youngest_rev, subpool));
   {
     svn_test__tree_entry_t expected[] = {
       { "A", 0 },
-      { "A/foo", "2\n" },
+      { "A/foo",
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "-abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "-abcdefghijklmnopqrstuvwxyz0123456789" },
       { "B", 0 },
-      { "B/foo", "2\n" },
+      { "B/foo",
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "-abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "-abcdefghijklmnopqrstuvwxyz0123456789" },
     };
     SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, subpool));
     SVN_ERR(svn_test__validate_tree(rev_root, expected,
                                     sizeof(expected)/sizeof(expected[0]),
                                     subpool));
   }
+  svn_pool_clear(subpool);
 
   /* Revision 4 */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
-  SVN_ERR(svn_test__set_file_contents(txn_root, "A/foo", "3\n", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/foo",
+                                      "abcdefghijklmnopqrstuvwxyz0123456789"
+                                      "--abcdefghijklmnopqrstuvwxyz0123456789"
+                                      "abcdefghijklmnopqrstuvwxyz0123456789"
+                                      "--abcdefghijklmnopqrstuvwxyz0123456789",
+                                      subpool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
-  svn_pool_clear(subpool);
+  SVN_ERR(svn_fs_deltify_revision(fs, youngest_rev, subpool));
   {
     svn_test__tree_entry_t expected[] = {
       { "A", 0 },
-      { "A/foo", "3\n" },
+      { "A/foo",
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "--abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "--abcdefghijklmnopqrstuvwxyz0123456789" },
       { "B", 0 },
-      { "B/foo", "2\n" },
+      { "B/foo",
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "-abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "-abcdefghijklmnopqrstuvwxyz0123456789" },
     };
     SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, subpool));
     SVN_ERR(svn_test__validate_tree(rev_root, expected,
                                     sizeof(expected)/sizeof(expected[0]),
                                     subpool));
   }
+  svn_pool_clear(subpool);
 
   /* Obliterate A/foo@2 affects both A/foo and B/foo */
   SVN_ERR(svn_fs_obliterate(fs, "A/foo", 2, subpool));
   {
     svn_test__tree_entry_t expected[] = {
       { "A", 0 },
-      { "A/foo", "1\n" },
+      { "A/foo",
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789" },
       { "B", 0 },
-      { "B/foo", "1\n" },
+      { "B/foo",
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789" },
     };
     SVN_ERR(svn_fs_revision_root(&rev_root, fs, 2, subpool));
     SVN_ERR(svn_test__validate_tree(rev_root, expected, 2,
@@ -4856,15 +4906,24 @@ obliterate_2(const svn_test_opts_t *opts, apr_pool_t *pool)
   {
     svn_test__tree_entry_t expected[] = {
       { "A", 0 },
-      { "A/foo", "3\n" },
+      { "A/foo",
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "--abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "--abcdefghijklmnopqrstuvwxyz0123456789" },
       { "B", 0 },
-      { "B/foo", "1\n" },
+      { "B/foo",
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789"
+        "abcdefghijklmnopqrstuvwxyz0123456789" },
     };
     SVN_ERR(svn_fs_revision_root(&rev_root, fs, 4, subpool));
     SVN_ERR(svn_test__validate_tree(rev_root, expected,
                                     sizeof(expected)/sizeof(expected[0]),
                                     subpool));
   }
+  svn_pool_clear(subpool);
 
   return SVN_NO_ERROR;
 }
