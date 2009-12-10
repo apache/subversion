@@ -168,7 +168,8 @@ typedef struct fs_vtable_t
                             svn_revnum_t rev, apr_uint32_t flags,
                             apr_pool_t *pool);
   svn_error_t *(*begin_obliteration_txn)(svn_fs_txn_t **txn_p, svn_fs_t *fs,
-                                         svn_revnum_t rev, apr_pool_t *pool);
+                                         svn_revnum_t replacing_rev,
+                                         apr_pool_t *pool);
   svn_error_t *(*open_txn)(svn_fs_txn_t **txn, svn_fs_t *fs,
                            const char *name, apr_pool_t *pool);
   svn_error_t *(*purge_txn)(svn_fs_t *fs, const char *txn_id,
