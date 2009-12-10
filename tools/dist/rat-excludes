@@ -42,6 +42,7 @@ subversion/bindings/ctypes-python/TODO
 subversion/bindings/ctypes-python/test/test.dumpfile
 subversion/bindings/ctypes-python/csvn/__init__.py
 subversion/bindings/ctypes-python/csvn/ext/__init__.py
+packages/
 tools/dist/rat-excludes
 doc/doxygen.conf
 **/*.dump
