@@ -37,10 +37,9 @@ svn_client__obliterate(const char *url,
   svn_ra_session_t *ra_session;
   const char *path;
 
-  /* Open a simple RA session for the URL (not connected to a WC). */
   SVN_ERR(svn_client_open_ra_session(&ra_session, url, ctx, pool));
 
-  path = "";  /* relative to URL of session */
+  SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &path, url, pool));
 
   SVN_ERR(svn_ra__obliterate(ra_session, rev, path, pool));
 

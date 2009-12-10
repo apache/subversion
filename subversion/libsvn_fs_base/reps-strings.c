@@ -1628,7 +1628,7 @@ svn_error_t *svn_fs_base__rep_obliterate(svn_fs_t *fs,
                                          trail_t *trail,
                                          apr_pool_t *pool)
 {
-  const char *new_str;
+  const char *new_str = NULL;
   representation_t *empty;
   svn_stream_t *new_stream;
   struct write_svndiff_strings_baton new_baton;
