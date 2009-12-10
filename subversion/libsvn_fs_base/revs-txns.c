@@ -40,6 +40,7 @@
 #include "revs-txns.h"
 #include "key-gen.h"
 #include "id.h"
+#include "obliterate.h"
 #include "bdb/rev-table.h"
 #include "bdb/txn-table.h"
 #include "bdb/copies-table.h"
@@ -692,25 +693,104 @@ txn_body_begin_txn(void *baton, trail_t *trail)
   return SVN_NO_ERROR;
 }
 
+/* Create a new transaction that is a mutable duplicate of the committed
+ * transaction in a particular revision, and able to become a replacement
+ * for the transaction in that revision. The duplicate transaction has a new
+ * txn-id and is a deep copy of the old one. All references to the txn-id
+ * within the copied parts of it are updated.
+ *
+ * The resulting transaction should be committed by
+ * svn_fs_base__commit_obliteration_txn(), not by a normal commit.
+ *
+ * BATON is of type (struct begin_txn_args *).
+ * BATON->base_rev is the revision on which the existing revision
+ * is based, i.e. one less than the number of the revision to be replaced.
+ * BATON->flags must be 0: specifically, the CHECK_OOD and CHECK_LOCKS
+ * flags are not supported.
+ *
+ * Set BATON->txn_p to point to the new transaction object, allocated in
+ * TRAIL->pool.
+ */
 static svn_error_t *
 txn_body_begin_obliteration_txn(void *baton, trail_t *trail)
 {
   struct begin_txn_args *args = baton;
-  const svn_fs_id_t *root_id;
-  const char *txn_id;
+  int replacing_rev = args->base_rev + 1;
+  const svn_fs_id_t *base_root_id;
+  const char *old_txn_id, *new_txn_id;
+  transaction_t *old_txn, *new_txn;
 
-  SVN_ERR(svn_fs_base__rev_get_root(&root_id, trail->fs, args->base_rev,
-                                    trail, trail->pool));
-  SVN_ERR(svn_fs_bdb__create_txn(&txn_id, trail->fs, root_id,
+  /* Obliteration doesn't support these flags */
+  SVN_ERR_ASSERT(! (args->flags & SVN_FS_TXN_CHECK_OOD));
+  SVN_ERR_ASSERT(! (args->flags & SVN_FS_TXN_CHECK_LOCKS));
+
+  /*
+   * This is like a combination of "dup the txn" and "make the txn mutable".
+   * "Dup the txn" means making a deep copy, but with a new txn id.
+   * "Make mutable" is like the opposite of finalizing a txn.
+   *
+   * To dup the txn in r50:
+   *   * dup TRANSACTIONS<t50> to TRANSACTIONS<t50'>
+   *   * dup all referenced NODES<*.*.t50> (not old nodes that are referenced)
+   *   * dup all referenced REPRESENTATIONS<*> to REPRESENTATIONS<*'>
+   *   * create new STRINGS<*> where necessary (###?)
+   *
+   * At commit time:
+   *   * dup all CHANGES<t50> to CHANGES<t50'>
+   *   * update COPIES<cpy_id> (We need to keep the copy IDs the same, but will
+   *       need to modify the copy src_txn fields.)
+   *   * update NODE-ORIGINS<node_id>
+   *   * update CHECKSUM-REPS<csum>
+   */
+
+  /* Implementation:
+   *   - create a new txn (to get a new txn-id)
+   *   - read the new txn
+   *   - modify the new txn locally, duplicating parts of the old txn
+   *   - write the modified new txn
+   *   - return a reference to the new txn
+   */
+
+  /* Create a new txn whose 'root' and 'base root' node-rev ids both point
+   * to the previous revision, like txn_body_begin_txn() does. */
+  SVN_ERR(svn_fs_base__rev_get_root(&base_root_id, trail->fs,
+                                    args->base_rev, trail, trail->pool));
+  SVN_ERR(svn_fs_bdb__create_txn(&new_txn_id, trail->fs, base_root_id,
                                  trail, trail->pool));
 
-  /* ### No need for "CHECK_OOD" and "CHECK_LOCKS" like the non-oblit case? */
+  /* Read the old and new txns */
+  SVN_ERR(svn_fs_base__rev_get_txn_id(&old_txn_id, trail->fs, replacing_rev,
+                                      trail, trail->pool));
+  SVN_ERR(svn_fs_bdb__get_txn(&old_txn, trail->fs, old_txn_id, trail,
+                              trail->pool));
+  SVN_ERR(svn_fs_bdb__get_txn(&new_txn, trail->fs, new_txn_id, trail,
+                              trail->pool));
 
-  *args->txn_p = make_txn(trail->fs, txn_id, args->base_rev, trail->pool);
+  /* Populate NEW_TXN with a duplicate of the contents of OLD_TXN. */
+
+  SVN_ERR_ASSERT(new_txn->kind == transaction_kind_normal);
+
+  /* Dup the old txn's root node-rev (recursively). */
+  SVN_ERR(svn_fs_base__node_rev_dup(&new_txn->root_id, old_txn->root_id,
+                                    new_txn_id, old_txn_id, trail,
+                                    trail->pool, trail->pool));
+
+  /* Dup txn->proplist */
+  new_txn->proplist = old_txn->proplist;
+
+  /* Leave txn->copies as NULL until commit time. We do not dup the "copies"
+   * table rows because we do not want new copy-ids because copy-ids pervade
+   * the whole history of the repository inside node-rev-ids. */
+
+  /* Save the modified transaction */
+  SVN_ERR(svn_fs_bdb__put_txn(trail->fs, new_txn, new_txn_id, trail,
+                              trail->pool));
+
+  /* Make and return an in-memory txn object referring to the new txn */
+  *args->txn_p = make_txn(trail->fs, new_txn_id, args->base_rev,
+                          trail->pool);
   return SVN_NO_ERROR;
 }
-
-
 
 
 /* Note:  it is acceptable for this function to call back into
@@ -747,6 +827,13 @@ svn_fs_base__begin_txn(svn_fs_txn_t **txn_p,
 }
 
 
+/* Create a new transaction in FS that is a mutable clone of the transaction
+ * in revision REPLACING_REV and is intended to replace it. Set *TXN_P to
+ * point to the new transaction.
+ *
+ * This is like svn_fs_base__begin_txn() except that it populates the new txn
+ * with a mutable clone of revision REPLACING_REV, and it does not support the
+ * CHECK_OOD and CHECK_LOCKS flags, and it does not change the date stamp. */
 svn_error_t *
 svn_fs_base__begin_obliteration_txn(svn_fs_txn_t **txn_p,
                                     svn_fs_t *fs,
@@ -758,6 +845,9 @@ svn_fs_base__begin_obliteration_txn(svn_fs_txn_t **txn_p,
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
+  /* Make a mutable duplicate of replacing_rev's txn. */
+  /* ### Does all of the duplication need to be done inside the retry_txn?
+   * It is currently inside. */
   args.txn_p = &txn;
   args.base_rev = replacing_rev - 1;
   args.flags = 0;
@@ -766,7 +856,7 @@ svn_fs_base__begin_obliteration_txn(svn_fs_txn_t **txn_p,
 
   *txn_p = txn;
 
-  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
+  return SVN_NO_ERROR;
 }
 
 
