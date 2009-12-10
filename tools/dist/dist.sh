@@ -242,6 +242,10 @@ ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
 # (See http://svn.haxx.se/dev/archive-2009-04/0166.shtml for discussion.)
 rm -rf "$DISTPATH/contrib"
 
+# Remove packages/ from the tarball.
+# (See http://svn.haxx.se/dev/archive-2009-12/0205.shtml)
+rm -rf "$DISPATH/packages"
+
 install_dependency()
 {
   DEP_NAME=$1
