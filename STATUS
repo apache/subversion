@@ -168,7 +168,7 @@ Candidate changes:
      This bug is the reason why all the mergeinfo in our project
      history at the moment is syntactically invalid.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, stylesen
 
 Veto-blocked changes:
 
