@@ -188,10 +188,11 @@ svn_error_t *svn_fs_base__begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs,
                                     apr_pool_t *pool);
 
 /* Begin a new transaction in filesystem FS, to replace an existing
-   revision REV.  The new transaction is returned in *TXN_P.  Allocate
-   the new transaction structure from POOL. */
+   revision REPLACING_REV.  The new transaction is returned in *TXN_P.
+   Allocate the new transaction structure from POOL. */
 svn_error_t *svn_fs_base__begin_obliteration_txn(svn_fs_txn_t **txn_p,
-                                                 svn_fs_t *fs, svn_revnum_t rev,
+                                                 svn_fs_t *fs,
+                                                 svn_revnum_t replacing_rev,
                                                  apr_pool_t *pool);
 
 svn_error_t *svn_fs_base__open_txn(svn_fs_txn_t **txn, svn_fs_t *fs,
