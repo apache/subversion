@@ -1741,7 +1741,7 @@ svn_fs_fs__commit_txn(const char **conflict_p,
 
 
 svn_error_t *
-svn_fs_fs__commit_obliteration_txn(svn_revnum_t rev,
+svn_fs_fs__commit_obliteration_txn(svn_revnum_t replacing_rev,
                                    svn_fs_txn_t *txn,
                                    apr_pool_t *pool)
 {
@@ -1749,7 +1749,7 @@ svn_fs_fs__commit_obliteration_txn(svn_revnum_t rev,
   svn_fs_t *fs = txn->fs;
 
   /* Try to commit. */
-  err = svn_fs_fs__commit_obliteration(rev, fs, txn, pool);
+  err = svn_fs_fs__commit_obliteration(replacing_rev, fs, txn, pool);
   if (err && (err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE))
     {
       /* ### ? */

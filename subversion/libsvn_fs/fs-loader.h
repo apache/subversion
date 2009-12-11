@@ -203,8 +203,8 @@ typedef struct txn_vtable_t
 {
   svn_error_t *(*commit)(const char **conflict_p, svn_revnum_t *new_rev,
                          svn_fs_txn_t *txn, apr_pool_t *pool);
-  svn_error_t *(*commit_obliteration)(svn_revnum_t rev, svn_fs_txn_t *txn,
-                                      apr_pool_t *pool);
+  svn_error_t *(*commit_obliteration)(svn_revnum_t replacing_rev,
+                                      svn_fs_txn_t *txn, apr_pool_t *pool);
   svn_error_t *(*abort)(svn_fs_txn_t *txn, apr_pool_t *pool);
   svn_error_t *(*get_prop)(svn_string_t **value_p, svn_fs_txn_t *txn,
                            const char *propname, apr_pool_t *pool);

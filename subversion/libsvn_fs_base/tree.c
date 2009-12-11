@@ -2774,7 +2774,7 @@ svn_fs_base__commit_txn(const char **conflict_p,
 
 
 svn_error_t *
-svn_fs_base__commit_obliteration_txn(svn_revnum_t rev,
+svn_fs_base__commit_obliteration_txn(svn_revnum_t replacing_rev,
                                      svn_fs_txn_t *txn,
                                      apr_pool_t *pool)
 {
