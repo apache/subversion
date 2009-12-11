@@ -560,9 +560,31 @@ where:
      this node where modified.
 
 In order to fully describe the changes made to any given path as part
-of a single transaction, one must read all the change items associated
-with the transaction's ID, and "collapse" multiple entries that refer
-to that path. 
+of a single transaction, one must first determine where the changes
+for that transaction are store, and then if the changes have already
+been "prefolded" -- that is, have the changes been reduced to a
+single, all-inclusive CHANGE record per changed path.  To interpret
+changes for a given path in an unfolded list, you must read all the
+change items associated with the transaction and "collapse" multiple
+entries that refer to that path; in a folded list, you can stop
+reading changes once you find the one for your path of interest.
+
+To determine which method of interpretation you have to use, look at
+the transaction's record first and see if it carries a CHANGE-INFO
+item:
+
+     UNFINISHED-TXN ::= ("transaction" ROOT-ID BASE-ID PROPLIST COPIES
+                          [CHANGES-INFO] );
+      COMMITTED-TXN ::= ("committed" ROOT-ID REV PROPLIST COPIES
+                          [CHANGES-INFO] )
+       CHANGES-INFO ::= (CHANGES-STATE CHNG [NUM-CHANGES]) ;
+
+If it does, then the changes for this transaction are stored in the
+`changes' table keyed on CHNG, and the state of these changes
+("folded" or "unfolded") is stored in the CHANGES-STATE string.  If,
+however, the transaction lacks a CHANGES-INFO item, then the changes
+for that transaction are unfolded and stored in the `changes' table
+keyed on the transaction's ID.
 
 
 
@@ -873,7 +895,7 @@ Berkeley DB tables
                 "nodes" : btree(ID -> NODE-REVISION, "next-key" -> NODE-ID)
             "revisions" : recno(REVISION)
          "transactions" : btree(TXN -> TRANSACTION, "next-key" -> TXN)
-              "changes" : btree(TXN -> CHANGE)
+              "changes" : btree(CHNG -> CHANGE, "next-key" -> CHNG)
                "copies" : btree(CPY -> COPY, "next-key" -> CPY)
               "strings" : btree(STR -> STRING, "next-key" -> STR)
       "representations" : btree(REP -> REPRESENTATION, "next-key" -> REP)
@@ -895,6 +917,7 @@ Table keys:
                     STR ::= number-36 ;
                     REP ::= number-36 ;
                   TOKEN ::= uuid ;
+                   CHNG ::= number-36 ;
 
 Property lists:
 
@@ -910,9 +933,15 @@ Filesystem revisions:
 Transactions:
 
             TRANSACTION ::= UNFINISHED-TXN | COMMITTED-TXN | DEAD-TXN
-         UNFINISHED-TXN ::= ("transaction" ROOT-ID BASE-ID PROPLIST COPIES) ;
-          COMMITTED-TXN ::= ("committed" ROOT-ID REV PROPLIST COPIES) ;
-               DEAD-TXN ::= ("dead" ROOT-ID BASE-ID PROPLIST COPIES) ;
+         UNFINISHED-TXN ::= ("transaction" ROOT-ID BASE-ID PROPLIST COPIES
+                             [CHANGES-INFO]) ;
+          COMMITTED-TXN ::= ("committed" ROOT-ID REV PROPLIST COPIES
+                             [CHANGES-INFO]) ;
+               DEAD-TXN ::= ("dead" ROOT-ID BASE-ID PROPLIST COPIES
+                             [CHANGES-INFO]) ;
+           CHANGES-INFO ::= (CHANGES-STATE CHNG [NUM-CHANGES]) ;
+          CHANGES-STATE ::= "unfolded" | "folded" ;
+            NUM-CHANGES ::= number ;
                 ROOT-ID ::= NODE-REV-ID ;
                 BASE-ID ::= NODE-REV-ID ;
                  COPIES ::= (CPY ...) ;
