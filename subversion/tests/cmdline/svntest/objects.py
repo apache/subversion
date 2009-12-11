@@ -42,12 +42,12 @@ def local_path(path):
   return os.sep.join(path.split('/'))
 
 
-def db_dump(repo_path, table):
+def db_dump(db_dump_name, repo_path, table):
   """Yield a human-readable representation of the rows of the BDB table
   TABLE in the repo at REPO_PATH.  Yield one line of text at a time.
   Calls the external program "db_dump" which is supplied with BDB."""
   table_path = repo_path + "/db/" + table
-  process = subprocess.Popen(["db_dump", "-p", table_path],
+  process = subprocess.Popen([db_dump_name, "-p", table_path],
                              stdout=subprocess.PIPE, universal_newlines=True)
   retcode = process.wait()
   assert retcode == 0
@@ -108,7 +108,7 @@ def crude_bdb_parse(line):
   new_line = '('.join(new_lparts)
   return new_line
 
-def dump_bdb(repo_path, dump_dir):
+def dump_bdb(db_dump_name, repo_path, dump_dir):
   """Dump all the known BDB tables in the repository at REPO_PATH into a
   single text file in DUMP_DIR.  Omit any "next-key" records."""
   dump_file = dump_dir + "/all.bdb"
@@ -117,7 +117,7 @@ def dump_bdb(repo_path, dump_dir):
                 'node-origins', 'representations', 'checksum-reps', 'strings',
                 'locks', 'lock-tokens', 'miscellaneous', 'uuids']:
     file.write(table + ":\n")
-    for line in db_dump(repo_path, table):
+    for line in db_dump(db_dump_name, repo_path, table):
       if line == " next-key\n":
         break
       file.write(crude_bdb_parse(line))
@@ -129,6 +129,17 @@ def dump_bdb(repo_path, dump_dir):
   #svnadmin lslocks repo_path > dump_dir + "/locks.svn"
   #svnadmin lstxns  repo_path > dump_dir + "/txns.svn"
 
+def locate_db_dump():
+  """Locate a db_dump executable"""
+  # Assume that using the newest version is OK.
+  for db_dump_name in ['db4.8_dump', 'db4.7_dump', 'db4.6_dump',
+                       'db4.5_dump', 'db4.4_dump', 'db_dump']:
+    try:
+      if subprocess.Popen([db_dump_name, "-V"]).wait() == 0:
+        return db_dump_name
+    except OSError, e:
+      pass
+  return 'none'
 
 ######################################################################
 # Class SvnRepository
@@ -140,6 +151,7 @@ class SvnRepository:
   def __init__(self, repo_url, repo_dir):
     self.repo_url = repo_url
     self.repo_absdir = os.path.abspath(repo_dir)
+    self.db_dump_name = locate_db_dump()
 
   def dump(self, output_dir):
     """Dump the repository into the directory OUTPUT_DIR"""
@@ -149,7 +161,8 @@ class SvnRepository:
 
     """Run a BDB dump on the repository"""
     #subprocess.call(["/home/julianfoad/bin/svn-dump-bdb", self.repo_absdir, ldir])
-    dump_bdb(self.repo_absdir, ldir)
+    if self.db_dump_name != 'none':
+      dump_bdb(self.db_dump_name, self.repo_absdir, ldir)
 
     """Run 'svnadmin dump' on the repository."""
     exit_code, stdout, stderr = \
