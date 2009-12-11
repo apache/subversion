@@ -102,6 +102,30 @@ svn_fs_bdb__put_txn(svn_fs_t *fs,
 }
 
 
+svn_error_t *
+svn_fs_bdb__get_next_txn_id(const char **next_txn_id,
+                            svn_fs_t *fs,
+                            trail_t *trail,
+                            apr_pool_t *pool)
+{
+  base_fs_data_t *bfd = fs->fsap_data;
+  DBT query, result;
+
+  svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY);
+
+  /* Get the current value associated with the `next-key' key in the table.  */
+  svn_fs_base__trail_debug(trail, "transactions", "get");
+  SVN_ERR(BDB_WRAP(fs, "getting next available transaction ID ('next-key')",
+                   bfd->transactions->get(bfd->transactions, trail->db_txn,
+                                          &query,
+                                          svn_fs_base__result_dbt(&result),
+                                          0)));
+  svn_fs_base__track_dbt(&result, trail->pool);
+  *next_txn_id = apr_pstrmemdup(pool, result.data, result.size);
+  return SVN_NO_ERROR;
+}
+
+
 /* Allocate a Subversion transaction ID in FS, as part of TRAIL.  Set
    *ID_P to the new transaction ID, allocated in POOL.  */
 static svn_error_t *
@@ -116,23 +140,11 @@ allocate_txn_id(const char **id_p,
   char next_key[MAX_KEY_SIZE];
   int db_err;
 
-  svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY);
-
-  /* Get the current value associated with the `next-key' key in the table.  */
-  svn_fs_base__trail_debug(trail, "transactions", "get");
-  SVN_ERR(BDB_WRAP(fs, "allocating new transaction ID (getting 'next-key')",
-                   bfd->transactions->get(bfd->transactions, trail->db_txn,
-                                          &query,
-                                          svn_fs_base__result_dbt(&result),
-                                          0)));
-  svn_fs_base__track_dbt(&result, pool);
-
-  /* Set our return value. */
-  *id_p = apr_pstrmemdup(pool, result.data, result.size);
+  SVN_ERR(svn_fs_bdb__get_next_txn_id(id_p, fs, trail, pool));
 
   /* Bump to future key. */
-  len = result.size;
-  svn_fs_base__next_key(result.data, &len, next_key);
+  len = strlen(*id_p);
+  svn_fs_base__next_key(*id_p, &len, next_key);
   svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY);
   svn_fs_base__str_to_dbt(&result, next_key);
   svn_fs_base__trail_debug(trail, "transactions", "put");

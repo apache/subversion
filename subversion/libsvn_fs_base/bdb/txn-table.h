@@ -41,6 +41,13 @@ int svn_fs_bdb__open_transactions_table(DB **transactions_p,
                                         svn_boolean_t create);
 
 
+/* Set *NEXT_TXN_ID to the value of the next available transaction ID
+   in FS, allocated from POOL.  Do this as part of TRAIL.  */
+svn_error_t *svn_fs_bdb__get_next_txn_id(const char **next_txn_id,
+                                         svn_fs_t *fs,
+                                         trail_t *trail,
+                                         apr_pool_t *pool);
+
 /* Create a new transaction in FS as part of TRAIL, with an initial
    root and base root ID of ROOT_ID.  Set *TXN_NAME_P to the name of the
    new transaction, allocated in POOL.  */

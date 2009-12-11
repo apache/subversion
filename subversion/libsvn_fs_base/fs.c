@@ -42,6 +42,7 @@
 #include "tree.h"
 #include "id.h"
 #include "lock.h"
+#include "trail.h"
 #define SVN_WANT_BDB
 #include "svn_private_config.h"
 
@@ -584,6 +585,7 @@ open_databases(svn_fs_t *fs,
                         : "opening 'changes' table"),
                    svn_fs_bdb__open_changes_table(&bfd->changes,
                                                   bfd->bdb->env,
+                                                  format,
                                                   create)));
   SVN_ERR(BDB_WRAP(fs, (create
                         ? "creating 'representations' table"
@@ -820,6 +822,43 @@ base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+/* Trail body function for initializing the `changes' table's 'next-key' 
+   row from the value of the same row in the `transaction' table. */
+static svn_error_t *
+txn_body_init_next_changes_key(void *baton, trail_t *trail)
+{
+  const char *next_txn_id;
+  SVN_ERR(svn_fs_bdb__get_next_txn_id(&next_txn_id, trail->fs,
+                                      trail, trail->pool));
+  return svn_fs_bdb__changes_init_next_key(trail->fs, next_txn_id, 
+                                           trail, trail->pool);
+}
+
+/* Open FS with COMMON_POOL and a subpool of POOL, and set *FS_POOL to
+   to that subpool, iff *FS_POOL is NULL (which indicates the the FS
+   hasn't already been opened).  Otherwise, do nothing.
+   
+   NOTE: By using base_open() here instead of open_databases(), we
+   will end up re-reading the already-updated format file.  For now,
+   though, it's better to use the existing encapsulation of "opening
+   the filesystem" rather than duplicating (or worse, partially
+   duplicating) that logic here.  */
+static svn_error_t *
+open_unopened_fs_for_upgrade(apr_pool_t **fs_pool,
+                             svn_fs_t *fs,
+                             const char *path,
+                             apr_pool_t *pool,
+                             apr_pool_t *common_pool)
+{
+  if (! *fs_pool)
+    {
+      *fs_pool = svn_pool_create(pool);
+      SVN_ERR(base_open(fs, path, *fs_pool, common_pool));
+    }
+  return SVN_NO_ERROR;
+}
+  
+
 static svn_error_t *
 base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
              apr_pool_t *common_pool)
@@ -827,6 +866,7 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   const char *version_file_path;
   int old_format_number;
   svn_error_t *err;
+  apr_pool_t *fs_pool = NULL;
 
   version_file_path = svn_dirent_join(path, FORMAT_FILE, pool);
 
@@ -845,31 +885,40 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   SVN_ERR(svn_io_write_version_file(version_file_path,
                                     SVN_FS_BASE__FORMAT_NUMBER, pool));
 
-  /* Check and see if we need to record the "bump" revision. */
+  /* Maybe record the "bump" revision. */
   if (old_format_number < SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT)
     {
-      apr_pool_t *subpool = svn_pool_create(pool);
       svn_revnum_t youngest_rev;
       const char *value;
-
-      /* Open the filesystem in a subpool (so we can control its
-         closure) and do our fiddling.
-
-         NOTE: By using base_open() here instead of open_databases(),
-         we will end up re-reading the format file that we just wrote.
-         But it's better to use the existing encapsulation of "opening
-         the filesystem" rather than duplicating (or worse, partially
-         duplicating) that logic here.  */
-      SVN_ERR(base_open(fs, path, subpool, common_pool));
+      
+      /* Open the FS if it isn't already open. */
+      SVN_ERR(open_unopened_fs_for_upgrade(&fs_pool, fs, path, pool,
+                                           common_pool));
 
       /* Fetch the youngest rev, and record it */
-      SVN_ERR(svn_fs_base__youngest_rev(&youngest_rev, fs, subpool));
-      value = apr_psprintf(subpool, "%ld", youngest_rev);
+      SVN_ERR(svn_fs_base__youngest_rev(&youngest_rev, fs, fs_pool));
+      value = apr_psprintf(fs_pool, "%ld", youngest_rev);
       SVN_ERR(svn_fs_base__miscellaneous_set
               (fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE,
-               value, subpool));
-      svn_pool_destroy(subpool);
+               value, fs_pool));
     }
+
+  /* Maybe initialize the next-available `changes' key (to match the
+     next-available `transactions' key). */
+  if (old_format_number < SVN_FS_BASE__MIN_CHANGES_INFO_FORMAT)
+    {
+      /* Open the FS if it isn't already open. */
+      SVN_ERR(open_unopened_fs_for_upgrade(&fs_pool, fs, path, pool,
+                                           common_pool));
+
+      /* Init the next changes key. */
+      SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_init_next_changes_key,
+                                     NULL, TRUE, pool)); 
+   }
+
+  /* If we opened the FS somewhere above, close the pool that holds it. */
+  if (fs_pool)
+    svn_pool_destroy(fs_pool);
 
   return SVN_NO_ERROR;
 }

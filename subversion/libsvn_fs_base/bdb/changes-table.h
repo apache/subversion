@@ -38,12 +38,23 @@ extern "C" {
 
 /* Open a `changes' table in ENV.  If CREATE is non-zero, create one
    if it doesn't exist.  Set *CHANGES_P to the new table.  Return a
-   Berkeley DB error code.  */
+   Berkeley DB error code.  VERSION is the filesystem format version
+   for the filesystem in which this `changes' table is being used.  */
 int svn_fs_bdb__open_changes_table(DB **changes_p,
                                    DB_ENV *env,
+                                   int version,
                                    svn_boolean_t create);
 
 
+
+/* Create a 'next-key' key in the `changes' table with value
+   INITIAL_VALUE as part of TRAIL.  Return SVN_ERR_FS_CORRUPT if the
+   'next-key' row already exists in the `changes' table.  */
+svn_error_t *svn_fs_bdb__changes_init_next_key(svn_fs_t *fs,
+                                               const char *initial_value,
+                                               trail_t *trail,
+                                               apr_pool_t *pool);
+
 /* Add CHANGE as a record to the `changes' table in FS as part of
    TRAIL, keyed on KEY.
 

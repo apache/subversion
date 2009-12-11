@@ -32,6 +32,7 @@
 #include "../err.h"
 #include "../trail.h"
 #include "../id.h"
+#include "../key-gen.h"
 #include "../util/fs_skels.h"
 #include "../../libsvn_fs/fs-loader.h"
 #include "bdb-err.h"
@@ -47,6 +48,7 @@
 int
 svn_fs_bdb__open_changes_table(DB **changes_p,
                                DB_ENV *env,
+                               int version,
                                svn_boolean_t create)
 {
   const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
@@ -63,8 +65,54 @@ svn_fs_bdb__open_changes_table(DB **changes_p,
                           "changes", 0, DB_BTREE,
                           open_flags, 0666));
 
+  /* If we're creating this table and using a filesystem format that
+     supports the arbitrary changes table keys, init our 'next-key' item. */
+  if (create && (version >= SVN_FS_BASE__MIN_CHANGES_INFO_FORMAT))
+    {
+      DBT key, value;
+      BDB_ERR(changes->put(changes, 0,
+                           svn_fs_base__str_to_dbt(&key, NEXT_KEY_KEY),
+                           svn_fs_base__str_to_dbt(&value, "0"), 0));
+    }
+
   *changes_p = changes;
   return 0;
+}
+
+
+svn_error_t *
+svn_fs_bdb__changes_init_next_key(svn_fs_t *fs,
+                                  const char *initial_value,
+                                  trail_t *trail,
+                                  apr_pool_t *pool)
+{
+  base_fs_data_t *bfd = fs->fsap_data;
+  DBT key, value;
+  int db_err;
+
+  svn_fs_base__trail_debug(trail, "changes", "get");
+  db_err = bfd->changes->get(bfd->changes, trail->db_txn,
+                             svn_fs_base__str_to_dbt(&key, NEXT_KEY_KEY),
+                             svn_fs_base__result_dbt(&value), 0);
+  svn_fs_base__track_dbt(&value, pool);
+
+  /* A not-found error is ideal -- let's add our 'next-key' row and
+     get outta here.  */
+  if (db_err == DB_NOTFOUND)
+    {
+      return BDB_WRAP(fs, _("initializing next changes key"),
+                      (bfd->changes->put(
+                          bfd->changes, trail->db_txn,
+                          svn_fs_base__str_to_dbt(&key, NEXT_KEY_KEY),
+                          svn_fs_base__str_to_dbt(&value, initial_value), 0)));
+    }
+
+  /* If there was some other error, though, we'll propogate that up. */
+  SVN_ERR(BDB_WRAP(fs, "fetching next changes key", db_err));
+  
+  /* If there wasn't an error above, that, too, is a problem. */
+  return svn_error_create(SVN_ERR_FS_CORRUPT, 0,
+                          _("Found unexpected 'next-key' in changes table"));
 }
 
 
