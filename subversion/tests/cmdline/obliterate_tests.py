@@ -128,7 +128,9 @@ def obliterate_1(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              obliterate_1,
+              SkipUnless(obliterate_1, lambda:
+                         svntest.main.is_ra_type_file() and
+                         not svntest.main.is_fs_type_fsfs()),
              ]
 
 if __name__ == '__main__':
