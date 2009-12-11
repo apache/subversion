@@ -105,12 +105,24 @@ def setup_pristine_repository():
 
 
 ######################################################################
+
+def guarantee_empty_repository(path):
+  """Guarantee that a local svn repository exists at PATH, containing
+  nothing."""
+
+  if path == main.pristine_dir:
+    print("ERROR:  attempt to overwrite the pristine repos!  Aborting.")
+    sys.exit(1)
+
+  # create an empty repository at PATH.
+  main.safe_rmtree(path)
+  main.create_repos(path)
+
 # Used by every test, so that they can run independently of  one
 # another. Every time this routine is called, it recursively copies
 # the `pristine repos' to a new location.
 # Note: make sure setup_pristine_repository was called once before
 # using this function.
-
 def guarantee_greek_repository(path):
   """Guarantee that a local svn repository exists at PATH, containing
   nothing but the greek-tree at revision 1."""
