@@ -561,7 +561,7 @@ where:
 
 In order to fully describe the changes made to any given path as part
 of a single transaction, one must first determine where the changes
-for that transaction are store, and then if the changes have already
+for that transaction are stored and if the changes have already
 been "prefolded" -- that is, have the changes been reduced to a
 single, all-inclusive CHANGE record per changed path.  To interpret
 changes for a given path in an unfolded list, you must read all the
