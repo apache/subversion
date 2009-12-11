@@ -282,6 +282,16 @@ svn_error_t *svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
                                          apr_pool_t *pool);
 
 
+/* Replace the transaction in revision REPLACING_REV with the uncommitted
+ * transaction TXN, and promote TXN to a committed transaction. See also
+ * svn_fs_base__dag_commit_txn(). */
+svn_error_t *
+svn_fs_base__dag_commit_obliteration_txn(svn_revnum_t replacing_rev,
+                                         svn_fs_txn_t *txn,
+                                         trail_t *trail,
+                                         apr_pool_t *pool);
+
+
 
 /* Directories.  */
 
