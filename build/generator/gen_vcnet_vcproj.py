@@ -79,16 +79,18 @@ class Generator(gen_win.WinGeneratorBase):
     target.output_pdb = self.get_output_pdb(target)
     target.output_dir = self.get_output_dir(target)
     target.intermediate_dir = self.get_intermediate_dir(target)
-    without_ext = os.path.basename(target.output_name)
-    target.output_name_without_ext = without_ext[:without_ext.rfind('.')]
+    basename = os.path.basename(target.output_name)
+    target.output_ext = basename[basename.rfind('.'):]
+    target.output_name_without_ext = basename[:basename.rfind('.')]
 
     configs = self.get_configs(target)
 
     sources = self.get_proj_sources(False, target)
-    
-    for src in sources:
-      if src.custom_build is not None:
-        src.custom_build = src.custom_build.replace('$(InputPath)', '%(FullPath)')
+
+    if self.vcproj_extension == '.vcxproj':
+      for src in sources:
+        if src.custom_build is not None:
+          src.custom_build = src.custom_build.replace('$(InputPath)', '%(FullPath)')
 
     data = {
       'target' : target,
