@@ -79,9 +79,6 @@ svn_fs_base__test_required_feature_format(svn_fs_t *fs,
 /* Revision at which the repo started using forward deltas. */
 #define SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE  "forward-delta-rev"
 
-/* Next filesystem-global unique identifier value (base36). */
-#define SVN_FS_BASE__MISC_NEXT_FSGUID            "next-fsguid"
-
 
 
 /*** The filesystem structure.  ***/
