@@ -773,7 +773,7 @@ txn_body_begin_obliteration_txn(void *baton, trail_t *trail)
   /* Dup the old txn's root node-rev (recursively). */
   SVN_ERR(svn_fs_base__node_rev_dup(&new_txn->root_id, old_txn->root_id,
                                     new_txn_id, old_txn_id, trail,
-                                    trail->pool, trail->pool));
+                                    trail->pool));
 
   /* Dup txn->proplist */
   new_txn->proplist = old_txn->proplist;

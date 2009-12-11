@@ -26,6 +26,7 @@
 #include <apr_pools.h>
 
 #include "svn_fs.h"
+#include "svn_pools.h"
 
 #include "obliterate.h"
 #include "fs.h"
@@ -41,16 +42,23 @@
 
 
 
+/* Implementation:
+ *   - read the existing rep
+ *   - modify any members that need to change: just the txn_id
+ *   - duplicate any members that need a deep copy
+ *   - write out the local rep as a new rep
+ *   - return the new rep's key (allocated in trail->pool)
+ */
 svn_error_t *
 svn_fs_base__rep_dup(const char **new_key,
                      const char *new_txn_id,
                      const char *key,
                      trail_t *trail,
-                     apr_pool_t *pool)
+                     apr_pool_t *scratch_pool)
 {
   representation_t *rep;
 
-  SVN_ERR(svn_fs_bdb__read_rep(&rep, trail->fs, key, trail, pool));
+  SVN_ERR(svn_fs_bdb__read_rep(&rep, trail->fs, key, trail, scratch_pool));
 
   rep->txn_id = new_txn_id;
 
@@ -60,27 +68,37 @@ svn_fs_base__rep_dup(const char **new_key,
       SVN_ERR(svn_fs_bdb__string_copy(trail->fs,
                                       &rep->contents.fulltext.string_key,
                                       rep->contents.fulltext.string_key,
-                                      trail, pool));
+                                      trail, scratch_pool));
     }
-  else
+  else  /* rep_kind_delta */
     {
       apr_array_header_t *chunks = rep->contents.delta.chunks;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       int i;
 
+      /* Make a deep copy of the rep's delta information. For each "chunk" (aka
+       * "window") in the parent rep, duplicate the chunk's delta string and
+       * the chunk's rep. */
       for (i = 0; i < chunks->nelts; i++)
       {
         rep_delta_chunk_t *w = APR_ARRAY_IDX(chunks, i, rep_delta_chunk_t *);
 
+        svn_pool_clear(iterpool);
+
+        /* Pool usage: We must allocate these two new keys in a pool that
+         * lives at least as long as 'rep'. ..._string_copy allocates in its
+         * last arg; ...rep_dup() allocates in its 'trail' arg. */
         SVN_ERR(svn_fs_bdb__string_copy(trail->fs,
                                         &w->string_key, w->string_key,
-                                        trail, pool));
+                                        trail, scratch_pool));
         SVN_ERR(svn_fs_base__rep_dup(&w->rep_key, new_txn_id, w->rep_key,
-                                     trail, pool));
+                                     trail, iterpool));
         /* ### w->offset = calc_offset(w->rep_key); ??? */
       }
+      svn_pool_destroy(iterpool);
     }
 
-  SVN_ERR(svn_fs_bdb__write_new_rep(new_key, trail->fs, rep, trail, pool));
+  SVN_ERR(svn_fs_bdb__write_new_rep(new_key, trail->fs, rep, trail, trail->pool));
   return SVN_NO_ERROR;
 }
 
@@ -96,23 +114,22 @@ svn_fs_base__node_rev_dup(const svn_fs_id_t **new_id,
                           const char *new_txn_id,
                           const char *old_txn_id,
                           trail_t *trail,
-                          apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
   node_revision_t *noderev;
 
   /* We only want to dup a node-rev if it "belongs to" (was created in) the
-   * txn we are replacing. */
+   * txn we are replacing. If not, simply return the id. */
   if (strcmp(svn_fs_base__id_txn_id(old_id), old_txn_id) != 0)
     {
-      *new_id = old_id;
+      *new_id = svn_fs_base__id_copy(old_id, trail->pool);
       return SVN_NO_ERROR;
     }
 
   /* Set ID2 to ID except with txn_id NEW_TXN_ID */
   *new_id = svn_fs_base__id_create(svn_fs_base__id_node_id(old_id),
                                    svn_fs_base__id_copy_id(old_id), new_txn_id,
-                                   result_pool);
+                                   trail->pool);
 
   /* Dup the representation of its text or entries, and recurse to dup the
    * node-revs of any children. */
@@ -120,7 +137,6 @@ svn_fs_base__node_rev_dup(const svn_fs_id_t **new_id,
                                         scratch_pool));
   if (noderev->kind == svn_node_dir)
     {
-      /*dag_node_t *old_dag_node;*/
       dag_node_t *parent_dag_node;
       apr_hash_t *entries;
       apr_hash_index_t *hi;
@@ -133,37 +149,46 @@ svn_fs_base__node_rev_dup(const svn_fs_id_t **new_id,
                                         *new_id, trail, trail->pool));
 
       /* Get the children */
-      /*SVN_ERR(svn_fs_base__dag_get_node(&old_dag_node, trail->fs, old_id, trail,
-                                        trail->pool));*/
       SVN_ERR(svn_fs_base__dag_dir_entries(&entries, parent_dag_node, trail,
                                            scratch_pool));
       /* Caution: 'kind' of each child in 'entries' is 'svn_node_unknown'. */
 
       /* Dup the children (recursing) */
       if (entries)
-        for (hi = apr_hash_first(scratch_pool, entries); hi;
-             hi = apr_hash_next(hi))
-          {
-            const char *child_name = svn_apr_hash_index_key(hi);
-            svn_fs_dirent_t *child_entry = svn_apr_hash_index_val(hi);
-            const svn_fs_id_t *new_child_id;
+        {
+          apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-            /* Make a deep copy of the child node-rev. */
-            SVN_ERR(svn_fs_base__node_rev_dup(&new_child_id, child_entry->id,
-                                              new_txn_id, old_txn_id, trail,
-                                              scratch_pool, scratch_pool));
+          for (hi = apr_hash_first(scratch_pool, entries); hi;
+               hi = apr_hash_next(hi))
+            {
+              const char *child_name = svn_apr_hash_index_key(hi);
+              svn_fs_dirent_t *child_entry = svn_apr_hash_index_val(hi);
+              const svn_fs_id_t *new_child_id;
 
-            /* Make the (new) parent node's rep refer to this new child. */
-            SVN_ERR(svn_fs_base__dag_set_entry(parent_dag_node, child_name,
-                                               new_child_id, new_txn_id,
-                                               trail, scratch_pool));
-            /* ### Use instead: svn_fs_base__dag_clone_child() ? */
-          }
+              svn_pool_clear(iterpool);
+
+              /* Pool usage: We are modifying stuff in 'parent_dag_node',
+               * writing it to the DB immediately. None of these allocations
+               * need to persist outside this loop. */
+
+              /* Make a deep copy of the child node-rev. */
+              SVN_ERR(svn_fs_base__node_rev_dup(&new_child_id, child_entry->id,
+                                                new_txn_id, old_txn_id, trail,
+                                                iterpool));
+
+              /* Make the (new) parent node's rep refer to this new child. */
+              SVN_ERR(svn_fs_base__dag_set_entry(parent_dag_node, child_name,
+                                                 new_child_id, new_txn_id,
+                                                 trail, iterpool));
+              /* ### Use instead: svn_fs_base__dag_clone_child() ? */
+            }
+          svn_pool_destroy(iterpool);
+        }
     }
   else if (noderev->kind == svn_node_file)
     {
       SVN_ERR(svn_fs_base__rep_dup(&noderev->data_key, new_txn_id,
-                                   noderev->data_key, trail, result_pool));
+                                   noderev->data_key, trail, scratch_pool));
 
       SVN_ERR(svn_fs_bdb__put_node_revision(trail->fs, *new_id, noderev, trail,
                                             scratch_pool));
