@@ -2806,13 +2806,6 @@ svn_fs_base__commit_obliteration_txn(svn_revnum_t replacing_rev,
   SVN_ERR(svn_fs_base__retry_txn(txn->fs, txn_body_commit_obliteration,
                                  &commit_args, FALSE, pool));
 
-  /* ### TODO: Update "copies" table entries referenced by txn->copies. */
-
-  /* ### TODO: Dup the "changes" that are keyed by the txn_id.
-   * Do this at commit time? Or at a higher level? */
-
-  /* ### TODO: Update the "node-origins" table. */
-
   /* return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL); */
   return SVN_NO_ERROR;
 }

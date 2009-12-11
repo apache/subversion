@@ -734,12 +734,12 @@ txn_body_begin_obliteration_txn(void *baton, trail_t *trail)
    *   * dup all referenced NODES<*.*.t50> (not old nodes that are referenced)
    *   * dup all referenced REPRESENTATIONS<*> to REPRESENTATIONS<*'>
    *   * create new STRINGS<*> where necessary (###?)
-   *
-   * At commit time:
    *   * dup all CHANGES<t50> to CHANGES<t50'>
    *   * update COPIES<cpy_id> (We need to keep the copy IDs the same, but will
    *       need to modify the copy src_txn fields.)
    *   * update NODE-ORIGINS<node_id>
+   *
+   * At commit time:
    *   * update CHECKSUM-REPS<csum>
    */
 
@@ -778,9 +778,16 @@ txn_body_begin_obliteration_txn(void *baton, trail_t *trail)
   /* Dup txn->proplist */
   new_txn->proplist = old_txn->proplist;
 
-  /* Leave txn->copies as NULL until commit time. We do not dup the "copies"
-   * table rows because we do not want new copy-ids because copy-ids pervade
-   * the whole history of the repository inside node-rev-ids. */
+  /* ### TODO: Update "copies" table entries referenced by txn->copies.
+   * This is hard, because I don't want to change the copy_ids, because they
+   * pervade node-ids throughout history. But what actually uses them, and
+   * does anything use them during txn construction? */
+
+  /* ### TODO: Dup the "changes" that are keyed by the txn_id. */
+
+  /* ### TODO: Update the "node-origins" table.
+   * Or can this be deferred till commit time? Probably not. */
+
 
   /* Save the modified transaction */
   SVN_ERR(svn_fs_bdb__put_txn(trail->fs, new_txn, new_txn_id, trail,
