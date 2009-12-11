@@ -27,8 +27,6 @@
 # General modules
 import shutil, sys, re, os, subprocess
 
-import csvn.wc
-
 # Our testing module
 import svntest
 from svntest import actions, main, tree, verify, wc
@@ -197,9 +195,6 @@ class SvnWC:
     # This WC's idea of the repository's head revision.
     # ### Shouldn't be in this class: should ask the repository instead.
     self.head_rev = 0
-
-    # ### experimenting with csvn (Python Ctypes bindings)
-    #self.wc = csvn.wc.WC(self.wc_absdir)
 
     print "## new SvnWC:"
     print self

@@ -92,7 +92,7 @@ def obliterate_1(sbox):
   "test svn obliterate"
 
   # Create empty repos and WC
-  main.create_repos(sbox.repo_dir)
+  actions.guarantee_empty_repository(sbox.repo_dir)
   expected_out = svntest.wc.State(sbox.wc_dir, {})
   expected_disk = svntest.wc.State(sbox.wc_dir, {})
   actions.run_and_verify_checkout(sbox.repo_url, sbox.wc_dir, expected_out,
@@ -107,14 +107,20 @@ def obliterate_1(sbox):
   # Create scenarios ready for obliteration
   apple_rev = create_dd1_scenarios(wc)
 
-  # Dump the repository state
-  repo.dump('before.dump')
+  # Dump the repository state, if possible, for debugging
+  try:
+    repo.dump('before.dump')
+  except:
+    pass
 
   # Obliterate d/foo@{content=Apple}
   repo.obliterate_node_rev('/d/foo', apple_rev)
 
-  # Dump the repository state
-  repo.dump('after.dump')
+  # Dump the repository state, if possible, for debugging
+  try:
+    repo.dump('after.dump')
+  except:
+    pass
 
 
 ########################################################################
