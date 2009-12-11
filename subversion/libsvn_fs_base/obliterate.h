@@ -35,22 +35,26 @@ extern "C" {
 
 /* Create a new representation that is a duplicate of the one keyed by KEY,
  * but make the duplicate refer to NEW_TXN_ID.
- * Set *NEW_KEY to the key of the new representation.
- * Work within TRAIL within FS. */
+ * Set *NEW_KEY to the key of the new representation, allocated in
+ * TRAIL->pool.
+ * Work within TRAIL.
+ */
 svn_error_t *
 svn_fs_base__rep_dup(const char **new_key,
                      const char *new_txn_id,
                      const char *key,
                      trail_t *trail,
-                     apr_pool_t *pool);
+                     apr_pool_t *scratch_pool);
 
 /* If the node_rev identified by OLD_ID was not created in transaction
- * OLD_TXN_ID, then set *NEW_ID to OLD_ID and return. Otherwise:
+ * OLD_TXN_ID, then set *NEW_ID to a copy of OLD_ID, allocated in
+ * TRAIL->pool, and return. Otherwise:
+ *
  * Make a deep copy of node OLD_ID, with any references to OLD_TXN_ID
  * replaced by NEW_TXN_ID (### and more differences?) The new node-rev-id is
  * OLD_ID except with the txn-id field changed to NEW_TXN_ID.
- * Set *NEW_ID to the new node-rev-id, allocated in RESULT_POOL.
- * Work within TRAIL within FS.
+ * Set *NEW_ID to the new node-rev-id, allocated in TRAIL->pool.
+ * Work within TRAIL.
  */
 svn_error_t *
 svn_fs_base__node_rev_dup(const svn_fs_id_t **new_id,
@@ -58,7 +62,6 @@ svn_fs_base__node_rev_dup(const svn_fs_id_t **new_id,
                           const char *new_txn_id,
                           const char *old_txn_id,
                           trail_t *trail,
-                          apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
 
