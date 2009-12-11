@@ -79,6 +79,8 @@ class Generator(gen_win.WinGeneratorBase):
     target.output_pdb = self.get_output_pdb(target)
     target.output_dir = self.get_output_dir(target)
     target.intermediate_dir = self.get_intermediate_dir(target)
+    without_ext = os.path.basename(target.output_name)
+    target.output_name_without_ext = without_ext[:without_ext.rfind('.')]
 
     configs = self.get_configs(target)
 

@@ -42,8 +42,9 @@
   </ImportGroup>
 [end][end]  <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-[for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">..\..\..\[configs.name]\[target.output_dir]\</OutDir>
+[for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">$([[]System.IO.Path]::GetFullPath('$(ProjectDir)..\..\..\[configs.name]\[target.output_dir]'))\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">..\..\..\[configs.name]\[target.intermediate_dir]\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[target.output_name_without_ext]</TargetName>
 [end][end]  </PropertyGroup>
 [for configs][for platforms]  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">
     <ClCompile>
@@ -55,32 +56,33 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <StringPooling>true</StringPooling>
-[end]      <AdditionalIncludeDirectories>[for includes][includes][if-index includes last][else];[end][end]</AdditionalIncludeDirectories>
+[end]      <AdditionalIncludeDirectories>[for includes][includes];[end]%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][for configs.defines][configs.defines];[end]_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ProgramDataBaseFileName>$(IntDir)[target.output_pdb]</ProgramDataBaseFileName>
       <DisableSpecificWarnings>4100;4127;4204;4206;4701;4706;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <TreatSpecificWarningsAsErrors>4002;4003;4013;4020;4022;4024;4028;4029;4030;4031;4047;4089;4115</TreatSpecificWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors>4002;4003;4013;4020;4022;4024;4028;4029;4030;4031;4047;4089;4115;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
     </ClCompile>
 [is config_type "Application"]    <Link>
       <OutputFile>$(OutDir)[target.output_name]</OutputFile>
-      <AdditionalDependencies>[for configs.libs][configs.libs];[end];%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
 [else][is config_type "DynamicLibrary"]    <Link>
       <OutputFile>$(OutDir)[target.output_name]</OutputFile>
-      <AdditionalDependencies>[for configs.libs][configs.libs];[end];%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
 [if-any def_file]      <ModuleDefinitionFile>[def_file]</ModuleDefinitionFile>
 [end]    </Link>
-[else][is config_type "StaticLibrary"]    <Lib>[is platforms "X64"]
-      <AdditionalOptions>/MACHINE:X64 %(AdditionalOptions)</AdditionalOptions>[end]
+[else][is config_type "StaticLibrary"]    <Lib>
+      <OutputFile>$(OutDir)[target.output_name]</OutputFile>
+      <TargetMachine>[is platforms "X64"]MachineX64[else]MachineX86[end]</TargetMachine>
     </Lib>
 [end][end][end]  </ItemDefinitionGroup>
 [end][end][if-any target.desc]  <ItemGroup>
     <ResourceCompile Include="..\svn.rc">
-[for configs][for platforms]      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[for includes][includes][if-index includes last][else];[end][end];%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+[for configs][for platforms]      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[for includes][includes];[end];%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is configs.name "Debug"]_DEBUG[else]NDEBUG[end];%(PreprocessorDefinitions)</PreprocessorDefinitions>
 [end][end]    </ResourceCompile>
   </ItemGroup>
