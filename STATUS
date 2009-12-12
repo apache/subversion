@@ -161,14 +161,18 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r888979, r889081
-   Make 'svnadmin load --parent-dir PATH' smart enough to know to prepend a
-   leading slash onto PATH when using it as a prefix for fixed-up mergeinfo.
+ * r889840
+   When producing svn_mergeinfo_t from string representations, or vice-versa,
+   tolerate relative merge source paths, but convert such paths to absolute
+   paths in the resulting string/mergeinfo.
    Justification:
-     This bug is the reason why all the mergeinfo in our project
-     history at the moment is syntactically invalid.
+     This prevents any syntactically invalid mergeinfo created by issue #3547
+     from breaking just about everything that uses mergeinfo, see http://
+     mail-archives.apache.org/mod_mbox/subversion-dev/200912.mbox/browser.
+   Branch:
+     ^/subversion/branches/1.6.x-r889840
    Votes:
-     +1: cmpilato, stylesen
+     +1: pburba 
 
 Veto-blocked changes:
 
@@ -205,3 +209,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r888979, r889081
+   Make 'svnadmin load --parent-dir PATH' smart enough to know to prepend a
+   leading slash onto PATH when using it as a prefix for fixed-up mergeinfo.
+   Justification:
+     This bug is the reason why all the mergeinfo in our project
+     history at the moment is syntactically invalid.
+   Votes:
+     +1: cmpilato, stylesen, pburba
