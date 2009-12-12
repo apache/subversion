@@ -70,6 +70,8 @@ Candidate changes:
      +1: rhuijben
      +0: pburba - I don't have a Vista or Win7 box to try this out on, but it
          works fine on my XP box.
+     +0: lgo - code reviewed and looks good, but I don't have access to a
+         Windows machine.
 
  * r879093
    Fix bug where svn_[rangelist|mergeinfo]_[merge|intersect|remove|diff]
@@ -116,19 +118,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r875632 (from ^/subversion/branches/http-protocol-v2@r875632), r880370
-   Fix issue #3519: ra_serf using Label header unsupported by mod_dav_svn.
-   Justification:
-     This is the cause of the switch-tests.py 19 failures we've been ignoring
-     for our 1.6.x releases.
-   Notes:
-     r875632 (from the http-protocol-v2 branch) is a plumbing change.
-     r880370 (from trunk) is the real fix.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3519
-   Votes:
-     +1: cmpilato, rhuijben
-
  * r880525, r880526
    Fix 'svn resolve --accept=theirs-conflict' for targets which live inside
    a subdirectory of the current working directory.
@@ -159,7 +148,7 @@ Candidate changes:
    Notes:
      http://mail-archives.apache.org/mod_mbox/subversion-dev/200911.mbox/browser
    Votes:
-     +1: stsp
+     +1: stsp, lgo
 
  * r889840
    When producing svn_mergeinfo_t from string representations, or vice-versa,
@@ -209,3 +198,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r875632 (from ^/subversion/branches/http-protocol-v2@r875632), r880370
+   Fix issue #3519: ra_serf using Label header unsupported by mod_dav_svn.
+   Justification:
+     This is the cause of the switch-tests.py 19 failures we've been ignoring
+     for our 1.6.x releases.
+   Notes:
+     r875632 (from the http-protocol-v2 branch) is a plumbing change.
+     r880370 (from trunk) is the real fix.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3519
+   Votes:
+     +1: cmpilato, rhuijben, lgo
