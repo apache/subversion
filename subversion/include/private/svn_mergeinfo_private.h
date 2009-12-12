@@ -87,7 +87,10 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
    appropriate newline terminated string.  If KEY_PREFIX is not NULL then
    prepend KEY_PREFIX to each key (path) in *OUTPUT.  if VAL_PREFIX is not
    NULL then prepend VAL_PREFIX to each merge source:rangelist line in
-   *OUTPUT. */
+   *OUTPUT.
+
+   Any relative merge source paths in the mergeinfo in CATALOG are converted
+   to absolute paths in *OUTPUT. */
 svn_error_t *
 svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
                                            svn_mergeinfo_catalog_t catalog,
@@ -99,7 +102,10 @@ svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
    Unlike svn_mergeinfo_to_string(), NULL MERGEINFO is tolerated and results
    in *OUTPUT set to "\n".  If SVN_DEBUG is true, then NULL or empty MERGEINFO
    causes *OUTPUT to be set to an appropriate newline terminated string.  If
-   PREFIX is not NULL then prepend PREFIX to each line in *OUTPUT. */
+   PREFIX is not NULL then prepend PREFIX to each line in *OUTPUT.
+
+   Any relative merge source paths in MERGEINFO are converted to absolute
+   paths in *OUTPUT.*/
 svn_error_t *
 svn_mergeinfo__to_formatted_string(svn_string_t **output,
                                    svn_mergeinfo_t mergeinfo,

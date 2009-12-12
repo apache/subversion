@@ -152,6 +152,9 @@ typedef apr_hash_t *svn_mergeinfo_catalog_t;
  * inheritability are also allowed, but will be combined into a single
  * range when placed into @a *mergeinfo.
  *
+ * @a input may contain relative merge source paths, but these are
+ * converted to absolute paths in @a *mergeinfo.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -362,6 +365,9 @@ svn_mergeinfo_inheritable(svn_mergeinfo_t *inheritable_mergeinfo,
 /** Take a mergeinfo in MERGEINPUT, and convert it back to unparsed
  *  mergeinfo in *OUTPUT.  If INPUT contains no elements, return the
  *  empty string.
+ *
+ * @a mergeinput may contain relative merge source paths, but these are
+ * converted to absolute paths in @a *output.
  *
  * @since New in 1.5.
 */
