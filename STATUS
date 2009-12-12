@@ -198,16 +198,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r875632 (from ^/subversion/branches/http-protocol-v2@r875632), r880370
-   Fix issue #3519: ra_serf using Label header unsupported by mod_dav_svn.
-   Justification:
-     This is the cause of the switch-tests.py 19 failures we've been ignoring
-     for our 1.6.x releases.
-   Notes:
-     r875632 (from the http-protocol-v2 branch) is a plumbing change.
-     r880370 (from trunk) is the real fix.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3519
-   Votes:
-     +1: cmpilato, rhuijben, lgo

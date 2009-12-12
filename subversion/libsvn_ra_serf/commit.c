@@ -469,13 +469,33 @@ get_version_url(const char **checked_in_url,
     {
       svn_ra_serf__propfind_context_t *propfind_ctx;
       apr_hash_t *props;
+      const char *propfind_url;
 
       props = apr_hash_make(pool);
 
       propfind_ctx = NULL;
-      svn_ra_serf__deliver_props(&propfind_ctx, props, session,
-                                 conn, session->repos_url.path,
-                                 base_revision, "0",
+      if (SVN_IS_VALID_REVNUM(base_revision))
+        {
+          const char *bc_url, *bc_relpath;
+          
+          /* mod_dav_svn can't handle the "Label:" header that
+             svn_ra_serf__deliver_props() is going to try to use for
+             this lookup, so we'll do things the hard(er) way, by
+             looking up the version URL from a resource in the
+             baseline collection. */
+          SVN_ERR(svn_ra_serf__get_baseline_info(&bc_url, &bc_relpath,
+                                                 session, conn,
+                                                 session->repos_url.path,
+                                                 base_revision, NULL, pool));
+          propfind_url = svn_path_url_add_component2(bc_url, bc_relpath, pool);
+        }
+      else
+        {
+          propfind_url = session->repos_url.path;
+        }
+
+      svn_ra_serf__deliver_props(&propfind_ctx, props, session, conn,
+                                 propfind_url, base_revision, "0",
                                  checked_in_props, FALSE, NULL, pool);
 
       SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, session, pool));
@@ -483,7 +503,7 @@ get_version_url(const char **checked_in_url,
       /* We wouldn't get here if the url wasn't found (404), so the checked-in
          property should have been set. */
       root_checkout =
-          svn_ra_serf__get_ver_prop(props, session->repos_url.path,
+          svn_ra_serf__get_ver_prop(props, propfind_url,
                                     base_revision, "DAV:", "checked-in");
 
       if (!root_checkout)
