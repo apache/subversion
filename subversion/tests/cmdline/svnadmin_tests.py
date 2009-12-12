@@ -693,14 +693,12 @@ def load_with_parent_dir(sbox):
                                    'mergeinfo_included.dump')
   dumpfile = svntest.main.file_read(dumpfile_location)
 
-  # Create 'sample' dir in sbox.repo_url
+  # Create 'sample' dir in sbox.repo_url, and load the dump stream there.
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 1.\n'],
                                      [], "mkdir", sbox.repo_url + "/sample",
                                      "-m", "Create sample dir")
-
-  # Load the dump stream
-  load_and_verify_dumpstream(sbox,[],[], None, dumpfile, '--parent-dir',
+  load_and_verify_dumpstream(sbox, [], [], None, dumpfile, '--parent-dir',
                              '/sample')
 
   # Verify the svn:mergeinfo properties for '--parent-dir'
@@ -715,6 +713,30 @@ def load_with_parent_dir(sbox):
                                       "/sample/branch:6-9\n"],
                                      [], 'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url + '/sample/branch1')
+
+  # Create 'sample-2' dir in sbox.repo_url, and load the dump stream again.
+  # This time, don't include a leading slash on the --parent-dir argument.
+  # See issue #3547.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 11.\n'],
+                                     [], "mkdir", sbox.repo_url + "/sample-2",
+                                     "-m", "Create sample-2 dir")
+  load_and_verify_dumpstream(sbox, [], [], None, dumpfile, '--parent-dir',
+                             'sample-2')
+
+  # Verify the svn:mergeinfo properties for '--parent-dir'.
+  svntest.actions.run_and_verify_svn(None,
+                                     [sbox.repo_url +
+                                      "/sample-2/branch - " +
+                                      "/sample-2/trunk:15-17\n"],
+                                     [], 'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url + '/sample-2/branch')
+  svntest.actions.run_and_verify_svn(None,
+                                     [sbox.repo_url +
+                                      "/sample-2/branch1 - " +
+                                      "/sample-2/branch:16-19\n"],
+                                     [], 'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url + '/sample-2/branch1')
 
 #----------------------------------------------------------------------
 
