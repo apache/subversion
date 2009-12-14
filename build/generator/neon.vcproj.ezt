@@ -32,6 +32,7 @@
 [for platforms]		<Configuration
 			Name="Debug|[platforms]"
 			OutputDirectory="Debug"
+			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
 			IntermediateDirectory="Debug"
 			ConfigurationType="0"
 			ManagedExtensions="1"
@@ -47,6 +48,7 @@
 		<Configuration
 			Name="Release|[platforms]"
 			OutputDirectory="Release"
+			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
 			IntermediateDirectory="Release"
 			ConfigurationType="0"
 			ManagedExtensions="1"
