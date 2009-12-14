@@ -26,6 +26,8 @@
 #include "svn_error_codes.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
+#include "svn_dirent_uri.h"
+
 #include "repos.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_fs_private.h"
@@ -43,6 +45,8 @@ svn_repos__obliterate_path_rev(svn_repos_t *repos,
   svn_fs_root_t *rev_root;
   svn_fs_txn_t *txn;
   const svn_fs_id_t *node_id;
+
+  SVN_ERR_ASSERT(path[0] == '/' && svn_relpath_is_canonical(path + 1, pool));
 
   /* Sanity check: ensure the path exists in fs at the revision.
    * ### TODO: May want to allow non-existent node as a no-op.
