@@ -32,6 +32,7 @@
 [for platforms][for configs]		<Configuration
 			Name="[configs]|[platforms]"
 			OutputDirectory="."
+			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
 			IntermediateDirectory="."
 			ConfigurationType="10"
 			UseOfMFC="0"
