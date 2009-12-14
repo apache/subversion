@@ -129,7 +129,7 @@ Candidate changes:
      additional fixes exclusive to 1.6.x. See the log message of r880532
      (which shows what the bug is), and see r880533 (which fixes the bug).
    Votes:
-     +1: stsp
+     +1: stsp, pburba
 
  * r880552
    Try to enable TCP keep-alives in svnserve.
@@ -140,15 +140,6 @@ Candidate changes:
      connection, a problem seen and reported by MPlayer developers in #svn.
    Votes:
      +1: stsp
-
- * r884842
-   Fix a bug in svnsync causing stale sync-locks on mirror repositories.
-   Justification:
-     Stale sync locks on mirrors are bad.
-   Notes:
-     http://mail-archives.apache.org/mod_mbox/subversion-dev/200911.mbox/browser
-   Votes:
-     +1: stsp, lgo
 
  * r889840
    When producing svn_mergeinfo_t from string representations, or vice-versa,
@@ -198,3 +189,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r884842
+   Fix a bug in svnsync causing stale sync-locks on mirror repositories.
+   Justification:
+     Stale sync locks on mirrors are bad.
+   Notes:
+     http://mail-archives.apache.org/mod_mbox/subversion-dev/200911.mbox/browser
+   Votes:
+     +1: stsp, lgo, pburba
+
