@@ -89,7 +89,8 @@ svn_fs_bdb__put_txn(svn_fs_t *fs,
   DBT key, value;
 
   /* Convert native type to skel. */
-  SVN_ERR(svn_fs_base__unparse_transaction_skel(&txn_skel, txn, pool));
+  SVN_ERR(svn_fs_base__unparse_transaction_skel(&txn_skel, txn,
+                                                bfd->format, pool));
 
   /* Only in the context of this function do we know that the DB call
      will not attempt to modify txn_name, so the cast belongs here.  */
@@ -172,6 +173,9 @@ svn_fs_bdb__create_txn(const char **txn_name_p,
   txn.proplist = NULL;
   txn.copies = NULL;
   txn.revision = SVN_INVALID_REVNUM;
+  txn.changes_id = NULL;
+  txn.changes_prefolded = FALSE;
+  txn.num_changes = -1;
   SVN_ERR(svn_fs_bdb__put_txn(fs, &txn, txn_name, trail, pool));
 
   *txn_name_p = txn_name;
@@ -235,7 +239,8 @@ svn_fs_bdb__get_txn(transaction_t **txn_p,
     return svn_fs_base__err_corrupt_txn(fs, txn_name);
 
   /* Convert skel to native type. */
-  SVN_ERR(svn_fs_base__parse_transaction_skel(&transaction, skel, pool));
+  SVN_ERR(svn_fs_base__parse_transaction_skel(&transaction, skel,
+                                              bfd->format, pool));
   *txn_p = transaction;
   return SVN_NO_ERROR;
 }
@@ -304,7 +309,7 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
 
       /* Convert skel to native type. */
       if ((err = svn_fs_base__parse_transaction_skel(&txn, txn_skel,
-                                                     subpool)))
+                                                     bfd->format, subpool)))
         {
           svn_bdb_dbc_close(cursor);
           return svn_error_return(err);

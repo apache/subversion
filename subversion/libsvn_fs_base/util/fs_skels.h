@@ -50,15 +50,15 @@ svn_fs_base__parse_revision_skel(revision_t **revision_p,
                                  apr_pool_t *pool);
 
 /* Parse a `TRANSACTION' SKEL into *TRANSACTION_P.  Use POOL for all
-   allocations.  */
+   allocations.  FORMAT is the format version of the filesystem. */
 svn_error_t *
 svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
                                     svn_skel_t *skel,
+                                    int format,
                                     apr_pool_t *pool);
 
 /* Parse a `REPRESENTATION' SKEL into *REP_P.  Use POOL for all
    allocations.  */
-
 svn_error_t *
 svn_fs_base__parse_representation_skel(representation_t **rep_p,
                                        svn_skel_t *skel,
@@ -111,10 +111,11 @@ svn_fs_base__unparse_revision_skel(svn_skel_t **skel_p,
                                    apr_pool_t *pool);
 
 /* Unparse TRANSACTION into a `TRANSACTION' skel *SKEL_P.  Use POOL
-   for all allocations.  */
+   for all allocations.  FORMAT is the format version of the filesystem. */
 svn_error_t *
 svn_fs_base__unparse_transaction_skel(svn_skel_t **skel_p,
                                       const transaction_t *transaction,
+                                      int format,
                                       apr_pool_t *pool);
 
 /* Unparse REP into a `REPRESENTATION' skel *SKEL_P.  Use POOL for all

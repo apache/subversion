@@ -169,6 +169,19 @@ typedef struct
      no copies in this transaction.  */
   apr_array_header_t *copies;
 
+  /* key into the `changed' table by which changed paths for this
+     transaction may be found, or NULL if changes are keyed on the
+     transaction's ID.  */
+  const char *changes_id;
+
+  /* TRUE iff the changes records for this transaction are known to be
+     prefolded. */
+  svn_boolean_t changes_prefolded;
+
+  /* Number of changed paths associated with this transaction, or -1
+     to mean "unknown". */
+  int num_changes;
+
 } transaction_t;
 
 

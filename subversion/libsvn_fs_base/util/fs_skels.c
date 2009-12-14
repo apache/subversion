@@ -83,11 +83,20 @@ is_valid_revision_skel(svn_skel_t *skel)
 
 
 static svn_boolean_t
-is_valid_transaction_skel(svn_skel_t *skel, transaction_kind_t *kind)
+is_valid_transaction_skel(svn_skel_t *skel,
+                          int format,
+                          transaction_kind_t *kind)
 {
   int len = svn_skel__list_length(skel);
-
-  if (len != 5)
+  
+  /* As of SVN_FS_BASE__MIN_CHANGES_INFO_FORMAT version, the
+     transaction record can have a CHANGES_INFO list at the end. */
+  if (format >= SVN_FS_BASE__MIN_CHANGES_INFO_FORMAT)
+    {
+      if (len != 5 && len != 6)
+        return FALSE;
+    }
+  else if (len != 5)
     return FALSE;
 
   /* Determine (and verify) the kind. */
@@ -100,13 +109,26 @@ is_valid_transaction_skel(svn_skel_t *skel, transaction_kind_t *kind)
   else
     return FALSE;
 
-  if (skel->children->next->is_atom
-      && skel->children->next->next->is_atom
-      && (! skel->children->next->next->next->is_atom)
-      && (! skel->children->next->next->next->next->is_atom))
-    return TRUE;
+  /* The next 4 items are fixed across formats. */
+  if (! (skel->children->next->is_atom
+         && skel->children->next->next->is_atom
+         && (! skel->children->next->next->next->is_atom)
+         && (! skel->children->next->next->next->next->is_atom)))
+    return FALSE;
 
-  return FALSE;
+  /* Now the optional CHANGES_INFO list. */
+  if (len > 5)
+    {
+      svn_skel_t *changes_info = skel->children->next->next->next->next->next;
+      int len_changes_info;
+      if (! changes_info->is_atom)
+        return FALSE;
+      len_changes_info = svn_skel__list_length(changes_info);
+      if (len_changes_info != 2 && len_changes_info != 3)
+        return FALSE;
+    }
+
+  return TRUE;
 }
 
 
@@ -406,16 +428,19 @@ svn_fs_base__parse_revision_skel(revision_t **revision_p,
 svn_error_t *
 svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
                                     svn_skel_t *skel,
+                                    int format,
                                     apr_pool_t *pool)
 {
   transaction_t *transaction;
   transaction_kind_t kind;
   svn_skel_t *root_id, *base_id_or_rev, *proplist, *copies;
-  int len;
+  int skel_len, len;
 
   /* Validate the skel. */
-  if (! is_valid_transaction_skel(skel, &kind))
+  if (! is_valid_transaction_skel(skel, format, &kind))
     return skel_err("transaction");
+
+  skel_len = svn_skel__list_length(skel);
 
   root_id = skel->children->next;
   base_id_or_rev = skel->children->next->next;
@@ -424,6 +449,7 @@ svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
 
   /* Create the returned structure */
   transaction = apr_pcalloc(pool, sizeof(*transaction));
+  transaction->num_changes = -1;
 
   /* KIND */
   transaction->kind = kind;
@@ -470,6 +496,37 @@ svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
           cpy = cpy->next;
         }
       transaction->copies = txncopies;
+    }
+
+  /* [CHANGES_INFO] */
+  if (skel_len > 5)
+    {
+      svn_skel_t *changes_info = skel->children->next->next->next->next->next; 
+      const char *state;
+
+      /* CHANGES_STATE */
+      state = apr_pstrmemdup(pool,
+                             changes_info->children->data,
+                             changes_info->children->len);
+      if (strcmp(state, "folded") == 0)
+        transaction->changes_prefolded = TRUE;
+      else if (strcmp(state, "unfolded") == 0)
+        transaction->changes_prefolded = FALSE;
+      else
+        return skel_err("transaction");
+
+      /* CHNG */
+      transaction->changes_id = 
+        apr_pstrmemdup(pool,
+                       changes_info->children->next->data,
+                       changes_info->children->next->len);
+        
+      /* [NUM_CHANGES] */
+      if (svn_skel__list_length(changes_info) > 2)
+        transaction->num_changes =
+          atoi(apr_pstrmemdup(pool,
+                              changes_info->children->next->next->data,
+                              changes_info->children->next->next->len));
     }
 
   /* Return the structure. */
@@ -922,10 +979,12 @@ svn_fs_base__unparse_revision_skel(svn_skel_t **skel_p,
 svn_error_t *
 svn_fs_base__unparse_transaction_skel(svn_skel_t **skel_p,
                                       const transaction_t *transaction,
+                                      int format,
                                       apr_pool_t *pool)
 {
   svn_skel_t *skel;
   svn_skel_t *proplist_skel, *copies_skel, *header_skel;
+  svn_skel_t *changes_info_skel = NULL;
   svn_string_t *id_str;
   transaction_kind_t kind;
 
@@ -956,6 +1015,42 @@ svn_fs_base__unparse_transaction_skel(svn_skel_t **skel_p,
       return skel_err("transaction");
     }
 
+  /* [CHANGES_INFO]
+
+     NOTE: we only bother to write any of this information if we have
+     a non-NULL TRANSACTION->changes_id value.  We're exploiting our
+     knowledge that without that, the system can't guarantee prefolded
+     changes or a valid num-changes count.  */
+  if ((format >= SVN_FS_BASE__MIN_CHANGES_INFO_FORMAT)
+      && (transaction->changes_id))
+    {
+      changes_info_skel = svn_skel__make_empty_list(pool);
+      
+      /* [NUM_CHANGES] */
+      if (transaction->num_changes > 0)
+        {
+          const char *num_str = 
+            apr_psprintf(pool, "%d", transaction->num_changes);
+          svn_skel__prepend(svn_skel__str_atom(num_str, pool),
+                            changes_info_skel);
+        }
+      
+      /* CHNG */
+      if (transaction->changes_id)
+        svn_skel__prepend(svn_skel__str_atom(transaction->changes_id, pool),
+                          changes_info_skel);
+      else
+        svn_skel__prepend(svn_skel__mem_atom(NULL, 0, pool),
+                          changes_info_skel);
+
+      /* CHANGES_STATE */
+      svn_skel__prepend(svn_skel__str_atom(transaction->changes_prefolded
+                                             ? "folded" : "unfolded",
+                                           pool),
+                        changes_info_skel);
+
+      svn_skel__prepend(changes_info_skel, skel);
+    }
 
   /* COPIES */
   copies_skel = svn_skel__make_empty_list(pool);
@@ -1002,7 +1097,7 @@ svn_fs_base__unparse_transaction_skel(svn_skel_t **skel_p,
   svn_skel__prepend(header_skel, skel);
 
   /* Validate and return the skel. */
-  if (! is_valid_transaction_skel(skel, &kind))
+  if (! is_valid_transaction_skel(skel, format, &kind))
     return skel_err("transaction");
   if (kind != transaction->kind)
     return skel_err("transaction");
