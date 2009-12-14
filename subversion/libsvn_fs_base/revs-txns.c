@@ -434,6 +434,52 @@ svn_fs_base__add_txn_copy(svn_fs_t *fs,
 }
 
 
+/* Duplicate all entries in the "changes" table that are keyed by OLD_TXN_ID,
+ * creating new entries that are keyed by NEW_TXN_ID.
+ *
+ * Each new "change" has the same content as the old one, except with the
+ * txn-id component of its noderev-id (which is assumed to have been
+ * OLD_TXN_ID) changed to NEW_TXN_ID.
+ *
+ * Work within TRAIL. */
+static svn_error_t *
+changes_dup(const char *new_txn_id,
+            const char *old_txn_id,
+            trail_t *trail,
+            apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *changes;
+  int i;
+
+  SVN_ERR(svn_fs_bdb__changes_fetch_raw(&changes, trail->fs, old_txn_id, trail,
+                                        scratch_pool));
+  for (i = 0; i < changes->nelts; i++)
+    {
+      change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
+
+      if (change->kind != svn_fs_path_change_delete
+          && change->kind != svn_fs_path_change_reset)
+        {
+          const char *node_id, *copy_id;
+
+          /* Modify the "change": change noderev_id's txn_id to NEW_TXN_ID */
+          node_id = svn_fs_base__id_node_id(change->noderev_id);
+          copy_id = svn_fs_base__id_copy_id(change->noderev_id);
+          SVN_ERR_ASSERT(svn_fs_base__key_compare(
+            svn_fs_base__id_txn_id(change->noderev_id), old_txn_id) == 0);
+          change->noderev_id = svn_fs_base__id_create(node_id, copy_id,
+                                                      new_txn_id,
+                                                      scratch_pool);
+        }
+
+      /* Save the new "change" */
+      SVN_ERR(svn_fs_bdb__changes_add(trail->fs, new_txn_id, change, trail,
+                                      scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+
 
 /* Generic transaction operations.  */
 
@@ -783,7 +829,8 @@ txn_body_begin_obliteration_txn(void *baton, trail_t *trail)
    * pervade node-ids throughout history. But what actually uses them, and
    * does anything use them during txn construction? */
 
-  /* ### TODO: Dup the "changes" that are keyed by the txn_id. */
+  /* Dup the "changes" that are keyed by the txn_id. */
+  SVN_ERR(changes_dup(new_txn_id, old_txn_id, trail, trail->pool));
 
   /* ### TODO: Update the "node-origins" table.
    * Or can this be deferred till commit time? Probably not. */
