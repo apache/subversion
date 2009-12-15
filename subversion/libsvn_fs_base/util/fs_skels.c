@@ -121,7 +121,7 @@ is_valid_transaction_skel(svn_skel_t *skel,
     {
       svn_skel_t *changes_info = skel->children->next->next->next->next->next;
       int len_changes_info;
-      if (! changes_info->is_atom)
+      if (changes_info->is_atom)
         return FALSE;
       len_changes_info = svn_skel__list_length(changes_info);
       if (len_changes_info != 2 && len_changes_info != 3)
