@@ -2,10 +2,10 @@
  * revisions.c:  discovering revisions
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -86,6 +86,11 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
           return svn_error_create(SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
                                   NULL, NULL);
 
+        /* The BASE, COMMITTED, and PREV revision keywords do not
+           apply to URLs. */
+        if (svn_path_is_url(local_abspath))
+          goto invalid_rev_arg;
+
         SVN_ERR(svn_wc__get_entry_versioned(&ent, wc_ctx, local_abspath,
                                             svn_node_unknown, FALSE, FALSE,
                                             scratch_pool, scratch_pool));
@@ -103,6 +108,11 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
         if (local_abspath == NULL)
           return svn_error_create(SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
                                   NULL, NULL);
+
+        /* The BASE, COMMITTED, and PREV revision keywords do not
+           apply to URLs. */
+        if (svn_path_is_url(local_abspath))
+          goto invalid_rev_arg;
 
         SVN_ERR(svn_wc__get_entry_versioned(&ent, wc_ctx, local_abspath,
                                             svn_node_unknown, FALSE, FALSE,
@@ -155,4 +165,10 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
     *revnum = *youngest_rev;
 
   return SVN_NO_ERROR;
+
+  invalid_rev_arg:
+    return svn_error_create(
+      SVN_ERR_CLIENT_BAD_REVISION, NULL,
+      _("PREV, BASE, or COMMITTED revision keywords are invalid for URL"));
+
 }

@@ -6,10 +6,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -204,6 +204,39 @@ def ignore_externals(sbox):
                                             wc_dir, repo_url,
                                             [ "2\n" ], [])
 
+#----------------------------------------------------------------------
+
+# Test for issue #3461 'excluded subtrees are not detected by svnversion'
+def svnversion_with_excluded_subtrees(sbox):
+  "test 'svnversion' with excluded subtrees"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  B_path   = os.path.join(wc_dir, "A", "B")
+  D_path   = os.path.join(wc_dir, "A", "D")
+  psi_path = os.path.join(wc_dir, "A", "D", "H", "psi")
+
+  svntest.actions.run_and_verify_svnversion("working copy with excluded dir",
+                                            wc_dir, repo_url,
+                                            [ "1\n" ], [])
+
+  # Exclude a directory and check that svnversion detects it.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--set-depth', 'exclude', B_path)
+  svntest.actions.run_and_verify_svnversion("working copy with excluded dir",
+                                            wc_dir, repo_url,
+                                            [ "1P\n" ], [])
+
+  # Exclude a file and check that svnversion detects it.  Target the
+  # svnversion command on a subtree that does not contain the excluded
+  # directory to assure we a detecting the switched file.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--set-depth', 'exclude', psi_path)
+  svntest.actions.run_and_verify_svnversion("working copy with excluded file",
+                                            D_path, repo_url + '/A/D',
+                                            [ "1P\n" ], [])
+
 ########################################################################
 # Run the tests
 
@@ -212,6 +245,7 @@ def ignore_externals(sbox):
 test_list = [ None,
               svnversion_test,
               ignore_externals,
+              svnversion_with_excluded_subtrees,
              ]
 
 if __name__ == '__main__':

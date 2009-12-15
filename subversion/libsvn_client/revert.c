@@ -2,10 +2,10 @@
  * revert.c:  wrapper around wc revert functionality.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -68,18 +68,13 @@ revert(const char *path,
        svn_client_ctx_t *ctx,
        apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access, *target_access;
-  const char *target, *local_abspath;
+  const char *local_abspath, *anchor_abspath;
   svn_error_t *err;
-  int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
-
-  SVN_ERR(svn_wc__adm_open_anchor_in_context(
-                                 &adm_access, &target_access, &target,
-                                 ctx->wc_ctx, path, TRUE, adm_lock_level,
-                                 ctx->cancel_func, ctx->cancel_baton,
-                                 pool));
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__acquire_write_lock(&anchor_abspath, ctx->wc_ctx,
+                                     local_abspath, pool, pool));
 
   err = svn_wc_revert4(ctx->wc_ctx,
                        local_abspath,
@@ -108,7 +103,8 @@ revert(const char *path,
         return svn_error_return(err);
     }
 
-  return svn_wc_adm_close2(adm_access, pool);
+  return svn_error_return(
+    svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool));
 }
 
 

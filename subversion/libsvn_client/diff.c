@@ -2,10 +2,10 @@
  * diff.c: comparing
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -269,7 +269,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
       {
         svn_stream_t *os = svn_stream_from_aprfile2(file, TRUE, pool);
         svn_diff_t *diff;
-        svn_diff_file_options_t options;
+        svn_diff_file_options_t options = { 0 };
         const svn_string_t *tmp;
         const svn_string_t *orig;
         const svn_string_t *val;
@@ -1761,13 +1761,6 @@ svn_client_diff_peg5(const apr_array_header_t *options,
 
   struct diff_cmd_baton diff_cmd_baton;
   svn_wc_diff_callbacks4_t diff_callbacks;
-
-  if (svn_path_is_url(path) &&
-        (start_revision->kind == svn_opt_revision_base
-         || end_revision->kind == svn_opt_revision_base) )
-    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                            _("Revision type requires a working copy "
-                              "path, not a URL"));
 
   /* fill diff_param */
   diff_params.path1 = path;

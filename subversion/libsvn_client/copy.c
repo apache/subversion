@@ -2,10 +2,10 @@
  * copy.c:  copy/move wrappers around wc 'copy' functionality.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -280,7 +280,8 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
   /* ### If we didn't potentially use DST_ACCESS as the SRC_ACCESS, we
      ### could use a read lock here. */
   SVN_ERR(svn_wc__adm_open_in_context(&dst_access, ctx->wc_ctx, dst_parent,
-                           TRUE, 0, ctx->cancel_func, ctx->cancel_baton, pool));
+                           TRUE, -1, ctx->cancel_func, ctx->cancel_baton,
+                           pool));
 
   for (i = 0; i < copy_pairs->nelts; i++)
     {
@@ -329,8 +330,12 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      svn_wc_adm_access_t *src_access, *dst_access;
+      svn_wc_adm_access_t *src_access;
+      svn_wc_adm_access_t *dst_access;
+      svn_boolean_t close_dst_access = FALSE;
+      svn_boolean_t close_src_access = FALSE;
       const char *src_parent;
+      const char *src_parent_abspath;
       const char *dst_abspath;
       const char *dst_parent_abspath;
 
@@ -342,43 +347,61 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      svn_dirent_split(pair->src, &src_parent, NULL, iterpool);
-
-      SVN_ERR(svn_wc__adm_open_in_context(&src_access, ctx->wc_ctx, src_parent,
-                               TRUE, pair->src_kind == svn_node_dir ? -1 : 0,
-                               ctx->cancel_func, ctx->cancel_baton,
-                               iterpool));
-
+      src_parent = svn_dirent_dirname(pair->src, iterpool);
+      SVN_ERR(svn_dirent_get_absolute(&src_parent_abspath, src_parent,
+                                      iterpool));
       SVN_ERR(svn_dirent_get_absolute(&dst_parent_abspath, pair->dst_parent,
                                       iterpool));
 
-      /* Need to avoid attempting to open the same dir twice when source
-         and destination overlap. */
-      if (strcmp(src_parent, pair->dst_parent) == 0)
+      /* We now need to open the right combination of batons.
+         Four cases:
+           1) src_parent == dst_parent
+           2) src_parent is parent of dst_parent
+           3) dst_parent is parent of src_parent
+           4) src_parent and dst_parent are disjoint */
+      if (strcmp(src_parent_abspath, dst_parent_abspath) == 0)
         {
+          SVN_ERR(svn_wc__adm_open_in_context(&src_access, ctx->wc_ctx,
+                                              src_parent, TRUE, -1,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, iterpool));
           dst_access = src_access;
+          close_src_access = TRUE;
+        }
+      else if (svn_dirent_is_child(src_parent_abspath, dst_parent_abspath,
+                                   iterpool))
+        {
+          SVN_ERR(svn_wc__adm_open_in_context(&src_access, ctx->wc_ctx,
+                                              src_parent, TRUE, -1,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, iterpool));
+          SVN_ERR(svn_wc_adm_retrieve(&dst_access, src_access,
+                                      pair->dst_parent, iterpool));
+          close_src_access = TRUE;
+        }
+      else if (svn_dirent_is_child(dst_parent_abspath, src_parent_abspath,
+                                   iterpool))
+        {
+          SVN_ERR(svn_wc__adm_open_in_context(&dst_access, ctx->wc_ctx,
+                                              pair->dst_parent, TRUE, -1,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, iterpool));
+          SVN_ERR(svn_wc_adm_retrieve(&src_access, dst_access, src_parent,
+                                      iterpool));
+          close_dst_access = TRUE;
         }
       else
         {
-          const char *src_parent_abs;
-
-          SVN_ERR(svn_dirent_get_absolute(&src_parent_abs, src_parent,
-                                          iterpool));
-          if ((pair->src_kind == svn_node_dir)
-              && (svn_dirent_is_child(src_parent_abs, dst_parent_abspath,
-                                      iterpool)))
-            {
-              SVN_ERR(svn_wc_adm_retrieve(&dst_access, src_access,
-                                          pair->dst_parent, iterpool));
-            }
-          else
-            {
-              SVN_ERR(svn_wc__adm_open_in_context(&dst_access, ctx->wc_ctx,
-                                                  pair->dst_parent, TRUE, 0,
-                                                  ctx->cancel_func,
-                                                  ctx->cancel_baton,
-                                                  iterpool));
-            }
+          SVN_ERR(svn_wc__adm_open_in_context(&src_access, ctx->wc_ctx,
+                                              src_parent, TRUE, -1,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, iterpool));
+          SVN_ERR(svn_wc__adm_open_in_context(&dst_access, ctx->wc_ctx,
+                                              pair->dst_parent, TRUE, -1,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, iterpool));
+          close_dst_access = TRUE;
+          close_src_access = TRUE;
         }
 
       /* Perform the copy and then the delete. */
@@ -397,9 +420,10 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
                              ctx->notify_func2, ctx->notify_baton2,
                              iterpool));
 
-      if (dst_access != src_access)
+      if (close_dst_access)
         SVN_ERR(svn_wc_adm_close2(dst_access, iterpool));
-      SVN_ERR(svn_wc_adm_close2(src_access, iterpool));
+      if (close_src_access)
+        SVN_ERR(svn_wc_adm_close2(src_access, iterpool));
     }
   svn_pool_destroy(iterpool);
 
@@ -623,7 +647,7 @@ find_absent_parents1(svn_ra_session_t *ra_session,
       svn_pool_clear(iterpool);
 
       APR_ARRAY_PUSH(new_dirs, const char *) = dir;
-      svn_dirent_split(dir, &dir, NULL, pool);
+      dir = svn_dirent_dirname(dir, pool);
 
       SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM,
                                 &kind, iterpool));
@@ -1649,7 +1673,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
 
   /* Probe the wc at the longest common dst ancestor. */
   SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, top_dst_path,
-                                       TRUE, 0, ctx->cancel_func,
+                                       TRUE, -1, ctx->cancel_func,
                                        ctx->cancel_baton, pool));
 
   /* We've already checked for physical obstruction by a working file.
@@ -1769,19 +1793,6 @@ try_copy(svn_commit_info_t **commit_info_p,
                                        sizeof(svn_client__copy_pair_t *));
   svn_boolean_t srcs_are_urls, dst_is_url;
   int i;
-
-  /* Check to see if the supplied peg revisions make sense. */
-  for (i = 0; i < sources->nelts; i++)
-    {
-      svn_client_copy_source_t *source =
-        ((svn_client_copy_source_t **) (sources->elts))[i];
-
-      if (svn_path_is_url(source->path)
-          && (SVN_CLIENT__REVKIND_NEEDS_WC(source->peg_revision->kind)))
-        return svn_error_create
-          (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-           _("Revision type requires a working copy path, not a URL"));
-    }
 
   /* Are either of our paths URLs?  Just check the first src_path.  If
      there are more than one, we'll check for homogeneity among them

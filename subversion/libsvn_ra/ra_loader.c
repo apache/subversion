@@ -2,10 +2,10 @@
  * ra_loader.c:  logic for loading different RA library implementations
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -1143,6 +1143,10 @@ svn_ra__obliterate(svn_ra_session_t *session,
   const char *session_url;
 
   SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
+
+  if (session->vtable->obliterate_path_rev == NULL)
+    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                            "obliterate not supported by this RA layer");
 
   return session->vtable->obliterate_path_rev(session, rev, path, pool);
 }

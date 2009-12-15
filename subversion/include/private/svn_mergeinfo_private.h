@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -117,7 +117,10 @@ svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
    appropriate newline terminated string.  If KEY_PREFIX is not NULL then
    prepend KEY_PREFIX to each key (path) in *OUTPUT.  if VAL_PREFIX is not
    NULL then prepend VAL_PREFIX to each merge source:rangelist line in
-   *OUTPUT. */
+   *OUTPUT.
+
+   Any relative merge source paths in the mergeinfo in CATALOG are converted
+   to absolute paths in *OUTPUT. */
 svn_error_t *
 svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
                                            svn_mergeinfo_catalog_t catalog,
@@ -129,7 +132,10 @@ svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
    Unlike svn_mergeinfo_to_string(), NULL MERGEINFO is tolerated and results
    in *OUTPUT set to "\n".  If SVN_DEBUG is true, then NULL or empty MERGEINFO
    causes *OUTPUT to be set to an appropriate newline terminated string.  If
-   PREFIX is not NULL then prepend PREFIX to each line in *OUTPUT. */
+   PREFIX is not NULL then prepend PREFIX to each line in *OUTPUT.
+
+   Any relative merge source paths in MERGEINFO are converted to absolute
+   paths in *OUTPUT.*/
 svn_error_t *
 svn_mergeinfo__to_formatted_string(svn_string_t **output,
                                    svn_mergeinfo_t mergeinfo,

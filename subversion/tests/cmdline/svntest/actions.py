@@ -5,10 +5,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -105,12 +105,24 @@ def setup_pristine_repository():
 
 
 ######################################################################
+
+def guarantee_empty_repository(path):
+  """Guarantee that a local svn repository exists at PATH, containing
+  nothing."""
+
+  if path == main.pristine_dir:
+    print("ERROR:  attempt to overwrite the pristine repos!  Aborting.")
+    sys.exit(1)
+
+  # create an empty repository at PATH.
+  main.safe_rmtree(path)
+  main.create_repos(path)
+
 # Used by every test, so that they can run independently of  one
 # another. Every time this routine is called, it recursively copies
 # the `pristine repos' to a new location.
 # Note: make sure setup_pristine_repository was called once before
 # using this function.
-
 def guarantee_greek_repository(path):
   """Guarantee that a local svn repository exists at PATH, containing
   nothing but the greek-tree at revision 1."""
@@ -1468,7 +1480,7 @@ def run_and_verify_resolved(expected_paths, *args):
 
 # This allows a test to *quickly* bootstrap itself.
 def make_repo_and_wc(sbox, create_wc = True, read_only = False):
-  """Create a fresh repository and checkout a wc from it.
+  """Create a fresh 'Greek Tree' repository and check out a WC from it.
 
   If read_only is False, a dedicated repository will be created, named
   TEST_NAME. The repository will live in the global dir 'general_repo_dir'.
@@ -1547,8 +1559,9 @@ def lock_admin_dir(wc_dir):
 
   db = svntest.sqlite3.connect(os.path.join(wc_dir, main.get_admin_name(),
                                             'wc.db'))
-  db.execute('insert into wc_lock (wc_id, local_dir_relpath) values (?, ?)',
-             (1, ''))
+  db.execute('insert into wc_lock (wc_id, local_dir_relpath, locked_levels) '
+             + 'values (?, ?, ?)',
+             (1, '', 0))
   db.commit()
   db.close()
 

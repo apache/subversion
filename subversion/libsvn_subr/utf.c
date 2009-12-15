@@ -2,10 +2,10 @@
  * utf.c:  UTF-8 conversion routines
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -399,7 +399,7 @@ fuzzy_escape(const char *src, apr_size_t len, apr_pool_t *pool)
       src++;
     }
 
-  /* Allocate that amount. */
+  /* Allocate that amount, plus one slot for '\0' character. */
   new = apr_palloc(pool, new_len + 1);
 
   new_orig = new;
@@ -413,7 +413,7 @@ fuzzy_escape(const char *src, apr_size_t len, apr_pool_t *pool)
              function escapes different characters.  Please keep in sync!
              ### If we add another fuzzy escape somewhere, we should abstract
              ### this out to a common function. */
-          sprintf(new, "?\\%03u", (unsigned char) *src_orig);
+          apr_snprintf(new, 6, "?\\%03u", (unsigned char) *src_orig);
           new += 5;
         }
       else

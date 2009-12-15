@@ -2,10 +2,10 @@
  * serf.c :  entry point for ra_serf
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -1014,7 +1014,8 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__replay,
   svn_ra_serf__has_capability,
   svn_ra_serf__replay_range,
-  svn_ra_serf__get_deleted_rev
+  svn_ra_serf__get_deleted_rev,
+  NULL  /* svn_ra_serf__obliterate_node_rev */
 };
 
 svn_error_t *

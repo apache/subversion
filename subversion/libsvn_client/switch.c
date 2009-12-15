@@ -2,10 +2,10 @@
  * switch.c:  implement 'switch' feature via WC & RA interfaces.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -81,7 +81,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   const svn_boolean_t close_adm_access = ! adm_access;
   const char *diff3_cmd;
   svn_boolean_t use_commit_times;
-  svn_boolean_t sleep_here;
+  svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const svn_delta_editor_t *switch_editor;
   void *switch_edit_baton;

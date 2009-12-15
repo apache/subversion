@@ -2,10 +2,10 @@
  * log.c:  return log messages
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -313,7 +313,6 @@ svn_client_log5(const apr_array_header_t *targets,
 {
   svn_ra_session_t *ra_session;
   const char *url_or_path;
-  svn_boolean_t is_url;
   svn_boolean_t has_log_revprops;
   const char *actual_url;
   apr_array_header_t *condensed_targets;
@@ -333,15 +332,6 @@ svn_client_log5(const apr_array_header_t *targets,
 
   /* Use the passed URL, if there is one.  */
   url_or_path = APR_ARRAY_IDX(targets, 0, const char *);
-  is_url = svn_path_is_url(url_or_path);
-
-  if (is_url && SVN_CLIENT__REVKIND_NEEDS_WC(peg_revision->kind))
-    {
-      return svn_error_create
-        (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-         _("Revision type requires a working copy path, not a URL"));
-    }
-
   session_opt_rev.kind = svn_opt_revision_unspecified;
 
   for (i = 0; i < revision_ranges->nelts; i++)
@@ -393,15 +383,6 @@ svn_client_log5(const apr_array_header_t *targets,
              _("Missing required revision specification"));
         }
 
-      if (is_url
-          && (SVN_CLIENT__REVKIND_NEEDS_WC(range->start.kind)
-              || SVN_CLIENT__REVKIND_NEEDS_WC(range->end.kind)))
-        {
-          return svn_error_create
-            (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-             _("Revision type requires a working copy path, not a URL"));
-        }
-
       /* Determine the revision to open the RA session to. */
       if (session_opt_rev.kind == svn_opt_revision_unspecified)
         {
@@ -423,7 +404,7 @@ svn_client_log5(const apr_array_header_t *targets,
     }
 
   /* Use the passed URL, if there is one.  */
-  if (is_url)
+  if (svn_path_is_url(url_or_path))
     {
       /* Initialize this array, since we'll be building it below */
       condensed_targets = apr_array_make(pool, 1, sizeof(const char *));
@@ -580,7 +561,7 @@ svn_client_log5(const apr_array_header_t *targets,
     {
       svn_revnum_t start_revnum, end_revnum, youngest_rev = SVN_INVALID_REVNUM;
       const char *path = APR_ARRAY_IDX(targets, 0, const char *);
-      const char *local_abspath;
+      const char *local_abspath_or_url;
       svn_opt_revision_range_t *range;
       limit_receiver_baton_t lb;
       svn_log_entry_receiver_t passed_receiver;
@@ -588,15 +569,20 @@ svn_client_log5(const apr_array_header_t *targets,
       const apr_array_header_t *passed_receiver_revprops;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
+
+      if (!svn_path_is_url(path))
+        SVN_ERR(svn_dirent_get_absolute(&local_abspath_or_url, path, iterpool));
+      else
+        local_abspath_or_url = path;
+
       range = APR_ARRAY_IDX(revision_ranges, i, svn_opt_revision_range_t *);
 
       SVN_ERR(svn_client__get_revision_number(&start_revnum, &youngest_rev,
-                                              ctx->wc_ctx, local_abspath,
+                                              ctx->wc_ctx, local_abspath_or_url,
                                               ra_session, &range->start,
                                               iterpool));
       SVN_ERR(svn_client__get_revision_number(&end_revnum, &youngest_rev,
-                                              ctx->wc_ctx, local_abspath,
+                                              ctx->wc_ctx, local_abspath_or_url,
                                               ra_session, &range->end,
                                               iterpool));
 

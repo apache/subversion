@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -1143,6 +1143,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #diff(String, Revision, String, Revision,
+     *                              String, String, int, boolean, boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.5
      */
     public void diff(String target1, Revision revision1, String target2,
@@ -1157,6 +1160,24 @@ public class SVNClientSynchronized implements SVNClientInterface
             worker.diff(target1, revision1, target2, revision2, relativeToDir,
                         outFileName, depth, changelists, ignoreAncestry,
                         noDiffDeleted, force);
+        }
+    }
+
+    /**
+     * @since 1.7
+     */
+    public void diff(String target1, Revision revision1, String target2,
+                     Revision revision2, String relativeToDir,
+                     String outFileName, int depth, String[] changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.diff(target1, revision1, target2, revision2, relativeToDir,
+                        outFileName, depth, changelists, ignoreAncestry,
+                        noDiffDeleted, force, copiesAsAdds);
         }
     }
 
@@ -1182,6 +1203,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #diff(String, Revision, Revision, Revision,
+     *                              String, String, int, boolean, boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.5
      */
     public void diff(String target, Revision pegRevision,
@@ -1196,6 +1220,25 @@ public class SVNClientSynchronized implements SVNClientInterface
             worker.diff(target, pegRevision, startRevision, endRevision,
                         relativeToDir, outFileName, depth, changelists,
                         ignoreAncestry, noDiffDeleted, force);
+        }
+    }
+
+    /**
+     * @since 1.7
+     */
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String relativeToDir, String outFileName, int depth,
+                     String[] changelists, boolean ignoreAncestry,
+                     boolean noDiffDeleted, boolean force,
+                     boolean copiesAsAdds)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.diff(target, pegRevision, startRevision, endRevision,
+                        relativeToDir, outFileName, depth, changelists,
+                        ignoreAncestry, noDiffDeleted, force, copiesAsAdds);
         }
     }
 
@@ -1667,9 +1710,11 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #blame(String, Revision, Revision, Revision,
+     *                               boolean, boolean, BlameCallback3)}
+     *                               instead.
      * @since 1.5
      */
-
     public void blame(String path,
                       Revision pegRevision,
                       Revision revisionStart,
@@ -1677,6 +1722,26 @@ public class SVNClientSynchronized implements SVNClientInterface
                       boolean ignoreMimeType,
                       boolean includeMergedRevisions,
                       BlameCallback2 callback)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.blame(path, pegRevision, revisionStart, revisionEnd,
+                         ignoreMimeType, includeMergedRevisions, callback);
+        }
+    }
+
+
+    /**
+     * @since 1.7
+     */
+    public void blame(String path,
+                      Revision pegRevision,
+                      Revision revisionStart,
+                      Revision revisionEnd,
+                      boolean ignoreMimeType,
+                      boolean includeMergedRevisions,
+                      BlameCallback3 callback)
             throws ClientException
     {
         synchronized(clazz)
@@ -1836,4 +1901,15 @@ public class SVNClientSynchronized implements SVNClientInterface
         }
     }
 
+    /**
+     * @since 1.7
+     */
+    public void upgrade(String path)
+        throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.upgrade(path);
+        }
+    }
 }

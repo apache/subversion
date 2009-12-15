@@ -2,10 +2,10 @@
  * upgrade.c:  routines for upgrading a working copy
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -377,7 +377,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
      function bumps a working copy all the way to current.  */
   SVN_ERR(svn_wc__db_temp_reset_format(SVN_WC__VERSION, db, dir_abspath,
                                        scratch_pool));
-  SVN_ERR(svn_wc__db_wclock_set(db, dir_abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_wclock_set(db, dir_abspath, 0, scratch_pool));
   SVN_ERR(svn_wc__write_upgraded_entries(db, sdb, repos_id, wc_id,
                                          dir_abspath, entries,
                                          scratch_pool));
@@ -743,6 +743,7 @@ migrate_props(const char *wcroot_abspath,
      if (node is replaced):
        revert  -> BASE
        working -> ACTUAL
+       base    -> WORKING
      else if (prop pristine is working [as defined in props.c] ):
        base    -> WORKING
        working -> ACTUAL
@@ -781,6 +782,7 @@ migrate_props(const char *wcroot_abspath,
       svn_boolean_t pristine_is_working;
       svn_boolean_t replaced;
       apr_hash_t *working_props;
+      apr_hash_t *base_props;
       svn_stream_t *stream;
 
       svn_pool_clear(iterpool);
@@ -800,6 +802,12 @@ migrate_props(const char *wcroot_abspath,
                                          child_relpath),
                             iterpool);
 
+      base_props = apr_hash_make(iterpool);
+      SVN_ERR(svn_stream_open_readonly(&stream, prop_base_path, iterpool,
+                                       iterpool));
+      SVN_ERR(svn_hash_read2(base_props, stream, SVN_HASH_TERMINATOR,
+                             iterpool));
+
       /* if node is replaced ... */
       SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, child_abspath,
                                            iterpool));
@@ -815,16 +823,12 @@ migrate_props(const char *wcroot_abspath,
           SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, child_abspath,
                                                         revert_props, FALSE,
                                                         iterpool));
+          SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, child_abspath,
+                                                        base_props, TRUE,
+                                                        iterpool));
         }
       else
         {
-          apr_hash_t *base_props = apr_hash_make(iterpool);
-
-          SVN_ERR(svn_stream_open_readonly(&stream, prop_base_path, iterpool,
-                                           iterpool));
-          SVN_ERR(svn_hash_read2(base_props, stream, SVN_HASH_TERMINATOR,
-                                 iterpool));
-
           SVN_ERR(svn_wc__prop_pristine_is_working(&pristine_is_working, db,
                                                    child_abspath, iterpool));
           SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, child_abspath,
@@ -929,13 +933,18 @@ svn_wc__upgrade_sdb(int *result_format,
         ++start_format;
 
       case 15:
-        SVN_ERR(migrate_props(wcroot_abspath, sdb, scratch_pool));
+        /* Nothing to do here for format 16 */
         SVN_ERR(svn_sqlite__set_schema_version(sdb, 16, scratch_pool));
         ++start_format;
 
 #if 0
       case 16:
-        SVN_ERR(bump_to_16(wcroot_abspath, sdb, scratch_pool));
+        SVN_ERR(migrate_props(wcroot_abspath, sdb, scratch_pool));
+        SVN_ERR(svn_sqlite__set_schema_version(sdb, 17, scratch_pool));
+        ++start_format;
+
+      case 17:
+        SVN_ERR(bump_to_17(wcroot_abspath, sdb, scratch_pool));
         ++start_format;
 #endif
 

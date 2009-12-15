@@ -2,10 +2,10 @@
  * lock.c:  routines for locking working copy subdirectories.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -310,7 +310,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 
   if (write_lock)
     {
-      SVN_ERR(svn_wc__db_wclock_set(db, lock->abspath, scratch_pool));
+      SVN_ERR(svn_wc__db_wclock_set(db, lock->abspath, 0, scratch_pool));
       SVN_ERR(svn_wc__db_temp_mark_locked(db, lock->abspath, scratch_pool));
     }
 
@@ -858,106 +858,84 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
                     const char *path,
                     apr_pool_t *pool)
 {
+  const char *local_abspath;
+  svn_wc__db_kind_t kind = svn_wc__db_kind_unknown;
+  svn_node_kind_t wckind;
+  svn_error_t *err;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
   if (strcmp(associated->path, path) == 0)
-    {
-      *adm_access = associated;
-    }
+    *adm_access = associated;
   else
-    {
-      const char *abspath;
+    *adm_access = svn_wc__adm_retrieve_internal2(associated->db, local_abspath,
+                                                 pool);
 
-      SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
-
-      *adm_access = svn_wc__adm_retrieve_internal2(associated->db, abspath,
-                                                   pool);
-
-      /* Relative paths can play stupid games with the lookup, and we might
-         try to return the wrong baton. Look for that case, and zap it.
-
-         The specific case observed happened during "svn status .. -u -v".
-         svn_wc_status2() would do dirname("..") returning "". When that
-         came into this function, we'd map it to an absolute path and find
-         it in the DB, then return it. The (apparently) *desired* behavior
-         is to not find "" in the set of batons.
-
-         Sigh.  */
-      if (*adm_access != NULL
-          && strcmp(path, (*adm_access)->path) != 0)
-        *adm_access = NULL;
-    }
+  /* We found what we're looking for, so bail. */
+  if (*adm_access)
+    return SVN_NO_ERROR;
 
   /* Most of the code expects access batons to exist, so returning an error
      generally makes the calling code simpler as it doesn't need to check
      for NULL batons. */
-  if (! *adm_access)
+  /* We are going to send a SVN_ERR_WC_NOT_LOCKED, but let's provide
+     a bit more information to our caller */
+
+  err = svn_io_check_path(path, &wckind, pool);
+
+  /* If we can't check the path, we can't make a good error message.  */
+  if (err)
     {
-      /* We are going to send a SVN_ERR_WC_NOT_LOCKED, but let's provide
-         a bit more information to our caller */
-
-      const char *local_abspath;
-      svn_wc__db_kind_t kind = svn_wc__db_kind_unknown;
-      svn_node_kind_t wckind;
-      svn_error_t *err;
-
-      err = svn_io_check_path(path, &wckind, pool);
-
-      /* If we can't check the path, we can't make a good error
-         message.  */
-      if (err)
-        {
-          return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, err,
-                                   _("Unable to check path existence for '%s'"),
-                                   svn_dirent_local_style(path, pool));
-        }
-
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-      if (associated)
-        {
-          err = svn_wc__db_read_kind(&kind, svn_wc__adm_get_db(associated),
-                                     local_abspath, TRUE, pool);
-
-          if (err)
-            {
-              kind = svn_wc__db_kind_unknown;
-              svn_error_clear(err);
-            }
-        }
-
-      if (kind == svn_wc__db_kind_dir && wckind == svn_node_file)
-        {
-          err = svn_error_createf(
-                   SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                   _("Expected '%s' to be a directory but found a file"),
-                   svn_dirent_local_style(path, pool));
-
-          return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
-        }
-      else if (kind != svn_wc__db_kind_dir && kind != svn_wc__db_kind_unknown)
-        {
-          err = svn_error_createf(
-                   SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                   _("Can't retrieve an access baton for non-directory '%s'"),
-                   svn_dirent_local_style(path, pool));
-
-          return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
-        }
-      else if (kind == svn_wc__db_kind_unknown || wckind == svn_node_none)
-        {
-          err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                  _("Directory '%s' is missing"),
-                                  svn_dirent_local_style(path, pool));
-
-          return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
-        }
-
-      /* If all else fails, return our useless generic error.  */
-      return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
-                               _("Working copy '%s' is not locked"),
+      return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, err,
+                               _("Unable to check path existence for '%s'"),
                                svn_dirent_local_style(path, pool));
     }
 
-  return SVN_NO_ERROR;
+  if (associated)
+    {
+      err = svn_wc__db_read_kind(&kind, svn_wc__adm_get_db(associated),
+                                 local_abspath, TRUE, pool);
+
+      if (err)
+        {
+          kind = svn_wc__db_kind_unknown;
+          svn_error_clear(err);
+        }
+    }
+
+  if (kind == svn_wc__db_kind_dir && wckind == svn_node_file)
+    {
+      err = svn_error_createf(
+               SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+               _("Expected '%s' to be a directory but found a file"),
+               svn_dirent_local_style(path, pool));
+
+      return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
+    }
+
+  if (kind != svn_wc__db_kind_dir && kind != svn_wc__db_kind_unknown)
+    {
+      err = svn_error_createf(
+               SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+               _("Can't retrieve an access baton for non-directory '%s'"),
+               svn_dirent_local_style(path, pool));
+
+      return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
+    }
+
+  if (kind == svn_wc__db_kind_unknown || wckind == svn_node_none)
+    {
+      err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                              _("Directory '%s' is missing"),
+                              svn_dirent_local_style(path, pool));
+
+      return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
+    }
+
+  /* If all else fails, return our useless generic error.  */
+  return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
+                           _("Working copy '%s' is not locked"),
+                           svn_dirent_local_style(path, pool));
 }
 
 
@@ -1744,3 +1722,122 @@ svn_wc__temp_get_relpath(const char **rel_path,
   }
 }
 
+
+svn_error_t *
+svn_wc__acquire_write_lock(const char **anchor_abspath,
+                           svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_kind_t kind;
+  apr_pool_t *iterpool;
+  const apr_array_header_t *children;
+  svn_boolean_t parent_is_anchor = FALSE;
+  int i;
+
+  if (anchor_abspath)
+    {
+      const char *parent_abspath, *base;
+      svn_error_t *err;
+
+      svn_dirent_split(local_abspath, &parent_abspath, &base, scratch_pool);
+      err = svn_wc__db_read_children(&children, wc_ctx->db, parent_abspath,
+                                     scratch_pool, scratch_pool);
+      if (err)
+        svn_error_clear(err);
+      else
+        {
+          for (i = 0; i < children->nelts; ++i)
+            if (! strcmp(APR_ARRAY_IDX(children, i, const char *), base))
+              break;
+          if (i < children->nelts)
+            parent_is_anchor = TRUE;
+        }
+      local_abspath = parent_is_anchor ? parent_abspath : local_abspath;
+      *anchor_abspath = apr_pstrdup(result_pool, local_abspath);
+    }
+
+  if (! parent_is_anchor)
+    {
+      SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
+                                   scratch_pool));
+      if (kind != svn_wc__db_kind_dir)
+        local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+      SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
+                                       scratch_pool, scratch_pool));
+    }
+
+  /* The current lock paradigm is that each directory holds a lock for itself,
+     and there are no inherited locks.  In the eventual wc-ng paradigm, a
+     lock on a directory, would imply a infinite-depth lock on the children.
+     But since we aren't quite there yet, we do the infinite locking
+     manually (and be sure to release them in svn_wc__release_write_lock(). */
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < children->nelts; i ++)
+    {
+      const char *child_relpath = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath;
+
+      svn_pool_clear(iterpool);
+      child_abspath = svn_dirent_join(local_abspath, child_relpath, iterpool);
+
+      SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, child_abspath, FALSE,
+                                   iterpool));
+      if (kind == svn_wc__db_kind_dir)
+        SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, child_abspath,
+                                           NULL, iterpool));
+    }
+
+  SVN_ERR(svn_wc__db_wclock_set(wc_ctx->db, local_abspath, 0, iterpool));
+  SVN_ERR(svn_wc__db_temp_mark_locked(wc_ctx->db, local_abspath, iterpool));
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_kind_t kind;
+  apr_pool_t *iterpool;
+  const apr_array_header_t *children;
+  int i;
+
+  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
+                               scratch_pool));
+  if (kind != svn_wc__db_kind_dir)
+    local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  /* We need to recursively remove locks (see comment in
+     svn_wc__acquire_write_lock(). */
+
+  SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
+                                   scratch_pool, scratch_pool));
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < children->nelts; i ++)
+    {
+      const char *child_relpath = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_abspath;
+
+      svn_pool_clear(iterpool);
+      child_abspath = svn_dirent_join(local_abspath, child_relpath, iterpool);
+
+      SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, child_abspath, FALSE,
+                                   iterpool));
+      if (kind == svn_wc__db_kind_dir)
+        SVN_ERR(svn_wc__release_write_lock(wc_ctx, child_abspath, iterpool));
+    }
+
+  SVN_ERR(svn_wc__db_wclock_remove(wc_ctx->db, local_abspath, iterpool));
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}

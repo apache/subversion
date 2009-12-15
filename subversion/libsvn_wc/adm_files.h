@@ -5,10 +5,10 @@
  *                something via these interfaces, something's wrong.)
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -130,10 +130,9 @@ svn_wc__open_writable_base(svn_stream_t **stream,
                            apr_pool_t *scratch_pool);
 
 
-/* Blow away the admistrative directory associated with the access baton
-   ADM_ACCESS. This closes ADM_ACCESS, but it is safe to close ADM_ACCESS
-   again, after calling this function. */
-svn_error_t *svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
+/* Blow away the admistrative directory associated with DIR_ABSPATH */
+svn_error_t *svn_wc__adm_destroy(svn_wc__db_t *db,
+                                 const char *dir_abspath,
                                  apr_pool_t *scratch_pool);
 
 

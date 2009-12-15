@@ -2,10 +2,10 @@
  * log.c:  handle the adm area's log file.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -1374,7 +1374,7 @@ cleanup_internal(svn_wc__db_t *db,
   SVN_ERR(can_be_cleaned(&wc_format, db, adm_abspath, iterpool));
 
   /* Lock this working copy directory, or steal an existing lock */
-  err = svn_wc__db_wclock_set(db, adm_abspath, iterpool);
+  err = svn_wc__db_wclock_set(db, adm_abspath, 0, iterpool);
   if (err && err->apr_err == SVN_ERR_WC_LOCKED)
     svn_error_clear(err);
   else if (err)
