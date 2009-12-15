@@ -32,6 +32,7 @@
 [for platforms]		<Configuration
 			Name="Debug|[platforms]"
 			OutputDirectory="[zlib_path]\Debug"
+			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
 			IntermediateDirectory="[zlib_path]\Debug"
 			ConfigurationType="0"
 			ManagedExtensions="1"
@@ -47,6 +48,7 @@
 		<Configuration
 			Name="Release|[platforms]"
 			OutputDirectory="[zlib_path]\Release"
+			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
 			IntermediateDirectory="[zlib_path]\Release"
 			ConfigurationType="0"
 			ManagedExtensions="1"

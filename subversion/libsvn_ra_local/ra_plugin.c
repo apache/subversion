@@ -1432,6 +1432,7 @@ svn_ra_local__obliterate_path_rev(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
 
+  path = svn_path_join(sess->fs_path->data, path, pool);
   SVN_ERR(svn_repos__obliterate_path_rev(sess->repos,
                                          revision,
                                          path,

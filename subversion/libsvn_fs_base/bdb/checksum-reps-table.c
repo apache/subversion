@@ -204,5 +204,5 @@ svn_error_t *svn_fs_bdb__reserve_rep_reuse_id(const char **id_p,
                                    svn_fs_base__str_to_dbt(&result, next_key),
                                    0);
 
-  return BDB_WRAP(fs, _("bumping next copy key"), db_err);
+  return BDB_WRAP(fs, _("bumping next representation reuse ID"), db_err);
 }
