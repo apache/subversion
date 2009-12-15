@@ -187,8 +187,9 @@ svn_fs_base__node_rev_dup(const svn_fs_id_t **new_id,
     }
   else if (noderev->kind == svn_node_file)
     {
-      SVN_ERR(svn_fs_base__rep_dup(&noderev->data_key, new_txn_id,
-                                   noderev->data_key, trail, scratch_pool));
+      if (noderev->data_key)
+        SVN_ERR(svn_fs_base__rep_dup(&noderev->data_key, new_txn_id,
+                                     noderev->data_key, trail, scratch_pool));
 
       SVN_ERR(svn_fs_bdb__put_node_revision(trail->fs, *new_id, noderev, trail,
                                             scratch_pool));
