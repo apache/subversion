@@ -2,10 +2,10 @@
  * main.c: Subversion server administration tool.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -903,9 +903,9 @@ list_dblogs(apr_getopt_t *os, void *baton, svn_boolean_t only_unused,
   for (i = 0; i < logfiles->nelts; i++)
     {
       const char *log_utf8;
-      log_utf8 = svn_path_join(opt_state->repository_path,
-                               APR_ARRAY_IDX(logfiles, i, const char *),
-                               pool);
+      log_utf8 = svn_dirent_join(opt_state->repository_path,
+                                 APR_ARRAY_IDX(logfiles, i, const char *),
+                                 pool);
       log_utf8 = svn_dirent_local_style(log_utf8, pool);
       SVN_ERR(svn_cmdline_printf(pool, "%s\n", log_utf8));
     }
@@ -1611,7 +1611,7 @@ main(int argc, const char *argv[])
         break;
       case svnadmin__config_dir:
         opt_state.config_dir =
-          apr_pstrdup(pool, svn_path_canonicalize(opt_arg, pool));
+          apr_pstrdup(pool, svn_dirent_canonicalize(opt_arg, pool));
         break;
       case svnadmin__wait:
         opt_state.wait = TRUE;

@@ -2,10 +2,10 @@
  * opt.c :  option and argument parsing for Subversion command lines
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -1004,12 +1004,12 @@ svn_opt__print_version_info(const char *pgm_name,
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s\n\n"), pgm_name,
                              SVN_VERSION, __DATE__, __TIME__));
-  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2009 The Subversion Corporation.\n"
+  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2009 The Apache Software Foundation.\n"
                               "This software consists of"
                               " contributions made by many people;\n"
                               "see the NOTICE file for more information.\n"
                               "Subversion is open source software, see"
-                              " http://subversion.tigris.org/\n\n"),
+                              " http://subversion.apache.org/\n\n"),
                             stdout, pool));
 
   if (footer)

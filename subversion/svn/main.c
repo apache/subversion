@@ -2,10 +2,10 @@
  * main.c:  Subversion command line client.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -244,7 +244,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "For example:\n"
                        "                             "
-                       "    servers:global:http-library=serf\n")},
+                       "    servers:global:http-library=serf")},
   {"auto-props",    opt_autoprops, 0, N_("enable automatic properties")},
   {"no-auto-props", opt_no_autoprops, 0, N_("disable automatic properties")},
   {"native-eol",    opt_native_eol, 1,
@@ -306,7 +306,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "    fudge/crunchy.html\n"
                        "                             "
-                       "while -p2 would give just crunchy.html\n")},
+                       "while -p2 would give just crunchy.html")},
   {"show-copies-as-adds", opt_show_copies_as_adds, 0,
                     N_("don't diff copied or moved files with their source")},
 
@@ -846,7 +846,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "        foo/bar -r 1234 http://example.com/repos/zag\n"
      "      Subversion 1.5 and greater support the above formats and the\n"
      "      following formats where the URLs may have peg revisions:\n"
-     "                http://example.com/repos/zig foo\n"
+     "                http://example.com/repos/zig@42 foo\n"
      "        -r 1234 http://example.com/repos/zig foo/bar\n"
      "      Relative URLs are supported in Subversion 1.5 and greater for\n"
      "      all above formats and are indicated by starting the URL with one\n"
@@ -857,6 +857,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "        /    to the server root\n"
      "      The ambiguous format 'relative_path relative_path' is taken as\n"
      "      'relative_url relative_path' with peg revision support.\n"
+     "      Lines in externals definitions starting with the '#' character\n"
+     "      are considered comments and are ignored.\n"
      "    svn:needs-lock - If present, indicates that the file should be locked\n"
      "      before it is modified.  Makes the working copy file read-only\n"
      "      when it is not locked.  Use 'svn propdel svn:needs-lock PATH...'\n"
@@ -1011,9 +1013,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     are applied to the obstructing path.\n"
      "\n"
      "     Use the --set-depth option to set a new working copy depth on the\n"
-     "     targets of this operation.  Currently, the depth of a working copy\n"
-     "     directory can only be increased (telescoped more deeply); you cannot\n"
-     "     make a directory more shallow.\n"
+     "     targets of this operation.\n"
      "\n"
      "  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n"
      "     This is used when repository's root URL changes (such as a scheme\n"
@@ -1080,9 +1080,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  in the first column with code 'E'.\n"
      "\n"
      "  Use the --set-depth option to set a new working copy depth on the\n"
-     "  targets of this operation.  Currently, the depth of a working copy\n"
-     "  directory can only be increased (telescoped more deeply); you cannot\n"
-     "  make a directory more shallow.\n"),
+     "  targets of this operation.\n"),
     {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force,
      opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept} },
 

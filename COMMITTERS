@@ -29,12 +29,12 @@ Blanket commit access:
            jaa   Jani Averbach <jaa@iki.fi>
     julianfoad   Julian Foad <julian.foad@wandisco.com>
   jszakmeister   John Szakmeister <john@szakmeister.net>
-      dionisos   Erik Hülsmann <e.huelsmann@gmx.net>
+           ehu   Erik Hülsmann <e.huelsmann@gmx.net>
         breser   Ben Reser <ben@reser.org>
           maxb   Max Bowsher <maxb1@ukf.net>
        dberlin   Daniel Berlin <dberlin@dberlin.org>
      danderson   David Anderson <david.anderson@natulte.net>
-        zhakov   Ivan Zhakov <chemodax@gmail.com>
+          ivan   Ivan Zhakov <chemodax@gmail.com>
         djames   David James <james@cs.toronto.edu>
         pburba   Paul Burba <pburba@collab.net>
        glasser   David Glasser <glasser@davidglasser.net>
@@ -47,7 +47,7 @@ Blanket commit access:
           stsp   Stefan Sperling <stsp@elego.de>
            kou   Kouhei Sutou <kou@cozmixng.org>
       danielsh   Daniel Shahaf <d.s@daniel.shahaf.name>
-    psamuelson   Peter Samuelson <peter@p12n.org>
+        peters   Peter Samuelson <peter@p12n.org>
       rhuijben   Bert Huijben <b.huijben@competence.biz>
       stylesen   Senthil Kumaran S <senthil@collab.net>
      steveking   Stefan Küng <tortoisesvn@gmail.com>
@@ -127,7 +127,8 @@ Commit access for specific areas:
        mhagger   Michael Haggerty <mhagger@alum.mit.edu>     (svntest)
        madanus   Madan U S <madan@collab.net>                (svnmerge)
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
-        bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
+        bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py,
+                                                              build/hudson)
         aogier   Anthony Ogier <aogier@iorga.com>            (svn-merge-vendor.py)
       dkagedal   David Kågedal <davidk@lysator.liu.se>       (dsvn.el)
       mattiase   Mattias Engdegård <mattias@virtutech.com>   (dsvn.el)
@@ -154,7 +155,7 @@ Commit access for specific areas:
        marcosc   Marcos Chaves <marcos.nospam@gmail.com>     (po: pt_BR)
         pynoos   Hojin Choi <hojin.choi@gmail.com>           (po: ko)
        blueboh   Jeong Seolin <blueboh@gmail.com>            (po: ko)
-        cauchy   Dongsheng Song <songdongsheng@live.cn>      (po: zh_CN)
+     dongsheng   Dongsheng Song <songdongsheng@live.cn>      (po: zh_CN)
         hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN)
           lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN)
 giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)

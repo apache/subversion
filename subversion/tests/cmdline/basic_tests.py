@@ -6,10 +6,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -34,6 +34,7 @@ from svntest import wc
 # (abbreviation)
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = wc.StateItem
 
 ######################################################################
@@ -324,6 +325,15 @@ def basic_mkdir_wc_with_parents(sbox):
 
   svntest.actions.run_and_verify_svn("mkdir dir/subdir", None, [],
                                      'mkdir', '--parents', Y_Z_path)
+
+  # Verify the WC status, because there was a regression in which parts of
+  # the WC were left locked.
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+    'Y'      : Item(status='A ', wc_rev=0),
+    'Y/Z'    : Item(status='A ', wc_rev=0),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
 #----------------------------------------------------------------------
@@ -2481,7 +2491,8 @@ test_list = [ None,
               basic_update,
               basic_mkdir_url,
               basic_mkdir_url_with_parents,
-              basic_mkdir_wc_with_parents,
+              Wimp("currently, WC locks are being left behind",
+                   basic_mkdir_wc_with_parents),
               basic_corruption,
               basic_merging_update,
               basic_conflict,

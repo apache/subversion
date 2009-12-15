@@ -3,10 +3,10 @@
  *     This is intended for use with SQLite 3
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -281,11 +281,11 @@ UPDATE ACTUAL_NODE SET
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_INSERT_WC_LOCK
-INSERT INTO WC_LOCK (wc_id, local_dir_relpath)
-VALUES (?1, ?2);
+INSERT INTO WC_LOCK (wc_id, local_dir_relpath, locked_levels)
+VALUES (?1, ?2, ?3);
 
 -- STMT_SELECT_WC_LOCK
-SELECT local_dir_relpath FROM WC_LOCK
+SELECT locked_levels FROM WC_LOCK
 WHERE wc_id = ?1 AND local_dir_relpath = ?2;
 
 -- STMT_DELETE_WC_LOCK

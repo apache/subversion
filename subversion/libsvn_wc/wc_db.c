@@ -2,10 +2,10 @@
  * wc_db.c :  manipulating the administrative database
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -211,7 +211,8 @@ static const char * const upgrade_sql[] = {
   WC_METADATA_SQL_12,
   WC_METADATA_SQL_13,
   WC_METADATA_SQL_14,
-  WC_METADATA_SQL_15
+  WC_METADATA_SQL_15,
+  WC_METADATA_SQL_16
 };
 
 WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
@@ -317,6 +318,7 @@ escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
         *(new_ptr++) = LIKE_ESCAPE_CHAR[0];
       *new_ptr = *old_ptr;
     }
+  *new_ptr = '\0';
 
   return result;
 }
@@ -1845,7 +1847,10 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
 
-  return insert_base_node(&ibb, pdh->wcroot->sdb, scratch_pool);
+  SVN_ERR(insert_base_node(&ibb, pdh->wcroot->sdb, scratch_pool));
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -5575,6 +5580,7 @@ svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
 svn_error_t *
 svn_wc__db_wclock_set(svn_wc__db_t *db,
                       const char *local_abspath,
+                      int levels_to_lock,
                       apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -5582,6 +5588,7 @@ svn_wc__db_wclock_set(svn_wc__db_t *db,
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
                                  STMT_INSERT_WC_LOCK, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, levels_to_lock));
   err = svn_sqlite__insert(NULL, stmt);
   if (err)
     return svn_error_createf(SVN_ERR_WC_LOCKED, err,
@@ -5593,23 +5600,56 @@ svn_wc__db_wclock_set(svn_wc__db_t *db,
 }
 
 
+static svn_error_t *
+is_wclocked(svn_boolean_t *locked,
+            svn_wc__db_t *db,
+            const char *local_abspath,
+            apr_int64_t recurse_depth,
+            apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  svn_error_t *err;
+
+  err = get_statement_for_path(&stmt, db, local_abspath,
+                               STMT_SELECT_WC_LOCK, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+    {
+      svn_error_clear(err);
+      *locked = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    {
+      apr_int64_t locked_levels = svn_sqlite__column_int64(stmt, 0);
+
+      /* The directory in question is considered locked if we find a lock
+         with depth -1 or the depth of the lock is greater than or equal to
+         the depth we've recursed. */
+      *locked = (locked_levels == -1 || locked_levels >= recurse_depth);
+      return svn_error_return(svn_sqlite__reset(stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return svn_error_return(is_wclocked(locked, db,
+                                      svn_dirent_dirname(local_abspath,
+                                                         scratch_pool),
+                                      recurse_depth + 1, scratch_pool));
+}
+
+
 svn_error_t *
 svn_wc__db_wclocked(svn_boolean_t *locked,
                     svn_wc__db_t *db,
                     const char *local_abspath,
                     apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_SELECT_WC_LOCK, scratch_pool));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  *locked = have_row;
-
-  return SVN_NO_ERROR;
+  return svn_error_return(is_wclocked(locked, db, local_abspath, 0,
+                                      scratch_pool));
 }
 
 
@@ -5644,7 +5684,7 @@ svn_wc__db_temp_mark_locked(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
 
-  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+  pdh = get_or_create_pdh(db, local_dir_abspath, TRUE, scratch_pool);
   pdh->locked = TRUE;
 
   return SVN_NO_ERROR;

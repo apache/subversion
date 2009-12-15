@@ -7,10 +7,10 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Subversion Corporation (SVN Corp.) under one
+#    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
-#    regarding copyright ownership.  The SVN Corp. licenses this file
+#    regarding copyright ownership.  The ASF licenses this file
 #    to you under the Apache License, Version 2.0 (the
 #    "License"); you may not use this file except in compliance
 #    with the License.  You may obtain a copy of the License at
@@ -839,11 +839,11 @@ def patch_unidiff_strip1(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              XFail(patch_unidiff, is_os_windows),
+              patch_unidiff,
               patch_unidiff_absolute_paths,
-              XFail(patch_unidiff_offset, is_os_windows),
-              XFail(patch_chopped_leading_spaces, is_os_windows),
-              XFail(patch_unidiff_strip1, is_os_windows),
+              patch_unidiff_offset,
+              patch_chopped_leading_spaces,
+              patch_unidiff_strip1,
             ]
 
 if __name__ == '__main__':

@@ -2,10 +2,10 @@
  * externals.c:  handle the svn:externals property
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -105,10 +105,15 @@ relegate_dir_external(const char *path,
   const char *local_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, local_abspath, NULL, pool));
   err = svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
                                              TRUE, FALSE,
                                              cancel_func, cancel_baton,
                                              pool);
+
+  /* ### Ugly. Unlock only if not going to return an error. Revisit */
+  if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
+    SVN_ERR(svn_wc__release_write_lock(wc_ctx, local_abspath, pool));
 
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
@@ -329,7 +334,7 @@ switch_file_external(const char *path,
           svn_error_clear(err);
           close_adm_access = TRUE;
           SVN_ERR(svn_wc__adm_open_in_context(&target_adm_access, ctx->wc_ctx,
-                                              anchor, TRUE, 1,
+                                              anchor, TRUE, -1,
                                               ctx->cancel_func,
                                               ctx->cancel_baton, subpool));
 

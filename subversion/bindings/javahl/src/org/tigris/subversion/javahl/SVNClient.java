@@ -1,10 +1,10 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -31,6 +31,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Date;
 import java.text.ParseException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 /**
  * This is the main client class.  All Subversion client APIs are
@@ -888,13 +890,32 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #diff(String, Revision, String, Revision,
+     *                              String, String, int, boolean, boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.5
+     */
+    public void diff(String target1, Revision revision1, String target2,
+                     Revision revision2, String relativeToDir,
+                     String outFileName, int depth, String[] changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force)
+            throws ClientException
+    {
+        diff(target1, revision1, target2, revision2, relativeToDir,
+             outFileName, depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, false);
+    }
+
+    /**
+     * @since 1.7
      */
     public native void diff(String target1, Revision revision1, String target2,
                             Revision revision2, String relativeToDir,
-                            String outFileName, int depth, String[] changelists,
-                            boolean ignoreAncestry, boolean noDiffDeleted,
-                            boolean force)
+                            String outFileName, int depth,
+                            String[] changelists, boolean ignoreAncestry,
+                            boolean noDiffDeleted, boolean force,
+                            boolean copiesAsAdds)
             throws ClientException;
 
     /**
@@ -916,14 +937,32 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #diff(String, Revision, Revision, Revision,
+     *                              String, String, int, boolean, boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.5
+     */
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String relativeToDir, String outFileName, int depth,
+                     String[] changelists, boolean ignoreAncestry,
+                     boolean noDiffDeleted, boolean force)
+            throws ClientException
+    {
+        diff(target, pegRevision, startRevision, endRevision, relativeToDir,
+             outFileName, depth, changelists, ignoreAncestry, noDiffDeleted,
+             force, false);
+    }
+
+    /**
+     * @since 1.7
      */
     public native void diff(String target, Revision pegRevision,
                             Revision startRevision, Revision endRevision,
                             String relativeToDir, String outFileName,
                             int depth, String[] changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
-                            boolean force)
+                            boolean force, boolean copiesAsAdds)
             throws ClientException;
 
     /**
@@ -1295,13 +1334,30 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #blame(String, Revision, Revision, Revision,
+     *                               boolean, boolean, BlameCallback3)}
+     *                               instead.
      * @since 1.5
+     */
+    public void blame(String path, Revision pegRevision,
+                      Revision revisionStart, Revision revisionEnd,
+                      boolean ignoreMimeType, boolean includeMergedRevisions,
+                      BlameCallback2 callback)
+            throws ClientException
+    {
+        BlameCallback2Wrapper cw = new BlameCallback2Wrapper(callback);
+        blame(path, pegRevision, revisionStart, revisionEnd, ignoreMimeType,
+              includeMergedRevisions, cw);
+    }
+
+    /**
+     * @since 1.7
      */
     public native void blame(String path, Revision pegRevision,
                              Revision revisionStart,
                              Revision revisionEnd, boolean ignoreMimeType,
                              boolean includeMergedRevisions,
-                             BlameCallback2 callback)
+                             BlameCallback3 callback)
             throws ClientException;
 
     /**
@@ -1356,6 +1412,12 @@ public class SVNClient implements SVNClientInterface
      */
     public native String getVersionInfo(String path, String trailUrl,
                                         boolean lastChanged)
+            throws ClientException;
+
+    /**
+     * @since 1.7
+     */
+    public native void upgrade(String path)
             throws ClientException;
 
     /**
@@ -1589,6 +1651,43 @@ public class SVNClient implements SVNClientInterface
                                String line)
         {
             oldCallback.singleLine(date, revision, author, line);
+        }
+    }
+
+    /**
+     * A private wrapper for compatibility of blame implementations.
+     */
+    private class BlameCallback2Wrapper implements BlameCallback3
+    {
+        private BlameCallback2 oldCallback;
+
+        public BlameCallback2Wrapper(BlameCallback2 callback)
+        {
+            oldCallback = callback;
+        }
+
+        public void singleLine(long lineNum, long revision, Map revProps,
+                               long mergedRevision, Map mergedRevProps,
+                               String mergedPath, String line,
+                               boolean localChange)
+            throws ClientException
+        {
+            DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+
+            try {
+                oldCallback.singleLine(
+                    df.parse((String) revProps.get("svn:date")),
+                    revision,
+                    (String) revProps.get("svn:author"),
+                    mergedRevProps == null ? null
+                        : df.parse((String) mergedRevProps.get("svn:date")),
+                    mergedRevision,
+                    mergedRevProps == null ? null
+                        : (String) mergedRevProps.get("svn:author"),
+                    mergedPath, line);
+            } catch (ParseException e) {
+                throw ClientException.fromException(e);
+            }
         }
     }
 }

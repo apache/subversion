@@ -7,10 +7,10 @@
  *            file in the working copy).
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -2435,7 +2435,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
       if (destroy_wf)
         {
           /* Don't kill local mods. */
-          if (text_modified_p || (! wc_special && local_special))
+          if ((! wc_special && local_special) || text_modified_p)
             return svn_error_create(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL, NULL);
           else  /* The working file is still present; remove it. */
             SVN_ERR(svn_io_remove_file2(local_abspath, TRUE, scratch_pool));
@@ -2528,12 +2528,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
 
       /* Remove the entire administrative .svn area, thereby removing
          _this_ dir from revision control too.  */
-      {
-        svn_wc_adm_access_t *adm_access =
-            svn_wc__adm_retrieve_internal2(db, local_abspath, iterpool);
-
-        SVN_ERR(svn_wc__adm_destroy(adm_access, iterpool));
-      }
+      SVN_ERR(svn_wc__adm_destroy(db, local_abspath, iterpool));
 
       /* If caller wants us to recursively nuke everything on disk, go
          ahead, provided that there are no dangling local-mod files

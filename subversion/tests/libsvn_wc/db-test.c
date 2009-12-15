@@ -2,10 +2,10 @@
  * db-test.c :  test the wc_db subsystem
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -306,7 +306,8 @@ static const char * const data_loading_sql[] = {
 
   WC_METADATA_SQL_13,
   WC_METADATA_SQL_14,
-  WC_METADATA_SQL_15
+  WC_METADATA_SQL_15,
+  WC_METADATA_SQL_16
 };
 
 

@@ -3,10 +3,10 @@
  *           repository.
  *
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
  *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    regarding copyright ownership.  The ASF licenses this file
  *    to you under the Apache License, Version 2.0 (the
  *    "License"); you may not use this file except in compliance
  *    with the License.  You may obtain a copy of the License at
@@ -1462,17 +1462,24 @@ apply_textdelta(void *file_baton,
   svn_stream_t *source;
   svn_stream_t *temp_stream;
   svn_error_t *err;
+  svn_boolean_t found;
 
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, eb->db, fb->local_abspath, pool, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    svn_error_clear(err);
+    {
+      svn_error_clear(err);
+      found = FALSE;
+    }
   else
-    SVN_ERR(err);
+    {
+      SVN_ERR(err);
+      found = TRUE;
+    }
 
-  if (status == svn_wc__db_status_added)
+  if (found && status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, eb->db,
                                      fb->local_abspath, pool, pool));
@@ -1481,8 +1488,8 @@ apply_textdelta(void *file_baton,
 
   /* If the node is added-with-history, then this is not actually
      an add, but a modification. */
-  if (status == svn_wc__db_status_copied ||
-      status == svn_wc__db_status_moved_here)
+  if (found && (status == svn_wc__db_status_copied ||
+                status == svn_wc__db_status_moved_here))
     fb->added = FALSE;
 
   if (fb->added)
@@ -1554,10 +1561,9 @@ close_file(void *file_baton,
                              NULL, eb->db, fb->local_abspath, pool, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     svn_error_clear(err);
-  else
-    SVN_ERR(err);
-
-  if (status == svn_wc__db_status_added)
+  else if (err)
+    return err;
+  else if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, eb->db,
                                      fb->local_abspath, pool, pool));
