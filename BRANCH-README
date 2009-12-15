@@ -1,0 +1,54 @@
+This branch exists for the resolution of issue #3550.  It is being
+managed as a reintegrate-able branch, with regular catch-up merges
+from the trunk.
+
+------------------------------------------------------------------
+
+THE PLAN
+
+I'd like to introduce a streamy version of the svn_fs_paths_changed2()
+API.  To make this work, the underlying paths-changed-fetching logic
+needs to be working on previously "folded" change records.  (It's hard
+to be streamy when you have to process the entirety of the data just
+to make sure you've got all the information for the first record.)
+So, I'm looking at a multi-step change here, starting with tweaks to
+the BDB backend:
+
+1.  Break the hard-coded requirement that changed-path records be
+keyed by transaction ID.  The nature of this subsystem is such that we
+must write changed-path records piecemeal as the changes occur.
+Folding the whole set of changes with each new write would be too
+costly, so we'll continue the current trend of writing a full set of
+unfolded changes at commit time.  This means that folding must happen
+post-facto, and to reduce the cost of the BDB transaction required to
+do this, I plan to fold changes for a transaction into a second set
+with a different key, then point the transaction to that new key, then
+purge the old changed-path records.
+
+2.  As noted above, the folding step needs to happen post-facto.  But
+when?  As the commit completes?  That adds a tail-end cost to the
+commit process, especially for huge 'svn import' operations.  So
+instead, I'll penalize the first caller of the paths-changed-fetching
+logic -- they'll still get their changes as expected, but will also
+pay the cost of writing the folded results back to the database.
+Think of it as a one-time cache management cost.  For users who are
+committing via WebDAV (which I suspect are the lion's share of users
+with large datasets), the cost will be the same as in the
+fold-immediately-after-commit case, because mod_dav_svn immediately
+calls svn_fs_paths_changed2() today after the commit completes so it
+can send the paths back in the MERGE response.
+
+3.  How to deal with the streaminess aspect?  Transaction records will
+now remember whether a changed-paths list has already been folded.  If
+it has, the non-streamy interface can at least skip the folding logic.
+And the streamy interface will likely employ one of these methods: (a)
+repeatedly re-enter the BDB system to fetch each row, (b) drive a
+callback directly while cursoring through the database (which requires
+*not* using a BDB transaction due), or (c, the mostly likely option)
+fetch, say, 100 records at a time.
+
+And then, of course, make this stuff work for FSFS, too.  (Which I
+*think* already folds changed-path records during the
+transaction-to-revision upgrade.)
+
+-- cmpilato
