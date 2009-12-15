@@ -66,8 +66,10 @@ combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
 
 /* pathname -> PATHNAME */
 static svn_error_t *
-parse_pathname(const char **input, const char *end,
-               svn_stringbuf_t **pathname, apr_pool_t *pool)
+parse_pathname(const char **input,
+               const char *end,
+               svn_stringbuf_t **pathname,
+               apr_pool_t *pool)
 {
   const char *curr = *input;
   const char *last_colon = NULL;
@@ -89,7 +91,18 @@ parse_pathname(const char **input, const char *end,
     return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
                             _("No pathname preceding ':'"));
 
-  *pathname = svn_stringbuf_ncreate(*input, last_colon - *input, pool);
+  /* Tolerate relative repository paths, but convert them to absolute. */
+  if (**input == '/')
+    {
+      *pathname = svn_stringbuf_ncreate(*input, last_colon - *input, pool);
+    }
+  else
+    {
+      const char *repos_rel_path = apr_pstrndup(pool, *input,
+                                                last_colon - *input);
+      *pathname = svn_stringbuf_createf(pool, "/%s",  repos_rel_path);
+    }
+
   *input = last_colon;
 
   return SVN_NO_ERROR;
@@ -487,6 +500,7 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
                     apr_pool_t *pool)
 {
   svn_stringbuf_t *pathname;
+  apr_array_header_t *existing_rangelist;
   apr_array_header_t *revlist = apr_array_make(pool, 1,
                                                sizeof(svn_merge_range_t *));
 
@@ -559,6 +573,17 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
           lastrange = APR_ARRAY_IDX(revlist, i, svn_merge_range_t *);
         }
     }
+
+  /* Handle any funky mergeinfo with relative merge source paths that
+     might exist due to issue #3547.  It's possible that this issue allowed
+     the creation of mergeinfo with path keys that differ only by a
+     leading slash, e.g. "trunk:4033\n/trunk:4039-4995".  In the event
+     we encounter this we merge the rangelists together under a single
+     absolute path key. */
+  if (existing_rangelist = apr_hash_get(hash, pathname->data,
+                                        APR_HASH_KEY_STRING))
+    svn_rangelist_merge(&revlist, existing_rangelist, pool);
+
   apr_hash_set(hash, pathname->data, APR_HASH_KEY_STRING, revlist);
 
   return SVN_NO_ERROR;
@@ -1235,7 +1260,9 @@ svn_rangelist_to_string(svn_string_t **output,
 
 /* Converts a mergeinfo INPUT to an unparsed mergeinfo in OUTPUT.  If PREFIX
    is not NULL then prepend PREFIX to each line in OUTPUT.  If INPUT contains
-   no elements, return the empty string.
+   no elements, return the empty string.  If INPUT contains any merge source
+   path keys that are relative then convert these to absolute paths in
+   *OUTPUT.
  */
 static svn_error_t *
 mergeinfo_to_stringbuf(svn_stringbuf_t **output,
@@ -1257,11 +1284,13 @@ mergeinfo_to_stringbuf(svn_stringbuf_t **output,
           svn_string_t *revlist;
 
           SVN_ERR(svn_rangelist_to_string(&revlist, elt.value, pool));
-          svn_stringbuf_appendcstr(*output,
-                                   apr_psprintf(pool, "%s%s:%s",
-                                                prefix ? prefix : "",
-                                                (const char *) elt.key,
-                                                revlist->data));
+          svn_stringbuf_appendcstr(
+            *output,
+            apr_psprintf(pool, "%s%s%s:%s",
+                         prefix ? prefix : "",
+                         *((const char *) elt.key) == '/' ? "" : "/",
+                         (const char *) elt.key,
+                         revlist->data));
           if (i < sorted->nelts - 1)
             svn_stringbuf_appendcstr(*output, "\n");
         }

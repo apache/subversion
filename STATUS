@@ -174,16 +174,3 @@ Approved changes:
      (which shows what the bug is), and see r880533 (which fixes the bug).
    Votes:
      +1: stsp, pburba, cmpilato
-
- * r889840
-   When producing svn_mergeinfo_t from string representations, or vice-versa,
-   tolerate relative merge source paths, but convert such paths to absolute
-   paths in the resulting string/mergeinfo.
-   Justification:
-     This prevents any syntactically invalid mergeinfo created by issue #3547
-     from breaking just about everything that uses mergeinfo, see http://
-     mail-archives.apache.org/mod_mbox/subversion-dev/200912.mbox/browser.
-   Branch:
-     ^/subversion/branches/1.6.x-r889840
-   Votes:
-     +1: pburba, cmpilato, philip (I'm ignoring merge conflicts on STATUS)
