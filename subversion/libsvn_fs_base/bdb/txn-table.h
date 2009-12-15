@@ -49,11 +49,14 @@ svn_error_t *svn_fs_bdb__get_next_txn_id(const char **next_txn_id,
                                          apr_pool_t *pool);
 
 /* Create a new transaction in FS as part of TRAIL, with an initial
-   root and base root ID of ROOT_ID.  Set *TXN_NAME_P to the name of the
-   new transaction, allocated in POOL.  */
+   root and base root ID of ROOT_ID.  Set *TXN_NAME_P to the name of
+   the new transaction, allocated in POOL.  If non-NULL, CHANGES_ID is
+   the key into the `changes' table for changes associated with this
+   transaction.  */
 svn_error_t *svn_fs_bdb__create_txn(const char **txn_name_p,
                                     svn_fs_t *fs,
                                     const svn_fs_id_t *root_id,
+                                    const char *changes_id,
                                     trail_t *trail,
                                     apr_pool_t *pool);
 

@@ -45,6 +45,7 @@
 #include "bdb/txn-table.h"
 #include "bdb/rev-table.h"
 #include "bdb/nodes-table.h"
+#include "bdb/changes-table.h"
 #include "bdb/copies-table.h"
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
@@ -196,16 +197,19 @@ svn_fs_base__dag_get_predecessor_count(int *count,
 }
 
 
-/* Trail body for svn_fs_base__dag_init_fs. */
+/* Trail body for svn_fs_base__dag_init_fs.  Baton is a pointer to an
+   'int format'.  */
 static svn_error_t *
 txn_body_dag_init_fs(void *baton,
                      trail_t *trail)
 {
+  int format = *((int *)baton);
   node_revision_t noderev;
   revision_t revision;
   svn_revnum_t rev = SVN_INVALID_REVNUM;
   svn_fs_t *fs = trail->fs;
   svn_string_t date;
+  const char *changes_id;
   const char *txn_id;
   const char *copy_id;
   svn_fs_id_t *root_id = svn_fs_base__id_create("0", "0", "0", trail->pool);
@@ -217,8 +221,16 @@ txn_body_dag_init_fs(void *baton,
   SVN_ERR(svn_fs_bdb__put_node_revision(fs, root_id, &noderev,
                                         trail, trail->pool));
 
+  /* Reserve a changes ID if our format allows such a thing. */
+  if (format >= SVN_FS_BASE__MIN_CHANGES_INFO_FORMAT)
+    SVN_ERR(svn_fs_bdb__changes_reserve_id(&changes_id, fs,
+                                           trail, trail->pool));
+  else
+    changes_id = NULL;
+
   /* Create a new transaction (better have an id of "0") */
-  SVN_ERR(svn_fs_bdb__create_txn(&txn_id, fs, root_id, trail, trail->pool));
+  SVN_ERR(svn_fs_bdb__create_txn(&txn_id, fs, root_id, changes_id,
+                                 trail, trail->pool));
   if (strcmp(txn_id, "0"))
     return svn_error_createf
       (SVN_ERR_FS_CORRUPT, 0,
@@ -255,9 +267,9 @@ txn_body_dag_init_fs(void *baton,
 
 
 svn_error_t *
-svn_fs_base__dag_init_fs(svn_fs_t *fs)
+svn_fs_base__dag_init_fs(svn_fs_t *fs, int format)
 {
-  return svn_fs_base__retry_txn(fs, txn_body_dag_init_fs, NULL,
+  return svn_fs_base__retry_txn(fs, txn_body_dag_init_fs, &format,
                                 TRUE, fs->pool);
 }
 

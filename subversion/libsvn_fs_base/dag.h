@@ -61,8 +61,11 @@ extern "C" {
 
 
 /* Given a filesystem FS, which contains all the necessary tables,
-   create the initial revision 0, and the initial root directory.  */
-svn_error_t *svn_fs_base__dag_init_fs(svn_fs_t *fs);
+   create the initial revision 0, the initial root directory, and
+   related database information.  FORMAT is the version of the
+   filesystem which is being initialized.  */
+svn_error_t *svn_fs_base__dag_init_fs(svn_fs_t *fs,
+                                      int format);
 
 
 

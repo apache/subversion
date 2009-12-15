@@ -679,7 +679,7 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   if (svn_err) goto error;
 
   /* Initialize the DAG subsystem. */
-  svn_err = svn_fs_base__dag_init_fs(fs);
+  svn_err = svn_fs_base__dag_init_fs(fs, format);
   if (svn_err) goto error;
 
   /* This filesystem is ready.  Stamp it with a format number. */

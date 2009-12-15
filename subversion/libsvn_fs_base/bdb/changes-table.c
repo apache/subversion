@@ -116,6 +116,45 @@ svn_fs_bdb__changes_init_next_key(svn_fs_t *fs,
 }
 
 
+svn_error_t *
+svn_fs_bdb__changes_reserve_id(const char **id_p,
+                               svn_fs_t *fs,
+                               trail_t *trail,
+                               apr_pool_t *pool)
+{
+  base_fs_data_t *bfd = fs->fsap_data;
+  DBT query, result;
+  apr_size_t len;
+  char next_key[MAX_KEY_SIZE];
+  int db_err;
+
+  svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY);
+
+  /* Get the current value associated with the `next-key' key in the
+     changes table.  */
+  svn_fs_base__trail_debug(trail, "changes", "get");
+  SVN_ERR(BDB_WRAP(fs, _("allocating new changes ID (getting 'next-key')"),
+                   bfd->changes->get(bfd->changes, trail->db_txn, &query,
+                                     svn_fs_base__result_dbt(&result),
+                                     0)));
+  svn_fs_base__track_dbt(&result, pool);
+
+  /* Set our return value. */
+  *id_p = apr_pstrmemdup(pool, result.data, result.size);
+
+  /* Bump to future key. */
+  len = result.size;
+  svn_fs_base__next_key(result.data, &len, next_key);
+  svn_fs_base__trail_debug(trail, "changes", "put");
+  db_err = bfd->changes->put(bfd->changes, trail->db_txn,
+                             svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY),
+                             svn_fs_base__str_to_dbt(&result, next_key),
+                             0);
+
+  return BDB_WRAP(fs, _("bumping next changes key"), db_err);
+}
+
+
 
 /*** Storing and retrieving changes.  ***/
 
