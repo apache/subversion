@@ -84,12 +84,10 @@ Candidate changes:
    Branch:
      Resolves a minor conflict in libsvn_client/merge.c where the code
      changed was refactored on trunk.
-     ^/subversion/branches/1.6.x-r39109
+     ^/subversion/branches/1.6.x-r39019
+     The relevant commit on the branch is r879175.
    Votes:
-     +1: pburba
-     -0: julianfoad (reviewed the changes in mergeinfo.c only;
-           and also it seems to sneak in another bug fix in
-           fix_deleted_subtree_ranges(). I suggest splitting up this patch.)
+     +1: pburba, julianfoad
 
  * r879766
    Fix issue #3498: Subversion password stores freeze Eclipse
