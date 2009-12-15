@@ -42,29 +42,32 @@ SkipUnless = svntest.testcase.SkipUnless
 # Test utilities
 #
 
+obliteration_dirs = ['f-mod', 'f-add', 'f-del', 'f-rpl', 'f-mov']
+
 def create_dd1_scenarios(wc):
   """Create, in the initially empty repository of the SvnWC WC, the
      obliteration test scenarios depicted in each "Example 1" in
      <notes/obliterate/fspec-dd1/dd1-file-ops.svg>."""
 
   # r1: base directories
-  for dir in ['f-mod', 'f-add', 'f-del', 'f-rpl', 'f-mov']:
+  for dir in obliteration_dirs:
     wc.svn_mkdir(dir)
-  wc.svn_commit()
+  rev = wc.svn_commit()
 
-  # r2 to r48 inclusive
-  for r in range(2, 9):
-    wc.svn_set_props('', { 'this-is-rev': str(r) })
-    wc.svn_commit()
+  # r2 to r8 inclusive, just so that the obliteration rev is a round and
+  # consistent number (10), no matter what complexity of history we have.
+  while rev < 8:
+    wc.svn_set_props('', { 'this-is-rev': str(rev + 1) })
+    rev = wc.svn_commit()
 
-  # r49: add the files used in the scenarios
+  # r9: add the files used in the scenarios
   wc.svn_file_create_add('f-mod/F', "Pear\n")
   wc.svn_file_create_add('f-del/F', "Pear\n")
   wc.svn_file_create_add('f-rpl/F', "Pear\n")
   wc.svn_file_create_add('f-mov/E', "Pear\n")  # 'E' will be moved to 'F'
   wc.svn_commit()
 
-  # r50: the rev to be obliterated
+  # r10: the rev in which files named 'F' are to be obliterated
   wc.file_modify('f-mod/F', 'Apple\n')
   wc.svn_file_create_add('f-add/F', 'Apple\n')
   wc.svn_delete('f-del/F')
@@ -74,10 +77,11 @@ def create_dd1_scenarios(wc):
   wc.file_modify('f-mov/F', 'Apple\n')
   rev = wc.svn_commit(log='Rev to be obliterated')
 
-  # r51
-  for dir in ['f-mod', 'f-add', 'f-rpl', 'f-mov']:
-    wc.file_modify(dir + '/F', 'Orange\n')
-  wc.svn_commit()
+  # r11: some more recent history that refers to the revision we changed
+  # (We are not ready to test this yet.)
+  #for dir in ['f-mod', 'f-add', 'f-rpl', 'f-mov']:
+  #  wc.file_modify(dir + '/F', 'Orange\n')
+  #wc.svn_commit()
 
   return rev
 
@@ -113,8 +117,9 @@ def obliterate_1(sbox):
   except:
     pass
 
-  # Obliterate d/foo@{content=Apple}
-  repo.obliterate_node_rev('/d/foo', apple_rev)
+  # Obliterate a file in the revision where the file content was 'Apple'
+  for dir in obliteration_dirs:
+    repo.obliterate_node_rev(dir + '/F', apple_rev)
 
   # Dump the repository state, if possible, for debugging
   try:
