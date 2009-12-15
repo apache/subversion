@@ -161,16 +161,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r880525, r880526
-   Fix 'svn resolve --accept=theirs-conflict' for targets which live inside
-   a subdirectory of the current working directory.
-   Justification:
-     'svn resolve --accept=theirs-conflict' cannot be used reliably.
-   Notes:
-     A backport branch is at ^/subversion/branches/1.6.x-r40452.
-     1.6.x has an additional bug which does not occur on trunk, requiring
-     additional fixes exclusive to 1.6.x. See the log message of r880532
-     (which shows what the bug is), and see r880533 (which fixes the bug).
-   Votes:
-     +1: stsp, pburba, cmpilato

@@ -2748,13 +2748,19 @@ resolve_conflict_on_entry(const char *path,
       switch (conflict_choice)
         {
         case svn_wc_conflict_choose_base:
-          auto_resolve_src = entry->conflict_old;
+          auto_resolve_src = svn_path_join(
+                              svn_wc_adm_access_path(conflict_dir),
+                              entry->conflict_old, pool);
           break;
         case svn_wc_conflict_choose_mine_full:
-          auto_resolve_src = entry->conflict_wrk;
+          auto_resolve_src = svn_path_join(
+                              svn_wc_adm_access_path(conflict_dir),
+                              entry->conflict_wrk, pool);
           break;
         case svn_wc_conflict_choose_theirs_full:
-          auto_resolve_src = entry->conflict_new;
+          auto_resolve_src = svn_path_join(
+                              svn_wc_adm_access_path(conflict_dir),
+                              entry->conflict_new, pool);
           break;
         case svn_wc_conflict_choose_merged:
           auto_resolve_src = NULL;
@@ -2768,6 +2774,9 @@ resolve_conflict_on_entry(const char *path,
                 apr_file_t *tmp_f;
                 svn_stream_t *tmp_stream;
                 svn_diff_t *diff;
+                const char *conflict_old;
+                const char *conflict_wrk;
+                const char *conflict_new;
                 svn_diff_conflict_display_style_t style =
                   conflict_choice == svn_wc_conflict_choose_theirs_conflict
                   ? svn_diff_conflict_display_latest
@@ -2779,16 +2788,40 @@ resolve_conflict_on_entry(const char *path,
                                                 svn_io_file_del_none,
                                                 pool));
                 tmp_stream = svn_stream_from_aprfile2(tmp_f, FALSE, pool);
+
+                /* ### If any of these paths isn't absolute, treat it
+                 * ### as relative to CONFLICT_DIR_ABSPATH.
+                 * ### Else we end up erroring out here, e.g. if the file
+                 * ### is just a basename, and does not live in the current
+                 * ### working directory.
+                 * ### The API docs are unclear about whether these paths
+                 * ### must be absolute or not. */
+                conflict_old = entry->conflict_old;
+                conflict_wrk = entry->conflict_wrk;
+                conflict_new = entry->conflict_new;
+                if (! svn_dirent_is_absolute(conflict_old))
+                  conflict_old = svn_dirent_join(
+                                   svn_wc_adm_access_path(conflict_dir),
+                                   entry->conflict_old, pool);
+                if (! svn_dirent_is_absolute(conflict_wrk))
+                  conflict_wrk = svn_dirent_join(
+                                   svn_wc_adm_access_path(conflict_dir),
+                                   entry->conflict_wrk, pool);
+                if (! svn_dirent_is_absolute(conflict_new))
+                  conflict_new = svn_dirent_join(
+                                   svn_wc_adm_access_path(conflict_dir),
+                                   entry->conflict_new, pool);
+
                 SVN_ERR(svn_diff_file_diff3_2(&diff,
-                                              entry->conflict_old,
-                                              entry->conflict_wrk,
-                                              entry->conflict_new,
+                                              conflict_old,
+                                              conflict_wrk,
+                                              conflict_new,
                                               svn_diff_file_options_create(pool),
                                               pool));
                 SVN_ERR(svn_diff_file_output_merge2(tmp_stream, diff,
-                                                    entry->conflict_old,
-                                                    entry->conflict_wrk,
-                                                    entry->conflict_new,
+                                                    conflict_old,
+                                                    conflict_wrk,
+                                                    conflict_new,
                                                     /* markers ignored */
                                                     NULL, NULL, NULL, NULL,
                                                     style,
@@ -2805,10 +2838,7 @@ resolve_conflict_on_entry(const char *path,
         }
 
       if (auto_resolve_src)
-        SVN_ERR(svn_io_copy_file(
-          svn_path_join(svn_wc_adm_access_path(conflict_dir), auto_resolve_src,
-                        pool),
-          path, TRUE, pool));
+        SVN_ERR(svn_io_copy_file(auto_resolve_src, path, TRUE, pool));
     }
 
   /* Yes indeed, being able to map a function over a list would be nice. */
