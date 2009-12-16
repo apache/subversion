@@ -2375,8 +2375,11 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_INSERT_PRISTINE));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, checksum, scratch_pool));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 2, finfo.size));
+  if (checksum->kind == svn_checksum_sha1)
+    SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, checksum, scratch_pool));
+  else
+    SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
   return SVN_NO_ERROR;
