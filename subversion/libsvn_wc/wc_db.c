@@ -5583,12 +5583,28 @@ svn_wc__db_wclock_set(svn_wc__db_t *db,
                       int levels_to_lock,
                       apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_error_t *err;
 
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_INSERT_WC_LOCK, scratch_pool));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, levels_to_lock));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  /* ### Can only lock this directory in the per-dir layout.  This is
+     ### a temporary restriction until metadata gets centralised.
+     ### Perhaps this should be a runtime error, rather than an
+     ### assert?  Perhaps check the path is versioned? */
+  SVN_ERR_ASSERT(*local_relpath == '\0');
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_INSERT_WC_LOCK));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi", pdh->wcroot->wc_id, local_relpath,
+                            levels_to_lock));
   err = svn_sqlite__insert(NULL, stmt);
   if (err)
     return svn_error_createf(SVN_ERR_WC_LOCKED, err,
