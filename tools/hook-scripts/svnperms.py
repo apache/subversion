@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -19,7 +20,6 @@
 # under the License.
 #
 #
-# -*- coding: utf-8 -*-
 
 # $HeadURL$
 # $LastChangedDate$
