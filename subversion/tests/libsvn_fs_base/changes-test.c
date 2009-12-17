@@ -161,9 +161,44 @@ txn_body_changes_delete(void *baton, trail_t *trail)
   return svn_fs_bdb__changes_delete(b->fs, b->key, trail, trail->pool);
 }
 
+static svn_error_t *
+txn_body_changes_reserve_id(void *baton, trail_t *trail)
+{
+  const char *expected_key = baton;
+  const char *reserved_key;
+  SVN_ERR(svn_fs_bdb__changes_reserve_id(&reserved_key, trail->fs,
+                                         trail, trail->pool));
+  if (strcmp(reserved_key, expected_key) != 0)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "got reserved key '%s'; expected '%s'",
+                             reserved_key, expected_key);
+  return SVN_NO_ERROR;
+}
 
 
 /* The tests.  */
+
+static svn_error_t *
+changes_reserve_id(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+
+  /* Create a new fs and repos */
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-changes-reserve-id",
+                                  opts, pool));
+  
+  /* Run the real test, which is all trail-y. */
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_reserve_id,
+                                 (void *)"1", FALSE, pool));
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_reserve_id,
+                                 (void *)"2", FALSE, pool));
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_reserve_id,
+                                 (void *)"3", FALSE, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 changes_add(const svn_test_opts_t *opts,
@@ -704,6 +739,8 @@ changes_fetch_ordering(const svn_test_opts_t *opts,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
+    SVN_TEST_OPTS_PASS(changes_reserve_id,
+                       "test changes next-key reservation"),
     SVN_TEST_OPTS_PASS(changes_add,
                        "add changes to the changes table"),
     SVN_TEST_OPTS_PASS(changes_fetch_raw,

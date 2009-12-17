@@ -45,6 +45,28 @@
 
 /*** Creating and opening the changes table. ***/
 
+/* Add a new 'next-key' row with value INITIAL_VALUE to the CHANGES
+   table as part of Berkeley DB transaction TXN_ID (which may be 0 if
+   no transaction support is needed).  This function assumes that the
+   CHANGES table does *not* already have a 'next-key' row.  */
+static int
+add_next_key_row(DB *changes,
+                 DB_TXN *txn_id,
+                 const char *initial_value)
+{
+  DBT key, value;
+
+  /* The `changes' table uses duplicate keys, so we need to specify
+     DB_NOOVERWRITE to avoid simply appending another 'next-key' row if
+     one already exists (which is not expected by callers of this
+     function). */
+  return changes->put(changes, txn_id,
+                      svn_fs_base__str_to_dbt(&key, NEXT_KEY_KEY),
+                      svn_fs_base__str_to_dbt(&value, initial_value),
+                      DB_NOOVERWRITE);
+}
+
+
 int
 svn_fs_bdb__open_changes_table(DB **changes_p,
                                DB_ENV *env,
@@ -69,10 +91,7 @@ svn_fs_bdb__open_changes_table(DB **changes_p,
      supports the arbitrary changes table keys, init our 'next-key' item. */
   if (create && (version >= SVN_FS_BASE__MIN_CHANGES_INFO_FORMAT))
     {
-      DBT key, value;
-      BDB_ERR(changes->put(changes, 0,
-                           svn_fs_base__str_to_dbt(&key, NEXT_KEY_KEY),
-                           svn_fs_base__str_to_dbt(&value, "0"), 0));
+      BDB_ERR(add_next_key_row(changes, 0, "0"));
     }
 
   *changes_p = changes;
@@ -87,32 +106,9 @@ svn_fs_bdb__changes_init_next_key(svn_fs_t *fs,
                                   apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  DBT key, value;
-  int db_err;
-
-  svn_fs_base__trail_debug(trail, "changes", "get");
-  db_err = bfd->changes->get(bfd->changes, trail->db_txn,
-                             svn_fs_base__str_to_dbt(&key, NEXT_KEY_KEY),
-                             svn_fs_base__result_dbt(&value), 0);
-  svn_fs_base__track_dbt(&value, pool);
-
-  /* A not-found error is ideal -- let's add our 'next-key' row and
-     get outta here.  */
-  if (db_err == DB_NOTFOUND)
-    {
-      return BDB_WRAP(fs, _("initializing next changes key"),
-                      (bfd->changes->put(
-                          bfd->changes, trail->db_txn,
-                          svn_fs_base__str_to_dbt(&key, NEXT_KEY_KEY),
-                          svn_fs_base__str_to_dbt(&value, initial_value), 0)));
-    }
-
-  /* If there was some other error, though, we'll propogate that up. */
-  SVN_ERR(BDB_WRAP(fs, "fetching next changes key", db_err));
-  
-  /* If there wasn't an error above, that, too, is a problem. */
-  return svn_error_create(SVN_ERR_FS_CORRUPT, 0,
-                          _("Found unexpected 'next-key' in changes table"));
+  return BDB_WRAP(fs, "init changes 'next-key' row",
+                  add_next_key_row(bfd->changes, trail->db_txn,
+                                   initial_value));
 }
 
 
@@ -142,15 +138,18 @@ svn_fs_bdb__changes_reserve_id(const char **id_p,
   /* Set our return value. */
   *id_p = apr_pstrmemdup(pool, result.data, result.size);
 
-  /* Bump to future key. */
+  /* Bump to future key.  Because this table uses duplicate keys, we
+     have to first remove the old 'next-key' row. */
+  svn_fs_base__trail_debug(trail, "changes", "del");
+  SVN_ERR(BDB_WRAP(fs, _("delete changes 'next-key' record"),
+                   bfd->changes->del(bfd->changes, trail->db_txn,
+                                     &query, 0)));
   len = result.size;
   svn_fs_base__next_key(result.data, &len, next_key);
   svn_fs_base__trail_debug(trail, "changes", "put");
-  db_err = bfd->changes->put(bfd->changes, trail->db_txn,
-                             svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY),
+  db_err = bfd->changes->put(bfd->changes, trail->db_txn, &query,
                              svn_fs_base__str_to_dbt(&result, next_key),
-                             0);
-
+                             DB_NOOVERWRITE);
   return BDB_WRAP(fs, _("bumping next changes key"), db_err);
 }
 
