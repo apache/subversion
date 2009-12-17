@@ -1574,25 +1574,27 @@ def get_wc_base_rev(wc_dir):
   return run_and_parse_info(wc_dir)[0]['Revision']
 
 def create_failing_hook(repo_dir, hook_name, text):
-  """Create a HOOK_NAME hook in REPO_DIR that prints TEXT to stderr and exits
-  with an error."""
+  """Create a HOOK_NAME hook in the repository at REPO_DIR that prints
+  a message including TEXT to stderr and exits with an error."""
 
   hook_path = os.path.join(repo_dir, 'hooks', hook_name)
+  # Embed the text carefully: it might include characters like "%" and "'".
   main.create_python_hook_script(hook_path, 'import sys\n'
     'sys.stderr.write("""%%s hook failed: %%s""" %% (%s, %s))\n'
     'sys.exit(1)\n' % (repr(hook_name), repr(text)))
 
 def enable_revprop_changes(repo_dir):
-  """Enable revprop changes in a repository REPOS_DIR by creating a
-pre-revprop-change hook script and (if appropriate) making it executable."""
+  """Enable revprop changes in the repository at REPO_DIR by creating a
+  pre-revprop-change hook script and (if appropriate) making it executable."""
 
   hook_path = main.get_pre_revprop_change_hook_path(repo_dir)
   main.create_python_hook_script(hook_path, 'import sys; sys.exit(0)')
 
 def disable_revprop_changes(repo_dir):
-  """Disable revprop changes in a repository REPO_DIR by creating a
-pre-revprop-change hook script like enable_revprop_changes, except that
-the hook prints "pre-revprop-change" followed by sys.argv"""
+  """Disable revprop changes in the repository at REPO_DIR by creating a
+  pre-revprop-change hook script that prints "pre-revprop-change" followed
+  by its arguments, and returns an error."""
+
   hook_path = main.get_pre_revprop_change_hook_path(repo_dir)
   main.create_python_hook_script(hook_path,
                                  'import sys\n'
@@ -1600,8 +1602,8 @@ the hook prints "pre-revprop-change" followed by sys.argv"""
                                  'sys.exit(1)\n')
 
 def create_failing_post_commit_hook(repo_dir):
-  """Disable commits in a repository REPOS_DIR by creating a post-commit hook
-script which always reports errors."""
+  """Create a post-commit hook script in the repository at REPO_DIR that always
+  reports an error."""
 
   hook_path = main.get_post_commit_hook_path(repo_dir)
   main.create_python_hook_script(hook_path, 'import sys\n'
