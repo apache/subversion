@@ -34,6 +34,7 @@
 #include "private/svn_skel.h"
 
 #include "../svn_test_fs.h"
+#include "../../libsvn_fs_base/revs-txns.h"
 #include "../../libsvn_fs_base/util/fs_skels.h"
 #include "../../libsvn_fs_base/bdb/changes-table.h"
 
@@ -153,6 +154,17 @@ txn_body_changes_fetch(void *baton, trail_t *trail)
                                    trail, trail->pool);
 }
 
+
+static svn_error_t *
+txn_body_changes_fetch_by_txn_id(void *baton, trail_t *trail)
+{
+  struct changes_args *b = baton;
+  const char *changes_id;
+  SVN_ERR(svn_fs_base__txn_get_changes_id(&changes_id, trail->fs, b->key,
+                                          trail, trail->pool));
+  return svn_fs_bdb__changes_fetch(&(b->changes), b->fs, changes_id,
+                                   trail, trail->pool);
+}
 
 static svn_error_t *
 txn_body_changes_delete(void *baton, trail_t *trail)
@@ -627,7 +639,7 @@ changes_fetch_ordering(const svn_test_opts_t *opts,
        the deletion of 'dir1', and the addition of 'dir3'. ***/
   args.fs = fs;
   args.key = txn_name;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_fetch, &args,
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_fetch_by_txn_id, &args,
                                  FALSE, subpool));
   if ((! args.changes) || (apr_hash_count(args.changes) != 3))
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
@@ -699,7 +711,7 @@ changes_fetch_ordering(const svn_test_opts_t *opts,
        the replacement of 'dir1', and the addition of 'dir4'. ***/
   args.fs = fs;
   args.key = txn_name;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_fetch, &args,
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_changes_fetch_by_txn_id, &args,
                                  FALSE, subpool));
   if ((! args.changes) || (apr_hash_count(args.changes) != 3))
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,

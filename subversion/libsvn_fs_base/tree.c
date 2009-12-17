@@ -944,11 +944,11 @@ get_dag(dag_node_t **dag_node_p,
 
 /* Populating the `changes' table. */
 
-/* Add a change to the changes table in FS, keyed on transaction id
-   TXN_ID, and indicated that a change of kind CHANGE_KIND occurred on
-   PATH (whose node revision id is--or was, in the case of a
-   deletion--NODEREV_ID), and optionally that TEXT_MODs or PROP_MODs
-   occurred.  Do all this as part of TRAIL.  */
+/* Add a change to the changes table in FS associated with the
+   transaction whose id is TXN_ID, indicating that a change of kind
+   CHANGE_KIND occurred on PATH (whose node revision id is--or was, in
+   the case of a deletion--NODEREV_ID), and (optionally) that
+   TEXT_MODs or PROP_MODs occurred.  Do all this as part of TRAIL.  */
 static svn_error_t *
 add_change(svn_fs_t *fs,
            const char *txn_id,
@@ -961,12 +961,15 @@ add_change(svn_fs_t *fs,
            apr_pool_t *pool)
 {
   change_t change;
+  const char *changes_id;
   change.path = svn_fs__canonicalize_abspath(path, pool);
   change.noderev_id = noderev_id;
   change.kind = change_kind;
   change.text_mod = text_mod;
   change.prop_mod = prop_mod;
-  return svn_fs_bdb__changes_add(fs, txn_id, &change, trail, pool);
+  SVN_ERR(svn_fs_base__txn_get_changes_id(&changes_id, fs, txn_id,
+                                          trail, pool));
+  return svn_fs_bdb__changes_add(fs, changes_id, &change, trail, pool);
 }
 
 

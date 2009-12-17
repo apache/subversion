@@ -91,6 +91,16 @@ svn_error_t *svn_fs_base__txn_get_revision(svn_revnum_t *revision,
                                            apr_pool_t *pool);
 
 
+/* Set *CHANGES_ID to the key into the `changes' table (allocated from
+   POOL) by which changed path records associated with FS transaction
+   TXN_NAME are found.  Do all of this as part of TRAIL.  */
+svn_error_t *svn_fs_base__txn_get_changes_id(const char **changes_id,
+                                             svn_fs_t *fs,
+                                             const char *txn_name,
+                                             trail_t *trail,
+                                             apr_pool_t *pool);
+
+
 /* Retrieve information about the Subversion transaction TXN_NAME from
    the `transactions' table of FS, as part of TRAIL.
    Set *ROOT_ID_P to the ID of the transaction's root directory.
