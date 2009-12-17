@@ -1,3 +1,4 @@
+#!/bin/env python
 #
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -18,7 +19,6 @@
 # under the License.
 #
 #
-#!/bin/env python
 
 # $Id$
 """
