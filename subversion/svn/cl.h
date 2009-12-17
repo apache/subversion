@@ -136,9 +136,9 @@ typedef struct svn_cl__opt_state_t
   /* An array of svn_opt_revision_range_t *'s representing revisions
      ranges indicated on the command-line via the -r and -c options.
      For each range in the list, if only one revision was provided
-     (-rN), its 'end' member remains `svn_opt_revision_unspecified'.
-
-     NOTE: This is currently used only by merge subcommand. */
+     (-rN), its 'end' member remains 'svn_opt_revision_unspecified'.
+     This array always has at least one element, even if that is a
+     null range in which both ends are 'svn_opt_revision_unspecified'. */
   apr_array_header_t *revision_ranges;
 
   /* These are simply a copy of the range start and end values present
