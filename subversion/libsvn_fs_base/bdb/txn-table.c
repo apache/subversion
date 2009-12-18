@@ -175,7 +175,7 @@ svn_fs_bdb__create_txn(const char **txn_name_p,
   txn.copies = NULL;
   txn.revision = SVN_INVALID_REVNUM;
   txn.changes_id = changes_id;
-  txn.changes_prefolded = FALSE;
+  txn.changes_folded = FALSE;
   txn.num_changes = -1;
   SVN_ERR(svn_fs_bdb__put_txn(fs, &txn, txn_name, trail, pool));
 

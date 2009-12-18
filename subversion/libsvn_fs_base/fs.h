@@ -172,7 +172,7 @@ typedef struct
 
   /* TRUE iff the changes records for this transaction are known to be
      prefolded. */
-  svn_boolean_t changes_prefolded;
+  svn_boolean_t changes_folded;
 
   /* Number of changed paths associated with this transaction, or -1
      to mean "unknown". */

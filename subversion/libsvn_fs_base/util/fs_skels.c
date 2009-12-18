@@ -509,9 +509,9 @@ svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
                              changes_info->children->data,
                              changes_info->children->len);
       if (strcmp(state, "folded") == 0)
-        transaction->changes_prefolded = TRUE;
+        transaction->changes_folded = TRUE;
       else if (strcmp(state, "unfolded") == 0)
-        transaction->changes_prefolded = FALSE;
+        transaction->changes_folded = FALSE;
       else
         return skel_err("transaction");
 
@@ -1044,7 +1044,7 @@ svn_fs_base__unparse_transaction_skel(svn_skel_t **skel_p,
                           changes_info_skel);
 
       /* CHANGES_STATE */
-      svn_skel__prepend(svn_skel__str_atom(transaction->changes_prefolded
+      svn_skel__prepend(svn_skel__str_atom(transaction->changes_folded
                                              ? "folded" : "unfolded",
                                            pool),
                         changes_info_skel);

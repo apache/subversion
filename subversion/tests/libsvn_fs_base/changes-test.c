@@ -151,7 +151,7 @@ txn_body_changes_fetch(void *baton, trail_t *trail)
 {
   struct changes_args *b = baton;
   return svn_fs_bdb__changes_fetch(&(b->changes), b->fs, b->key,
-                                   trail, trail->pool);
+                                   FALSE, trail, trail->pool);
 }
 
 
@@ -160,10 +160,14 @@ txn_body_changes_fetch_by_txn_id(void *baton, trail_t *trail)
 {
   struct changes_args *b = baton;
   const char *changes_id;
-  SVN_ERR(svn_fs_base__txn_get_changes_id(&changes_id, trail->fs, b->key,
-                                          trail, trail->pool));
+  svn_boolean_t changes_folded;
+  int num_changes;
+
+  SVN_ERR(svn_fs_base__txn_get_changes_info(&changes_id, &changes_folded,
+                                            &num_changes, trail->fs, b->key,
+                                            trail, trail->pool));
   return svn_fs_bdb__changes_fetch(&(b->changes), b->fs, changes_id,
-                                   trail, trail->pool);
+                                   changes_folded, trail, trail->pool);
 }
 
 static svn_error_t *

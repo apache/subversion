@@ -88,10 +88,14 @@ svn_error_t *svn_fs_bdb__changes_delete(svn_fs_t *fs,
 /* Return a hash *CHANGES_P, keyed on const char * paths, and
    containing svn_fs_path_change2_t * values representing summarized
    changed records associated with KEY in FS, as part of TRAIL.
-   Allocate the array and its items in POOL.  */
+   Allocate the array and its items in POOL.
+
+   If PREFOLDED is TRUE, assume the change records have already been
+   collapsed into a single all-inclusive change record per path.  */
 svn_error_t *svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
                                        svn_fs_t *fs,
                                        const char *key,
+                                       svn_boolean_t prefolded,
                                        trail_t *trail,
                                        apr_pool_t *pool);
 

@@ -345,15 +345,19 @@ svn_fs_base__txn_get_revision(svn_revnum_t *revision,
 
 
 svn_error_t *
-svn_fs_base__txn_get_changes_id(const char **changes_id,
-                                svn_fs_t *fs,
-                                const char *txn_name,
-                                trail_t *trail,
-                                apr_pool_t *pool)
+svn_fs_base__txn_get_changes_info(const char **changes_id,
+                                  svn_boolean_t *changes_folded,
+                                  int *num_changes,
+                                  svn_fs_t *fs,
+                                  const char *txn_name,
+                                  trail_t *trail,
+                                  apr_pool_t *pool)
 {
   transaction_t *txn;
   SVN_ERR(get_txn(&txn, fs, txn_name, FALSE, trail, pool));
   *changes_id = txn->changes_id;
+  *changes_folded = txn->changes_folded;
+  *num_changes = txn->num_changes;
   return SVN_NO_ERROR;
 }
 

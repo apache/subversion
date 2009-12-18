@@ -330,6 +330,7 @@ svn_error_t *
 svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
                           svn_fs_t *fs,
                           const char *key,
+                          svn_boolean_t prefolded,
                           trail_t *trail,
                           apr_pool_t *pool)
 {
@@ -378,38 +379,54 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
         goto cleanup;
 
       /* ... and merge it with our return hash.  */
-      err = fold_change(changes, change);
-      if (err)
-        goto cleanup;
-
-      /* Now, if our change was a deletion or replacement, we have to
-         blow away any changes thus far on paths that are (or, were)
-         children of this path.
-         ### i won't bother with another iteration pool here -- at
-             most we talking about a few extra dups of paths into what
-             is already a temporary subpool.
-      */
-      if ((change->kind == svn_fs_path_change_delete)
-          || (change->kind == svn_fs_path_change_replace))
+      if (prefolded)
         {
-          apr_hash_index_t *hi;
+          svn_fs_path_change2_t *new_change;
+          new_change = svn_fs__path_change_create_internal(
+                          svn_fs_base__id_copy(change->noderev_id, pool),
+                          change->kind, pool);
+          new_change->text_mod = change->text_mod;
+          new_change->prop_mod = change->prop_mod;
+          new_change->node_kind = svn_node_unknown;
+          new_change->copyfrom_known = FALSE;
+          apr_hash_set(changes, apr_pstrdup(pool, change->path),
+                       APR_HASH_KEY_STRING, new_change);
+        }
+      else
+        {
+          err = fold_change(changes, change);
+          if (err)
+            goto cleanup;
 
-          for (hi = apr_hash_first(subpool, changes);
-               hi;
-               hi = apr_hash_next(hi))
+          /* Now, if our change was a deletion or replacement, we have to
+             blow away any changes thus far on paths that are (or, were)
+             children of this path.
+             ### i won't bother with another iteration pool here -- at
+                 most we talking about a few extra dups of paths into what
+                 is already a temporary subpool.
+          */
+          if ((change->kind == svn_fs_path_change_delete)
+              || (change->kind == svn_fs_path_change_replace))
             {
-              /* KEY is the path. */
-              const void *hashkey;
-              apr_ssize_t klen;
-              apr_hash_this(hi, &hashkey, &klen, NULL);
+              apr_hash_index_t *hi;
 
-              /* If we come across our own path, ignore it. */
-              if (strcmp(change->path, hashkey) == 0)
-                continue;
+              for (hi = apr_hash_first(subpool, changes);
+                   hi;
+                   hi = apr_hash_next(hi))
+                {
+                  /* KEY is the path. */
+                  const void *hashkey;
+                  apr_ssize_t klen;
+                  apr_hash_this(hi, &hashkey, &klen, NULL);
 
-              /* If we come across a child of our path, remove it. */
-              if (svn_uri_is_child(change->path, hashkey, subpool))
-                apr_hash_set(changes, hashkey, klen, NULL);
+                  /* If we come across our own path, ignore it. */
+                  if (strcmp(change->path, hashkey) == 0)
+                    continue;
+
+                  /* If we come across a child of our path, remove it. */
+                  if (svn_uri_is_child(change->path, hashkey, subpool))
+                    apr_hash_set(changes, hashkey, klen, NULL);
+                }
             }
         }
 

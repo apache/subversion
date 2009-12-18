@@ -962,13 +962,17 @@ add_change(svn_fs_t *fs,
 {
   change_t change;
   const char *changes_id;
+  svn_boolean_t changes_folded;
+  int num_changes;
+
   change.path = svn_fs__canonicalize_abspath(path, pool);
   change.noderev_id = noderev_id;
   change.kind = change_kind;
   change.text_mod = text_mod;
   change.prop_mod = prop_mod;
-  SVN_ERR(svn_fs_base__txn_get_changes_id(&changes_id, fs, txn_id,
-                                          trail, pool));
+  SVN_ERR(svn_fs_base__txn_get_changes_info(&changes_id, &changes_folded,
+                                            &num_changes, fs, txn_id,
+                                            trail, pool));
   return svn_fs_bdb__changes_add(fs, changes_id, &change, trail, pool);
 }
 
@@ -2489,6 +2493,8 @@ verify_locks(const char *txn_name,
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *changes_id;
+  svn_boolean_t changes_folded;
+  int num_changes;
   apr_hash_t *changes;
   apr_hash_index_t *hi;
   apr_array_header_t *changed_paths;
@@ -2496,10 +2502,11 @@ verify_locks(const char *txn_name,
   int i;
 
   /* Fetch the changes for this transaction. */
-  SVN_ERR(svn_fs_base__txn_get_changes_id(&changes_id, trail->fs, txn_name,
-                                          trail, trail->pool));
+  SVN_ERR(svn_fs_base__txn_get_changes_info(&changes_id, &changes_folded,
+                                            &num_changes, trail->fs, txn_name,
+                                            trail, trail->pool));
   SVN_ERR(svn_fs_bdb__changes_fetch(&changes, trail->fs, txn_name,
-                                    trail, pool));
+                                    changes_folded, trail, pool));
 
   /* Make an array of the changed paths, and sort them depth-first-ily.  */
   changed_paths = apr_array_make(pool, apr_hash_count(changes) + 1,
@@ -4120,6 +4127,8 @@ txn_body_paths_changed(void *baton,
 {
   struct paths_changed_args *args = baton;
   const char *txn_id, *changes_id;
+  svn_boolean_t changes_folded;
+  int num_changes;
   svn_fs_t *fs = args->root->fs;
 
   /* Get the transaction ID from ROOT. */
@@ -4129,10 +4138,11 @@ txn_body_paths_changed(void *baton,
   else
     txn_id = args->root->txn;
 
-  SVN_ERR(svn_fs_base__txn_get_changes_id(&changes_id, fs, txn_id,
-                                          trail, trail->pool));
+  SVN_ERR(svn_fs_base__txn_get_changes_info(&changes_id, &changes_folded,
+                                            &num_changes, fs, txn_id,
+                                            trail, trail->pool));
   return svn_fs_bdb__changes_fetch(&(args->changes), fs, changes_id,
-                                   trail, trail->pool);
+                                   changes_folded, trail, trail->pool);
 }
 
 

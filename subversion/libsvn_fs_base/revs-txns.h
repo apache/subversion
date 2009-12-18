@@ -93,12 +93,17 @@ svn_error_t *svn_fs_base__txn_get_revision(svn_revnum_t *revision,
 
 /* Set *CHANGES_ID to the key into the `changes' table (allocated from
    POOL) by which changed path records associated with FS transaction
-   TXN_NAME are found.  Do all of this as part of TRAIL.  */
-svn_error_t *svn_fs_base__txn_get_changes_id(const char **changes_id,
-                                             svn_fs_t *fs,
-                                             const char *txn_name,
-                                             trail_t *trail,
-                                             apr_pool_t *pool);
+   TXN_NAME are found.  Set *CHANGES_FOLDED to TRUE if those changed
+   path records have already been folded; set it to FALSE otherwise.
+   Set *NUM_CHANGES to the number of changed path records, if known,
+   or to -1 otherwise.  Do all of this as part of TRAIL.  */
+svn_error_t *svn_fs_base__txn_get_changes_info(const char **changes_id,
+                                               svn_boolean_t *changes_folded,
+                                               int *num_changes,
+                                               svn_fs_t *fs,
+                                               const char *txn_name,
+                                               trail_t *trail,
+                                               apr_pool_t *pool);
 
 
 /* Retrieve information about the Subversion transaction TXN_NAME from
