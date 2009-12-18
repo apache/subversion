@@ -2334,7 +2334,8 @@ svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
 svn_error_t *
 svn_wc__db_pristine_install(svn_wc__db_t *db,
                             const char *tempfile_abspath,
-                            const svn_checksum_t *checksum,
+                            const svn_checksum_t *sha1_checksum,
+                            const svn_checksum_t *md5_checksum,
                             apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -2345,7 +2346,8 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
   svn_sqlite__stmt_t *stmt;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(tempfile_abspath));
-  SVN_ERR_ASSERT(checksum != NULL);
+  SVN_ERR_ASSERT(sha1_checksum != NULL);
+  SVN_ERR_ASSERT(md5_checksum != NULL);
 
   VERIFY_CHECKSUM_KIND(checksum);
 
@@ -2362,7 +2364,7 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, checksum,
+  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, sha1_checksum,
                              TRUE /* create_subdir */,
                              scratch_pool, scratch_pool));
 
@@ -2375,10 +2377,8 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_INSERT_PRISTINE));
-  if (checksum->kind == svn_checksum_sha1)
-    SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, checksum, scratch_pool));
-  else
-    SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
