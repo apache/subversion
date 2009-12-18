@@ -137,6 +137,20 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r891672
+   Fix issue #3552 - File external from URL cannot overwrite the existing
+   versioned item
+   Justification:
+     This defect affects 'subversive' client users in 1.6.x.
+   Notes:
+     The backport branch exists in order to make the patch compatible with
+     1.6.x tests. r876917 introduces 'switched' to wc status which is not 
+     available in 1.6.x.
+   Branch:
+     ^/subversion/branches/1.6.x-r891672
+   Votes:
+     +1: stylesen
+
 Veto-blocked changes:
 
  * r877552, r877617, r877618, r877619, r877621
