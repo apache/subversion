@@ -496,44 +496,42 @@ copy_dup(const char **new_copy_id,
  *
  * Each new "change" has the same content as the old one, except with the
  * txn-id component of its noderev-id (which is assumed to have been
- * OLD_KEY) changed to NEW_KEY.
+ * OLD_TXN_ID) changed to NEW_TXN_ID.
  *
- * Work within TRAIL. */
+ * Work within TRAIL.  Use POOL for any necessary allocations.  */
 static svn_error_t *
-changes_dup(const char *new_key,
-            const char *old_key,
+changes_dup(const char *old_key,
+            const char *old_txn_id,
+            const char *new_key,
+            const char *new_txn_id,
             trail_t *trail,
-            apr_pool_t *scratch_pool)
+            apr_pool_t *pool)
 {
   apr_array_header_t *changes;
   int i;
 
-  SVN_ERR(svn_fs_bdb__changes_fetch_raw(&changes, trail->fs, old_key, trail,
-                                        scratch_pool));
+  SVN_ERR(svn_fs_bdb__changes_fetch_raw(&changes, trail->fs, old_key,
+                                        trail, pool));
   for (i = 0; i < changes->nelts; i++)
     {
       change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
 
+      /* Tweak the txn_id of the change's noderev_id to NEW_TXN_ID
+         (unless it's a `delete' or `reset' record).  */
       if (change->kind != svn_fs_path_change_delete
           && change->kind != svn_fs_path_change_reset)
         {
-          const char *node_id, *copy_id;
-
-          /* Modify the "change": change noderev_id's txn_id to NEW_KEY */
-          node_id = svn_fs_base__id_node_id(change->noderev_id);
-          copy_id = svn_fs_base__id_copy_id(change->noderev_id);
-          /* ### FIXME:  Not sure this assertion makes sense when
-             `changes' are arbitrarily keyed. */
+          const char *node_id = svn_fs_base__id_node_id(change->noderev_id);
+          const char *copy_id = svn_fs_base__id_copy_id(change->noderev_id);
           SVN_ERR_ASSERT(svn_fs_base__key_compare(
-            svn_fs_base__id_txn_id(change->noderev_id), old_key) == 0);
+            svn_fs_base__id_txn_id(change->noderev_id), old_txn_id) == 0);
           change->noderev_id = svn_fs_base__id_create(node_id, copy_id,
-                                                      new_key,
-                                                      scratch_pool);
+                                                      new_txn_id, pool);
         }
 
       /* Save the new "change" */
-      SVN_ERR(svn_fs_bdb__changes_add(trail->fs, new_key, change, trail,
-                                      scratch_pool));
+      SVN_ERR(svn_fs_bdb__changes_add(trail->fs, new_key, change,
+                                      trail, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -941,7 +939,8 @@ txn_body_begin_obliteration_txn(void *baton, trail_t *trail)
     }
 
   /* Dup the "changes" that are keyed by the txn_id. */
-  SVN_ERR(changes_dup(changes_id, old_txn->changes_id, trail, trail->pool));
+  SVN_ERR(changes_dup(old_txn->changes_id, old_txn_id, changes_id,
+                      new_txn_id, trail, trail->pool));
 
   /* ### TODO: Update the "node-origins" table.
    * Or can this be deferred till commit time? Probably not. */
