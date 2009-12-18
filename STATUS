@@ -126,6 +126,17 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r892050, 892085
+   Fix a reintegrate bug which can occur when the merge source has mergeinfo
+   that explicitly describes common history with the reintegrate target.
+   Justification:
+     Reintegrate merges may not work if the reintegrate source has self-
+     referential mergeinfo that is also self-referential to the reintegrate
+     target.  This occured in our own repository, see
+     http://svn.haxx.se/dev/archive-2009-12/0338.shtml.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 
  * r877552, r877617, r877618, r877619, r877621
