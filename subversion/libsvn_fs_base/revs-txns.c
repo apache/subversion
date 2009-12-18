@@ -353,8 +353,7 @@ svn_fs_base__txn_get_changes_id(const char **changes_id,
 {
   transaction_t *txn;
   SVN_ERR(get_txn(&txn, fs, txn_name, FALSE, trail, pool));
-  *changes_id = txn->changes_id ? txn->changes_id 
-                                : apr_pstrdup(pool, txn_name);
+  *changes_id = txn->changes_id;
   return SVN_NO_ERROR;
 }
 
@@ -938,9 +937,7 @@ txn_body_begin_obliteration_txn(void *baton, trail_t *trail)
     }
 
   /* Dup the "changes" that are keyed by the txn_id. */
-  SVN_ERR(changes_dup(changes_id,
-                      old_txn->changes_id ? old_txn->changes_id : old_txn_id,
-                      trail, trail->pool));
+  SVN_ERR(changes_dup(changes_id, old_txn->changes_id, trail, trail->pool));
 
   /* ### TODO: Update the "node-origins" table.
    * Or can this be deferred till commit time? Probably not. */
@@ -1107,6 +1104,7 @@ txn_body_cleanup_txn_copy(void *baton, trail_t *trail)
 static svn_error_t *
 txn_body_cleanup_txn_changes(void *baton, trail_t *trail)
 {
+  /* The 'baton' is the 'changes_id'. */
   return svn_fs_bdb__changes_delete(trail->fs, baton, trail, trail->pool);
 }
 
@@ -1250,7 +1248,7 @@ svn_fs_base__purge_txn(svn_fs_t *fs,
   /* Kill the transaction's changes (which should gracefully recover
      if...). */
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_cleanup_txn_changes,
-                                 (void *)txn_id, TRUE, pool));
+                                 (void *)txn->changes_id, TRUE, pool));
 
   /* Kill the transaction's copies (which should gracefully...). */
   if (txn->copies)

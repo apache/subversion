@@ -242,6 +242,12 @@ svn_fs_bdb__get_txn(transaction_t **txn_p,
   /* Convert skel to native type. */
   SVN_ERR(svn_fs_base__parse_transaction_skel(&transaction, skel,
                                               bfd->format, pool));
+  
+  /* Fixup TRANSACTION to ensure that it has a value 'changes_id'
+   *member. */
+  if (transaction->changes_id == NULL)
+    transaction->changes_id = apr_pstrdup(pool, txn_name);
+
   *txn_p = transaction;
   return SVN_NO_ERROR;
 }

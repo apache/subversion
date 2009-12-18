@@ -166,9 +166,8 @@ typedef struct
      no copies in this transaction.  */
   apr_array_header_t *copies;
 
-  /* key into the `changed' table by which changed paths for this
-     transaction may be found, or NULL if changes are keyed on the
-     transaction's ID.  */
+  /* key into the `changes' table by which changed paths for this
+     transaction may be found.  */
   const char *changes_id;
 
   /* TRUE iff the changes records for this transaction are known to be

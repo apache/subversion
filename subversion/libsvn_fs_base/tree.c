@@ -2488,6 +2488,7 @@ verify_locks(const char *txn_name,
              apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
+  const char *changes_id;
   apr_hash_t *changes;
   apr_hash_index_t *hi;
   apr_array_header_t *changed_paths;
@@ -2495,6 +2496,8 @@ verify_locks(const char *txn_name,
   int i;
 
   /* Fetch the changes for this transaction. */
+  SVN_ERR(svn_fs_base__txn_get_changes_id(&changes_id, trail->fs, txn_name,
+                                          trail, trail->pool));
   SVN_ERR(svn_fs_bdb__changes_fetch(&changes, trail->fs, txn_name,
                                     trail, pool));
 
@@ -4115,11 +4118,8 @@ static svn_error_t *
 txn_body_paths_changed(void *baton,
                        trail_t *trail)
 {
-  /* WARNING: This is called *without* the protection of a Berkeley DB
-     transaction.  If you modify this function, keep that in mind. */
-
   struct paths_changed_args *args = baton;
-  const char *txn_id;
+  const char *txn_id, *changes_id;
   svn_fs_t *fs = args->root->fs;
 
   /* Get the transaction ID from ROOT. */
@@ -4129,7 +4129,9 @@ txn_body_paths_changed(void *baton,
   else
     txn_id = args->root->txn;
 
-  return svn_fs_bdb__changes_fetch(&(args->changes), fs, txn_id,
+  SVN_ERR(svn_fs_base__txn_get_changes_id(&changes_id, fs, txn_id,
+                                          trail, trail->pool));
+  return svn_fs_bdb__changes_fetch(&(args->changes), fs, changes_id,
                                    trail, trail->pool);
 }
 
@@ -4142,8 +4144,8 @@ base_paths_changed(apr_hash_t **changed_paths_p,
   struct paths_changed_args args;
   args.root = root;
   args.changes = NULL;
-  SVN_ERR(svn_fs_base__retry(root->fs, txn_body_paths_changed, &args,
-                             FALSE, pool));
+  SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_paths_changed, &args,
+                                 FALSE, pool));
   *changed_paths_p = args.changes;
   return SVN_NO_ERROR;
 }
