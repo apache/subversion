@@ -17165,6 +17165,10 @@ def merge_into_wc_for_deleted_branch(sbox):
                                        None, None, None, None,
                                        None, 1, 0)  
 
+# Test for a reintegrate bug which can occur when the merge source
+# has mergeinfo that explicitly describes common history with the reintegrate
+# target, see http://mail-archives.apache.org/mod_mbox/subversion-dev/
+# 200912.mbox/%3C6cfe18eb0912161438wfb5234bj118aacdff7ffb25f@mail.gmail.com%3E
 def reintegrate_with_self_referential_mergeinfo(sbox):
   "source has target's history as explicit mergeinfo"
 
@@ -17263,7 +17267,7 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
     'D/H/omega' : Item("New content"),
     })
   expected_skip = wc.State(A2_path, { })
-  # Currently failing with this error:
+  # Previously failed with this error:
   #
   #   svn merge ^/A2.1" A2 --reintegrate
   #  ..\..\..\subversion\svn\merge-cmd.c:349: (apr_err=160013)
@@ -17514,7 +17518,7 @@ test_list = [ None,
               XFail(committed_case_only_move_and_revert,
                     is_fs_case_insensitive),
               merge_into_wc_for_deleted_branch,
-              XFail(reintegrate_with_self_referential_mergeinfo),
+              reintegrate_with_self_referential_mergeinfo,
              ]
 
 if __name__ == '__main__':
