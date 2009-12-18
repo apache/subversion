@@ -1,0 +1,21 @@
+# XML RELAX NG schema for Subversion command-line client output
+# For "svn diff --summarize --xml"
+
+include "common.rnc"
+
+start = diff
+
+diff = element diff { paths }
+
+paths = element paths { path* }
+
+## A path entry
+path = element path { attlist.path, text }
+attlist.path &=
+  ## The props of the entry.
+  attribute props { "none" | "modified" },
+  ## The kind of the entry.
+  attribute kind { "dir" | "file" },
+  ## The action performed against this path.  This terminology
+  ## was chosen for consistencey from 'svn list'.
+  attribute item { "none" | "added" | "modified" | "deleted" }

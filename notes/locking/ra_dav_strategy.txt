@@ -1,0 +1,87 @@
+    How we will extend ra_dav/mod_dav_svn protocol for locking feature
+    ==================================================================
+
+
+RA->lock()
+
+     * send http LOCK request with 2 custom headers:
+
+         - force flag
+         - working-revnum (for OOD check)
+
+     * mod_dav_svn should call authz_read func on path, if it exists.
+
+     * generate http LOCK response, which includes standard body that
+       describes almost all the svn_lock_t fields.
+
+         - add one custom response header:  creation-date
+
+     * what if older server?  just returns '405 Method not Allowed'.
+
+
+RA->unlock()
+
+     * send http UNLOCK request with 1 custom header:
+
+         - force flag
+
+     * mod_dav_svn should call authz_read func on path, if it exists.
+
+     * generate http UNLOCK response:  success == "204 no content"
+
+     * what if older server?  just returns '405 Method not Allowed'.
+
+----
+
+RA->get_lock()
+
+     * do a depth-0 PROPFIND for DAV:lockdiscovery property
+
+     * mod_dav_svn should call authz_read func on path, if it exists.
+
+     * response is the same as what comes back in a LOCK response  --
+       a standard property value that describes almost all the
+       svn_lock_t fields. 
+
+         - add one custom response header:  X-SVN-creation-date
+
+     * what if older server?  just returns '404 Not Found'.
+
+
+RA->get_locks()
+
+     * custom REPORT request.
+
+     * mod_dav_svn should call svn_repos_fs_get_locks(), because it
+       automatically uses the authz_read func to screen out paths.
+
+     * custom response.
+
+     * what if older server?  return some sort of 4XX response and
+       error indicating the report-type is unknown.
+        
+     *** NOTE: a dumb client can achieve the exact same effect by
+         doing a depth-infinity PROPFIND for the 'DAV:lockdiscovery'
+         property.  But this causes mod_dav_svn to do an O(N)
+         traversal of the repository, running svn_fs_get_lock() on
+         each path!  Much, *much* slower than allowing fs_get_locks()
+         to do a partial-key database lookup!
+
+
+
+RA->get_commit_editor2()
+
+     * stash the incoming hash of tokens.
+
+     * every time we do a CHECKOUT, PUT, COPY, DELETE, PROPPATCH of a
+       file path, look to see if there's a token available in the
+       hash.  If so, put it in the If: header of the request.
+
+     * send *all* tokens in the If: header of the final MERGE request.
+
+          -- also send either a new XML body element, or custom
+             header, indicating whether to 'keep_locks' or not.
+ 
+     * what if older server?  meaningless.  why would you have the
+       tokens in the first place.  And anyway, the If: tokens will be
+       ignored anyway if the server isn't paying attention to locking.

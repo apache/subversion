@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+			<Directory Id="ProgramMenuFolder" Name="PMFolder">
+				<Directory Id="SubversionMenuFolder" Name="Subversion">
+					<Component Id="IDSubvProgGroup" Guid="8F23C209-2890-4DA6-8165-7CC650028DAD">
+						<RemoveFolder Id="IDSubvProgGroup" On="uninstall" />
+						<!-- HKCU -->
+							<!-- setup path -->
+							<RegistryValue Root="HKCU" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe" Type="string" Value="[INSTALLDIR]bin\svn.exe" KeyPath="no" />
+							<RegistryValue Root="HKCU" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe" Type="string" Name="Path" Value="[INSTALLDIR]bin" KeyPath="no" />
+	
+							<!-- setup version -->
+							<RegistryValue Root="HKCU" Key="SOFTWARE\Tigris.org\Subversion" Type="string" Name="Version" Value="1234" KeyPath="no" />
+							<RegistryValue Root="HKCU" Key="SOFTWARE\Tigris.org\Subversion" Type="string" Name="Revision" Value="4321" KeyPath="no" />
+						
+							<!-- iconv -->
+							<RegistryValue Root="HKCU" Key="Environment" Type="string" Name="APR_ICONV_PATH" Value="[INSTALLDIR]iconv" KeyPath="no" />
+
+						<!-- HKLM -->
+							<!-- setup path -->
+							<RegistryValue Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe" Type="string" Value="[INSTALLDIR]bin\svn.exe" KeyPath="no" />
+							<RegistryValue Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe" Type="string" Name="Path" Value="[INSTALLDIR]bin" KeyPath="no" />
+	
+							<!-- setup version -->
+							<RegistryValue Root="HKLM" Key="SOFTWARE\Tigris.org\Subversion" Type="string" Name="Version" Value="1234" KeyPath="no" />
+							<RegistryValue Root="HKLM" Key="SOFTWARE\Tigris.org\Subversion" Type="string" Name="Revision" Value="4321" KeyPath="no" />
+						
+							<!-- iconv -->
+							<RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Control\Session Manager\Environment" Type="string" Name="APR_ICONV_PATH" Value="[INSTALLDIR]iconv" KeyPath="no" />
+					</Component>
+					<Directory Id="LicenseMenuFolder" Name="Licenses">
+						<Component Id="IDSubvLicGroup" Guid="3FFFC11C-3738-4784-B577-508BE9D718F8">
+							<RemoveFolder Id="IDSubvLicGroup" On="uninstall" />
+							<!-- HKCU -->
+								<!-- setup path -->
+								<RegistryValue Root="HKCU" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe" Type="string" Value="[INSTALLDIR]bin\svn.exe" KeyPath="no" />
+								<RegistryValue Root="HKCU" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe" Type="string" Name="Path" Value="[INSTALLDIR]bin" KeyPath="no" />
+		
+								<!-- setup version -->
+								<RegistryValue Root="HKCU" Key="SOFTWARE\Tigris.org\Subversion" Type="string" Name="Version" Value="[ProductVersion]" KeyPath="no" />
+								<RegistryValue Root="HKCU" Key="SOFTWARE\Tigris.org\Subversion" Type="string" Name="Revision" Value="[RevisionNumber]" KeyPath="no" />
+							
+								<!-- iconv -->
+								<RegistryValue Root="HKCU" Key="Environment" Type="string" Name="APR_ICONV_PATH" Value="[INSTALLDIR]iconv" KeyPath="no" />
+	
+							<!-- HKLM -->
+								<!-- setup path -->
+								<RegistryValue Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe" Type="string" Value="[INSTALLDIR]bin\svn.exe" KeyPath="no" />
+								<RegistryValue Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe" Type="string" Name="Path" Value="[INSTALLDIR]bin" KeyPath="no" />
+		
+								<!-- setup version -->
+								<RegistryValue Root="HKLM" Key="SOFTWARE\Tigris.org\Subversion" Type="string" Name="Version" Value="[ProductVersion]" KeyPath="no" />
+								<RegistryValue Root="HKLM" Key="SOFTWARE\Tigris.org\Subversion" Type="string" Name="Revision" Value="[RevisionNumber]" KeyPath="no" />
+							
+								<!-- iconv -->
+								<RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Control\Session Manager\Environment" Type="string" Name="APR_ICONV_PATH" Value="[INSTALLDIR]iconv" KeyPath="no" />
+						</Component>
+					</Directory>
+				</Directory>
+			</Directory>
+</Include>

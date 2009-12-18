@@ -1,0 +1,154 @@
+#!/bin/sh
+# -*- coding:utf-8;mode:shell-script;mode:font-lock -*-
+
+##
+# GNU diff wrapper for FileMerge.
+#
+# (FileMerge is a graphical diff tool in the Mac OS X Developer
+# Tools.)
+#
+# Use this as a --diff-cmd argument to svn diff in order to view your
+# diffs using FileMerge.
+##
+# Copyright (c) 2002 Wilfredo Sanchez Vega <wsanchez@wsanchez.net>.
+# All rights reserved.
+# 
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL
+# WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+# AUTHORS BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+# DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+# PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+# TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+# PERFORMANCE OF THIS SOFTWARE.
+##
+
+set -e
+set -u
+
+##
+# Handle command line
+##
+
+usage ()
+{
+  program=$(basename "$0");
+
+  if [ $# != 0 ]; then echo "$@"; echo ""; fi;
+
+  echo "${program}: usage:";
+  echo "    ${program} [options] file1 file2";
+  echo "";
+  echo "options:";
+  echo "  --help                     Print this help";
+  echo "  -c                         Ignored";
+  echo "  -C --context X             Ignored";
+  echo "  -u                         Ignored";
+  echo "  -U --unified X             Ignored";
+  echo "  -L --label X               Ignored";
+ #echo "  -p --show-c-function       Ignored";
+ #echo "  -F --show-function-line X  Ignored";
+  echo "  -q --brief                 Ignored";
+  echo "  -y --side-by-side          Ignored";
+  echo "  -w --width X               Ignored";
+ #echo "  --left-column              Ignored";
+ #echo "  --suppress-common-lines    Ignored";
+  echo "  -l --paginate              Ignored";
+  echo "  -t --expand-tabs           Ignored";
+  echo "  -T --initial-tab           Ignored";
+ #echo "  -r --recursive             Ignored";
+  echo "  -d --minimal               Ignored";
+  echo "  -H --speed-large-files     Ignored";
+}
+
+# Process arguments
+while [ $# != 0 ]; do
+  case "$1" in
+    --help)
+      usage;
+      exit 0;
+      ;;
+
+    # These display options would not make sense for FileMerge
+    -c                     ) shift 1; ;; # Context diff
+    -C|--context           ) shift 2; ;; # Context diff
+    -u                     ) shift 1; ;; # Unified diff
+    -U|--unified           ) shift 2; ;; # Unified diff
+    -L|--label             ) shift 2; ;; #   Label
+   #-p|--show-c-function   ) shift 1; ;; #   C function names
+   #-F|--show-function-line) shift 2; ;; #   Show recent line w/ regex
+    -q|--brief             ) shift 1; ;; # Output only whether files differ
+    -y|--side-by-side      ) shift 1; ;; # Output in two columns
+    -w|--width             ) shift 2; ;; #   Max chars per line
+   #--left-column          ) shift 1; ;; #   Left only if common
+   #--suppress-common-lines) shift 1; ;; #   No output if common
+    -l|--paginate          ) shift 1; ;; # Pass through pr
+    -t|--expand-tabs       ) shift 1; ;; # Expand tabs
+    -T|--initial-tab       ) shift 1; ;; # Add initial tab
+   #-r|--recursive         ) shift 1; ;; # Recurse into directories
+    -d|--minimal           ) shift 1; ;; # Try hard to minimize changes
+    -H|--speed-large-files ) shift 1; ;; # Assume large files and small changes
+
+    # Implement these
+   #-s  --report-identical-files
+
+    --|*) break; ;;
+  esac;
+done;
+
+if [ $# != 2 ]; then
+    usage "Invalid arguments: $*";
+    exit 1;
+fi;
+
+file1="$1"; shift;
+file2="$1"; shift;
+
+##
+# Do The Right Thing
+##
+
+#
+# If opendiff isn't installed, you can't launch FileMerge.
+# If we're not in the OS X Terminal, we probably can't run FileMerge
+#
+if ! type opendiff >& /dev/null || [ "${TERM_PROGRAM:=}" != "Apple_Terminal" ]; then
+    diff "$@";
+    exit $?;
+fi;
+
+merge="${file2}";
+
+tmp="";
+
+if [ $(dirname "${file1}") == "/tmp" ]; then
+    if [ -z "${tmp}" ]; then tmp=$(mktemp -d /tmp/viewdiff.XXXX); fi;
+
+    ln "${file1}" "${tmp}/left";
+    file1="${tmp}/left";
+fi;
+
+if [ $(dirname "${file2}") == "/tmp" ]; then
+    if [ -z "${tmp}" ]; then tmp=$(mktemp -d /tmp/viewdiff.XXXX); fi;
+
+    ln "${file2}" "${tmp}/right";
+    file2="${tmp}/right";
+    merge="";
+fi;
+
+echo opendiff "${file1}" "${file2}";
+if [ -z "${merge}" ]; then
+    opendiff "${file1}" "${file2}";
+else
+    opendiff "${file1}" "${file2}" -merge "${merge}";
+fi;
+
+sleep 1
+
+# Give FileMerge some time before letting svn diff continue and possibly delete
+# any temp files, or before deleting our own temp files.
+if [ -n "${tmp}" ]; then (sleep 2; rm -rf "${tmp}") & fi;

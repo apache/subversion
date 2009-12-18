@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+						<Component Guid="6B649B76-F991-4F91-931C-28A3D2835EA1" Id="saslanon" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\saslANONYMOUS.dll" Name="saslANONYMOUS.dll" Id="saslanon" />
+						</Component>
+						<Component Guid="B370A704-3E8E-4D73-B3F0-AF7ACB5AF624" Id="saslcramm" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\saslCRAMMD5.dll" Name="saslCRAMMD5.dll" Id="saslcramm" />
+						</Component>
+						<Component Guid="17DCDDF9-3E2F-4A08-B3FC-E7CC12385BAD" Id="sasldig" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\saslDIGESTMD5.dll" Name="saslDIGESTMD5.dll" Id="sasldig" />
+						</Component>
+						<Component Guid="3AD50FDC-B249-4D5E-960E-4A8357C2F67A" Id="sasllog" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\saslLOGIN.dll" Name="saslLOGIN.dll" Id="sasllog" />
+						</Component>
+						<Component Guid="607227AC-A4EA-44A5-A660-BC3944FDC013" Id="saslntlm" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\saslNTLM.dll" Name="saslNTLM.dll" Id="saslNTLM" />
+						</Component>
+						<Component Guid="70B56DD7-BCBC-42FF-8E3C-F6BF2DDFC432" Id="saslplain" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\saslPLAIN.dll" Name="saslPLAIN.dll" Id="saslplain" />
+						</Component>
+						<Component Guid="78AE5C63-63E9-4353-88A6-7FA55C10A2A4" Id="sasldb" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\saslSASLDB.dll" Name="saslSASLDB.dll" Id="sasldb" />
+						</Component>
+</Include>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+						<Directory Id="locale" Name="locale">
+							<Directory Id="de" Name="de">
+								<Directory Id="LC_MESSAGES1" Name="LC_MESSAGES">
+									<Component Guid="BD031E7E-FBC3-446D-9E6F-2201FFE6361D" Id="SubversionMo" DiskId="1">
+										<File Source="..\..\..\work\svn-win32-ap20x\share\locale\de\LC_MESSAGES\subversion.mo" Name="subversion.mo" Id="subversion.mo" />
+									</Component>
+								</Directory>
+							</Directory>
+							<Directory Id="es" Name="es">
+								<Directory Id="LC_MESSAGES2" Name="LC_MESSAGES">
+									<Component Guid="56B45FF0-F1B9-466B-B586-A309E534479C" Id="LC_MESSAGESSubversionMo" DiskId="1">
+										<File Source="..\..\..\work\svn-win32-ap20x\share\locale\es\LC_MESSAGES\subversion.mo" Name="subversion.mo" Id="LC_MESSAGES.subversion.mo" />
+									</Component>
+								</Directory>
+							</Directory>
+							<Directory Id="fr" Name="fr">
+								<Directory Id="LC_MESSAGES3" Name="LC_MESSAGES">
+									<Component Guid="19AD8281-4344-4BE5-BD07-4503442482A7" Id="LC_MESSAGESSubversionMo1" DiskId="1">
+										<File Source="..\..\..\work\svn-win32-ap20x\share\locale\fr\LC_MESSAGES\subversion.mo" Name="subversion.mo" Id="LC_MESSAGES.subversion1.mo" />
+									</Component>
+								</Directory>
+							</Directory>
+							<Directory Id="it" Name="it">
+								<Directory Id="LC_MESSAGES4" Name="LC_MESSAGES">
+									<Component Guid="F5FDF02A-3E9C-4892-8A3A-D1B01D53F5E4" Id="LC_MESSAGESSubversionMo2" DiskId="1">
+										<File Source="..\..\..\work\svn-win32-ap20x\share\locale\it\LC_MESSAGES\subversion.mo" Name="subversion.mo" Id="LC_MESSAGES.subversion2.mo" />
+									</Component>
+								</Directory>
+							</Directory>
+							<Directory Id="ja" Name="ja">
+								<Directory Id="LC_MESSAGES5" Name="LC_MESSAGES">
+									<Component Guid="0E02573D-A28C-4D25-B2AF-75E504F4B722" Id="LC_MESSAGESSubversionMo3" DiskId="1">
+										<File Source="..\..\..\work\svn-win32-ap20x\share\locale\ja\LC_MESSAGES\subversion.mo" Name="subversion.mo" Id="LC_MESSAGES.subversion3.mo" />
+									</Component>
+								</Directory>
+							</Directory>
+							<Directory Id="ko" Name="ko">
+								<Directory Id="LC_MESSAGES6" Name="LC_MESSAGES">
+									<Component Guid="2B861D0D-A086-4313-ACD4-BF48CAB80B8D" Id="LC_MESSAGESSubversionMo4" DiskId="1">
+										<File Source="..\..\..\work\svn-win32-ap20x\share\locale\ko\LC_MESSAGES\subversion.mo" Name="subversion.mo" Id="LC_MESSAGES.subversion4.mo" />
+									</Component>
+								</Directory>
+							</Directory>
+							<Directory Id="nb" Name="nb">
+								<Directory Id="LC_MESSAGES7" Name="LC_MESSAGES">
+									<Component Guid="B329ED9C-8A85-4749-8460-8E2246A17A52" Id="LC_MESSAGESSubversionMo5" DiskId="1">
+										<File Source="..\..\..\work\svn-win32-ap20x\share\locale\nb\LC_MESSAGES\subversion.mo" Name="subversion.mo" Id="LC_MESSAGES.subversion5.mo" />
+									</Component>
+								</Directory>
+							</Directory>
+							<Directory Id="pl" Name="pl">
+								<Directory Id="LC_MESSAGES8" Name="LC_MESSAGES">
+									<Component Guid="439C7FB1-834A-4728-90D1-52ED224DBC49" Id="LC_MESSAGESSubversionMo6" DiskId="1">
+										<File Source="..\..\..\work\svn-win32-ap20x\share\locale\pl\LC_MESSAGES\subversion.mo" Name="subversion.mo" Id="LC_MESSAGES.subversion6.mo" />
+									</Component>
+								</Directory>
+							</Directory>
+							<Directory Id="pt_BR" Name="pt_BR">
+								<Directory Id="LC_MESSAGES9" Name="LC_MESSAGES">
+									<Component Guid="2358F386-884A-441E-9F90-4407ED623EB9" Id="LC_MESSAGESSubversionMo7" DiskId="1">
+										<File Source="..\..\..\work\svn-win32-ap20x\share\locale\pt_BR\LC_MESSAGES\subversion.mo" Name="subversion.mo" Id="LC_MESSAGES.subversion7.mo" />
+									</Component>
+								</Directory>
+							</Directory>
+							<Directory Id="sv" Name="sv">
+								<Directory Id="LC_MESSAGES10" Name="LC_MESSAGES">
+									<Component Guid="ABFF1CE3-4EE8-48B7-A4B7-A2986A9657C1" Id="LC_MESSAGESSubversionMo8" DiskId="1">
+										<File Source="..\..\..\work\svn-win32-ap20x\share\locale\sv\LC_MESSAGES\subversion.mo" Name="subversion.mo" Id="LC_MESSAGES.subversion8.mo" />
+									</Component>
+								</Directory>
+							</Directory>
+							<Directory Id="zh_CN" Name="zh_CN">
+								<Directory Id="LC_MESSAGES11" Name="LC_MESSAGES">
+									<Component Guid="E33D63D6-C79C-415D-8B1F-2CE512DDF4A0" Id="LC_MESSAGESSubversionMo9" DiskId="1">
+										<File Source="..\..\..\work\svn-win32-ap20x\share\locale\zh_CN\LC_MESSAGES\subversion.mo" Name="subversion.mo" Id="LC_MESSAGES.subversion9.mo" />
+									</Component>
+								</Directory>
+							</Directory>
+							<Directory Id="zh_TW" Name="zh_TW">
+								<Directory Id="LC_MESSAGES12" Name="LC_MESSAGES">
+									<Component Guid="5A0D0377-9DDC-4C86-A7C0-A54E45181554" Id="LC_MESSAGESSubversionMo10" DiskId="1">
+										<File Source="..\..\..\work\svn-win32-ap20x\share\locale\zh_TW\LC_MESSAGES\subversion.mo" Name="subversion.mo" Id="LC_MESSAGES.subversion10.mo" />
+									</Component>
+								</Directory>
+							</Directory>
+						</Directory>
+</Include>

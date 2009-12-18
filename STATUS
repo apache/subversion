@@ -1,0 +1,163 @@
+      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      *                                                     *
+      *  THIS RELEASE STREAM IS OPEN TO BUG FIXES.          *
+      *                                                     *
+      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+This file tracks the status of releases in the 1.6.x line.
+
+See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
+details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
+
+Status of 1.6.7:
+================
+
+Candidate changes:
+
+ * r878078, r878088, r878102, r878196
+   Make KWallet window attached to terminal window.
+   Justification:
+     Without this change, KWallet window can appear behind terminal window
+     and is left after killing terminal.
+   Votes:
+     +1: arfrever
+     -0: peters, stsp (without r878196) (code is ugly and Linux-specific -
+                                            would getenv("WINDOWID") work
+                                            instead?)
+
+ * r878216, r878341, r878343, r876862, r877203, r877595, r877665, r877597, r878269,
+   r878321, r878399, r878423, r878426
+   Fix issue #3432 'Merge can record mergeinfo from natural history gaps'
+   Justification:
+     Gaps in merge sources can lead to the creation of invalid mergeinfo
+     or the removal of valid mergeinfo.
+   Notes:     
+     The fix itself in r878399 is relatively simple, but recent refactoring
+     of the merge code on trunk makes it look a lot worse than it is.
+     Unless otherwise noted, all of the following are nominated simply to
+     avoid a conflict nightmare:
+     r878216, r878341, r878343 - New test and test tweaks for the issue.
+     r876862 - Comment changes only.
+     r877203 - Scope reduction of a pool.
+     r877595 - Minor bug fix and some refactoring.
+     r877665 - Comment changes only.
+     r877597 - Merge code refactoring.
+     r878269 - Pool use cleanup, no functional change.
+     r878321 - More merge code refactoring.
+     r878423 - Variable rename to avoid shadowing a previous local.
+     r878426 - Remove an unused variable.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3432
+   Votes:
+     +1: pburba, stsp
+
+ * r876032, r876104, r878447, r878910, r878911, r878916
+   Several fixes to the Win32 exception handler. This change also makes it
+   available on Windows Vista and 7 where it was previously blocked by a
+   version check.
+   Justification:
+     This exception handler is a valuable debugging tool for users who don't
+     have development tools installed. (Most users on Windows).
+   Notes:
+     Most of these revisions cancel out each other. The real changes are in
+     r878447 (removing version check) and r878910,r878916 (fixing formatting
+     specifier). It's probably easier to review the combined patch than the
+     individual revisions.
+   Branch:
+     ^/subversion/branches/1.6.x-r38836.
+   Votes:
+     +1: rhuijben
+     +0: pburba - I don't have a Vista or Win7 box to try this out on, but it
+         works fine on my XP box.
+     +0: lgo - code reviewed and looks good, but I don't have access to a
+         Windows machine.
+
+ * r879093
+   Fix bug where svn_[rangelist|mergeinfo]_[merge|intersect|remove|diff]
+   APIs can modify their *non*-output arguments.
+   Justification:
+     No reports of this causing any problems that I know of, which is
+     probably due to the fact that users of an API like svn_mergeinfo_merge
+     typically only care about the output arguments.  The new C tests added
+     to mergeinfo-test.c clearly demonstrate the bug.
+   Branch:
+     Resolves a minor conflict in libsvn_client/merge.c where the code
+     changed was refactored on trunk.
+     ^/subversion/branches/1.6.x-r39019
+     The relevant commit on the branch is r879175.
+   Votes:
+     +1: pburba, julianfoad
+
+ * r879766
+   Fix issue #3498: Subversion password stores freeze Eclipse
+   Justification:
+     All subclipse users are in great need of this.
+   Branch:
+     Resolves a minor conflict in libsvn_auth_gnome_keyring/gnome_keyring.c
+     where the code changed was refactored on trunk.
+     ^/subversion/branches/1.6.x-r39692
+   Votes:
+     +1: stylesen
+     +0: julianfoad (reviewed, not tested)
+
+ * r879902, r879916
+   Disables file synchronization mutexes in fsfs on Windows. These mutexes
+   were added to make POSIX systems lock files that were in use by other
+   threads in the same process.
+   
+   Windows implements per filehandle locking, so it doesn't need these
+   locks. We usually see the opposite problem in Subversion on Windows.
+   Justification:
+     This gives a measurable performance boost (5% decrease in running time
+     on running the testsuite in parallel mode (on trunk). The difference
+     will be bigger when measured on a real subversion server like one
+     running apache or svnserve.
+   Votes:
+     +1: rhuijben
+
+ * r880552
+   Try to enable TCP keep-alives in svnserve.
+   Justification:
+     ra_svn clients do this, too. It should not do any harm.
+     Is likely to fix hanging svnserve processes which still linger
+     blocking on reads from sockets after days of inactivity on the
+     connection, a problem seen and reported by MPlayer developers in #svn.
+   Votes:
+     +1: stsp
+
+Veto-blocked changes:
+
+ * r877552, r877617, r877618, r877619, r877621
+   Support using `svnversion` on files and improve some messages printed by
+   `svnversion`.
+   Justification:
+     Some messages printed by `svnversion` are inconsistent and sometimes
+     incorrect:
+     $ svnversion /usr
+     exported
+     $ svnversion /bin/ls
+     '/bin/ls' not versioned, and not exported
+     $ svnversion VERSIONED_FILE
+     'VERSIONED_FILE' not versioned, and not exported
+     $ svnversion /nonexistent
+     subversion/libsvn_wc/questions.c:90: (apr_err=2)
+     svn: '/nonexistent' does not exist
+     ^^^
+     Messages with these revisions backported:
+     $ svnversion /usr
+     Unversioned directory
+     $ svnversion /bin/ls
+     Unversioned file
+     $ svnversion VERSIONED_FILE
+     NUMBER
+     $ svnversion /nonexistent
+     '/nonexistent' doesn't exist
+   Votes:
+     +1: arfrever
+     -0: cmpilato (Introduces new features and changes output)
+     -1: rhuijben (Introduces new features and changes output;
+                   I think it should be removed from STATUS)
+
+Approved changes:
+=================

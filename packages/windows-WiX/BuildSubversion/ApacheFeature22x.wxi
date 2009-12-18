@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+				<ComponentRef Id="LibaprDll22x"/>
+				<ComponentRef Id="LibapriconvDll22x"/>
+				<ComponentRef Id="LibaprutilDll22x"/>
+
+				<ComponentRef Id="Libsvnclient22x"/>
+				<ComponentRef Id="Libsvndelta22x"/>
+				<ComponentRef Id="Libsvndiff22x"/>
+				<ComponentRef Id="libsvnfs22x"/>
+				<ComponentRef Id="libsvnra22x"/>
+				<ComponentRef Id="libsvnrepos22x"/>
+				<ComponentRef Id="libsvnsubr22x"/>
+				<ComponentRef Id="libsvnwc22x"/>
+	
+				<ComponentRef Id="Mod_authz_svnSo22x"/>
+				<ComponentRef Id="Mod_dav_svnSo22x"/>
+				<ComponentRef Id="SvnExe22x"/>
+				<ComponentRef Id="SvnadminExe22x"/>
+				<ComponentRef Id="SvndumpfilterExe22x"/>
+				<ComponentRef Id="SvnlookExe22x"/>
+				<ComponentRef Id="SvnserveExe22x"/>
+				<ComponentRef Id="SvnsyncExe22x"/>
+				<ComponentRef Id="SvnversionExe22x"/>
+				<ComponentRef Id="Svnmucc22x"/>
+				<ComponentRef Id="Svnpop22x"/>
+				<ComponentRef Id="Svnpush22x"/>
+				<ComponentRef Id="Svnauthval22x"/>
+				<ComponentRef Id="READMETxtap22x"/>
+</Include>

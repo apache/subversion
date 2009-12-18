@@ -1,0 +1,885 @@
+                                                                -*- Text -*-
+
+Content
+=======
+
+ * Context
+ * Requirements
+ * Nice-to-have's
+ * Non-goals
+ * Open items / discussion points
+ * Problems in wc-1.0
+ * Possible solutions
+ * Prerequisites for a good wc implementation
+ * Modularization
+ * Implementation proposals for
+   - metadata storage/access abstraction
+   - BASE tree storage/access abstraction
+   - WORKING tree storage/access abstraction
+   - TARGET & MERGE-END tree storage/access abstraction
+   - transactional manipulation API proposal
+   - delta-application algorithm
+      (in light of metadata, tree and textual conflicts)
+   - 
+ * Implementation plan
+
+
+Context
+=======
+
+The working copy library has traditionally been a complex piece of
+machinery and libsvn_wc-1.0 (wc-1.0 hereafter) was more a result of
+evolution than it was a result of design.  This can't be said to be
+anybody's fault as much as it was unawareness of the developers at
+the time with the problem(s) inherent to versioning trees instead of
+files (as was the usual context within CVS).  As a result, the WC
+has been one of the most fragile areas of the Subversion versioning
+model.
+
+The wc is where a large number of issues come together which can
+be considered separate issues in the remainder of the system, or
+don't have any effect on the rest of the system at all.  The following
+things come to mind:
+
+ * Different behaviours required by different use-cases (users)
+   For example: some users want mtime's at checkout time
+     to be the checkout time, some want it to be the historical
+     value at check-in time (and others want different variants).
+ * Different filesystems behave differently, yet Subversion
+   is a cross platform tool and tries to behave the same on all
+   filesystems (timestamp resolution may be an example of this).
+
+When considering the wc-1.0 design, one finds that there are a lot
+of situations where the exact state of the versioned tree isn't
+defined.  When explicitly considering which trees relate to the
+working copy at one time or another, the following trees can be
+found:
+
+ * BASE: The tree of nodes from the repository, against which local changes
+     are made.  Also known as "pristine".  Each node is as it was in the
+     repository at a particular revision and URL, as recorded per node in
+     the WC metadata.  A directory node in the BASE tree knows something
+     about the children it had in the repository (### details?), but its set
+     of children in the WC is independent of that.  In a node or tree
+     scheduled for replacement the BASE is the pristine version of the
+     to-be-added node or tree, not of the deleted one.  For a node that is
+     scheduled for add without history, there is no BASE node.
+
+ * WORKING: The tree that represent's the user's view of the WC with their
+     local modifications (assuming the user told Subversion about these
+     modifications with "svn add" etc. as required).  In implementation, the
+     WORKING tree has the structure and properties recorded in the WC, and
+     the file content present on the local disk.  (If a file cannot be
+     accessed because the tree structure on the local disk is incompatible,
+     this is an error, known as an "obstruction".)
+
+ * ACTUAL: The tree on the local disk, ignoring Subversion
+     administrative directories and other nodes that Subversion has
+     knowingly put there such as conflict reject files, and regarding
+     every node as having no Subversion properties.
+
+     (Variations to consider: Construct properties such as
+     svn:executable, svn:special, and any svn: time-stamp properties
+     from the operating system meta-data. Construct properties from
+     auto-props. Exclude nodes that the operating system says are
+     hidden.)
+
+In the context of the 'svn update' command:
+
+ * BASE-TARGET: The tree to which BASE is being updated and for
+     which the changes w.r.t. BASE are integrated into
+     WORKING and ACTUAL
+
+ * WORKING-TARGET, ACTUAL-TARGET: Trees in which the above mentioned
+     changes have been integrated, but which haven't "gone live" yet;
+     these trees generally represent "in transition" or "intermediary"
+     state with the intent to become the final tree.
+
+Additionally, two more trees may be related to the working copy
+when considering the 'svn merge' command:
+
+ * START: The tree used as the base state for the 'merge' command
+
+ * END: The tree used as the ending state for the 'merge' command
+    The difference between these trees will be merged into the
+    WORKING and ACTUAL trees.
+
+In the following example 10 == START and 15 == END:
+  $ svn merge -r10:15 http://svn.example.com/svn/ .
+
+Please note that the WORKING-TARGET and ACTUAL-TARGET trees also
+apply to 'svn merge' as they can result in 'add with history' schedules,
+which will place text bases in the WORKING-TARGET tree.  Also note
+that -since merge is by definition an 'edit' operation- the BASE and
+BASE-TARGET trees are not concerned with a merge.
+
+###EHU: To which trees do BASE and TARGET refer when we're in a subdir
+of a replaced tree? And which trees do they refer to in a subdir of
+a replaced tree which itself is replaced? (Preliminary answer: the
+base in a replaced subdir should probably be the base as defined by
+the parent which got copied in, not the base as was deleted, because
+otherwise it won't be possible to delete files from the replaced subdir:
+there would be no way to express a deletion against the new dir.)
+
+A tree can be said to have its files in repository-normal format or
+working-copy format; the difference relates to line endings and keyword
+expansion, as defined elsewhere.  A BASE tree presents itself in
+repository-normal format by default and can be converted to working-copy
+format. A WORKING or ACTUAL tree presents itself in working-copy format by
+default and can be converted to repository-normal format.
+
+
+Requirements
+============
+
+ * Developer sanity
+   From this requirement, a number of additional ones follow:
+    - Very explicit tree state management; clear difference between
+      each of the 5 states we may be looking at
+    - It must be "fun" to code wc-ng enhancements
+ * Speed
+   (Note: a trade off may be required for 'checkout' vs 'status' speed)
+ * Cross-node-type working copy changes
+ * Flexibility
+   The model should make it easy to support
+     - central vs local metadata storage
+     - Last modified timestamp behaviours
+     - .svn-less working copy subtrees
+     - different file-changed detection schemes
+        (e.g. full tree scan as in wc-1.0 as well as 'p4 edit')
+ * Graceful (defined) fallback for non-supported operations
+   When a checkout tries to create a symlink on an OS which supports
+   them, on a filesystem which doesn't, we should cope without
+   canceling the complete checkout.  Same for marking metadata read-only.
+ * Gracefully handle symlinks in relation to any special-handling of
+   files (don't special-handle symlinks!)
+ * Clear/reparable tree state
+   Other than our current loggy system, I mean here: "there is a command
+   by which the user can restart the command he/she last issued and
+   Subversion will help complete that command", which differs from our
+   loggy system in the way that it will return the working copy to a
+   defined (but to the user unknown) state.
+ * Transactional/ repairable tree state (with which I mean something
+   which achieves the same as our loggy system, but better).
+ * Case sensitive filesystem aware / resilient
+ * Working copy stability; a number of scenario's with switch and
+   update obstructions used to leave the working copy unrecoverable
+ * Client side 'true renames' support where one side can't be committed
+   without the other (relates to issue #876)
+
+   ###JSS: Perhaps this is obvious... I think that requirement is fine for the
+      user doing the commit.  We still need to remember that another user doing
+      the update may not have authz permission to the directory it was renamed
+      into or may have a checkout of a sub-tree and that target directory may
+      not exist.  Likewise, the original location might be unavailable too.
+
+ * Change detection should become entirely internal to libsvn_wc (referring
+   to the fact that libsvn_client currently calls svn_wait_for_timestamps()),
+   even though under 'use-commit-times=yes', this waiting is
+   completely useless.
+ * Last-modified recording as a preparation for solving issue #1256 and
+   as defined in this mail, also linked from the issue:
+   http://svn.haxx.se/dev/archive-2006-10/0193.shtml
+ * Representing "this node is part of a replaced-with-history tree and
+   I'm *not* in the replacement tree" as well as "... and I'm deleted
+   from the replacement tree" [issues #1962 and #2690]
+
+
+Would-be-very-nice-to-have's
+============================
+
+ * Multiple users with a single working copy (aka shared working copy)
+ * Ending up with an implementation which can use current WCs
+   (without conversion)
+ * Working copies/ metadata storages without local storage of text-bases
+   (other than a few cached ones)
+
+
+Non-goals
+=========
+
+ * Off-line commits
+ * Distributed VC
+
+Open items / discussion points
+==============================
+
+ * Files changed during the window "sent as part of commit" to
+    "post commit wc processing"; these are currently explicitly
+    supported. Do we want to keep this support (at the cost of speed)?
+ * Single working copy lock. Should we have one lock which locks the
+    entire working copy, disabling any parallel actions on disjoint
+    parts of the working copy?
+ * Meta data physical read-only marking (as in wc-1.0). Is it still
+    required, or should it become advisory (ie ignore errors on failure)?
+ * Is issue #1599 a real use-case we need to address?
+    (Loosing and regaining authz access with updates in between)
+
+
+Problems in wc-1.0
+==================
+
+ * There's no way to clear unused parts of the entries cache
+ * The code is littered with path calculations in order
+   to access different parts of the working copy (incl. admin areas)
+ * The code is littered with direct accesses to both wc files and
+   admin area files
+ * It's not always clear at which time log files are being processed
+   (ie transactions are being committed), meaning it's not always
+   clear at which version of a tree one is looking at: the pre or post
+   transformation versions...
+ * There's no support for nested transactions (even though some
+   functions want to start a new transaction, regardless whether one
+   was already started)
+ * It's very hard to determine when an action needs to be written
+   to a transaction or needs to be executed directly
+ * All code assumes local access to admin (meta)data
+ * The transaction system contains non-runnable commands
+ * It's possible to generate combinations of commands, each of which
+   is runnable, but the series isn't
+ * Long if() blocks to sort through all possible states of
+   WORKING, ACTUAL and BASE, without calling it that.
+ * Large if() blocks dealing with the difference between file and
+   directory nodes
+ * Many special-handling if()s for svn:special files
+ * Manipulation of paths, URLs and base-text paths in 1 function
+ * 'Switchedness' of subdirectories has to be derived from the
+   URLs of the parent and the child, but copied nodes also have
+   non-parent-child source URLs... (confusing)
+ * Duplication of data: a 'copied' boolean and a 'copy_source' URL field
+ * Checkouts fail when checking out files of different casing to a case
+   insensitive filesystem
+ * Checkouts fail when marking working copy admin data as read-only
+   is a non-supported FS operation (VFAT or Samba mounts on Linux have
+   this behaviour)
+ * Obstructed updates leave operations half done; in case of a switch,
+   it's not always possible to switch back (because the switch itself
+   may have left now-unversioned items behind)
+ * Directories which have their own children merged into them (which happens
+   when merging a directory-add) won't correctly fold the children into
+   schedule==normal, but instead leave them as schedule==add, resulting in
+   a double commit (through HTTP, other RA layers fold the double add, but
+   that's not the point) [see issue #1962]
+ * transaction files (ie log files) are XML files, requiring correct
+   encoding of characters and other values; given the short expected
+   life-time of a log file and the fact that we're almost completely sure
+   the log file is going to be read by the WC library anyway (no interchange
+   problems), this is a waste of processing time
+ * No strict separation between public and internal APIs: many public
+   APIs also used internally, growing arguments which *should* only
+   matter for internal use
+
+
+Possible solutions
+==================
+
+Developer sanity
+----------------
+Strict separation between modules should help keep code focused at one
+task.  Probably some of the required user-specific behaviours can (and
+should) be hidden behind vtables; for example: setting the file stamp
+to the commit time, last recorded time or leaving it at the current time
+should be abstracted from.
+
+Access to 'text bases' is another one of these areas: most routines in
+wc-1.0 don't actually need access to a file (a stream would be fine as
+well), but since the files are there, availability is assumed.
+When abstracting all access into streams, the actual administration of
+the BASE tree can be abstracted from: for all we know the 'tree storage
+module' may be reading the stream directly off the repository server.
+[The only module in wc-1.0 which *requires* access to the files is
+the diff/merge library, because it rewinds to the start of the file
+during its processing; an operation not supported by streams... and even
+then, if these routines are passed file handles, they'll be quite
+happy, meaning they still don't need to know where the text base /
+source file is...]
+
+###GJS: the APIs should use streams so that we can decompress as the
+   stream is being read. the diff library will need a callback of some
+   kind to perform the rewind, which will effectively just close and
+   reopen the stream. if it rewinds *multiple* times, then we may want
+   to cache the decompressed version of the file. I'll
+   investigate. Given our metadata/base-text storage system, I suspect
+   it will be very easy to cache decompressed copies for a while.
+
+###GJS: a very reasonable strategy is: non-binary files are compressed
+   by default. binaries are stored uncompressed.
+   future improvement: extension-based choices, or some other control
+
+In order to keep developers sane, it should be extremely clear at any
+one time - when operating on a tree - which tree is being operated upon.
+
+One way to prevent the lengthy 'if()' blocks currently in wc-1.0, would be
+to design a dispatch mechanism based on the path-state in WORKING/BASE and the
+required transformation, dispatching to (small) functions which perform
+solely that specific task.
+#####XBC Do please note that this suggests yet another instance of
+         pure polymorphism coded in C. This runs contrary to the
+         developer sanity requirement.
+###GJS: agreed with XBC.
+
+
+Speed
+-----
+wc-1.0 assumes the WORKING tree and the ACTUAL tree match, but then
+goes out of its way to assure they actually do when deemed important.
+The result is a library which calls stat() a lot more often than need be.
+
+One of the possible improvements would be to make wc-ng read all of
+the ACTUAL state (concentrated in one place, using apr_stat()), keeping
+it around as long as required, matching it with the WORKING state before
+operating on either (not only when deemed important!).
+
+###GJS: working copy file counts are unbounded, so we need to be
+   careful about keeping "all" stat results in memory. I'll certainly
+   keep this in mind, however.
+
+Working from the ACTUAL tree will also prove to be a step toward clarity
+regarding the exact tree which is being operated upon.
+
+[This suggestion from wc-improvements also applies to wc-ng:]
+Most operations are I/O bound and have CPU to spare.  Consider the virtue
+of compressed text bases in order to reduce the amount of I/O required.
+
+Another idea to reduce I/O is to eliminate atomic-rename-into-place for
+the metadata part of the working copy: if a file is completely written,
+store the name of the base-text/prop-text in the entries file, which gets
+rewritten on most wc-transformations anyway.
+
+
+Cross node type change representation
+-------------------------------------
+####EHU To be done
+
+
+Flexibility of metadata storage
+-------------------------------
+There are 3 known models for storing metadata as requested by different
+groups of users:
+
+ - in-subtree metadata storage (.svn subdir model, as in wc-1.0)
+   ###GJS: euh... aren't we axing this? who has *requested* this?
+ - in-'tree root' metadata storage (working copy central)
+ - detached metadata storage (user-central)
+   - in $HOME/.subversion/
+   - in arbitrary location (e.g. $HOME is a (slow) NFS mount, and we
+     want the metadata on a local drive, such as /var/...)
+
+A solution to implementing each of these behaviours in order to satisfy
+the wide range of use-cases they solve, would be to define a module
+interface and implement this interface three times (possibly using vtables).
+
+Note that using within-module vtables should be less problematic than our
+post-1.0 experiences with public vtables (such as the ra-layer vtable):
+implementation details are allowed to differ between releases (even patch
+releases).
+
+###GJS: note that we are talking about both metadata AND base-text
+   content. (and yeah, optional and compresses base-texts can be done
+   during this rewrite)  Also note that we might be able to share
+   base-text content across working copies if they are all keyed by
+   the MD5 hash into storage directories (under the user-central model)
+
+###GJS: I don't think vtables are needed here. This is simply altering
+   the base location, not a whole new implementation. My plan is to
+   default to the "tree root" model with a .svn subdirectory. If a
+   .svn subdir is not found, then we fall back to looking in the
+   $HOME/.subversion/ directory (some subdir under there). If we
+   *still* don't find it, then some config options will point us to
+   the metadata/base-text location.
+
+###GJS: my plan is to upgrade the working copy if we find a pre-1.6
+   working copy. all the data will be lifted from the multiple .svn
+   subdirectories, and relocated to the "proper" storage location.
+   This will be a non-reversable upgrade, and will preclude pre-1.6
+   clients from using that working copy again.
+   Note: because of the "destructive" nature of this upgrade, and the
+   expected duration, we may want to require the user to perform an
+   explicit action in order to complete the upgrade. However, 1.6 will
+   not be able to *modify* wc-1.0 metadata -- just read it in order to
+   upgrade it to the new storage system.
+
+When svn detects an old working copy, then it will error out and
+request that the user run "svn cleanup" to upgrade their working copy
+to the new format.
+
+The metadata location is determined at one of two points:
+
+  * checkout time
+  * upgrade time
+
+According to the user's config, the metadata will be placed in one of
+three areas:
+
+  wcroot: at the root of the working copy in a .svn subdirectory
+  home: in the .subversion/wc/ subdirectory
+  /some/path: stored in the given path
+
+All wcroot directories will have a .svn subdirectory. In that
+directory will be the datastore, or there will be a file that provides
+two pieces of information:
+
+  * absolute path to the (centralized) metadata
+  * absolute path of where this wcroot was created
+
+With this information, we can link a wcroot to its metadata in the
+centralized store. If the user has moved the wcroot (the stored path
+is different from the current/actual path), then Subversion will exit
+with an error. The user must then ###somehow tell svn that the wc has
+been copied (duplicate the metadata for the wcroot) or moved (tweak
+the path stored in the metadata and in the linkage file). Subversion
+is unable to programmatically determine which operation was used.
+
+Note that we use "svn cleanup" as the trigger to *perform* the
+upgrade. The amount of file opens, parsing, moving, deleting, etc is
+expected to consume significant amounts of I/O and (thus) cannot
+simply be done on-the-fly without the user's knowledge and consent.
+
+
+Transaction duration / memory management
+----------------------------------------
+The current pool-based memory management system is very good at managing
+memory in a transaction-based processing model.  In the wc library, a
+'transaction' often spans more than one call into the library.  We either
+need a sane way to handle this kind of situation using pools, or we may
+need a different memory management strategy in wc-ng.
+
+Working copy stability
+----------------------
+In light of obstructed updates it may not always be desirable to be able
+to resume the current operation (as currently is the case): in some cases
+the user may want to abort the operation, in other cases the user may
+want to resolve the obstruction before re-executing the operation.
+
+The solution to this problem could be 'atomic updates': receiving the
+full working copy transformation, verifying prerequisites, creating
+replacement files and directories and when all that succeeds, update
+the working copy.
+
+Full workin' copy unit tests:
+Exactly because the working copy is such an important part of the
+Subversion experience *and* because of the 'reputation' of wc-1.0,
+we need a way to ensure wc-ng completely performs according to our
+expectations.  *The* way to ensure we're able to test the most contrived
+edge-cases is to develop a full unit testing test-suite while developing
+wc-ng.  This will both be a measure to ensure working copy stability
+as well as developer sanity: in the early stages of the wc-ng develop-
+ment process, we'll be able to assess how well the design holds up
+under more difficult 'weather'.
+
+###GJS: agreed. as much as possible, when I (re)implement the old APIs
+   in terms of the new APIs, then I'll write a whitebox test. we'll
+   see how long I keep that up :-P
+
+Transactional updates
+---------------------
+
+.. where 'update' is meant as 'user command', not 'svn update' per se.
+
+When applied to files, this can be summarized as:
+
+ * Receive transformations (update, delete, add) from
+   the server,
+
+
+Prerequisites for a good wc implementation
+==========================================
+
+These prerequisites are to be addressed, either as definitions
+in this document, or elsewhere in the subversion (source) tree:
+ * Well defined behaviour for cross-node type updates/merges/..
+   (tree conflicts in particular)
+ * Well defined behaviour for special file handling
+ * Well defined behaviour for operations on locally missing items
+     (see issue #1082)
+ * Well defined change detection scheme for each of the different
+     last-modified handling strategies
+ * No special handling of symlinks: they are first class versioned objects
+ * Well defined behaviour for property changes on updates/merges/...
+   (this is a problem which may resemble tree conflicts!),
+   including 'svn:' special properties
+ * File name manipulation routines (availability)
+ * File name comparison routines (!) (availability; which compensate
+     for the different ways Unicode characters can be represented
+     [re: NFC/NFD Unicode issue])
+
+   ###JSS: Talking with ehu on IRC when I asked him about how to handle this
+   issue: "if we accept that some repositories will be unusable with wc-ng,
+   then we can standardize anything that comes in from the server as well as
+   the directory side into the same encoding.  we'd be writing files with the
+   standardized encoding."  The rest of this conversation centered around the
+   fact that either APR or the OS will convert the filename to the correct
+   form for the filesystem when doing the stat() call.  Note, ehu says: "(we'll
+   need to retain the filename we got from the server though: we'll need it to
+   describe the file through the editor interface: the server still allows all
+   encodings.)"
+
+ * URL manipulation routines (availability)
+ * URL comparison routines (availability; which compensate for
+     different ways the same URL can be encoded; see issue #2490)
+ * Modularization
+ * Agree on a UI to pull in other parts of the same repository
+   (NOT svn:externals) [relates to issue #1167]
+#####XBC I submit this is a server-side feature that the client
+         (i.e. the WC library) should not know about.
+ * Agree on behaviour for update on moved items (relates to issue #1736)
+ * Case-sensitivity detection code to probe working copy filesystem
+
+
+Modularization
+==============
+
+Strict separation must be applied to a number of modules which can be
+recognised.  This will help prevent spaghetti code as in wc-1.0 where
+one piece of code manipulates paths to a working copy file, its URL
+*and* the path to the base file.
+
+For now, these APIs can be separated:
+
+ - the public API (presumably not to be used by any internal
+     processing, but presents functionality to working copy users)
+#####XBC This is really required of all our module public APIs.
+ - tree administration API (required for BASE, TARGET and WORKING)
+     Admins which files are part of the tree, which ones map to
+     which repositories and which textbase / propbase files belong
+     to which local files. [should provide checkpointing functionality
+     for use with transactional tree modifications API]
+ - tree access API (required for BASE, WORKING, TARGET and ACTUAL)
+     Gives access to the content of the nodes in a tree
+       - props
+       - text bases (for files)
+       - child nodes (for directories)
+ - transactional tree modifications API (applicable to all trees,
+     ###EHU do we provide the same interface to BASE/WORKING as for ACTUAL?)
+ - tree transformation (required for update/switch/merge updating
+     BASE, WORKING and ACTUAL), meaning all of tree changes, file
+     changes and metadata changes
+ - Working-copy changedness detection API
+ - Metadata access API (used by tree administration module(s))
+ - Event hooks (in order to be able to implement different
+   timestamp-setting strategies and possibly more)
+
+These APIs will be implemented by these (currently known) modules:
+
+ - tree administration
+   * wc_adm
+ - tree access
+   * wc_acc
+ - transactional tree modifications
+   * wc_log
+ - tree transformation
+   * wc_trans
+ - working copy changedness detection
+   wc_detect vtable-based API implemented by these modules:
+     * tree crawler ('inspired' by wc-1.0)
+     * tree marker (inspired by 'p4 edit')
+ - metadata access API
+   wc_macc vtable-based API implemented by these modules:
+     * tree spread ('inspired' by wc-1.0)
+     * tree root (storing all metadata in the tree root (think darcs))
+     * central depot (storing 'somewhere' locally, possibly $HOME)
+        this central store would open up the possibility to share
+        text bases/prop bases across checkouts
+     * non-local (retrieving all text and prop-bases from the server,
+        except for a number of cached ones) ###EHU: maybe this is
+        orthogonal to the question where metadata is stored: in all
+        situations, you *could* choose not to keep local copies
+ - Event hooks for the union of all paths in (BASE, WORKING)
+   wc_hook event based single-callback API
+   for e.g. these events:
+        + props updated
+        + base text updated
+        + wc file updated
+        + update completed
+        + lock acquired
+        + lock released
+       (+ lock can't be acquired [in order to 'unprotect'
+           svn:needs-lock protected files which have been removed
+           from the repository?])
+   to be implemented by these modules:
+     * use-commit-times
+     * versioned-mtimes
+     * versioned-execute-perm
+     * versioned-other-unix-perms
+    (* versioned-windows-perms?)
+     * needs-lock-updater
+
+Justification for the large number of modules, with a modest number
+of different APIs is that the problem is really quite complex as shown
+earlier in this document.
+
+Over the years, a large number of use cases have developed around
+Subversion where different user groups have shown very valid use cases
+for conflicting behaviours.  Presumably, most of these we want to
+retain.  Some of the unimplemented ones have open issues indicating
+there's at least an active interest.  In order to prevent locking out
+some of the current use cases adding support for the open issues, we
+need a flexible modularized model.  This model will also prevent that
+we'll end up duplicating lots of code to support the different use cases.
+#####XBC Such flexibility will bring the WC to the kind of
+         purgatory the RA layers are in. We promise feature and semantics
+         parity between them, and the result is that even a small change
+         in that layer requires knowledge of three different protocols
+         and four different implementations.
+
+Given the assumption of 'little code duplication', the choice for
+having several modules which implement the same API (vtable) is
+justifiable.
+
+###GJS: disagree. I plan to have just one library and no plans for
+   vtables. there is very little need for distinct implementations, as
+   far as I can tell.
+
+
+Implementation proposals
+========================
+
+Classification of svn_wc_entry_t fields to BASE/WORKING
+-------------------------------------------------------
+
+[Note: This section is mainly to clarify the difference between the BASE
+and WORKING trees, it's not here to mean that we actually need all these
+fields in wc-ng!]
+
+Here are the mappings of all fields from svn_wc_entry_t to the BASE and
+WORKING trees:
+
+ +-------------------------------+------+---------+
+ |       svn_wc_entry_t          | BASE | WORKING |
+ +-------------------------------+------+---------+
+ | name                          |  x   |    x (1)|
+ | revision                      |  x   |    x (2)|
+ | url                           |  x   |    x (2)|
+ | repos                         |  x   |    x (3)|
+ | uuid                          |  x   |    x (3)|
+ | kind                          |  x   |    x    |
+ | absent                        |  x   |         |
+ | copyfrom_url                  |      |    x    |
+ | copyfrom_rev                  |      |    x    |
+ | conflict_old                  |      |    x    |
+ | conflict_new                  |      |    x    |
+ | conflict_wrk                  |      |    x    |
+ | prejfile                      |      |    x    |
+ | text_time                     |      |    =    |
+ | prop_time                     |      |    =    |
+ | checksum                      |  x   |    x (2)|
+ | cmt_rev                       |  x   |    x (2)|
+ | cmt_date                      |  x   |    x (2)|
+ | cmt_author                    |  x   |    x (2)|
+ | lock_token                    |  x(6)|         |
+ | lock_owner                    |  x   |         |
+ | lock_comment                  |  x   |         |
+ | lock_creation_date            |  x   |         |
+ | has_props                     |  x   |    x (4)|
+ | has_prop_mods                 |      |    =    |
+ | cachable_props                |  x(5)|    x (4)|
+ | present_props                 |  x   |    x (4)|
+ | changelist                    |      |    x    |
+ | working_size                  |      |    =    |
+ | keep_local                    |      |    =    |
+ | depth                         |  x   |    x    |
+ | schedule                      |      |         |
+ | copied                        |      |         |
+ | deleted                       |      |         |
+ | incomplete                    |      |         |
+ +-------------------------------+------+---------+
+
+(1) if this one differs from BASE, it must point to the source of a rename
+(2) for an add-with-history
+(3) or can we assume single-repository working copies?
+(4) can differ from BASE for add-with-history
+(5) why is this a field at all; can't the WC code know?
+(6) locks apply to in-repository paths, hence BASE
+
+The fields marked with '=' are implementation details of internal detection
+mechanisms, which means they don't belong in the public interface.
+
+Fields with no check are to become obsolete. 'schedule', 'copied' and
+'deleted' can be deducded from the difference between the BASE and WORKING
+or WORKING and ACTUAL trees.  'incomplete' should become obsolete when the
+goal of 'atomic updates' can be realised, in which case the tree can't be
+in an incomplete yet locked state.  This would also invalidate issue #1879.
+
+
+Basic Storage Mechanics
+-----------------------
+
+All metadata will be stored into a single SQLite database. This
+includes all of the "entry" fields *and* all of the properties
+attached to the files/directories. SQLite transactions will be used
+rather than the "loggy" mechanics of wc-1.0.
+
+###GJS: note that atomicity across the sqlite database and the content
+   of the ACTUAL tree is freakin' difficult. idea to test: metadata
+   says "not sure of ACTUAL", and when ops complete successfully, then
+   we clear the flag. during any future operation, if the flag is
+   present, then we approach the ACTUAL with extreme prejudice. also
+   note that we can batch clearing of the flags as an optimistic
+   efficiency approach (since if we batch 100 and the last fails, then
+   the other 99 will be slower until the wc-ng determines the ACTUAL
+   is in fine shape and clears the flag for future operations).
+
+###GJS: be wary of sqlite commit performance (based on some of my
+   prior experience with it). must have timing/debugging around the
+   commit operations. may need to use various transaction isolations
+   and/or batching of commits to get proper performance. thus, profile
+   output capability is mandatory to determine if we have issues, and
+   where they occur.
+
+###JSS: I don't see how transactions by themselves can replace loggy.
+   Right now, if you abort something like 'svn update' or 'svn checkout',
+   loggy has recorded all the files to be downloaded, and will pick up
+   where it left off.  We did this as an optimization to prevent
+   re-downloading a potentially large amount of data again.  Seems like
+   we still need to provide that capability.
+
+   ###GJS: sqlite transactions replace the atomicity that loggy was
+           originally designed for. it sounds like loggy is also be
+           used as a work queue, and that is easily handled in sqlite.
+
+Base text data will be stored in a multi-level directory structure,
+keyed/named by the checksum (MD5 or SHA1) of the file. The database
+will record appropriate mappings, content/compression types, and
+refcounts for the base text files (for the shared case). We will use a
+single level of directories:
+
+  TEXT_BASE/7c/7ca344...
+
+With 100k files spread across all of a user's working copies, that
+will put 390 files into each subdirectory, which is quite fine. If the
+user grows to a million files, then 3900 per subdir is still
+reasonable. Two levels would effectively mean one file per subdir in
+typical situations, which is a lot of disk overhead.
+
+When the metadata is recorded in a central area (rather than the WC
+root), then it is possible for the metadata and the base files to
+become out of date with respect to all the working copies on the
+system. We will revamp "svn cleanup" to re-tally the base text
+reference counts, eliminate unreferenced bases, verify that the
+working copies are still present, ensure the metadata <-> WC
+integrity, deal with moves of metadata from central -> wc-root (can
+happen if somebody rm -rf's the wc, then does a checkout and wants the
+metadata at the wc-root (this time)), and other consistency checks.
+
+
+Metadata Schemas
+----------------
+
+see libsvn_wc/wc-metatdata.sql3
+
+
+
+Random Notes
+------------
+
+### break down all modification operations to things that operate on a
+    small/fixed set of rows. if a large sequence of operations fails,
+    then it can leave the system in reparable state, since most were
+    performed. note that ACTUAL can change at any time, thus all mods
+    should be able to compensate for ACTUAL being something
+    unexpected. thus, the transformative operations should be able to
+    fail in such a way as to leave ACTUAL pretty bunged up.
+
+### maybe use handles to refer to files/dirs? take input pathname,
+    convert to native charset, and return a handle for that. same
+    handle across varous schemas.
+
+    note: could be very handy, as I'm thinking abspath for all names,
+    which gets to be pretty wordy for large working copies.
+    
+    note: with handles, a file entry could have "parent dir" cheaply,
+    and from that, we could derive repos_url/uuid from some dir table.
+
+### probably want to special-case the checksum and BASETEXT entry for
+    the "empty file"
+
+
+Code Organization
+-----------------
+
+libsvn_wc/wc_db.h  (symbols: svn_wc__db_*)
+        Storage subsystem for the WC metadata/base-text information.
+        This is a private API, and the rest of the WC will be rebuilt
+        on top of this.
+        
+        This code deals with storage, and transactional modifications
+        of the data.
+        
+        Note: this is a random-access, low-level API. Editors will be
+        built on top of this layer.
+
+
+svn_wc.h API
+------------
+
+Note that we also have an opportunity to revamp the WC API. Things
+like access batons will definitely disappear, but there will most
+likely be great opportunities for other design changes.
+
+Note that removing access batons (and other API changes) will ripple
+up until libsvn_client, and may even have an affect on *its* API.
+
+### the form of a new API is unknown/TBD.
+
+
+Implementation Plan
+===================
+The following are tests which need to be accomplished for WC-NG.  There
+isn't a strict ordering here, but rather a possible plan.  There may be
+dependencies between some items, but that is left as an exercise for the
+reader.
+
+* Pristine file management
+* Properties management
+* Tree management (BASE v. WORKING v. ACTUAL for APIs and storage)
+* Journaled actions
+* Finding/using the correct admin area
+* Upgrading
+  - Including multiple heterogenous admin areas
+* Move entries into SQLite
+* Relocating datastore in useful ways
+
+Afterwards, we'll need:
+* A second pass at the WC code to find/fix patterns and solutions.
+* Revamp of WC API, to propagate up into libsvn_client.
+* Reexamine any client/wc interactions, and look for final cleanups.
+
+Near-Term Plan
+--------------
+
+1. convert entries.c to use sqlite directly. migrate 'entries' file
+   during this step. the sqlite file will be in-memory if we are not
+   allowed to auto-upgrade the WC; otherwise, we'll write the sqlite
+   database into .svn/
+   note: the presence of 'wc.db' (or whatever its name) will indicate
+         a minimum format level. the user field in the database
+         contains the schema version which is our further format-level
+         descriptor value.
+
+2. convert entries.c to use wc_db. shift the sqlite code into wc_db.
+   note: this is a separate step from 1. there is a paradigm shift
+         between how entries.c works and wc_db works. we want to
+         ignore that in Step 1, and then handle it in this Step.
+   note: put wc_db handle into lock->shared and share the handle
+         across all directories/batons.
+
+3. convert props.c to use wc_db. migrate props to db simultaneously.
+
+4. incremental shift of pristines from N files into pristine db.
+   note: we could continue to leave .revert-base while we migrate the
+         primary base into the pristine dataset.
+
+5. shift libsvn_wc from using entries.h to using wc_db.h.
+   note: since entries.h is "merely" a wrapper for wc_db.h, this will
+         allow the libsvn_wc to start using the new wc_db APIs
+         wherever it is easy/possible.
+   goal: all libsvn_wc code uses wc_db.h, and entries.h exists solely
+         to support old backwards-compat code.
+
+6. centralize the metadata and pristines
+   note: this will also involve merging datastores
+
+
+Other sections
+==============
+ remain to be done

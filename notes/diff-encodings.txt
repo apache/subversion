@@ -1,0 +1,125 @@
+Better Encoding and Newline Support In The Diff Algorithms
+
+[NOTE: This is work-in-progress.]
+
+Introduction
+============
+
+Currently, the diff handling routines in libsvn_diff know nothing
+about character encodings and eol characters.  It assumes an
+ASCII-based encoding and LF as line separator.  This leads to a lot of
+problems:
+
+* Diff output will be inconsistently encoded.
+* Files with different line endings cause unexpected results (i.e. CR
+  line endings).
+* Diff output gets inconsistent line endings.
+* Non-ASCII based encodings, such as UTF16 aren't supported at all by
+  subversion out-of-the-box.
+
+Solving this situation seems to be a lot of work.  The motivation for
+starting this was issue #1533 'diff output doesn't use correct
+encoding'.  This issue is solved, making the diff code assume the
+locale encoding for file contents rather than UTF8, but the problems
+discussed in this file are still present.
+
+Header Encoding
+===============
+
+Currently, the headers are written using the locale encoding, which
+is not always what's wanted.  If the encoding of the files is known
+(via svn:mime-type, for example), the headers should probably be
+written using that encoding.
+
+Note that this applies to property change information and property
+values in the svn: namespace as well.  For other properties, we can't
+do anything but treat them as opaque.
+
+Newlines
+========
+
+According to the GNU diff documentation, on systems with newline
+separators other than just LF, the newlines are normalized to the
+system markers, except when --binary is used.
+
+Currently, our diff library understands nothing but LF as newline.
+Making it accept CRLF and CR as well is not hard.
+
+Since we know the newline marker used in the file via the
+svn:eol-style property, we can handle this quite well.  If
+svn:eol-style is not set, I suggest we output newlines as-is, and use
+APR_EOL_STR to output newlines in headers.  That's consistent with how
+GNU diff behaves with the --binary option.
+
+When svn:eol-style is set, we should use that style for the headers.
+The values might be different for the original and the new file; it
+seems logical to use the value from the modified file.  Note that in
+this case, newlines will be inconsistent anyway.  Also, the
+libsvn_client should make sure the files are translated into their
+newline style before comparing them (this is necessary since working
+files don't have their newlines normalized if svn:eol-style is changed
+in the working revision).  In the usual case, when svn:eol-style is
+not changed, this will give consistent newlines for the whole diff.
+If svn:eol-style is changed, the diff will contain every line in the
+file with eol marker changes.  This is what happens currently if you
+do a repos_to_repos diff with svn:eol-style changed.  If svn:eol-style
+is set to native, then APR_EOL_STR should be used, as usual.
+
+This requires that the svn_client_diff* functions read the
+svn:eol-style property of the modified file and pass that information
+to svn_diff_file_output_unified.  svn_diff_file_output_unified needs
+an eolstr argument, giving the newline marker to use for headers.
+
+Content Encoding
+================
+
+To support encodings that aren't ASCII-based (meaning that the first
+128 bytes always means the same as in ASCII), Subversion needs to know
+the encodings of the files being diffed.  We don't currently have a
+canonical way of detecting the encoding.  It has been suggested to use
+the charset parameter of svn:mime-type for this purpose.  Whatever
+method we choose, we need to cope with the fact that not all files
+have this information available.  In this case, we might assume the
+locale/console encoding.
+
+When the encodings of the files are known, the diff tokenizer should
+use that to decide what newline separator it expects.  A simple
+solution is to just recode "\n", "\r\n" and "\r" into the file
+encodings and search for that.  Beware that to support UTF16 and other
+forms of Unicode, we need to support null bytes in these strings.
+
+NOTE: Supporting non-byte-oriented encodings such as UTF16 will
+require work in other parts of the client libraries as well.  I'm
+discussing it here to not design a solution where we can't support
+that in the future.
+
+To support this, svn_diff_file_diff will need arguments for the
+encodings of the original and modified files.
+
+Merge
+=====
+
+Merging (i.e. diff3) can be handled in similar ways to diff.  The
+eol-style of the .mine file should be used for the conflict markers
+and the files should be translated to their newline styles if needed.
+
+The encoding part is a bit trickier.  If the encoding of all the three
+files is the same, then conflict markers should use that encoding as
+well.
+
+NOTE: For UTF16 and UTF32, the BOM might be problematic.  Ideally, we
+need to be careful to not add extra BOMs inside the file.  One idea is
+to strip the BOMs before merging and ensure that the resulting file
+has a BOM after the merge.  I'm not sure how much encoding specific
+code we want to add to our diff library.  Maybe UTF16 would be
+considered common enough to not handle it like "just another
+encoding".  For UTF8, we may need to handle the BOM as well, since
+that's allowed.  We need to be careful not to add BOMs that aren't in
+the files, since that will break applications (and we don't want to
+silently change the contents of users' files!)
+
+If the encodings are different for the three files, merging could
+easily lead to an inconsistent mess, unless the encodings share some
+subset (like when changing from US-ASCII to UTF-8).  I think we should
+leave those rare cases to the user, who can recode and merge by hand
+or use some other tool.

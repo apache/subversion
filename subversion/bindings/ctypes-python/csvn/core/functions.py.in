@@ -1,0 +1,61 @@
+from ctypes import *
+from tempfile import NamedTemporaryFile
+import weakref, sys
+
+class FILE(Structure):
+    pass
+
+# PyFile_AsFile converts Python files into regular "FILE *" objects
+PyFile_AsFile = pythonapi.PyFile_AsFile
+PyFile_AsFile.argtypes = [py_object]
+PyFile_AsFile.restype = POINTER(FILE)
+
+# A friendly wrapper for exceptions
+class SubversionException(Exception):
+    def __init__(self, err, message=None, inherited=False):
+        if isinstance(err, (int, long)):
+            err = svn_error_create(err, None, message)
+
+        self._as_parameter_ = err
+
+        # Get a nice error message with line numbers and everything 
+        f = NamedTemporaryFile()
+        svn_handle_error2(err, PyFile_AsFile(f.file), 0, "")
+        f.seek(0)
+        self.value = f.read()
+        f.close()
+
+        # Save off the message and apr_err stuff
+        self.message = err[0].message
+        self.apr_err = err[0].apr_err
+        self.child = None
+        if err[0].child:
+            self.child = SubversionException(err[0].child, None, True)
+
+        if not inherited:
+            # Cleanup the error when we die
+            self.weakself = weakref.ref(self, lambda x: svn_error_clear(err))
+
+    def __str__(self):
+        return self.value
+
+# If a error is returned from a Subversion function,
+# raise an exception 
+def SVN_ERR(ret):
+    if ret:
+        err = cast(ret, POINTER(svn_error_t))
+        raise SubversionException(err)
+    return ret
+
+# As of ctypes 1.0, ctypes does not support custom error-checking
+# functions on callbacks, nor does it support custom datatypes on
+# callbacks, so ctypesgen sets the return values for callbacks
+# to c_void_p.
+#
+# Callback functions, therefore, won't have their errors checked
+# automatically. Users who call these functions should wrap
+# their function call using SVN_ERR so as to ensure that any
+# exceptions are thrown appropriately.
+
+
+###########################

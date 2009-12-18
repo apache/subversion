@@ -1,0 +1,451 @@
+                               -*- text -*-
+
+              TREE CONFLICTS USE CASES AND DESIRED BEHAVIOURS
+
+
+Issue reference:  http://subversion.tigris.org/issues/show_bug.cgi?id=2282
+
+(These use cases are based on a scenario paper "SVN move/rename
+problems & suggested improvements" submitted by a corporate Subversion
+user, which may be found attached to issue #2282.)
+
+--------------------------------------------------------------------------
+
+==========
+USE CASE 1
+==========
+
+Description
+
+   During an update, a file modification is merged onto a file move.
+
+Current Behavior
+
+   Developer A modifies Foo.c and commits it to the repository.
+
+   Developer B has simultaneously moved Foo.c to Bar.c in his working
+   copy.
+   
+   B cannot commit because the working copy is out of date, so B runs 'svn
+   update'. The update will apply A's modifications to Foo.c in the
+   repository to Foo.c in B's working copy.
+
+Problems With Current Behavior
+
+   First problem:
+   
+   A's modification of Foo.c will effectively be reverted by B's new
+   revision. Foo.c will be deleted in the new revision, and Bar.c will be
+   added with the content of the original Foo.c before A's modifications.
+   Hence A will likely get angry with B.
+   
+   Second problem:
+   
+   B is not explicitly warned about reverting A's modification of Foo.c.
+   The only visible warning is that Foo.c is left behind unversioned in
+   B's working copy because it has "local" modifications (which were in
+   fact made by A). This will likely escape B's attention.
+
+Diagram of current behavior
+
+
+              (edit)
+    wcA          -- Foo.c' ------->
+                /         |
+               /          |commit
+    repos     /           v
+    -- Foo.c -------------- Foo.c' --------------- Bar.c --->
+              \                     |          ^
+               \                    |update    |commit
+                \                   v          |
+    wcB          -- +Bar.c ---------- +Bar.c ----  Bar.c --->
+             (move) -Foo.c            -Foo.c'     ?Foo.c' (unversioned)
+
+
+Desired behavior
+
+   When user B updates, A's modifications to Foo.c should be merged into
+   Bar.c. Signal a text conflict if necessary.
+   
+   Foo.c should be deleted from B's working copy.
+   
+   A tree conflict should be signalled to inform B of the new changes
+   to Bar.c, so that B can review the modified Bar.c before committing it.
+
+Diagram of desired behaviour
+
+
+              (edit)
+    wcA          -- Foo.c' ------->
+                /          |
+               /           |commit
+    repos     /            v
+    -- Foo.c --------------- Foo.c' ------------------------ Bar.c' --->
+              \                      |           ^        ^
+               \                     |update     |commit  |commit
+                \                    v           |(fails) |
+    wcB          -- +Bar.c ------------ +Bar.c' -------------->
+             (move) -Foo.c              -Foo.c          ^
+                                                        |
+                                                     resolved
+
+
+==========
+USE CASE 2
+==========
+
+Description
+
+   During an update, a file move is merged onto a file modification.
+   
+   This is essentially the same as Use Case 1, with the difference that
+   this time, B does the edit and A does the move.
+
+Current Behavior
+
+   Developer B modifies Foo.c in his working copy.
+   
+   Developer A has simultaneously moved Foo.c to Bar.c and commits
+   the move to the repository.
+   
+   B cannot commit because his working copy is out of date, so B runs 
+   'svn update'. The next update will add Bar.c (with the same content
+   as the original Foo.c) to B's working copy, and delete Foo.c from
+   B's working copy. Since B made local modifications to Foo.c,
+   it will not be deleted from disk but left behind unversioned.
+
+Problems with Current Behavior
+
+   Developer B may not notice that Foo.c fell out of version control.
+   B's source tree in the working copy likely builds fine because Foo.c
+   is still present on disk.  So B may commit an incomplete change set,
+   possibly breaking the tree.  Everybody will get angry with B if this
+   happens.
+
+Diagram of Current Behaviour
+
+
+              (move)
+    wcA          -- +Bar.c ------->
+                /   -Foo.c |
+               /           |commit
+    repos     /            v
+    -- Foo.c --------------- Bar.c ----------------------->
+              \                      |            ^
+               \                     |update      |commit
+                \                    v            |(no-op)
+    wcB          -- Foo.c' ------------  Bar.c  ------->
+             (edit)                     ?Foo.c' (unversioned)
+
+
+Desired Behavior
+
+   In B's working copy, the update should add Bar.c and merge the local
+   modifications to Foo.c into Bar.c. Signal a text conflict if necessary.
+   
+   Foo.c should be deleted from B's working copy.
+   
+   A tree conflict should be signaled to inform B that Foo.c has been
+   renamed to Bar.c
+
+Diagram of Desired Behaviour
+
+
+              (move)
+    wcA          -- +Bar.c ------->
+                /   -Foo.c |
+               /           |commit
+    repos     /            v
+    -- Foo.c --------------- Bar.c -------------------------- Bar.c'--->
+              \                      |          ^          ^
+               \                     |update    |commit    |commit
+                \                    v          |(fails)   |
+    wcB          -- Foo.c' ------------+Bar.c' ------------------------>
+             (edit)                    -Foo.c'           ^
+                                                         |
+                                                      resolved
+
+
+==========
+USE CASE 3
+==========
+
+Description
+
+   During an update, a file move is merged onto a conflicting file move.
+
+Current Behavior
+
+   Developer A moves Foo.c to Bar.c and commits the move to the repository.
+   
+   Developer B has moved Foo.c to Bix.c in his working copy.
+   
+   B cannot commit because his working copy is out of date, so B runs 
+   'svn update'. The update will add Bar.c to B's working copy and
+   delete Foo.c from B's working copy (the latter is a no-op).
+
+Problems with Current Behavior
+
+   After B's next commit, the content of the original Foo.c
+   will exist twice in the source tree under two different paths,
+   namely Bar.c and Bix.c, respectively.
+   
+   This may not have been intended.
+
+Diagram of Current Behavior
+
+
+             (move)
+    wcA          -- +Bar.c ------>
+                /   -Foo.c |
+               /           |commit
+    archive   /            v
+    -- Foo.c --------------- Bar.c ------------------ Bar.c --->
+              \                    |         ^        Bix.c
+               \                   |update   |commit
+                \                  v         |
+    wcB          -- +Bix.c ---------- +Bix.c ------->
+             (move) -Foo.c             Bar.c
+
+
+Desired Behavior
+
+   A tree conflict should be signaled to inform B of the conflicting rename
+   operation. B can now decide on deleting either file or committing both.
+
+Diagram of Desired Behavior
+
+
+             (move)
+    wcA          -- +Bar.c ------>
+                /   -Foo.c |
+               /           |commit
+    archive   /            v
+    -- Foo.c --------------- Bar.c -------------------------- Bar.c -->
+              \                    |         ^        ^       (or Bix.c,
+               \                   |update   |commit  |commit  or both)
+                \                  v         |(fails) |
+    wcB          -- +Bix.c ---------- +Bix.c -------------->
+             (move) -Foo.c             Bar.c        ^
+                                                    |
+                                                 resolved
+
+
+==========
+USE CASE 4
+==========
+
+Description
+
+   A file modification is merged onto the source of a file move.
+
+Current Behavior
+
+   Developer A modifies Foo.c and commits it to the repository.
+
+   Developer B moves Foo.c to Bar.c and commits it to the repository.
+   
+   Developer merges A's new revision into his working copy. The merge
+   will apply A's modification to Foo.c to the Foo.c in B's working
+   copy.
+
+Problems With Current Behavior
+
+   First problem:
+   
+   A's modification of Foo.c will not be merged to B's line of
+   development because the merge skips the absent file.
+   
+   Second problem:
+   
+   B is not explicitly warned about reverting A's modification of Foo.c,
+   except for a "skipped" warning in the output of the merge command,
+   which might not be noticed.
+
+Diagram of current behavior
+
+
+            (edit)
+    urlA        -- Foo.c' ------------------>
+               /   (r50)              |
+              /                       |
+    -- Foo.c -                        |merge -c50
+              \                       |(Foo.c skipped)
+               \                      |
+    urlB        -- +Bar.c ------------|----------------->
+            (move) -Foo.c \           |         ^
+                           \          |         |commit
+                            \         v         |(no-op)
+    wcB                      -- Bar.c -- Bar.c ------ -->
+
+
+Desired behavior
+
+   When user B merges, A's modifications to Foo.c should be merged into
+   Bar.c. Signal a text conflict if necessary.
+   
+   A tree conflict should be signalled to inform B of the new changes
+   to Bar.c, so that B can review the modified Bar.c before committing it.
+
+Diagram of desired behaviour
+
+
+            (edit)
+    urlA        -- Foo.c' ------------------>
+               /   (r50)               |
+              /                        |
+    -- Foo.c -                         |merge -c50
+              \                        |(tree conflict)
+               \                       |
+    urlB        -- +Bar.c -------------|-------------------- Bar.c' -->
+            (move) -Foo.c  \           |          ^        ^
+                            \          |          |commit  |commit
+                             \         v          |(fails) |
+    wcB                       -- Bar.c -- Bar.c' --------------->
+                                                         ^
+                                                         |
+                                                      resolved
+
+
+==========
+USE CASE 5
+==========
+
+Description
+
+   A file move is merged onto a modification of the move-source.
+
+   This is essentially the same as Use Case 4, with the difference that
+   this time, B does the edit and A does the move.
+
+Current Behavior
+
+   Developer A  moves Foo.c to Bar.c and commits it to the repository.
+
+   Developer B modifies Foo.cand commits it to the repository.
+   
+   Developer merges A's new revision into his working copy.  The merge
+   will add Bar.c (with the same content as the original Foo.c) and
+   will delete B's Foo.c.
+
+Problems With Current Behavior
+
+   First problem:
+   
+   B's has modified Foo.c in the past.  This modification will be lost
+   unless B reviews the history of Foo.c and Bar.c at both URLs and
+   corrects the problem (e.g., via 'svn copy').
+
+Diagram of current behavior
+
+
+            (move)
+    urlA        -- +Bar.c ------------------->
+               /   -Foo.c              |
+              /    (r50)               |
+    -- Foo.c -                         |merge -c50
+              \                        |
+               \                       |
+    urlB        -- Foo.c' -------------|------------ Bar.c --->
+            (edit)        \            |          ^
+                           \           |          |commit
+                            \          v          |
+    wcB                      -- Foo.c' -- +Bar.c ------>
+                                          -Foo.c'
+
+
+Desired behavior
+
+   In B's working copy, the update should add Bar.c and merge the local
+   modifications to Foo.c into Bar.c. Signal a text conflict if necessary.
+   
+   Foo.c should be deleted from B's working copy.
+   
+   A tree conflict should be signaled to inform B that Foo.c has been
+   renamed to Bar.c
+
+Diagram of desired behaviour
+
+
+            (move)
+    urlA        -- +Bar.c ------------------->
+               /   -Foo.c              |
+              /    (r50)               |
+    -- Foo.c -                         |merge -c50
+              \                        |(tree conflict)
+               \                       |
+    urlB        -- Foo.c' -------------|-------------------- Bar.c'-->
+            (edit)        \            |          ^        ^
+                           \           |          |commit  |commit
+                            \          v          |(fails) |
+    wcB                      -- Foo.c' -- Bar.c' --------------->
+                                         -Foo.c'         ^
+                                                         |
+                                                      resolved
+
+
+==========
+USE CASE 6
+==========
+
+Description
+
+   A file move is merged onto a conflicting file move.
+
+Current Behavior
+
+   Developer A moves Foo.c to Bar.c and commits it to the repository.
+
+   Developer B moves Foo.c to Bix.c and commits it to the repository.
+   
+   Developer merges A's new revision into his working copy.  The merge
+   will add Bar.c with history in B's working copy.
+
+Problems With Current Behavior
+
+   After B's next commit, the content of the original Foo.c will exist
+   twice in the source tree under two different paths (Bar.c and
+   Bix.c).  This may not have been intended.
+
+Diagram of current behavior
+
+
+            (move)
+    urlA        -- +Bar.c ------------------>
+               /   -Foo.c             |
+              /    (r50)              |
+    -- Foo.c -                        |merge -c50
+              \                       |
+               \                      |
+    urlB        -- +Bix.c ------------|---------------- Bix.c --->
+            (move) -Foo.c \           |         ^       Bar.c
+                           \          |         |commit
+                            \         v         |
+    wcB                      -- Bix.c -- Bix.c ---------->
+                                        +Bar.c
+
+
+Desired behavior
+
+   A tree conflict should be signaled to inform B of the conflicting
+   rename operation.  B can delete either file or commit both.
+
+Diagram of desired behaviour
+
+
+            (move)
+    urlA        -- +Bar.c ----------------->
+               /   -Foo.c             |
+              /    (r50)              |
+    -- Foo.c -                        |merge -c50
+              \                       |(tree conflict)
+               \                      |
+    urlB        -- +Bix.c ------------|------------------------- Bar.c -->
+            (move) -Foo.c \           |         ^        ^       (or Bix.c,
+                           \          |         |commit  |commit  or both)
+                            \         v         |(fails) |
+    wcB                      -- Bix.c -- Bix.c -------------->
+                                        +Bar.c          ^
+                                                        |
+                                                     resolved
+

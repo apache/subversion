@@ -1,0 +1,139 @@
+log: Show the log messages for a set of revision(s) and/or file(s).
+usage: 1. log [PATH]
+       2. log URL[@REV] [PATH...]
+
+  1. Print the log messages for a local PATH (default: '.').
+     The default revision range is BASE:1.
+
+  2. Print the log messages for the PATHs (default: '.') under URL.
+     If specified, REV determines in which revision the URL is first
+     looked up, and the default revision range is REV:1; otherwise,
+     the URL is looked up in HEAD, and the default revision range is
+     HEAD:1.
+
+  Multiple '-c' or '-r' options may be specified (but not a
+  combination of '-c' and '-r' options), and mixing of forward and
+  reverse ranges is allowed.
+
+  With -v, also print all affected paths with each log message.
+  With -q, don't print the log message body itself (note that this is
+  compatible with -v).
+
+  Each log message is printed just once, even if more than one of the
+  affected paths for that revision were explicitly requested.  Logs
+  follow copy history by default.  Use --stop-on-copy to disable this
+  behavior, which can be useful for determining branchpoints.
+
+  Examples:
+    svn log
+    svn log foo.c
+    svn log http://www.example.com/repo/project/foo.c
+    svn log http://www.example.com/repo/project foo.c bar.c
+
+Valid options:
+  -r [--revision] ARG      : ARG (some commands also take ARG1:ARG2 range)
+                             A revision argument can be one of:
+                                NUMBER       revision number
+                                '{' DATE '}' revision at start of the date
+                                'HEAD'       latest in repository
+                                'BASE'       base rev of item's working copy
+                                'COMMITTED'  last commit at or before BASE
+                                'PREV'       revision just before COMMITTED
+  -q [--quiet]             : print nothing, or only summary information
+  -v [--verbose]           : print extra information
+  -g [--use-merge-history] : use/display additional information from merge
+                             history
+  -c [--change] ARG        : the change made in revision ARG
+  --targets ARG            : pass contents of file ARG as additional args
+  --stop-on-copy           : do not cross copies while traversing history
+  --incremental            : give output suitable for concatenation
+  --xml                    : output in XML
+  -l [--limit] ARG         : maximum number of log entries
+  --with-all-revprops      : retrieve all revision properties
+  --with-no-revprops       : retrieve no revision properties
+  --with-revprop ARG       : retrieve revision property ARG
+
+Global options:
+  --username ARG           : specify a username ARG
+  --password ARG           : specify a password ARG
+  --no-auth-cache          : do not cache authentication tokens
+  --non-interactive        : do no interactive prompting
+  --trust-server-cert      : accept unknown SSL server certificates without
+                             prompting (but only with '--non-interactive')
+  --config-dir ARG         : read user configuration files from directory ARG
+  --config-option ARG      : set user configuration option in the format:
+                                 FILE:SECTION:OPTION=[VALUE]
+                             For example:
+                                 servers:global:http-library=serf
+
+
+switch (sw): Update the working copy to a different URL.
+usage: 1. switch URL[@PEGREV] [PATH]
+       2. switch --relocate FROM TO [PATH...]
+
+  1. Update the working copy to mirror a new URL within the repository.
+     This behavior is similar to 'svn update', and is the way to
+     move a working copy to a branch or tag within the same repository.
+     If specified, PEGREV determines in which revision the target is first
+     looked up.
+
+     If --force is used, unversioned obstructing paths in the working
+     copy do not automatically cause a failure if the switch attempts to
+     add the same path.  If the obstructing path is the same type (file
+     or directory) as the corresponding path in the repository it becomes
+     versioned but its contents are left 'as-is' in the working copy.
+     This means that an obstructing directory's unversioned children may
+     also obstruct and become versioned.  For files, any content differences
+     between the obstruction and the repository are treated like a local
+     modification to the working copy.  All properties from the repository
+     are applied to the obstructing path.
+
+     Use the --set-depth option to set a new working copy depth on the
+     targets of this operation.
+
+  2. Rewrite working copy URL metadata to reflect a syntactic change only.
+     This is used when repository's root URL changes (such as a scheme
+     or hostname change) but your working copy still reflects the same
+     directory within the same repository.
+
+  See also 'svn help update' for a list of possible characters
+  reporting the action taken.
+
+Valid options:
+  -r [--revision] ARG      : ARG (some commands also take ARG1:ARG2 range)
+                             A revision argument can be one of:
+                                NUMBER       revision number
+                                '{' DATE '}' revision at start of the date
+                                'HEAD'       latest in repository
+                                'BASE'       base rev of item's working copy
+                                'COMMITTED'  last commit at or before BASE
+                                'PREV'       revision just before COMMITTED
+  -N [--non-recursive]     : obsolete; try --depth=files or --depth=immediates
+  --depth ARG              : limit operation by depth ARG ('empty', 'files',
+                            'immediates', or 'infinity')
+  --set-depth ARG          : set new working copy depth to ARG ('exclude',
+                            'empty', 'files', 'immediates', or 'infinity')
+  -q [--quiet]             : print nothing, or only summary information
+  --diff3-cmd ARG          : use ARG as merge command
+  --relocate               : relocate via URL-rewriting
+  --ignore-externals       : ignore externals definitions
+  --force                  : force operation to run
+  --accept ARG             : specify automatic conflict resolution action
+                            ('postpone', 'base', 'mine-conflict',
+                             'theirs-conflict', 'mine-full', 'theirs-full',
+                             'edit', 'launch')
+
+Global options:
+  --username ARG           : specify a username ARG
+  --password ARG           : specify a password ARG
+  --no-auth-cache          : do not cache authentication tokens
+  --non-interactive        : do no interactive prompting
+  --trust-server-cert      : accept unknown SSL server certificates without
+                             prompting (but only with '--non-interactive')
+  --config-dir ARG         : read user configuration files from directory ARG
+  --config-option ARG      : set user configuration option in the format:
+                                 FILE:SECTION:OPTION=[VALUE]
+                             For example:
+                                 servers:global:http-library=serf
+
+

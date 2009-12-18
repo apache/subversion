@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding = "Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="[version]"
+	Name="locale"
+	ProjectGUID="{18FA6D17-1EE7-43A2-BC2A-C2AF819CEEFB}"
+	Keyword="MakeFileProj">
+	<Platforms>
+[for platforms]		<Platform
+			Name="[platforms]"/>
+[end]	</Platforms>
+	<Configurations>
+[for platforms]		<Configuration
+			Name="Debug|[platforms]"
+			ConfigurationType="0"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cmd /c build_locale.bat Debug"
+				ReBuildCommandLine="cmd /c build_locale.bat Debug"
+                        />
+		</Configuration>
+		<Configuration
+			Name="Release|[platforms]"
+			ConfigurationType="0"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cmd /c build_locale.bat Release"
+				ReBuildCommandLine="cmd /c build_locale.bat Release"
+			/>
+		</Configuration>
+[end]	</Configurations>
+	<Files>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>

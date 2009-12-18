@@ -1,0 +1,256 @@
+Implementation for "Locking" feature
+
+This document describes proposed implementation details for a new
+locking system in Subversion.
+
+I. Introduction
+
+II. Client Implementation
+
+   A. Overview
+
+   B. The "svn:needs-lock" property
+
+      1. Property as enforcement system
+
+      2. Property as communication system
+
+   C. Lock manipulation via client
+
+      1. Lock Tokens
+
+          Stored as 'entryprops'.  That is, just like
+          last-changed-rev, last-author, etc., tokens come into the
+          client with an svn:entry: prefix, are filtered by libsvn_wc,
+          and stored in .svn/entries.   We'll call the new entryprops
+          "svn:entry:lock-token", "svn:entry:lock-owner",
+          "svn:entry:lock-comment and "svn:entry:lock-creation-date".
+          (In DAV parlance, what
+          we call 'entryprops' are called 'live props'.)
+
+          libsvn_wc stores the other fields of a lock (owner,
+          comment, creation-date) in the entries file, so that they
+          are available for the info command.  Note that this
+          information is only stored if the current WC has a lock on
+          the file.
+
+      2. New client subcommands
+          
+         a. Creating a lock
+
+             'svn lock' calls new RA->lock() function, which marshals
+             BASE rev of file to svn_fs_lock().  FS does a
+             complimentary out-of-dateness check before creating the
+             lock.  The lock is marshaled back to client, stored in
+             .svn/entries file.
+
+         b. Using a lock
+
+            1. Using a lock to Commit
+
+               A new RA layer get_commit_editor2() function will be created.
+               It takes a hash of path -> lock token from the working
+               copy.  This will be used by the server to check that
+               the WC locks match the current locks on the paths.  A
+               flag keep_locks will also be added, specifying whether
+               the committables should be unlocked after a successful commit.
+
+               libsvn_client will collect lock tokens during the
+               harvesting of commit items.  If --no-unlock was not
+               specified, unmodified objects will be treated as commit
+               items if the WC has a lock on them.  A new status flag
+               in svn_client_commit_info_t indicates that the object
+               has a lock token.
+
+               A new svn_wc_process_committed2 WC function will be
+               created with a flag indicating whether the lock toke
+               should be removed as part of the post-commit entry update.
+
+            2. Releasing a lock
+
+               svn unlock uses the lock token stored in the WC and
+               issues an ra->unlock command to the server.
+
+
+         c. Breaking a lock
+
+            svn unlock --force will first ask the server for a lock
+            token and use it in the ra->unlock command to break the
+            lock.
+
+         d. Stealing a lock
+
+            svn lock --force uses ra->lock with the force argument set
+            to TRUE to steal a lock.
+
+         e. Discovering/examining locks
+
+            1. seeing lock tokens in a working copy
+
+               The client uses the lock information stored in the
+               entries file to show lock information with svn info and
+               svn status.
+
+            2. seeing locks in a repository
+
+               The server will marshal the lock information as
+               entryprops when calling the status editor.
+
+               svn info URL will use RA->get_lock to get the lock for the
+               path specified.
+
+            3. 'svn update' behavior
+
+                A.  At the start of an update, a new version of the
+                'reporter' vtable is used to describe not only mixed
+                revnums to the server, but also existing locktokens.
+                We need to be careful with protocols when marshaling
+                this new information to older or newer servers.
+
+                In ra_svn a new command will be added to the report
+                command set for this purpose.
+
+                B.  If a locktoken is defunct (expired, broken,
+                whatever), then the server sends a 'deletion' of the
+                locktoken entryprop, through normal means: the prop
+                deletion comes into the update_editor, and thus is
+                removed from .svn/entries.
+
+
+III. Server Implementation
+
+   A. Overview
+
+   B. Tracking locks
+
+      1. Define a lock-token:
+ 
+            UUID
+            owner
+            comment [optional]
+            creation-date
+            expiration-date [optional]
+
+      2. Define a lock-table that maps [fs-path --> lock-token]
+
+         Beware the "deletion problem": if a certain path is locked,
+         then no parent directory of that path can be deleted.
+
+         The bad way to solve this problem is to do an O(N) recursive
+         search of the directory being deleted, making sure no child
+         is locked.
+
+         The good way to solve this problem is to implement the 'lock
+         table' as a tree.  When an object is locked, we create the
+         locked path in the lock-tree.  Then, the mere existence of a
+         directory in the lock-tree means it has at least one locked
+         child, and cannot be deleted.  This is a much more acceptable
+         O(logN) search.
+
+   C.  How to implement locks in libsvn_fs
+
+          This option implies that both BDB and FSFS would need to
+          implement the 'lock tree' in their own way.  Any user of
+          libsvn_fs would automatically get lock-enforcement.
+
+
+      1.  Define an API for associating a user with an open
+          filesystem.  Locks cannot be created/destroyed without a
+          username, except that the filesystem allows breaking a lock
+          without a username.
+
+      2.  New fs functions for locks:
+
+              svn_fs_lock()       --> locks a file
+              svn_fs_unlock()     --> unlocks a file
+              svn_fs_get_locks()  --> returns list of locked paths
+              svn_fs_get_lock()   --> discover if a path is locked
+
+            These functions don't do anything special, other than
+            allow one to create/release/examine locks.  BDB and FSFS
+            need to implement these functions independently.
+
+      3.  Wrap two of the functions in libsvn_repos, to invoke hooks.
+
+              svn_repos_fs_lock()
+              svn_repos_fs_unlock()
+
+            As usually, encourage "good citizens" to use these
+            wrappers, since they'll invoke the new hook scripts.  The
+            only thing which calls the fs functions directly (and
+            circumvents hooks) would be a tool like svnadmin (see
+            'svnadmin unlock' in UI document.)
+
+      4.  Teach a number of fs functions to check for locks, and deal
+          with them:
+
+          svn_fs_node_prop()
+          svn_fs_apply_textdelta()
+          svn_fs_apply_text()
+          svn_fs_make_file()
+          svn_fs_make_dir()
+
+            Check to see if the incoming path is locked.  If so, use
+            the access descriptor to see if the caller has the lock token.
+
+              1. check that the lock-token correctly matches the
+                 lock. (i.e. that the caller isn't using some defunct
+                 or malformed token).
+
+              2. check that the lock owner matches whatever
+                 authenticated username is currently attached to the fs.
+
+          svn_fs_copy()
+          svn_fs_revision_link()
+          svn_fs_delete()
+
+            Same logic as above, except that because these operations
+            can operate on entire trees,  *multiple* lock-tokens might
+            need to be checked in the access descriptor.
+
+          svn_fs_commit_txn()
+
+            Same logic, but this is the "final" check.  This function
+            already briefly locks the revisions-table in order to do a
+            final out-of-date check on everything.  In that same vein,
+            it needs to briefly lock the locks-table, and verify every
+            single lock.
+
+
+      5.  auto-expiration of locks
+
+          The common code which reads locks should be implemented in a
+          special way: whenever a lock is read, lock expiration should
+          be checked.  If a lock has expired, then the lock should be
+          removed, and the caller (doing the read operation) should
+          get nothing back.
+
+          As discussed on the list -- the svn_fs_lock() command should
+          take an optional argument for the 'expiration-date' field.
+          But this field should *never* be used by anything other than
+          mod_dav_svn responding to generic DAV clients.  We don't
+          want to expose this feature to the svn client.
+
+
+
+   D. Configurable Mechanisms
+
+      1. New "pre-" hook scripts
+
+        a. pre-lock
+
+        b. pre-unlock
+
+      2. New "post-" hook scripts
+
+        a. post-lock
+
+        b. post-unlock
+
+
+   E. Lock manipulation with server tools
+
+      1. 'svnlook listlocks'
+
+      2. 'svnadmin unlock'
+

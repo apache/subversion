@@ -1,0 +1,152 @@
+.\" Process this file with
+.\" groff -man -Tascii <file>
+.\"
+.TH @PACKAGE@ 8 "2008-04-18" "version @PACKAGE_VERSION@" Subversion
+.SH NAME
+@PACKAGE@ \- 
+.BR svns "erve " t "unnel-mode " s "etuid " w rapper
+.SH SYNOPSIS
+.B @PACKAGE@
+[
+.I options\c
+\&.\|.\|.\& ]
+.SH DESCRIPTION
+Runs Subversion's
+.B svnserve
+program in tunnel mode, setting the tunnel username equal to the
+username of the user that invoked
+.BR @PACKAGE@ .
+
+Using this wrapper, repository administrators can have meaningful
+path-based access controls when using the svn+ssh access scheme
+without resorting to the authorized_keys trick.  Normally, the svn+ssh
+scheme requires the repository administrator to make all repository
+files fully readable and writeable by all users.  Unfortunately, this
+configuration allows users to easily bypass
+.BR svnserve 's
+access controls.  With
+.B svnstsw
+installed and the setuid or setgid bit set, repository administrators
+can take direct filesystem access away from users and prevent them
+from bypassing
+.BR svnserve 's
+access controls.
+
+This wrapper works by executing (via
+.BR exec (3))
+.B svnserve
+with the
+.B \-\-tunnel
+and
+.BI \-\-tunnel\-user= user
+arguments, where
+.I user
+is the username of the user that invoked
+.B svnstsw
+(as determined using either
+.BR getlogin_r (3)
+or
+.BR getpwuid_r (3)
+with
+.BR getuid (3)).
+
+The specific
+.B svnserve
+executable to run is set at compile time and can be verified using the
+.B \-\-help
+command-line argument.
+
+The
+.B \-\-root=\c
+.I path
+command-line argument is also passed to
+.B svnserve\c
+, with the value of
+.I path
+set at compile time.  The value of
+.I path
+can be verified using the
+.B \-\-help
+command-line argument.  Depending on compile-time settings,
+.I path
+may be overridden using the
+.B \-r
+or
+.B \-\-root
+command-line arguments; see
+.B \-\-help
+for more details.
+
+This wrapper was written for Subversion 1.4.
+.SH OPTIONS
+.TP
+.BR \-h , \ \-\-help
+Display a command-line usage summary along with the specific
+.B svnserve
+binary to execute and the (default) virtual repository root path.
+.TP
+.BI \-r " path\fR,\fP " \-\-root= path
+Use
+.I path
+as the argument to
+.B svnserve\c
+\&'s
+.B --root
+command-line argument instead of the compiled-in default.  This option
+is ignored if root overriding was disabled at compile time.  To see
+the default
+.I path\c
+, use the
+.B \-\-help
+option.
+.TP
+.BR \-R , \ \-\-read\-only
+Instructs this wrapper to also pass the
+.B \-\-read\-only
+command-line argument to
+.B svnserve\c
+\&.
+.TP
+.BR \-t , \ \-\-tunnel
+Ignored.
+.TP
+.BI \-\-tunnel-user= user
+Ignored.
+.TP
+.BR \-\-version
+Display version and copyright information.
+.SH SEE ALSO
+.BR svnserve "(8), " lib@PACKAGE@ (3)
+.SH AUTHOR
+Richard Hansen <svnstsw@ir.bbn.com>
+.SH COPYING
+Copyright (c) 2008 BBN Technologies Corp.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+.RS 0
+.IP 1. 4
+Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+.IP 2. 4
+Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+.IP 3. 4
+Neither the name of BBN Technologies nor the names of its contributors
+may be used to endorse or promote products derived from this software
+without specific prior written permission.
+.RE
+
+THIS SOFTWARE IS PROVIDED BY BBN TECHNOLOGIES AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL BBN TECHNOLOGIES OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

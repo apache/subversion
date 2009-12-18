@@ -1,0 +1,21 @@
+The script in this directory will attempt to build a Solaris package
+out of a source tree for subversion.
+
+To build a package, make sure you are in the root of the source tree,
+and run:
+
+build/pkg/buildpkg.sh
+
+A Solaris package called subversion-<version>-<architecture>-local.gz will be
+created in the root of the source tree.
+
+By default, the script will attempt to find a system installed version of
+APR and APR-util v1. You may override the location of apr or apr-util like so:
+
+build/pkg/buildpkg.sh --with-apr=some/other/path --with-apr-util=some/other/path
+
+The --with-neon and --with-apxs flags will allow you to specify the location of
+the neon and httpd installations respectively.
+
+If you wish the package to install Subversion into someplace other than
+/usr/local use the --prefix flag to indicate your desired prefix.

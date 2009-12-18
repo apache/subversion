@@ -1,0 +1,28 @@
+A Mailman mailing list for the Python and Bourne shell versions of
+svnmerge has been set up at:
+
+    http://www.orcaware.com/mailman/listinfo/svnmerge
+
+The Python version is newer and undergoing active development.  A wiki
+has been been setup at:
+
+    http://www.orcaware.com/svn/wiki/Svnmerge.py
+
+The Python version supports significantly more features than the
+Bourne shell version, including, but not limited to:
+
+  * Add support for more informative commit messages (-V).
+
+  * Add double-verbose mode, which shows every svn command executed
+    (-v -v).
+
+  * "svnmerge avail" now only shows commits in head, not also commits
+    in other parts of the repository.
+
+  * Add "svnmerge block" to flag some revisions as blocked, so that
+    they will not show up anymore in the available list.  Added also
+    the complementary "svnmerge unblock".
+
+  * "svnmerge avail" has grown two new options:
+    -B to display a list of the blocked revisions.
+    -A to display both the blocked and the available revisions.

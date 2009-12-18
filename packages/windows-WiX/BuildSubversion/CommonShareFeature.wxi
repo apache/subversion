@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+				<ComponentRef Id="SubversionMo"/>
+				<ComponentRef Id="LC_MESSAGESSubversionMo"/>
+				<ComponentRef Id="LC_MESSAGESSubversionMo1"/>
+				<ComponentRef Id="LC_MESSAGESSubversionMo2"/>
+				<ComponentRef Id="LC_MESSAGESSubversionMo3"/>
+				<ComponentRef Id="LC_MESSAGESSubversionMo4"/>
+				<ComponentRef Id="LC_MESSAGESSubversionMo5"/>
+				<ComponentRef Id="LC_MESSAGESSubversionMo6"/>
+				<ComponentRef Id="LC_MESSAGESSubversionMo7"/>
+				<ComponentRef Id="LC_MESSAGESSubversionMo8"/>
+				<ComponentRef Id="LC_MESSAGESSubversionMo9"/>
+				<ComponentRef Id="LC_MESSAGESSubversionMo10"/>
+</Include>

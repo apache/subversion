@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    Copyright (c) Microsoft Corporation.  All rights reserved.
+-->
+<!--
+First-time install dialog sequence:      Maintenance dialog sequence:
+ - WixUI_WelcomeDlgSubv                     - WixUI_MaintenanceWelcomeDlgSubv
+ - WixUI_InfoDlg            - WixUI_MaintenanceTypeDlg
+ - WixUI_InstallDirDlg                    - WixUI_InstallDirDlg
+   - WixUI_VerifyReadyDlg                 - WixUI_VerifyReadyDlg
+   - WixUI_DiskCostDlg
+-->
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Fragment>
+        <UI Id="WixUI_Subversion">
+            <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
+            <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" Bold="yes" />
+            <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes" />
+            <TextStyle Id="WixUI_Font_Bold" FaceName="Tahoma" Size="8" Bold="yes" />
+
+            <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+            <Property Id="WixUI_Mode" Value="InstallDir" />
+
+            <DialogRef Id="BrowseDlg" />
+            <DialogRef Id="DiskCostDlg" />
+            <DialogRef Id="ErrorDlg" />
+            <DialogRef Id="FatalError" />
+            <DialogRef Id="FilesInUse" />
+            <DialogRef Id="MsiRMFilesInUse" />
+            <DialogRef Id="PrepareDlg" />
+            <DialogRef Id="ProgressDlg" />
+            <DialogRef Id="ResumeDlg" />
+            <DialogRef Id="UserExit" />
+
+            <Publish Dialog="PostDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999"></Publish>
+
+        	<Publish Dialog="WelcomeDlgSubv" Control="Next" Event="NewDialog" Value="InfoDlg">1</Publish>
+
+            <Publish Dialog="InfoDlg" Control="Back" Event="NewDialog" Value="WelcomeDlgSubv">1</Publish>
+            <Publish Dialog="InfoDlg" Control="Next" Event="NewDialog" Value="ApacheSelectDlg">1</Publish>
+
+            <Publish Dialog="ApacheSelectDlg" Control="Back" Event="NewDialog" Value="InfoDlg">1</Publish>
+            <Publish Dialog="ApacheSelectDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg">1</Publish>
+
+	  		<Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="ApacheSelectDlg">1</Publish>
+            <Publish Dialog="InstallDirDlg" Control="Next" Event="SetTargetPath" Value="[WIXUI_INSTALLDIR]" Order="1">1</Publish>
+            <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="2">1</Publish>
+            <Publish Dialog="InstallDirDlg" Control="ChangeFolder" Property="_BrowseProperty" Value="[WIXUI_INSTALLDIR]" Order="1">1</Publish>
+            <Publish Dialog="InstallDirDlg" Control="ChangeFolder" Event="SpawnDialog" Value="BrowseDlg" Order="2">1</Publish>
+
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="InstallDirDlg" Order="1">NOT Installed</Publish>
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="2">Installed</Publish>
+
+            <Publish Dialog="MaintenanceWelcomeDlg" Control="Next" Event="NewDialog" Value="MaintenanceTypeDlg">1</Publish>
+
+            <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
+            <Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
+            <Publish Dialog="MaintenanceTypeDlg" Control="Back" Event="NewDialog" Value="MaintenanceWelcomeDlg">1</Publish>
+
+            <Property Id="ARPNOMODIFY" Value="1" />
+        </UI>
+
+        <UIRef Id="WixUI_Common" />
+    </Fragment>
+</Wix>

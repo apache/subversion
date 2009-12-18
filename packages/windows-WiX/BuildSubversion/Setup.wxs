@@ -1,0 +1,121 @@
+﻿<?xml version="1.0"?>
+<!--
+	Subversion Installer
+
+	Author: Troy Simpson (troy@ebswift.com) http://www.ebswift.com
+	Thanks to: Gábor DEÁK JAHN, Tramontána, Alex Shevchuk, the SharpDevelop team and of course, the WiX team
+
+	Instructions for upgrades:
+
+	1. Change ProductVersion
+	2. Change RevisionNumber
+	3. Change ProductCode
+	4. Set the product version against the output name in the wixproj
+	   (go to project properties in SharpDevelop, or change it directly in the wixproj)
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<?define RTMProductVersion="1.0.0" ?>
+  	<?define ProductVersion="1.5.1" ?> <!-- change for upgrade -->
+	<?define RevisionNumber="r32289" ?> <!-- change for upgrade -->
+	<?define ProductCode="{0ED6E1BF-3604-45E9-A719-8DD3B5826706}" ?> <!-- change for upgrade -->
+	<?define UpgradeCode="{032A49B2-32FB-4AE0-BAB0-6AB953CC94DA}" ?> <!-- leave this value -->
+	<?define PackageCode="*" ?>
+
+	<Product Id="$(var.ProductCode)"
+		Name="!(loc.ProductName)"
+		Language="1033"
+		UpgradeCode="$(var.UpgradeCode)"
+		Manufacturer="CollabNet"
+	  	Version="$(var.ProductVersion)">
+		
+		<Package Description="!(loc.PackageDescription)"
+		    Id="$(var.PackageCode)"
+			Comments="!(loc.ProductName) $(var.ProductVersion)-$(var.RevisionNumber)"
+			InstallerVersion="200"
+		    Keywords="!(loc.Keywords)"
+			Compressed="yes"/>
+
+		<Upgrade Id="$(var.UpgradeCode)">
+  			<UpgradeVersion Minimum="$(var.ProductVersion)"
+                  IncludeMinimum="no"
+                  OnlyDetect="yes"
+                  Language="1033"
+                  Property="NEWPRODUCTFOUND" />
+			<UpgradeVersion Minimum="$(var.RTMProductVersion)"
+                  IncludeMinimum="yes"
+                  Maximum="$(var.ProductVersion)"
+                  IncludeMaximum="no"
+                  Language="1033"
+	              Property="UPGRADEFOUND" />
+ 		</Upgrade>
+
+		<!--
+			Source media for the installation. 
+ 			Specifies a single cab file to be embedded in the installer's .msi. 
+		-->
+		<Media Id="1" Cabinet="contents.cab" EmbedCab="yes" CompressionLevel="high"/>
+		
+		<!-- Installation directory and files are defined in Files.wxs -->
+		<Directory Id="TARGETDIR" Name="SourceDir"/>
+		
+		<Feature Id="Complete"
+		         Title="Subversion"
+		         Description="Subversion for win32"
+		         Level="1">
+
+				<?include ApacheFeature20x.wxi ?>
+				<?include ApacheFeature22x.wxi ?>
+				<?include iconvFeature20x.wxi ?>
+				<?include iconvFeature22x.wxi ?>
+				<?include CommonBinaryFeature.wxi ?>
+				<?include CommonSASLFeature.wxi ?>
+				<?include CommonShareFeature.wxi ?>
+
+				<?include LicensesCommonFeature.wxi ?>
+				<?include LicensesFeature20x.wxi ?>
+				<?include LicensesFeature22x.wxi ?>
+
+				<ComponentRef Id="svnbookchm"/>
+			
+			<!-- Program Files Folder -->
+				<ComponentRef Id='IDSubvProgGroup' />
+				<ComponentRef Id='IDSubvLicGroup' />
+		</Feature>
+		
+		<Property Id="WIXUI_INSTALLDIR">INSTALLDIR</Property>
+ 		
+		<!-- note to self: properties populated from controls
+		     must be in uppercase and have the secure option set -->
+		<Property Id="APACHEVERSION" Secure="yes">Apache20</Property>
+
+		<Property Id="ProductRevision">$(var.RevisionNumber)</Property>
+		
+		<!-- 
+ 			Use custom Subversion Fragment
+		-->
+		<UIRef Id="WixUI_Subversion"/>
+		<WixVariable Id="WixUIDialogBmp" Value="dlgbmp.bmp"/>	
+		<WixVariable Id="WixUIBannerBmp" Value="wiz-55x55x24.bmp"/>	
+
+		<!-- Prevent downgrading -->
+		<CustomAction Id="PreventDowngrading"
+              Error="!(loc.NoDowngrade)" />
+	
+		<InstallExecuteSequence>
+		  <Custom Action="PreventDowngrading"
+		          After="FindRelatedProducts">NEWPRODUCTFOUND</Custom>
+		  <RemoveExistingProducts After="InstallFinalize" />
+		</InstallExecuteSequence>
+
+		<InstallUISequence>
+		  <Custom Action="PreventDowngrading"
+		          After="FindRelatedProducts">NEWPRODUCTFOUND</Custom>
+		</InstallUISequence>
+
+		<!-- add/remove programs icon -->
+		<Icon Id="Subversion.ico" SourceFile="..\..\..\SubversionTagSource\build\win32\svn.ico"/>
+		<Property Id="ARPPRODUCTICON" Value="Subversion.ico" />
+
+		<Property Id="ARPHELPLINK">http://subversion.tigris.org</Property>
+	</Product>
+</Wix>

@@ -1,0 +1,851 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+						<Component Guid="DCFD247A-53DD-41AA-9041-46804E566C16" Id="Adobe_stdencSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\adobe-stdenc.so" Name="adobe-stdenc.so" Id="adobe_stdenc.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="964668A3-1370-4EFF-9163-9E817BAEC4A9" Id="Adobe_symbolSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\adobe-symbol.so" Name="adobe-symbol.so" Id="adobe_symbol.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="89550DAF-1346-4F95-8A76-8633CF388F24" Id="Adobe_zdingbatsSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\adobe-zdingbats.so" Name="adobe-zdingbats.so" Id="adobe_zdingbats.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="CFAEBA76-D01E-4F3F-8791-25CF22338DA5" Id="Big5So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\big5.so" Name="big5.so" Id="big5.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="A094D440-BDF9-4CAE-B4DB-6488A24C3051" Id="Cns11643_plane1So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cns11643-plane1.so" Name="cns11643-plane1.so" Id="cns11643_plane1.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7C7D47E5-68E8-49E0-8906-4CBA36AFCC46" Id="Cns11643_plane14So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cns11643-plane14.so" Name="cns11643-plane14.so" Id="cns11643_plane14.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="3956E86F-2383-48D1-A187-CDF26A04FA40" Id="Cns11643_plane2So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cns11643-plane2.so" Name="cns11643-plane2.so" Id="cns11643_plane2.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="15B4ACA2-C5FF-4DF2-B323-D1E8F48E8F9E" Id="Cp037So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp037.so" Name="cp037.so" Id="cp037.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="1C0D37C3-9CD9-4798-AECB-6D70562F551D" Id="Cp038So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp038.so" Name="cp038.so" Id="cp038.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="9DF3D784-70A0-41BD-8BD5-B093B0CB6EEC" Id="Cp10000So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp10000.so" Name="cp10000.so" Id="cp10000.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="F748B0FC-FB28-4842-A6A2-CFB4D27E6A6D" Id="Cp10006So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp10006.so" Name="cp10006.so" Id="cp10006.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="ACDE40BE-4F1A-4B84-A481-9CCB511C58C5" Id="Cp10007So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp10007.so" Name="cp10007.so" Id="cp10007.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="9E3F9BE8-6757-4AB1-94BE-B3BBA72BF417" Id="Cp10029So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp10029.so" Name="cp10029.so" Id="cp10029.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7178748A-11C1-4F12-A9BE-FBCDE5F2C1A4" Id="Cp1006So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp1006.so" Name="cp1006.so" Id="cp1006.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7AAE87DF-84CC-4EE5-9297-E6F52940BA3B" Id="Cp10079So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp10079.so" Name="cp10079.so" Id="cp10079.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="442F2E32-B88D-479F-998F-56FA5369BA65" Id="Cp10081So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp10081.so" Name="cp10081.so" Id="cp10081.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="45E3C170-E773-4C7E-808B-D7B42B68563F" Id="Cp1026So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp1026.so" Name="cp1026.so" Id="cp1026.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="95A8FA9E-A95A-48C3-9329-B2F7283B806E" Id="Cp273So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp273.so" Name="cp273.so" Id="cp273.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="4D3FF5DC-572C-44F2-A60F-675F510189EA" Id="Cp274So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp274.so" Name="cp274.so" Id="cp274.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="8859A241-1FFD-427F-B68A-8409C482D3B8" Id="Cp275So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp275.so" Name="cp275.so" Id="cp275.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="8173E9F9-A77E-4075-BF0F-0F254C16EB66" Id="Cp277So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp277.so" Name="cp277.so" Id="cp277.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="D40DB0C8-F7EE-476A-99A1-BDA03EE9C193" Id="Cp278So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp278.so" Name="cp278.so" Id="cp278.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7940CF2E-B3AF-41DD-8B3E-B7D318BB5C0F" Id="Cp280So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp280.so" Name="cp280.so" Id="cp280.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="816FB933-A3A2-4950-B76C-89090775AC28" Id="Cp281So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp281.so" Name="cp281.so" Id="cp281.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="D5F81859-5701-4F19-AA97-E216B4842FE2" Id="Cp284So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp284.so" Name="cp284.so" Id="cp284.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="69256952-7B15-4340-8885-56D6E30A654B" Id="Cp285So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp285.so" Name="cp285.so" Id="cp285.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="5D28E7FA-6EE7-46E2-AA5D-20291C2E91C5" Id="Cp290So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp290.so" Name="cp290.so" Id="cp290.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="E9A817AD-954C-4159-9426-4AC7EB5040B3" Id="Cp297So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp297.so" Name="cp297.so" Id="cp297.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="CF6369D9-E0B7-4814-9DC9-0BC33B363FDE" Id="Cp420So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp420.so" Name="cp420.so" Id="cp420.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="B73CA58E-91EF-48B4-A821-90668B2A33BA" Id="Cp423So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp423.so" Name="cp423.so" Id="cp423.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="3B8FB8F2-68D5-49B9-A9A6-F9FE525205AE" Id="Cp424So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp424.so" Name="cp424.so" Id="cp424.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="9588EF40-3636-4BC9-80E0-8FE11F82C763" Id="Cp437So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp437.so" Name="cp437.so" Id="cp437.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="A4E9955E-331C-49EA-AB65-A32ABA99E040" Id="Cp500So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp500.so" Name="cp500.so" Id="cp500.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="03ADB8F6-8805-44CD-A599-AD9DD7BCC3B8" Id="Cp737So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp737.so" Name="cp737.so" Id="cp737.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="5F741D83-C659-4BA7-A58C-99AC90661B09" Id="Cp775So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp775.so" Name="cp775.so" Id="cp775.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="DAAEE9FB-B443-48E2-A07C-75CD2E8A0B1B" Id="Cp850So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp850.so" Name="cp850.so" Id="cp850.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="26A74019-55B2-4104-87DE-5CFAEE37A27E" Id="Cp851So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp851.so" Name="cp851.so" Id="cp851.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="0C875F77-4269-4CD9-B891-293091827D31" Id="Cp852So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp852.so" Name="cp852.so" Id="cp852.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="EB0F0519-5446-4E8A-9F63-221B17BCD73B" Id="Cp855So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp855.so" Name="cp855.so" Id="cp855.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="3B45DDF1-5E8D-4870-A84B-138FCCEF6532" Id="Cp856So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp856.so" Name="cp856.so" Id="cp856.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="F5A418FE-9C9D-4382-A1D7-2E9BC5F8A329" Id="Cp857So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp857.so" Name="cp857.so" Id="cp857.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7FA399D4-E109-41F7-9C38-1AF593A8478F" Id="Cp860So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp860.so" Name="cp860.so" Id="cp860.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="31FB33EF-0417-42C4-AA48-D9561C2B8E05" Id="Cp861So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp861.so" Name="cp861.so" Id="cp861.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="D7239621-7249-4012-BBB8-91CAA9F03DF8" Id="Cp862So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp862.so" Name="cp862.so" Id="cp862.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="D8B1026D-6F6F-42D8-B67B-12B62F839BF0" Id="Cp863So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp863.so" Name="cp863.so" Id="cp863.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="6FC3D226-7A83-4BA2-BD7E-9A95D7B08453" Id="Cp864So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp864.so" Name="cp864.so" Id="cp864.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="0033CDA8-C5F4-49BC-B04F-8BF861E13D25" Id="Cp865So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp865.so" Name="cp865.so" Id="cp865.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="241CB977-5C82-4E52-95AE-89DC0C9F7221" Id="Cp866So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp866.so" Name="cp866.so" Id="cp866.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="9A9CAB70-F76E-4DFD-8E54-DBC424637AC9" Id="Cp868So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp868.so" Name="cp868.so" Id="cp868.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="5784A417-1811-4DC4-9AF6-8A54BF25B4D2" Id="Cp869So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp869.so" Name="cp869.so" Id="cp869.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="5D12E087-D82A-44F3-AB50-8D1B8ABFAB1B" Id="Cp870So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp870.so" Name="cp870.so" Id="cp870.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="9C2C4093-355F-44D1-99EE-FF3BF4396B46" Id="Cp871So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp871.so" Name="cp871.so" Id="cp871.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="73D0B6F4-4BF7-4F7B-804B-F3F338D3C32A" Id="Cp874So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp874.so" Name="cp874.so" Id="cp874.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="F093B9F4-3F88-4456-9E06-1FFF7E1FC2B3" Id="Cp875So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp875.so" Name="cp875.so" Id="cp875.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="5040F878-9FE2-4087-857C-616548F1092C" Id="Cp880So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp880.so" Name="cp880.so" Id="cp880.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="CE1221BB-A47F-43F2-8122-4518ABFBFA1C" Id="Cp891So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp891.so" Name="cp891.so" Id="cp891.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="BE60BC3D-198F-4C60-BC27-EBFFD27B3DD1" Id="Cp903So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp903.so" Name="cp903.so" Id="cp903.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="CA398ED5-1C5D-4928-A2D5-1A2F0EBF9997" Id="Cp904So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp904.so" Name="cp904.so" Id="cp904.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="B524486E-5B8D-49BF-B4EA-D660823FE49E" Id="Cp905So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp905.so" Name="cp905.so" Id="cp905.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="30EF2481-585C-45A4-9000-846AB25CAFF9" Id="Cp918So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp918.so" Name="cp918.so" Id="cp918.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="53C3B6F3-1F9D-4625-95C9-66AC8D24E1B4" Id="Cp932So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp932.so" Name="cp932.so" Id="cp932.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="462D53A8-138E-435F-AA93-5330975A441C" Id="Cp936So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp936.so" Name="cp936.so" Id="cp936.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="9D2833E4-C15A-4B66-A599-827D5A9E03FC" Id="Cp949So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp949.so" Name="cp949.so" Id="cp949.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="8F2DD305-8EAC-41BF-87BE-B831273F99AE" Id="Cp950So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\cp950.so" Name="cp950.so" Id="cp950.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7145A745-E14A-49A9-ACF2-08CF68726B51" Id="Dec_mcsSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\dec-mcs.so" Name="dec-mcs.so" Id="dec_mcs.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="D6093279-70CA-41E9-98C0-0279C8A3A60A" Id="Ebcdic_at_de_aSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-at-de-a.so" Name="ebcdic-at-de-a.so" Id="ebcdic_at_de_a.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="6087E453-D147-416C-B850-633F809DF435" Id="Ebcdic_at_deSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-at-de.so" Name="ebcdic-at-de.so" Id="ebcdic_at_de.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="5DB6F835-E4C6-466A-B658-37753CAF52AD" Id="Ebcdic_ca_frSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-ca-fr.so" Name="ebcdic-ca-fr.so" Id="ebcdic_ca_fr.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="94B663D1-3AAE-4457-B6C7-EE58EA3504C0" Id="Ebcdic_dk_no_aSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-dk-no-a.so" Name="ebcdic-dk-no-a.so" Id="ebcdic_dk_no_a.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7F123C40-3AE2-4E2F-9F67-82330DD8CC59" Id="Ebcdic_dk_noSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-dk-no.so" Name="ebcdic-dk-no.so" Id="ebcdic_dk_no.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="DE73955F-A91D-48B2-B615-85133885F53F" Id="Ebcdic_es_aSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-es-a.so" Name="ebcdic-es-a.so" Id="ebcdic_es_a.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="4D06FEFF-B9CD-4A72-BEDD-29619A92EF03" Id="Ebcdic_es_sSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-es-s.so" Name="ebcdic-es-s.so" Id="ebcdic_es_s.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="1ECDF7E2-2470-4DA5-87C8-473875ACA98C" Id="Ebcdic_esSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-es.so" Name="ebcdic-es.so" Id="ebcdic_es.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="AA1DB799-7D16-4476-A719-E96101854732" Id="Ebcdic_fi_se_aSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-fi-se-a.so" Name="ebcdic-fi-se-a.so" Id="ebcdic_fi_se_a.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="BAD41B02-A8FC-4C15-ADB5-7A2CA6D681A6" Id="Ebcdic_fi_seSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-fi-se.so" Name="ebcdic-fi-se.so" Id="ebcdic_fi_se.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="70BF173B-E3BA-471A-B03B-993066557A78" Id="Ebcdic_frSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-fr.so" Name="ebcdic-fr.so" Id="ebcdic_fr.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="8A0C93E7-89D4-40F9-8C34-08E87A1CFBB7" Id="Ebcdic_itSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-it.so" Name="ebcdic-it.so" Id="ebcdic_it.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="13CBEA49-2C5A-4A79-88AB-BF317CD0BC3F" Id="Ebcdic_ptSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-pt.so" Name="ebcdic-pt.so" Id="ebcdic_pt.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="FC5DA870-DDC3-4C86-A028-591FD6EF2EF2" Id="Ebcdic_ukSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-uk.so" Name="ebcdic-uk.so" Id="ebcdic_uk.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="D3FF5DF0-266D-4F89-A3A6-D8046C389FC3" Id="Ebcdic_usSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ebcdic-us.so" Name="ebcdic-us.so" Id="ebcdic_us.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="62D4F708-4A6C-4E76-9EB0-3FF411B186E1" Id="Euc_jpSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\euc-jp.so" Name="euc-jp.so" Id="euc_jp.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="3725F62D-420E-41CB-A0E0-09708BC6900E" Id="Euc_krSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\euc-kr.so" Name="euc-kr.so" Id="euc_kr.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="A0ACB554-3C50-41DE-95FE-5C97D3044984" Id="Euc_twSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\euc-tw.so" Name="euc-tw.so" Id="euc_tw.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="CBC4D460-EAEF-467E-B0E5-5DE5F1B0C439" Id="Gb12345So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\gb12345.so" Name="gb12345.so" Id="gb12345.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="F04E4AC3-1C62-4F46-910A-51DBDD97F42C" Id="Gb2312So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\gb2312.so" Name="gb2312.so" Id="gb2312.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="60740153-0251-4444-8A2E-2EB68B6FA751" Id="Gb_2312_80So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\gb_2312-80.so" Name="gb_2312-80.so" Id="gb_2312_80.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="A8E0D17B-8886-4542-AB61-2310FF764053" Id="Hp_roman8So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\hp-roman8.so" Name="hp-roman8.so" Id="hp_roman8.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7578069B-B0AE-4E4E-B13B-639416DBC181" Id="Iso_10646_ucs_2So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-10646-ucs-2.so" Name="iso-10646-ucs-2.so" Id="iso_10646_ucs_2.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="9F9C231A-C915-4240-AA3D-0FED1838573B" Id="Iso_10646_ucs_4So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-10646-ucs-4.so" Name="iso-10646-ucs-4.so" Id="iso_10646_ucs_4.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="92DC7948-1EE9-4862-8EDB-8909EF787401" Id="Iso_2022_cnSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-2022-cn.so" Name="iso-2022-cn.so" Id="iso_2022_cn.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="DEA16AC9-D4C9-4472-918D-7333D61C14E6" Id="Iso_2022_jp_2So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-2022-jp-2.so" Name="iso-2022-jp-2.so" Id="iso_2022_jp_2.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="AFB110FC-CCED-421A-A075-91AE4E458D4A" Id="Iso_2022_jpSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-2022-jp.so" Name="iso-2022-jp.so" Id="iso_2022_jp.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="66FAF49E-211A-47A1-9818-BA476049A123" Id="Iso_2022_krSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-2022-kr.so" Name="iso-2022-kr.so" Id="iso_2022_kr.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="1CE632F4-3782-4F26-9DF2-3D9E1854003A" Id="Iso_8859_1So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-8859-1.so" Name="iso-8859-1.so" Id="iso_8859_1.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="3AD5FCF5-E7EB-42E8-AEB6-411605D8CAFA" Id="Iso_8859_10So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-8859-10.so" Name="iso-8859-10.so" Id="iso_8859_10.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="6DC8728E-1E98-4FF8-9663-30109D170CAD" Id="Iso_8859_13So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-8859-13.so" Name="iso-8859-13.so" Id="iso_8859_13.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="8B337E22-6020-41E4-A681-0C073F8DE1DA" Id="Iso_8859_14So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-8859-14.so" Name="iso-8859-14.so" Id="iso_8859_14.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="ADF49521-1C8F-4C19-BA8C-FFBBA06D9E93" Id="Iso_8859_15So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-8859-15.so" Name="iso-8859-15.so" Id="iso_8859_15.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="673769D9-566E-4D91-9CEF-C788D7AC136E" Id="Iso_8859_2So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-8859-2.so" Name="iso-8859-2.so" Id="iso_8859_2.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="31931528-B074-4CDD-A0E3-9008862A5491" Id="Iso_8859_3So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-8859-3.so" Name="iso-8859-3.so" Id="iso_8859_3.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="6CF9F5EE-C79A-4FCE-8395-37D13ACD7EF1" Id="Iso_8859_4So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-8859-4.so" Name="iso-8859-4.so" Id="iso_8859_4.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="FA5A57AF-DD87-4CFC-AD77-9E35C60177A8" Id="Iso_8859_5So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-8859-5.so" Name="iso-8859-5.so" Id="iso_8859_5.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="81A6530E-0FE8-462A-8A0F-F9DB06D454B1" Id="Iso_8859_6So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-8859-6.so" Name="iso-8859-6.so" Id="iso_8859_6.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="64204D6F-247B-4B24-8EF7-DAC007682027" Id="Iso_8859_7So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-8859-7.so" Name="iso-8859-7.so" Id="iso_8859_7.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="E2E21D45-4821-4317-A11A-4B4CB4A0B034" Id="Iso_8859_8So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-8859-8.so" Name="iso-8859-8.so" Id="iso_8859_8.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="D0A7E1E7-A855-4862-9733-A550E8D9ECA0" Id="Iso_8859_9So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-8859-9.so" Name="iso-8859-9.so" Id="iso_8859_9.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="46BEEDB5-A92F-4894-8CD5-894EA5D6D2CA" Id="Iso_ir_10So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-10.so" Name="iso-ir-10.so" Id="iso_ir_10.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="AD8CE265-D7D3-4592-AB67-B898BD94D39F" Id="Iso_ir_102So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-102.so" Name="iso-ir-102.so" Id="iso_ir_102.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="BCF2D0D6-9970-487B-B557-E219CD6D970D" Id="Iso_ir_103So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-103.so" Name="iso-ir-103.so" Id="iso_ir_103.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="AAC9B1CB-517E-4708-BBCF-79C13CFE1AE3" Id="Iso_ir_11So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-11.so" Name="iso-ir-11.so" Id="iso_ir_11.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="736C73A6-AFD0-4ECF-B506-4881E57C62B7" Id="Iso_ir_111So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-111.so" Name="iso-ir-111.so" Id="iso_ir_111.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="8EE90754-2E1C-4788-91DE-3A097F8629CE" Id="Iso_ir_121So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-121.so" Name="iso-ir-121.so" Id="iso_ir_121.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="71EE0B90-58BF-40D2-9E11-0DC2F436F6CA" Id="Iso_ir_122So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-122.so" Name="iso-ir-122.so" Id="iso_ir_122.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="EC742266-37ED-4521-8611-083279B508F4" Id="Iso_ir_123So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-123.so" Name="iso-ir-123.so" Id="iso_ir_123.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="B3F9A11B-292D-4185-95D0-423BE6BFC8EF" Id="Iso_ir_128So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-128.so" Name="iso-ir-128.so" Id="iso_ir_128.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="10B58D2B-7107-4F94-88FC-F60F0DB68187" Id="Iso_ir_13So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-13.so" Name="iso-ir-13.so" Id="iso_ir_13.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="D63886E1-7797-48A5-A33F-79B4B9C4F203" Id="Iso_ir_139So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-139.so" Name="iso-ir-139.so" Id="iso_ir_139.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="965316F9-8A06-4313-A3E3-09855FC31B47" Id="Iso_ir_14So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-14.so" Name="iso-ir-14.so" Id="iso_ir_14.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="1E6E03CA-9E19-45E1-8032-707A691584BD" Id="Iso_ir_141So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-141.so" Name="iso-ir-141.so" Id="iso_ir_141.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="F8B8E878-0AAF-4532-AB38-2772804DD114" Id="Iso_ir_142So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-142.so" Name="iso-ir-142.so" Id="iso_ir_142.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="2193296D-6CB8-4C51-B58A-4E12CDE5BB84" Id="Iso_ir_143So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-143.so" Name="iso-ir-143.so" Id="iso_ir_143.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="27088B76-BDEC-44FF-95EF-62043EE988BC" Id="Iso_ir_146So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-146.so" Name="iso-ir-146.so" Id="iso_ir_146.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="A9C03042-35AF-4261-8E1D-4C6C729D008B" Id="Iso_ir_147So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-147.so" Name="iso-ir-147.so" Id="iso_ir_147.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="462B5245-7DF4-4DB9-BA3D-959E5650F7A9" Id="Iso_ir_15So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-15.so" Name="iso-ir-15.so" Id="iso_ir_15.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="FA0BA678-B28D-46F3-B67E-98A32690A9D4" Id="Iso_ir_150So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-150.so" Name="iso-ir-150.so" Id="iso_ir_150.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="F404E1AF-6AEA-4B6A-99C4-0C0DB7BB74CD" Id="Iso_ir_151So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-151.so" Name="iso-ir-151.so" Id="iso_ir_151.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="770D2634-3450-459F-A04B-6F2EF4C7DEF4" Id="Iso_ir_152So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-152.so" Name="iso-ir-152.so" Id="iso_ir_152.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7398E6C3-FCDC-443F-9707-B06653C9DE2E" Id="Iso_ir_153So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-153.so" Name="iso-ir-153.so" Id="iso_ir_153.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="482F8D00-B708-447D-B22D-5C6BDB610576" Id="Iso_ir_154So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-154.so" Name="iso-ir-154.so" Id="iso_ir_154.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="0B59F441-6E8C-4AF3-A8A3-2BF1ACB7087E" Id="Iso_ir_155So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-155.so" Name="iso-ir-155.so" Id="iso_ir_155.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7252078D-3254-4E67-839A-4DCF3019DE7C" Id="Iso_ir_158So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-158.so" Name="iso-ir-158.so" Id="iso_ir_158.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="1AB4C8AC-395C-4A22-B3F9-C566CA7C44D3" Id="Iso_ir_16So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-16.so" Name="iso-ir-16.so" Id="iso_ir_16.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="CD200444-5DED-4EC1-B964-96A9A5E64318" Id="Iso_ir_17So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-17.so" Name="iso-ir-17.so" Id="iso_ir_17.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="A5B2B495-F3BB-4EBD-9BD4-A7050EF0D0D7" Id="Iso_ir_18So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-18.so" Name="iso-ir-18.so" Id="iso_ir_18.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="A56E8829-9F28-4230-B684-BF2595532A09" Id="Iso_ir_19So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-19.so" Name="iso-ir-19.so" Id="iso_ir_19.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="B4A8DCFA-A2C6-4197-A614-E74FD45C285A" Id="Iso_ir_2So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-2.so" Name="iso-ir-2.so" Id="iso_ir_2.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="5336C2E1-4501-4657-A456-CF7AC6205D3A" Id="Iso_ir_21So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-21.so" Name="iso-ir-21.so" Id="iso_ir_21.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="8FC3CF3E-3C65-4220-8899-E2D9BF6C3C46" Id="Iso_ir_25So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-25.so" Name="iso-ir-25.so" Id="iso_ir_25.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="5F93690E-194C-4598-8ED7-F9EDC0BD1B76" Id="Iso_ir_27So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-27.so" Name="iso-ir-27.so" Id="iso_ir_27.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="3B9A7303-7B50-4250-8E22-1E86C5F06130" Id="Iso_ir_37So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-37.so" Name="iso-ir-37.so" Id="iso_ir_37.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="4163C3FC-D17E-408C-8F13-27BBF1D0F4B0" Id="Iso_ir_4So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-4.so" Name="iso-ir-4.so" Id="iso_ir_4.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="6AD1A080-E75A-4B75-8ABF-4AB945F41FA6" Id="Iso_ir_47So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-47.so" Name="iso-ir-47.so" Id="iso_ir_47.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="DBC78862-7132-4327-880A-F1A1C2AC218F" Id="Iso_ir_49So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-49.so" Name="iso-ir-49.so" Id="iso_ir_49.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="29F27410-40AE-4B8F-A783-E966DD4C24B6" Id="Iso_ir_50So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-50.so" Name="iso-ir-50.so" Id="iso_ir_50.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="CB255B9B-A4C1-439F-8A36-E34779B5E97C" Id="Iso_ir_51So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-51.so" Name="iso-ir-51.so" Id="iso_ir_51.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="87208281-0E71-497A-BAD2-131393CB23F3" Id="Iso_ir_54So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-54.so" Name="iso-ir-54.so" Id="iso_ir_54.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="256EDD3E-64C5-4EC9-B2B8-6C4C7DE5F855" Id="Iso_ir_55So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-55.so" Name="iso-ir-55.so" Id="iso_ir_55.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="BBC515C3-B446-4EAE-AC8E-2EB2E835C23C" Id="Iso_ir_57So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-57.so" Name="iso-ir-57.so" Id="iso_ir_57.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="481B0C3A-8621-42FA-9B7B-DEF9AA7B5E79" Id="Iso_ir_60So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-60.so" Name="iso-ir-60.so" Id="iso_ir_60.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="B0D2B233-7762-413B-AF9F-F9BB45885044" Id="Iso_ir_61So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-61.so" Name="iso-ir-61.so" Id="iso_ir_61.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="338C6014-CC68-4937-AA03-C55FF265B82E" Id="Iso_ir_69So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-69.so" Name="iso-ir-69.so" Id="iso_ir_69.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="3A8F4394-F002-4245-84EB-F67A55FDB801" Id="Iso_ir_70So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-70.so" Name="iso-ir-70.so" Id="iso_ir_70.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="21B0654D-EA49-4AC5-A78E-2C37D4A21DEE" Id="Iso_ir_8_1So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-8-1.so" Name="iso-ir-8-1.so" Id="iso_ir_8_1.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="B7E89192-0B28-4687-9F8D-DC9942F72214" Id="Iso_ir_8_2So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-8-2.so" Name="iso-ir-8-2.so" Id="iso_ir_8_2.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="9B5FE9C0-0364-45E0-8129-80C81C3D8FC6" Id="Iso_ir_84So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-84.so" Name="iso-ir-84.so" Id="iso_ir_84.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="FDE32131-52BD-4FA7-8848-4802283B25F3" Id="Iso_ir_85So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-85.so" Name="iso-ir-85.so" Id="iso_ir_85.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="117B89C6-2B37-47BE-98AF-100E322EFC58" Id="Iso_ir_86So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-86.so" Name="iso-ir-86.so" Id="iso_ir_86.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="C13FE335-2371-4FC9-BB99-CE02973CD0CA" Id="Iso_ir_88So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-88.so" Name="iso-ir-88.so" Id="iso_ir_88.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="2844AA67-4948-4753-B486-B22C35716448" Id="Iso_ir_89So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-89.so" Name="iso-ir-89.so" Id="iso_ir_89.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="27D7A4ED-42B3-4E35-BB7F-31981D9DA6D3" Id="Iso_ir_9_1So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-9-1.so" Name="iso-ir-9-1.so" Id="iso_ir_9_1.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="729A7518-819B-4176-A87E-CC1644D5D08A" Id="Iso_ir_9_2So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-9-2.so" Name="iso-ir-9-2.so" Id="iso_ir_9_2.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="3A84F5AF-533B-45DF-B670-7C90A4E88F70" Id="Iso_ir_90So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-90.so" Name="iso-ir-90.so" Id="iso_ir_90.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="4445750D-7FC8-4987-8A37-FEE0D1907F9F" Id="Iso_ir_91So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-91.so" Name="iso-ir-91.so" Id="iso_ir_91.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="8231308B-9B44-42A1-822B-57076A7ACBC0" Id="Iso_ir_92So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-92.so" Name="iso-ir-92.so" Id="iso_ir_92.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="D661574B-4C8E-4F94-A3CA-647F58BF60E0" Id="Iso_ir_93So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-93.so" Name="iso-ir-93.so" Id="iso_ir_93.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="C0CDB868-CEF8-495C-89DD-9EAAF419B66A" Id="Iso_ir_94So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-94.so" Name="iso-ir-94.so" Id="iso_ir_94.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="EDE32797-D5F8-4EED-8F64-F562B9A44CD8" Id="Iso_ir_95So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-95.so" Name="iso-ir-95.so" Id="iso_ir_95.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="1CC935DB-3F8C-46EB-8258-00D6183A6FE1" Id="Iso_ir_96So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-96.so" Name="iso-ir-96.so" Id="iso_ir_96.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7A690929-6761-4B7A-959E-9061638108E9" Id="Iso_ir_98So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-98.so" Name="iso-ir-98.so" Id="iso_ir_98.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="1D717075-F1A5-4F9D-A188-5115C2C10DE7" Id="Iso_ir_99So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso-ir-99.so" Name="iso-ir-99.so" Id="iso_ir_99.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7258BEED-4FBF-46CC-A6B5-5D04021E73B5" Id="Iso646_dkSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso646-dk.so" Name="iso646-dk.so" Id="iso646_dk.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="334EF18C-65E8-43C0-9AE0-D63C568C0FC7" Id="Iso646_krSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\iso646-kr.so" Name="iso646-kr.so" Id="iso646_kr.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="02658988-A0CF-4F6E-A7FE-9BD7D4A18C73" Id="Jis_x0201So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\jis_x0201.so" Name="jis_x0201.so" Id="jis_x0201.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="E66F9A5A-389A-4D6D-9783-48979E7BA48A" Id="Jis_x0208_1983So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\jis_x0208-1983.so" Name="jis_x0208-1983.so" Id="jis_x0208_1983.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="AD242FE1-1F81-47C3-9EE0-6D9643D3A3D2" Id="Jis_x0212_1990So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\jis_x0212-1990.so" Name="jis_x0212-1990.so" Id="jis_x0212_1990.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="EC6998E4-BDBC-4FC9-9662-419F6C8593E2" Id="JohabSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\johab.so" Name="johab.so" Id="johab.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7492482F-3154-4376-8F38-6E28F83BFF4D" Id="Koi8_rSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\koi8-r.so" Name="koi8-r.so" Id="koi8_r.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7E5B9CF4-33B4-4A33-8BF7-E2E58B511AF1" Id="Koi8_ruSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\koi8-ru.so" Name="koi8-ru.so" Id="koi8_ru.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="C86B863B-DE57-4F0E-868E-9B30C6112008" Id="Koi8_uSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\koi8-u.so" Name="koi8-u.so" Id="koi8_u.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="AFDF777E-8ACC-48F7-B719-4ED0539BC38F" Id="Ksx1001So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ksx1001.so" Name="ksx1001.so" Id="ksx1001.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="59E4B04A-EEB7-4D83-B7C3-4622E4E13B94" Id="Mac_ceSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\mac-ce.so" Name="mac-ce.so" Id="mac_ce.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="18D0FED3-1D74-4684-A09F-2472CE0746D0" Id="Mac_croatianSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\mac-croatian.so" Name="mac-croatian.so" Id="mac_croatian.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="1CB7F26B-9D61-42F1-9D85-BE204A3D1097" Id="Mac_cyrillicSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\mac-cyrillic.so" Name="mac-cyrillic.so" Id="mac_cyrillic.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="C7E663C6-DD5A-45F7-B530-9544795192AA" Id="Mac_dingbatsSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\mac-dingbats.so" Name="mac-dingbats.so" Id="mac_dingbats.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="3F604F5F-B181-4563-9B66-D432146469B9" Id="Mac_greekSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\mac-greek.so" Name="mac-greek.so" Id="mac_greek.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="8D657A20-B9C0-4174-AAF2-F94F58796D48" Id="Mac_icelandSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\mac-iceland.so" Name="mac-iceland.so" Id="mac_iceland.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="1847BF49-08F9-41FF-92CA-0730D7B3A3A7" Id="Mac_japanSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\mac-japan.so" Name="mac-japan.so" Id="mac_japan.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="340B6600-7A13-4C78-92F0-E21339D4B77C" Id="Mac_romanSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\mac-roman.so" Name="mac-roman.so" Id="mac_roman.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="04015173-7169-4BF1-85A1-5CDB5570E130" Id="Mac_romaniaSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\mac-romania.so" Name="mac-romania.so" Id="mac_romania.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="DCB62173-3CEC-4F91-8E30-9BAE0CAAB157" Id="Mac_thaiSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\mac-thai.so" Name="mac-thai.so" Id="mac_thai.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="31C9CEED-8ADA-4BF8-8568-A8A315159115" Id="Mac_turkishSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\mac-turkish.so" Name="mac-turkish.so" Id="mac_turkish.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="227A50D6-3A91-473C-961D-C5C39FE911A6" Id="Mac_ukraineSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\mac-ukraine.so" Name="mac-ukraine.so" Id="mac_ukraine.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="2DDC5B05-7131-47BF-AB90-D8A2506EBF5B" Id="MacintoshSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\macintosh.so" Name="macintosh.so" Id="macintosh.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="E38A0893-12B6-41D9-9DE0-D7BC2379E980" Id="Osd_ebcdic_df04_1So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\osd_ebcdic_df04_1.so" Name="osd_ebcdic_df04_1.so" Id="osd_ebcdic_df04_1.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="839B1EF6-725A-46C4-A70A-18D4E955F4CE" Id="Osd_ebcdic_df04_15So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\osd_ebcdic_df04_15.so" Name="osd_ebcdic_df04_15.so" Id="osd_ebcdic_df04_15.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="394AE41F-3F05-4120-A266-11B68E7D795A" Id="Shift_jisSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\shift_jis.so" Name="shift_jis.so" Id="shift_jis.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="09276062-D57E-4CCC-8F5E-B537C0A19618" Id="Ucs2_internalSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ucs2-internal.so" Name="ucs2-internal.so" Id="ucs2_internal.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="5180C707-7204-42AD-970E-0B6D5140A35D" Id="Ucs4_internalSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\ucs4-internal.so" Name="ucs4-internal.so" Id="ucs4_internal.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="89619D4A-83C5-4620-9CA5-994F564619EF" Id="Unicode_1_1_utf_7So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\unicode-1-1-utf-7.so" Name="unicode-1-1-utf-7.so" Id="unicode_1_1_utf_7.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="75D29A60-E876-456F-928F-FEF7175A10D6" Id="Us_asciiSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\us-ascii.so" Name="us-ascii.so" Id="us_ascii.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="EBD0BC9B-BE77-4697-928B-85B45924DCE7" Id="Utf_16So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\utf-16.so" Name="utf-16.so" Id="utf_16.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="2B80F890-F01C-4E09-AA4C-492E2217C83C" Id="Utf_8So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\utf-8.so" Name="utf-8.so" Id="utf_8.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="930FC949-78F6-4CC5-9C16-C6331EBB5AE0" Id="Windows_1250So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\windows-1250.so" Name="windows-1250.so" Id="windows_1250.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="4E230DD9-8E46-4AC4-81AD-3BFED4996D2A" Id="Windows_1251So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\windows-1251.so" Name="windows-1251.so" Id="windows_1251.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="56AE84E8-ED24-4B33-B2A1-0E4C94394A39" Id="Windows_1252So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\windows-1252.so" Name="windows-1252.so" Id="windows_1252.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="F0BBCDD6-6899-42D7-A354-ADA23B760343" Id="Windows_1253So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\windows-1253.so" Name="windows-1253.so" Id="windows_1253.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="DAF91458-BEE0-4A0A-89D5-91CB170C5ECE" Id="Windows_1254So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\windows-1254.so" Name="windows-1254.so" Id="windows_1254.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="9D66625F-DED7-41AE-9DF1-E34A8A25FCFE" Id="Windows_1255So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\windows-1255.so" Name="windows-1255.so" Id="windows_1255.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="6E8DD498-2AA3-4938-8887-28A0F6952EDF" Id="Windows_1256So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\windows-1256.so" Name="windows-1256.so" Id="windows_1256.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="2193C384-FB88-41E3-A049-C767F39E9433" Id="Windows_1257So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\windows-1257.so" Name="windows-1257.so" Id="windows_1257.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="697195F8-565C-4146-95A0-238CEFBA2862" Id="Windows_1258So22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\windows-1258.so" Name="windows-1258.so" Id="windows_1258.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="BDBD056E-87B6-423D-B78D-D959BE72C71A" Id="_tbl_simpleSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\iconv\_tbl_simple.so" Name="_tbl_simple.so" Id="_tbl_simple.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+</Include>

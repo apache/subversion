@@ -1,0 +1,49 @@
+Command-line Repository Root Relative URL Support
+=================================================
+
+Syntax Description 
+------------------
+
+"^/[REL-URL][@PEG]"
+
+'^/':      Represents the root url of the repository
+'REL_URL': Desired path relative to the root of the repository
+'@PEG':    Optional standard peg revision
+
+Examples:
+
+	^/
+	^/trunk
+	^/branches/1.5.x@25000
+	^/tags/1.4.6/@{2007-12-20T14:37:37.868870Z}
+
+Repository Root URL Determination Logic
+---------------------------------------
+
+- If there are arguments that are not root relative urls
+  - Find the repository root url of each of the non root relative urls
+    - If their repository root urls do not match, issue an error
+    - Else use the matching repository root url in place of '^/' in all
+      the root relative urls
+- ElseIf the current working directory is a Subversion working copy
+  - Determine the repository root url for the current working copy
+    - If successful, use that repository root url in place of '^/' in all 
+      the root relative urls
+    - Else issue an error
+- Else issue an error
+
+Special Considerations
+----------------------
+
+The repository root relative syntax is '^/', not '^'.  So use '^/' to refer to
+the root of the repository.  URLs that begin with a '^' are reserved for future
+extension.
+
+Shells That Treat '^' Specially
+-------------------------------
+
+ISSUE:      zsh with 'setopt extendedglob' enabled
+WORKAROUND: quote it in single quotes ('^')
+
+ISSUE:      cmd.exe
+WORKAROUND: Double it (^^) 

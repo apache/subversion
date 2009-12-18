@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding = "Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="[version]"
+	Name="__CONFIG__"
+	ProjectGUID="{638FEA9B-E592-4B88-93B7-08B8A32CAD1F}"
+	Keyword="MakeFileProj">
+	<Platforms>
+[for platforms]		<Platform
+			Name="[platforms]"/>
+[end]	</Platforms>
+	<Configurations>
+[for platforms][for configs]		<Configuration
+			Name="[configs]|[platforms]"
+			OutputDirectory="."
+			IntermediateDirectory="."
+			ConfigurationType="10"
+			UseOfMFC="0"
+			DeleteExtensionsOnClean="*.obj;*.ilk;*.pdb;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;$(TargetPath)"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName="./svn_config.tlb"
+				HeaderFileName=""/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+		</Configuration>
+[end][end]
+	</Configurations>
+	<Files>
+		<File
+			RelativePath="..\..\subversion\svn_private_config.h">
+[for platforms][for configs]			<FileConfiguration
+				Name="[configs]|[platforms]"
+				ExcludedFromBuild="TRUE">
+				<Tool
+					Name="VCCustomBuildTool"/>
+			</FileConfiguration>
+[end][end]		</File>
+		<File
+			RelativePath="..\..\subversion\svn_private_config.hw">
+[for platforms][for configs]			<FileConfiguration
+				Name="[configs]|[platforms]">
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Creating svn_private_config.h from svn_private_config.hw."
+					CommandLine="copy ..\..\subversion\svn_private_config.hw ..\..\subversion\svn_private_config.h &gt; nul
+"
+					Outputs="..\..\subversion\svn_private_config.h"/>
+			</FileConfiguration>
+[end][end]		</File>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>
+

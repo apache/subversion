@@ -1,0 +1,426 @@
+                  Sparse Directories Support in Subversion
+           (a.k.a. "sparse checkouts" / "incomplete directories")
+
+Contents
+========
+
+   0. Goals
+   1. Design
+   2. User Interface
+   3. Examples
+   4. Implementation Strategy
+   5. Compatibility Matters
+   6. API Changes
+   7. Work Remaining
+
+0. Goals
+========
+
+   Many users have very large trees of which they only want to
+   checkout certain parts.  In Subversion <= 1.4, 'checkout -N' is not
+   up to this task.
+
+   Subversion 1.5 introduces the idea of "depth" (controlled via the
+   '--depth' and '--set-depth' options) as a replacement for mere
+   non-recursiveness (formerly controlled via the '-N' option).  Depth
+   allows working copies to have exactly the contents the user wants,
+   leaving out everything else.
+
+1. Design
+=========
+
+   We have a new "depth" field in .svn/entries, which has (currently)
+   four possible values: depth-empty, depth-files, depth-immediates,
+   and depth-infinity.  Only this_dir entries may have depths other
+   than depth-infinity.
+   
+      depth-empty ------>  Updates will not pull in any files or
+                           subdirectories not already present.
+   
+      depth-files ------>  Updates will pull in any files not already
+                           present, but not subdirectories.
+   
+      depth-immediates ->  Updates will pull in any files or
+                           subdirectories not already present; those
+                           subdirectories' this_dir entries will
+                           have depth-empty.
+   
+      depth-infinity --->  Updates will pull in any files or
+                           subdirectories not already present; those
+                           subdirectories' this_dir entries will
+                           have depth-infinity.  Equivalent to
+                           today's default update behavior.
+   
+   The new '--depth' option limits how far an operation descends, and
+   the new '--set-depth' option changes the depth of a working copy tree.
+
+   The new options are explained in more detail in 'Usage' below, but
+   these two concepts will aid understanding:
+
+      "ambient depth" -----> The depth, or combination of depths,
+                             of a given working copy.
+
+      "requested depth" ---> The depth the user requested for a
+                             particular operation (e.g., checkout,
+                             update, switch).  This is sometimes
+                             called the "operational depth".
+
+   When when running an operation in a working copy, the requested
+   depth never goes deeper than the ambient depth.  For example, if
+   you run 'svn status --depth=infinity' in a working copy directory
+   that was checked out with '--depth=immediates', the status will go
+   as far as depth immediates.  That is, it descends all the way
+   ("infinity") into what's available, but in this case what's
+   available is shallower than infinity.
+
+2. User interface
+=================
+   
+   Quick start:
+
+   Run checkout with --depth=empty or --depth=files.  When you need
+   additional files or directories, pull them in with 'svn up NAME'
+   (passing --depth for directories as appropriate).
+   
+   Not-so-quick start:
+
+   checkout without --depth or -N behaves the same as it does today,
+   which is the same as with --depth=infinity.
+
+   checkout --depth=(empty|files|immediates) creates a working copy
+   that is (empty | has only files | has files and empty subdirs).
+
+   Inside such a working copy, running 'svn up' by itself will update
+   only what is already present, but running 'svn up OMITTED_SUBDIR'
+   will cause OMITTED_SUBDIR to be brought in at depth-infinity, while
+   the rest of the parent working copy remains at its previous depth.
+
+   The --depth option limits how far an operation recurses.  The
+   operation will reach whatever is inside the intersection of the
+   ambient depth and the requested depth (see 'Design' section for
+   definitions).
+
+   The --depth option never changes the depth of an existing dir.
+   Instead, use the new '--set-depth=NEW_DEPTH' option for that.
+   Right now, --set-depth can only extend (that is, make deeper) a
+   directory.  (In the future, it will also be able to contract; see
+   issue #2843.)  We disallow '--depth' and '--set-depth' together.
+
+   The -N option has been deprecated, but still works: it simply maps
+   to one of --depth=files, --depth=empty, or --depth=immediates,
+   depending on context, for compatibility.  For most commands, it's
+   --depth=files, but for status it's --depth=immediates, and for
+   revert and add it's --depth=empty, to be compatible with the
+   varying behaviors -N had across these commands.
+
+   'svn info' lists depth, iff invoked on a directory whose depth is
+   not the default (depth infinity).
+   
+3. Examples
+===========
+   
+   svn co http://.../A
+   
+       Same as today; everything has depth-infinity.
+   
+   svn co -N http://.../A
+   
+       Today, this creates wc containing only mu.  Now, this will be
+       identical to 'svn co --depth=files /A'.
+   
+   svn co --depth=empty http://.../A Awc
+   
+       Creates wc Awc, but empty: no files, no subdirectories.
+   
+       Awc/.svn/entries                this_dir    depth-empty
+   
+   svn co --depth=files http://.../A Awc1
+   
+       Creates wc Awc1 with all files (i.e., Awc1/mu) but no
+       subdirectories.
+   
+       Awc1/.svn/entries               this_dir    depth-files
+       ...
+   
+   svn co --depth=immediates http://.../A Awc2
+   
+       Creates wc Awc2 with all files and all subdirectories, but
+       subdirectories are empty.
+   
+       Awc2/.svn/entries               this_dir    depth-immediates
+                                       B
+                                       C
+       Awc2/B/.svn/entries             this_dir    depth-empty
+       Awc2/C/.svn/entries             this_dir    depth-empty
+       ...
+   
+   svn up Awc/B:
+   
+       Since B is not yet checked out, add it at depth infinity.
+   
+       Awc/.svn/entries                this_dir    depth-empty
+                                       B
+       Awc/B/.svn/entries              this_dir    depth-infinity
+                                       ...
+       Awc/B/E/.svn/entries            this_dir    depth-infinity
+                                       ...
+       ...
+   
+   svn up Awc
+   
+       Since A is already checked out, don't change its depth, just
+       update it.  B and everything under it is at depth-infinity,
+       so it will be updated just as today.
+   
+   svn up --depth=immediates Awc/D
+   
+       Since D is not yet checked out, add it at depth-immediates.
+   
+       Awc/.svn/entries                this_dir    depth-empty
+                                       B
+                                       D
+       Awc/D/.svn/entries              this_dir    depth-immediates
+                                       ...
+       Awc/D/G/.svn/entries            this_dir    depth-empty
+       ...
+   
+   svn up --depth=infinity Awc
+   
+       Update Awc at depth-empty, and Awc/B at depth-infinity, since
+       those are the ambient depths of those two directories already.
+   
+       Awc/.svn/entries                this_dir    depth-empty
+                                       ...
+       Awc/B/.svn/entries              this_dir    depth-infinity
+                                       ...
+   
+   svn up --set-depth=infinity Awc/D
+   
+       Pull everything into Awc/D, resulting in a subdirectory that is
+       just as if it had been pulled in with no --depth flag at all.
+   
+       Awc/.svn/entries                this_dir    depth-empty
+                                       B
+                                       D
+       Awc/D/.svn/entries              this_dir    depth-infinity
+                                       ...
+       ...
+
+   ########################################################################
+   #                                                                      #
+   #     ############################################################     #
+   #     ###                                                      ###     #
+   #     ###  THIS IS NOT YET FULLY IMPLEMENTED, SEE ISSUE #2843  ###     #
+   #     ###                                                      ###     #
+   #     ############################################################     #
+   #                                                                      #
+   # svn up --set-depth=empty Awc/B/E                                     #
+   #                                                                      #
+   #     Remove everything under E, but leave E as an empty directory     #
+   #     since B is depth-infinity.                                       #
+   #                                                                      #
+   #     Awc/.svn/entries                this_dir    depth-infinity       #
+   #                                     B                                #
+   #                                     D                                #
+   #     Awc/B/.svn/entries              this_dir    depth-infinity       #
+   #                                     ...                              #
+   #     Awc/B/E/.svn/entries            this_dir    depth-empty          #
+   #     ...                                                              #
+   #                                                                      #
+   # svn up --set-depth=empty Awc/D                                       #
+   #                                                                      #
+   #     Remove everything under D, and D itself since A is depth-empty.  #
+   #                                                                      #
+   #     Awc/.svn/entries                this_dir    depth-empty          #
+   #                                     B                                #
+   #                                                                      #
+   # svn up Awc/D                                                         #
+   #                                                                      #
+   #     Bring D back at depth-infinity.                                  #
+   #                                                                      #
+   #     Awc/.svn/entries                this_dir    depth-empty          #
+   #                                     ...                              #
+   #     Awc/D/.svn/entries              this_dir    depth-infinity       #
+   #                                     ...                              #
+   #     ...                                                              #
+   #                                                                      #
+   # svn up --set-depth=immediates Awc                                    #
+   #                                                                      #
+   #     Bring in everything that's missing (C/ and mu) and empty all     #
+   #     subdirectories (and set their this_dir to depth-empty).          #
+   #                                                                      #
+   #     Awc/.svn/entries                this_dir    depth-immediates     #
+   #                                     B                                #
+   #                                     C                                #
+   #     Awc/B/.svn/entries              this_dir    depth-empty          #
+   #     Awc/C/.svn/entries              this_dir    depth-empty          #
+   #     ...                                                              #
+   #                                                                      #
+   # svn up --set-depth=files Awc                                         #
+   #                                                                      #
+   #     Remove every subdirectories under Awc. but leave the files.      #
+   #                                                                      #
+   #     Awc/.svn/entries                this_dir    depth-files          #
+   #                                                                      #
+   ########################################################################
+
+
+4. Implementation Strategy
+==========================
+   
+   It would be nice if all this could be accomplished with just simple
+   tweaks to how we drive the update reporter (svn_ra_reporter2_t).
+   However, it's not that easy.
+   
+   Handling 'checkout --depth=empty' would be easy.  It should get us
+   an empty directory at depth-empty, with no files and no subdirs,
+   and if we just report it as at HEAD every time, the server will
+   never send updates down (hmmm, this could be a problem for getting
+   dir property updates, though).  Then any files or subdirs we have
+   explicitly included we can just report at their respective
+   revisions, and get proper updates; at least that'll work for the
+   depth infinity ones.
+   
+   But consider 'checkout --depth=immediates'.  The desired state is a
+   depth-immediates directory D, with all files up-to-date, and with
+   skeleton subdirs at depth empty.  Plain updates should preserve this
+   state of affairs.
+   
+   If we report D as at its BASE revision, files at their BASE
+   revisions, and subdirs at HEAD, then:
+   
+      - When new files appear in the repos, they'll get sent down (good)
+      - When new subdirs appear, they'll get sent down in full (bad)
+   
+   But if we don't report subdirs as at HEAD, then the server will try to
+   update them (bad).  And if we report D at HEAD, then the working copy
+   won't receive new files that have appeared in the repository since D's
+   BASE revision (note that we *can* get updates for files we already
+   have, though, by continuing to report them at their respective BASEs).
+   
+   The same logic applies to subdirectories at depth-files or
+   depth-immediates.
+   
+   So, for efficient depth handling, the client directly reports the
+   desired depth to the server; i.e., we extend the RA protocol.
+   
+   Meanwhile, legacy servers will send back a bunch of information the
+   client doesn't want, and the client just ignores it, and the user
+   never knows except for the fact that everything seems slow (but
+   once their servers are upgraded, it'll speed up).
+
+5. Compatibility Matters
+========================
+
+   This feature introduces two new concepts into the RA protocol which
+   will not be understood by older servers:
+
+      * Reported Depths -- the depths associated with individual paths
+        included by the client in the description (via the
+        svn_ra_reporter_t) of its working copy state.  
+
+      * Requested Depth -- the single depth value used to limit the
+        scope of the server's response to the client.
+        
+   As such, it's useful to understand how these concepts will be
+   handled across the compatibility matrix of depth-aware and
+   non-depth-aware clients and servers.
+
+   NOTE: in the sections below, it is not necessarily that case that a
+   value or state which is said to be "transmitted" literally has a
+   presence in the RA protocol.  Some such bits of state have default
+   values in the protocol and can therefore be effectively transmitted
+   while not literally identifiable in a network trace of the
+   client-server traffic.
+
+   Depth-aware Clients (DACs)
+
+      DACs will transmit reported depths (with "infinity" as the
+      default) and will transmit a requested depth (with "unknown" as
+      the default).  They will also -- for the sake of older,
+      non-depth-aware servers (NDASs) -- transmit a requested recurse
+      value derived from the requested depth:
+   
+         depth        recurse
+         -----        -------
+         empty        no
+         files        no
+         unknown      yes
+         immediates   yes
+         infinity     yes
+
+      When speaking to an NDAS, the requested recurse value is the
+      only thing the server understands , but is obviously more
+      "grainy" than the requested depth concept.  The DAC, therefore,
+      must filter out any additional, unwanted data that the server
+      transmits in its response.  (This filtering will happen in the
+      RA implementation itself so the RA APIs behave as expected
+      regardless of the server's pedigree.)
+
+      When speaking to a depth-aware server (DAS), the requested
+      recurse value is ignored.  A requested depth of "unknown" means
+      "only send information about the stuff in my report,
+      depth-aware-ily".  Other requested depth values are honored by
+      the server properly, and the DAC must handle the transformation
+      of any working copy depths from their pre-update to their
+      post-update depths and content as described in `3. Examples'.
+
+   Non-depth-aware Clients (NDACs)
+
+      NDACs will never transmit reported depths and never transmit a
+      requested depth.  But they will transmit a requested recurse
+      value (either "yes" or "no", with "yes" being the default).  (A
+      DAS uses the presence of a requested depth in the actual protocol
+      to distinguish DACs from NDACs, and knows to ignore the
+      requested recurse value transmitted by a DAC.)
+
+      When speaking to an NDAS, what happens happens.  It's the past,
+      man -- you don't get to define the interaction this late in the
+      game!
+
+      When speaking to a DAS, the not-reported depths are treated like
+      reported depths of "infinity", and the reported recurse values
+      "yes" and "no" map to depths of "infinity" and "files",
+      respectively.
+
+6. API Changes
+==============
+
+   A new enum type 'svn_depth_t depth' is defined in svn_types.h.
+   Both client and server side now understand the concept of depth,
+   and the basic update use cases handle depth.  See depth_tests.py.
+
+   On the client side, most of the svn_client.h interfaces that
+   formerly took 'svn_boolean_t recurse' have been revved and their
+   successors take 'svn_depth_t depth' instead.  Each old API now
+   documents how it converts 'recurse' to 'depth'.
+
+   Some of this recurse-becomes-depth change has propagated down into
+   libsvn_wc, which now stores a depth field in svn_wc_entry_t (and
+   therefore in .svn/entries).  The update reporter knows to report
+   differing depths to the server, in the same way it already reports
+   differing revisions.  In other words, take the concept of "mixed
+   revision" working copies and extend it to "mixed depth" working
+   copies.
+
+   On the server side, most of the significant changes are in
+   libsvn_repos/reporter.c.  The code that receives update reports now
+   receives notice of paths that have different depths from their
+   parent, and of course the overall update operation has a global
+   depth, which applies except when restricted by some shallower local
+   depth for a given path.
+
+   The RA code on both sides knows how to send and receive depths; the
+   relevant svn_ra_* APIs now take depth arguments, which sometimes
+   supersede older 'recurse' booleans.  In these cases, the RA layer
+   does the usual compatibility dance: receiving "recurse=FALSE" from
+   an older client causes the server to behave as if "depth=files"
+   had been transmitted.
+
+7. Work Remaining
+=================
+
+   The list of outstanding issues is shown by this issue tracker query
+   (showing Summary fields that start with "[sparse-directories]"):
+
+<http://subversion.tigris.org/issues/buglist.cgi?component=subversion&issue_status=NEW&issue_status=STARTED&issue_status=REOPENED&short_desc=%5Bsparse-directories%5D&short_desc_type=casesubstring>

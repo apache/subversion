@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# Copyright 2004 Ben Reser <ben@reser.org>
+# Licensed under the terms subversion ships under or GPLv2.
+
+# Useful for greping in a subversion working copy.  
+# Essentially it behaves the same way your grep command does (in fact it
+# ultimately calls the grep command on your path) with a few exceptions.
+# Ignores the subversion admin directories (.svn) and vi(m) backup files.
+# Recursive is always on with or without -r.
+# Always print filename and line numbers.
+# Ignores binary files.
+# If no path is given the current working directory is searched not stdin.
+# Other than that it will take any parameter or pattern your standard grep
+# does.
+# 
+# This script requires GNU findutils and by default GNU grep (though that
+# can be changed with environment variables).
+# 
+# There are three environment variables you can set that modify the default
+# behavior:
+#
+# WCGREP_GREP      Controls what command is used for the grep command.
+#                  If unset or null wcgrep will use the command named grep.
+# WCGREP_GREPARGS  Controls what arguments are always passed to the grep
+#                  command before the arguments given on the command line.
+#                  If unset or null it defaults to -HnI (always print file
+#                  names, line numbers and ignore binary files).  If you wish
+#                  to set no default args set the variable to a space (" ").
+# WCGREP_IGNORE    Controls what files are ignored by the grep command.
+#                  This is a regex that is passed to the find command with
+#                  -regex so see find's man page for details.  If unset or
+#                  null defaults to '.*~$\|.*/\.svn\(/\|$\)', which will
+#                  ignore vim backup files and subversion admin dirs.
+
+
+arg_count=$#
+for (( i=1; i <= $arg_count; i++ )); do
+    arg="$1"
+    shift 1
+    if [ -z "$pattern" ]; then
+        if [ "$arg" == "--" ]; then
+            grepargs="$grepargs $arg"
+            pattern="$1"
+            shift 1
+            ((i++))
+        elif [ "${arg:0:1}" != "-" ]; then
+            pattern="$arg"
+        else
+            grepargs="$grepargs $arg"
+        fi  
+    else
+        pathargs="$pathargs $arg"
+    fi
+done
+
+find $pathargs -regex ${WCGREP_IGNORE:-'.*~$\|.*/\.svn\(/\|$\)'} -prune -o \
+    -type f -print0 | xargs -r0 ${WCGREP_GREP:-grep} ${WCGREP_GREPARGS:--HnI} \
+    $grepargs "$pattern"

@@ -1,0 +1,30 @@
+﻿<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Fragment>
+		<DirectoryRef Id="TARGETDIR">
+			<Directory Id="ProgramFilesFolder" Name="PFiles">
+				<Directory Id="INSTALLDIR" Name="Subversion">
+					<Directory Id="bin" Name="bin">
+						<?include CommonBinaryFiles.wxi ?>
+						<?include ApacheFiles20x.wxi ?>
+						<?include ApacheFiles22x.wxi ?>
+						<?include CommonSASLFiles.wxi ?>
+					</Directory>
+					<Directory Id="iconv" Name="iconv">
+						<?include iconvFiles20x.wxi ?>
+						<?include iconvFiles22x.wxi ?>
+					</Directory>
+					<Directory Id="share" Name="share">
+						<?include CommonShareFiles.wxi ?>
+					</Directory>
+					<Directory Id="licenses" Name="licenses">
+						<?include LicensesCommon.wxi ?>
+						<?include Licenses20x.wxi ?>
+						<?include Licenses22x.wxi ?>
+					</Directory>					
+				</Directory>
+			</Directory>
+			<?include ProgramMenu.wxi ?>
+			<Directory Id="DesktopFolder" Name="Desktop" />
+		</DirectoryRef>
+	</Fragment>
+</Wix>

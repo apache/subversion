@@ -1,0 +1,84 @@
+.\" Process this file with
+.\" groff -man -Tascii <file>
+.\"
+.TH @PACKAGE@_fso_is_changeable 3 "2008-04-18" "version @PACKAGE_VERSION@" Subversion
+.SH NAME
+@PACKAGE@_fso_is_changeable \- test if a file or directory is
+changeable
+.SH SYNOPSIS
+.B #include <@PACKAGE@/fso_is_changeable.h>
+
+.BI "int @PACKAGE@_fso_is_changeable(const char* " path ");"
+.SH DESCRIPTION
+Tests if the file or directory referred to by
+.I path
+is changeable.  A file or directory is considered changeable if it can
+be directly modified or if any component of the path can be renamed.
+If any component of the path refers to a symbolic link, the target is
+also tested.  Permissions are tested against the real user and group
+IDs, not the effective IDs.
+
+This function is designed to help determine whether a file is safe to
+.BR exec (3)
+from a setuid/setgid binary.  If this function returns true, the user
+may be able to start a shell as the effective user.
+
+This function is thread-safe if the user's C POSIX library is
+thread-safe.
+.SH ARGUMENTS
+.TP
+.I path
+Null-terminated string containing the path to the file or directory to
+test.
+.SH RETURN VALUE
+On success, returns 1 if the user (real user and group IDs) can change
+the file or directory referred to by
+.IR path ,
+or 0 if the file or directory can not be changed.
+
+On error, returns 1 and sets
+.I errno
+(see 
+.BR errno (3)).
+.SH ERRORS
+Error conditions and
+.I errno
+(see
+.BR errno (3))
+values are described in the specifications for
+.BR stat "(3), " access "(3), " snprintf "(3), " lstat "(3), " readlink "(3), and " getcwd "(3)."
+.SH SEE ALSO
+.BR lib@PACKAGE@ "(3), " @PACKAGE@_exec_svnserve "(3)"
+.SH AUTHOR
+Richard Hansen <svnstsw@ir.bbn.com>
+.SH COPYING
+Copyright (c) 2008 BBN Technologies Corp.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+.RS 0
+.IP 1. 4
+Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+.IP 2. 4
+Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+.IP 3. 4
+Neither the name of BBN Technologies nor the names of its contributors
+may be used to endorse or promote products derived from this software
+without specific prior written permission.
+.RE
+
+THIS SOFTWARE IS PROVIDED BY BBN TECHNOLOGIES AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL BBN TECHNOLOGIES OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
