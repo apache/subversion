@@ -114,7 +114,8 @@ typedef enum {
   opt_show_revs,
   opt_reintegrate,
   opt_trust_server_cert,
-  opt_show_copies_as_adds
+  opt_show_copies_as_adds,
+  opt_ignore_keywords
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -309,6 +310,10 @@ const apr_getopt_option_t svn_cl__options[] =
                        "while -p2 would give just crunchy.html")},
   {"show-copies-as-adds", opt_show_copies_as_adds, 0,
                     N_("don't diff copied or moved files with their source")},
+  {"ignore-keywords", opt_ignore_keywords, 0,
+                    N_("don't expand keywords\n"
+                       "                             "
+                       "[aliases: --ik]")},
 
   /* Long-opt Aliases
    *
@@ -318,6 +323,7 @@ const apr_getopt_option_t svn_cl__options[] =
 
   {"cl",            opt_changelist, 1, NULL},
   {"ie",            opt_ignore_externals, 0, NULL},
+  {"ik",            opt_ignore_keywords, 0, NULL},
 
   {0,               0, 0, 0},
 };
@@ -514,7 +520,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  If specified, PEGREV determines in which revision the target is first\n"
      "  looked up.\n"),
-    {'r', 'q', 'N', opt_depth, opt_force, opt_native_eol, opt_ignore_externals} },
+    {'r', 'q', 'N', opt_depth, opt_force, opt_native_eol, opt_ignore_externals,
+     opt_ignore_keywords} },
 
   { "help", svn_cl__help, {"?", "h"}, N_
     ("Describe the usage of this program or its subcommands.\n"
@@ -1659,6 +1666,9 @@ main(int argc, const char *argv[])
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
         }
+        break;
+      case opt_ignore_keywords:
+        opt_state.ignore_keywords = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

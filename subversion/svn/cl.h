@@ -222,6 +222,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t trust_server_cert; /* trust server SSL certs that would
                                       otherwise be rejected as "untrusted" */
   int strip_count; /* number of leading path components to strip */
+  svn_boolean_t ignore_keywords;  /* do not expand keywords */
 } svn_cl__opt_state_t;
 
 

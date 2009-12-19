@@ -4033,6 +4033,9 @@ svn_client_revprop_list(apr_hash_t **props,
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
  *
+ * If @a ignore_keywords is set, don't expand keywords as part of this
+ * operation.
+ *
  * @a native_eol allows you to override the standard eol marker on the platform
  * you are running on.  Can be either "LF", "CR" or "CRLF" or NULL.  If NULL
  * will use the standard eol marker.  Any other value will cause the
@@ -4046,6 +4049,28 @@ svn_client_revprop_list(apr_hash_t **props,
  * #svn_depth_empty, then export exactly @a from and none of its children.
  *
  * All allocations are done in @a pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_export5(svn_revnum_t *result_rev,
+                   const char *from,
+                   const char *to,
+                   const svn_opt_revision_t *peg_revision,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t overwrite,
+                   svn_boolean_t ignore_externals,
+                   svn_boolean_t ignore_keywords,
+                   svn_depth_t depth,
+                   const char *native_eol,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_export5(), but with @a ignore_keywords set
+ * to FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  *
  * @since New in 1.5.
  */

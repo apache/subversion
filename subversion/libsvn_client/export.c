@@ -101,6 +101,7 @@ copy_one_versioned_file(const char *from_abspath,
                         svn_wc_context_t *wc_ctx,
                         const svn_opt_revision_t *revision,
                         const char *native_eol,
+                        svn_boolean_t ignore_keywords,
                         apr_pool_t *scratch_pool)
 {
   const svn_wc_entry_t *entry;
@@ -245,7 +246,7 @@ copy_one_versioned_file(const char *from_abspath,
                                              eol,
                                              FALSE /* repair */,
                                              kw,
-                                             TRUE /* expand */,
+                                             ! ignore_keywords /* expand */,
                                              scratch_pool);
 
   /* ###: use cancel func/baton in place of NULL/NULL below. */
@@ -271,6 +272,7 @@ copy_versioned_files(const char *from,
                      const svn_opt_revision_t *revision,
                      svn_boolean_t force,
                      svn_boolean_t ignore_externals,
+                     svn_boolean_t ignore_keywords,
                      svn_depth_t depth,
                      const char *native_eol,
                      svn_client_ctx_t *ctx,
@@ -369,7 +371,8 @@ copy_versioned_files(const char *from,
 
                   SVN_ERR(copy_versioned_files(new_from, new_to,
                                                revision, force,
-                                               ignore_externals, depth,
+                                               ignore_externals,
+                                               ignore_keywords, depth,
                                                native_eol, ctx, iterpool));
                 }
             }
@@ -391,7 +394,8 @@ copy_versioned_files(const char *from,
 
               SVN_ERR(copy_one_versioned_file(new_from_abspath, new_to_abspath,
                                               ctx->wc_ctx, revision,
-                                              native_eol, iterpool));
+                                              native_eol, ignore_keywords,
+                                              iterpool));
             }
         }
 
@@ -435,6 +439,7 @@ copy_versioned_files(const char *from,
 
                   SVN_ERR(copy_versioned_files(new_from, new_to,
                                                revision, force, FALSE,
+                                               ignore_keywords,
                                                svn_depth_infinity, native_eol,
                                                ctx, iterpool));
                 }
@@ -446,7 +451,8 @@ copy_versioned_files(const char *from,
   else if (from_kind == svn_node_file)
     {
       SVN_ERR(copy_one_versioned_file(from_abspath, to_abspath, ctx->wc_ctx,
-                                      revision, native_eol, pool));
+                                      revision, native_eol, ignore_keywords,
+                                      pool));
     }
 
   return SVN_NO_ERROR;
@@ -511,6 +517,7 @@ struct edit_baton
   svn_revnum_t *target_revision;
   apr_hash_t *externals;
   const char *native_eol;
+  svn_boolean_t ignore_keywords;
 
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
@@ -739,7 +746,8 @@ change_file_prop(void *file_baton,
   if (strcmp(name, SVN_PROP_EOL_STYLE) == 0)
     fb->eol_style_val = svn_string_dup(value, fb->pool);
 
-  else if (strcmp(name, SVN_PROP_KEYWORDS) == 0)
+  else if (! fb->edit_baton->ignore_keywords &&
+           strcmp(name, SVN_PROP_KEYWORDS) == 0)
     fb->keywords_val = svn_string_dup(value, fb->pool);
 
   else if (strcmp(name, SVN_PROP_EXECUTABLE) == 0)
@@ -868,13 +876,14 @@ close_file(void *file_baton,
 /*** Public Interfaces ***/
 
 svn_error_t *
-svn_client_export4(svn_revnum_t *result_rev,
+svn_client_export5(svn_revnum_t *result_rev,
                    const char *from,
                    const char *to,
                    const svn_opt_revision_t *peg_revision,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t overwrite,
                    svn_boolean_t ignore_externals,
+                   svn_boolean_t ignore_keywords,
                    svn_depth_t depth,
                    const char *native_eol,
                    svn_client_ctx_t *ctx,
@@ -915,6 +924,7 @@ svn_client_export4(svn_revnum_t *result_rev,
       eb->notify_baton = ctx->notify_baton2;
       eb->externals = apr_hash_make(pool);
       eb->native_eol = native_eol;
+      eb->ignore_keywords = ignore_keywords;
 
       SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
 
@@ -1038,8 +1048,8 @@ svn_client_export4(svn_revnum_t *result_rev,
       /* This is a working copy export. */
       /* just copy the contents of the working copy into the target path. */
       SVN_ERR(copy_versioned_files(from, to, revision, overwrite,
-                                   ignore_externals, depth, native_eol,
-                                   ctx, pool));
+                                   ignore_externals, ignore_keywords,
+                                   depth, native_eol, ctx, pool));
     }
 
 
