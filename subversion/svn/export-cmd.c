@@ -91,12 +91,11 @@ svn_cl__export(apr_getopt_t *os,
     opt_state->depth = svn_depth_infinity;
 
   /* Do the export. */
-  err = svn_client_export4(NULL, truefrom, to, &peg_revision,
+  err = svn_client_export5(NULL, truefrom, to, &peg_revision,
                            &(opt_state->start_revision),
                            opt_state->force, opt_state->ignore_externals,
-                           opt_state->depth,
-                           opt_state->native_eol, ctx,
-                           pool);
+                           opt_state->ignore_keywords, opt_state->depth,
+                           opt_state->native_eol, ctx, pool);
   if (err && err->apr_err == SVN_ERR_WC_OBSTRUCTED_UPDATE && !opt_state->force)
     SVN_ERR_W(err,
               _("Destination directory exists; please remove "

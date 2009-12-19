@@ -422,6 +422,67 @@ def export_to_explicit_cwd(sbox):
                                         '.', expected_output,
                                         expected_disk)
 
+def export_ignoring_keyword_translation(sbox):
+  "export ignoring keyword translation"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Add a keyword to A/mu and set the svn:keywords property
+  # appropriately to make sure it's not translated during
+  # the export operation
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append(mu_path, '$LastChangedRevision$')
+  svntest.main.run_svn(None, 'ps', 'svn:keywords',
+                       'LastChangedRevision', mu_path)
+  svntest.main.run_svn(None, 'ci',
+                       '-m', 'Added keyword to mu', mu_path)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents +
+                      '$LastChangedRevision$')
+
+  export_target = sbox.add_wc_path('export')
+
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = export_target
+  expected_output.desc[''] = Item()
+  expected_output.tweak(contents=None, status='A ')
+
+  svntest.actions.run_and_verify_export(sbox.repo_url,
+                                        export_target,
+                                        expected_output,
+                                        expected_disk,
+                                        "--ignore-keywords")
+
+def export_working_copy_ignoring_keyword_translation(sbox):
+  "export working copy ignoring keyword translation"
+  sbox.build(read_only = True)
+
+  wc_dir = sbox.wc_dir
+
+  # Add a keyword to A/mu and set the svn:keywords property
+  # appropriately to make sure it's not translated during
+  # the export operation
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append(mu_path, '$LastChangedRevision$')
+  svntest.main.run_svn(None, 'ps', 'svn:keywords',
+                       'LastChangedRevision', mu_path)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents +
+                      '$LastChangedRevision$')
+
+  export_target = sbox.add_wc_path('export')
+
+  svntest.actions.run_and_verify_export(wc_dir,
+                                        export_target,
+                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_disk,
+                                        "--ignore-keywords")
+
 ########################################################################
 # Run the tests
 
@@ -446,6 +507,8 @@ test_list = [ None,
               export_creates_intermediate_folders,
               export_HEADplus1_fails,
               export_to_explicit_cwd,
+              export_ignoring_keyword_translation,
+              export_working_copy_ignoring_keyword_translation,
              ]
 
 if __name__ == '__main__':

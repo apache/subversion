@@ -860,6 +860,24 @@ svn_client_diff_summarize_peg(const char *path,
 
 /*** From export.c ***/
 svn_error_t *
+svn_client_export4(svn_revnum_t *result_rev,
+                   const char *from,
+                   const char *to,
+                   const svn_opt_revision_t *peg_revision,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t overwrite,
+                   svn_boolean_t ignore_externals,
+                   svn_depth_t depth,
+                   const char *native_eol,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_export5(result_rev, from, to, peg_revision, revision,
+                            overwrite, ignore_externals, FALSE, depth,
+                            native_eol, ctx, pool);
+}
+
+svn_error_t *
 svn_client_export3(svn_revnum_t *result_rev,
                    const char *from,
                    const char *to,
