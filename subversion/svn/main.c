@@ -1786,7 +1786,7 @@ main(int argc, const char *argv[])
         }
     }
 
-  /* Only merge supports multiple revisions/revision ranges. */
+  /* Only merge and log support multiple revisions/revision ranges. */
   if (subcommand->cmd_func != svn_cl__merge
       && subcommand->cmd_func != svn_cl__log)
     {
@@ -1798,17 +1798,6 @@ main(int argc, const char *argv[])
                                    "or both -c and -r"));
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         }
-    }
-
-  /* Merge doesn't support specifying a revision range
-     when using --reintegrate. */
-  if (subcommand->cmd_func == svn_cl__merge
-      && opt_state.revision_ranges->nelts
-      && opt_state.reintegrate)
-    {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("-r and -c can't be used with --reintegrate"));
-      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
   /* Disallow simultaneous use of both --depth and --set-depth. */
@@ -1850,7 +1839,7 @@ main(int argc, const char *argv[])
       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
-  /* Ensure that 'revision_ranges' has at least one item, and that
+  /* Ensure that 'revision_ranges' has at least one item, and make
      'start_revision' and 'end_revision' match that item. */
   if (opt_state.revision_ranges->nelts == 0)
     {
