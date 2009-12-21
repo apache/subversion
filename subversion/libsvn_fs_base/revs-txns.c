@@ -476,9 +476,9 @@ copy_dup(const char **new_copy_id,
 /* Duplicate all entries in the "changes" table that are keyed by OLD_TXN_ID,
  * creating new entries that are keyed by NEW_TXN_ID.
  *
- * Each new "change" has the same content as the old one, except with the
- * txn-id component of its noderev-id (which is assumed to have been
- * OLD_TXN_ID) changed to NEW_TXN_ID.
+ * Each new "change" has the same content as the old one, except that if the
+ * txn-id component of its noderev-id is OLD_TXN_ID (which is the case for
+ * all changes except deletes) then that is changed to NEW_TXN_ID.
  *
  * Work within TRAIL. */
 static svn_error_t *
