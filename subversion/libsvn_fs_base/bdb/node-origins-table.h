@@ -62,6 +62,13 @@ svn_error_t *svn_fs_bdb__set_node_origin(svn_fs_t *fs,
                                          trail_t *trail,
                                          apr_pool_t *pool);
 
+/* Like svn_fs_bdb__set_node_origin() but replaces an existing entry. */
+svn_error_t *svn_fs_bdb__change_node_origin(svn_fs_t *fs,
+                                            const char *node_id,
+                                            const svn_fs_id_t *origin_id,
+                                            trail_t *trail,
+                                            apr_pool_t *pool);
+
 /* Delete from the `node-origins' table the record for NODE_ID in FS.
    Do this as part of TRAIL.  Use POOL for temporary allocations.  */
 svn_error_t *svn_fs_bdb__delete_node_origin(svn_fs_t *fs,

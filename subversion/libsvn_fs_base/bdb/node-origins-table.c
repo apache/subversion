@@ -129,6 +129,39 @@ svn_error_t *svn_fs_bdb__set_node_origin(svn_fs_t *fs,
                                          &key, &value, 0));
 }
 
+svn_error_t *svn_fs_bdb__change_node_origin(svn_fs_t *fs,
+                                            const char *node_id,
+                                            const svn_fs_id_t *origin_id,
+                                            trail_t *trail,
+                                            apr_pool_t *pool)
+{
+  base_fs_data_t *bfd = fs->fsap_data;
+  DBT key, value;
+  int db_err;
+
+  /* Create a key from our NODE_ID. */
+  svn_fs_base__str_to_dbt(&key, node_id);
+
+  /* Check that we already have a mapping for NODE_ID. */
+  svn_fs_base__trail_debug(trail, "node-origins", "get");
+  db_err = bfd->node_origins->get(bfd->node_origins, trail->db_txn,
+                                  &key, svn_fs_base__result_dbt(&value), 0);
+  svn_fs_base__track_dbt(&value, pool);
+  if (db_err == DB_NOTFOUND)
+    {
+      return svn_error_createf
+        (SVN_ERR_FS_CORRUPT, NULL,
+         _("Node origin for '%s' not found"), node_id);
+    }
+
+  /* Create a value from our ORIGIN_ID, and add this record to the table. */
+  svn_fs_base__id_to_dbt(&value, origin_id, pool);
+  svn_fs_base__trail_debug(trail, "node-origins", "put");
+  return BDB_WRAP(fs, _("storing node-origins record"),
+                  bfd->node_origins->put(bfd->node_origins, trail->db_txn,
+                                         &key, &value, 0));
+}
+
 svn_error_t *svn_fs_bdb__delete_node_origin(svn_fs_t *fs,
                                             const char *node_id,
                                             trail_t *trail,
