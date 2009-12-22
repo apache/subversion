@@ -1670,9 +1670,10 @@ node_origins_update(const char *new_txn_id,
               origin_id = svn_fs_base__id_create(node_id, id_copy_id,
                                                  new_txn_id, scratch_pool);
               /* Save the new node-origin */
-              SVN_ERR(svn_fs_bdb__change_node_origin(trail->fs, node_id,
-                                                     origin_id, trail,
-                                                     scratch_pool));
+              SVN_ERR(svn_fs_bdb__delete_node_origin(trail->fs, node_id, trail, scratch_pool));
+              SVN_ERR(svn_fs_bdb__set_node_origin(trail->fs, node_id,
+                                                  origin_id, trail,
+                                                  scratch_pool));
             }
         }
     }
