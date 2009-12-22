@@ -434,45 +434,6 @@ svn_fs_base__add_txn_copy(svn_fs_t *fs,
 }
 
 
-/* Create a new row in the "copies" table that is a deep copy of the row
- * keyed by OLD_COPY_ID. Assume that the txn-id component of its
- * 'dst_noderev_id' field is OLD_TXN_ID, and change that to NEW_TXN_ID.
- * Set *NEW_COPY_ID to the key of the new row.
- * Work in TRAIL and allocate *NEW_COPY_ID in TRAIL->POOL. */
-static svn_error_t *
-copy_dup(const char **new_copy_id,
-         const char *old_copy_id,
-         const char *new_txn_id,
-         const char *old_txn_id,
-         trail_t *trail,
-         apr_pool_t *scratch_pool)
-{
-  copy_t *copy;
-  const char *node_id, *copy_id, *txn_id;
-
-  /* Get the old copy */
-  SVN_ERR(svn_fs_bdb__get_copy(&copy, trail->fs, old_copy_id, trail,
-                               scratch_pool));
-
-  /* Modify it: change dst_noderev_id's txn_id to NEW_TXN_ID */
-  node_id = svn_fs_base__id_node_id(copy->dst_noderev_id);
-  copy_id = svn_fs_base__id_copy_id(copy->dst_noderev_id);
-  txn_id = svn_fs_base__id_txn_id(copy->dst_noderev_id);
-  SVN_ERR_ASSERT(svn_fs_base__key_compare(copy_id, old_copy_id) == 0);
-  SVN_ERR_ASSERT(svn_fs_base__key_compare(txn_id, old_txn_id) == 0);
-  copy->dst_noderev_id = svn_fs_base__id_create(node_id, copy_id, new_txn_id,
-                                                scratch_pool);
-
-  /* Save the new copy */
-  SVN_ERR(svn_fs_bdb__reserve_copy_id(new_copy_id, trail->fs, trail,
-                                      trail->pool));
-  SVN_ERR(svn_fs_bdb__create_copy(trail->fs, *new_copy_id, copy->src_path,
-                                  copy->src_txn_id, copy->dst_noderev_id,
-                                  copy->kind, trail, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-
 /* Duplicate all entries in the "changes" table that are keyed by OLD_TXN_ID,
  * creating new entries that are keyed by NEW_TXN_ID.
  *
@@ -863,41 +824,25 @@ txn_body_begin_obliteration_txn(void *baton, trail_t *trail)
   /* Dup txn->proplist */
   new_txn->proplist = old_txn->proplist;
 
-  /* ### TODO: Update "copies" table entries referenced by txn->copies.
-   * This is hard, because I don't want to change the copy_ids, because they
-   * pervade node-ids throughout history. But what actually uses them, and
-   * does anything use them during txn construction? */
-
-  /* Dup txn->copies
+  /* Prepare to update the "copies" table.
    *
-   * ### PROBLEM:
-   * This code makes new rows in the 'copies' table, keyed by a NEW COPY-ID
-   * that is not the copy-id of the node-rev it refers to. WRONG!
+   * As part of obliteration, we need to update all of the "copies" table
+   * rows that are referenced by this txn, to refer to the new txn's
+   * node-rev ids instead. At txn begin time, just keep the references to
+   * the old rows. At commit time, we will update those rows to refer to
+   * this txn's node-rev ids.
    *
-   * For the purpose of the txn keeping track of which "copies" table rows
-   * it allocated, this is fine. It is no good if something needs to look
-   * up copy info based on copy-id during txn construction.
+   * We cannot simply create new "copies" table rows now and make the old
+   * ones obsolete at commit time, because the rows are keyed by copy-id,
+   * and we don't want to change the copy_ids because they pervade node-ids
+   * throughout history.
    *
-   * If no look-ups are required until after the txn is committed, maybe we
-   * could overwrite the old "copies" table entries with the new ones at
-   * commit time.
-   */
+   * ### What actually uses the "copies" table? Does anything use it during
+   * txn construction? Does it need to be keyed by copy-id or could we
+   * change the schema to use arbitrary keys? */
   if (old_txn->copies)
     {
-      int i;
-
-      new_txn->copies = apr_array_make(trail->pool, old_txn->copies->nelts,
-                                       sizeof(const char *));
-      for (i = 0; i < old_txn->copies->nelts; i++)
-        {
-          const char *old_copy_id = APR_ARRAY_IDX(old_txn->copies, i,
-                                                  const char *);
-          const char *new_copy_id;
-
-          SVN_ERR(copy_dup(&new_copy_id, old_copy_id, new_txn_id, old_txn_id,
-                           trail, trail->pool));
-          APR_ARRAY_PUSH(new_txn->copies, const char *) = new_copy_id;
-        }
+      new_txn->copies = apr_array_copy(trail->pool, old_txn->copies);
     }
 
   /* Dup the "changes" that are keyed by the txn_id. */
