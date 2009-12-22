@@ -45,7 +45,8 @@
 [for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">$([[]System.IO.Path]::GetFullPath('$(ProjectDir)..\..\..\[configs.name]\[target.output_dir]'))\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">..\..\..\[configs.name]\[target.intermediate_dir]\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[target.output_name_without_ext]</TargetName>
-[end][end]  </PropertyGroup>
+[is config_type "DynamicLibrary"][is target.output_ext ".dll"][else]    <TargetExt>[target.output_ext]</TargetExt>
+[end][end][end][end]  </PropertyGroup>
 [for configs][for platforms]  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">
     <ClCompile>
 [is configs.name "Debug"]      <Optimization>Disabled</Optimization>
@@ -68,11 +69,13 @@
       <OutputFile>$(OutDir)[target.output_name]</OutputFile>
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
 [else][is config_type "DynamicLibrary"]    <Link>
       <OutputFile>$(OutDir)[target.output_name]</OutputFile>
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
 [if-any def_file]      <ModuleDefinitionFile>[def_file]</ModuleDefinitionFile>
 [end]    </Link>
 [else][is config_type "StaticLibrary"]    <Lib>
