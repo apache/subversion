@@ -1631,7 +1631,60 @@ svn_fs_base__dag_commit_obliteration_txn(svn_revnum_t replacing_rev,
                                          trail_t *trail,
                                          apr_pool_t *pool)
 {
+  transaction_t *txn_obj;
   revision_t revision;
+
+  /* Read the txn so we can access its "copies" list */
+  SVN_ERR(svn_fs_bdb__get_txn(&txn_obj, trail->fs, txn->id, trail,
+                              trail->pool));
+
+  /* Finish updating the "copies" table, which was started in
+   * svn_fs_base__begin_obliteration_txn().  Change the keys of all the
+   * "copies" table rows that we created back to their original keys.
+   *
+   * This assumes that the old 'replacing_rev' transaction is now obsolete,
+   * so that the old "copies" table rows are no longer referenced.
+   *
+   * ### TODO: See txn_body_begin_obliteration_txn().
+   * ### TODO: Guarantee the old txn is obsolete.
+   */
+  if (txn_obj->copies)
+    {
+      int i;
+
+      for (i = 0; i < txn_obj->copies->nelts; i++)
+        {
+          const char *txn_copy_id = APR_ARRAY_IDX(txn_obj->copies, i,
+                                                  const char *);
+          const char *final_copy_id;
+          copy_t *copy;
+          const char *id_node_id, *id_copy_id, *id_txn_id;
+
+          /* Get the old copy */
+          SVN_ERR(svn_fs_bdb__get_copy(&copy, trail->fs, txn_copy_id, trail,
+                                       pool));
+
+          /* Modify it: change dst_noderev_id's txn_id to the new txn's id */
+          id_node_id = svn_fs_base__id_node_id(copy->dst_noderev_id);
+          id_copy_id = svn_fs_base__id_copy_id(copy->dst_noderev_id);
+          id_txn_id = svn_fs_base__id_txn_id(copy->dst_noderev_id);
+          /* SVN_ERR_ASSERT(svn_fs_base__key_compare(id_copy_id, old_copy_id)
+                            == 0); */
+          /* SVN_ERR_ASSERT(svn_fs_base__key_compare(id_txn_id, old_txn_id)
+                            == 0); */
+          copy->dst_noderev_id = svn_fs_base__id_create(id_node_id,
+                                                        id_copy_id,
+                                                        txn->id,
+                                                        pool);
+
+          /* Save the new copy */
+          final_copy_id = id_copy_id;
+          SVN_ERR(svn_fs_bdb__create_copy(trail->fs, final_copy_id,
+                                          copy->src_path, copy->src_txn_id,
+                                          copy->dst_noderev_id, copy->kind,
+                                          trail, pool));
+        }
+    }
 
   /* Replace the revision entry in the `revisions' table. */
   revision.txn_id = txn->id;
