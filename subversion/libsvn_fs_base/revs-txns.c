@@ -848,10 +848,6 @@ txn_body_begin_obliteration_txn(void *baton, trail_t *trail)
   /* Dup the "changes" that are keyed by the txn_id. */
   SVN_ERR(changes_dup(new_txn_id, old_txn_id, trail, trail->pool));
 
-  /* ### TODO: Update the "node-origins" table.
-   * Or can this be deferred till commit time? Probably not. */
-
-
   /* Save the modified transaction */
   SVN_ERR(svn_fs_bdb__put_txn(trail->fs, new_txn, new_txn_id, trail,
                               trail->pool));
