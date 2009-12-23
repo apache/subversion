@@ -1681,11 +1681,59 @@ node_origins_update(const char *new_txn_id,
   return SVN_NO_ERROR;
 }
 
+/* Modify each row in the "copies" table that is keyed by a (const char *)
+ * copy-id listed in COPY_IDS, changing the txn-id component of its
+ * "dst_noderev_id" field from OLD_TXN_ID to NEW_TXN_ID.
+ * Each entry in COPY_IDS must match exactly one row in the "copies" table.
+ *
+ * Work within TRAIL. */
+static svn_error_t *
+copies_update(const char *new_txn_id,
+              const char *old_txn_id,
+              apr_array_header_t *copy_ids,
+              trail_t *trail,
+              apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  for (i = 0; i < copy_ids->nelts; i++)
+    {
+      const char *copy_id = APR_ARRAY_IDX(copy_ids, i, const char *);
+      copy_t *copy;
+      const char *id_node_id, *id_copy_id, *id_txn_id;
+
+      svn_pool_clear(iterpool);
+
+      /* Get the old "copy" row from the "copies" table */
+      SVN_ERR(svn_fs_bdb__get_copy(&copy, trail->fs, copy_id, trail,
+                                   iterpool));
+
+      /* Modify it: change dst_noderev_id's txn_id from old to new txn-id */
+      id_node_id = svn_fs_base__id_node_id(copy->dst_noderev_id);
+      id_copy_id = svn_fs_base__id_copy_id(copy->dst_noderev_id);
+      id_txn_id = svn_fs_base__id_txn_id(copy->dst_noderev_id);
+      SVN_ERR_ASSERT(svn_fs_base__key_compare(id_copy_id, copy_id) == 0);
+      SVN_ERR_ASSERT(svn_fs_base__key_compare(id_txn_id, old_txn_id) == 0);
+      copy->dst_noderev_id = svn_fs_base__id_create(id_node_id, id_copy_id,
+                                                    new_txn_id, iterpool);
+
+      /* Write the new "copy" row back under the same key (copy_id) */
+      SVN_ERR(svn_fs_bdb__create_copy(trail->fs, copy_id,
+                                      copy->src_path, copy->src_txn_id,
+                                      copy->dst_noderev_id, copy->kind,
+                                      trail, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_base__dag_commit_obliteration_txn(svn_revnum_t replacing_rev,
                                          svn_fs_txn_t *txn,
                                          trail_t *trail,
-                                         apr_pool_t *pool)
+                                         apr_pool_t *scratch_pool)
 {
   transaction_t *txn_obj;
   revision_t revision;
@@ -1693,11 +1741,11 @@ svn_fs_base__dag_commit_obliteration_txn(svn_revnum_t replacing_rev,
 
   /* Find the old txn. */
   SVN_ERR(svn_fs_base__rev_get_txn_id(&old_txn_id, trail->fs, replacing_rev,
-                                      trail, trail->pool));
+                                      trail, scratch_pool));
 
   /* Read the new txn so we can access its "copies" list */
   SVN_ERR(svn_fs_bdb__get_txn(&txn_obj, trail->fs, txn->id, trail,
-                              trail->pool));
+                              scratch_pool));
 
   /* Finish updating the "copies" table, which was started in
    * svn_fs_base__begin_obliteration_txn().  Change the keys of all the
@@ -1710,53 +1758,20 @@ svn_fs_base__dag_commit_obliteration_txn(svn_revnum_t replacing_rev,
    * ### TODO: Guarantee the old txn is obsolete.
    */
   if (txn_obj->copies)
-    {
-      int i;
-
-      for (i = 0; i < txn_obj->copies->nelts; i++)
-        {
-          const char *txn_copy_id = APR_ARRAY_IDX(txn_obj->copies, i,
-                                                  const char *);
-          const char *final_copy_id;
-          copy_t *copy;
-          const char *id_node_id, *id_copy_id, *id_txn_id;
-
-          /* Get the old copy */
-          SVN_ERR(svn_fs_bdb__get_copy(&copy, trail->fs, txn_copy_id, trail,
-                                       pool));
-
-          /* Modify it: change dst_noderev_id's txn_id to the new txn's id */
-          id_node_id = svn_fs_base__id_node_id(copy->dst_noderev_id);
-          id_copy_id = svn_fs_base__id_copy_id(copy->dst_noderev_id);
-          id_txn_id = svn_fs_base__id_txn_id(copy->dst_noderev_id);
-          /* SVN_ERR_ASSERT(svn_fs_base__key_compare(id_copy_id, old_copy_id)
-                            == 0); */
-          /* SVN_ERR_ASSERT(svn_fs_base__key_compare(id_txn_id, old_txn_id)
-                            == 0); */
-          copy->dst_noderev_id = svn_fs_base__id_create(id_node_id,
-                                                        id_copy_id,
-                                                        txn->id,
-                                                        pool);
-
-          /* Save the new copy */
-          final_copy_id = id_copy_id;
-          SVN_ERR(svn_fs_bdb__create_copy(trail->fs, final_copy_id,
-                                          copy->src_path, copy->src_txn_id,
-                                          copy->dst_noderev_id, copy->kind,
-                                          trail, pool));
-        }
-    }
+    SVN_ERR(copies_update(txn->id, old_txn_id, txn_obj->copies, trail,
+                          scratch_pool));
 
   /* Replace the revision entry in the `revisions' table. */
   revision.txn_id = txn->id;
-  SVN_ERR(svn_fs_bdb__put_rev(&replacing_rev, txn->fs, &revision, trail, pool));
+  SVN_ERR(svn_fs_bdb__put_rev(&replacing_rev, txn->fs, &revision, trail,
+                              scratch_pool));
 
   /* Promote the unfinished transaction to a committed one. */
   SVN_ERR(svn_fs_base__txn_make_committed(txn->fs, txn->id, replacing_rev,
-                                          trail, pool));
+                                          trail, scratch_pool));
 
   /* Update the "node-origins" table. */
-  SVN_ERR(node_origins_update(txn->id, old_txn_id, trail, trail->pool));
+  SVN_ERR(node_origins_update(txn->id, old_txn_id, trail, scratch_pool));
 
   return SVN_NO_ERROR;
 }

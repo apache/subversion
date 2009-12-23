@@ -289,7 +289,7 @@ svn_error_t *
 svn_fs_base__dag_commit_obliteration_txn(svn_revnum_t replacing_rev,
                                          svn_fs_txn_t *txn,
                                          trail_t *trail,
-                                         apr_pool_t *pool);
+                                         apr_pool_t *scratch_pool);
 
 
 
