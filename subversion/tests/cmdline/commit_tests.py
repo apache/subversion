@@ -2076,8 +2076,10 @@ def post_commit_hook_test(sbox):
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
-  # Disable commits
-  svntest.actions.create_failing_post_commit_hook(repo_dir)
+  # Create a hook that outputs a message to stderr and returns exit code 1
+  # Include a non-XML-safe message to regression-test issue #3553.
+  error_msg = "Text with <angle brackets> & ampersand"
+  svntest.actions.create_failing_hook(repo_dir, "post-commit", error_msg)
 
   # Modify iota just so there is something to commit.
   iota_path = os.path.join(wc_dir, "iota")
@@ -2092,7 +2094,7 @@ def post_commit_hook_test(sbox):
                       "\n",
                       "Warning: " +
                         svntest.actions.hook_failure_message('post-commit'),
-                      "Post-commit hook failed\n",
+                      error_msg + "\n",
                     ]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
@@ -2443,13 +2445,9 @@ def start_commit_hook_test(sbox):
   repo_dir = sbox.repo_dir
 
   # Create a hook that outputs a message to stderr and returns exit code 1
-  hook_code = """import sys
-sys.stderr.write("Start-commit hook failed")
-sys.exit(1)"""
-
-  # Setup the hook configs to log data to a file
-  start_commit_hook = svntest.main.get_start_commit_hook_path(repo_dir)
-  svntest.main.create_python_hook_script(start_commit_hook, hook_code)
+  # Include a non-XML-safe message to regression-test issue #3553.
+  error_msg = "Text with <angle brackets> & ampersand"
+  svntest.actions.create_failing_hook(repo_dir, "start-commit", error_msg)
 
   # Modify iota just so there is something to commit.
   iota_path = os.path.join(wc_dir, "iota")
@@ -2469,7 +2467,7 @@ sys.exit(1)"""
     actual_stderr = actual_stderr[-2:]
   expected_stderr = [ "svn: " +
                         svntest.actions.hook_failure_message('start-commit'),
-                      "Start-commit hook failed\n"
+                      error_msg + "\n",
                     ]
   svntest.verify.compare_and_display_lines('Start-commit hook test',
                                            'STDERR',
@@ -2487,13 +2485,9 @@ def pre_commit_hook_test(sbox):
   repo_dir = sbox.repo_dir
 
   # Create a hook that outputs a message to stderr and returns exit code 1
-  hook_code = """import sys
-sys.stderr.write("Pre-commit hook failed")
-sys.exit(1)"""
-
-  # Setup the hook configs to log data to a file
-  pre_commit_hook = svntest.main.get_pre_commit_hook_path(repo_dir)
-  svntest.main.create_python_hook_script(pre_commit_hook, hook_code)
+  # Include a non-XML-safe message to regression-test issue #3553.
+  error_msg = "Text with <angle brackets> & ampersand"
+  svntest.actions.create_failing_hook(repo_dir, "pre-commit", error_msg)
 
   # Modify iota just so there is something to commit.
   iota_path = os.path.join(wc_dir, "iota")
@@ -2513,7 +2507,7 @@ sys.exit(1)"""
     actual_stderr = actual_stderr[-2:]
   expected_stderr = [ "svn: " +
                         svntest.actions.hook_failure_message('pre-commit'),
-                      "Pre-commit hook failed\n"
+                      error_msg + "\n",
                     ]
   svntest.verify.compare_and_display_lines('Pre-commit hook test',
                                            'STDERR',
