@@ -1,5 +1,32 @@
+Version 1.6.7
+(29 Dec 2009, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.7
+
+ User-visible changes:
+  * allow multiple external updates over ra_svn (issue #3487)
+  * fix a segmentation fault when using FSFS (r881905)
+  * support Berkeley DB 4.8 (r879688)
+  * various autoprop improvements (r880274, -5)
+  * improve usage of svn+ssh:// on Windows (issue #2580)
+  * teach 1.6.x to recognize 1.7 working copies (1.6.x-future-proof branch)
+  * update help text for 'svn update' and 'svn switch' (r886164, -97)
+  * make 'svnadmin load --parent-dir' create valid mergeinfo (r888979, -9081)
+  * tolerate relative merge source paths in mergeinfo (r889840)
+  * teach mod_dav_svn to support the Label header (issue #3519)
+  * fixed: svnsync leaves stale sync-locks on mirrors (r884842)
+  * fix applicability of 'svn resolve --accept=theirs-conflict' (r880525, -6)
+
+ Developer-visible changes:
+  * update ruby bindings test expectation (r880162)
+
+
+[ Note: All revision numbers for versions prior to 1.6.7 reference the
+  original repository on svn.collab.net.  For more information see:
+  http://svn.apache.org/repos/asf/subversion/README ]
+
+
 Version 1.6.6
-(16 Oct 2009, from /branches/1.6.x)
+(22 Oct 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.6
 
  User-visible changes:
@@ -28,9 +55,9 @@ http://svn.collab.net/repos/svn/tags/1.6.6
   * add svn.client.{log5,merge_peg3} to python bindings (r39635, -6, -7)
   * include the time of a test run in tests.log (r39887)
 
- 
+
 Version 1.6.5
-(21 Aug 2009, from /branches/1.6.x)
+(22 Aug 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.5
 
  User-visible changes:
