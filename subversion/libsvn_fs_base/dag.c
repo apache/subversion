@@ -1638,6 +1638,7 @@ node_origins_update(const char *new_txn_id,
                     apr_pool_t *scratch_pool)
 {
   apr_array_header_t *changes;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
   /* To find the nodes that originate in the old txn, we'll look in the
@@ -1648,6 +1649,8 @@ node_origins_update(const char *new_txn_id,
   for (i = 0; i < changes->nelts; i++)
     {
       change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
+
+      svn_pool_clear(iterpool);
 
       if (change->kind == svn_fs_path_change_add
           || change->kind == svn_fs_path_change_replace)
@@ -1660,7 +1663,7 @@ node_origins_update(const char *new_txn_id,
 
           /* Fetch the old node-origin */
           SVN_ERR(svn_fs_bdb__get_node_origin(&origin_id, trail->fs, node_id,
-                                              trail, scratch_pool));
+                                              trail, iterpool));
           id_copy_id = svn_fs_base__id_copy_id(origin_id);
           id_txn_id = svn_fs_base__id_txn_id(origin_id);
 
@@ -1668,16 +1671,18 @@ node_origins_update(const char *new_txn_id,
             {
               /* Change its txn_id to NEW_TXN_ID */
               origin_id = svn_fs_base__id_create(node_id, id_copy_id,
-                                                 new_txn_id, scratch_pool);
+                                                 new_txn_id, iterpool);
               /* Save the new node-origin */
-              SVN_ERR(svn_fs_bdb__delete_node_origin(trail->fs, node_id, trail, scratch_pool));
+              SVN_ERR(svn_fs_bdb__delete_node_origin(trail->fs, node_id, trail,
+                                                     iterpool));
               SVN_ERR(svn_fs_bdb__set_node_origin(trail->fs, node_id,
                                                   origin_id, trail,
-                                                  scratch_pool));
+                                                  iterpool));
             }
         }
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
