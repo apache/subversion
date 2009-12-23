@@ -1575,13 +1575,13 @@ def get_wc_base_rev(wc_dir):
 
 def create_failing_hook(repo_dir, hook_name, text):
   """Create a HOOK_NAME hook in the repository at REPO_DIR that prints
-  a message including TEXT to stderr and exits with an error."""
+  TEXT to stderr and exits with an error."""
 
   hook_path = os.path.join(repo_dir, 'hooks', hook_name)
   # Embed the text carefully: it might include characters like "%" and "'".
   main.create_python_hook_script(hook_path, 'import sys\n'
-    'sys.stderr.write("""%%s hook failed: %%s""" %% (%s, %s))\n'
-    'sys.exit(1)\n' % (repr(hook_name), repr(text)))
+    'sys.stderr.write(' + repr(text) + ')\n'
+    'sys.exit(1)\n')
 
 def enable_revprop_changes(repo_dir):
   """Enable revprop changes in the repository at REPO_DIR by creating a
