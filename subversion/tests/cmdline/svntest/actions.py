@@ -1573,6 +1573,28 @@ def get_wc_base_rev(wc_dir):
   "Return the BASE revision of the working copy at WC_DIR."
   return run_and_parse_info(wc_dir)[0]['Revision']
 
+def hook_failure_message(hook_name):
+  """Return the error message that the client prints for failure of the
+  specified hook HOOK_NAME. The wording changed with Subversion 1.5."""
+  if svntest.main.server_minor_version < 5:
+    return "'%s' hook failed with error output:\n" % hook_name
+  else:
+    if hook_name in ["start-commit", "pre-commit"]:
+      action = "Commit"
+    elif hook_name == "pre-revprop-change":
+      action = "Revprop change"
+    elif hook_name == "pre-lock":
+      action = "Lock"
+    elif hook_name == "pre-unlock":
+      action = "Unlock"
+    else:
+      action = None
+    if action is None:
+      message = "%s hook failed (exit code 1)" % (hook_name,)
+    else:
+      message = "%s blocked by %s hook (exit code 1)" % (action, hook_name)
+    return message + " with output:\n"
+
 def create_failing_hook(repo_dir, hook_name, text):
   """Create a HOOK_NAME hook in the repository at REPO_DIR that prints
   TEXT to stderr and exits with an error."""
