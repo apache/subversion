@@ -2062,28 +2062,6 @@ def local_mods_are_not_commits(sbox):
                                      os.path.join(wc_dir, 'A', 'mu'),
                                      os.path.join(wc_dir, 'A', 'yu'))
 
-# Helper for hook tests: returns the "hook failed" line, with precise
-# wording that changed with Subversion 1.5.
-def hook_failure_message(hookname):
-  if svntest.main.server_minor_version < 5:
-    return "'%s' hook failed with error output:\n" % hookname
-  else:
-    if hookname in ["start-commit", "pre-commit"]:
-      action = "Commit"
-    elif hookname == "pre-revprop-change":
-      action = "Revprop change"
-    elif hookname == "pre-lock":
-      action = "Lock"
-    elif hookname == "pre-unlock":
-      action = "Unlock"
-    else:
-      action = None
-    if action is None:
-      message = "%s hook failed (exit code 1)" % (hookname,)
-    else:
-      message = "%s blocked by %s hook (exit code 1)" % (action, hookname)
-    return message + " with output:\n"
-
 
 #----------------------------------------------------------------------
 # Test if the post-commit error message is returned back to the svn
@@ -2112,7 +2090,8 @@ def post_commit_hook_test(sbox):
                       "Transmitting file data .\n",
                       "Committed revision 2.\n",
                       "\n",
-                      "Warning: " + hook_failure_message('post-commit'),
+                      "Warning: " +
+                        svntest.actions.hook_failure_message('post-commit'),
                       "Post-commit hook failed\n",
                     ]
 
@@ -2488,7 +2467,8 @@ sys.exit(1)"""
   # contain source code file and line numbers.
   if len(actual_stderr) > 2:
     actual_stderr = actual_stderr[-2:]
-  expected_stderr = [ "svn: " + hook_failure_message('start-commit'),
+  expected_stderr = [ "svn: " +
+                        svntest.actions.hook_failure_message('start-commit'),
                       "Start-commit hook failed\n"
                     ]
   svntest.verify.compare_and_display_lines('Start-commit hook test',
@@ -2531,7 +2511,8 @@ sys.exit(1)"""
   # contain source code file and line numbers.
   if len(actual_stderr) > 2:
     actual_stderr = actual_stderr[-2:]
-  expected_stderr = [ "svn: " + hook_failure_message('pre-commit'),
+  expected_stderr = [ "svn: " +
+                        svntest.actions.hook_failure_message('pre-commit'),
                       "Pre-commit hook failed\n"
                     ]
   svntest.verify.compare_and_display_lines('Pre-commit hook test',
