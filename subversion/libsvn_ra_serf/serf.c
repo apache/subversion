@@ -360,14 +360,12 @@ svn_ra_serf__open(svn_ra_session_t *session,
      older, for root paths url.path will be "", where serf requires "/". */
   if (url.path == NULL || url.path[0] == '\0')
     url.path = apr_pstrdup(serf_sess->pool, "/");
-
-  serf_sess->repos_url = url;
-  serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
-
   if (!url.port)
     {
       url.port = apr_uri_port_of_scheme(url.scheme);
     }
+  serf_sess->repos_url = url;
+  serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
   serf_sess->using_ssl = (svn_cstring_casecmp(url.scheme, "https") == 0);
 
   serf_sess->capabilities = apr_hash_make(serf_sess->pool);
