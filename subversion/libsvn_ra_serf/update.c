@@ -2127,7 +2127,7 @@ link_path(void *report_baton,
  * if the number of ACTIVE_REQS > REQS_PER_CONN or if there currently is
  * only one main connection open.
  */
-static void
+static svn_error_t *
 open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
 {
   /* For each REQS_PER_CONN outstanding requests open a new connection, with
@@ -2136,6 +2136,7 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
       ((active_reqs / REQS_PER_CONN) > sess->num_conns))
     {
       int cur = sess->num_conns;
+      apr_status_t status;
 
       sess->conns[cur] = apr_palloc(sess->pool, sizeof(*sess->conns[cur]));
       sess->conns[cur]->bkt_alloc = serf_bucket_allocator_create(sess->pool,
@@ -2150,13 +2151,17 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
       sess->conns[cur]->last_status_code = -1;
       sess->conns[cur]->ssl_context = NULL;
       sess->conns[cur]->session = sess;
-      sess->conns[cur]->conn = serf_connection_create(sess->context,
-                                                      sess->conns[cur]->address,
-                                                      svn_ra_serf__conn_setup,
-                                                      sess->conns[cur],
-                                                      svn_ra_serf__conn_closed,
-                                                      sess->conns[cur],
-                                                      sess->pool);
+      status = serf_connection_create2(&sess->conns[cur]->conn,
+                                       sess->context,
+                                       sess->repos_url,
+                                       svn_ra_serf__conn_setup,
+                                       sess->conns[cur],
+                                       svn_ra_serf__conn_closed,
+                                       sess->conns[cur],
+                                       sess->pool);
+      if (status)
+        return svn_error_wrap_apr(status, NULL);
+
       sess->num_conns++;
 
       /* Authentication protocol specific initalization. */
@@ -2166,6 +2171,8 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
         sess->proxy_auth_protocol->init_conn_func(sess, sess->conns[cur],
                                                   sess->pool);
     }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -2220,7 +2227,7 @@ finish_report(void *report_baton,
   svn_ra_serf__request_create(handler);
 
   /* Open the first extra connection. */
-  open_connection_if_needed(sess, 0);
+  SVN_ERR(open_connection_if_needed(sess, 0));
 
   sess->cur_conn = 1;
   closed_root = FALSE;
@@ -2244,8 +2251,8 @@ finish_report(void *report_baton,
 
       /* Open extra connections if we have enough requests to send. */
       if (sess->num_conns < MAX_NR_OF_CONNS)
-        open_connection_if_needed(sess, report->active_fetches +
-                                        report->active_propfinds);
+        SVN_ERR(open_connection_if_needed(sess, report->active_fetches +
+                                          report->active_propfinds));
 
       /* Switch our connection. */
       if (!report->done)

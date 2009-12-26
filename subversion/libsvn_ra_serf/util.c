@@ -504,8 +504,9 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 {
   serf_bucket_t *hdrs_bkt;
 
-  *req_bkt = serf_bucket_request_create(method, url, body_bkt,
-                                        serf_request_get_alloc(request));
+  *req_bkt =
+    serf_request_bucket_request_create(request, method, url, body_bkt,
+                                       serf_request_get_alloc(request));
 
   hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
   serf_bucket_headers_setn(hdrs_bkt, "Host", conn->hostinfo);
@@ -552,15 +553,6 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
         }
     }
 #endif
-
-  /* Set up Proxy settings */
-  if (conn->session->using_proxy)
-    {
-      char *root = apr_uri_unparse(conn->session->pool,
-                                   &conn->session->repos_url,
-                                   APR_URI_UNP_OMITPATHINFO);
-      serf_bucket_request_set_root(*req_bkt, root);
-    }
 
   if (ret_hdrs_bkt)
     {
