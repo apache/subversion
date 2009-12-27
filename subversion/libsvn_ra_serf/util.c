@@ -1171,6 +1171,74 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
   return server_err.error;
 }
 
+apr_status_t
+svn_ra_serf__credentials_callback(char **username, char **password,
+                                  serf_request_t *request, void *baton,
+                                  int code, const char *authn_type,
+                                  const char *realm,
+                                  apr_pool_t *pool)
+{
+  svn_ra_serf__handler_t *ctx = baton;
+  svn_ra_serf__session_t *session = ctx->session;
+  void *creds;
+  svn_auth_cred_simple_t *simple_creds;
+  svn_error_t *err;
+
+  if (code == 401)
+    {
+      /* Use svn_auth_first_credentials if this is the first time we ask for
+         credentials during this session OR if the last time we asked
+         session->auth_state wasn't set (eg. if the credentials provider was
+         cancelled by the user). */
+      if (!session->auth_state)
+        {
+          err = svn_auth_first_credentials(&creds,
+                                           &session->auth_state,
+                                           SVN_AUTH_CRED_SIMPLE,
+                                           realm,
+                                           session->wc_callbacks->auth_baton,
+                                           session->pool);
+        }
+      else
+        {
+          err = svn_auth_next_credentials(&creds,
+                                          session->auth_state,
+                                          session->pool);
+        }
+
+      if (err)
+        {
+          ctx->session->pending_error = err;
+          return err->apr_err;
+        }
+
+      session->auth_attempts++;
+
+      if (!creds || session->auth_attempts > 4)
+        {
+          /* No more credentials. */
+          ctx->session->pending_error =
+            svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
+                             "No more credentials or we tried too many times.\n"
+                             "Authentication failed");
+          return SVN_ERR_AUTHN_FAILED;
+        }
+
+      simple_creds = creds;
+      *username = apr_pstrdup(pool, simple_creds->username);
+      *password = apr_pstrdup(pool, simple_creds->password);
+    }
+  else
+    {
+      *username = apr_pstrdup(pool, session->proxy_username);
+      *password = apr_pstrdup(pool, session->proxy_password);
+    }
+
+  ctx->conn->last_status_code = code;
+
+  return APR_SUCCESS;
+}
+
 /* Implements the serf_response_handler_t interface.  Wait for HTTP
    response status and headers, and invoke CTX->response_handler() to
    carry out operation-specific processing.  Afterwards, check for
