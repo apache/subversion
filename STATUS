@@ -151,6 +151,14 @@ Candidate changes:
    Votes:
      +1: stylesen
 
+ * r876175
+   Allow use of APR 1.x when testing Ruby bindings on Windows.
+   Justification:
+     Makes possible testing of the Ruby bindings built with the recommended
+     version of APR.
+   Votes:
+     +1: joeswatosh
+
 Veto-blocked changes:
 
  * r877552, r877617, r877618, r877619, r877621
