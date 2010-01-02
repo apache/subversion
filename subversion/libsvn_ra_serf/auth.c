@@ -95,7 +95,6 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     setup_request_basic_auth,
     default_auth_response_handler,
   },
-#endif
   {
     407,
     "Basic",
@@ -105,6 +104,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     setup_request_proxy_basic_auth,
     default_auth_response_handler,
   },
+#endif
 #ifdef SVN_RA_SERF_SSPI_ENABLED
   {
     401,
