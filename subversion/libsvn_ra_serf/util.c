@@ -1232,6 +1232,17 @@ svn_ra_serf__credentials_callback(char **username, char **password,
     {
       *username = apr_pstrdup(pool, session->proxy_username);
       *password = apr_pstrdup(pool, session->proxy_password);
+
+      session->proxy_auth_attempts++;
+
+      if (!session->proxy_username || session->proxy_auth_attempts > 4)
+        {
+          /* No more credentials. */
+          ctx->session->pending_error =
+            svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
+                             "Proxy authentication failed");
+          return SVN_ERR_AUTHN_FAILED;
+        }
     }
 
   ctx->conn->last_status_code = code;
