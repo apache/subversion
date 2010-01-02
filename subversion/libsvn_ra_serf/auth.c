@@ -125,6 +125,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     default_auth_response_handler,
   },
 #endif /* SVN_RA_SERF_SSPI_ENABLED */
+#if ! SERF_VERSION_AT_LEAST(0, 4, 0)
   {
     401,
     "Digest",
@@ -134,6 +135,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     svn_ra_serf__setup_request_digest_auth,
     svn_ra_serf__validate_response_digest_auth,
   },
+#endif
 #ifdef SVN_RA_SERF_HAVE_GSSAPI
   {
     401,
