@@ -68,9 +68,9 @@ svn_stream_create(void *baton, apr_pool_t *pool)
   stream->baton = baton;
   stream->read_fn = NULL;
   stream->write_fn = NULL;
+  stream->close_fn = NULL;
   stream->reset_fn = NULL;
   stream->mark_fn = NULL;
-  stream->close_fn = NULL;
   stream->line_filter_cb = NULL;
   stream->line_transformer_cb = NULL;
   return stream;
@@ -98,6 +98,12 @@ svn_stream_set_write(svn_stream_t *stream, svn_write_fn_t write_fn)
 }
 
 void
+svn_stream_set_close(svn_stream_t *stream, svn_close_fn_t close_fn)
+{
+  stream->close_fn = close_fn;
+}
+
+void
 svn_stream_set_reset(svn_stream_t *stream, svn_io_reset_fn_t reset_fn)
 {
   stream->reset_fn = reset_fn;
@@ -107,12 +113,6 @@ void
 svn_stream_set_mark(svn_stream_t *stream, svn_io_mark_fn_t mark_fn)
 {
   stream->mark_fn = mark_fn;
-}
-
-void
-svn_stream_set_close(svn_stream_t *stream, svn_close_fn_t close_fn)
-{
-  stream->close_fn = close_fn;
 }
 
 void
@@ -601,13 +601,20 @@ read_handler_apr(void *baton, char *buffer, apr_size_t *len)
   return err;
 }
 
-
 static svn_error_t *
 write_handler_apr(void *baton, const char *data, apr_size_t *len)
 {
   struct baton_apr *btn = baton;
 
   return svn_io_file_write_full(btn->file, data, *len, len, btn->pool);
+}
+
+static svn_error_t *
+close_handler_apr(void *baton)
+{
+  struct baton_apr *btn = baton;
+
+  return svn_io_file_close(btn->file, btn->pool);
 }
 
 static svn_error_t *
@@ -640,14 +647,6 @@ mark_handler_apr(void *baton, svn_boolean_t set)
     btn->mark = -1;
 
   return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-close_handler_apr(void *baton)
-{
-  struct baton_apr *btn = baton;
-
-  return svn_io_file_close(btn->file, btn->pool);
 }
 
 
