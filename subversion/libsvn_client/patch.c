@@ -170,6 +170,7 @@ strip_path(const char **result, const char *path, int strip_count,
  * which is the path of the target as it appeared in the patch file.
  * Put a canonicalized version of PATH_FROM_PATCHFILE into
  * TARGET->CANON_PATH_FROM_PATCHFILE.
+ * WC_CTX is a context for the working copy the patch is applied to.
  * If possible, determine TARGET->WC_PATH, TARGET->ABS_PATH, and TARGET->KIND.
  * Indicate in TARGET->SKIPPED whether the target should be skipped.
  * STRIP_COUNT specifies the number of leading path components
@@ -180,6 +181,7 @@ resolve_target_path(patch_target_t *target,
                     const char *path_from_patchfile,
                     const char *wc_path,
                     int strip_count,
+                    svn_wc_context_t *wc_ctx,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
@@ -264,6 +266,33 @@ resolve_target_path(patch_target_t *target,
         break;
     }
 
+  if (! target->skipped)
+    {
+      const svn_wc_entry_t *entry;
+
+      /* If the target is versioned, we should be able to get an entry. */
+      SVN_ERR(svn_wc__maybe_get_entry(&entry, wc_ctx,
+                                      target->abs_path,
+                                      svn_node_unknown,
+                                      TRUE, FALSE,
+                                      result_pool,
+                                      scratch_pool));
+      if (entry)
+        {
+          if (entry->schedule == svn_wc_schedule_delete)
+            {
+              /* The target is versioned and scheduled for deletion,
+               * skip it. */
+              target->skipped = TRUE;
+            }
+        }
+      else if (target->kind == svn_node_file)
+        {
+          /* The target is an unversioned file, skip it. */
+           target->skipped = TRUE;
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -316,26 +345,8 @@ init_patch_target(patch_target_t **target,
   new_target = apr_pcalloc(result_pool, sizeof(*new_target));
 
   SVN_ERR(resolve_target_path(new_target, patch->new_filename,
-                              base_dir, strip_count, result_pool,
-                              scratch_pool));
-  if (! new_target->skipped)
-    {
-      const svn_wc_entry_t *entry;
-
-      /* If the target is versioned, we should be able to get an entry. */
-      SVN_ERR(svn_wc__maybe_get_entry(&entry, ctx->wc_ctx,
-                                      new_target->abs_path,
-                                      svn_node_unknown,
-                                      TRUE, FALSE,
-                                      result_pool,
-                                      scratch_pool));
-
-      if (entry && entry->schedule == svn_wc_schedule_delete)
-        {
-          /* The target is versioned and scheduled for deletion, so skip it. */
-          new_target->skipped = TRUE;
-        }
-    }
+                              base_dir, strip_count, ctx->wc_ctx,
+                              result_pool, scratch_pool));
 
   if (new_target->kind == svn_node_file && ! new_target->skipped)
     {
