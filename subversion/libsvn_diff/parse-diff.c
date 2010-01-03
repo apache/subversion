@@ -249,8 +249,8 @@ parse_next_hunk(svn_hunk_t **hunk,
 
       /* Remember the current line's offset, and read the line. */
       last_line = pos;
-      SVN_ERR(svn_stream_readline(stream, &line, patch->eol_str, &eof,
-                                  iterpool));
+      SVN_ERR(svn_stream_readline_detect_eol(stream, &line, NULL, &eof,
+                                             iterpool));
 
       /* Lines starting with a backslash are comments, such as
        * "\ No newline at end of file". */
@@ -385,7 +385,6 @@ close_hunk(svn_hunk_t *hunk)
 svn_error_t *
 svn_diff__parse_next_patch(svn_patch_t **patch,
                            apr_file_t *patch_file,
-                           const char *eol_str,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
@@ -411,7 +410,6 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
   /* Record what we already know about the patch. */
   *patch = apr_pcalloc(result_pool, sizeof(**patch));
   (*patch)->patch_file = patch_file;
-  (*patch)->eol_str = eol_str;
   (*patch)->path = fname;
 
   /* Get a stream to read lines from the patch file.
@@ -429,7 +427,8 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
       svn_pool_clear(iterpool);
 
       /* Read a line from the stream. */
-      SVN_ERR(svn_stream_readline(stream, &line, eol_str, &eof, iterpool));
+      SVN_ERR(svn_stream_readline_detect_eol(stream, &line, NULL, &eof,
+                                             iterpool));
 
       /* See if we have a diff header. */
       if (line->len > strlen(indicator) && starts_with(line->data, indicator))

@@ -445,8 +445,8 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
     {
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_stream_readline(hunk->original_text, &hunk_line,
-                                  target->patch->eol_str, &hunk_eof, iterpool));
+      SVN_ERR(svn_stream_readline_detect_eol(hunk->original_text, &hunk_line,
+                                             NULL, &hunk_eof, iterpool));
       SVN_ERR(svn_stream_readline(target->stream, &target_line, target->eol_str,
                                   &target->eof, iterpool));
       if (! hunk_eof && hunk_line->len > 0)
@@ -697,12 +697,10 @@ skip_lines_from_target(patch_target_t *target, svn_linenum_t nlines,
 /* Copy HUNK_TEXT into TARGET, line by line, such that the line filter
  * and transformation callbacks set on HUNK_TEXT by the diff parsing
  * code in libsvn_diff will trigger. ABSPATH is the absolute path to the
- * file underlying TARGET. Use EOL_STR as EOL indicator when
- * reading from HUNK_TEXT and when writing to TARGET. */
+ * file underlying TARGET. */
 static svn_error_t *
 copy_hunk_text(svn_stream_t *hunk_text, svn_stream_t *target,
-               const char *abspath, const char *eol_str,
-               apr_pool_t *scratch_pool)
+               const char *abspath, apr_pool_t *scratch_pool)
 {
   svn_boolean_t eof;
   apr_pool_t *iterpool;
@@ -711,18 +709,20 @@ copy_hunk_text(svn_stream_t *hunk_text, svn_stream_t *target,
   do
     {
       svn_stringbuf_t *line;
+      const char *eol_str;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_stream_readline(hunk_text, &line, eol_str, &eof, iterpool));
+      SVN_ERR(svn_stream_readline_detect_eol(hunk_text, &line, &eol_str,
+                                             &eof, iterpool));
       if (! eof)
         {
           if (line->len >= 1)
             SVN_ERR(try_stream_write(target, abspath, line->data, line->len,
                                      iterpool));
-          /* Add newline. */
-          SVN_ERR(try_stream_write(target, abspath, eol_str, strlen(eol_str),
-                                   iterpool));
+          if (eol_str)
+            SVN_ERR(try_stream_write(target, abspath, eol_str, strlen(eol_str),
+                                     iterpool));
         }
     }
   while (! eof);
@@ -746,8 +746,7 @@ reject_hunk(patch_target_t *target, const svn_hunk_t *hunk, apr_pool_t *pool)
   SVN_ERR(svn_stream_write(target->reject, hunk_header, &len));
 
   SVN_ERR(copy_hunk_text(hunk->diff_text, target->reject,
-                         target->reject_path,
-                         target->patch->eol_str, pool));
+                         target->reject_path, pool));
 
   target->had_rejects = TRUE;
   return SVN_NO_ERROR;
@@ -796,7 +795,7 @@ apply_one_hunk(const svn_hunk_t *hunk, patch_target_t *target, apr_pool_t *pool)
 
   /* Copy the patched hunk text into the patched stream. */
   SVN_ERR(copy_hunk_text(hunk->modified_text, target->patched,
-                         target->patched_path, target->patch->eol_str, pool));
+                         target->patched_path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1058,8 +1057,8 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, patch_eol_str,
-                                         iterpool, iterpool));
+      SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, iterpool,
+                                         iterpool));
       if (patch)
         {
           SVN_ERR(apply_one_patch(patch, wc_path, dry_run, ctx, strip_count,
