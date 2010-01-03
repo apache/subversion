@@ -252,11 +252,6 @@ parse_next_hunk(svn_hunk_t **hunk,
       SVN_ERR(svn_stream_readline_detect_eol(stream, &line, NULL, &eof,
                                              iterpool));
 
-      /* Lines starting with a backslash are comments, such as
-       * "\ No newline at end of file". */
-      if (line->data[0] == '\\')
-        continue;
-
       if (! eof)
         {
           /* Update line offset for next iteration.
@@ -264,6 +259,11 @@ parse_next_hunk(svn_hunk_t **hunk,
           pos = 0;
           SVN_ERR(svn_io_file_seek(patch->patch_file, APR_CUR, &pos, iterpool));
         }
+
+      /* Lines starting with a backslash are comments, such as
+       * "\ No newline at end of file". */
+      if (line->data[0] == '\\')
+        continue;
 
       if (in_hunk)
         {
