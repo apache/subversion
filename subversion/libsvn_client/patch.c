@@ -449,7 +449,7 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
                                              NULL, &hunk_eof, iterpool));
       SVN_ERR(svn_stream_readline(target->stream, &target_line, target->eol_str,
                                   &target->eof, iterpool));
-      if (! hunk_eof && hunk_line->len > 0)
+      if (! hunk_eof)
         {
           lines_matched = (hunk_line->len == target_line->len &&
                            ! strcmp(hunk_line->data, target_line->data));
