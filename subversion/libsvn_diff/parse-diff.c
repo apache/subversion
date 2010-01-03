@@ -238,7 +238,7 @@ parse_next_hunk(svn_hunk_t **hunk,
 
   /* Get current seek position -- APR has no ftell() :( */
   pos = 0;
-  apr_file_seek(patch->patch_file, APR_CUR, &pos);
+  SVN_ERR(svn_io_file_seek(patch->patch_file, APR_CUR, &pos, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
   do
@@ -262,7 +262,7 @@ parse_next_hunk(svn_hunk_t **hunk,
           /* Update line offset for next iteration.
            * APR has no ftell() :( */
           pos = 0;
-          apr_file_seek(patch->patch_file, APR_CUR, &pos);
+          SVN_ERR(svn_io_file_seek(patch->patch_file, APR_CUR, &pos, iterpool));
         }
 
       if (in_hunk)
@@ -324,7 +324,8 @@ parse_next_hunk(svn_hunk_t **hunk,
     /* Rewind to the start of the line just read, so subsequent calls
      * to this function or svn_diff__parse_next_patch() don't end
      * up skipping the line -- it may contain a patch or hunk header. */
-    apr_file_seek(patch->patch_file, APR_SET, &last_line);
+    SVN_ERR(svn_io_file_seek(patch->patch_file, APR_SET, &last_line,
+                             scratch_pool));
 
   if (hunk_seen && start < end)
     {
@@ -393,7 +394,6 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
   const char *indicator;
   const char *fname;
   svn_stream_t *stream;
-  apr_off_t pos;
   svn_boolean_t eof, in_header;
   svn_hunk_t *hunk;
   apr_pool_t *iterpool;
@@ -407,10 +407,6 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
 
   /* Get the patch's filename. */
   SVN_ERR(svn_io_file_name_get(&fname, patch_file, result_pool));
-
-  /* Get current seek position -- APR has no ftell() :( */
-  pos = 0;
-  apr_file_seek(patch_file, APR_CUR, &pos);
 
   /* Record what we already know about the patch. */
   *patch = apr_pcalloc(result_pool, sizeof(**patch));
