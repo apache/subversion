@@ -464,7 +464,107 @@ test_stream_tee(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_stream_mark_file(apr_pool_t *pool)
+{
+  static const char *file_data[2] = {"One", "Two"};
+  svn_stream_t *stream;
+  svn_stringbuf_t *line;
+  svn_boolean_t eof;
+  apr_file_t *f;
+  static const char *fname = "test_stream_mark.txt";
+  int j;
+  apr_status_t status;
+  static const char *NL = APR_EOL_STR;
 
+  status = apr_file_open(&f, fname, (APR_READ | APR_WRITE | APR_CREATE |
+                         APR_TRUNCATE | APR_DELONCLOSE), APR_OS_DEFAULT, pool);
+  if (status != APR_SUCCESS)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, "Cannot open '%s'",
+                             fname);
+
+  /* Create the file. */
+  for (j = 0; j < 2; j++)
+    {
+      apr_size_t len;
+
+      len = strlen(file_data[j]);
+      status = apr_file_write(f, file_data[j], &len);
+      if (status || len != strlen(file_data[j]))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Cannot write to '%s'", fname);
+      len = strlen(NL);
+      status = apr_file_write(f, NL, &len);
+      if (status || len != strlen(NL))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Cannot write to '%s'", fname);
+    }
+
+  /* Create a stream to read from the file. */
+  stream = svn_stream_from_aprfile2(f, FALSE, pool);
+  SVN_ERR(svn_stream_reset(stream));
+  SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
+  SVN_ERR_ASSERT(! eof && strcmp(line->data, file_data[0]) == 0);
+  /* Set a mark at the beginning of the second line of the file. */
+  SVN_ERR(svn_stream_mark(stream, TRUE));
+  /* Read the second line and then reset the stream. */
+  SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
+  SVN_ERR_ASSERT(! eof && strcmp(line->data, file_data[1]) == 0);
+  SVN_ERR(svn_stream_reset(stream));
+  /* The next read should return the second line again. */
+  SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
+  SVN_ERR_ASSERT(! eof && strcmp(line->data, file_data[1]) == 0);
+  /* Clear the mark. */
+  SVN_ERR(svn_stream_mark(stream, FALSE));
+  /* The next read should return EOF. */
+  SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
+  SVN_ERR_ASSERT(eof);
+  /* Reset the stream. */
+  SVN_ERR(svn_stream_reset(stream));
+  /* The next read should return the first line again. */
+  SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
+  SVN_ERR_ASSERT(! eof && strcmp(line->data, file_data[0]) == 0);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_mark_stringbuf(apr_pool_t *pool)
+{
+  svn_stream_t *stream;
+  svn_stringbuf_t *stringbuf;
+  char buf[4];
+  apr_size_t len;
+
+  stringbuf = svn_stringbuf_create("OneTwo", pool);
+  stream = svn_stream_from_stringbuf(stringbuf, pool);
+  len = 3;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  buf[3] = '\0';
+  SVN_ERR_ASSERT(strcmp(buf, "One") == 0);
+  SVN_ERR(svn_stream_mark(stream, TRUE));
+  len = 3;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  buf[3] = '\0';
+  SVN_ERR_ASSERT(strcmp(buf, "Two") == 0);
+  SVN_ERR(svn_stream_reset(stream));
+  len = 3;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  buf[3] = '\0';
+  SVN_ERR_ASSERT(strcmp(buf, "Two") == 0);
+  SVN_ERR(svn_stream_mark(stream, FALSE));
+  SVN_ERR(svn_stream_reset(stream));
+  len = 3;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  buf[3] = '\0';
+  SVN_ERR_ASSERT(strcmp(buf, "One") == 0);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
 
 
 /* The test table.  */
@@ -486,5 +586,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test stream line filtering and transforming"),
     SVN_TEST_PASS2(test_stream_tee,
                    "test 'tee' streams"),
+    SVN_TEST_PASS2(test_stream_mark_file,
+                   "test stream marking for files"),
+    SVN_TEST_PASS2(test_stream_mark_stringbuf,
+                   "test stream marking for stringbufs"),
     SVN_TEST_NULL
   };

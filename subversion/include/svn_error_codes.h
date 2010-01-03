@@ -293,6 +293,11 @@ SVN_ERROR_START
              SVN_ERR_STREAM_CATEGORY_START + 3,
              "Stream doesn't support resetting")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_STREAM_MARK_NOT_SUPPORTED,
+             SVN_ERR_STREAM_CATEGORY_START + 4,
+             "Stream doesn't support marking")
+
   /* node errors */
 
   SVN_ERRDEF(SVN_ERR_NODE_UNKNOWN_KIND,
