@@ -22,6 +22,7 @@
  */
 
 #include <limits.h>  /* for ULONG_MAX */
+#include <stdlib.h>
 #include <string.h>
 
 #include "svn_types.h"
@@ -370,6 +371,21 @@ parse_next_hunk(svn_hunk_t **hunk,
   return SVN_NO_ERROR;
 }
 
+/* Compare function for sorting hunks after parsing.
+ * We sort hunks by their original line offset. */
+static int
+compare_hunks(const void *a, const void *b)
+{
+  const svn_hunk_t *ha = *((const svn_hunk_t **)a);
+  const svn_hunk_t *hb = *((const svn_hunk_t **)b);
+
+  if (ha->original_start < hb->original_start)
+    return -1;
+  if (ha->original_start > hb->original_start)
+    return 1;
+  return 0;
+}
+
 /*
  * Ensure that all streams which were opened for HUNK are closed.
  */
@@ -495,6 +511,16 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
 
   svn_pool_destroy(iterpool);
   SVN_ERR(svn_stream_close(stream));
+
+  if (*patch)
+    {
+      /* Usually, hunks appear in the patch sorted by their original line
+       * offset. But just in case they weren't parsed in this order for
+       * some reason, we sort them so that our caller can assume that hunks
+       * are sorted as if parsed from a usual patch. */
+      qsort((*patch)->hunks->elts, (*patch)->hunks->nelts,
+            (*patch)->hunks->elt_size, compare_hunks);
+    }
 
   return SVN_NO_ERROR;
 }
