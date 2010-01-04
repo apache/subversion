@@ -467,13 +467,21 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
         }
     }
   while (lines_matched && ! (hunk_eof || target->eof));
-  svn_pool_destroy(iterpool);
 
-  /* Determine whether we had a match. */
   if (hunk_eof)
     *matched = lines_matched;
   else if (target->eof)
-    *matched = FALSE;
+    {
+      /* If the target has no newline at end-of-file, we get an EOF
+       * indication for the target earlier than we do get it for the hunk. */
+      SVN_ERR(svn_stream_readline_detect_eol(hunk->original_text, &hunk_line,
+                                             NULL, &hunk_eof, iterpool));
+      if (hunk_line->len == 0 && hunk_eof)
+        *matched = lines_matched;
+      else
+        *matched = FALSE;
+    }
+  svn_pool_destroy(iterpool);
 
   SVN_ERR(svn_stream_reset(hunk->original_text));
   SVN_ERR(svn_io_file_seek(target->file, APR_SET, &pos, pool));
