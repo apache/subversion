@@ -716,6 +716,13 @@ def inappropriate_props(sbox):
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/trunk:', path)
 
+  # ...contain non-inheritable ranges when the target is a file.
+  svntest.actions.run_and_verify_svn('empty ranges', None,
+                                     "svn: Cannot set non-inheritable "
+                                     "mergeinfo on a non-directory*",
+                                     'propset', SVN_PROP_MERGEINFO,
+                                     '/A/D/H/psi:1*', iota_path)
+
 #----------------------------------------------------------------------
 
 # Issue #976.  When copying a file, do not determine svn:executable
