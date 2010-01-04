@@ -151,6 +151,14 @@ Candidate changes:
    Votes:
      +1: stylesen
 
+ * r895653
+   Update test expectations in the swig-py tests to take the recent mergeinfo
+   canonicalization changes into account.
+   Justification:
+     Passing tests are Good.
+   Votes:
+     +1: hwright
+
 Veto-blocked changes:
 
  * r877552, r877617, r877618, r877619, r877621
