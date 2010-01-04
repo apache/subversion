@@ -170,19 +170,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r879093
-   Fix bug where svn_[rangelist|mergeinfo]_[merge|intersect|remove|diff]
-   APIs can modify their *non*-output arguments.
-   Justification:
-     No reports of this causing any problems that I know of, which is
-     probably due to the fact that users of an API like svn_mergeinfo_merge
-     typically only care about the output arguments.  The new C tests added
-     to mergeinfo-test.c clearly demonstrate the bug.
-   Branch:
-     Resolves a minor conflict in libsvn_client/merge.c where the code
-     changed was refactored on trunk.
-     ^/subversion/branches/1.6.x-r39019
-     The relevant commit on the branch is r879175.
-   Votes:
-     +1: pburba, julianfoad, rhuijben

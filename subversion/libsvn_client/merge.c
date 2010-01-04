@@ -3381,11 +3381,26 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
   if (is_subtree)
     {
       apr_array_header_t *deleted_rangelist, *added_rangelist;
+      svn_boolean_t is_rollback = revision2 < revision1;
+
+      /* If this is a reverse merge reorder CHILD->REMAINING_RANGES
+         so it will work with the svn_rangelist_diff API. */
+      if (is_rollback)
+        {
+          SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, pool));
+          SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges, pool));
+        }
 
       SVN_ERR(svn_rangelist_diff(&deleted_rangelist, &added_rangelist,
                                  child->remaining_ranges,
                                  parent->remaining_ranges,
                                  TRUE, pool));
+
+      if (is_rollback)
+        {
+          SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, pool));
+          SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges, pool));
+        }
 
       /* If CHILD is the merge target we then know that primary_url,
          REVISION1, and REVISION2 are provided by normalize_merge_sources()
