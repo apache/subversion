@@ -1059,6 +1059,8 @@ svn_stream_reset(svn_stream_t *stream);
  * the stream. If @a set is FALSE, the mark is cleared.
  * This function returns the #SVN_ERR_STREAM_MARK_NOT_SUPPORTED error
  * when the stream doesn't implement marking.
+ * The error #SVN_ERR_STREAM_MARK_ALREADY_SET is returned if there was
+ * an attempt to set a mark without clearing an existing mark beforehand.
  *
  * @see svn_stream_reset()
  * @since New in 1.7.

@@ -716,6 +716,8 @@ mark_handler_apr(void *baton, svn_boolean_t set)
 
   if (set)
     {
+      if (btn->mark != -1)
+        return svn_error_create(SVN_ERR_STREAM_MARK_ALREADY_SET, NULL, NULL);
       btn->mark = 0;
       SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &btn->mark, btn->pool));
     }
@@ -1382,7 +1384,11 @@ mark_handler_stringbuf(void *baton, svn_boolean_t set)
 {
   struct stringbuf_stream_baton *btn = baton;
   if (set)
-    btn->mark = btn->amt_read;
+    {
+      if (btn->mark != (apr_size_t)-1)
+        return svn_error_create(SVN_ERR_STREAM_MARK_ALREADY_SET, NULL, NULL);
+      btn->mark = btn->amt_read;
+    }
   else
     btn->mark = (apr_size_t)-1;
   return SVN_NO_ERROR;
