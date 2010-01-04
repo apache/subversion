@@ -702,12 +702,29 @@ typedef svn_error_t *(*svn_close_fn_t)(void *baton);
  */
 typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
 
+/* An opaque type which represents a mark on a stream.
+ *
+ * @see svn_stream_mark().
+ * @since New in 1.7.
+ */
+typedef struct svn_stream_mark_t svn_stream_mark_t;
+
 /** Mark handler function for a generic stream. @see svn_stream_t and
  * svn_stream_mark().
  *
  * @since New in 1.7.
  */
-typedef svn_error_t *(*svn_io_mark_fn_t)(void *baton, svn_boolean_t set);
+typedef svn_error_t *(*svn_io_mark_fn_t)(void *baton,
+                                         svn_stream_mark_t **mark,
+                                         apr_pool_t *pool);
+
+/** Seek handler function for a generic stream. @see svn_stream_t and
+ * svn_stream_seek().
+ *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_io_seek_fn_t)(void *baton,
+                                         svn_stream_mark_t *mark);
 
 /** Line-filtering callback function for a generic stream.
  * @a baton is the stream's baton.
@@ -784,6 +801,14 @@ svn_stream_set_reset(svn_stream_t *stream,
 void
 svn_stream_set_mark(svn_stream_t *stream,
                     svn_io_mark_fn_t mark_fn);
+
+/** Set @a stream's seek function to @a seek_fn 
+ *
+ * @since New in 1.7.
+ */
+void
+svn_stream_set_seek(svn_stream_t *stream,
+                    svn_io_seek_fn_t seek_fn);
 
 /** Set @a stream's line-filtering callback function to @a line_filter_cb
  *
@@ -1046,27 +1071,35 @@ svn_stream_close(svn_stream_t *stream);
  * #SVN_ERR_STREAM_RESET_NOT_SUPPORTED error when the stream doesn't
  * implement resetting.
  *
- * If a mark has been set on the stream, the stream is reset to
- * the mark instead of its origin. @see svn_stream_mark()
- *
  * @since New in 1.7.
  */
 svn_error_t *
 svn_stream_reset(svn_stream_t *stream);
 
-/** Set or clear the mark on a generic stream according to @a set.
- * If @a set is TRUE, the mark is set at the current position in
- * the stream. If @a set is FALSE, the mark is cleared.
- * This function returns the #SVN_ERR_STREAM_MARK_NOT_SUPPORTED error
- * when the stream doesn't implement marking.
- * The error #SVN_ERR_STREAM_MARK_ALREADY_SET is returned if there was
- * an attempt to set a mark without clearing an existing mark beforehand.
+/** Set a @a mark at the current position of a generic @a stream,
+ * which can later be sought back to using svn_stream_seek().
+ * The @a mark is allocated in @a pool.
  *
- * @see svn_stream_reset()
+ * This function returns the #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error
+ * if the stream doesn't implement seeking.
+ *
+ * @see svn_stream_seek()
  * @since New in 1.7.
  */
 svn_error_t *
-svn_stream_mark(svn_stream_t *stream, svn_boolean_t set);
+svn_stream_mark(svn_stream_t *stream,
+                svn_stream_mark_t **mark,
+                apr_pool_t *pool);
+
+/* Seek to a @a mark in a generic @a stream.
+ * This function returns the #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error
+ * if the stream doesn't implement seeking.
+ *
+ * @see svn_stream_mark()
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_stream_seek(svn_stream_t *stream, svn_stream_mark_t *mark);
 
 /** Return a writable stream which, when written to, writes to both of the
  * underlying streams.  Both of these streams will be closed upon closure of
