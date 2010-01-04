@@ -186,13 +186,3 @@ Approved changes:
      The relevant commit on the branch is r879175.
    Votes:
      +1: pburba, julianfoad, rhuijben
-
-
- * r895653
-   Update test expectations in the swig-py tests to take the recent mergeinfo
-   canonicalization changes into account.
-   Justification:
-     Passing tests are Good.
-   Votes:
-     +1: hwright, rhuijben
-     +1: stsp (via irc)
