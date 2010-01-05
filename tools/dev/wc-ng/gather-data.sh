@@ -1,3 +1,4 @@
+#/usr/bin/env sh
 #
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -18,7 +19,6 @@
 # under the License.
 #
 #
-#/usr/bin/env sh
 # Trap Ctrl-C
 trap 'exit 1' 2
 

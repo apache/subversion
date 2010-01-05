@@ -827,11 +827,14 @@ svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
    ### install the sucker into the pristine datastore for the given checksum.
    ### This is used for files where we don't know the checksum ahead of
    ### time, so we drop it into a temp area first, computing the checksum
-   ### as we write it there. */
+   ### as we write it there.
+   
+   ### the md5_checksum parameter is temporary. */
 svn_error_t *
 svn_wc__db_pristine_install(svn_wc__db_t *db,
                             const char *tempfile_abspath,
-                            const svn_checksum_t *checksum,
+                            const svn_checksum_t *sha1_checksum,
+                            const svn_checksum_t *md5_checksum,
                             apr_pool_t *scratch_pool);
 
 

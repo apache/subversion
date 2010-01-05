@@ -42,7 +42,7 @@ svn_repos__obliterate_path_rev(svn_repos_t *repos,
                                apr_pool_t *pool)
 {
   svn_fs_t *fs = svn_repos_fs(repos);
-  svn_fs_root_t *rev_root;
+  svn_fs_root_t *rev_root, *txn_root;
   svn_fs_txn_t *txn;
   const svn_fs_id_t *node_id;
 
@@ -62,9 +62,10 @@ svn_repos__obliterate_path_rev(svn_repos_t *repos,
 
   /* Begin a new transaction, based on the revision we want to modify. */
   SVN_ERR(svn_fs__begin_obliteration_txn(&txn, fs, revision, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
   /* Make the required changes in this txn */
-  /* ... */
+  SVN_ERR(svn_fs_delete(txn_root, path, pool));
 
   /* Commit the new transaction in place of the old revision */
   SVN_ERR(svn_fs__commit_obliteration_txn(revision, txn, pool));

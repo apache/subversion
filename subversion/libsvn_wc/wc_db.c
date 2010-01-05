@@ -2334,7 +2334,8 @@ svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
 svn_error_t *
 svn_wc__db_pristine_install(svn_wc__db_t *db,
                             const char *tempfile_abspath,
-                            const svn_checksum_t *checksum,
+                            const svn_checksum_t *sha1_checksum,
+                            const svn_checksum_t *md5_checksum,
                             apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -2345,7 +2346,8 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
   svn_sqlite__stmt_t *stmt;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(tempfile_abspath));
-  SVN_ERR_ASSERT(checksum != NULL);
+  SVN_ERR_ASSERT(sha1_checksum != NULL);
+  SVN_ERR_ASSERT(md5_checksum != NULL);
 
   VERIFY_CHECKSUM_KIND(checksum);
 
@@ -2362,7 +2364,7 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, checksum,
+  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, sha1_checksum,
                              TRUE /* create_subdir */,
                              scratch_pool, scratch_pool));
 
@@ -2375,8 +2377,9 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_INSERT_PRISTINE));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, checksum, scratch_pool));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 2, finfo.size));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
   return SVN_NO_ERROR;
@@ -3082,23 +3085,18 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
   if (flush_entry_cache)
     flush_entries(pdh);
 
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_DEPTH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
-  /* ### setting depth exclude on a wcroot breaks svn_wc_crop() */
-  if (strcmp(current_relpath, "") != 0 || depth != svn_depth_exclude)
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_DEPTH));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_WORKING_DEPTH));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_WORKING_DEPTH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* Check if we should also set depth in the parent db */
-  if (strcmp(current_relpath, "") == 0)
+  if (flush_entry_cache && strcmp(current_relpath, "") == 0)
     {
       svn_error_t *err;
 
@@ -3114,26 +3112,7 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
       else
         SVN_ERR(err);
 
-      if (flush_entry_cache)
-        flush_entries(pdh);
-
-      depth = (depth == svn_depth_exclude) ? svn_depth_exclude
-                                           : svn_depth_infinity;
-
-      VERIFY_USABLE_PDH(pdh);
-      wcroot = pdh->wcroot;
-      sdb = wcroot->sdb;
-      current_relpath = svn_dirent_basename(local_abspath, NULL);
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_DEPTH));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_WORKING_DEPTH));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
-      SVN_ERR(svn_sqlite__step_done(stmt));
+      flush_entries(pdh);
     }
 
   return SVN_NO_ERROR;
@@ -5583,12 +5562,28 @@ svn_wc__db_wclock_set(svn_wc__db_t *db,
                       int levels_to_lock,
                       apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_error_t *err;
 
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_INSERT_WC_LOCK, scratch_pool));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, levels_to_lock));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  /* ### Can only lock this directory in the per-dir layout.  This is
+     ### a temporary restriction until metadata gets centralised.
+     ### Perhaps this should be a runtime error, rather than an
+     ### assert?  Perhaps check the path is versioned? */
+  SVN_ERR_ASSERT(*local_relpath == '\0');
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_INSERT_WC_LOCK));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi", pdh->wcroot->wc_id, local_relpath,
+                            levels_to_lock));
   err = svn_sqlite__insert(NULL, stmt);
   if (err)
     return svn_error_createf(SVN_ERR_WC_LOCKED, err,

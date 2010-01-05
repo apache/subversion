@@ -238,6 +238,8 @@ EOC
          ["apr-util", build_type],
          ["apr-iconv", build_type],
          ["berkeley-db", "bin"],
+         ["libintl", "bin"],
+         ["sasl", "lib"],
         ].each do |lib, sub_dir|
           lib_dir = Pathname.new(gen_make_opts["--with-#{lib}"])
           dll_dir = lib_dir + sub_dir

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -18,8 +19,6 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-#
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) 2003, 2004, 2005 Edgewall Software
 # Copyright (C) 2003, 2004, 2005 Jonas Borgström <jonas@edgewall.com>

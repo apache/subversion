@@ -303,9 +303,15 @@ load_config(svn_ra_serf__session_t *session,
   else
     session->using_proxy = FALSE;
 
-  /* Load the list of support authn types. */
-   SVN_ERR(load_http_auth_types(pool, config, server_group,
-           &session->authn_types));
+  /* Setup authentication. */
+  SVN_ERR(load_http_auth_types(pool, config, server_group,
+                               &session->authn_types));
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+  /* TODO: convert string authn types to SERF_AUTHN bitmask.
+     serf_config_authn_types(session->context, session->authn_types);*/
+  serf_config_credentials_callback(session->context,
+                                   svn_ra_serf__credentials_callback);
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -360,14 +366,12 @@ svn_ra_serf__open(svn_ra_session_t *session,
      older, for root paths url.path will be "", where serf requires "/". */
   if (url.path == NULL || url.path[0] == '\0')
     url.path = apr_pstrdup(serf_sess->pool, "/");
-
-  serf_sess->repos_url = url;
-  serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
-
   if (!url.port)
     {
       url.port = apr_uri_port_of_scheme(url.scheme);
     }
+  serf_sess->repos_url = url;
+  serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
   serf_sess->using_ssl = (svn_cstring_casecmp(url.scheme, "https") == 0);
 
   serf_sess->capabilities = apr_hash_make(serf_sess->pool);
@@ -430,11 +434,15 @@ svn_ra_serf__open(svn_ra_session_t *session,
     serf_sess->conns[0]->useragent = USER_AGENT;
 
   /* go ahead and tell serf about the connection. */
-  serf_sess->conns[0]->conn =
-      serf_connection_create(serf_sess->context, serf_sess->conns[0]->address,
-                             svn_ra_serf__conn_setup, serf_sess->conns[0],
-                             svn_ra_serf__conn_closed, serf_sess->conns[0],
-                             serf_sess->pool);
+  status =
+    serf_connection_create2(&serf_sess->conns[0]->conn,
+                            serf_sess->context,
+                            url,
+                            svn_ra_serf__conn_setup, serf_sess->conns[0],
+                            svn_ra_serf__conn_closed, serf_sess->conns[0],
+                            serf_sess->pool);
+  if (status)
+    return svn_error_wrap_apr(status, NULL);
 
   /* Set the progress callback. */
   serf_context_set_progress_cb(serf_sess->context, svn_ra_serf__progress,

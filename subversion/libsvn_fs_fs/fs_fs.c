@@ -34,6 +34,7 @@
 #include <apr_lib.h>
 #include <apr_md5.h>
 #include <apr_sha1.h>
+#include <apr_strings.h>
 #include <apr_thread_mutex.h>
 
 #include "svn_pools.h"
@@ -457,8 +458,7 @@ get_shared_txn(svn_fs_t *fs, const char *txn_id, svn_boolean_t create_new)
     }
 
   assert(strlen(txn_id) < sizeof(txn->txn_id));
-  strncpy(txn->txn_id, txn_id, sizeof(txn->txn_id) - 1);
-  txn->txn_id[sizeof(txn->txn_id) - 1] = '\0';
+  apr_cpystrn(txn->txn_id, txn_id, sizeof(txn->txn_id));
   txn->being_written = FALSE;
 
   /* Link this transaction into the head of the list.  We will typically
@@ -6641,14 +6641,12 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
       if (svn_fs_fs__key_compare(node_id, max_node_id) > 0)
         {
           assert(strlen(node_id) < MAX_KEY_SIZE);
-          strncpy(max_node_id, node_id, MAX_KEY_SIZE - 1);
-          max_node_id[MAX_KEY_SIZE - 1] = '\0';
+          apr_cpystrn(max_node_id, node_id, MAX_KEY_SIZE);
         }
       if (svn_fs_fs__key_compare(copy_id, max_copy_id) > 0)
         {
           assert(strlen(copy_id) < MAX_KEY_SIZE);
-          strncpy(max_copy_id, copy_id, MAX_KEY_SIZE - 1);
-          max_copy_id[MAX_KEY_SIZE - 1] = '\0';
+          apr_cpystrn(max_copy_id, copy_id, MAX_KEY_SIZE);
         }
 
       if (kind == svn_node_file)

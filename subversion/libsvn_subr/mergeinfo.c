@@ -655,8 +655,8 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
      leading slash, e.g. "trunk:4033\n/trunk:4039-4995".  In the event
      we encounter this we merge the rangelists together under a single
      absolute path key. */
-  if (existing_rangelist = apr_hash_get(hash, pathname->data,
-                                        APR_HASH_KEY_STRING))
+  existing_rangelist = apr_hash_get(hash, pathname->data, APR_HASH_KEY_STRING);
+  if (existing_rangelist)
     svn_rangelist_merge(&rangelist, existing_rangelist, pool);
 
   apr_hash_set(hash, pathname->data, APR_HASH_KEY_STRING, rangelist);

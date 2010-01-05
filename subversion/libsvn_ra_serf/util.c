@@ -504,8 +504,9 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 {
   serf_bucket_t *hdrs_bkt;
 
-  *req_bkt = serf_bucket_request_create(method, url, body_bkt,
-                                        serf_request_get_alloc(request));
+  *req_bkt =
+    serf_request_bucket_request_create(request, method, url, body_bkt,
+                                       serf_request_get_alloc(request));
 
   hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
   serf_bucket_headers_setn(hdrs_bkt, "Host", conn->hostinfo);
@@ -552,15 +553,6 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
         }
     }
 #endif
-
-  /* Set up Proxy settings */
-  if (conn->session->using_proxy)
-    {
-      char *root = apr_uri_unparse(conn->session->pool,
-                                   &conn->session->repos_url,
-                                   APR_URI_UNP_OMITPATHINFO);
-      serf_bucket_request_set_root(*req_bkt, root);
-    }
 
   if (ret_hdrs_bkt)
     {
@@ -1177,6 +1169,85 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
                                                    &server_err, pool));
 
   return server_err.error;
+}
+
+apr_status_t
+svn_ra_serf__credentials_callback(char **username, char **password,
+                                  serf_request_t *request, void *baton,
+                                  int code, const char *authn_type,
+                                  const char *realm,
+                                  apr_pool_t *pool)
+{
+  svn_ra_serf__handler_t *ctx = baton;
+  svn_ra_serf__session_t *session = ctx->session;
+  void *creds;
+  svn_auth_cred_simple_t *simple_creds;
+  svn_error_t *err;
+
+  if (code == 401)
+    {
+      /* Use svn_auth_first_credentials if this is the first time we ask for
+         credentials during this session OR if the last time we asked
+         session->auth_state wasn't set (eg. if the credentials provider was
+         cancelled by the user). */
+      if (!session->auth_state)
+        {
+          err = svn_auth_first_credentials(&creds,
+                                           &session->auth_state,
+                                           SVN_AUTH_CRED_SIMPLE,
+                                           realm,
+                                           session->wc_callbacks->auth_baton,
+                                           session->pool);
+        }
+      else
+        {
+          err = svn_auth_next_credentials(&creds,
+                                          session->auth_state,
+                                          session->pool);
+        }
+
+      if (err)
+        {
+          ctx->session->pending_error = err;
+          return err->apr_err;
+        }
+
+      session->auth_attempts++;
+
+      if (!creds || session->auth_attempts > 4)
+        {
+          /* No more credentials. */
+          ctx->session->pending_error =
+            svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
+                             "No more credentials or we tried too many times.\n"
+                             "Authentication failed");
+          return SVN_ERR_AUTHN_FAILED;
+        }
+
+      simple_creds = creds;
+      *username = apr_pstrdup(pool, simple_creds->username);
+      *password = apr_pstrdup(pool, simple_creds->password);
+    }
+  else
+    {
+      *username = apr_pstrdup(pool, session->proxy_username);
+      *password = apr_pstrdup(pool, session->proxy_password);
+
+      session->proxy_auth_attempts++;
+
+      if (!session->proxy_username || session->proxy_auth_attempts > 4)
+        {
+          /* No more credentials. */
+          ctx->session->pending_error =
+            svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
+                             "Proxy authentication failed");
+          return SVN_ERR_AUTHN_FAILED;
+        }
+    }
+
+  ctx->conn->last_status_code = code;
+
+  return APR_SUCCESS;
 }
 
 /* Implements the serf_response_handler_t interface.  Wait for HTTP

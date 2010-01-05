@@ -556,6 +556,8 @@ add_parent_dirs(svn_client_ctx_t *ctx,
 
   parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
+  /* ### Do we need locks here?  Are locks being enforced? 1.6 used to
+         acquire and release locks. */
   SVN_ERR(add_parent_dirs(ctx, parent_abspath, scratch_pool));
   SVN_ERR(svn_wc_add4(ctx->wc_ctx, local_abspath, svn_depth_infinity,
                       NULL, SVN_INVALID_REVNUM,
@@ -595,27 +597,17 @@ svn_client_add4(const char *path,
   else
     parent_abspath = svn_dirent_dirname(local_abspath, pool);
 
-  SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, parent_abspath,
-                                     pool, pool));
-
   if (add_parents)
     {
       apr_pool_t *subpool;
 
       subpool = svn_pool_create(pool);
-      err = add_parent_dirs(ctx, parent_abspath, subpool);
-
-      /* We need to be sure we release our working copy locks if we bump
-         into a situation where we couldn't add the parents. */
-      if (err)
-        return svn_error_return(
-                    svn_error_compose_create(
-                      err,
-                      svn_wc__release_write_lock(ctx->wc_ctx, parent_abspath,
-                                                 pool)));
-
+      SVN_ERR(add_parent_dirs(ctx, parent_abspath, subpool));
       svn_pool_destroy(subpool);
     }
+
+  SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, parent_abspath,
+                                     pool, pool));
 
   err = add(local_abspath, depth, force, no_ignore, ctx, pool);
 

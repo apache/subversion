@@ -118,8 +118,6 @@ def dump_bdb(db_dump_name, repo_path, dump_dir):
                 'locks', 'lock-tokens', 'miscellaneous', 'uuids']:
     file.write(table + ":\n")
     for line in db_dump(db_dump_name, repo_path, table):
-      if line == " next-key\n":
-        break
       file.write(crude_bdb_parse(line))
     file.write("\n")
   file.close()
@@ -160,7 +158,6 @@ class SvnRepository:
     print "## SvnRepository::dump(rep_dir=" + self.repo_absdir + ")"
 
     """Run a BDB dump on the repository"""
-    #subprocess.call(["/home/julianfoad/bin/svn-dump-bdb", self.repo_absdir, ldir])
     if self.db_dump_name != 'none':
       dump_bdb(self.db_dump_name, self.repo_absdir, ldir)
 
