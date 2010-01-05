@@ -5245,9 +5245,10 @@ get_mergeinfo_walk_cb(const char *local_abspath,
       child->switched = switched;
       child->absent = absent;
       child->scheduled_for_deletion = deleted;
-      if (propval
-          && strstr(propval->data, SVN_MERGEINFO_NONINHERITABLE_STR))
-        child->has_noninheritable = TRUE;
+
+      if (propval)
+        SVN_ERR(svn_mergeinfo__string_has_noninheritable(
+          &(child->has_noninheritable), propval->data, scratch_pool));
 
       /* A little trickery: If PATH doesn't have any mergeinfo or has
          only inheritable mergeinfo, we still describe it as having
@@ -7069,25 +7070,21 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
     {
       const char *added_abspath = svn_apr_hash_index_key(hi);
       const char *dir_abspath;
-      const svn_string_t *added_path_parent_propval;
+      svn_mergeinfo_t parent_mergeinfo;
+      svn_boolean_t inherited;
 
       apr_pool_clear(iterpool);
       dir_abspath = svn_dirent_dirname(added_abspath, iterpool);
 
-      /* Rather than using svn_client__get_wc_mergeinfo() and analyzing the
-         mergeinfo it returns to determine if ADDED_PATH's parent has
-         non-inheritable mergeinfo, it is much simpler to just get the
-         svn_string_t representation of the svn:mergeinfo prop and look for
-         the '*' non-inheritable marker. */
-      SVN_ERR(svn_wc_prop_get2(&added_path_parent_propval,
-                               merge_b->ctx->wc_ctx, dir_abspath,
-                               SVN_PROP_MERGEINFO, iterpool, iterpool));
-      if (added_path_parent_propval
-          && strstr(added_path_parent_propval->data,
-                    SVN_MERGEINFO_NONINHERITABLE_STR))
+      /* Does ADDED_ABSPATH's immediate parent have non-inheritable
+         mergeinfo? */
+      SVN_ERR(svn_client__get_wc_mergeinfo(&parent_mergeinfo, &inherited,
+                                           svn_mergeinfo_explicit,
+                                           dir_abspath, NULL, NULL,
+                                           merge_b->ctx,
+                                           iterpool, iterpool));
+      if (svn_mergeinfo__is_noninheritable(parent_mergeinfo, iterpool))
         {
-          /* ADDED_PATH's immediate parent has non-inheritable
-             mergeinfo. */
           svn_client__merge_path_t *target_merge_path =
             APR_ARRAY_IDX(notify_b->children_with_mergeinfo, 0,
                           svn_client__merge_path_t *);

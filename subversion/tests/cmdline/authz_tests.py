@@ -39,6 +39,7 @@ Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
+Wimp = svntest.testcase.Wimp
 
 ######################################################################
 # Tests
@@ -866,54 +867,42 @@ def authz_access_required_at_repo_root(sbox):
   "authz issue #3242 - access required at repo root"
 
   sbox.build(create_wc = False)
+  root_url = sbox.repo_url
 
+  # Create a copy-level copy of A, just so we have something to work with.
+  svntest.main.run_svn(None, 'cp', '-m', 'logmsg',
+                       root_url + '/A',
+                       root_url + '/A-copy')
+
+  # Now we get all restrictive.
   write_authz_file(sbox, {'/': '* =',
                           '/A': 'jrandom = rw',
                           '/A-copy': 'jrandom = rw'})
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
-  root_url = sbox.repo_url
+  # Do some copies and moves where the common parents of the source(s)
+  # and destination(s) are unreadable.  All we currently hope to support
+  # is the case where the sources are individually (and recursively)
+  # readable, and the destination tree is writable.
 
-  # Do some copies and moves where the common parents of the single
-  # source and single destination is an unreadable root.
-
-  svntest.main.run_svn(None, 'cp', '-m', 'logmsg',
-                       root_url + '/A',
-                       root_url + '/A-copy')
-  svntest.main.run_svn(None, 'cp', '-m', 'logmsg',
+  svntest.main.run_svn(None, 'cp',
+                       '-m', 'copy in readable space',
                        root_url + '/A/B',
                        root_url + '/A/B-copy')
-  svntest.main.run_svn(None, 'mv', '-m', 'logmsg',
+  svntest.main.run_svn(None, 'cp',
+                       '-m', 'copy across disjoint readable spaces',
                        root_url + '/A/B',
                        root_url + '/A-copy/B-copy')
-  svntest.main.run_svn(None, 'mv', '-m', 'logmsg',
-                       root_url + '/A-copy/B-copy',
-                       root_url + '/A/B')
-  svntest.main.run_svn(None, 'rm', '-m', 'logmsg',
-                       root_url + '/A-copy',
-                       root_url + '/A/B-copy')
-
-  # Move the high-water-mark of readability down a level, and repeat.
-
-  write_authz_file(sbox, {'/': '* =',
-                          '/A/B': 'jrandom = rw',
-                          '/A/B-copy': 'jrandom = rw'})
-  
-  svntest.main.run_svn(None, 'cp', '-m', 'logmsg',
+  svntest.main.run_svn(None, 'cp',
+                       '-m', 'multi-copy across disjoint readable spaces',
                        root_url + '/A/B',
-                       root_url + '/A/B-copy')
-  svntest.main.run_svn(None, 'cp', '-m', 'logmsg',
-                       root_url + '/A/B/E',
-                       root_url + '/A/B/E-copy')
-  svntest.main.run_svn(None, 'mv', '-m', 'logmsg',
-                       root_url + '/A/B/E',
-                       root_url + '/A/B-copy/E-copy')
-  svntest.main.run_svn(None, 'mv', '-m', 'logmsg',
-                       root_url + '/A/B-copy/E-copy',
-                       root_url + '/A/B/E')
-  svntest.main.run_svn(None, 'rm', '-m', 'logmsg',
-                       root_url + '/A/B-copy',
-                       root_url + '/A/B/E-copy')
+                       root_url + '/A/mu',
+                       root_url + '/A-copy/C')
+  svntest.main.run_svn(None, 'cp',
+                       '-m', 'copy from disjoint readable spaces',
+                       root_url + '/A/B/E/alpha',
+                       root_url + '/A-copy/B/E/beta',
+                       root_url + '/A-copy/C')
 
 ########################################################################
 # Run the tests
@@ -938,7 +927,8 @@ test_list = [ None,
                                svntest.main.is_ra_type_svn)),
               XFail(Skip(authz_switch_to_directory,
                          svntest.main.is_ra_type_file)),
-              Skip(authz_access_required_at_repo_root,
+              Skip(XFail(authz_access_required_at_repo_root,
+                         svntest.main.is_ra_type_dav),
                    svntest.main.is_ra_type_file),
              ]
 

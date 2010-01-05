@@ -2003,3 +2003,49 @@ svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
     }
   return SVN_NO_ERROR;
 }
+
+svn_boolean_t
+svn_mergeinfo__is_noninheritable(svn_mergeinfo_t mergeinfo,
+                                 apr_pool_t *scratch_pool)
+{
+  if (mergeinfo)
+    {
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(scratch_pool, mergeinfo);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          apr_array_header_t *rangelist = svn_apr_hash_index_val(hi);
+          int i;
+
+          for (i = 0; i < rangelist->nelts; i++)
+            {
+              svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
+                                                       svn_merge_range_t *);
+              if (!range->inheritable)
+                return TRUE;
+            }
+        }
+    }
+  return FALSE;
+}
+
+svn_error_t *
+svn_mergeinfo__string_has_noninheritable(svn_boolean_t *is_noninheritable,
+                                         const char *mergeinfo_str,
+                                         apr_pool_t *scratch_pool)
+{
+  *is_noninheritable = FALSE;
+
+  if (mergeinfo_str)
+    {
+      svn_mergeinfo_t mergeinfo;
+
+      SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_str, scratch_pool));
+      *is_noninheritable = svn_mergeinfo__is_noninheritable(mergeinfo,
+                                                            scratch_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
