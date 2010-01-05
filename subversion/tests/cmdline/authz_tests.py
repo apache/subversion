@@ -866,29 +866,42 @@ def authz_access_required_at_repo_root(sbox):
   "authz issue #3242 - access required at repo root"
 
   sbox.build(create_wc = False)
+  root_url = sbox.repo_url
 
-  write_authz_file(sbox, {'/': '* =', '/A': 'jrandom = rw',
+  # Create a copy-level copy of A, just so we have something to work with.
+  svntest.main.run_svn(None, 'cp', '-m', 'logmsg',
+                       root_url + '/A',
+                       root_url + '/A-copy')
+
+  # Now we get all restrictive.
+  write_authz_file(sbox, {'/': '* =',
+                          '/A': 'jrandom = rw',
                           '/A-copy': 'jrandom = rw'})
-
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
-  root_url = sbox.repo_url
-  A_url = root_url + '/A'
-  A_copy_url = root_url + '/A-copy'
-  B_url = root_url + '/A/B'
-  B_copy_url = root_url + '/A/B-copy'
+  # Do some copies and moves where the common parents of the source(s)
+  # and destination(s) are unreadable.  All we currently hope to support
+  # is the case where the sources are individually (and recursively)
+  # readable, and the destination tree is writable.
 
-  # Should succeed
-  svntest.main.run_svn(None, 'cp', A_url, A_copy_url, '-m', 'logmsg')
-
-  # Should succeed
-  svntest.main.run_svn(None, 'cp', B_url, B_copy_url, '-m', 'logmsg')
-
-  # Should succeed
-  svntest.main.run_svn(None, 'mv', A_url, A_copy_url, '-m', 'logmsg')
-
-  # Should succeed
-  svntest.main.run_svn(None, 'mv', B_url, B_copy_url, '-m', 'logmsg')
+  svntest.main.run_svn(None, 'cp',
+                       '-m', 'copy in readable space',
+                       root_url + '/A/B',
+                       root_url + '/A/B-copy')
+  svntest.main.run_svn(None, 'cp',
+                       '-m', 'copy across disjoint readable spaces',
+                       root_url + '/A/B',
+                       root_url + '/A-copy/B-copy')
+  svntest.main.run_svn(None, 'cp',
+                       '-m', 'multi-copy across disjoint readable spaces',
+                       root_url + '/A/B',
+                       root_url + '/A/mu',
+                       root_url + '/A-copy/C')
+  svntest.main.run_svn(None, 'cp',
+                       '-m', 'copy from disjoint readable spaces',
+                       root_url + '/A/B/E/alpha',
+                       root_url + '/A-copy/B/E/beta',
+                       root_url + '/A-copy/C')
 
 ########################################################################
 # Run the tests
@@ -913,8 +926,9 @@ test_list = [ None,
                                svntest.main.is_ra_type_svn)),
               XFail(Skip(authz_switch_to_directory,
                          svntest.main.is_ra_type_file)),
-              XFail(Skip(authz_access_required_at_repo_root,
-                         svntest.main.is_ra_type_file)),
+              Skip(XFail(authz_access_required_at_repo_root,
+                         svntest.main.is_ra_type_dav),
+                   svntest.main.is_ra_type_file),
              ]
 
 if __name__ == '__main__':
