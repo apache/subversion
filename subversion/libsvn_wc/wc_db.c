@@ -3085,23 +3085,18 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
   if (flush_entry_cache)
     flush_entries(pdh);
 
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_DEPTH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
-  /* ### setting depth exclude on a wcroot breaks svn_wc_crop() */
-  if (strcmp(current_relpath, "") != 0 || depth != svn_depth_exclude)
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_DEPTH));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_WORKING_DEPTH));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_WORKING_DEPTH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* Check if we should also set depth in the parent db */
-  if (strcmp(current_relpath, "") == 0)
+  if (flush_entry_cache && strcmp(current_relpath, "") == 0)
     {
       svn_error_t *err;
 
@@ -3117,26 +3112,7 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
       else
         SVN_ERR(err);
 
-      if (flush_entry_cache)
-        flush_entries(pdh);
-
-      depth = (depth == svn_depth_exclude) ? svn_depth_exclude
-                                           : svn_depth_infinity;
-
-      VERIFY_USABLE_PDH(pdh);
-      wcroot = pdh->wcroot;
-      sdb = wcroot->sdb;
-      current_relpath = svn_dirent_basename(local_abspath, NULL);
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_DEPTH));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_WORKING_DEPTH));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
-      SVN_ERR(svn_sqlite__step_done(stmt));
+      flush_entries(pdh);
     }
 
   return SVN_NO_ERROR;

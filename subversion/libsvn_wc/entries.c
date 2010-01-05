@@ -1568,29 +1568,25 @@ svn_wc__set_depth(svn_wc__db_t *db,
 
       if (entry != NULL)
         {
+          /* The entries in the parent stub only store excluded vs infinity. */
           entry->depth = (depth == svn_depth_exclude) ? svn_depth_exclude
                                                       : svn_depth_infinity;
         }
     }
 
-  /* ### setting depth exclude on a wcroot breaks svn_wc_crop() */
-  if (depth != svn_depth_exclude)
+   /* Fetch the entries for the directory, and write our depth there. */
+  adm_access = svn_wc__adm_retrieve_internal2(db, local_dir_abspath,
+                                              scratch_pool);
+  if (adm_access != NULL)
     {
-       /* We aren't excluded, so fetch the entries for the directory, and write
-        our depth there. */
-      adm_access = svn_wc__adm_retrieve_internal2(db, local_dir_abspath,
-                                                  scratch_pool);
-      if (adm_access != NULL)
-        {
-          apr_hash_t *entries = svn_wc__adm_access_entries(adm_access);
+      apr_hash_t *entries = svn_wc__adm_access_entries(adm_access);
 
-          entry = (entries != NULL)
-                           ? apr_hash_get(entries, "", APR_HASH_KEY_STRING)
-                           : NULL;
+      entry = (entries != NULL)
+                       ? apr_hash_get(entries, "", APR_HASH_KEY_STRING)
+                       : NULL;
 
-          if (entry != NULL)
-            entry->depth = depth;
-        }
+      if (entry != NULL)
+        entry->depth = depth;
     }
 
   return svn_error_return(svn_wc__db_temp_op_set_dir_depth(db,
