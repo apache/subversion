@@ -39,7 +39,6 @@ Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
-Wimp = svntest.testcase.Wimp
 
 ######################################################################
 # Tests
