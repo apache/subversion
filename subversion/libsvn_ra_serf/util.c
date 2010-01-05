@@ -509,7 +509,9 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
                                        serf_request_get_alloc(request));
 
   hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
+#if ! SERF_VERSION_AT_LEAST(0, 4, 0)
   serf_bucket_headers_setn(hdrs_bkt, "Host", conn->hostinfo);
+#endif
   serf_bucket_headers_setn(hdrs_bkt, "User-Agent", conn->useragent);
 
   if (content_type)
