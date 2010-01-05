@@ -4926,7 +4926,8 @@ close_file(void *file_baton,
   /* If we had a text change, drop the pristine into it's proper place. */
   if (fb->temp_pristine_abspath)
     SVN_ERR(svn_wc__db_pristine_install(eb->db, fb->temp_pristine_abspath,
-                                        sha1_actual_checksum, pool));
+                                        sha1_actual_checksum,
+                                        md5_actual_checksum, pool));
 #endif
 
   /* It's a small world, after all. */

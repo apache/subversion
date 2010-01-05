@@ -2247,7 +2247,9 @@ public class BasicTests extends SVNTests
     private long[] getMergeinfoRevisions(int kind, String pathOrUrl,
                                          Revision pegRevision,
                                          String mergeSourceUrl,
-                                         Revision srcPegRevision) {
+                                         Revision srcPegRevision) 
+        throws SubversionException
+    {
         class Callback implements LogMessageCallback {
 
             List revList = new ArrayList();
@@ -2268,15 +2270,10 @@ public class BasicTests extends SVNTests
                 return revisions;
             }
         }
-        try {
-            Callback callback = new Callback();
-            client.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
-                                   srcPegRevision, false, null, callback);
-            return callback.getRevisions();
-        } catch (ClientException e) {
-            return null;
-        }
-
+        Callback callback = new Callback();
+        client.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                               srcPegRevision, false, null, callback);
+        return callback.getRevisions();
     }
 
     /**

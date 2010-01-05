@@ -1734,12 +1734,12 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
   apr_pool_t *iterpool;
   const apr_array_header_t *children;
   svn_boolean_t parent_is_anchor = FALSE;
-  int i;
+  int format, i;
+  svn_error_t *err;
 
   if (anchor_abspath)
     {
       const char *parent_abspath, *base;
-      svn_error_t *err;
 
       svn_dirent_split(local_abspath, &parent_abspath, &base, scratch_pool);
       err = svn_wc__db_read_children(&children, wc_ctx->db, parent_abspath,
@@ -1791,8 +1791,15 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
                                            NULL, iterpool));
     }
 
-  SVN_ERR(svn_wc__db_wclock_set(wc_ctx->db, local_abspath, 0, iterpool));
-  SVN_ERR(svn_wc__db_temp_mark_locked(wc_ctx->db, local_abspath, iterpool));
+  /* We don't want to try and lock an unversioned directory that
+     obstructs a versioned directory. */
+  err = svn_wc__internal_check_wc(&format, wc_ctx->db, local_abspath, iterpool);
+  if (!err && format)
+    {
+      SVN_ERR(svn_wc__db_wclock_set(wc_ctx->db, local_abspath, 0, iterpool));
+      SVN_ERR(svn_wc__db_temp_mark_locked(wc_ctx->db, local_abspath, iterpool));
+    }
+  svn_error_clear(err);
 
   svn_pool_destroy(iterpool);
 

@@ -56,6 +56,15 @@ svn_cl__merge(apr_getopt_t *os,
     peg_revision2;
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
 
+  /* Merge doesn't support specifying a revision or revision range
+     when using --reintegrate. */
+  if (opt_state->reintegrate
+      && opt_state->start_revision.kind != svn_opt_revision_unspecified)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("-r and -c can't be used with --reintegrate"));
+    }
+
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
                                                       ctx, pool));

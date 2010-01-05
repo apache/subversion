@@ -1011,7 +1011,6 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
   if (is_url)
     {
       const char *repos_rel_path;
-      const char *local_abspath;
       const char *old_session_url;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", scratch_pool));

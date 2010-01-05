@@ -383,7 +383,7 @@ def mergeinfo_on_pegged_wc_path(sbox):
                                      'ci', wc_dir,
                                      '-m', 'Merge r5')
 
-  # Ask for merged revisions to A_COPY pegged at various values.
+  # Ask for merged and eligible revisions to A_COPY pegged at various values.
   # Prior to issue #3180 fix the peg revision was ignored.
   #
   # A_COPY pegged to non-existent revision
@@ -399,7 +399,7 @@ def mergeinfo_on_pegged_wc_path(sbox):
   # A_COPY@HEAD
   svntest.actions.run_and_verify_mergeinfo(
     adjust_error_for_server_version(''),
-    ['3','5','6'], A_path, A_COPY_path + '@BASE', '--show-revs', 'merged')
+    ['3','5','6'], A_path, A_COPY_path + '@HEAD', '--show-revs', 'merged')
 
   # A_COPY@4 (Prior to any merges)
   svntest.actions.run_and_verify_mergeinfo(
@@ -416,6 +416,32 @@ def mergeinfo_on_pegged_wc_path(sbox):
   svntest.actions.run_and_verify_mergeinfo(
     adjust_error_for_server_version(''),
     ['3', '6'], A_path, A_COPY_path + '@PREV', '--show-revs', 'merged')
+
+  # A_COPY@BASE
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['4'], A_path, A_COPY_path + '@BASE', '--show-revs', 'eligible')
+
+  # A_COPY@HEAD
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['4'], A_path, A_COPY_path + '@HEAD', '--show-revs', 'eligible')
+
+  # A_COPY@4 (Prior to any merges)
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['3', '4', '5', '6'], A_path, A_COPY_path + '@4', '--show-revs', 'eligible')
+
+  # A_COPY@COMMITTED (r8)
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['4'], A_path, A_COPY_path + '@COMMITTED', '--show-revs',
+    'eligible')
+
+  # A_COPY@PREV (r7)
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''),
+    ['4', '5'], A_path, A_COPY_path + '@PREV', '--show-revs', 'eligible')
 
 ########################################################################
 # Run the tests

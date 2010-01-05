@@ -702,6 +702,30 @@ typedef svn_error_t *(*svn_close_fn_t)(void *baton);
  */
 typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
 
+/* An opaque type which represents a mark on a stream.
+ *
+ * @see svn_stream_mark().
+ * @since New in 1.7.
+ */
+typedef struct svn_stream_mark_t svn_stream_mark_t;
+
+/** Mark handler function for a generic stream. @see svn_stream_t and
+ * svn_stream_mark().
+ *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_io_mark_fn_t)(void *baton,
+                                         svn_stream_mark_t **mark,
+                                         apr_pool_t *pool);
+
+/** Seek handler function for a generic stream. @see svn_stream_t and
+ * svn_stream_seek().
+ *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_io_seek_fn_t)(void *baton,
+                                         svn_stream_mark_t *mark);
+
 /** Line-filtering callback function for a generic stream.
  * @a baton is the stream's baton.
  * @see svn_stream_t, svn_stream_set_baton() and svn_stream_readline().
@@ -769,6 +793,22 @@ svn_stream_set_close(svn_stream_t *stream,
 void
 svn_stream_set_reset(svn_stream_t *stream,
                      svn_io_reset_fn_t reset_fn);
+
+/** Set @a stream's mark function to @a mark_fn 
+ *
+ * @since New in 1.7.
+ */
+void
+svn_stream_set_mark(svn_stream_t *stream,
+                    svn_io_mark_fn_t mark_fn);
+
+/** Set @a stream's seek function to @a seek_fn 
+ *
+ * @since New in 1.7.
+ */
+void
+svn_stream_set_seek(svn_stream_t *stream,
+                    svn_io_seek_fn_t seek_fn);
 
 /** Set @a stream's line-filtering callback function to @a line_filter_cb
  *
@@ -1028,7 +1068,7 @@ svn_stream_close(svn_stream_t *stream);
 
 /** Reset a generic stream back to its origin. E.g. On a file this would be
  * implemented as a seek to position 0).  This function returns a
- * @a SVN_ERR_STREAM_RESET_NOT_SUPPORTED error when the stream doesn't
+ * #SVN_ERR_STREAM_RESET_NOT_SUPPORTED error when the stream doesn't
  * implement resetting.
  *
  * @since New in 1.7.
@@ -1036,6 +1076,30 @@ svn_stream_close(svn_stream_t *stream);
 svn_error_t *
 svn_stream_reset(svn_stream_t *stream);
 
+/** Set a @a mark at the current position of a generic @a stream,
+ * which can later be sought back to using svn_stream_seek().
+ * The @a mark is allocated in @a pool.
+ *
+ * This function returns the #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error
+ * if the stream doesn't implement seeking.
+ *
+ * @see svn_stream_seek()
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_stream_mark(svn_stream_t *stream,
+                svn_stream_mark_t **mark,
+                apr_pool_t *pool);
+
+/* Seek to a @a mark in a generic @a stream.
+ * This function returns the #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error
+ * if the stream doesn't implement seeking.
+ *
+ * @see svn_stream_mark()
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_stream_seek(svn_stream_t *stream, svn_stream_mark_t *mark);
 
 /** Return a writable stream which, when written to, writes to both of the
  * underlying streams.  Both of these streams will be closed upon closure of
@@ -1106,6 +1170,20 @@ svn_stream_readline(svn_stream_t *stream,
                     svn_boolean_t *eof,
                     apr_pool_t *pool);
 
+/**
+ * Similar to svn_stream_readline(). The line-terminator is detected
+ * automatically.  If @a eol is not NULL, the detected line-terminator
+ * is returned in @a *eol.  If EOF is reached and the stream does not
+ * end with a newline character, @a *eol will be NULL.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_stream_readline_detect_eol(svn_stream_t *stream,
+                               svn_stringbuf_t **stringbuf,
+                               const char **eol,
+                               svn_boolean_t *eof,
+                               apr_pool_t *pool);
 
 /**
  * Read the contents of the readable stream @a from and write them to the

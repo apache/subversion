@@ -45,7 +45,8 @@
 [for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">$([[]System.IO.Path]::GetFullPath('$(ProjectDir)..\..\..\[configs.name]\[target.output_dir]'))\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">..\..\..\[configs.name]\[target.intermediate_dir]\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[target.output_name_without_ext]</TargetName>
-[end][end]  </PropertyGroup>
+[is config_type "DynamicLibrary"][is target.output_ext ".dll"][else]    <TargetExt>[target.output_ext]</TargetExt>
+[end][end][end][end]  </PropertyGroup>
 [for configs][for platforms]  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">
     <ClCompile>
 [is configs.name "Debug"]      <Optimization>Disabled</Optimization>
@@ -61,6 +62,7 @@
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ProgramDataBaseFileName>$(IntDir)[target.output_pdb]</ProgramDataBaseFileName>
+      <BrowseInformation>true</BrowseInformation>
       <DisableSpecificWarnings>4100;4127;4204;4206;4701;4706;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <TreatSpecificWarningsAsErrors>4002;4003;4013;4020;4022;4024;4028;4029;4030;4031;4047;4089;4115;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
     </ClCompile>
@@ -68,11 +70,14 @@
       <OutputFile>$(OutDir)[target.output_name]</OutputFile>
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
     </Link>
 [else][is config_type "DynamicLibrary"]    <Link>
       <OutputFile>$(OutDir)[target.output_name]</OutputFile>
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
 [if-any def_file]      <ModuleDefinitionFile>[def_file]</ModuleDefinitionFile>
 [end]    </Link>
 [else][is config_type "StaticLibrary"]    <Lib>

@@ -89,7 +89,7 @@ test_parse_unidiff(apr_pool_t *pool)
 
   /* We have two patches with one hunk each.
    * Parse the first patch. */
-  SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, NL, pool, pool));
+  SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, pool, pool));
   SVN_ERR_ASSERT(patch);
   SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/C/gamma"));
   SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/C/gamma"));
@@ -118,7 +118,7 @@ test_parse_unidiff(apr_pool_t *pool)
   SVN_ERR_ASSERT(buf->len == 0);
 
   /* Parse the second patch. */
-  SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, NL, pool, pool));
+  SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, pool, pool));
   SVN_ERR_ASSERT(patch);
   SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/D/gamma.orig"));
   SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/D/gamma"));

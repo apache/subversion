@@ -396,7 +396,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
             {
               /* Report the excluded path, no matter whether report_everything
                  flag is set.  Because the report_everything flag indicates
-                 that the server will treate the wc as empty and thus push
+                 that the server will treat the wc as empty and thus push
                  full content of the files/subdirs. But we want to prevent the
                  server from pushing the full content of this_path at us. */
 

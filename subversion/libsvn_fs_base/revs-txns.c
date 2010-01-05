@@ -437,9 +437,9 @@ svn_fs_base__add_txn_copy(svn_fs_t *fs,
 /* Duplicate all entries in the "changes" table that are keyed by OLD_TXN_ID,
  * creating new entries that are keyed by NEW_TXN_ID.
  *
- * Each new "change" has the same content as the old one, except with the
- * txn-id component of its noderev-id (which is assumed to have been
- * OLD_TXN_ID) changed to NEW_TXN_ID.
+ * Each new "change" has the same content as the old one, except that if the
+ * txn-id component of its noderev-id is OLD_TXN_ID (which is the case for
+ * all changes except deletes) then that is changed to NEW_TXN_ID.
  *
  * Work within TRAIL. */
 static svn_error_t *
@@ -824,17 +824,29 @@ txn_body_begin_obliteration_txn(void *baton, trail_t *trail)
   /* Dup txn->proplist */
   new_txn->proplist = old_txn->proplist;
 
-  /* ### TODO: Update "copies" table entries referenced by txn->copies.
-   * This is hard, because I don't want to change the copy_ids, because they
-   * pervade node-ids throughout history. But what actually uses them, and
-   * does anything use them during txn construction? */
+  /* Prepare to update the "copies" table.
+   *
+   * As part of obliteration, we need to update all of the "copies" table
+   * rows that are referenced by this txn, to refer to the new txn's
+   * node-rev ids instead. At txn begin time, just keep the references to
+   * the old rows. At commit time, we will update those rows to refer to
+   * this txn's node-rev ids.
+   *
+   * We cannot simply create new "copies" table rows now and make the old
+   * ones obsolete at commit time, because the rows are keyed by copy-id,
+   * and we don't want to change the copy_ids because they pervade node-ids
+   * throughout history.
+   *
+   * ### What actually uses the "copies" table? Does anything use it during
+   * txn construction? Does it need to be keyed by copy-id or could we
+   * change the schema to use arbitrary keys? */
+  if (old_txn->copies)
+    {
+      new_txn->copies = apr_array_copy(trail->pool, old_txn->copies);
+    }
 
   /* Dup the "changes" that are keyed by the txn_id. */
   SVN_ERR(changes_dup(new_txn_id, old_txn_id, trail, trail->pool));
-
-  /* ### TODO: Update the "node-origins" table.
-   * Or can this be deferred till commit time? Probably not. */
-
 
   /* Save the modified transaction */
   SVN_ERR(svn_fs_bdb__put_txn(trail->fs, new_txn, new_txn_id, trail,

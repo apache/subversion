@@ -1,3 +1,4 @@
+#! /bin/sh
 #
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -17,8 +18,6 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-#
-#! /bin/sh
 #
 # buildcheck.sh: Inspects the build setup to make detection and
 # correction of problems an easier process.

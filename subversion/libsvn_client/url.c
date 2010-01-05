@@ -93,9 +93,17 @@ svn_client__derive_location(const char **url,
      it into a URL. */
   if (! svn_path_is_url(abspath_or_url))
     {
-      SVN_ERR(svn_client__entry_location(url, peg_revnum, ctx->wc_ctx,
-                                         abspath_or_url, peg_revision->kind,
-                                         result_pool, scratch_pool));
+      /* If we need to contact the repository for *PEG_REVNUM just get
+         the *URL now.  Otherwise the working copy has all the information
+         we need. */
+      if (peg_revision->kind == svn_opt_revision_date
+          || peg_revision->kind == svn_opt_revision_head)
+        SVN_ERR(svn_wc__node_get_url(url, ctx->wc_ctx, abspath_or_url,
+                                     result_pool, scratch_pool));
+      else
+        SVN_ERR(svn_client__entry_location(url, peg_revnum, ctx->wc_ctx,
+                                           abspath_or_url, peg_revision->kind,
+                                           result_pool, scratch_pool));
     }
   else
     {
