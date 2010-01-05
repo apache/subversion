@@ -2444,16 +2444,16 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
       apr_hash_t *mergeinfo;
       svn_string_t *new_value_str;
 
+      SVN_ERR(svn_mergeinfo_parse(&mergeinfo, propval->data, pool));
 
       /* Non-inheritable mergeinfo is only valid on directories. */
       if (kind != svn_node_dir
-          && strstr(propval->data, SVN_MERGEINFO_NONINHERITABLE_STR))
+          && svn_mergeinfo__is_noninheritable(mergeinfo, pool))
         return svn_error_createf(
           SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
           _("Cannot set non-inheritable mergeinfo on a non-directory ('%s')"),
           svn_dirent_local_style(path, pool));
 
-      SVN_ERR(svn_mergeinfo_parse(&mergeinfo, propval->data, pool));
       SVN_ERR(svn_mergeinfo_to_string(&new_value_str, mergeinfo, pool));
       new_value = svn_stringbuf_create_from_string(new_value_str, pool);
     }
