@@ -7075,7 +7075,7 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
       const char *added_abspath = svn_apr_hash_index_key(hi);
       const char *dir_abspath;
       svn_mergeinfo_t parent_mergeinfo;
-      svn_boolean_t inherited;
+      svn_boolean_t inherited; /* used multiple times, but ignored */
 
       apr_pool_clear(iterpool);
       dir_abspath = svn_dirent_dirname(added_abspath, iterpool);
@@ -7092,7 +7092,6 @@ record_mergeinfo_for_added_subtrees(svn_merge_range_t *merged_range,
           svn_client__merge_path_t *target_merge_path =
             APR_ARRAY_IDX(notify_b->children_with_mergeinfo, 0,
                           svn_client__merge_path_t *);
-          svn_boolean_t inherited;
           svn_merge_range_t *rng;
           svn_node_kind_t added_path_kind;
           svn_mergeinfo_t merge_mergeinfo, added_path_mergeinfo;
