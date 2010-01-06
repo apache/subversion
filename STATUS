@@ -135,6 +135,21 @@ Candidate changes:
    Votes:
      +1: stylesen
 
+ * r896522, r896547
+   Fix segfault with 'svn resolve [mine-full | base | theirs-full]'.
+   Justification:
+     Easily reproducible segfault.
+   Notes:
+     r896522 is simply the addition of a new test to cover this 1.6.x-only
+     bug.  r896547 is the actual fix, done on the backport branch.  Due to
+     the ongoing wc-ng work, the fix could not be made on trunk.  For more
+     info see http://svn.haxx.se/dev/archive-2010-01/0088.shtml.
+   Branch:
+     ^/subversion/branches/1.6.x-r896522
+   Votes:
+     +1: pburba
+     +1: stsp (896547 only)
+
 Veto-blocked changes:
 
  * r877552, r877617, r877618, r877619, r877621
