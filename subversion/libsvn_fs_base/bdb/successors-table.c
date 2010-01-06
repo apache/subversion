@@ -120,28 +120,12 @@ svn_fs_bdb__successors_delete(svn_fs_t *fs,
 
   /* Advance the cursor to the key that we're looking for. */
   svn_fs_base__str_to_dbt(&key, node_id);
-  svn_fs_base__result_dbt(&value);
-  db_err = svn_bdb_dbc_get(cursor, &key, &value, DB_SET);
+  svn_fs_base__str_to_dbt(&value, succ_id);
+  db_err = svn_bdb_dbc_get(cursor, &key, &value, DB_GET_BOTH);
   if (! db_err)
-    svn_fs_base__track_dbt(&value, pool);
-
-  while (! db_err)
     {
-      /* VALUE now contains a successor ID.  Is it the one we're
-         looking to delete?  */
-      if ((value.size == strlen(succ_id)) 
-          && (memcmp(succ_id, value.data, value.size) == 0))
-        {
-          db_err = svn_bdb_dbc_del(cursor, 0);
-          break;
-        }
-      
-      /* Advance the cursor to the next record with this same KEY, and
-         fetch that record. */
-      svn_fs_base__result_dbt(&value);
-      db_err = svn_bdb_dbc_get(cursor, &key, &value, DB_NEXT_DUP);
-      if (! db_err)
-        svn_fs_base__track_dbt(&value, pool);
+      /* Delete the item at the cursor. */
+      db_err = svn_bdb_dbc_del(cursor, 0);
     }
 
   /* Record any errors we caught.  We'll return them post-cleanup. */
