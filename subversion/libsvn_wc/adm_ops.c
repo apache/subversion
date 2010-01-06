@@ -2741,29 +2741,31 @@ resolve_conflict_on_entry(const char *path,
 
   if (resolve_text)
     {
-      const char *auto_resolve_src;
+      const char *auto_resolve_src = NULL;
 
       /* Handle automatic conflict resolution before the temporary files are
        * deleted, if necessary. */
       switch (conflict_choice)
         {
         case svn_wc_conflict_choose_base:
-          auto_resolve_src = svn_path_join(
-                              svn_wc_adm_access_path(conflict_dir),
-                              entry->conflict_old, pool);
+          if (entry->conflict_old)
+            auto_resolve_src = svn_path_join(
+              svn_wc_adm_access_path(conflict_dir),
+              entry->conflict_old, pool);
           break;
         case svn_wc_conflict_choose_mine_full:
-          auto_resolve_src = svn_path_join(
-                              svn_wc_adm_access_path(conflict_dir),
-                              entry->conflict_wrk, pool);
+          if (entry->conflict_wrk)
+            auto_resolve_src = svn_path_join(
+              svn_wc_adm_access_path(conflict_dir),
+              entry->conflict_wrk, pool);
           break;
         case svn_wc_conflict_choose_theirs_full:
-          auto_resolve_src = svn_path_join(
-                              svn_wc_adm_access_path(conflict_dir),
-                              entry->conflict_new, pool);
+          if (entry->conflict_new)
+            auto_resolve_src = svn_path_join(
+              svn_wc_adm_access_path(conflict_dir),
+              entry->conflict_new, pool);
           break;
         case svn_wc_conflict_choose_merged:
-          auto_resolve_src = NULL;
           break;
         case svn_wc_conflict_choose_theirs_conflict:
         case svn_wc_conflict_choose_mine_conflict:
@@ -2828,8 +2830,6 @@ resolve_conflict_on_entry(const char *path,
                                                     pool));
                 SVN_ERR(svn_stream_close(tmp_stream));
               }
-            else
-              auto_resolve_src = NULL;
             break;
           }
         default:
