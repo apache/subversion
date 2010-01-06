@@ -3244,6 +3244,10 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
   if (recorded_mergeinfo)
     {
       svn_boolean_t inherited;
+
+      /* ### FIXME: There's probably an RA session we could/should be
+         ### using here instead of having this function possibly spawn
+         ### yet another one.  */
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(recorded_mergeinfo,
                                                     &inherited, FALSE,
                                                     inherit, NULL,
