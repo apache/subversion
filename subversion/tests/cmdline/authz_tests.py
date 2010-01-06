@@ -926,8 +926,7 @@ test_list = [ None,
                                svntest.main.is_ra_type_svn)),
               XFail(Skip(authz_switch_to_directory,
                          svntest.main.is_ra_type_file)),
-              Skip(XFail(authz_access_required_at_repo_root,
-                         svntest.main.is_ra_type_dav),
+              Skip(authz_access_required_at_repo_root,
                    svntest.main.is_ra_type_file),
              ]
 
