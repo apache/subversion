@@ -1,6 +1,6 @@
-Version 1.6.7
-(29 Dec 2009, from /branches/1.6.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.6.7
+Version 1.6.8
+(?? ??? 2010, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.8
 
  User-visible changes:
   * allow multiple external updates over ra_svn (issue #3487)
@@ -18,6 +18,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.7
 
  Developer-visible changes:
   * update ruby bindings test expectation (r880162)
+
+
+Version 1.6.7
+(Not released, see changes for 1.6.8.)
 
 
 [ Note: All revision numbers for versions prior to 1.6.7 reference the
