@@ -147,8 +147,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-r896522
    Votes:
-     +1: pburba
-     +1: stsp (896547 only)
+     +1: pburba, stsp
 
 Veto-blocked changes:
 
