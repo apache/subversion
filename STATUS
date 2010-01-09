@@ -148,6 +148,9 @@ Candidate changes:
      ^/subversion/branches/1.6.x-r896522
    Votes:
      +1: pburba, stsp
+     +1: joeswatosh (as a partial committer, not sure if I can vote in the
+       main body of the Subversion code.  It solves the bindings segfault,
+       the new tests pass, and the diff looks good to me).
 
 Veto-blocked changes:
 
