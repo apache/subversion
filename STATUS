@@ -154,7 +154,7 @@ Candidate changes:
 
   * r888715, r895514
     Make the dll dependencies right when testing the Ruby bindings on 
-    windows.
+    windows.  (r888715 lets r895514 merge cleanly).
     Justification:
       Explicit is better than implicit.
     Votes:
