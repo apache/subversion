@@ -152,6 +152,14 @@ Candidate changes:
        main body of the Subversion code.  It solves the bindings segfault,
        the new tests pass, and the diff looks good to me).
 
+  * r888715, r895514
+    Make the dll dependencies right when testing the Ruby bindings on 
+    windows.
+    Justification:
+      Explicit is better than implicit.
+    Votes:
+      +1: joeswatosh
+  
 Veto-blocked changes:
 
  * r877552, r877617, r877618, r877619, r877621
