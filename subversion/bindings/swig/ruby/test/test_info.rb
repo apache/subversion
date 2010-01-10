@@ -38,15 +38,16 @@ class SvnInfoTest < Test::Unit::TestCase
     log = "test commit\nnew line"
     FileUtils.touch(path)
 
-    commit_info = make_context(log) do |ctx|
+    date, revision = make_context(log) do |ctx|
       ctx.add(path)
       commit_info = ctx.commit([@wc_path])
+      [commit_info.date, commit_info.revision]
     end
 
-    info = make_info(commit_info.revision)
+    info = make_info(revision)
     assert_equal(@author, info.author)
-    assert_equal(commit_info.date, info.date)
-    assert_equal(commit_info.revision, info.revision)
+    assert_equal(date, info.date)
+    assert_equal(revision, info.revision)
     assert_equal(log, info.log)
   end
 
@@ -57,16 +58,16 @@ class SvnInfoTest < Test::Unit::TestCase
     file_path = File.join(dir_path, file)
     log = "added dir"
 
-    commit_info = make_context(log) do |ctx|
+    revision = make_context(log) do |ctx|
       ctx.mkdir(dir_path)
       FileUtils.touch(file_path)
       ctx.add(file_path)
-      commit_info = ctx.commit(@wc_path)
+      ctx.commit(@wc_path).revision
     end
 
-    info = make_info(commit_info.revision)
+    info = make_info(revision)
     assert_equal(["/", "#{dir}/"], info.changed_dirs)
-    assert_equal(commit_info.revision, info.revision)
+    assert_equal(revision, info.revision)
     assert_equal(log, info.log)
   end
 
