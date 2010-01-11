@@ -135,32 +135,17 @@ Candidate changes:
    Votes:
      +1: stylesen
 
- * r896522, r896547
-   Fix segfault with 'svn resolve [mine-full | base | theirs-full]'.
+ * r896915
+   On Windows, stop retrying a move operation without looking to the
+   initial error code. 
    Justification:
-     Easily reproducible segfault.
-   Notes:
-     r896522 is simply the addition of a new test to cover this 1.6.x-only
-     bug.  r896547 is the actual fix, done on the backport branch.  Due to
-     the ongoing wc-ng work, the fix could not be made on trunk.  For more
-     info see http://svn.haxx.se/dev/archive-2010-01/0088.shtml.
-   Branch:
-     ^/subversion/branches/1.6.x-r896522
+     Without this patch the initial move error is lost, which makes it
+     impossible to diagnose the real error.
    Votes:
-     +1: pburba, stsp
-     +1: joeswatosh (as a partial committer, not sure if I can vote in the
-       main body of the Subversion code.  It solves the bindings segfault,
-       the new tests pass, and the diff looks good to me).
+     +1: rhuijben
 
-  * r888715, r895514
-    Make the dll dependencies right when testing the Ruby bindings on 
-    windows.  (r888715 lets r895514 merge cleanly).
-    Justification:
-      Explicit is better than implicit.
-    Votes:
-      +1: joeswatosh
-  
 Veto-blocked changes:
+=====================
 
  * r877552, r877617, r877618, r877619, r877621
    Support using `svnversion` on files and improve some messages printed by
@@ -195,3 +180,28 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r896522, r896547
+   Fix segfault with 'svn resolve [mine-full | base | theirs-full]'.
+   Justification:
+     Easily reproducible segfault.
+   Notes:
+     r896522 is simply the addition of a new test to cover this 1.6.x-only
+     bug.  r896547 is the actual fix, done on the backport branch.  Due to
+     the ongoing wc-ng work, the fix could not be made on trunk.  For more
+     info see http://svn.haxx.se/dev/archive-2010-01/0088.shtml.
+   Branch:
+     ^/subversion/branches/1.6.x-r896522
+   Votes:
+     +1: pburba, stsp, rhuijben
+     +1: joeswatosh (as a partial committer, not sure if I can vote in the
+       main body of the Subversion code.  It solves the bindings segfault,
+       the new tests pass, and the diff looks good to me).
+
+  * r888715, r895514
+    Make the dll dependencies right when testing the Ruby bindings on 
+    windows.  (r888715 lets r895514 merge cleanly).
+    Justification:
+      Explicit is better than implicit.
+    Votes:
+      +1: joeswatosh, rhuijben
