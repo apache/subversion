@@ -84,6 +84,10 @@ Candidate changes:
    Votes:
      +1: stylesen
      +0: julianfoad (reviewed, not tested)
+     -0: rhuijben (needs more explanation: The not-interactive and no
+                   callback code paths should be more similar if the code
+                   works correctly. I think the not interactive code path
+                   needs the same fix).
 
  * r879902, r879916
    Disables file synchronization mutexes in fsfs on Windows. These mutexes
