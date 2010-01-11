@@ -79,7 +79,7 @@ module SvnTestUtil
                        libaprutil#{apr_major_version}.dll 
                        libapr#{apr_major_version}.dll 
                        libapriconv#{apr_major_version}.dll
-                       sqlite3.dll libdb44.dll libdb44d.dll)
+                       libdb44.dll libdb44d.dll)
           ENV["PATH"].split(";").each do |path|
             found_targets = []
             targets.each do |target|
@@ -94,7 +94,7 @@ module SvnTestUtil
           end
           # Remove optional targets instead of raising below.  If they are really
           # needed, svnserve won't start anyway.
-          targets -= %W[libapriconv#{apr_major_version}.dll sqlite3.dll]
+          targets -= %W[libapriconv#{apr_major_version}.dll]
           unless targets.empty?
             raise "can't find libraries to work svnserve: #{targets.join(' ')}"
           end
@@ -219,7 +219,8 @@ EOC
          ["apr-util", build_type],
          ["apr-iconv", build_type],
          ["berkeley-db", "bin"],
-         ["sqlite", "bin"],
+         ["libintl", "bin"],
+         ["sasl", "lib"],
         ].each do |lib, sub_dir|
           lib_dir = Pathname.new(gen_make_opts["--with-#{lib}"])
           dll_dir = lib_dir + sub_dir
