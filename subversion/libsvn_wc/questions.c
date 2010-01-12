@@ -95,7 +95,7 @@ static svn_error_t *
 compare_and_verify(svn_boolean_t *modified_p,
                    svn_wc__db_t *db,
                    const char *versioned_file_abspath,
-                   const char *base_file_abspath,
+                   svn_stream_t *pristine_stream,
                    svn_boolean_t compare_textbases,
                    svn_boolean_t verify_checksum,
                    apr_pool_t *scratch_pool)
@@ -107,7 +107,6 @@ compare_and_verify(svn_boolean_t *modified_p,
   svn_boolean_t special;
   svn_boolean_t need_translation;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(base_file_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_file_abspath));
 
   SVN_ERR(svn_wc__get_eol_style(&eol_style, &eol_str, db,
@@ -126,11 +125,8 @@ compare_and_verify(svn_boolean_t *modified_p,
       /* Reading files is necessary. */
       svn_checksum_t *checksum;
       svn_stream_t *v_stream;  /* versioned_file */
-      svn_stream_t *b_stream;  /* base_file */
+      svn_stream_t *p_stream = svn_stream_disown(pristine_stream, scratch_pool);
       const svn_checksum_t *node_checksum;
-
-      SVN_ERR(svn_stream_open_readonly(&b_stream, base_file_abspath,
-                                       scratch_pool, scratch_pool));
 
       if (verify_checksum)
         {
@@ -146,7 +142,7 @@ compare_and_verify(svn_boolean_t *modified_p,
                                        scratch_pool, scratch_pool));
 
           if (node_checksum)
-            b_stream = svn_stream_checksummed2(b_stream, &checksum, NULL,
+            p_stream = svn_stream_checksummed2(p_stream, &checksum, NULL,
                                                svn_checksum_md5, TRUE,
                                                scratch_pool);
         }
@@ -180,27 +176,28 @@ compare_and_verify(svn_boolean_t *modified_p,
           else if (need_translation)
             {
               /* Wrap base stream to translate into working copy form. */
-              b_stream = svn_subst_stream_translated(b_stream, eol_str,
-                                                     FALSE, keywords, TRUE,
+              p_stream = svn_subst_stream_translated(p_stream, eol_str, FALSE,
+                                                     keywords, TRUE,
                                                      scratch_pool);
             }
         }
 
-      SVN_ERR(svn_stream_contents_same(&same, b_stream, v_stream,
+      SVN_ERR(svn_stream_contents_same(&same, p_stream, v_stream,
                                        scratch_pool));
 
       SVN_ERR(svn_stream_close(v_stream));
-      SVN_ERR(svn_stream_close(b_stream));
+      SVN_ERR(svn_stream_close(p_stream));
 
       if (verify_checksum && node_checksum)
         {
-          if (!svn_checksum_match(checksum, node_checksum))
+          if (checksum && !svn_checksum_match(checksum, node_checksum))
             {
               return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                   _("Checksum mismatch indicates corrupt text base: '%s':\n"
+                   _("Checksum mismatch indicates corrupt text base for file: "
+                     "'%s':\n"
                      "   expected:  %s\n"
                      "     actual:  %s\n"),
-                  svn_dirent_local_style(base_file_abspath, scratch_pool),
+                  svn_dirent_local_style(versioned_file_abspath, scratch_pool),
                   svn_checksum_to_cstring_display(node_checksum, scratch_pool),
                   svn_checksum_to_cstring_display(checksum, scratch_pool));
             }
@@ -209,9 +206,15 @@ compare_and_verify(svn_boolean_t *modified_p,
   else
     {
       /* Translation would be a no-op, so compare the original file. */
-      SVN_ERR(svn_io_files_contents_same_p(&same, base_file_abspath,
-                                           versioned_file_abspath,
-                                           scratch_pool));
+      svn_stream_t *v_stream;  /* versioned_file */
+
+      SVN_ERR(svn_stream_open_readonly(&v_stream, versioned_file_abspath,
+                                       scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_stream_contents_same(&same, pristine_stream, v_stream,
+                                       scratch_pool));
+
+      SVN_ERR(svn_stream_close(v_stream));
     }
 
   *modified_p = (! same);
@@ -227,11 +230,17 @@ svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
                                          svn_boolean_t compare_textbases,
                                          apr_pool_t *scratch_pool)
 {
-  return svn_error_return(compare_and_verify(modified_p, db,
-                                             versioned_file_abspath,
-                                             base_file_abspath,
-                                             compare_textbases, FALSE,
-                                             scratch_pool));
+  svn_stream_t *pristine_stream;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(base_file_abspath));
+  SVN_ERR(svn_stream_open_readonly(&pristine_stream, base_file_abspath,
+                                   scratch_pool, scratch_pool));
+
+  SVN_ERR(compare_and_verify(modified_p, db, versioned_file_abspath,
+                             pristine_stream, compare_textbases, FALSE,
+                             scratch_pool));
+
+  return svn_error_return(svn_stream_close(pristine_stream));
 }
 
 svn_error_t *
@@ -256,6 +265,7 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
                                  svn_boolean_t compare_textbases,
                                  apr_pool_t *scratch_pool)
 {
+  svn_stream_t *pristine_stream;
   const char *textbase_abspath;
   svn_node_kind_t kind;
   svn_error_t *err;
@@ -353,19 +363,12 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
   SVN_ERR(svn_wc__text_base_path(&textbase_abspath, db, local_abspath, FALSE,
                                  scratch_pool));
 
-  /* Check all bytes, and verify checksum if requested. */
-  err = compare_and_verify(modified_p,
-                           db,
-                           local_abspath,
-                           textbase_abspath,
-                           compare_textbases,
-                           force_comparison,
-                           scratch_pool);
+  err = svn_stream_open_readonly(&pristine_stream, textbase_abspath,
+                                 scratch_pool, scratch_pool);
   if (err)
     {
-      svn_error_t *err2;
-
-      err2 = svn_io_check_path(textbase_abspath, &kind, scratch_pool);
+      svn_error_t *err2 = svn_io_check_path(textbase_abspath, &kind,
+                                            scratch_pool);
       if (! err2 && kind != svn_node_file)
         {
           svn_error_clear(err);
@@ -381,6 +384,11 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
 
       return err;
     }
+
+  /* Check all bytes, and verify checksum if requested. */
+  SVN_ERR(compare_and_verify(modified_p, db, local_abspath, pristine_stream,
+                             compare_textbases, force_comparison,
+                             scratch_pool));
 
   return SVN_NO_ERROR;
 }
