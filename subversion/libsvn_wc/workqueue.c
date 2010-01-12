@@ -1320,6 +1320,8 @@ log_do_committed(svn_wc__db_t *db,
 
           const char *basef;
           apr_finfo_t basef_finfo;
+          svn_boolean_t modified;
+          const char *base_abspath;
 
           /* If the working file was overwritten (due to re-translation)
              or touched (due to +x / -x), then use *that* textual
@@ -1333,39 +1335,34 @@ log_do_committed(svn_wc__db_t *db,
               (SVN_ERR_WC_BAD_ADM_LOG, err,
                _("Error getting 'affected time' for '%s'"),
                svn_dirent_local_style(basef, pool));
-          else
+
+
+          SVN_ERR(svn_dirent_get_absolute(&base_abspath, basef, pool));
+
+          /* Verify that the working file is the same as the base file
+             by comparing file sizes, then timestamps and the contents
+             after that. */
+
+          /*###FIXME: if the file needs translation, don't compare
+            file-sizes, just compare timestamps and do the rest of the
+            hokey pokey. */
+          modified = finfo.size != basef_finfo.size;
+          if (finfo.mtime != basef_finfo.mtime && ! modified)
             {
-              svn_boolean_t modified;
-              const char *base_abspath;
-
-              SVN_ERR(svn_dirent_get_absolute(&base_abspath, basef, pool));
-
-              /* Verify that the working file is the same as the base file
-                 by comparing file sizes, then timestamps and the contents
-                 after that. */
-
-              /*###FIXME: if the file needs translation, don't compare
-                file-sizes, just compare timestamps and do the rest of the
-                hokey pokey. */
-              modified = finfo.size != basef_finfo.size;
-              if (finfo.mtime != basef_finfo.mtime && ! modified)
-                {
-                  err = svn_wc__internal_versioned_file_modcheck(&modified,
-                                                                 db,
-                                                                 local_abspath,
-                                                                 base_abspath,
-                                                                 FALSE, pool);
-                  if (err)
-                    return svn_error_createf
-                      (SVN_ERR_WC_BAD_ADM_LOG, err,
-                       _("Error comparing '%s' and '%s'"),
-                       svn_dirent_local_style(local_abspath, pool),
-                       svn_dirent_local_style(basef, pool));
-                }
-              /* If they are the same, use the working file's timestamp,
-                 else use the base file's timestamp. */
-              tmp_entry.text_time = modified ? basef_finfo.mtime : finfo.mtime;
+              err = svn_wc__internal_versioned_file_modcheck(&modified,
+                                                             db, local_abspath,
+                                                             base_abspath,
+                                                             FALSE, pool);
+              if (err)
+                return svn_error_createf
+                  (SVN_ERR_WC_BAD_ADM_LOG, err,
+                   _("Error comparing '%s' and '%s'"),
+                   svn_dirent_local_style(local_abspath, pool),
+                   svn_dirent_local_style(basef, pool));
             }
+          /* If they are the same, use the working file's timestamp,
+             else use the base file's timestamp. */
+          tmp_entry.text_time = modified ? basef_finfo.mtime : finfo.mtime;
         }
 
       return svn_error_return(svn_wc__entry_modify2(
