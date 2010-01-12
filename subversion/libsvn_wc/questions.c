@@ -266,7 +266,6 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
                                  apr_pool_t *scratch_pool)
 {
   svn_stream_t *pristine_stream;
-  const char *textbase_abspath;
   svn_node_kind_t kind;
   svn_error_t *err;
   apr_finfo_t finfo;
@@ -360,12 +359,9 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
      yet committed. */
   /* We used to stat for the working base here, but we just give
      compare_and_verify a try; we'll check for errors afterwards */
-  SVN_ERR(svn_wc__text_base_path(&textbase_abspath, db, local_abspath, FALSE,
-                                 scratch_pool));
-
-  err = svn_stream_open_readonly(&pristine_stream, textbase_abspath,
-                                 scratch_pool, scratch_pool);
-  if (err)
+  SVN_ERR(svn_wc__db_pristine_read(&pristine_stream, db, local_abspath, NULL,
+                                   scratch_pool, scratch_pool));
+  /*if (err)
     {
       svn_error_t *err2 = svn_io_check_path(textbase_abspath, &kind,
                                             scratch_pool);
@@ -383,7 +379,7 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
         }
 
       return err;
-    }
+    }*/
 
   /* Check all bytes, and verify checksum if requested. */
   SVN_ERR(compare_and_verify(modified_p, db, local_abspath, pristine_stream,
