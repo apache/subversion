@@ -482,8 +482,10 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
   session->pool = pool;
 
   /* Ask the library to open the session. */
-  SVN_ERR(vtable->open_session(session, repos_URL, callbacks, callback_baton,
-                               config, pool));
+  SVN_ERR_W(vtable->open_session(session, repos_URL, callbacks, callback_baton,
+                               config, pool),
+            apr_psprintf(pool, "Unable to connect to a repository at URL '%s'",
+                         repos_URL));
 
   /* Check the UUID. */
   if (uuid)
