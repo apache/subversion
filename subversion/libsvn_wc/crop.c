@@ -335,17 +335,6 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
       _("Can only crop a working copy with a restrictive depth"));
 
   {
-    svn_boolean_t hidden;
-    SVN_ERR(svn_wc__db_node_hidden(&hidden, db, local_abspath, scratch_pool));
-
-    if (hidden)
-      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                               _("The node '%s' was not found."),
-                               svn_dirent_local_style(local_abspath,
-                                                      scratch_pool));
-  }
-
-  {
     svn_wc__db_status_t status;
     svn_wc__db_kind_t kind;
 
@@ -359,6 +348,13 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
     if (kind != svn_wc__db_kind_dir)
       return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
         _("Can only crop directories"));
+
+    if (status == svn_wc__db_status_not_present
+        || status == svn_wc__db_status_absent)
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                               _("The node '%s' was not found."),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
 
     if (status == svn_wc__db_status_deleted ||
         status == svn_wc__db_status_obstructed_delete)
