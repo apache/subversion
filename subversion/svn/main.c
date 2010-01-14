@@ -203,7 +203,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"xml",           opt_xml, 0, N_("output in XML")},
   {"strict",        opt_strict, 0, N_("use strict semantics")},
   {"stop-on-copy",  opt_stop_on_copy, 0,
-                    N_("do not cross copies while traversing history")},
+                    N_("do not cross copies while traversing history\n"
+                       "                             "
+                       "[alias: --soc]")},
   {"no-ignore",     opt_no_ignore, 0,
                     N_("disregard default and svn:ignore property ignores")},
   {"no-auth-cache", opt_no_auth_cache, 0,
@@ -217,15 +219,19 @@ const apr_getopt_option_t svn_cl__options[] =
   {"dry-run",       opt_dry_run, 0,
                     N_("try operation but make no changes")},
   {"no-diff-deleted", opt_no_diff_deleted, 0,
-                    N_("do not print differences for deleted files")},
+                    N_("do not print differences for deleted files\n"
+                       "                             "
+                       "[alias: --ndd]")},
   {"notice-ancestry", opt_notice_ancestry, 0,
                     N_("notice ancestry when calculating differences")},
   {"ignore-ancestry", opt_ignore_ancestry, 0,
-                    N_("ignore ancestry when calculating merges")},
+                    N_("ignore ancestry when calculating merges\n"
+                       "                             "
+                       "[alias: --ia]")},
   {"ignore-externals", opt_ignore_externals, 0,
                     N_("ignore externals definitions\n"
                        "                             "
-                       "[aliases: --ie]")},
+                       "[alias: --ie]")},
   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
@@ -263,7 +269,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"changelist",    opt_changelist, 1,
                     N_("operate only on members of changelist ARG\n"
                        "                             "
-                       "[aliases: --cl]")},
+                       "[alias: --cl]")},
   {"keep-changelists", opt_keep_changelists, 0,
                     N_("don't delete changelists after commit")},
   {"keep-local",    opt_keep_local, 0, N_("keep path in working copy")},
@@ -293,7 +299,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "('merged', 'eligible')")},
   {"reintegrate",   opt_reintegrate, 0,
-                    N_("lump-merge all of source URL's unmerged changes")},
+                    N_("lump-merge all of source URL's unmerged changes\n"
+                       "                             "
+                       "[alias: --ri]")},
   {"strip",         'p', 1,
                     N_("number of leading path components to strip\n"
                        "                             "
@@ -309,11 +317,13 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "while -p2 would give just crunchy.html")},
   {"show-copies-as-adds", opt_show_copies_as_adds, 0,
-                    N_("don't diff copied or moved files with their source")},
+                    N_("don't diff copied or moved files with their source\n"
+                       "                             "
+                       "[alias: --sca]")},
   {"ignore-keywords", opt_ignore_keywords, 0,
                     N_("don't expand keywords\n"
                        "                             "
-                       "[aliases: --ik]")},
+                       "[alias: --ik]")},
 
   /* Long-opt Aliases
    *
@@ -321,8 +331,13 @@ const apr_getopt_option_t svn_cl__options[] =
    * other option (whose description should probably mention its aliases).
   */
 
-  {"cl",            opt_changelist, 1, NULL},
+  {"soc",           opt_stop_on_copy, 0, NULL},
+  {"ndd",           opt_no_diff_deleted, 0, NULL},
+  {"ia",            opt_ignore_ancestry, 0, NULL},
   {"ie",            opt_ignore_externals, 0, NULL},
+  {"cl",            opt_changelist, 1, NULL},
+  {"ri",            opt_reintegrate, 0, NULL},
+  {"sca",           opt_show_copies_as_adds, 0, NULL},
   {"ik",            opt_ignore_keywords, 0, NULL},
 
   {0,               0, 0, 0},
