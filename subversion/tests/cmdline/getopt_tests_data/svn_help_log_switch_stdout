@@ -46,6 +46,7 @@ Valid options:
   -c [--change] ARG        : the change made in revision ARG
   --targets ARG            : pass contents of file ARG as additional args
   --stop-on-copy           : do not cross copies while traversing history
+                             [alias: --soc]
   --incremental            : give output suitable for concatenation
   --xml                    : output in XML
   -l [--limit] ARG         : maximum number of log entries
@@ -127,7 +128,7 @@ Valid options:
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
   --ignore-externals       : ignore externals definitions
-                             [aliases: --ie]
+                             [alias: --ie]
   --force                  : force operation to run
   --accept ARG             : specify automatic conflict resolution action
                             ('postpone', 'base', 'mine-conflict',
