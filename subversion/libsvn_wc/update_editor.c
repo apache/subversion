@@ -706,7 +706,7 @@ complete_directory(struct edit_baton *eb,
           else
             {
               SVN_ERR(svn_wc__set_depth(eb->db, eb->target_abspath,
-                                        svn_depth_infinity, pool));
+                                        eb->requested_depth, pool));
             }
         }
 

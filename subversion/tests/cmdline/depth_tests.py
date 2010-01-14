@@ -28,6 +28,7 @@
 
 # General modules
 import os
+import re
 
 # Our testing module
 import svntest
@@ -2342,7 +2343,6 @@ def info_excluded(sbox):
   A_path = os.path.join(wc_dir, 'A')
   svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', A_path)
 
-  import re
   expected_info = {
       'Path' : re.escape(A_path),
       'Repository Root' : sbox.repo_url,
@@ -2502,6 +2502,161 @@ def tree_conflicts_resolved_depth_infinity(sbox):
 
   svntest.actions.run_and_verify_resolved([m, B, g], '--depth=infinity', A)
 
+def update_excluded_path_sticky_depths(sbox):
+  """set-depth from excluded to all other depths"""
+
+  ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
+                                                             infinity=True)
+  A_path = os.path.join(wc_dir, 'A')
+  B_path = os.path.join(A_path, 'B')
+
+  # Exclude the subtree 'A/B'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B'            : Item(status='D '),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/E',
+                         'A/B/F', 'A/B')
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/E',
+                       'A/B/F', 'A/B')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'exclude', B_path)
+
+  # Update to depth 'empty' for the excluded path A/B
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B'         : Item(status='A '),
+    })
+  expected_status.add({
+    'A/B'         : Item(status='  ', wc_rev=1)
+    })
+  expected_disk.add({
+    'A/B'         : Item(contents=None),
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'empty', B_path)
+  verify_depth(None, "empty", B_path)
+  expected_info = {
+      'Path' : re.escape(B_path),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : svntest.actions.get_wc_uuid(wc_dir),
+      'Depth' : 'empty',
+  }
+  svntest.actions.run_and_verify_info([expected_info], B_path)
+
+  # Exclude A/B again
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--set-depth', 'exclude', B_path)
+
+  # Update to depth 'files' for the excluded path A/B
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B'              : Item(status='A '),
+    'A/B/lambda'       : Item(status='A '),
+    })
+  expected_status.add({
+    'A/B'              : Item(status='  ', wc_rev=1),
+    'A/B/lambda'       : Item(status='  ', wc_rev=1),
+    })
+  expected_disk.add({
+    'A/B'            : Item(contents=None),
+    'A/B/lambda'     : Item(contents="This is the file 'lambda'.\n"),
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'files', B_path)
+  verify_depth(None, "files", B_path)
+  expected_info = {
+      'Path' : re.escape(B_path),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : svntest.actions.get_wc_uuid(wc_dir),
+      'Depth' : 'files',
+  }
+  svntest.actions.run_and_verify_info([expected_info], B_path)
+
+  # Exclude A/B again
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--set-depth', 'exclude', B_path)
+
+  # Update to depth 'immediates' for the excluded path A/B
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B'              : Item(status='A '),
+    'A/B/lambda'       : Item(status='A '),
+    'A/B/E'            : Item(status='A '),
+    'A/B/F'            : Item(status='A '),
+    })
+  expected_status.add({
+    'A/B'              : Item(status='  ', wc_rev=1),
+    'A/B/lambda'       : Item(status='  ', wc_rev=1),
+    'A/B/E'            : Item(status='  ', wc_rev=1),
+    'A/B/F'            : Item(status='  ', wc_rev=1),
+    })
+  expected_disk.add({
+    'A/B'              : Item(contents=None),
+    'A/B/lambda'       : Item(contents="This is the file 'lambda'.\n"),
+    'A/B/E'            : Item(contents=None),
+    'A/B/F'            : Item(contents=None),
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'immediates', B_path)
+  verify_depth(None, "immediates", B_path)
+  expected_info = {
+      'Path' : re.escape(B_path),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : svntest.actions.get_wc_uuid(wc_dir),
+      'Depth' : 'immediates',
+  }
+  svntest.actions.run_and_verify_info([expected_info], B_path)
+
+  # Exclude A/B again
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--set-depth', 'exclude', B_path)
+
+  # Update to depth 'infinity' for the excluded path A/B
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B'              : Item(status='A '),
+    'A/B/lambda'       : Item(status='A '),
+    'A/B/E'            : Item(status='A '),
+    'A/B/E/beta'       : Item(status='A '),
+    'A/B/E/alpha'      : Item(status='A '),
+    'A/B/F'            : Item(status='A '),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_disk = svntest.main.greek_state.copy()
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'infinity', B_path)
+  verify_depth(None, "infinity", B_path)
+  expected_info = {
+      'Path' : re.escape(B_path),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : svntest.actions.get_wc_uuid(wc_dir),
+  #   'Depth' value is absent for 'infinity'
+  }
+  svntest.actions.run_and_verify_info([expected_info], B_path)
 
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
@@ -2546,6 +2701,7 @@ test_list = [ None,
               tree_conflicts_resolved_depth_files,
               tree_conflicts_resolved_depth_immediates,
               tree_conflicts_resolved_depth_infinity,
+              update_excluded_path_sticky_depths,
             ]
 
 if __name__ == "__main__":
