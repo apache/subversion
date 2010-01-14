@@ -10,7 +10,7 @@ See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.6.8:
+Status of 1.6.9:
 ================
 
 Candidate changes:
@@ -145,6 +145,16 @@ Candidate changes:
    Justification:
      Without this patch the initial move error is lost, which makes it
      impossible to diagnose the real error.
+   Votes:
+     +1: rhuijben
+
+ * r898048
+   Extend the Windows only, crypto api verification of server certificates
+   to check for certificate revocation. Also simplify the code by making
+   Windows do the chain verification instead of just taking an intermediate
+   result.
+   Justification:
+     It's better to be safe, when we are talking about SSL.
    Votes:
      +1: rhuijben
 
