@@ -903,7 +903,7 @@ run_deletion_postcommit(svn_wc__db_t *db,
          processing this logfile.  */
       if (kind == svn_wc__db_kind_dir)
         {
-          const svn_wc_entry_t *orig_entry;
+          svn_boolean_t keep_local;
           svn_wc_entry_t tmp_entry;
 
           /* Bump the revision number of this_dir anyway, so that it
@@ -918,14 +918,14 @@ run_deletion_postcommit(svn_wc__db_t *db,
                                         SVN_WC__ENTRY_MODIFY_REVISION,
                                         scratch_pool));
 
-          SVN_ERR(svn_wc__get_entry(&orig_entry, db, local_abspath, FALSE,
-                                    svn_node_unknown, FALSE,
-                                    scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_temp_determine_keep_local(&keep_local, db,
+                                                       local_abspath,
+                                                       scratch_pool));
 
           /* Ensure the directory is deleted later.  */
           return svn_error_return(svn_wc__wq_add_killme(
                                     db, local_abspath,
-                                    orig_entry->keep_local /* adm_only */,
+                                    keep_local /* adm_only */,
                                     scratch_pool));
         }
 

@@ -1891,6 +1891,12 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
                                const char *local_abspath,
                                apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_wc__db_temp_determine_keep_local(svn_boolean_t *keep_local,
+                                     svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     apr_pool_t *scratch_pool);
+
 /* Removes all references of LOCAL_ABSPATH from its working copy
    using DB. When FLUSH_ENTRY_CACHE is set to TRUE, flush the related
    entries caches. */

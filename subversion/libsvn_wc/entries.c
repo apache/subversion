@@ -194,24 +194,6 @@ fetch_wc_id(apr_int64_t *wc_id, svn_sqlite__db_t *sdb)
 }
 
 
-static svn_error_t *
-determine_keep_local(svn_boolean_t *keep_local,
-                     svn_sqlite__db_t *sdb,
-                     apr_int64_t wc_id,
-                     const char *local_relpath)
-{
-  svn_sqlite__stmt_t *stmt;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_KEEP_LOCAL_FLAG));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_row(stmt));
-
-  *keep_local = svn_sqlite__column_boolean(stmt, 0);
-
-  return svn_error_return(svn_sqlite__reset(stmt));
-}
-
-
 /* Hit the database to check the file external information for the given
    entry.  The entry will be modified in place. */
 static svn_error_t *
@@ -521,7 +503,7 @@ read_entries_new(apr_hash_t **result_entries,
 
   entries = apr_hash_make(result_pool);
 
-  /* ### need database to determine: incomplete, keep_local, ACTUAL info.  */
+  /* ### need database to determine: incomplete, ACTUAL info.  */
   SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, db, local_abspath, FALSE,
                                   handle_pool, iterpool));
 
@@ -709,8 +691,9 @@ read_entries_new(apr_hash_t **result_entries,
              directories after the delete operation are always kept locally.
              */
           if (*entry->name == '\0')
-            SVN_ERR(determine_keep_local(&entry->keep_local, sdb,
-                                         wc_id, entry->name));
+            SVN_ERR(svn_wc__db_temp_determine_keep_local(&entry->keep_local,
+                                                         db, entry_abspath,
+                                                         scratch_pool));
         }
       else if (status == svn_wc__db_status_added
                || status == svn_wc__db_status_obstructed_add)
