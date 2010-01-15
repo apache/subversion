@@ -1100,18 +1100,28 @@ proplist_walk_cb(const char *local_abspath,
                  apr_pool_t *scratch_pool)
 {
   struct proplist_walk_baton *wb = walk_baton;
-  const svn_wc_entry_t *entry;
   apr_hash_t *hash;
   const char *path;
 
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wb->wc_ctx, local_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      scratch_pool, scratch_pool));
-
   /* Ignore the entry if it does not exist at the time of interest. */
-  if (entry->schedule
-      == (wb->pristine ? svn_wc_schedule_add : svn_wc_schedule_delete))
-    return SVN_NO_ERROR;
+  if (wb->pristine)
+    {
+      svn_boolean_t added;
+
+      SVN_ERR(svn_wc__node_is_status_added(&added, wb->wc_ctx, local_abspath,
+                                           scratch_pool));
+      if (added)
+        return SVN_NO_ERROR;
+    }
+  else
+    {
+      svn_boolean_t deleted;
+
+      SVN_ERR(svn_wc__node_is_status_delete(&deleted, wb->wc_ctx,
+                                            local_abspath, scratch_pool));
+      if (deleted)
+        return SVN_NO_ERROR;
+    }
 
   /* If our entry doesn't pass changelist filtering, get outta here. */
   if (! svn_wc__changelist_match(wb->wc_ctx, local_abspath,
