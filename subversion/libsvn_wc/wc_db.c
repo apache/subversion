@@ -5273,6 +5273,23 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
 }
 
 svn_error_t *
+svn_wc__db_temp_determine_keep_local(svn_boolean_t *keep_local,
+                                     svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_SELECT_KEEP_LOCAL_FLAG, scratch_pool));
+  SVN_ERR(svn_sqlite__step_row(stmt));
+
+  *keep_local = svn_sqlite__column_boolean(stmt, 0);
+
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
+
+svn_error_t *
 svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
