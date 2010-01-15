@@ -438,10 +438,10 @@ svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
  * allocations.
  */
 svn_error_t *
-svn_wc__node_is_status_delete(svn_boolean_t *is_deleted,
-                              svn_wc_context_t *wc_ctx,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool);
+svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool);
 
 /**
  * Set @a *is_deleted to whether @a local_abspath is obstructed, using

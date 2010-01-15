@@ -2068,8 +2068,8 @@ merge_dir_added(const char *local_dir_abspath,
 
   /* Find out if this path is deleted and in asking this question also derive
      the path's version-control state, we'll need to know both below. */
-  err = svn_wc__node_is_status_delete(&is_deleted, merge_b->ctx->wc_ctx,
-                                      local_abspath, subpool);
+  err = svn_wc__node_is_status_deleted(&is_deleted, merge_b->ctx->wc_ctx,
+                                       local_abspath, subpool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -2263,8 +2263,8 @@ merge_dir_deleted(const char *local_dir_abspath,
 
   /* Find out if this path is deleted and in asking this question also derive
      the path's version-control state, we'll need to know both below. */
-  err = svn_wc__node_is_status_delete(&is_deleted, merge_b->ctx->wc_ctx,
-                                      local_abspath, subpool);
+  err = svn_wc__node_is_status_deleted(&is_deleted, merge_b->ctx->wc_ctx,
+                                       local_abspath, subpool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -2415,8 +2415,8 @@ merge_dir_opened(const char *local_dir_abspath,
 
     /* Find out if this path is deleted and in asking this question also derive
        the path's version-control state, we'll need to know both below. */
-    err = svn_wc__node_is_status_delete(&is_deleted, merge_b->ctx->wc_ctx,
-                                        local_abspath, subpool);
+    err = svn_wc__node_is_status_deleted(&is_deleted, merge_b->ctx->wc_ctx,
+                                         local_abspath, subpool);
     if (err)
       {
         if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -5186,8 +5186,8 @@ get_mergeinfo_walk_cb(const char *local_abspath,
 
   SVN_ERR(svn_wc__node_is_status_obstructed(&obstructed, wb->ctx->wc_ctx,
                                             local_abspath, scratch_pool));
-  SVN_ERR(svn_wc__node_is_status_delete(&deleted, wb->ctx->wc_ctx,
-                                        local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__node_is_status_deleted(&deleted, wb->ctx->wc_ctx,
+                                         local_abspath, scratch_pool));
   SVN_ERR(svn_wc__node_is_status_absent(&absent, wb->ctx->wc_ctx,
                                         local_abspath, scratch_pool));
 
