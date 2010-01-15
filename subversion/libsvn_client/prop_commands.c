@@ -1117,8 +1117,8 @@ proplist_walk_cb(const char *local_abspath,
     {
       svn_boolean_t deleted;
 
-      SVN_ERR(svn_wc__node_is_status_delete(&deleted, wb->wc_ctx,
-                                            local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__node_is_status_deleted(&deleted, wb->wc_ctx,
+                                             local_abspath, scratch_pool));
       if (deleted)
         return SVN_NO_ERROR;
     }

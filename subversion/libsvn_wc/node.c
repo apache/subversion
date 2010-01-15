@@ -484,10 +484,10 @@ svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
-svn_wc__node_is_status_delete(svn_boolean_t *is_deleted,
-                              svn_wc_context_t *wc_ctx,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool)
+svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
 
