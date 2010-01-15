@@ -1931,11 +1931,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
-  apr_dir_t *this_dir;
-  apr_finfo_t this_entry;
   apr_pool_t *subpool;
-  apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
-  const char *path_apr;
   apr_hash_t *dirents;
   apr_hash_index_t *ent;
 
