@@ -1975,8 +1975,6 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
         }
       else
         {
-          svn_error_t *err;
-
           if (cancel_func)
             SVN_ERR((*cancel_func)(cancel_baton));
 
