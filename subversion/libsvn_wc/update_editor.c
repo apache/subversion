@@ -671,29 +671,32 @@ complete_directory(struct edit_baton *eb,
       /* Before we can finish, we may need to clear the exclude flag for
          target. Also give a chance to the target that is explicitly pulled
          in. */
+      svn_depth_t depth;
+      svn_wc__db_kind_t kind;
       svn_error_t *err;
-      const svn_wc_entry_t *target_entry;
 
       SVN_ERR_ASSERT(strcmp(local_abspath, eb->anchor_abspath) == 0);
 
-      err = svn_wc__get_entry(&target_entry, eb->db, eb->target_abspath, TRUE,
-                              svn_node_dir, TRUE, pool, pool);
-      if (err)
+      err = svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, &depth, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 eb->db, eb->target_abspath, pool, pool);
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
         {
-          if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
-            return svn_error_return(err);
           svn_error_clear(err);
-
-          /* No problem if it is actually a file. The depth won't be
-             svn_depth_exclude, so we'll do nothing.  */
+          return SVN_NO_ERROR;
         }
-      if (target_entry && target_entry->depth == svn_depth_exclude)
+      else if (err)
+        return svn_error_return(err);
+
+      if (depth == svn_depth_exclude)
         {
           /* There is a small chance that the target is gone in the
              repository.  If so, we should get rid of the entry
              (and thus get rid of the exclude flag) now. */
 
-          if (target_entry->kind == svn_node_dir &&
+          if (kind == svn_wc__db_kind_dir &&
               svn_wc__adm_missing(eb->db, eb->target_abspath, pool))
             {
               /* Still passing NULL for THEIR_URL. A case where THEIR_URL
