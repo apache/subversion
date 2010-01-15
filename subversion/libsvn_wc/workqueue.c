@@ -1205,8 +1205,8 @@ log_do_committed(svn_wc__db_t *db,
           const char *child_name = APR_ARRAY_IDX(children, i, const char*);
           const char *child_abspath;
           svn_wc__db_kind_t kind;
+          svn_wc__db_status_t status;
           svn_boolean_t is_file;
-          const svn_wc_entry_t *child_entry;
 
           apr_pool_clear(iterpool);
           child_abspath = svn_dirent_join(local_abspath, child_name, iterpool);
@@ -1217,12 +1217,13 @@ log_do_committed(svn_wc__db_t *db,
           is_file = (kind == svn_wc__db_kind_file ||
                      kind == svn_wc__db_kind_symlink);
 
-          SVN_ERR(svn_wc__get_entry(&child_entry, db, child_abspath,
-                                    FALSE,
-                                    is_file ? svn_node_file : svn_node_dir,
-                                    !is_file, iterpool, iterpool));
+          SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       db, child_abspath, iterpool, iterpool));
 
-          if (child_entry->schedule != svn_wc_schedule_delete)
+          if (status != svn_wc__db_status_deleted)
             continue;
 
           /* ### We pass NULL, NULL for cancel_func and cancel_baton below.
