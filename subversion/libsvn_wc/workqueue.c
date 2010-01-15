@@ -895,7 +895,7 @@ run_deletion_postcommit(svn_wc__db_t *db,
       const char *repos_relpath;
       const char *repos_root_url;
       const char *repos_uuid;
-      const svn_wc_entry_t *parent_entry;
+      svn_revnum_t parent_revision;
 
       /* If we are suppose to delete "this dir", drop a 'killme' file
          into my own administrative dir as a signal for svn_wc__run_log()
@@ -942,12 +942,14 @@ run_deletion_postcommit(svn_wc__db_t *db,
                 FALSE, FALSE, cancel_func, cancel_baton, scratch_pool));
 
       /* If the parent entry's working rev 'lags' behind new_rev... */
-      SVN_ERR(svn_wc__get_entry(&parent_entry, db,
-                                svn_dirent_dirname(local_abspath,
-                                                   scratch_pool),
-                                FALSE, svn_node_dir, FALSE,
-                                scratch_pool, scratch_pool));
-      if (new_revision > parent_entry->revision)
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, &parent_revision, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   db, svn_dirent_dirname(local_abspath,
+                                                          scratch_pool),
+                                   scratch_pool, scratch_pool));
+      if (new_revision > parent_revision)
         {
           /* ...then the parent's revision is now officially a
              lie;  therefore, it must remember the file as being
