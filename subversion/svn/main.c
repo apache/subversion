@@ -152,7 +152,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"incremental",   opt_incremental, 0,
                     N_("give output suitable for concatenation")},
   {"encoding",      opt_encoding, 1,
-                    N_("treat value as being in charset encoding ARG")},
+                    N_("treat value as being in charset encoding ARG\n"
+                       "                             "
+                       "[alias: --enc]")},
   {"version",       opt_version, 0, N_("show program version information")},
   {"verbose",       'v', 0, N_("print extra information")},
   {"show-updates",  'u', 0, N_("display update information")},
@@ -199,7 +201,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"set-depth",     opt_set_depth, 1,
                     N_("set new working copy depth to ARG ('exclude',\n"
                        "                            "
-                       "'empty', 'files', 'immediates', or 'infinity')")},
+                       "'empty', 'files', 'immediates', or 'infinity')\n"
+                       "                            "
+                       "[alias: --sd]")},
   {"xml",           opt_xml, 0, N_("output in XML")},
   {"strict",        opt_strict, 0, N_("use strict semantics")},
   {"stop-on-copy",  opt_stop_on_copy, 0,
@@ -209,7 +213,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"no-ignore",     opt_no_ignore, 0,
                     N_("disregard default and svn:ignore property ignores")},
   {"no-auth-cache", opt_no_auth_cache, 0,
-                    N_("do not cache authentication tokens")},
+                    N_("do not cache authentication tokens\n"
+                       "                             "
+                       "[alias: --nac]")},
   {"trust-server-cert", opt_trust_server_cert, 0,
                     N_("accept unknown SSL server certificates without\n"
                        "                             "
@@ -217,13 +223,17 @@ const apr_getopt_option_t svn_cl__options[] =
   {"non-interactive", opt_non_interactive, 0,
                     N_("do no interactive prompting")},
   {"dry-run",       opt_dry_run, 0,
-                    N_("try operation but make no changes")},
+                    N_("try operation but make no changes\n"
+                       "                             "
+                       "[alias: --dry]")},
   {"no-diff-deleted", opt_no_diff_deleted, 0,
                     N_("do not print differences for deleted files\n"
                        "                             "
                        "[alias: --ndd]")},
   {"notice-ancestry", opt_notice_ancestry, 0,
-                    N_("notice ancestry when calculating differences")},
+                    N_("notice ancestry when calculating differences\n"
+                       "                             "
+                       "[alias: --na]")},
   {"ignore-ancestry", opt_ignore_ancestry, 0,
                     N_("ignore ancestry when calculating merges\n"
                        "                             "
@@ -236,14 +246,18 @@ const apr_getopt_option_t svn_cl__options[] =
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
   {"record-only",   opt_record_only, 0,
-                    N_("merge only mergeinfo differences")},
+                    N_("merge only mergeinfo differences\n"
+                       "                             "
+                       "[alias: --ro]")},
   {"old",           opt_old_cmd, 1, N_("use ARG as the older target")},
   {"new",           opt_new_cmd, 1, N_("use ARG as the newer target")},
   {"revprop",       opt_revprop, 0,
                     N_("operate on a revision property (use with -r)")},
   {"relocate",      opt_relocate, 0, N_("relocate via URL-rewriting")},
   {"config-dir",    opt_config_dir, 1,
-                    N_("read user configuration files from directory ARG")},
+                    N_("read user configuration files from directory ARG\n"
+                       "                             "
+                       "[alias: --cd]")},
   {"config-option", opt_config_options, 1,
                     N_("set user configuration option in the format:\n"
                        "                             "
@@ -272,7 +286,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "[alias: --cl]")},
   {"keep-changelists", opt_keep_changelists, 0,
                     N_("don't delete changelists after commit")},
-  {"keep-local",    opt_keep_local, 0, N_("keep path in working copy")},
+  {"keep-local",    opt_keep_local, 0, N_("keep path in working copy\n"
+                       "                             "
+                       "[alias: --kl]")},
   {"with-all-revprops",  opt_with_all_revprops, 0,
                     N_("retrieve all revision properties")},
   {"with-no-revprops",  opt_with_no_revprops, 0,
@@ -297,7 +313,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"show-revs",     opt_show_revs, 1,
                     N_("specify which collection of revisions to display\n"
                        "                             "
-                       "('merged', 'eligible')")},
+                       "('merged', 'eligible')\n"
+                       "                             "
+                       "[alias: --sr]")},
   {"reintegrate",   opt_reintegrate, 0,
                     N_("lump-merge all of source URL's unmerged changes\n"
                        "                             "
@@ -331,11 +349,20 @@ const apr_getopt_option_t svn_cl__options[] =
    * other option (whose description should probably mention its aliases).
   */
 
+  {"sd",            opt_set_depth, 1, NULL},
+  {"enc",           opt_encoding, 1, NULL},
   {"soc",           opt_stop_on_copy, 0, NULL},
+  {"nac",           opt_no_auth_cache, 0, NULL},
+  {"dry",           opt_dry_run, 0, NULL},
   {"ndd",           opt_no_diff_deleted, 0, NULL},
+  {"na",            opt_notice_ancestry, 0, NULL},
   {"ia",            opt_ignore_ancestry, 0, NULL},
   {"ie",            opt_ignore_externals, 0, NULL},
+  {"ro",            opt_record_only, 0, NULL},
+  {"cd",            opt_config_dir, 1, NULL},
   {"cl",            opt_changelist, 1, NULL},
+  {"kl",            opt_keep_local, 0, NULL},
+  {"sr",            opt_show_revs, 1, NULL},
   {"ri",            opt_reintegrate, 0, NULL},
   {"sca",           opt_show_copies_as_adds, 0, NULL},
   {"ik",            opt_ignore_keywords, 0, NULL},

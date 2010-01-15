@@ -58,10 +58,12 @@ Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
+                             [alias: --nac]
   --non-interactive        : do no interactive prompting
   --trust-server-cert      : accept unknown SSL server certificates without
                              prompting (but only with '--non-interactive')
   --config-dir ARG         : read user configuration files from directory ARG
+                             [alias: --cd]
   --config-option ARG      : set user configuration option in the format:
                                  FILE:SECTION:OPTION=[VALUE]
                              For example:
@@ -124,6 +126,7 @@ Valid options:
                             'immediates', or 'infinity')
   --set-depth ARG          : set new working copy depth to ARG ('exclude',
                             'empty', 'files', 'immediates', or 'infinity')
+                            [alias: --sd]
   -q [--quiet]             : print nothing, or only summary information
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
@@ -139,10 +142,12 @@ Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
+                             [alias: --nac]
   --non-interactive        : do no interactive prompting
   --trust-server-cert      : accept unknown SSL server certificates without
                              prompting (but only with '--non-interactive')
   --config-dir ARG         : read user configuration files from directory ARG
+                             [alias: --cd]
   --config-option ARG      : set user configuration option in the format:
                                  FILE:SECTION:OPTION=[VALUE]
                              For example:
