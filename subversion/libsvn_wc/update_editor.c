@@ -3023,13 +3023,13 @@ close_directory(void *dir_baton,
      deleted (issue #1672). */
   if (db->was_incomplete)
     {
-      const svn_wc_entry_t *entry;
       int i;
       apr_hash_t *props_to_delete;
+      svn_wc__db_kind_t kind;
 
-      SVN_ERR(svn_wc__get_entry(&entry, db->edit_baton->db, db->local_abspath,
-                                TRUE, svn_node_unknown, FALSE, pool, pool));
-      if (entry == NULL)
+      SVN_ERR(svn_wc__db_read_kind(&kind, db->edit_baton->db,
+                                   db->local_abspath, TRUE, pool));
+      if (kind == svn_wc__db_kind_unknown)
         {
           base_props = apr_hash_make(pool);
           working_props = apr_hash_make(pool);
