@@ -146,6 +146,33 @@ def cat_skip_uncattable(sbox):
                                       'cat', rho_path, G_path, new_file_path)
 
 
+# Test for issue #3560 'svn_wc_status3() returns incorrect status for
+# unversioned files'.
+def cat_unversioned_file(sbox):
+  "cat an unversioned file parent dir thinks exists"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  # Delete a file an commit the deletion.
+  svntest.actions.run_and_verify_svn2(None, None, [], 0,
+                                      'delete', iota_path)
+  svntest.actions.run_and_verify_svn2(None, None, [], 0,
+                                      'commit', '-m', 'delete a file',
+                                      iota_path)
+
+  # Now try to cat the deleted file, it should be reported as unversioned.
+  expected_error = ["svn: warning: '" + iota_path + "'"
+                    + " is not under version control\n"]
+  svntest.actions.run_and_verify_svn2(None, [], expected_error, 0,
+                                      'cat', iota_path)
+
+  # Put an unversioned file at 'iota' and try to cat it again, the result
+  # should still be the same.
+  svntest.main.file_write(iota_path, "This the unversioned file 'iota'.\n")
+  svntest.actions.run_and_verify_svn2(None, [], expected_error, 0,
+                                      'cat', iota_path)
+
 ########################################################################
 # Run the tests
 
@@ -157,6 +184,7 @@ test_list = [ None,
               cat_base,
               cat_nonexistent_file,
               cat_skip_uncattable,
+              XFail(cat_unversioned_file),
              ]
 
 if __name__ == '__main__':
