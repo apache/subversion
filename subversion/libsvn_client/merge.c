@@ -2599,7 +2599,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
   notification_receiver_baton_t *notify_b = baton;
   svn_boolean_t is_operative_notification = FALSE;
 
-  /* Skip notifications if this is a --mergeinfo-only merge that is adding
+  /* Skip notifications if this is a --record-only merge that is adding
      or deleting NOTIFY->PATH, allow only mergeinfo changes to be notified.
      We will already have skipped the actual addition or deletion, but will
      still get a notification callback for it.*/
