@@ -215,12 +215,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * ^/subversion/branches/1.6.x-1.6.8-serfassertion
-   Fix the assertion as seen while running the tests over svn_ra_serf by
-   canonicalizing the basecoll_url before returning it.  See
-   http://svn.haxx.se/dev/archive-2010-01/0295.shtml for discussion.
-   Justification:
-     Failing assertions are bad.
-   Votes:
-     +1: rhuijben, pburba, lgo
