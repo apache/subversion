@@ -25,7 +25,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2010-01-15 08:52+0100\n"
-"PO-Revision-Date: 2010-01-15 09:06+0100\n"
+"PO-Revision-Date: 2010-01-19 20:03+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -302,7 +302,7 @@ msgstr "Une donnée ne peut être protégée sûrement dans du XML"
 
 #: ../include/svn_error_codes.h:248
 msgid "Inconsistent line ending style"
-msgstr "Style de fin de ligne inconsistant"
+msgstr "Style de fin de ligne incohérent"
 
 #: ../include/svn_error_codes.h:252
 msgid "Unrecognized line ending style"
@@ -10039,7 +10039,7 @@ msgstr ""
 
 #: ../svn/util.c:140
 msgid "The EDITOR, SVN_EDITOR or VISUAL environment variable or 'editor-cmd' run-time configuration option is empty or consists solely of whitespace. Expected a shell command."
-msgstr "La variable d'environnement EDITOR, SVN_EDITOR ou VISUAL, ou alors la configuration 'editor-cmd' est vide ou consiste seulement en des espaces. Une commande shell est attendue."
+msgstr "La variable d'environnement EDITOR, SVN_EDITOR ou VISUAL, ou alors la configuration 'editor-cmd' est vide ou est constituée seulement d'espaces. Une commande shell est attendue."
 
 #: ../svn/util.c:147
 msgid "None of the environment variables SVN_EDITOR, VISUAL or EDITOR are set, and no 'editor-cmd' run-time configuration option was found"
@@ -10067,7 +10067,7 @@ msgstr "system('%s') a retourné %d"
 
 #: ../svn/util.c:241
 msgid "The SVN_MERGE environment variable is empty or consists solely of whitespace. Expected a shell command.\n"
-msgstr "La variable d'environnement SVN_MERGE est vide ou consiste seulement en des espaces. Une commande shell est attendue.\n"
+msgstr "La variable d'environnement SVN_MERGE est vide ou est constituée seulement d'espaces. Une commande shell est attendue.\n"
 
 #: ../svn/util.c:247
 msgid "The environment variable SVN_MERGE and the merge-tool-cmd run-time configuration option were not set.\n"
@@ -11347,7 +11347,7 @@ msgid ""
 msgstr ""
 "usage général : svnlook SOUS_COMMANDE CHEMIN_DÉPÔT [ARGS & OPTIONS...]\n"
 "Note : Quand --revision ou --transaction ne sont pas précisées, les sous-\n"
-"       commandes qui en ont besoin utilisent la révision la plus réçente.\n"
+"       commandes qui en ont besoin utilisent la révision la plus récente.\n"
 "Entrer 'svnlook help <sous-commande>' pour une aide spécifique.\n"
 "Entrer 'svnlook --version' pour avoir la version et les modules de stockage.\n"
 "\n"
