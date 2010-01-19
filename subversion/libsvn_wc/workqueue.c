@@ -1223,7 +1223,8 @@ log_do_committed(svn_wc__db_t *db,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        db, child_abspath, iterpool, iterpool));
 
-          if (status != svn_wc__db_status_deleted)
+          if (! (status == svn_wc__db_status_deleted
+                || status == svn_wc__db_status_obstructed_delete) )
             continue;
 
           /* ### We pass NULL, NULL for cancel_func and cancel_baton below.
