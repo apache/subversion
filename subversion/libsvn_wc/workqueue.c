@@ -942,13 +942,12 @@ run_deletion_postcommit(svn_wc__db_t *db,
                 FALSE, FALSE, cancel_func, cancel_baton, scratch_pool));
 
       /* If the parent entry's working rev 'lags' behind new_rev... */
-      SVN_ERR(svn_wc__db_read_info(NULL, NULL, &parent_revision, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
-                                   db, svn_dirent_dirname(local_abspath,
-                                                          scratch_pool),
-                                   scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &parent_revision, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       db, svn_dirent_dirname(local_abspath,
+                                                              scratch_pool),
+                                       scratch_pool, scratch_pool));
       if (new_revision > parent_revision)
         {
           /* ...then the parent's revision is now officially a
