@@ -985,6 +985,8 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                 "requested baseline-collection value"));
     }
 
+  basecoll_url = svn_path_canonicalize(basecoll_url, pool);
+
   if (latest_revnum)
     {
       const char *version_name;
