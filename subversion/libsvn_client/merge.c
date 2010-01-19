@@ -6921,6 +6921,15 @@ record_mergeinfo_for_dir_merge(const svn_merge_range_t *merged_range,
         }
       else /* Record mergeinfo on CHILD. */
         {
+          svn_boolean_t child_is_deleted;
+
+          /* If CHILD is deleted we don't need to set mergeinfo on it. */
+          SVN_ERR(svn_wc__node_is_status_deleted(&child_is_deleted,
+                                                 merge_b->ctx->wc_ctx,
+                                                 child->abspath, iterpool));
+          if (child_is_deleted)
+            continue;
+
           child_repos_path = svn_dirent_is_child(merge_b->target_abspath,
                                                  child->abspath, iterpool);
           if (!child_repos_path)
