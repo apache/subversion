@@ -100,9 +100,15 @@
   apr_array_header_t *list
 }
 
+#ifdef SWIGRUBY
 %apply const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
   apr_array_header_t *changelists
 }
+#else
+%apply const apr_array_header_t *STRINGLIST {
+  apr_array_header_t *changelists
+}
+#endif
 
 /* svn_wc_cleanup2() */
 %apply const char *MAY_BE_NULL {

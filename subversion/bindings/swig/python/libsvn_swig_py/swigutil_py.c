@@ -878,57 +878,6 @@ PyObject *svn_swig_py_changed_path_hash_to_dict(apr_hash_t *hash)
   return dict;
 }
 
-apr_array_header_t *svn_swig_py_rangelist_to_array(PyObject *list,
-                                                   apr_pool_t *pool)
-{
-  Py_ssize_t inputlen;
-  int targlen;
-  apr_array_header_t *temp;
-
-  if (!PySequence_Check(list)) {
-    PyErr_SetString(PyExc_TypeError, "not a sequence");
-    return NULL;
-  }
-
-  inputlen = PySequence_Length(list);
-
-  if (inputlen < 0)
-      return NULL;
-
-  if (inputlen > INT_MAX)
-    {
-      PyErr_SetString(PyExc_ValueError, "too many elements");
-      return NULL;
-    }
-
-  targlen = (int) inputlen;
-  temp = apr_array_make(pool, targlen, sizeof(svn_merge_range_t *));
-  /* APR_ARRAY_IDX doesn't actually increment the array item count
-     (like, say, apr_array_push would). */
-  temp->nelts = targlen;
-  while (targlen--) {
-      PyObject *o = PySequence_GetItem(list, targlen);
-      svn_merge_range_t *range;
-      svn_merge_range_t *newrange;
-
-      if (o == NULL)
-        return NULL;
-      if (svn_swig_ConvertPtrString(o, (void **)&range,
-                                    "svn_merge_range_t *"))
-        {
-          PyErr_SetString(PyExc_TypeError,
-                          "list values are not svn_merge_range_t *'s");
-          Py_DECREF(list);
-          return NULL;
-        }
-      newrange = svn_merge_range_dup(range, pool);
-
-      APR_ARRAY_IDX(temp, targlen, svn_merge_range_t *) = newrange;
-      Py_DECREF(o);
-  }
-  return temp;
-}
-
 apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
                                              apr_pool_t *pool)
 {
@@ -990,7 +939,12 @@ apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
       PyObject *key = PyList_GetItem(keys, i);
       PyObject *value = PyDict_GetItem(dict, key);
       const char *pathname = make_string_from_ob(key, pool);
-      apr_array_header_t *ranges = svn_swig_py_rangelist_to_array(value, pool);
+      const apr_array_header_t *ranges = svn_swig_py_seq_to_array(value,
+        sizeof(const svn_merge_range_t *),
+        svn_swig_py_unwrap_struct_ptr,
+        svn_swig_TypeQuery("svn_merge_range_t *"),
+        pool
+      );
 
       if (! (pathname && ranges))
         {
@@ -1182,130 +1136,85 @@ apr_hash_t *svn_swig_py_changed_path_hash_from_dict(PyObject *dict,
   return hash;
 }
 
-const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
-                                                       apr_pool_t *pool)
+int
+svn_swig_py_unwrap_string(PyObject *source,
+                          void *destination,
+                          void *baton)
 {
-    Py_ssize_t inputlen;
-    int targlen;
-    apr_array_header_t *temp;
-
-    if (source == Py_None)
-      return NULL;
-
-    if (!PySequence_Check(source))
-      {
-        PyErr_SetString(PyExc_TypeError, "not a sequence");
-        return NULL;
-      }
-
-    inputlen = PySequence_Length(source);
-
-    if (inputlen < 0)
-        return NULL;
-
-    if (inputlen > INT_MAX)
-      {
-        PyErr_SetString(PyExc_ValueError, "too many elements");
-        return NULL;
-      }
-
-    targlen = (int) inputlen;
-    temp = apr_array_make(pool, targlen, sizeof(const char *));
-    /* APR_ARRAY_IDX doesn't actually increment the array item count
-       (like, say, apr_array_push would). */
-    temp->nelts = targlen;
-    while (targlen--)
-      {
-        PyObject *o = PySequence_GetItem(source, targlen);
-        if (o == NULL)
-            return NULL;
-        if (!PyString_Check(o))
-          {
-            Py_DECREF(o);
-            PyErr_SetString(PyExc_TypeError, "not a string");
-            return NULL;
-          }
-        APR_ARRAY_IDX(temp, targlen, const char *) = PyString_AS_STRING(o);
-        Py_DECREF(o);
-      }
-    return temp;
+    const char **ptr_dest = destination;
+    *ptr_dest = PyString_AsString(source);
+    
+    if (*ptr_dest != NULL)
+        return 0;
+    else
+        return -1;
 }
 
-
-const apr_array_header_t *svn_swig_py_revnums_to_array(PyObject *source,
-                                                       apr_pool_t *pool)
+int
+svn_swig_py_unwrap_revnum(PyObject *source,
+                          void *destination,
+                          void *baton)
 {
-    Py_ssize_t inputlen;
-    int targlen;
-    apr_array_header_t *temp;
+    svn_revnum_t *revnum_dest = destination;
 
-    if (!PySequence_Check(source))
+    if (PyInt_Check(source))
       {
-        PyErr_SetString(PyExc_TypeError, "not a sequence");
-        return NULL;
+        *revnum_dest = PyInt_AsLong(source);
+        if (PyErr_Occurred()) return -1;
+        return 0;
+      }
+    if (PyLong_Check(source))
+      {
+        *revnum_dest = PyLong_AsLong(source);
+        if (PyErr_Occurred()) return -1;
+        return 0;
       }
 
-    inputlen = PySequence_Length(source);
+    PyErr_SetString(PyExc_TypeError, "not an integer type");
+    return -1;
+}
 
-    if (inputlen < 0)
-        return NULL;
+int
+svn_swig_py_unwrap_struct_ptr(PyObject *source,
+                          void *destination,
+                          void *baton)
+{
+    void **ptr_dest = destination;
+    swig_type_info *type_descriptor = baton;
 
-    if (inputlen > INT_MAX)
-      {
-        PyErr_SetString(PyExc_ValueError, "too many elements");
-        return NULL;
-      }
+    int status = svn_swig_ConvertPtr(source, ptr_dest, type_descriptor);
 
-    targlen = (int) inputlen;
-    temp = apr_array_make(pool, targlen, sizeof(svn_revnum_t));
-    /* APR_ARRAY_IDX doesn't actually increment the array item count
-       (like, say, apr_array_push would). */
-    temp->nelts = targlen;
-    while (targlen--)
-      {
-        PyObject *o = PySequence_GetItem(source, targlen);
-        if (o == NULL)
-            return NULL;
-        if (PyLong_Check(o))
-          {
-            APR_ARRAY_IDX(temp, targlen, svn_revnum_t) =
-              (svn_revnum_t)PyLong_AsLong(o);
-          }
-        else if (PyInt_Check(o))
-          {
-            APR_ARRAY_IDX(temp, targlen, svn_revnum_t) =
-              (svn_revnum_t)PyInt_AsLong(o);
-          }
-        else
-          {
-            Py_DECREF(o);
-            PyErr_SetString(PyExc_TypeError, "not an integer type");
-            return NULL;
-          }
-        Py_DECREF(o);
+    if (status != 0)
+    {
+        PyErr_SetString(PyExc_TypeError, "not a SWIG proxy of correct type");
+        return -1;
     }
-    return temp;
+
+    return 0;
 }
+
 
 const apr_array_header_t *
-svn_swig_py_struct_ptr_list_to_array(PyObject *source,
-                                     swig_type_info *type_descriptor,
-                                     apr_pool_t *pool)
+svn_swig_py_seq_to_array(PyObject *seq,
+                         int element_size,
+                         svn_swig_py_object_unwrap_t unwrap_func,
+                         void *unwrap_baton,
+                         apr_pool_t *pool)
 {
     Py_ssize_t inputlen;
-    int targlen;
+    int targlen, i;
     apr_array_header_t *temp;
 
-    if (source == Py_None)
+    if (seq == Py_None)
         return NULL;
 
-    if (!PySequence_Check(source))
+    if (!PySequence_Check(seq))
       {
         PyErr_SetString(PyExc_TypeError, "not a sequence");
         return NULL;
       }
 
-    inputlen = PySequence_Length(source);
+    inputlen = PySequence_Length(seq);
 
     if (inputlen < 0)
         return NULL;
@@ -1317,32 +1226,25 @@ svn_swig_py_struct_ptr_list_to_array(PyObject *source,
       }
 
     targlen = (int) inputlen;
-    temp = apr_array_make(pool, targlen, sizeof(void *));
+    temp = apr_array_make(pool, targlen, element_size);
 
-    temp->nelts = targlen;
-    while (targlen--)
+    for (i = 0; i < targlen; ++i)
       {
-        void *struct_ptr;
         int status;
-        PyObject *o = PySequence_GetItem(source, targlen);
+        void * elt_ptr;
+        PyObject *o = PySequence_GetItem(seq, i);
+
         if (o == NULL)
-          return NULL;
-
-        status = svn_swig_ConvertPtr(o, &struct_ptr, type_descriptor);
-
-        if (status == 0)
-          {
-            APR_ARRAY_IDX(temp, targlen, void *) = struct_ptr;
-            Py_DECREF(o);
-          }
-        else
-          {
-            Py_DECREF(o);
-            PyErr_SetString(PyExc_TypeError,
-                            "not a SWIG proxy of correct type");
             return NULL;
-          }
+        
+        elt_ptr = apr_array_push(temp);
+        status = unwrap_func(o, elt_ptr, unwrap_baton);
+        Py_DECREF(o);
+
+        if (status < 0)
+            return NULL;
       }
+
     return temp;
 }
 

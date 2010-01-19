@@ -466,10 +466,13 @@
 
 #ifdef SWIGPYTHON
 %typemap(in) apr_array_header_t *location_revisions {
-    $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input,
-                                                             _global_pool);
-    if ($1 == NULL)
-        SWIG_fail;
+    $1 = (apr_array_header_t *) svn_swig_py_seq_to_array($input,
+      sizeof(svn_revnum_t),
+      svn_swig_py_unwrap_revnum,
+      NULL,
+      _global_pool);
+    if (PyErr_Occurred())
+      SWIG_fail;
 }
 #endif
 #ifdef SWIGRUBY
@@ -484,16 +487,11 @@
 
 #ifdef SWIGPYTHON
 %typemap(in) const apr_array_header_t *STRINGLIST {
-    $1 = (apr_array_header_t *) svn_swig_py_strings_to_array($input,
-                                                             _global_pool);
-    if (PyErr_Occurred())
-      SWIG_fail;
-}
-%typemap(in) const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
-    $1 = ($input == Py_None) 
-           ? NULL
-           : (apr_array_header_t *)svn_swig_py_strings_to_array($input,
-                                                                _global_pool);
+    $1 = (apr_array_header_t *) svn_swig_py_seq_to_array($input,
+      sizeof(const char *),
+      svn_swig_py_unwrap_string,
+      NULL,
+      _global_pool);
     if (PyErr_Occurred())
       SWIG_fail;
 }
@@ -651,10 +649,14 @@
 */
 #ifdef SWIGPYTHON
 %typemap(in) apr_array_header_t *RANGELIST {
-  $1 = svn_swig_py_rangelist_to_array($input, _global_pool);
-  if (PyErr_Occurred()) {
-    SWIG_fail;
-  }
+    $1 = (apr_array_header_t *) svn_swig_py_seq_to_array($input,
+      sizeof(const svn_merge_range_t *),
+      svn_swig_py_unwrap_struct_ptr,
+      $descriptor(svn_merge_range_t *),
+      _global_pool);
+    if (PyErr_Occurred()) {
+      SWIG_fail;
+    }
 }
 #endif
 
@@ -678,11 +680,14 @@
 */
 #ifdef SWIGPYTHON
 %typemap(in) apr_array_header_t *REVISION_RANGE_LIST {
-  $1 = (apr_array_header_t *) svn_swig_py_struct_ptr_list_to_array($input,
-    $descriptor(svn_opt_revision_range_t *), _global_pool);
-  if (PyErr_Occurred()) {
-    SWIG_fail;
-  }
+    $1 = (apr_array_header_t *) svn_swig_py_seq_to_array($input,
+      sizeof(const svn_opt_revision_range_t *),
+      svn_swig_py_unwrap_struct_ptr,
+      $descriptor(svn_opt_revision_range_t *),
+      _global_pool);
+    if (PyErr_Occurred()) {
+      SWIG_fail;
+    }
 }
 #endif
 
@@ -794,7 +799,12 @@
 %typemap(in) apr_array_header_t **RANGELIST_INOUT ($*1_ltype temp)
 {
   $1 = &temp;
-  *$1 = svn_swig_py_rangelist_to_array($input, _global_pool);
+  *$1 = (apr_array_header_t *) svn_swig_py_seq_to_array($input,
+    sizeof(const svn_merge_range_t *),
+    svn_swig_py_unwrap_struct_ptr,
+    $descriptor(svn_merge_range_t *),
+    _global_pool);
+      
   if (PyErr_Occurred()) {
     SWIG_fail;
   }
