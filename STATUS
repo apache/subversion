@@ -170,6 +170,14 @@ Candidate changes:
    Votes:
      +1: peters
 
+ * r900797
+   Fix the vague commit failure when committed via the out-of-date mirror
+   which is out-of-date by irrelevant revisions elsewhere in the repository.
+   Justification:
+     We see this ourself after moving to ASF often on european mirror.
+   Votes:
+     +1: kameshj
+
 Veto-blocked changes:
 =====================
 
