@@ -172,14 +172,6 @@ Candidate changes:
      -0: rhuijben (I see test failures on trunk which could be related to
                    these patches. I'll update when I have more information)
 
- * r900797
-   Fix the vague commit failure when committed via the out-of-date mirror
-   which is out-of-date by irrelevant revisions elsewhere in the repository.
-   Justification:
-     We see this ourself after moving to ASF often on european mirror.
-   Votes:
-     +1: kameshj, rhuijben
-
 Veto-blocked changes:
 =====================
 
@@ -216,3 +208,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r900797
+   Fix the vague commit failure when committed via the out-of-date mirror
+   which is out-of-date by irrelevant revisions elsewhere in the repository.
+   Justification:
+     We see this ourself after moving to ASF often on european mirror.
+   Votes:
+     +1: kameshj, rhuijben, cmpilato
+
