@@ -169,6 +169,8 @@ Candidate changes:
      ^/subversion/branches/1.6.x-r898963
    Votes:
      +1: peters
+     -0: rhuijben (I see test failures on trunk which could be related to
+                   these patches. I'll update when I have more information)
 
  * r900797
    Fix the vague commit failure when committed via the out-of-date mirror
@@ -176,8 +178,7 @@ Candidate changes:
    Justification:
      We see this ourself after moving to ASF often on european mirror.
    Votes:
-     +1: kameshj
-     
+     +1: kameshj, rhuijben
 
 Veto-blocked changes:
 =====================
