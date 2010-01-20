@@ -228,15 +228,6 @@ echo "Exporting $REPOS_PATH r$REVISION into sandbox..."
 
 rm -f "$DISTPATH/STATUS"
 
-# Remove the www/ directory, and create an empty directory in it's place.
-# Export hacking.html from trunk into that directory.
-# (See http://svn.haxx.se/dev/archive-2008-02/0863.shtml for rationale.)
-rm -rf "$DISTPATH/www"
-mkdir "$DISTPATH/www"
-${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
-    "http://svn.apache.org/repos/asf/subversion/trunk/www/hacking.html" \
-    --username none --password none "$DISTPATH/www/hacking.html"
-
 # Remove contrib/ from our distribution tarball.  Some of it is of
 # unknown license, and usefulness.
 # (See http://svn.haxx.se/dev/archive-2009-04/0166.shtml for discussion.)
