@@ -6,7 +6,7 @@ COMMITTERS/
 HACKING/
 TRANSLATING/
 build/win32/empty.c
-notes/*
+notes/**
 build/generator/__init__.py
 build/generator/util/__init__.py
 subversion/tests/cmdline/getopt_tests_data/*
