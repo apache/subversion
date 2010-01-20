@@ -1,6 +1,6 @@
-Version 1.6.8
-(15 Jan 2010, from /branches/1.6.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.6.8
+Version 1.6.9
+(25 Jan 2010, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.9
 
  User-visible changes:
   * allow multiple external updates over ra_svn (issue #3487)
@@ -16,14 +16,19 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.8
   * fixed: svnsync leaves stale sync-locks on mirrors (r884842)
   * fix applicability of 'svn resolve --accept=theirs-conflict' (r880525, -6)
   * fixed: segfault in 'svn resolve' (r896522, -47)
+  * fix commit failure against an out-of-date mirror (r900797)
 
  Developer-visible changes:
   * update ruby bindings test expectation (r880162)
   * don't allow rangelist and mergeinfo API to modify input args (r879093)
 
 
+Version 1.6.8
+(Not released, see changes for 1.6.9.)
+
+
 Version 1.6.7
-(Not released, see changes for 1.6.8.)
+(Not released, see changes for 1.6.9.)
 
 
 [ Note: All revision numbers for versions prior to 1.6.7 reference the
