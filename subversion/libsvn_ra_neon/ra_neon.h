@@ -973,6 +973,7 @@ svn_ra_neon__copy(svn_ra_neon__session_t *ras,
                   apr_pool_t *pool);
 
 /* Return the Location HTTP header or NULL if none was sent.
+ * (Return a canonical URL even if the header ended with a slash.)
  *
  * Do allocations in POOL.
  */
