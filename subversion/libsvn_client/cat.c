@@ -71,7 +71,7 @@ cat_local_file(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, local_abspath, FALSE,
                                 scratch_pool));
 
-  if (kind == svn_node_unknown)
+  if (kind == svn_node_unknown || kind == svn_node_none)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("'%s' is not under version control"),
                              svn_dirent_local_style(local_abspath,
