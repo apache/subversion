@@ -413,7 +413,8 @@ static svn_error_t * end_element(void *baton, int state,
     case ELEM_href:
       /* Special handling for <href> that belongs to the <response> tag. */
       if (rsrc->href_parent == ELEM_response)
-        return assign_rsrc_url(pc->rsrc, cdata, pc->pool);
+        return assign_rsrc_url(pc->rsrc, svn_uri_canonicalize(cdata, pc->pool),
+                               pc->pool);
 
       /* Use the parent element's name, not the href. */
       parent_defn = defn_from_id(rsrc->href_parent);

@@ -1490,5 +1490,5 @@ svn_ra_neon__request_get_location(svn_ra_neon__request_t *request,
                                   apr_pool_t *pool)
 {
   const char *val = ne_get_response_header(request->ne_req, "Location");
-  return val ? apr_pstrdup(pool, val) : NULL;
+  return val ? svn_uri_canonicalize(val, pool) : NULL;
 }

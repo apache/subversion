@@ -25,6 +25,7 @@
 
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 
@@ -107,7 +108,9 @@ end_element(void *baton, int state,
   options_ctx_t *oc = baton;
 
   if (state == ELEM_href)
-    oc->activity_coll = svn_string_create_from_buf(oc->cdata, oc->pool);
+    oc->activity_coll = svn_string_create(svn_uri_canonicalize(oc->cdata->data,
+                                                               oc->pool),
+                                          oc->pool);
 
   return SVN_NO_ERROR;
 }
