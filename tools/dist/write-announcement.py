@@ -67,9 +67,9 @@ Release notes for the @MAJOR_MINOR@.x release series may be found at:
 
 You can find the list of changes between @VERSION@ and earlier versions at:
 
-    http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES
+    http://svn.apache.org/repos/asf/subversion/tags/@VERSION@/CHANGES
 
-Questions, comments, and bug reports to users@subversion.tigris.org.
+Questions, comments, and bug reports to users@subversion.apache.org.
 
 Thanks,
 - The Subversion Team
@@ -121,7 +121,7 @@ ann_html = """\
 
 <p>You can find the list of changes between @VERSION@ and earlier versions at:</p>
 
-<dl><dd><a href="http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES">http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES</a></dd></dl>
+<dl><dd><a href="http://svn.apache.org/repos/asf/subversion/tags/@VERSION@/CHANGES">http://svn.apache.org/repos/asf/subversion/tags/@VERSION@/CHANGES</a></dd></dl>
 """
 
 rc_warning_text = [ """\
