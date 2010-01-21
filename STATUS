@@ -176,6 +176,17 @@ Candidate changes:
    Votes:
      +1: peters, rhuijben
 
+ * r901752
+   Allow 'svn log' on an uncommitted copy/move destination.
+   Notes:
+     svn_client_log5 API promises that unspecified peg revisions default
+     to svn_opt_revision_working for WC paths; prior to r901752 we were
+     not keeping this promise.
+   Justification:
+     APIs should do what they say they do.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
