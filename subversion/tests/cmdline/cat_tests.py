@@ -162,7 +162,7 @@ def cat_unversioned_file(sbox):
                                       iota_path)
 
   # Now try to cat the deleted file, it should be reported as unversioned.
-  expected_error = ["svn: warning: '" + iota_path + "'"
+  expected_error = ["svn: warning: '" + os.path.abspath(iota_path) + "'"
                     + " is not under version control\n"]
   svntest.actions.run_and_verify_svn2(None, [], expected_error, 0,
                                       'cat', iota_path)
@@ -184,7 +184,7 @@ test_list = [ None,
               cat_base,
               cat_nonexistent_file,
               cat_skip_uncattable,
-              XFail(cat_unversioned_file),
+              cat_unversioned_file,
              ]
 
 if __name__ == '__main__':

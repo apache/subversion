@@ -2368,7 +2368,16 @@ internal_status(svn_wc_status2_t **status,
   else if (err)
     return svn_error_return(err);
 
-  if (entry && ! svn_path_is_empty(local_abspath))
+  if (entry)
+    {
+      svn_boolean_t hidden;
+      SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
+
+      if (hidden)
+        entry = NULL;
+    }  
+
+  if (entry)
     {
       const char *parent_abspath = svn_dirent_dirname(local_abspath,
                                                       scratch_pool);
