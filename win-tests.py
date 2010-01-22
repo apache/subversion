@@ -61,6 +61,9 @@ def _usage_exit():
   print("  -v, --verbose          : talk more")
   print("  -f, --fs-type=type     : filesystem type to use (fsfs is default)")
   print("  -c, --cleanup          : cleanup after running a test")
+  print("  -t, --test=TEST        : Run the TEST test (all is default); use")
+  print("                           TEST#n to run a particular test number,")
+  print("                           multiples also accepted e.g. '2,4-7'")
 
   print("  --svnserve-args=list   : comma-separated list of arguments for")
   print("                           svnserve")
@@ -107,9 +110,9 @@ for section in gen_obj.sections.values():
     dll_basename = section.name + "-" + str(gen_obj.version) + ".dll"
     svn_dlls.append(os.path.join("subversion", section.name, dll_basename))
 
-opts, args = my_getopt(sys.argv[1:], 'hrdvcpu:f:',
-                       ['release', 'debug', 'verbose', 'cleanup', 'url=',
-                        'svnserve-args=', 'fs-type=', 'asp.net-hack',
+opts, args = my_getopt(sys.argv[1:], 'hrdvct:pu:f:',
+                       ['release', 'debug', 'verbose', 'cleanup', 'test=',
+                        'url=', 'svnserve-args=', 'fs-type=', 'asp.net-hack',
                         'httpd-dir=', 'httpd-port=', 'httpd-daemon',
                         'httpd-server', 'http-library=', 'help',
                         'fsfs-packing', 'fsfs-sharding=',
@@ -137,6 +140,7 @@ fsfs_sharding = None
 fsfs_packing = None
 server_minor_version = None
 config_file = None
+tests_to_run = []
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -149,6 +153,8 @@ for opt, val in opts:
     verbose = 1
   elif opt in ('-c', '--cleanup'):
     cleanup = 1
+  elif opt in ('-t', '--test'):
+    tests_to_run.append(val)
   elif opt in ['-r', '--release']:
     objdir = 'Release'
   elif opt in ['-d', '--debug']:
@@ -599,6 +605,32 @@ if run_httpd:
 if daemon:
   daemon.start()
 
+# Find the full path and filename of any test that is specified just by
+# its base name.
+if len(tests_to_run) != 0:
+  tests = []
+  for t in tests_to_run:
+    tns = None
+    if '#' in t:
+      t, tns = t.split('#')
+
+    test = [x for x in all_tests if x.split('/')[-1] == t]
+    if not test and not (t.endswith('-test.exe') or t.endswith('_tests.py')):
+      # The lengths of '-test.exe' and of '_tests.py' are both 9.
+      test = [x for x in all_tests if x.split('/')[-1][:-9] == t]
+
+    if not test:
+      print("Skipping test '%s', test not found." % t)
+    elif tns:
+      tests.append('%s#%s' % (test[0], tns))
+    else:
+      tests.extend(test)
+
+  tests_to_run = tests
+else:
+  tests_to_run = all_tests
+
+
 print('Testing %s configuration on %s' % (objdir, repo_loc))
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
@@ -612,7 +644,7 @@ th = run_tests.TestHarness(abs_srcdir, abs_builddir,
 old_cwd = os.getcwd()
 try:
   os.chdir(abs_builddir)
-  failed = th.run(all_tests)
+  failed = th.run(tests_to_run)
 except:
   os.chdir(old_cwd)
   raise
