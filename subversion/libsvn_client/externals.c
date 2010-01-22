@@ -1089,6 +1089,9 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   svn_wc_external_item2_t *item;
   const char *ambient_depth_w;
   svn_depth_t ambient_depth;
+  const char *url;
+  const char *abs_parent_dir;
+  svn_error_t *err;
 
   if (cb->is_export)
     SVN_ERR_ASSERT(!cb->adm_access);
@@ -1166,18 +1169,38 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   ib.pool              = cb->pool;
   ib.iter_pool         = svn_pool_create(cb->pool);
 
-  /* Get the URL of the parent directory by appending a portion of
-     parent_dir to from_url.  from_url is the URL for to_path and
-     to_path is a substring of parent_dir, so append any characters in
-     parent_dir past strlen(to_path) to from_url (making sure to move
-     past a '/' in parent_dir, otherwise svn_path_url_add_component()
-     will error. */
-  len = strlen(cb->to_path);
-  if (ib.parent_dir[len] == '/')
-    ++len;
-  ib.parent_dir_url = svn_path_url_add_component2(cb->from_url,
-                                                  ib.parent_dir + len,
-                                                  cb->pool);
+  SVN_ERR(svn_dirent_get_absolute(&abs_parent_dir, ib.parent_dir, 
+                                  cb->pool));
+
+  err = svn_wc__node_get_url(&url, cb->ctx->wc_ctx, 
+                             abs_parent_dir, cb->pool, cb->pool);
+
+  /* If we're doing an 'svn export' the current dir will not be a 
+     working copy. We can't get the parent_dir. */
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY ||
+          err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          /* Get the URL of the parent directory by appending a portion of
+             parent_dir to from_url.  from_url is the URL for to_path and
+             to_path is a substring of parent_dir, so append any characters in
+             parent_dir past strlen(to_path) to from_url (making sure to move
+             past a '/' in parent_dir, otherwise svn_path_url_add_component()
+             will error. */
+          len = strlen(cb->to_path);
+          if (ib.parent_dir[len] == '/')
+            ++len;
+          ib.parent_dir_url = svn_path_url_add_component2(cb->from_url,
+                                                          ib.parent_dir + len,
+                                                          cb->pool);
+          svn_error_clear(err);
+        }
+      else 
+        return svn_error_return(err);
+    }
+  else
+      ib.parent_dir_url = url;
 
   /* We must use a custom version of svn_hash_diff so that the diff
      entries are processed in the order they were originally specified
