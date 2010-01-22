@@ -62,50 +62,37 @@ def db_dump(db_dump_name, repo_path, table):
     elif copying:
       yield line
 
-def crude_bdb_parse(line):
-  """Replace BDB ([klen] kval) syntax with (kval) syntax. This is a very
-  crude parser, only just good enough to make a more human-friendly output
-  in common cases. The result is not intended to be unambiguous or machine-
-  parsable."""
-  lparts = line.split('(')
-  new_lparts = []
-  for lpart in lparts:
-    rparts = lpart.split(')')
-    new_rparts = []
-    for rpart in rparts:
-      words = rpart.split(' ')
+def pretty_print_skel(line):
+  """Return LINE modified so as to look prettier for human reading, but no
+  longer unambiguous or machine-parsable. LINE is assumed to be in the
+  "Skel" format in which some values are preceded by a decimal length. This
+  function removes the length indicator, and also replaces a zero-length
+  value with a pair of single quotes."""
+  new_line = ''
+  while line:
+    # an explicit-length atom
+    explicit_atom = re.match(r'\d+ ', line)
+    if explicit_atom:
+      n = int(explicit_atom.group())
+      line = line[explicit_atom.end():]
+      new_line += line[:n]
+      line = line[n:]
+      if n == 0:
+        new_line += "''"
+      continue
 
-      # Set new_words to all the words that we want to keep
-      new_words = []
-      last_len = None
-      last_word = None
-      for word in words:
-        if last_len is None:
-          try:
-            last_len = int(word)
-            last_word = word
-          except ValueError:
-            if last_word is not None:
-              new_words += [last_word]
-            new_words += [word]
-            last_word = None
-            last_len = None
-        else:  # print a word that was previously prefixed by its len
-          if not len(word) == last_len + word.count('\\') * 2:
-            print "## parsed wrongly: %d %d '%s'" % (last_len, len(word), word)
-          if word == "":
-            new_words += ["''"]
-          else:
-            new_words += [word]
-          last_word = None
-          last_len = None
+    # an implicit-length atom
+    implicit_atom = re.match(r'[A-Za-z][^\s()]*', line)
+    if implicit_atom:
+      n = implicit_atom.end()
+      new_line += line[:n]
+      line = line[n:]
+      continue
 
-      if last_word is not None:
-        new_words += [last_word]
+    # parentheses, white space or any other non-atom
+    new_line += line[:1]
+    line = line[1:]
 
-      new_rparts += [' '.join(new_words)]
-    new_lparts += [')'.join(new_rparts)]
-  new_line = '('.join(new_lparts)
   return new_line
 
 def dump_bdb(db_dump_name, repo_path, dump_dir):
@@ -117,15 +104,20 @@ def dump_bdb(db_dump_name, repo_path, dump_dir):
                 'node-origins', 'representations', 'checksum-reps', 'strings',
                 'locks', 'lock-tokens', 'miscellaneous', 'uuids']:
     file.write(table + ":\n")
+    next_key_line = False
     for line in db_dump(db_dump_name, repo_path, table):
-      file.write(crude_bdb_parse(line))
+      # Omit any 'next-key' line and the following line.
+      if next_key_line:
+        next_key_line = False
+        continue
+      if line == ' next-key\n':
+        next_key_line = True
+        continue
+      # The line isn't necessarily a skel, but pretty_print_skel() shouldn't
+      # do too much harm if it isn't.
+      file.write(pretty_print_skel(line))
     file.write("\n")
   file.close()
-
-  # Dump the svn view of the repository
-  #svnadmin dump    repo_path > dump_dir + "/dump.svn"
-  #svnadmin lslocks repo_path > dump_dir + "/locks.svn"
-  #svnadmin lstxns  repo_path > dump_dir + "/txns.svn"
 
 def locate_db_dump():
   """Locate a db_dump executable"""
