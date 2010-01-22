@@ -256,13 +256,15 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      PATH.  When we call reporter->finish_report, the update_editor
      will be driven by svn_repos_dir_delta2.
 
-     We pass NULL for traversal_info because this is a switch, not an
-     update, and therefore we don't want to handle any externals
-     except the ones directly affected by the switch. */
+     We pass in an external_func for recording all externals. It
+     shouldn't be needed for a switch if it wasn't for the relative
+     externals of type '../path'. All of those must be resolved to 
+     the new location.  */
   err = svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
                                 report_baton, TRUE, depth, (! depth_is_sticky),
                                 (! server_supports_depth),
-                                use_commit_times, NULL, NULL,
+                                use_commit_times, 
+                                svn_client__external_info_gatherer, &efb,
                                 ctx->notify_func2, ctx->notify_baton2, pool);
 
   if (err)
