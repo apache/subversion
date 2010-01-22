@@ -542,6 +542,26 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
                            apr_pool_t *scratch_pool);
 
+/** A callback invoked by the svn_wc__call_with_write_lock() function.  */
+typedef svn_error_t *(*svn_wc__with_write_lock_func_t)(void *baton,
+                                                       apr_pool_t *result_pool,
+                                                       apr_pool_t *scratch_pool);
+
+
+/** Call function @a func while holding a write lock on
+ * @a local_abspath. The @a baton, and @a result_pool and
+ * @a scratch_pool, is passed @a func.
+ * Use @a wc_ctx for working copy access.
+ * The lock is guaranteed to be released after @a func returns.
+ */
+svn_error_t *
+svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
+                             void *baton,
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+                      
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
