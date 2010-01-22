@@ -28,6 +28,10 @@
 # After the build, point your PATH to the Subversion build you want to use.
 # Note that this Makefile requires GNU make.
 
+ENABLE_PYTHON_BINDINGS = yes
+ENABLE_RUBY_BINDINGS = yes
+ENABLE_PERL_BINDINGS = no
+
 PWD		= $(shell pwd)
 
 TAG		?= none
@@ -71,12 +75,16 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 
 FETCH_CMD	= wget -c
 
+SUBVERSION_REPOS_URL = https://svn.apache.org/repos/asf/subversion
 BDB_URL		= http://download.oracle.com/berkeley-db/$(BDB_DIST)
 APR_URL		= http://svn.apache.org/repos/asf/apr/apr
 APR_ICONV_URL	= ftp://ftp.fu-berlin.de/unix/www/apache/apr/$(APR_ICONV_DIST)
 APR_UTIL_URL	= http://svn.apache.org/repos/asf/apr/apr-util
-HTTPD_URL	= ftp://ftp.fu-berlin.de/unix/www/apache/httpd/$(HTTPD_DIST)
+HTTPD_URL	= http://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
+SERF_REPOS_URL = http://serf.googlecode.com/svn
+SERF_URL	= $(SERF_REPOS_URL)/tags/$(SERF_VER)
+SERF_TRUNK_URL = $(SERF_REPOS_URL)/trunk
 SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
@@ -355,7 +363,6 @@ httpd-install:	$(HTTPD_OBJDIR)/.installed $(HTTPD_CONF)
 httpd-reset:
 	$(foreach f, .retrieved .configured .compiled .installed, \
 		rm -f $(HTTPD_OBJDIR)/$(f);)
-	rm -f 
 
 httpd-clean:
 	-(cd $(HTTPD_OBJDIR) && make clean)
@@ -480,10 +487,10 @@ serf-clean:
 $(SERF_OBJDIR)/.retrieved:
 	[ -d $(SERF_OBJDIR) ] || mkdir -p $(SERF_OBJDIR)
 	if [ ! -d $(SERF_SRCDIR) ]; then \
-		svn export http://serf.googlecode.com/svn/tags/$(SERF_VER)/ \
+		svn export $(SERF_URL) \
 				$(SERF_SRCDIR) && \
 		(cd $(SERF_SRCDIR) && \
-			svn diff -c1221 http://serf.googlecode.com/svn/trunk \
+			svn diff -c1221 $(SERF_TRUNK_URL) \
 			| patch -p0); \
 	fi
 	touch $@
@@ -553,7 +560,7 @@ $(SQLITE_OBJDIR)/.installed: $(SQLITE_OBJDIR)/.compiled
 #######################################################################
 
 .PHONY: svn-configure svn-compile svn-install svn-bindings-compile \
-	svn-bindings-install svn-clean
+	svn-bindings-install svn-bindings-reset svn-clean
 
 svn-install-all: svn-install svn-bindings-install
 
@@ -562,7 +569,10 @@ svn-compile:	$(SVN_OBJDIR)/.compiled
 svn-bindings-compile:	$(SVN_OBJDIR)/.bindings-compiled
 svn-install:	$(SVN_OBJDIR)/.installed
 svn-bindings-install:	$(SVN_OBJDIR)/.bindings-installed
-svn-reset:
+svn-bindings-reset:
+	$(foreach f, .bindings-compiled .bindings-installed, \
+		rm -f $(SVN_OBJDIR)/$(f);)
+svn-reset: svn-bindings-reset
 	$(foreach f, .retrieved .configured .compiled .installed \
 	        .bindings-compiled .bindings-installed, \
 		rm -f $(SVN_OBJDIR)/$(f);)
@@ -584,7 +594,7 @@ $(SVN_OBJDIR)/.retrieved:
 		co="co"; \
 	fi; \
 	if [ ! -d $(SVN_WC) ]; then \
-		svn $${co} https://svn.apache.org/repos/asf/subversion/$${branchdir} \
+		svn $${co} $(SUBVERSION_REPOS_URL)/$${branchdir} \
 			$(SVN_WC); \
 	fi
 	touch $@
@@ -633,20 +643,36 @@ $(SVN_OBJDIR)/.installed: $(SVN_OBJDIR)/.compiled
 	touch $@
 
 $(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed
-	cd $(svn_builddir) \
-		&& make swig-py \
-		&& make swig-rb \
-		&& make swig-pl
+	if [ $(ENABLE_PYTHON_BINDINGS) = yes ]; then \
+		cd $(svn_builddir) \
+			&& make swig-py; \
+	fi
+	if [ $(ENABLE_RUBY_BINDINGS) = yes ]; then \
+		cd $(svn_builddir) \
+			&& make swig-rb; \
+	fi
+	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
+		cd $(svn_builddir) \
+			&& make swig-pl; \
+	fi
 	touch $@
 
 $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
-	cd $(svn_builddir) \
-		&& make install-swig-py \
-		&& make install-swig-rb \
-		&& make install-swig-pl-lib
-	cd $(svn_builddir)/subversion/bindings/swig/perl/native \
-		&& perl Makefile.PL PREFIX="$(SVN_PREFIX)" \
-		&& make install
+	if [ $(ENABLE_PYTHON_BINDINGS) = yes ]; then \
+		cd $(svn_builddir) \
+		  && make install-swig-py
+	fi
+	if [ $(ENABLE_RUBY_BINDINGS) = yes ]; then \
+		cd $(svn_builddir) \
+			&& make install-swig-rb
+	fi
+	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
+		cd $(svn_builddir) \
+	    && make install-swig-pl-lib; \
+	  cd subversion/bindings/swig/perl/native \
+		  && perl Makefile.PL PREFIX="$(SVN_PREFIX)" \
+		  && make install
+	fi
 	touch $@
 
 # run svn regression tests
@@ -662,6 +688,7 @@ httpd-conf:
 	echo "LoadModule dav_svn_module modules/svn-$(WC)/mod_dav_svn.so" >> $(HTTPD_CHECK_CONF)
 	echo "LoadModule authz_svn_module modules/svn-$(WC)/mod_authz_svn.so" >> $(HTTPD_CHECK_CONF)
 	echo "DocumentRoot "$(PREFIX)/httpd/htdocs"" >> $(HTTPD_CHECK_CONF)
+	echo "# These two Locations are used for 'make check'" >> $(HTTPD_CHECK_CONF)
 	echo "<Directory />" >> $(HTTPD_CHECK_CONF)
 	echo "    Options FollowSymLinks" >> $(HTTPD_CHECK_CONF)
 	echo "    AllowOverride None" >> $(HTTPD_CHECK_CONF)
@@ -686,41 +713,70 @@ httpd-conf:
 	echo "    AuthUserFile $(HTTPD_CHECK_USERS)" >> $(HTTPD_CHECK_CONF)
 	echo "    Require valid-user" >> $(HTTPD_CHECK_CONF)
 	echo "</Location>" >> $(HTTPD_CHECK_CONF)
+	echo "# This Location lets you access repositories dropped in /tmp/svn/" >> $(HTTPD_CHECK_CONF)
+	echo "<Location /svn>" >> $(HTTPD_CHECK_CONF)
+	echo "    DAV svn" >> $(HTTPD_CHECK_CONF)
+	echo "    SVNParentPath /tmp/svn" >> $(HTTPD_CHECK_CONF)
+	echo "</Location>" >> $(HTTPD_CHECK_CONF)
 
 # We need this to make sure some targets below pick up the right libraries
 LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/svn-$(WC)/lib
 
+.PHONY: start-svnserve stop-svnserve start-httpd stop-httpd
+
+HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+            $(PREFIX)/httpd/bin/apachectl -f conf/httpd-svn-check-$(WC).conf
+HTTPD_START_CMD = $(HTTPD_CMD) -k start
+HTTPD_STOP_CMD = $(HTTPD_CMD) -k stop
+
+SVNSERVE_START_CMD = $(svn_builddir)/subversion/svnserve/svnserve \
+                     --listen-host 127.0.0.1 \
+										 --pid-file $(PWD)/svnserve-$(WC).pid \
+										 -d -r $(svn_builddir)/subversion/tests/cmdline
+SVNSERVE_STOP_CMD = kill `cat $(PWD)/svnserve-$(WC).pid`
+
+start-httpd: httpd-conf
+	$(HTTPD_START_CMD)
+	@echo " make check BASE_URL=http://localhost:$(HTTPD_CHECK_PORT)"
+	@echo "and"
+	@echo " http://localhost:$(HTTPD_CHECK_PORT)/svn/\*"
+	@echo "   maps to"
+	@echo " /tmp/svn/\*"
+
+stop-httpd:
+	$(HTTPD_STOP_CMD)
+
+start-svnserve: $(SVN_OBJDIR)/.compiled
+	$(SVNSERVE_START_CMD)
+
+stop-svnserve:
+	$(SVNSERVE_STOP_CMD)
+
 svn-check-neon: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
-	env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(PREFIX)/httpd/bin/apachectl \
-		-f conf/httpd-svn-check-$(WC).conf -k start
+	$(HTTPD_START_CMD)
 	cd $(svn_builddir) && make check FS_TYPE=fsfs \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon
 	cd $(svn_builddir) && make check FS_TYPE=bdb \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon
-	$(PREFIX)/httpd/bin/apachectl -f conf/httpd-svn-check-$(WC).conf \
-		-k stop
+	$(HTTPD_STOP_CMD)
 
 svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
-	env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(PREFIX)/httpd/bin/apachectl \
-		-f conf/httpd-svn-check-$(WC).conf -k start
+	$(HTTPD_START_CMD)
 	cd $(svn_builddir) && make check FS_TYPE=fsfs \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf
 	cd $(svn_builddir) && make check FS_TYPE=bdb \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf
-	$(PREFIX)/httpd/bin/apachectl -f conf/httpd-svn-check-$(WC).conf \
-		-k stop
+	$(HTTPD_STOP_CMD)
 
 svn-check-local:
 	cd $(svn_builddir) && make check FS_TYPE=fsfs
 	cd $(svn_builddir) && make check FS_TYPE=bdb
 
 svn-check-svn:
-	$(svn_builddir)/subversion/svnserve/svnserve --listen-host 127.0.0.1 \
-		--pid-file $(PWD)/svnserve-$(WC).pid \
-		-d -r $(svn_builddir)/subversion/tests/cmdline 
+	$(SVNSERVE_START_CMD)
 	cd $(svn_builddir) && make check FS_TYPE=fsfs BASE_URL=svn://127.0.0.1
 	cd $(svn_builddir) && make check FS_TYPE=bdb BASE_URL=svn://127.0.0.1
-	kill `cat $(PWD)/svnserve-$(WC).pid`
+	$(SVNSERVE_STOP_CMD)
 
 .PHONY: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb
 svn-check-swig: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb
