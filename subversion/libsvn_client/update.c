@@ -102,7 +102,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *repos_root;
   svn_error_t *err;
   svn_revnum_t revnum;
-  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t use_commit_times;
   svn_boolean_t sleep_here = FALSE;
@@ -115,6 +114,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   struct ff_baton *ffb;
   const char *local_abspath;
   const char *anchor_abspath;
+  svn_client__external_func_baton_t efb;
   svn_boolean_t server_supports_depth;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
@@ -239,19 +239,25 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   ffb->repos_root = repos_root;
   ffb->pool = pool;
 
+  /* Build a boton for the externals-info-gatherer callback. */
+  efb.externals_new = apr_hash_make(pool);
+  efb.externals_old = apr_hash_make(pool);
+  efb.ambient_depths = apr_hash_make(pool);
+  efb.result_pool = pool;
+
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
-  SVN_ERR(svn_wc_get_update_editor3(&revnum, adm_access, target,
-                                    use_commit_times, depth, depth_is_sticky,
-                                    allow_unver_obstructions,
-                                    ctx->notify_func2, ctx->notify_baton2,
-                                    ctx->cancel_func, ctx->cancel_baton,
-                                    ctx->conflict_func, ctx->conflict_baton,
-                                    file_fetcher, ffb,
+  SVN_ERR(svn_wc_get_update_editor4(&update_editor, &update_edit_baton,
+                                    &revnum, ctx->wc_ctx, anchor_abspath,
+                                    target, use_commit_times, depth, 
+                                    depth_is_sticky, allow_unver_obstructions,
                                     diff3_cmd, preserved_exts,
-                                    &update_editor, &update_edit_baton,
-                                    traversal_info,
-                                    pool));
+                                    file_fetcher, ffb,
+                                    ctx->conflict_func, ctx->conflict_baton,
+                                    svn_client__external_info_gatherer, &efb,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    ctx->notify_func2, ctx->notify_baton2,
+                                    pool, pool));
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision.  */
@@ -269,12 +275,13 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      update_editor will be driven by svn_repos_dir_delta2. */
-  err = svn_wc_crawl_revisions4(path, dir_access, reporter, report_baton,
-                                TRUE, depth, (! depth_is_sticky),
+  err = svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter, 
+                                report_baton, TRUE, depth, (! depth_is_sticky),
                                 (! server_supports_depth),
                                 use_commit_times,
-                                ctx->notify_func2, ctx->notify_baton2,
-                                traversal_info, pool);
+                                svn_client__external_info_gatherer,
+                                &efb, ctx->notify_func2, ctx->notify_baton2,
+                                pool);
 
   if (err)
     {
@@ -290,13 +297,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      the primary operation.  */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     {
-      apr_hash_t *externals_old, *externals_new, *ambient_depths;
-
-      svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
-      svn_wc_traversed_depths(&ambient_depths, traversal_info);
-
-      SVN_ERR(svn_client__handle_externals(adm_access, externals_old,
-                                           externals_new, ambient_depths,
+      SVN_ERR(svn_client__handle_externals(adm_access, efb.externals_old,
+                                           efb.externals_new, 
+                                           efb.ambient_depths,
                                            anchor_url, anchor, repos_root,
                                            depth, use_sleep, ctx, pool));
     }
