@@ -254,10 +254,10 @@ class build(_build):
           sys.exit(2)
 
     if not self.dry_run:
+      r = re.compile(r"(\s+\w+)\.restype = POINTER\(svn_error_t\)")
       out = open("svn_all2.py", "w")
       for line in open("svn_all.py"):
-        line = line.replace("restype = POINTER(svn_error_t)",
-                            "restype = SVN_ERR")
+        line = r.sub("\\1.restype = POINTER(svn_error_t)\n\\1.errcheck = _svn_errcheck", line)
 
         if not line.startswith("FILE ="):
           out.write(line)
