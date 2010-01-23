@@ -299,7 +299,6 @@ def setup_development_mode():
         'run_and_verify_export',
         'run_and_verify_update',
         'run_and_verify_merge',
-        'run_and_verify_merge2',
         'run_and_verify_switch',
         'run_and_verify_commit',
         'run_and_verify_unquiet_status',
@@ -944,6 +943,22 @@ def use_editor(func):
   os.environ['SVNTEST_EDITOR_FUNC'] = func
   os.environ['SVN_TEST_PYTHON'] = sys.executable
 
+def mergeinfo_notify_line(revstart, revend):
+  """Return an expected output line that describes the beginning of a
+  mergeinfo recording notification on revisions REVSTART through REVEND."""
+  if (revend is None):
+    if (revstart < 0):
+      revstart = abs(revstart)
+      return "--- Recording mergeinfo for reverse merge of r%ld .*:\n" \
+             % (revstart)
+    else:
+      return "--- Recording mergeinfo for merge of r%ld .*:\n" % (revstart)
+  elif (revstart < revend):
+    return "--- Recording mergeinfo for merge of r%ld through r%ld .*:\n" \
+           % (revstart, revend)
+  else:
+    return "--- Recording mergeinfo for reverse merge of r%ld through " \
+           "r%ld .*:\n" % (revstart, revend)
 
 def merge_notify_line(revstart=None, revend=None, same_URL=True,
                       foreign=False):

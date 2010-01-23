@@ -1612,6 +1612,11 @@ def mergeinfo_switch_elision(sbox):
     'E/alpha' : Item(status='U '),
     'E/beta'  : Item(status='U '),
     })
+  expected_mergeinfo_output = svntest.wc.State(B_COPY_1_path, {
+    '' : Item(status=' U'),
+    })
+  expected_elision_output = svntest.wc.State(B_COPY_1_path, {
+    })
   expected_merge_status = svntest.wc.State(B_COPY_1_path, {
     ''        : Item(status=' M', wc_rev=2),
     'lambda'  : Item(status='  ', wc_rev=2),
@@ -1632,9 +1637,10 @@ def mergeinfo_switch_elision(sbox):
   saved_cwd = os.getcwd()
 
   svntest.actions.run_and_verify_merge(B_COPY_1_path, '2', '4',
-                                       sbox.repo_url + \
-                                       '/A/B',
+                                       sbox.repo_url + '/A/B', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_merge_disk,
                                        expected_merge_status,
                                        expected_skip,
@@ -1660,6 +1666,11 @@ def mergeinfo_switch_elision(sbox):
     'alpha' : Item(status='U '),
     'beta'  : Item(status='U '),
     })
+  expected_mergeinfo_output = svntest.wc.State(E_COPY_2_path, {
+    '' : Item(status=' U'),
+    })
+  expected_elision_output = svntest.wc.State(E_COPY_2_path, {
+    })
   expected_merge_status = svntest.wc.State(E_COPY_2_path, {
     ''      : Item(status=' M', wc_rev=2),
     'alpha' : Item(status='M ', wc_rev=2),
@@ -1674,9 +1685,10 @@ def mergeinfo_switch_elision(sbox):
   saved_cwd = os.getcwd()
 
   svntest.actions.run_and_verify_merge(E_COPY_2_path, '2', '4',
-                                       sbox.repo_url + \
-                                       '/A/B/E',
+                                       sbox.repo_url + '/A/B/E', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_merge_disk,
                                        expected_merge_status,
                                        expected_skip,

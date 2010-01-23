@@ -1472,6 +1472,11 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
     'G/rho'   : Item(status='U '),
     'H/omega' : Item(status='U '),
     })
+  expected_mergeinfo_output = wc.State(D_COPY_path, {
+    ''        : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(D_COPY_path, {
+    })
   expected_status = wc.State(D_COPY_path, {
     ''        : Item(status=' M', wc_rev=2),
     'G'       : Item(status='  ', wc_rev=2),
@@ -1498,8 +1503,10 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
     })
   expected_skip = wc.State(D_COPY_path, { })
   svntest.actions.run_and_verify_merge(D_COPY_path, None, None,
-                                       sbox.repo_url + '/A/D',
+                                       sbox.repo_url + '/A/D', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
@@ -1534,6 +1541,11 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   expected_output = wc.State(H_COPY_path, {
     'psi' : Item(status='U ')
     })
+  expected_mergeinfo_output = wc.State(H_COPY_path, {
+    ''    : Item(status=' G'),
+    })
+  expected_elision_output = wc.State(H_COPY_path, {
+    })
   expected_status = wc.State(H_COPY_path, {
     ''      : Item(status=' M', wc_rev=7),
     'psi'   : Item(status='M ', wc_rev=7),
@@ -1548,8 +1560,11 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
     })
   expected_skip = wc.State(H_COPY_path, { })
   svntest.actions.run_and_verify_merge(H_COPY_path, '3', '2',
-                                       sbox.repo_url + '/A/D/H',
-                                       expected_output, expected_disk,
+                                       sbox.repo_url + '/A/D/H', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1)
 

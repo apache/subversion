@@ -139,6 +139,13 @@ def mergeinfo_and_skipped_paths(sbox):
     'D/G/rho'   : Item(status='U '),
     'D/H/psi'   : Item(status='U '),
     })
+  expected_mergeinfo_output = wc.State(A_COPY_path, {
+    ''          : Item(status=' U'),
+    'B/E'       : Item(status=' U'),
+    'D/H/omega' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_COPY_path, {
+    })
   expected_status = wc.State(A_COPY_path, {
     ''          : Item(status=' M', wc_rev=8),
     'D/H/chi'   : Item(status='  ', wc_rev=8),
@@ -189,9 +196,10 @@ def mergeinfo_and_skipped_paths(sbox):
     })
   saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_path, '4', '8',
-                                       sbox.repo_url + \
-                                       '/A',
+                                       sbox.repo_url + '/A', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
@@ -218,6 +226,15 @@ def mergeinfo_and_skipped_paths(sbox):
   expected_output = wc.State(A_COPY_2_path, {
     'D/G'       : Item(status='  ', treeconflict='C'),
     'D/H/omega' : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(A_COPY_2_path, {
+    ''          : Item(status=' U'),
+    'D'         : Item(status=' U'),
+    'D/H'       : Item(status=' U'),
+    'D/H/omega' : Item(status=' U'),
+    'B/E'       : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_COPY_2_path, {
     })
   expected_status = wc.State(A_COPY_2_path, {
     ''          : Item(status=' M', wc_rev=8),
@@ -259,9 +276,10 @@ def mergeinfo_and_skipped_paths(sbox):
     })
   saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_2_path, '4', '8',
-                                       sbox.repo_url + \
-                                       '/A',
+                                       sbox.repo_url + '/A', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
@@ -277,6 +295,12 @@ def mergeinfo_and_skipped_paths(sbox):
   # neither gets any mergeinfo recorded.
   expected_output = wc.State(A_COPY_3_path, {
     'D/G/rho' : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(A_COPY_3_path, {
+    ''  : Item(status=' U'),
+    'B' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_COPY_3_path, {
     })
   expected_status = wc.State(A_COPY_3_path, {
     ''          : Item(status=' M', wc_rev=8),
@@ -317,9 +341,10 @@ def mergeinfo_and_skipped_paths(sbox):
   expected_skip = wc.State(A_COPY_3_path, {'B/E' : Item()})
   saved_cwd = os.getcwd()
   svntest.actions.run_and_verify_merge(A_COPY_3_path, '5', '7',
-                                       sbox.repo_url + \
-                                       '/A',
+                                       sbox.repo_url + '/A', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
@@ -338,6 +363,8 @@ def mergeinfo_and_skipped_paths(sbox):
   expected_output = wc.State(A_COPY_2_H_path, {
     'omega' : Item(status='U '),
     })
+  expected_elision_output = wc.State(A_COPY_2_H_path, {
+    })
   expected_status = wc.State(A_COPY_2_H_path, {
     ''      : Item(status=' M', wc_rev=8),
     'chi'   : Item(status='  ', wc_rev=8),
@@ -353,10 +380,16 @@ def mergeinfo_and_skipped_paths(sbox):
     'psi'   : Item(),
     })
   saved_cwd = os.getcwd()
+  # Note we don't bother checking expected mergeinfo output because the
+  # multiple merges being performed here, -c5 and -c8, will result in
+  # first ' U' and then ' G' mergeinfo notifications.  Our expected
+  # tree structures can't handle checking for multiple values for the
+  # same key.
   svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '4', '5',
-                                       sbox.repo_url + \
-                                       '/A/D/H',
+                                       sbox.repo_url + '/A/D/H', None,
                                        expected_output,
+                                       None, # expected_mergeinfo_output, 
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
@@ -387,6 +420,13 @@ def mergeinfo_and_skipped_paths(sbox):
     'omega' : Item(status='U '),
     'zeta'  : Item(status='A '),
     })
+  expected_mergeinfo_output = wc.State(A_COPY_2_H_path, {
+    ''      : Item(status=' U'),
+    'omega' : Item(status=' U'),
+    'zeta'  : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_COPY_2_H_path, {
+    })
   expected_status = wc.State(A_COPY_2_H_path, {
     ''      : Item(status=' M', wc_rev=8),
     'chi'   : Item(status='  ', wc_rev=8),
@@ -403,10 +443,12 @@ def mergeinfo_and_skipped_paths(sbox):
     })
   expected_skip = wc.State(A_COPY_2_H_path, {})
   saved_cwd = os.getcwd()
+  #raise svntest.Failure("PTB")
   svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '7', '9',
-                                       sbox.repo_url + \
-                                       '/A/D/H',
+                                       sbox.repo_url + '/A/D/H', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
@@ -507,11 +549,14 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                         expected_status,
                                         None,
                                         wc_dir, wc_dir)
-  svntest.actions.run_and_verify_svn(None, expected_merge_output([[3,4]],
-                                     'U    ' + Acopy_gamma_path + '\n'),
-                                     [], 'merge', '-r1:4',
-                                     A_url + '/D/gamma' + '@4',
-                                     Acopy_gamma_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[3,4]],
+                          ['U    ' + Acopy_gamma_path + '\n',
+                           ' U   ' + Acopy_gamma_path + '\n']),
+    [], 'merge', '-r1:4',
+    A_url + '/D/gamma' + '@4',
+    Acopy_gamma_path)
 
   # r6: create an empty (unreadable) commit.
   # Empty or unreadable revisions used to crash a svn 1.6+ client when
@@ -524,10 +569,13 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   # A delete merged ontop of a modified file is normally a tree conflict,
   # see notes/tree-conflicts/detection.txt, but --force currently avoids
   # this.
-  svntest.actions.run_and_verify_svn(None, expected_merge_output([[3,6]],
-                                     ['D    ' + Acopy_gamma_path + '\n']),
-                                     [], 'merge', '-r1:6', '--force',
-                                     A_url, Acopy_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[3,6]],
+                          ['D    ' + Acopy_gamma_path + '\n',
+                           ' U   ' + Acopy_path + '\n']),
+    [], 'merge', '-r1:6', '--force',
+    A_url, Acopy_path)
 
 ########################################################################
 # Run the tests

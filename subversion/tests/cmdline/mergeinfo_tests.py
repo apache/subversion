@@ -172,18 +172,20 @@ def non_inheritable_mergeinfo(sbox):
   svntest.actions.run_and_verify_svn(None, ["At revision 6.\n"], [], 'up',
                                      wc_dir)
   expected_status.tweak(wc_rev=6)
-  svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output([[4]], 'U    ' +
-                                                           rho_COPY_path +
-                                                           '\n'),
-                                     [], 'merge', '-c4',
-                                     sbox.repo_url + '/A',
-                                     A_COPY_path)
-  svntest.actions.run_and_verify_svn(None,
-                                     [], # Noop due to shallow depth
-                                     [], 'merge', '-c6',
-                                     sbox.repo_url + '/A',
-                                     A_COPY_path, '--depth', 'empty')
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[4]],
+                          ['U    ' + rho_COPY_path + '\n',
+                           ' U   ' + A_COPY_path + '\n',]),
+    [], 'merge', '-c4',
+    sbox.repo_url + '/A',
+    A_COPY_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[6]], ' G   ' + A_COPY_path + '\n'),
+    [], 'merge', '-c6',
+    sbox.repo_url + '/A',
+    A_COPY_path, '--depth', 'empty')
   expected_output = wc.State(wc_dir, {
     'A_COPY'         : Item(verb='Sending'),
     'A_COPY/D/G/rho' : Item(verb='Sending'),
@@ -229,6 +231,7 @@ def recursive_mergeinfo(sbox):
   # Some paths we'll care about
   A_path          = os.path.join(wc_dir, "A")
   A_COPY_path     = os.path.join(wc_dir, "A_COPY")
+  B_COPY_path     = os.path.join(wc_dir, "A_COPY", "B")
   C_COPY_path     = os.path.join(wc_dir, "A_COPY", "C")
   rho_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
   H_COPY_path     = os.path.join(wc_dir, "A_COPY", "D", "H")
@@ -259,45 +262,54 @@ def recursive_mergeinfo(sbox):
   # Merge r4 from A2 to A_COPY at depth empty
   svntest.actions.run_and_verify_svn(None, ["At revision 8.\n"], [], 'up',
                                      wc_dir)
-  svntest.actions.run_and_verify_svn(None,
-                                     #expected_merge_output([[4]], 'U    ' +
-                                     #                      rho_COPY_path +
-                                     #                      '\n'),
-                                     [], [], 'merge', '-c4', '--depth', 'empty',
-                                     sbox.repo_url + '/A2',
-                                     A_COPY_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[4]], ' U   ' + A_COPY_path + '\n'),
+    [], 'merge', '-c4', '--depth', 'empty',
+    sbox.repo_url + '/A2',
+    A_COPY_path)
 
   # Merge r6 from A2/D/H to A_COPY/D/H
-  svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output([[6]], 'U    ' +
-                                                           omega_COPY_path +
-                                                           '\n'),
-                                     [], 'merge', '-c6',
-                                     sbox.repo_url + '/A2/D/H',
-                                     H_COPY_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[6]],
+                          ['U    ' + omega_COPY_path + '\n',
+                           ' G   ' + H_COPY_path + '\n']),
+    [], 'merge', '-c6',
+    sbox.repo_url + '/A2/D/H',
+    H_COPY_path)
 
   # Merge r5 from A2 to A_COPY
-  svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output([[5]], 'U    ' +
-                                                           beta_COPY_path +
-                                                           '\n'),
-                                     [], 'merge', '-c5',
-                                     sbox.repo_url + '/A2',
-                                     A_COPY_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[5]],
+                          ['U    ' + beta_COPY_path + '\n',
+                           ' G   ' + A_COPY_path + '\n',
+                           ' G   ' + B_COPY_path + '\n',
+                           ' U   ' + B_COPY_path + '\n',], # Elision
+                          elides=True),
+    [], 'merge', '-c5',
+    sbox.repo_url + '/A2',
+    A_COPY_path)
 
   # Reverse merge -r5 from A2/C to A_COPY/C leaving empty mergeinfo on
   # A_COPY/C.
-  svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-c-5',
-                                     sbox.repo_url + '/A2/C', C_COPY_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[-5]],
+                          ' G   ' + C_COPY_path + '\n'),
+    [], 'merge', '-c-5',
+    sbox.repo_url + '/A2/C', C_COPY_path)
 
   # Merge r8 from A2/B/F to A_COPY/B/F
-  svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output([[8]], 'A    ' +
-                                                           nu_COPY_path +
-                                                           '\n'),
-                                     [], 'merge', '-c8',
-                                     sbox.repo_url + '/A2/B/F',
-                                     F_COPY_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[8]],
+                          ['A    ' + nu_COPY_path + '\n',
+                           ' G   ' + F_COPY_path + '\n']),
+    [], 'merge', '-c8',
+    sbox.repo_url + '/A2/B/F',
+    F_COPY_path)
 
   # Commit everything this far as r9
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -367,7 +379,9 @@ def mergeinfo_on_pegged_wc_path(sbox):
     None,
     expected_merge_output([[3],[6]],
                           ['U    ' + psi_COPY_path + '\n',
-                           'U    ' + omega_COPY_path + '\n']),
+                           'U    ' + omega_COPY_path + '\n',
+                           ' U   ' + A_COPY_path + '\n',
+                           ' G   ' + A_COPY_path + '\n',]),
     [], 'merge', '-c3,6', sbox.repo_url + '/A', A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', wc_dir,
@@ -377,7 +391,8 @@ def mergeinfo_on_pegged_wc_path(sbox):
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output([[5]],
-                          'U    ' + beta_COPY_path + '\n'),
+                          ['U    ' + beta_COPY_path + '\n',
+                           ' U   ' + A_COPY_path + '\n']),
     [], 'merge', '-c5', sbox.repo_url + '/A', A_COPY_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', wc_dir,

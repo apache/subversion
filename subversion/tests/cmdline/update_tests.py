@@ -30,6 +30,7 @@ import sys, re, os, subprocess
 # Our testing module
 import svntest
 from svntest import wc
+from merge_tests import expected_merge_output
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -2944,6 +2945,11 @@ def mergeinfo_update_elision(sbox):
     'E/alpha' : Item(status='U '),
     'E/beta'  : Item(status='U '),
     })
+  expected_mergeinfo_output = wc.State(B_COPY_path, {
+    '' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(B_COPY_path, {
+    })
   expected_merge_status = wc.State(B_COPY_path, {
     ''        : Item(status=' M', wc_rev=2),
     'lambda'  : Item(status='M ', wc_rev=2),
@@ -2963,9 +2969,10 @@ def mergeinfo_update_elision(sbox):
   expected_skip = wc.State(B_COPY_path, { })
 
   svntest.actions.run_and_verify_merge(B_COPY_path, '2', '5',
-                                       sbox.repo_url + \
-                                       '/A/B',
+                                       sbox.repo_url + '/A/B', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_merge_disk,
                                        expected_merge_status,
                                        expected_skip,
@@ -3020,18 +3027,13 @@ def mergeinfo_update_elision(sbox):
 
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
-  update_line = 'U    ' + alpha_COPY_path + '\n'
-  if sys.platform == 'win32':
-    # Construct a properly escaped regex when dealing with
-    # '\' riddled paths on Windows.
-    update_line = update_line.replace("\\", "\\\\")
-  notify_line = svntest.main.merge_notify_line(3, 5, True, False)
   svntest.actions.run_and_verify_svn(None,
-                                     '|'.join([notify_line, update_line]),
+                                     expected_merge_output([[3,5]],
+                                     ['U    ' + alpha_COPY_path + '\n',
+                                      ' U   ' + alpha_COPY_path + '\n']),
                                      [], 'merge', '-r2:5',
                                      sbox.repo_url + '/A/B/E/alpha',
                                      alpha_COPY_path)
-
   expected_alpha_status = wc.State(alpha_COPY_path, {
     ''        : Item(status='MM', wc_rev=5),
     })
@@ -3084,6 +3086,13 @@ def mergeinfo_update_elision(sbox):
   expected_output = wc.State(E_COPY_path, {
     'alpha' : Item(status='U '),
     })
+  expected_mergeinfo_output = wc.State(E_COPY_path, {
+    ''      : Item(status=' G'),
+    'alpha' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(E_COPY_path, {
+    'alpha' : Item(status=' U'),
+    })
   expected_merge_status = wc.State(E_COPY_path, {
     ''        : Item(status=' M', wc_rev=7),
     'alpha' : Item(status='MM', wc_rev=7),
@@ -3095,11 +3104,11 @@ def mergeinfo_update_elision(sbox):
     'beta'  : Item("New content"),
     })
   expected_skip = wc.State(E_COPY_path, { })
-
   svntest.actions.run_and_verify_merge(E_COPY_path, '6', '7',
-                                       sbox.repo_url + \
-                                       '/A/B/E',
+                                       sbox.repo_url + '/A/B/E', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_merge_disk,
                                        expected_merge_status,
                                        expected_skip,
@@ -3141,6 +3150,13 @@ def mergeinfo_update_elision(sbox):
   expected_output = wc.State(B_COPY_path, {
     'E/alpha' : Item(status='U '),
     })
+  expected_mergeinfo_output = wc.State(B_COPY_path, {
+    ''        : Item(status=' U'),
+    'E/alpha' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(B_COPY_path, {
+    'E/alpha' : Item(status=' U'),
+    })
   expected_merge_status = wc.State(B_COPY_path, {
     ''        : Item(status=' M', wc_rev=7),
     'lambda'  : Item(status='  ', wc_rev=7),
@@ -3160,9 +3176,10 @@ def mergeinfo_update_elision(sbox):
   expected_skip = wc.State(B_COPY_path, { })
 
   svntest.actions.run_and_verify_merge(B_COPY_path, '6', '7',
-                                       sbox.repo_url + \
-                                       '/A/B',
+                                       sbox.repo_url + '/A/B', None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_merge_disk,
                                        expected_merge_status,
                                        expected_skip,
@@ -3172,7 +3189,6 @@ def mergeinfo_update_elision(sbox):
   # Update just A/B_COPY/E.  The mergeinfo (r3-5,7) reset on
   # A/B_COPY/E by the udpate is identical to the local info on
   # A/B_COPY, so should elide, leaving no mereginfo on E.
-  #expected_output = svntest.wc.State(wc_dir, { })
   expected_output = wc.State(wc_dir, {
     'A/B_COPY/E/alpha' : Item(status='GG'),
     'A/B_COPY/E/'      : Item(status=' U'),
