@@ -91,16 +91,22 @@ svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
 svn_error_t *
 svn_client__record_wc_mergeinfo(const char *local_abspath,
                                 svn_mergeinfo_t mergeinfo,
+                                svn_boolean_t do_notification,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *scratch_pool)
 {
   svn_string_t *mergeinfo_str = NULL;
+  svn_boolean_t mergeinfo_changes = FALSE;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* Convert MERGEINFO (if any) into text for storage as a property value. */
   if (mergeinfo)
     SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_str, mergeinfo, scratch_pool));
+
+  if (do_notification && ctx->notify_func2)
+    SVN_ERR(svn_client__mergeinfo_status(&mergeinfo_changes, ctx->wc_ctx,
+                                         local_abspath, scratch_pool));
 
   /* Record the new mergeinfo in the WC. */
   /* ### Later, we'll want behavior more analogous to
@@ -109,13 +115,18 @@ svn_client__record_wc_mergeinfo(const char *local_abspath,
                            mergeinfo_str, TRUE /* skip checks */, NULL, NULL,
                            scratch_pool));
 
-  if (ctx->notify_func2)
+  if (do_notification && ctx->notify_func2)
     {
-      ctx->notify_func2(ctx->notify_baton2,
-                        svn_wc_create_notify(local_abspath,
-                                             svn_wc_notify_merge_record_info,
-                                             scratch_pool),
-                        scratch_pool);
+      svn_wc_notify_t *notify =
+        svn_wc_create_notify(local_abspath,
+                             svn_wc_notify_merge_record_info,
+                             scratch_pool);
+      if (mergeinfo_changes)
+        notify->prop_state = svn_wc_notify_state_merged;
+      else
+        notify->prop_state = svn_wc_notify_state_changed;
+
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
 
   return SVN_NO_ERROR;
@@ -853,8 +864,16 @@ elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
                 svn_wc_create_notify(
                               svn_dirent_join_many(scratch_pool, local_abspath,
                                                    path_suffix, NULL),
-                              svn_wc_notify_merge_record_info, scratch_pool);
+                              svn_wc_notify_merge_elide_info, scratch_pool);
 
+          ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+          notify = svn_wc_create_notify(svn_dirent_join_many(scratch_pool,
+                                                             local_abspath,
+                                                             path_suffix,
+                                                             NULL),
+                                        svn_wc_notify_update_update,
+                                        scratch_pool);
+          notify->prop_state = svn_wc_notify_state_changed;
           ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
         }
     }
@@ -2120,5 +2139,32 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
     }
 
   *suggestions = list;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__mergeinfo_status(svn_boolean_t *mergeinfo_changes,
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *propchanges;
+  int i;
+
+  *mergeinfo_changes = FALSE;
+
+  SVN_ERR(svn_wc_get_prop_diffs2(&propchanges, NULL, wc_ctx,
+                                 local_abspath, scratch_pool, scratch_pool));
+
+  for (i = 0; i < propchanges->nelts; i++)
+    {
+      svn_prop_t prop = APR_ARRAY_IDX(propchanges, i, svn_prop_t);
+      if (strcmp(prop.name, SVN_PROP_MERGEINFO) == 0)
+        {
+          *mergeinfo_changes = TRUE;
+          break;
+        }
+    }
+
   return SVN_NO_ERROR;
 }

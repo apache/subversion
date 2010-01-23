@@ -177,7 +177,7 @@ extend_wc_mergeinfo(const char *target_abspath,
 
   return svn_error_return(
     svn_client__record_wc_mergeinfo(target_abspath, wc_mergeinfo,
-                                    ctx, pool));
+                                    FALSE, ctx, pool));
 }
 
 /* Find the longest common ancestor of paths in COPY_PAIRS.  If

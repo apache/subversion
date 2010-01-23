@@ -64,14 +64,17 @@ def automatic_conflict_resolution(sbox):
   def do_text_conflicting_merge():
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'revert', '--recursive', A_COPY_path)
-    svntest.actions.run_and_verify_svn(None,
-                                       "(--- Merging r3 into .*A_COPY':\n)|"
-                                       "(C    .*psi\n)|"
-                                       "(Summary of conflicts:\n)|"
-                                       "(  Text conflicts: 1\n)",
-                                       [], 'merge', '-c3',
-                                       sbox.repo_url + '/A',
-                                       A_COPY_path)
+    svntest.actions.run_and_verify_svn(
+      None,
+      "(--- Merging r3 into .*A_COPY':\n)|"
+      "(C    .*psi\n)|"
+      "(--- Recording mergeinfo for merge of r3 into .*A_COPY':\n)|"
+      "( U   .*A_COPY\n)|"
+      "(Summary of conflicts:\n)|"
+      "(  Text conflicts: 1\n)",
+      [], 'merge', '-c3',
+      sbox.repo_url + '/A',
+      A_COPY_path)
 
   # Test 'svn resolve -R --accept base'
   do_text_conflicting_merge()

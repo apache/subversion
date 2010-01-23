@@ -434,12 +434,20 @@ def revert_file_merge_replace_with_history(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G/rho': Item(status='R ')
     })
+  expected_mergeinfo_output = svntest.wc.State(wc_dir, {
+    '' : Item(status=' U')
+    })
+  expected_elision_output = svntest.wc.State(wc_dir, {
+    '' : Item(status=' U')
+    })
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
   expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n")
   svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
-                                       sbox.repo_url,
+                                       sbox.repo_url, None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip)
@@ -672,14 +680,22 @@ def revert_replaced_with_history_file_1(sbox):
     'A/mu': Item(status='R '),
     'iota': Item(status='A ')
     })
+  expected_mergeinfo_output = svntest.wc.State(wc_dir, {
+    '': Item(status=' U'),
+    })
+  expected_elision_output = svntest.wc.State(wc_dir, {
+    '': Item(status=' U'),
+    })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/mu', status='R ', copied='+', wc_rev='-')
   expected_status.tweak('iota', status='A ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
   expected_disk = svntest.main.greek_state.copy()
   svntest.actions.run_and_verify_merge(wc_dir, '2', '1',
-                                       sbox.repo_url,
+                                       sbox.repo_url, None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip)
@@ -785,6 +801,12 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
     'A/D/G/pi': Item(status='A '),
     'A/D/G/tau': Item(status='A '),
     })
+  expected_mergeinfo_output = svntest.wc.State(wc_dir, {
+    '': Item(status=' U'),
+    })
+  expected_elision_output = svntest.wc.State(wc_dir, {
+    '': Item(status=' U'),
+    })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak('A/D/G', status='R ', copied='+', wc_rev='-')
   expected_status.tweak('A/D/G/rho',
@@ -799,8 +821,10 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   expected_skip = wc.State(wc_dir, { })
   expected_disk   = svntest.main.greek_state.copy()
   svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
-                                       sbox.repo_url,
+                                       sbox.repo_url, None,
                                        expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,

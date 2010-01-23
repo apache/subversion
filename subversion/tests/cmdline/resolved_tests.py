@@ -274,7 +274,11 @@ def resolved_on_deleted_item(sbox):
       'B'                 : Item(status='  ', treeconflict='C'),
       'D/gamma'           : Item(status='  ', treeconflict='C'),
     })
-
+  expected_mergeinfo_output = svntest.wc.State(A2, {
+      '' : Item(status=' U')
+    })
+  expected_elision_output = svntest.wc.State(A2, {
+    })
   expected_disk = svntest.wc.State('', {
       'mu'                : Item(contents="This is the file 'mu'.\n"),
       'D'                 : Item(),
@@ -310,11 +314,12 @@ def resolved_on_deleted_item(sbox):
     'C'                 : Item(status='  ', wc_rev='2'),
   })
 
-  svntest.actions.run_and_verify_merge(
-                       A2, None, None, A_url,
-                       expected_output, expected_disk, None, expected_skip,
-                       None,
-                       dry_run = False)
+  svntest.actions.run_and_verify_merge(A2, None, None, A_url, None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk, None, expected_skip,
+                                       None, dry_run = False)
   svntest.actions.run_and_verify_unquiet_status(A2, expected_status)
 
 

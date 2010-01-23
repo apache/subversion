@@ -282,6 +282,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_update_update:
+    case svn_wc_notify_merge_record_info:
       {
         if (n->content_state == svn_wc_notify_state_conflicted)
           {
@@ -580,6 +581,50 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                                  n->merge_range->start,
                                  n->merge_range->end + 1, path_local);
       if (err)
+        goto print_error;
+      break;
+
+    case svn_wc_notify_merge_record_info_begin:
+      if (!n->merge_range)
+        {
+          err = svn_cmdline_printf(pool,
+                                   _("--- Recording mergeinfo for merge "
+                                     "between repository URLs into '%s':\n"),
+                                   path_local);
+        }
+      else
+        {
+          if (n->merge_range->start == n->merge_range->end - 1
+              || n->merge_range->start == n->merge_range->end)
+            err = svn_cmdline_printf(
+              pool,
+              _("--- Recording mergeinfo for merge of r%ld into '%s':\n"),
+              n->merge_range->end, path_local);
+          else if (n->merge_range->start - 1 == n->merge_range->end)
+            err = svn_cmdline_printf(
+              pool,
+              _("--- Recording mergeinfo for reverse merge of r%ld into '%s':\n"),
+              n->merge_range->start, path_local);
+           else if (n->merge_range->start < n->merge_range->end)
+             err = svn_cmdline_printf(
+               pool,
+               _("--- Recording mergeinfo for merge of r%ld through r%ld into '%s':\n"),
+               n->merge_range->start + 1, n->merge_range->end, path_local);
+           else /* n->merge_range->start > n->merge_range->end - 1 */
+             err = svn_cmdline_printf(
+               pool,
+               _("--- Recording mergeinfo for reverse merge of r%ld through r%ld into '%s':\n"),
+               n->merge_range->start, n->merge_range->end + 1, path_local);
+ 
+      if (err)
+        goto print_error;
+        }
+      break;
+
+    case svn_wc_notify_merge_elide_info:
+      if ((err = svn_cmdline_printf(pool,
+                                    _("--- Eliding mergeinfo from '%s':\n"),
+                                    path_local)))
         goto print_error;
       break;
 

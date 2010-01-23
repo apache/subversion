@@ -1053,6 +1053,14 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_upgraded_path,
 
+  /** Mergeinfo describing a merge was recorded.
+   * @since New in 1.7. */
+  svn_wc_notify_merge_record_info_begin,
+
+  /** Mergeinfo was removed due to elision.
+   * @since New in 1.7. */
+  svn_wc_notify_merge_elide_info,
+
 } svn_wc_notify_action_t;
 
 

@@ -274,13 +274,15 @@ svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
 /* Write MERGEINFO into the WC for LOCAL_ABSPATH.  If MERGEINFO is NULL,
    remove any SVN_PROP_MERGEINFO for LOCAL_ABSPATH.  If MERGEINFO is empty,
    record an empty property value (e.g. "").  If CTX->NOTIFY_FUNC2 is
-   not null call it with notification type svn_wc_notify_merge_record_info.
+   not null call it with notification type svn_wc_notify_update_update
+   if DO_NOTIFICATION is true.
 
    Use WC_CTX to access the working copy, and SCRATCH_POOL for any temporary
    allocations. */
 svn_error_t *
 svn_client__record_wc_mergeinfo(const char *local_abspath,
                                 svn_mergeinfo_t mergeinfo,
+                                svn_boolean_t do_notification,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *scratch_pool);
 
@@ -338,5 +340,13 @@ svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
                                           const char *rel_path,
                                           svn_mergeinfo_t mergeinfo,
                                           apr_pool_t *pool);
+
+/* Set *MERGEINFO_CHANGES to TRUE if LOCAL_ABSPATH has locally modified
+   mergeinfo, set *MERGEINFO_CHANGES to FALSE otherwise. */
+svn_error_t *
+svn_client__mergeinfo_status(svn_boolean_t *mergeinfo_changes,
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             apr_pool_t *scratch_pool);
 
 #endif /* SVN_LIBSVN_CLIENT_MERGEINFO_H */
