@@ -205,7 +205,7 @@ test_list = [ None,
               getopt__help,
               getopt_help,
               getopt_help_bogus_cmd,
-              getopt_help_log_switch
+              getopt_help_log_switch,
             ]
 
 if __name__ == '__main__':
