@@ -903,6 +903,40 @@ def authz_access_required_at_repo_root(sbox):
                        root_url + '/A-copy/B/E/beta',
                        root_url + '/A-copy/C')
 
+
+def multiple_matches(sbox):
+  "multiple lines matching a user"
+
+  sbox.build(create_wc = False)
+  root_url = sbox.repo_url
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+  if sbox.repo_url.startswith("http"):
+    expected_err = ".*[Ff]orbidden.*"
+  else:
+    expected_err = ".*svn: Authorization failed.*"
+
+  # Prohibit access and commit fails
+  write_authz_file(sbox, {'/': 'jrandom ='})
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'cp', '-m', 'fail copy',
+                                     root_url, root_url + '/fail')
+
+  # At present if multiple lines match the permissions of all the
+  # matching lines are amalgamated.  So jrandom gets access regardless
+  # of the line prohibiting access and regardless of the  order of the
+  # lines.  This might be a bug, but we probably can't simply fix it as
+  # that would change the behaviour of lots of existing authz files.
+
+  write_authz_file(sbox, {'/': 'jrandom =' + '\n' + '* = rw'})
+  svntest.main.run_svn(None, 'cp',
+                       '-m', 'first copy',
+                       root_url, root_url + '/first')
+
+  write_authz_file(sbox, {'/': '* = rw' + '\n' + 'jrandom ='})
+  svntest.main.run_svn(None, 'cp',
+                       '-m', 'second copy',
+                       root_url, root_url + '/second')
+
 ########################################################################
 # Run the tests
 
@@ -928,6 +962,7 @@ test_list = [ None,
                          svntest.main.is_ra_type_file)),
               Skip(authz_access_required_at_repo_root,
                    svntest.main.is_ra_type_file),
+              Skip(multiple_matches, svntest.main.is_ra_type_file),
              ]
 
 if __name__ == '__main__':
