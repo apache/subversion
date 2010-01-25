@@ -4266,6 +4266,44 @@ def move_below_move(sbox):
                                         None, sbox.wc_dir)
 
 
+def reverse_merge_move(sbox):
+  """reverse merge move"""
+
+  # Alias for svntest.actions.run_and_verify_svn
+  rav_svn = svntest.actions.run_and_verify_svn
+
+  wc_dir = sbox.wc_dir
+  a_dir = os.path.join(wc_dir, 'A')
+  a_repo_url = sbox.repo_url+ '/A'
+  sbox.build()
+
+  # Update working directory and ensure that we are at revision 1.
+  rav_svn(None, ["At revision 1.\n"], [], 'up', wc_dir)
+
+  # Add new folder and file, later commit
+  new_path = os.path.join(a_dir, 'New')
+  os.mkdir(new_path)
+  first_path = os.path.join(new_path, 'first')
+  svntest.main.file_append(first_path, 'appended first text')
+  svntest.main.run_svn(None, "add", new_path)
+  rav_svn(None, None, [], 'ci', wc_dir, '-m', 'Add new folder %s' % new_path)
+  rav_svn(None, ["At revision 2.\n"], [], 'up', wc_dir)
+
+  # Reverse merge to revert previous changes and commit
+  rav_svn(None, None, [], 'merge', '-c', '-2', a_repo_url, a_dir)
+  rav_svn(None, None, [], 'ci', '-m', 'Reverting svn merge -c -2.', a_dir)
+  rav_svn(None, ["At revision 3.\n"], [], 'up', wc_dir)
+
+  # Reverse merge again to undo last revert.
+  rav_svn(None, None, [], 'merge', '-c', '-3', a_repo_url, a_dir)
+
+  # Move new added file to another one and commit.
+  second_path = os.path.join(new_path, 'second')
+  rav_svn(None, None, [], 'move', first_path, second_path)
+  rav_svn(None, None, ["Committed revision 4.\n"], 'ci', '-m',
+          'Revert svn merge. svn mv %s %s.' % (first_path, second_path), a_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -4353,6 +4391,7 @@ test_list = [ None,
               commit_copy_depth_empty,
               copy_below_copy,
               XFail(move_below_move),
+              XFail(reverse_merge_move),
              ]
 
 if __name__ == '__main__':
