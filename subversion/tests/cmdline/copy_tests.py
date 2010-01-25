@@ -4300,7 +4300,8 @@ def reverse_merge_move(sbox):
   # Move new added file to another one and commit.
   second_path = os.path.join(new_path, 'second')
   rav_svn(None, None, [], 'move', first_path, second_path)
-  rav_svn(None, None, ["Committed revision 4.\n"], 'ci', '-m',
+  rav_svn(None, "Adding.*New|Adding.*first||Committed revision 4.", [],
+          'ci', '-m',
           'Revert svn merge. svn mv %s %s.' % (first_path, second_path), a_dir)
 
 
