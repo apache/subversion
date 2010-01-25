@@ -4352,7 +4352,7 @@ test_list = [ None,
               path_copy_in_repo_2475,
               commit_copy_depth_empty,
               copy_below_copy,
-              XFail(move_below_move)
+              XFail(move_below_move),
              ]
 
 if __name__ == '__main__':
