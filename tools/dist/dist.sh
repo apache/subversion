@@ -184,16 +184,6 @@ if [ $? -ne 0 ] && [ -z "$ZIP" ]; then
   exit 1
 fi
 
-# Check for a recent enough Python
-PYTHON="`./build/find_python.sh`"
-if test -z "$PYTHON"; then
-  echo "Python 2.4 or later is required to run dist.sh"
-  echo "If you have a suitable Python installed, but not on the"
-  echo "PATH, set the environment variable PYTHON to the full path"
-  echo "to the Python executable, and re-run dist.sh"
-  exit 1
-fi
-
 # Default to 'wget', but allow 'curl' to be used if available.
 HTTP_FETCH=wget
 HTTP_FETCH_OUTPUT="-O"
@@ -213,6 +203,16 @@ DEPSNAME="subversion-deps-${VERSION}${VER_NUMTAG}"
 DIST_SANDBOX=.dist_sandbox
 DISTPATH="$DIST_SANDBOX/$DISTNAME"
 DEPSPATH="$DIST_SANDBOX/deps/$DISTNAME"
+
+# Check for a recent enough Python
+PYTHON="`$DISTPATH/build/find_python.sh`"
+if test -z "$PYTHON"; then
+  echo "Python 2.4 or later is required to run dist.sh"
+  echo "If you have a suitable Python installed, but not on the"
+  echo "PATH, set the environment variable PYTHON to the full path"
+  echo "to the Python executable, and re-run dist.sh"
+  exit 1
+fi
 
 echo "Distribution will be named: $DISTNAME"
 echo "     constructed from path: /$REPOS_PATH"
