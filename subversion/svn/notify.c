@@ -311,7 +311,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       nb->received_some_change = TRUE;
       if (n->hunk_original_start != n->hunk_matched_line)
         {
-          apr_int64_t off;
+          apr_uint64_t off;
           const char *s;
           const char *minus;
 
@@ -331,7 +331,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                 "with offset %s");
           if ((err = svn_cmdline_printf(pool,
                                         apr_pstrcat(pool, s,
-                                                    "%"APR_INT64_T_FMT"\n",
+                                                    "%"APR_UINT64_T_FMT"\n",
                                                     NULL),
                                         n->hunk_original_start,
                                         n->hunk_original_length,
