@@ -142,6 +142,8 @@ class SvnRepository:
     self.repo_url = repo_url
     self.repo_absdir = os.path.abspath(repo_dir)
     self.db_dump_name = locate_db_dump()
+    # This repository object's idea of its own head revision.
+    self.head_rev = 0
 
   def dump(self, output_dir):
     """Dump the repository into the directory OUTPUT_DIR"""
@@ -162,11 +164,23 @@ class SvnRepository:
     main.file_append(ldumpfile, ''.join(stdout))
 
 
-  def obliterate_node_rev(self, path, rev):
-    """Obliterate the single node-rev PATH in revision REV."""
+  def obliterate_node_rev(self, path, rev,
+                          exp_out=None, exp_err=[], exp_exit=0):
+    """Obliterate the single node-rev PATH in revision REV. Check the
+    expected stdout, stderr and exit code (EXP_OUT, EXP_ERR, EXP_EXIT)."""
+    arg = self.repo_url + '/' + path + '@' + str(rev)
+    actions.run_and_verify_svn2(None, exp_out, exp_err, exp_exit,
+                                'obliterate', arg)
+
+  def svn_mkdirs(self, *dirs):
+    """Run 'svn mkdir' on the repository. DIRS is a list of directories to
+    make, and each directory is a path relative to the repository root,
+    neither starting nor ending with a slash."""
+    urls = [self.repo_url + '/' + dir for dir in dirs]
     actions.run_and_verify_svn(None, None, [],
-                               'obliterate',
-                               self.repo_url + '/' + path + '@' + str(rev))
+                               'mkdir', '-m', 'svn_mkdirs()', '--parents',
+                               *urls)
+    self.head_rev += 1
 
 
 ######################################################################
@@ -182,9 +196,9 @@ class SvnWC:
      in Subversion canonical form ('/' separators).
      """
 
-  def __init__(self, wc_dir):
-    """Initialize the object to use the existing WC at path WC_DIR.
-    """
+  def __init__(self, wc_dir, repo):
+    """Initialize the object to use the existing WC at path WC_DIR and
+    the existing repository object REPO."""
     self.wc_absdir = os.path.abspath(wc_dir)
     # 'state' is, at all times, the 'wc.State' representation of the state
     # of the WC, with paths relative to 'wc_absdir'.
@@ -194,15 +208,10 @@ class SvnWC:
     self.state.add({
       '': wc.StateItem()
     })
-    # This WC's idea of the repository's head revision.
-    # ### Shouldn't be in this class: should ask the repository instead.
-    self.head_rev = 0
-
-    print "## new SvnWC:"
-    print self
+    self.repo = repo
 
   def __str__(self):
-    return "SvnWC(head_rev=" + str(self.head_rev) + ", state={" + \
+    return "SvnWC(head_rev=" + str(self.repo.head_rev) + ", state={" + \
       str(self.state.desc) + \
       "})"
 
@@ -298,10 +307,13 @@ class SvnWC:
       rpath2: self.state.desc[rpath1]
     })
 
-  def svn_delete(self, rpath):
+  def svn_delete(self, rpath, even_if_modified=False):
     "Delete a WC path locally."
     lpath = local_path(rpath)
-    actions.run_and_verify_svn(None, None, [], 'delete', lpath)
+    args = []
+    if even_if_modified:
+      args += ['--force']
+    actions.run_and_verify_svn(None, None, [], 'delete', lpath, *args)
 
   def svn_commit(self, rpath='', log=''):
     "Commit a WC path (recursively). Return the new revision number."
@@ -309,9 +321,14 @@ class SvnWC:
     actions.run_and_verify_svn(None, verify.AnyOutput, [],
                                'commit', '-m', log, lpath)
     actions.run_and_verify_update(lpath, None, None, None)
-    self.head_rev += 1
-    print "## head-rev == " + str(self.head_rev)
-    return self.head_rev
+    self.repo.head_rev += 1
+    print "## head-rev == " + str(self.repo.head_rev)
+    return self.repo.head_rev
+
+  def svn_update(self, rpath='', rev='HEAD'):
+    "Update the WC to the specified revision"
+    lpath = local_path(rpath)
+    actions.run_and_verify_update(lpath, None, None, None)
 
 #  def svn_merge(self, rev_spec, source, target, exp_out=None):
 #    """Merge a single change from path 'source' to path 'target'.

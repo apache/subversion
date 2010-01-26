@@ -44,7 +44,7 @@ SkipUnless = svntest.testcase.SkipUnless
 
 obliteration_dirs = ['f-mod', 'f-add', 'f-del', 'f-rpl', 'f-mov']
 
-def create_dd1_scenarios(wc):
+def create_dd1_scenarios(wc, repo):
   """Create, in the initially empty repository of the SvnWC WC, the
      obliteration test scenarios depicted in each "Example 1" in
      <notes/obliterate/fspec-dd1/dd1-file-ops.svg>."""
@@ -52,13 +52,13 @@ def create_dd1_scenarios(wc):
   # r1: base directories
   for dir in obliteration_dirs:
     wc.svn_mkdir(dir)
-  rev = wc.svn_commit()
+  wc.svn_commit()
 
   # r2 to r8 inclusive, just so that the obliteration rev is a round and
   # consistent number (10), no matter what complexity of history we have.
-  while rev < 8:
-    wc.svn_set_props('', { 'this-is-rev': str(rev + 1) })
-    rev = wc.svn_commit()
+  while repo.head_rev < 8:
+    repo.svn_mkdirs('tmp/' + str(repo.head_rev + 1))
+  wc.svn_update()
 
   # r9: add the files used in the scenarios
   wc.svn_file_create_add('f-mod/F', "Pear\n")
@@ -75,7 +75,7 @@ def create_dd1_scenarios(wc):
   wc.svn_file_create_add('f-rpl/F', 'Apple\n')
   wc.svn_move('f-mov/E', 'f-mov/F')
   wc.file_modify('f-mov/F', 'Apple\n')
-  rev = wc.svn_commit(log='Rev to be obliterated')
+  wc.svn_commit(log='Rev to be obliterated')
 
   # r11: some more recent history that refers to the revision we changed
   # (We are not ready to test this yet.)
@@ -83,7 +83,7 @@ def create_dd1_scenarios(wc):
   #  wc.file_modify(dir + '/F', 'Orange\n')
   #wc.svn_commit()
 
-  return rev
+  return 10
 
 ######################################################################
 # Tests
@@ -103,13 +103,13 @@ def obliterate_1(sbox):
                                   expected_disk)
 
   # Create test utility objects
-  wc = objects.SvnWC(sbox.wc_dir)
   repo = objects.SvnRepository(sbox.repo_url, sbox.repo_dir)
+  wc = objects.SvnWC(sbox.wc_dir, repo)
 
   os.chdir(sbox.wc_dir)
 
   # Create scenarios ready for obliteration
-  apple_rev = create_dd1_scenarios(wc)
+  apple_rev = create_dd1_scenarios(wc, repo)
 
   # Dump the repository state, if possible, for debugging
   try:
