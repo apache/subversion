@@ -313,25 +313,31 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         {
           apr_int64_t off;
           const char *s;
+          const char *minus;
 
           if (n->hunk_matched_line > n->hunk_original_start)
             {
               off = n->hunk_matched_line - n->hunk_original_start;
-              s = "";
+              minus = "";
             }
           else
             {
               off = n->hunk_original_start - n->hunk_matched_line;
-              s = "-";
+              minus = "-";
             }
-          if ((err = svn_cmdline_printf(pool, ">         applied hunk "
-                                        "@@ -%lu,%lu +%lu,%lu @@ "
-                                        "with offset %s%"APR_INT64_T_FMT"\n",
+
+          /* ### APR_INT64_T_FMT isn't translator-friendly */
+          s = _(">         applied hunk @@ -%lu,%lu +%lu,%lu @@ "
+                "with offset %s");
+          if ((err = svn_cmdline_printf(pool,
+                                        apr_pstrcat(pool, s,
+                                                    "%"APR_INT64_T_FMT"\n",
+                                                    NULL),
                                         n->hunk_original_start,
                                         n->hunk_original_length,
                                         n->hunk_modified_start,
                                         n->hunk_modified_length,
-                                        s, off)))
+                                        minus, off)))
             goto print_error;
         }
       break;
@@ -339,8 +345,8 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
     case svn_wc_notify_patch_rejected_hunk:
       nb->received_some_change = TRUE;
       if ((err = svn_cmdline_printf(pool,
-                                    ">         rejected hunk "
-                                    "@@ -%lu,%lu +%lu,%lu @@\n",
+                                    _(">         rejected hunk "
+                                      "@@ -%lu,%lu +%lu,%lu @@\n"),
                                     n->hunk_original_start,
                                     n->hunk_original_length,
                                     n->hunk_modified_start,
