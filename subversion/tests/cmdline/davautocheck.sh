@@ -269,7 +269,7 @@ LoadModule          authz_svn_module "$MOD_AUTHZ_SVN"
 LockFile            lock
 User                $(id -un)
 Group               $(id -gn)
-Listen              localhost:$HTTPD_PORT
+Listen              $HTTPD_PORT
 ServerName          localhost
 PidFile             "$HTTPD_PID"
 LogFormat           "%h %l %u %t \"%r\" %>s %b" common
