@@ -973,8 +973,7 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
           /* The hunk does not apply, reject it. */
           SVN_ERR(reject_hunk(target, hi, iterpool));
         }
-      else
-        APR_ARRAY_PUSH(target->hunks, hunk_info_t *) = hi;
+      APR_ARRAY_PUSH(target->hunks, hunk_info_t *) = hi;
     }
 
   /* Apply hunks. */
@@ -1214,8 +1213,9 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
         }
 
     }
+
   /* Write out rejected hunks, if any. */
-  if (! target->skipped && target->had_rejects)
+  if (! dry_run && ! target->skipped && target->had_rejects)
     {
       SVN_ERR(svn_io_copy_file(target->reject_path,
                                apr_psprintf(pool, "%s.svnpatch.rej",

@@ -898,6 +898,76 @@ def patch_add_new_dir(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+def patch_unidiff_reject(sbox):
+  "apply a unidiff patch which is rejected"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Set gamma contents
+  gamma_contents = "Hello there! I'm the file 'gamma'.\n"
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  svntest.main.file_write(gamma_path, gamma_contents)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma'       : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/gamma', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+
+  # Apply patch
+
+  unidiff_patch = [
+    "Index: A/D/gamma\n",
+    "===================================================================\n",
+    "--- A/D/gamma\t(revision 1)\n",
+    "+++ A/D/gamma\t(working copy)\n",
+    "@@ -1 +1 @@\n",
+    "-This is really the file 'gamma'.\n",
+    "+It is really the file 'gamma'.\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'C         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    '>         rejected hunk @@ -1,1 +1,1 @@\n',
+    'Summary of conflicts:\n',
+    '  Text conflicts: 1\n',
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/gamma', contents=gamma_contents)
+
+  reject_file_contents = [
+    "--- A/D/gamma\n",
+    "+++ A/D/gamma\n",
+    "@@ -1,1 +1,1 @@\n",
+    "-This is really the file 'gamma'.\n",
+    "+It is really the file 'gamma'.\n",
+  ]
+  expected_disk.add({'A/D/gamma.svnpatch.rej' :
+                     Item(contents=''.join(reject_file_contents))})
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/gamma', wc_rev=2)
+  # ### not yet
+  #expected_status.tweak('A/D/gamma', status='C ')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 
 ########################################################################
 #Run the tests
@@ -910,6 +980,7 @@ test_list = [ None,
               patch_chopped_leading_spaces,
               patch_unidiff_strip1,
               patch_add_new_dir,
+              patch_unidiff_reject,
             ]
 
 if __name__ == '__main__':
