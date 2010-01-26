@@ -833,6 +833,66 @@ def patch_unidiff_strip1(sbox):
                                        1, # dry-run
                                        '-p1')
 
+def patch_add_new_dir(sbox):
+  "apply a unidiff patch with missing dirs"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+
+  # The first diff is adding 'new' with two missing dirs. The second is 
+  # adding 'new' with one missing dir to a 'A' that is locally deleted. Should be
+  # skipped.
+  unidiff_patch = [
+    "Index: new\n",
+    "===================================================================\n",
+    "--- X/Y/new\t(revision 0)\n",
+    "+++ X/Y/new\t(revision 0)\n",
+    "@@ -0,0 +1 @@\n",
+    "+new\n",
+    "Index: new\n",
+    "===================================================================\n",
+    "--- A/C/Y/new\t(revision 0)\n",
+    "+++ A/C/Y/new\t(revision 0)\n",
+    "@@ -0,0 +1 @@\n",
+    "+new\n",
+  ]
+
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  svntest.actions.run_and_verify_svn("Deleting C failed", None, [],
+                                     'rm', C_path)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  A_C_Y_new_path = os.path.join(wc_dir, 'A', 'C', 'Y', 'new')
+  expected_output = [
+    'A    %s\n' % os.path.join(wc_dir, 'X', 'Y', 'new'),
+    'Skipped missing target: \'%s\'\n' % A_C_Y_new_path,
+    'Summary of conflicts:\n',
+    '  Skipped paths: 1\n',
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'X/Y/new': Item(contents='new\n')})
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'X' : Item(status='A ', wc_rev=0)})
+  expected_status.add({'X/Y' : Item(status='A ', wc_rev=0)})
+  expected_status.add({'X/Y/new' : Item(status='A ', wc_rev=0)})
+  expected_status.add({'A/C' : Item(status='D ', wc_rev=1)})
+
+  expected_skip = wc.State('', {A_C_Y_new_path : Item()})
+
+  svntest.actions.run_and_verify_patch(wc_dir, 
+                                       os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 
 ########################################################################
 #Run the tests
@@ -844,6 +904,7 @@ test_list = [ None,
               patch_unidiff_offset,
               patch_chopped_leading_spaces,
               patch_unidiff_strip1,
+              patch_add_new_dir,
             ]
 
 if __name__ == '__main__':
