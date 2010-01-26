@@ -288,6 +288,52 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         goto print_error;
       break;
 
+    case svn_wc_notify_patch_applied_hunk:
+      nb->received_some_change = TRUE;
+      if ((err = svn_cmdline_printf(pool,
+                                    ">         applied hunk "
+                                    "@@ -%lu,%lu +%lu,%lu @@",
+                                    n->hunk_original_start,
+                                    n->hunk_original_length,
+                                    n->hunk_modified_start,
+                                    n->hunk_modified_length)))
+        goto print_error;
+      if (n->hunk_original_start != n->hunk_matched_line)
+        {
+          apr_int64_t off;
+          const char *s;
+
+          if (n->hunk_matched_line > n->hunk_original_start)
+            {
+              off = n->hunk_matched_line - n->hunk_original_start;
+              s = "";
+            }
+          else
+            {
+              off = n->hunk_original_start - n->hunk_matched_line;
+              s = "-";
+            }
+          if ((err = svn_cmdline_printf(pool,
+                                        " with offset %s%"APR_INT64_T_FMT,
+                                        s, off)))
+            goto print_error;
+        }
+      if ((err = svn_cmdline_printf(pool, "\n")))
+        goto print_error;
+      break;
+
+    case svn_wc_notify_patch_rejected_hunk:
+      nb->received_some_change = TRUE;
+      if ((err = svn_cmdline_printf(pool,
+                                    ">         rejected hunk "
+                                    "@@ -%lu,%lu +%lu,%lu @@\n",
+                                    n->hunk_original_start,
+                                    n->hunk_original_length,
+                                    n->hunk_modified_start,
+                                    n->hunk_modified_length)))
+        goto print_error;
+      break;
+
     case svn_wc_notify_update_update:
     case svn_wc_notify_merge_record_info:
       {
