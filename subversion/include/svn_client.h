@@ -4809,8 +4809,8 @@ svn_client_info(const char *path_or_url,
  */
 
 /**
- * Apply a unidiff patch that's located at @a patch_path against a
- * working copy pointed to by @a target.
+ * Apply a unidiff patch that's located at absolute path
+ * @a abs_patch_path to the working copy at @a local_abspath.
  *
  * If @a dry_run is TRUE, the patching process is carried out, and full
  * notification feedback is provided, but the working copy is not modified.
@@ -4828,8 +4828,8 @@ svn_client_info(const char *path_or_url,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_client_patch(const char *patch_path,
-                 const char *target,
+svn_client_patch(const char *abs_patch_path,
+                 const char *local_abspath,
                  svn_boolean_t dry_run,
                  int strip_count,
                  svn_client_ctx_t *ctx,

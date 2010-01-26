@@ -60,7 +60,7 @@ typedef struct {
   /* The target path, relative to the working copy directory the
    * patch is being applied to. A patch strip count applies to this
    * and only this path. This is never NULL. */
-  const char *wc_path;
+  const char *rel_path;
 
   /* The absolute path of the target on the filesystem.
    * Any symlinks the path from the patch file may contain are resolved.
@@ -197,13 +197,12 @@ strip_path(const char **result, const char *path, int strip_count,
 static svn_error_t *
 resolve_target_path(patch_target_t *target,
                     const char *path_from_patchfile,
-                    const char *wc_path,
+                    const char *abs_wc_path,
                     int strip_count,
                     svn_wc_context_t *wc_ctx,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
-  const char *abs_wc_path;
   const char *stripped_path;
 
   target->canon_path_from_patchfile = svn_dirent_internal_style(
@@ -214,11 +213,9 @@ resolve_target_path(patch_target_t *target,
       target->skipped = TRUE;
       target->kind = svn_node_file;
       target->abs_path = NULL;
-      target->wc_path = "";
+      target->rel_path = "";
       return SVN_NO_ERROR;
     }
-
-  SVN_ERR(svn_dirent_get_absolute(&abs_wc_path, wc_path, scratch_pool));
 
   if (strip_count > 0)
     SVN_ERR(strip_path(&stripped_path, target->canon_path_from_patchfile,
@@ -228,28 +225,28 @@ resolve_target_path(patch_target_t *target,
 
   if (svn_dirent_is_absolute(stripped_path))
     {
-      target->wc_path = svn_dirent_is_child(abs_wc_path, stripped_path,
-                                            result_pool);
-      if (! target->wc_path)
+      target->rel_path = svn_dirent_is_child(abs_wc_path, stripped_path,
+                                             result_pool);
+      if (! target->rel_path)
         {
           /* The target path is either outside of the working copy
            * or it is the working copy itself. Skip it. */
           target->skipped = TRUE;
           target->kind = svn_node_file;
           target->abs_path = NULL;
-          target->wc_path = stripped_path;
+          target->rel_path = stripped_path;
           return SVN_NO_ERROR;
         }
     }
   else
     {
-      target->wc_path = stripped_path;
+      target->rel_path = stripped_path;
     }
 
   /* Make sure the path is secure to use. We want the target to be inside
    * of the working copy and not be fooled by symlinks it might contain. */
   if (! svn_dirent_is_under_root(&target->abs_path, abs_wc_path,
-                                 target->wc_path, result_pool))
+                                 target->rel_path, result_pool))
     {
       /* The target path is outside of the working copy. Skip it. */
       target->skipped = TRUE;
@@ -835,17 +832,14 @@ apply_one_hunk(const hunk_info_t *hi, patch_target_t *target, apr_pool_t *pool)
 }
 
 /* Use client context CTX to send a suitable notification for a patch TARGET.
- * Send WC_PATH as the working copy path in notifications.
  * Use POOL for temporary allocations. */
 static svn_error_t *
-maybe_send_patch_target_notification(const patch_target_t *target,
-                                     const char *wc_path,
-                                     const svn_client_ctx_t *ctx,
-                                     apr_pool_t *pool)
+maybe_send_patch_notification(const patch_target_t *target,
+                              const svn_client_ctx_t *ctx,
+                              apr_pool_t *pool)
 {
   svn_wc_notify_t *notify;
   svn_wc_notify_action_t action;
-  const char *path;
 
   if (! ctx->notify_func2)
     return SVN_NO_ERROR;
@@ -859,13 +853,9 @@ maybe_send_patch_target_notification(const patch_target_t *target,
   else
     action = svn_wc_notify_update_update;
 
-  /* Figure out which path to report for the patch target. */
-  if (! target->skipped)
-    path = svn_dirent_join(wc_path, target->wc_path, pool);
-  else
-    path = target->wc_path;
-
-  notify = svn_wc_create_notify(path, action, pool);
+  notify = svn_wc_create_notify(target->abs_path ? target->abs_path
+                                                 : target->rel_path,
+                                action, pool);
   notify->kind = svn_node_file;
 
   if (action == svn_wc_notify_skip)
@@ -894,19 +884,19 @@ maybe_send_patch_target_notification(const patch_target_t *target,
   return SVN_NO_ERROR;
 }
 
-/* Apply a PATCH to a working copy at WC_PATH.
+/* Apply a PATCH to a working copy at ABS_WC_PATH.
  * Use client context CTX to send notifiations and retrieve WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
  * Do all allocations in POOL. */
 static svn_error_t *
-apply_one_patch(svn_patch_t *patch, const char *wc_path,
+apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
                 svn_boolean_t dry_run, const svn_client_ctx_t *ctx,
                 int strip_count, apr_pool_t *pool)
 {
   patch_target_t *target;
 
-  SVN_ERR(init_patch_target(&target, patch, wc_path, ctx, strip_count,
+  SVN_ERR(init_patch_target(&target, patch, abs_wc_path, ctx, strip_count,
                             pool, pool));
   if (target == NULL)
     /* Can't apply the patch. */
@@ -1069,19 +1059,19 @@ apply_one_patch(svn_patch_t *patch, const char *wc_path,
 
     }
 
-  SVN_ERR(maybe_send_patch_target_notification(target, wc_path, ctx, pool));
+  SVN_ERR(maybe_send_patch_notification(target, ctx, pool));
 
   return SVN_NO_ERROR;
 }
 
 /* Apply all diffs in the patch file at PATCH_PATH to the working copy
- * at WC_PATH.
+ * at ABS_WC_PATH.
  * TODO ### DRY_RUN ...
  * TODO ### STRIP_COUNT ...
  * Use client context CTX to send notifiations.
  * Do all allocations in POOL.  */
 static svn_error_t *
-apply_textdiffs(const char *patch_path, const char *wc_path,
+apply_textdiffs(const char *patch_path, const char *abs_wc_path,
                 svn_boolean_t dry_run, const svn_client_ctx_t *ctx,
                 int strip_count, apr_pool_t *pool)
 {
@@ -1116,7 +1106,7 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
                                          iterpool));
       if (patch)
         {
-          SVN_ERR(apply_one_patch(patch, wc_path, dry_run, ctx, strip_count,
+          SVN_ERR(apply_one_patch(patch, abs_wc_path, dry_run, ctx, strip_count,
                                   iterpool));
           SVN_ERR(svn_diff__close_patch(patch));
         }
@@ -1128,15 +1118,14 @@ apply_textdiffs(const char *patch_path, const char *wc_path,
 }
 
 svn_error_t *
-svn_client_patch(const char *patch_path,
-                 const char *target,
+svn_client_patch(const char *abs_patch_path,
+                 const char *local_abspath,
                  svn_boolean_t dry_run,
                  int strip_count,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
-  const char *abs_target;
 
   if (strip_count < 0)
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
@@ -1148,12 +1137,12 @@ svn_client_patch(const char *patch_path,
    *        concurrent client can't also update the WC via its entries cache
    *        at the same time.. And currently access batons are the only write
    *        locks we have */
-  SVN_ERR(svn_dirent_get_absolute(&abs_target, target, pool));
-  SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, abs_target,
+  SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx, local_abspath,
                                       TRUE, -1, ctx->cancel_func,
                                       ctx->cancel_baton, pool));
 
-  SVN_ERR(apply_textdiffs(patch_path, target, dry_run, ctx, strip_count, pool));
+  SVN_ERR(apply_textdiffs(abs_patch_path, local_abspath, dry_run,
+                          ctx, strip_count, pool));
 
   SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
