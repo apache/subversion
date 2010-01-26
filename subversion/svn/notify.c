@@ -282,10 +282,29 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_patch:
-      nb->received_some_change = TRUE;
-      if ((err = svn_cmdline_printf(pool, "U         %s\n",
-                                    path_local)))
-        goto print_error;
+      {
+        nb->received_some_change = TRUE;
+        if (n->content_state == svn_wc_notify_state_conflicted)
+          {
+            nb->in_external ? nb->ext_text_conflicts++
+                            : nb->text_conflicts++;
+            statchar_buf[0] = 'C';
+          }
+        else if (n->kind == svn_node_file)
+          {
+            if (n->content_state == svn_wc_notify_state_merged)
+              statchar_buf[0] = 'G';
+            else if (n->content_state == svn_wc_notify_state_changed)
+              statchar_buf[0] = 'U';
+          }
+
+        if (statchar_buf[0] != ' ')
+          {
+            if ((err = svn_cmdline_printf(pool, "%s      %s\n",
+                                          statchar_buf, path_local)))
+              goto print_error;
+          }
+      }
       break;
 
     case svn_wc_notify_patch_applied_hunk:
