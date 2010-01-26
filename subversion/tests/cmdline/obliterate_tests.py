@@ -98,6 +98,19 @@ def create_dd1_scenarios(wc, repo):
 
   return 10
 
+def hook_enable(repo):
+  """Make a pre-obliterate hook in REPO (an svntest.objects.SvnRepository)
+  that allows the user 'jrandom' to do any obliteration."""
+
+  hook_path = os.path.join(repo.repo_absdir, 'hooks', 'pre-obliterate')
+  # Embed the text carefully: it might include characters like "%" and "'".
+  main.create_python_hook_script(hook_path, 'import sys\n'
+    'repos = sys.argv[1]\n'
+    'user = sys.argv[2]\n'
+    'if user == "jrandom":\n'
+    '  sys.exit(0)\n'
+    'sys.exit(1)\n')
+
 ######################################################################
 # Tests
 #
@@ -130,6 +143,8 @@ def obliterate_1(sbox):
   except:
     pass
 
+  hook_enable(repo)
+
   # Obliterate a file in the revision where the file content was 'Apple'
   for dir in obliteration_dirs:
     repo.obliterate_node_rev(dir + '/F', apple_rev)
@@ -140,15 +155,58 @@ def obliterate_1(sbox):
   except:
     pass
 
+def pre_obliterate_hook(sbox):
+  "test the pre-obliterate hook"
+
+  # Create empty repos and WC
+  actions.guarantee_empty_repository(sbox.repo_dir)
+  expected_out = svntest.wc.State(sbox.wc_dir, {})
+  expected_disk = svntest.wc.State(sbox.wc_dir, {})
+  actions.run_and_verify_checkout(sbox.repo_url, sbox.wc_dir, expected_out,
+                                  expected_disk)
+
+  # Create test utility objects
+  repo = objects.SvnRepository(sbox.repo_url, sbox.repo_dir)
+  wc = objects.SvnWC(sbox.wc_dir, repo)
+
+  os.chdir(sbox.wc_dir)
+
+  # Create scenarios ready for obliteration
+  apple_rev = create_dd1_scenarios(wc, repo)
+  dir = obliteration_dirs[0]
+
+  hook_path = os.path.join(repo.repo_absdir, 'hooks', 'pre-obliterate')
+
+  # Try an obliterate that should be forbidden as no hook is installed
+  exp_err = 'svn: Repository has not been enabled to accept obliteration\n'
+  repo.obliterate_node_rev(dir + '/F', apple_rev,
+                           exp_out=[], exp_err=exp_err, exp_exit=1)
+
+  # Try an obliterate that should be forbidden by the hook
+  main.create_python_hook_script(hook_path, 'import sys\n'
+    'sys.stderr.write("Pre-oblit, %s, %s" %\n'
+    '                 (sys.argv[1], sys.argv[2]))\n'
+    'sys.exit(1)\n')
+  exp_err = 'svn: Obliteration blocked by pre-obliterate hook (exit code 1) with output:|' + \
+            'Pre-oblit, /.*, jrandom'
+  repo.obliterate_node_rev(dir + '/F', apple_rev,
+                           exp_out=[], exp_err=exp_err, exp_exit=1)
+
+  # Try an obliterate that should be allowed by the hook
+  hook_enable(repo)
+  repo.obliterate_node_rev(dir + '/F', apple_rev)
+
 
 ########################################################################
 # Run the tests
 
+def supports_obliterate():
+  return svntest.main.is_ra_type_file() and not svntest.main.is_fs_type_fsfs()
+
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(obliterate_1, lambda:
-                         svntest.main.is_ra_type_file() and
-                         not svntest.main.is_fs_type_fsfs()),
+              SkipUnless(obliterate_1, supports_obliterate),
+              SkipUnless(pre_obliterate_hook, supports_obliterate),
              ]
 
 if __name__ == '__main__':
