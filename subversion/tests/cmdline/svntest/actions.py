@@ -220,9 +220,10 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
 
 def run_and_verify_svn2(message, expected_stdout, expected_stderr,
                         expected_exit, *varargs):
-  """Invokes main.run_svn() with *VARARGS, returns exit code as int, stdout
-  and stderr as lists of lines.  For both EXPECTED_STDOUT and EXPECTED_STDERR,
-  create an appropriate instance of verify.ExpectedOutput (if necessary):
+  """Invoke main.run_svn() with *VARARGS. Return exit code as int; stdout,
+  stderr as lists of lines (including line terminators).  For both
+  EXPECTED_STDOUT and EXPECTED_STDERR, create an appropriate instance of
+  verify.ExpectedOutput (if necessary):
 
      - If it is an array of strings, create a vanilla ExpectedOutput.
 
