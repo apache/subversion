@@ -1061,6 +1061,9 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_merge_elide_info,
 
+  /** A file in the working copy was patched.
+   * @since New in 1.7. */
+  svn_wc_notify_patch,
 } svn_wc_notify_action_t;
 
 
