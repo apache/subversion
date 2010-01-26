@@ -281,6 +281,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         goto print_error;
       break;
 
+    case svn_wc_notify_patch:
+      nb->received_some_change = TRUE;
+      if ((err = svn_cmdline_printf(pool, "U         %s\n",
+                                    path_local)))
+        goto print_error;
+      break;
+
     case svn_wc_notify_update_update:
     case svn_wc_notify_merge_record_info:
       {

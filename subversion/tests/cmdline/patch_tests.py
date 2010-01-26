@@ -186,11 +186,11 @@ def patch_unidiff(sbox):
   ]
 
   expected_output = [
-    'U    %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
-    'U    %s\n' % os.path.join(wc_dir, 'iota'),
-    'A    %s\n' % os.path.join(wc_dir, 'new'),
-    'U    %s\n' % os.path.join(wc_dir, 'A', 'mu'),
-    'D    %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    'A         %s\n' % os.path.join(wc_dir, 'new'),
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -256,7 +256,7 @@ def patch_unidiff_absolute_paths(sbox):
 
   lambda_path = os.path.join(os.path.sep, 'A', 'B', 'lambda')
   expected_output = [
-    'U    %s\n' % os.path.join('A', 'B', 'E', 'alpha'),
+    'U         %s\n' % os.path.join('A', 'B', 'E', 'alpha'),
     'Skipped \'%s\'\n' % lambda_path,
     'Summary of conflicts:\n',
     '  Skipped paths: 1\n'
@@ -470,8 +470,8 @@ def patch_unidiff_offset(sbox):
   os.chdir(wc_dir)
 
   expected_output = [
-    'U    %s\n' % os.path.join('A', 'mu'),
-    'U    iota\n'
+    'U         %s\n' % os.path.join('A', 'mu'),
+    'U         iota\n'
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -630,11 +630,11 @@ def patch_chopped_leading_spaces(sbox):
   ]
 
   expected_output = [
-    'U    %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
-    'U    %s\n' % os.path.join(wc_dir, 'iota'),
-    'A    %s\n' % os.path.join(wc_dir, 'new'),
-    'U    %s\n' % os.path.join(wc_dir, 'A', 'mu'),
-    'D    %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    'A         %s\n' % os.path.join(wc_dir, 'new'),
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -800,11 +800,11 @@ def patch_unidiff_strip1(sbox):
   ]
 
   expected_output = [
-    'U    %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
-    'U    %s\n' % os.path.join(wc_dir, 'iota'),
-    'A    %s\n' % os.path.join(wc_dir, 'new'),
-    'U    %s\n' % os.path.join(wc_dir, 'A', 'mu'),
-    'D    %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    'A         %s\n' % os.path.join(wc_dir, 'new'),
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -866,7 +866,9 @@ def patch_add_new_dir(sbox):
 
   A_C_Y_new_path = os.path.join(wc_dir, 'A', 'C', 'Y', 'new')
   expected_output = [
-    'A    %s\n' % os.path.join(wc_dir, 'X', 'Y', 'new'),
+    'A         %s\n' % os.path.join(wc_dir, 'X'),
+    'A         %s\n' % os.path.join(wc_dir, 'X', 'Y'),
+    'A         %s\n' % os.path.join(wc_dir, 'X', 'Y', 'new'),
     'Skipped missing target: \'%s\'\n' % A_C_Y_new_path,
     'Summary of conflicts:\n',
     '  Skipped paths: 1\n',

@@ -847,11 +847,11 @@ maybe_send_patch_notification(const patch_target_t *target,
   if (target->skipped)
     action = svn_wc_notify_skip;
   else if (target->deleted)
-    action = svn_wc_notify_update_delete;
+    action = svn_wc_notify_delete;
   else if (target->added)
-    action = svn_wc_notify_update_add;
+    action = svn_wc_notify_add;
   else
-    action = svn_wc_notify_update_update;
+    action = svn_wc_notify_patch;
 
   notify = svn_wc_create_notify(target->abs_path ? target->abs_path
                                                  : target->rel_path,
@@ -1041,9 +1041,11 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
                    * if we wanted to. */
                   const char *abs_path;
                   apr_array_header_t *components;
+                  int missing_components;
 
                   abs_path = apr_pstrdup(pool, abs_wc_path);
                   components = svn_path_decompose(target->rel_path, pool);
+                  missing_components = 0;
                   iterpool = svn_pool_create(pool);
                   for (i = 0; i < components->nelts - 1; i++)
                     {
@@ -1085,27 +1087,46 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
                               break;
                             }
                         }
+
+                      missing_components++;
                     }
+
+                  /* Do notification for missing parent directories. */
+                  if (! target->skipped && ctx->notify_func2)
+                    {
+                      abs_path = abs_wc_path;
+                      for (i = 0; i < missing_components; i++)
+                        {
+                          svn_wc_notify_t *notify;
+                          const char *component;
+
+                          svn_pool_clear(iterpool);
+
+                          component = APR_ARRAY_IDX(components, i,
+                                                    const char *);
+                          abs_path = svn_dirent_join(abs_path, component,
+                                                     pool);
+                          notify = svn_wc_create_notify(abs_path,
+                                                        svn_wc_notify_add,
+                                                        iterpool);
+                          notify->kind = svn_node_dir;
+                          ctx->notify_func2(ctx->notify_baton2, notify,
+                                            iterpool);
+                        }
+                    }
+
                   svn_pool_destroy(iterpool);
                 }
               else
                 {
                   const char *dir_abspath;
-                  svn_wc_notify_func2_t notify_func;
                   svn_error_t *err;
 
                   dir_abspath = svn_dirent_dirname(target->abs_path, pool);
 
-                  /* Hacky. We don't want any notifications when adding
-                   * the dirs. Just one at the end when we add the file.
-                   * This way, we will get the same notifications as
-                   * when running with --dry-run. */
-                  notify_func = ctx->notify_func2;
-                  ctx->notify_func2 = NULL;
                   err = svn_client__make_local_parents(dir_abspath,
                                                        TRUE, ctx, 
                                                        pool);
-                  ctx->notify_func2 = notify_func;
                   /* ### wc-ng should eventually be able to replace
                    * directories in-place, so the schedule conflict
                    * will go away. */
