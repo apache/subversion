@@ -1369,7 +1369,9 @@ svn_repos_create(svn_repos_t **repos_p,
   if (root_path != NULL)
     return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL, _("'%s' is a "
                               "subdirectory of an existing repository rooted "
-                              "at '%s'"), path, root_path);
+                              "at '%s'"),
+                              svn_dirent_local_style(path, pool),
+                              svn_dirent_local_style(root_path, pool));
 
   /* Create the various files and subdirectories for the repository. */
   SVN_ERR_W(create_repos_structure(repos, path, fs_config, pool),
