@@ -42,7 +42,8 @@ SkipUnless = svntest.testcase.SkipUnless
 # Test utilities
 #
 
-obliteration_dirs = ['f-mod', 'f-add', 'f-del', 'f-rpl', 'f-mov']
+#obliteration_dirs = ['f-mod', 'f-add', 'f-del', 'f-rpl', 'f-mov']
+obliteration_dirs = ['f-mod']
 
 def create_dd1_scenarios(wc, repo):
   """Create, in the initially empty repository of the SvnWC WC, the
@@ -61,26 +62,38 @@ def create_dd1_scenarios(wc, repo):
   wc.svn_update()
 
   # r9: add the files used in the scenarios
-  wc.svn_file_create_add('f-mod/F', "Pear\n")
-  wc.svn_file_create_add('f-del/F', "Pear\n")
-  wc.svn_file_create_add('f-rpl/F', "Pear\n")
-  wc.svn_file_create_add('f-mov/E', "Pear\n")  # 'E' will be moved to 'F'
+  if 'f-mod' in obliteration_dirs:
+    wc.svn_file_create_add('f-mod/F', "Pear\n")
+  if 'f-add' in obliteration_dirs:
+    pass  # nothing needed
+  if 'f-del' in obliteration_dirs:
+    wc.svn_file_create_add('f-del/F', "Pear\n")
+  if 'f-rpl' in obliteration_dirs:
+    wc.svn_file_create_add('f-rpl/F', "Pear\n")
+  if 'f-mov' in obliteration_dirs:
+    wc.svn_file_create_add('f-mov/E', "Pear\n")  # 'E' will be moved to 'F'
   wc.svn_commit()
 
   # r10: the rev in which files named 'F' are to be obliterated
-  wc.file_modify('f-mod/F', 'Apple\n')
-  wc.svn_file_create_add('f-add/F', 'Apple\n')
-  wc.svn_delete('f-del/F')
-  wc.svn_delete('f-rpl/F')
-  wc.svn_file_create_add('f-rpl/F', 'Apple\n')
-  wc.svn_move('f-mov/E', 'f-mov/F')
-  wc.file_modify('f-mov/F', 'Apple\n')
+  if 'f-mod' in obliteration_dirs:
+    wc.file_modify('f-mod/F', 'Apple\n')
+  if 'f-add' in obliteration_dirs:
+    wc.svn_file_create_add('f-add/F', 'Apple\n')
+  if 'f-del' in obliteration_dirs:
+    wc.svn_delete('f-del/F')
+  if 'f-rpl' in obliteration_dirs:
+    wc.svn_delete('f-rpl/F')
+    wc.svn_file_create_add('f-rpl/F', 'Apple\n')
+  if 'f-mov' in obliteration_dirs:
+    wc.svn_move('f-mov/E', 'f-mov/F')
+    wc.file_modify('f-mov/F', 'Apple\n')
   wc.svn_commit(log='Rev to be obliterated')
 
   # r11: some more recent history that refers to the revision we changed
   # (We are not ready to test this yet.)
-  #for dir in ['f-mod', 'f-add', 'f-rpl', 'f-mov']:
-  #  wc.file_modify(dir + '/F', 'Orange\n')
+  #for dir in obliteration_dirs:
+  #  if not dir == 'f-del':
+  #    wc.file_modify(dir + '/F', 'Orange\n')
   #wc.svn_commit()
 
   return 10
