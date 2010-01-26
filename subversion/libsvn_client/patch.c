@@ -268,45 +268,44 @@ resolve_target_path(patch_target_t *target,
       status->text_status == svn_wc_status_ignored ||
       status->text_status == svn_wc_status_obstructed)
     {
-        target->skipped = TRUE;
-        target->kind = svn_node_none;
+      target->skipped = TRUE;
+      SVN_ERR(svn_io_check_path(target->abs_path, &target->kind,
+                                scratch_pool));
+      return SVN_NO_ERROR;
     }
-  else
-    {
-      /* Deduce some information about the target from its kind. */
-      SVN_ERR(svn_wc__node_get_kind(&target->kind, wc_ctx, target->abs_path,
-                                    FALSE, scratch_pool));
-      switch (target->kind)
-        {
-          case svn_node_file:
-            target->added = FALSE;
-            target->parent_dir_exists = TRUE;
-            break;
-          case svn_node_none:
-          case svn_node_unknown:
-            {
-              const char *abs_dirname;
-              svn_node_kind_t kind;
 
-              /* The file is not there, that's fine. The patch might want to
-               * create it. Check if the containing directory of the target
-               * exists. We may need to create it later. */
-              target->added = TRUE;
-              abs_dirname = svn_dirent_dirname(target->abs_path, scratch_pool);
-              SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, abs_dirname,
-                                            FALSE, scratch_pool));
-              SVN_ERR(svn_wc_status3(&status, wc_ctx, abs_dirname,
-                                     scratch_pool, scratch_pool));
-              target->parent_dir_exists =
-                (kind == svn_node_dir &&
-                 status->text_status != svn_wc_status_deleted &&
-                 status->text_status != svn_wc_status_missing);
-              break;
-            }
-          default:
-            target->skipped = TRUE;
-            break;
+  SVN_ERR(svn_wc__node_get_kind(&target->kind, wc_ctx, target->abs_path,
+                                FALSE, scratch_pool));
+  switch (target->kind)
+    {
+      case svn_node_file:
+        target->added = FALSE;
+        target->parent_dir_exists = TRUE;
+        break;
+      case svn_node_none:
+      case svn_node_unknown:
+        {
+          const char *abs_dirname;
+          svn_node_kind_t kind;
+
+          /* The file is not there, that's fine. The patch might want to
+           * create it. Check if the containing directory of the target
+           * exists. We may need to create it later. */
+          target->added = TRUE;
+          abs_dirname = svn_dirent_dirname(target->abs_path, scratch_pool);
+          SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, abs_dirname,
+                                        FALSE, scratch_pool));
+          SVN_ERR(svn_wc_status3(&status, wc_ctx, abs_dirname,
+                                 scratch_pool, scratch_pool));
+          target->parent_dir_exists =
+            (kind == svn_node_dir &&
+             status->text_status != svn_wc_status_deleted &&
+             status->text_status != svn_wc_status_missing);
+          break;
         }
+      default:
+        target->skipped = TRUE;
+        break;
     }
 
   return SVN_NO_ERROR;
