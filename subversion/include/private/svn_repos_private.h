@@ -64,6 +64,7 @@ extern "C" {
  */
 svn_error_t *
 svn_repos__obliterate_path_rev(svn_repos_t *repos,
+                               const char *username,
                                svn_revnum_t revision,
                                const char *path,
                                apr_pool_t *pool);
