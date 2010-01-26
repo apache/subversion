@@ -48,6 +48,9 @@ typedef struct {
 
   /* The line where the hunk matched in the target file. */
   svn_linenum_t matched_line;
+
+  /* Whether this hunk has been rejected. */
+  svn_boolean_t rejected;
 } hunk_info_t;
 
 typedef struct {
@@ -112,7 +115,7 @@ typedef struct {
   apr_array_header_t *lines;
 
   /* An array containing hunk_info_t structures for hunks already matched. */
-  apr_array_header_t *matched_hunks;
+  apr_array_header_t *hunks;
 
   /* The node kind of the target as found on disk prior
    * to patch application. */
@@ -439,8 +442,7 @@ init_patch_target(patch_target_t **target,
   new_target->pool = result_pool;
   new_target->lines = apr_array_make(result_pool, 0,
                                      sizeof(svn_stream_mark_t *));
-  new_target->matched_hunks = apr_array_make(result_pool, 0,
-                                             sizeof(hunk_info_t *));
+  new_target->hunks = apr_array_make(result_pool, 0, sizeof(hunk_info_t *));
   *target = new_target;
   return SVN_NO_ERROR;
 }
@@ -608,11 +610,11 @@ scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
           svn_boolean_t taken = FALSE;
 
           /* Don't allow hunks to match at overlapping locations. */
-          for (i = 0; i < target->matched_hunks->nelts; i++)
+          for (i = 0; i < target->hunks->nelts; i++)
             {
-              const hunk_info_t *hi;
+              hunk_info_t *hi;
               
-              hi = APR_ARRAY_IDX(target->matched_hunks, i, hunk_info_t *);
+              hi = APR_ARRAY_IDX(target->hunks, i, hunk_info_t *);
               taken = (target->current_line >= hi->matched_line &&
                        target->current_line < hi->matched_line +
                                               hi->hunk->original_length);
@@ -690,8 +692,9 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
     }
 
   (*hi) = apr_palloc(result_pool, sizeof(hunk_info_t));
-  (*hi)->matched_line = matched_line;
   (*hi)->hunk = hunk;
+  (*hi)->matched_line = matched_line;
+  (*hi)->rejected = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -782,29 +785,37 @@ copy_hunk_text(svn_stream_t *hunk_text, svn_stream_t *target,
 }
 
 
+/* Write a hunk described by hunk info HI to the reject stream of TARGET,
+ * mark the hunk as rejected, and mark TARGET as having had rejects.
+ * Do all allocations in POOL. */
 static svn_error_t *
-reject_hunk(patch_target_t *target, const svn_hunk_t *hunk, apr_pool_t *pool)
+reject_hunk(patch_target_t *target, hunk_info_t *hi, apr_pool_t *pool)
 {
   const char *hunk_header;
   apr_size_t len;
 
   hunk_header = apr_psprintf(pool, "@@ -%lu,%lu +%lu,%lu @@%s",
-                             hunk->original_start, hunk->original_length,
-                             hunk->modified_start, hunk->modified_length,
+                             hi->hunk->original_start,
+                             hi->hunk->original_length,
+                             hi->hunk->modified_start,
+                             hi->hunk->modified_length,
                              target->eol_str);
   len = strlen(hunk_header);
   SVN_ERR(svn_stream_write(target->reject, hunk_header, &len));
 
-  SVN_ERR(copy_hunk_text(hunk->diff_text, target->reject,
+  SVN_ERR(copy_hunk_text(hi->hunk->diff_text, target->reject,
                          target->reject_path, pool));
 
   target->had_rejects = TRUE;
+  hi->rejected = TRUE;
+
   return SVN_NO_ERROR;
 }
 
-/* Apply a HUNK to a patch TARGET. Do all allocations in POOL. */
+/* Apply a hunk described by hunk info HI to a patch TARGET.
+ * Do all allocations in POOL. */
 static svn_error_t *
-apply_one_hunk(const hunk_info_t *hi, patch_target_t *target, apr_pool_t *pool)
+apply_one_hunk(patch_target_t *target, hunk_info_t *hi, apr_pool_t *pool)
 {
   if (target->kind == svn_node_file)
     {
@@ -813,7 +824,7 @@ apply_one_hunk(const hunk_info_t *hi, patch_target_t *target, apr_pool_t *pool)
       if (target->eof)
         {
           /* File is shorter than it should be. */
-          SVN_ERR(reject_hunk(target, hi->hunk, pool));
+          SVN_ERR(reject_hunk(target, hi, pool));
           return SVN_NO_ERROR;
         }
 
@@ -881,6 +892,39 @@ maybe_send_patch_notification(const patch_target_t *target,
 
   (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
 
+  if (action == svn_wc_notify_patch)
+    {
+      int i;
+      apr_pool_t *iterpool;
+
+      iterpool = svn_pool_create(pool);
+      for (i = 0; i < target->hunks->nelts; i++)
+        {
+          hunk_info_t *hi;
+
+          svn_pool_clear(iterpool);
+
+          hi = APR_ARRAY_IDX(target->hunks, i, hunk_info_t *);
+
+          if (hi->rejected)
+            action = svn_wc_notify_patch_rejected_hunk;
+          else
+            action = svn_wc_notify_patch_applied_hunk;
+
+          notify = svn_wc_create_notify(target->abs_path ? target->abs_path
+                                                         : target->rel_path,
+                                        action, pool);
+          notify->hunk_original_start = hi->hunk->original_start;
+          notify->hunk_original_length = hi->hunk->original_length;
+          notify->hunk_modified_start = hi->hunk->modified_start;
+          notify->hunk_modified_length = hi->hunk->original_length;
+          notify->hunk_matched_line = hi->matched_line;
+
+          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+        }
+      svn_pool_destroy(iterpool);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -927,21 +971,22 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
       if (hi->matched_line == 0)
         {
           /* The hunk does not apply, reject it. */
-          SVN_ERR(reject_hunk(target, hunk, iterpool));
+          SVN_ERR(reject_hunk(target, hi, iterpool));
         }
       else
-        APR_ARRAY_PUSH(target->matched_hunks, hunk_info_t *) = hi;
+        APR_ARRAY_PUSH(target->hunks, hunk_info_t *) = hi;
     }
 
   /* Apply hunks. */
-  for (i = 0; i < target->matched_hunks->nelts; i++)
+  for (i = 0; i < target->hunks->nelts; i++)
     {
-      const hunk_info_t *hi;
+      hunk_info_t *hi;
 
       svn_pool_clear(iterpool);
 
-      hi = APR_ARRAY_IDX(target->matched_hunks, i, const hunk_info_t *);
-      SVN_ERR(apply_one_hunk(hi, target, iterpool));
+      hi = APR_ARRAY_IDX(target->hunks, i, hunk_info_t *);
+      if (! hi->rejected)
+        SVN_ERR(apply_one_hunk(target, hi, iterpool));
     }
   svn_pool_destroy(iterpool);
 

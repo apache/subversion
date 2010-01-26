@@ -187,9 +187,13 @@ def patch_unidiff(sbox):
 
   expected_output = [
     'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    '>         applied hunk @@ -1,1 +1,1 @@\n',
     'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    '>         applied hunk @@ -1,1 +1,1 @@\n',
     'A         %s\n' % os.path.join(wc_dir, 'new'),
     'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    '>         applied hunk @@ -6,6 +6,6 @@\n',
+    '>         applied hunk @@ -14,11 +17,11 @@\n',
     'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
   ]
 
@@ -257,6 +261,7 @@ def patch_unidiff_absolute_paths(sbox):
   lambda_path = os.path.join(os.path.sep, 'A', 'B', 'lambda')
   expected_output = [
     'U         %s\n' % os.path.join('A', 'B', 'E', 'alpha'),
+    '>         applied hunk @@ -1,1 +1,1 @@\n',
     'Skipped \'%s\'\n' % lambda_path,
     'Summary of conflicts:\n',
     '  Skipped paths: 1\n'
@@ -471,7 +476,10 @@ def patch_unidiff_offset(sbox):
 
   expected_output = [
     'U         %s\n' % os.path.join('A', 'mu'),
-    'U         iota\n'
+    '>         applied hunk @@ -6,6 +6,6 @@ with offset -1\n',
+    '>         applied hunk @@ -14,11 +17,11 @@ with offset 4\n',
+    'U         iota\n',
+    '>         applied hunk @@ -5,6 +5,6 @@ with offset -3\n',
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -631,9 +639,13 @@ def patch_chopped_leading_spaces(sbox):
 
   expected_output = [
     'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    '>         applied hunk @@ -1,1 +1,1 @@\n',
     'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    '>         applied hunk @@ -1,1 +1,1 @@\n',
     'A         %s\n' % os.path.join(wc_dir, 'new'),
     'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    '>         applied hunk @@ -6,6 +6,6 @@\n',
+    '>         applied hunk @@ -14,11 +17,11 @@\n',
     'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
   ]
 
@@ -801,9 +813,13 @@ def patch_unidiff_strip1(sbox):
 
   expected_output = [
     'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    '>         applied hunk @@ -1,1 +1,1 @@\n',
     'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    '>         applied hunk @@ -1,1 +1,1 @@\n',
     'A         %s\n' % os.path.join(wc_dir, 'new'),
     'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    '>         applied hunk @@ -6,6 +6,6 @@\n',
+    '>         applied hunk @@ -14,11 +17,11 @@\n',
     'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
   ]
 

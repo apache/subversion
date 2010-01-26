@@ -1064,6 +1064,14 @@ typedef enum svn_wc_notify_action_t
   /** A file in the working copy was patched.
    * @since New in 1.7. */
   svn_wc_notify_patch,
+
+  /** A hunk from a patch was applied.
+   * @since New in 1.7. */
+  svn_wc_notify_patch_applied_hunk,
+
+  /** A hunk from a patch was rejected.
+   * @since New in 1.7. */
+  svn_wc_notify_patch_rejected_hunk,
 } svn_wc_notify_action_t;
 
 
@@ -1226,6 +1234,19 @@ typedef struct svn_wc_notify_t {
    * In all other cases, it is #SVN_INVALID_REVNUM.
    * @since New in 1.7 */
   svn_revnum_t old_revision;
+
+  /* These fields are used by svn patch to identify the
+   * hunk the notification is for. They are line-based
+   * offsets and lengths parsed from the unidiff hunk header.
+   * @since New in 1.7. */
+  svn_linenum_t hunk_original_start;
+  svn_linenum_t hunk_original_length;
+  svn_linenum_t hunk_modified_start;
+  svn_linenum_t hunk_modified_length;
+
+  /* The line at which a hunk was matched (and applied).
+   * @since New in 1.7. */
+  svn_linenum_t hunk_matched_line;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
