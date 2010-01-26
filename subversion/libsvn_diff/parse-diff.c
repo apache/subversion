@@ -47,7 +47,6 @@ parse_offset(svn_linenum_t *offset, const char *number)
 {
   apr_int64_t parsed_offset;
 
-  errno = 0; /* clear errno for safety */
   parsed_offset = apr_atoi64(number);
   if (errno == ERANGE || parsed_offset < 0)
     return FALSE;
