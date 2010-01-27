@@ -256,38 +256,6 @@ def run_and_verify_svn2(message, expected_stdout, expected_stderr,
   verify.verify_exit_code(message, exit_code, expected_exit)
   return exit_code, out, err
 
-def run_and_verify_svn_match_any(message, expected_stdout, expected_stderr,
-                                 *varargs):
-  """Like run_and_verify_svn_match_any2, but the expected exit code is
-  assumed to be 0 if no output is expected on stderr, and 1 otherwise."""
-
-  expected_exit = 0
-  if expected_stderr is not None and expected_stderr != []:
-    expected_exit = 1
-  return run_and_verify_svn_match_any2(message, expected_stdout,
-                                       expected_stderr, expected_exit,
-                                       *varargs)
-
-
-def run_and_verify_svn_match_any2(message, expected_stdout, expected_stderr,
-                                 expected_exit, *varargs):
-  """Like run_and_verify_svn2, except that only one stdout line must match
-  EXPECTED_STDOUT."""
-
-  if expected_stderr is None:
-    raise verify.SVNIncorrectDatatype("expected_stderr must not be None")
-
-  want_err = None
-  if expected_stderr is not None and expected_stderr != []:
-    want_err = True
-
-  exit_code, out, err = main.run_svn(want_err, *varargs)
-  verify.verify_outputs(message, out, err, expected_stdout, expected_stderr,
-                        False)
-  verify.verify_exit_code(message, exit_code, expected_exit)
-  return exit_code, out, err
-
-
 def run_and_verify_load(repo_dir, dump_file_content):
   "Runs 'svnadmin load' and reports any errors."
   if not isinstance(dump_file_content, list):
