@@ -1123,9 +1123,9 @@ wrapper_reader_cb(void *baton, const char *data, size_t len)
   if (parser_status)
     {
       /* Pass XML parser error. */
-      SVN_RA_NEON__REQ_ERR
-        (pwb->req, check_parse_error(pwb->req->method, pwb->parser,
-                                     pwb->req->url));
+      SVN_RA_NEON__REQ_ERR(pwb->req,
+                           check_parse_error(pwb->req->method, pwb->parser,
+                                             pwb->req->url));
     }
 
   return parser_status;
