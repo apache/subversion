@@ -1121,24 +1121,12 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
     {
       if (! dry_run)
         {
-          svn_wc_adm_access_t *adm_access;
-
           /* Schedule the target for deletion.  Suppress
            * notification, we'll do it manually in a minute. */
-
-          /* ### svn_wc_delete4() still needs an adm access */
-          SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx,
-                                  svn_dirent_dirname(target->abs_path,
-                                                     pool),
-                                  TRUE, -1, ctx->cancel_func,
-                                  ctx->cancel_baton, pool));
-
           SVN_ERR(svn_wc_delete4(ctx->wc_ctx, target->abs_path,
                                  FALSE /* keep_local */, FALSE,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  NULL, NULL, pool));
-
-          SVN_ERR(svn_wc_adm_close2(adm_access, pool));
         }
     }
   else
@@ -1160,115 +1148,102 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
            * result in place. */
           if (target->added && ! target->parent_dir_exists)
             {
-              if (dry_run)
-                {
-                  /* During a dry run, we need to check if we
-                   * could create the target's parent directory
-                   * if we wanted to. */
-                  const char *abs_path;
-                  apr_array_header_t *components;
-                  int missing_components;
+              /* Check if we can safely create the target's parent. */
+              const char *abs_path;
+              apr_array_header_t *components;
+              int missing_components;
 
-                  abs_path = apr_pstrdup(pool, abs_wc_path);
-                  components = svn_path_decompose(target->rel_path, pool);
-                  missing_components = 0;
-                  iterpool = svn_pool_create(pool);
-                  for (i = 0; i < components->nelts - 1; i++)
+              abs_path = apr_pstrdup(pool, abs_wc_path);
+              components = svn_path_decompose(target->rel_path, pool);
+              missing_components = 0;
+              iterpool = svn_pool_create(pool);
+              for (i = 0; i < components->nelts - 1; i++)
+                {
+                  const char *component;
+                  svn_node_kind_t kind;
+
+                  svn_pool_clear(iterpool);
+
+                  component = APR_ARRAY_IDX(components, i,
+                                            const char *);
+                  abs_path = svn_dirent_join(abs_path, component, pool);
+
+                  SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx,
+                                                abs_path, TRUE,
+                                                iterpool));
+                  if (kind == svn_node_file)
+                    {
+                      /* Obstructed. */
+                      target->skipped = TRUE;
+                      break;
+                    }
+                  else if (kind == svn_node_dir)
+                    {
+                      /* ### wc-ng should eventually be able to replace
+                       * directories in-place, so this schedule conflict
+                       * check will go away. We could then also make the
+                       * svn_wc__node_get_kind() call above ignore hidden
+                       * nodes.*/
+                      svn_boolean_t is_deleted;
+
+                      SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted,
+                                                             ctx->wc_ctx,
+                                                             abs_path,
+                                                             iterpool));
+                      if (is_deleted)
+                        {
+                          target->skipped = TRUE;
+                          break;
+                        }
+                    }
+
+                  missing_components++;
+                }
+
+              if (! target->skipped)
+                {
+                  abs_path = abs_wc_path;
+                  for (i = 0; i < missing_components; i++)
                     {
                       const char *component;
-                      svn_node_kind_t kind;
 
                       svn_pool_clear(iterpool);
 
                       component = APR_ARRAY_IDX(components, i,
                                                 const char *);
-                      abs_path = svn_dirent_join(abs_path, component, pool);
-
-                      SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx,
-                                                    abs_path, TRUE,
-                                                    iterpool));
-                      if (kind == svn_node_file)
+                      abs_path = svn_dirent_join(abs_path, component,
+                                                 pool);
+                      if (dry_run)
                         {
-                          /* A normal run would be obstructed. */
-                          target->skipped = TRUE;
-                          break;
-                        }
-                      else if (kind == svn_node_dir)
-                        {
-                          /* ### wc-ng should eventually be able to replace
-                           * directories in-place, so this schedule conflict
-                           * check will go away. We could then also make the
-                           * svn_wc__node_get_kind() call above ignore hidden
-                           * nodes.*/
-                          svn_boolean_t is_deleted;
-
-                          SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted,
-                                                                 ctx->wc_ctx,
-                                                                 abs_path,
-                                                                 iterpool));
-                          if (is_deleted)
+                          if (ctx->notify_func2)
                             {
-                              /* A normal run would schedule conflict. */
-                              target->skipped = TRUE;
-                              break;
+                              /* Just do notification. */ 
+                              svn_wc_notify_t *notify;
+                              notify = svn_wc_create_notify(abs_path,
+                                                            svn_wc_notify_add,
+                                                            iterpool);
+                              notify->kind = svn_node_dir;
+                              ctx->notify_func2(ctx->notify_baton2, notify,
+                                                iterpool);
                             }
                         }
-
-                      missing_components++;
-                    }
-
-                  /* Do notification for missing parent directories. */
-                  if (! target->skipped && ctx->notify_func2)
-                    {
-                      abs_path = abs_wc_path;
-                      for (i = 0; i < missing_components; i++)
+                      else
                         {
-                          svn_wc_notify_t *notify;
-                          const char *component;
-
-                          svn_pool_clear(iterpool);
-
-                          component = APR_ARRAY_IDX(components, i,
-                                                    const char *);
-                          abs_path = svn_dirent_join(abs_path, component,
-                                                     pool);
-                          notify = svn_wc_create_notify(abs_path,
-                                                        svn_wc_notify_add,
-                                                        iterpool);
-                          notify->kind = svn_node_dir;
-                          ctx->notify_func2(ctx->notify_baton2, notify,
-                                            iterpool);
+                          /* Create the missing component and add it
+                           * to version control. Suppress cancellation. */
+                          SVN_ERR(svn_io_dir_make(abs_path, APR_OS_DEFAULT,
+                                                  iterpool));
+                          SVN_ERR(svn_wc_add4(ctx->wc_ctx, abs_path,
+                                              svn_depth_infinity,
+                                              NULL, SVN_INVALID_REVNUM,
+                                              NULL, NULL,
+                                              ctx->notify_func2,
+                                              ctx->notify_baton2,
+                                              iterpool));
                         }
                     }
-
-                  svn_pool_destroy(iterpool);
                 }
-              else
-                {
-                  const char *dir_abspath;
-                  svn_error_t *err;
-
-                  dir_abspath = svn_dirent_dirname(target->abs_path, pool);
-
-                  err = svn_client__make_local_parents(dir_abspath,
-                                                       TRUE, ctx, 
-                                                       pool);
-                  /* ### wc-ng should eventually be able to replace
-                   * directories in-place, so the schedule conflict
-                   * will go away. */
-                  if (err &&
-                      (APR_STATUS_IS_ENOTDIR(err->apr_err) ||
-                       err->apr_err == SVN_ERR_WC_SCHEDULE_CONFLICT))
-                    {
-                      /* Either an obstruction is blocking the creation of
-                       * the target's parent directory, or the parent has
-                       * been scheduled for deletion. Skip this target. */
-                      target->skipped = TRUE;
-                      svn_error_clear(err);
-                    }
-                  else
-                    SVN_ERR(err);
-                }
+              svn_pool_destroy(iterpool);
             }
 
           if (! dry_run && ! target->skipped)
