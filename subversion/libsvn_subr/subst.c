@@ -1136,6 +1136,43 @@ translated_stream_reset(void *baton)
   return svn_error_return(err);
 }
 
+static svn_error_t *
+translated_stream_mark(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
+{
+  struct translated_stream_baton *b = baton;
+
+  return svn_error_return(svn_stream_mark(b->stream, mark, pool));
+}
+
+static svn_error_t *
+translated_stream_seek(void *baton, svn_stream_mark_t *mark)
+{
+  struct translated_stream_baton *b = baton;
+  svn_error_t *err;
+
+  /* Flush output buffer if necessary. */
+  if (b->written)
+    SVN_ERR(translate_chunk(b->stream, b->out_baton, NULL, 0, b->iterpool));
+
+  err = svn_stream_seek(b->stream, mark);
+  if (err == NULL)
+    {
+      /* Force into boring state. */
+      b->in_baton->newline_off = 0;
+      b->in_baton->keyword_off = 0;
+      b->out_baton->newline_off = 0;
+      b->out_baton->keyword_off = 0;
+
+      /* Output buffer has been flushed. */
+      b->written = FALSE;
+
+      /* Reset read buffer. */
+      svn_stringbuf_setempty(b->readbuf);
+      b->readbuf_off = 0;
+    }
+
+  return svn_error_return(err);
+}
 
 svn_error_t *
 svn_subst_read_specialfile(svn_stream_t **stream,
@@ -1235,6 +1272,8 @@ svn_subst_stream_translated(svn_stream_t *stream,
   svn_stream_set_write(s, translated_stream_write);
   svn_stream_set_close(s, translated_stream_close);
   svn_stream_set_reset(s, translated_stream_reset);
+  svn_stream_set_mark(s, translated_stream_mark);
+  svn_stream_set_seek(s, translated_stream_seek);
 
   return s;
 }
