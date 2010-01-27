@@ -366,8 +366,9 @@ CreateJ::Property(jobject jthis, const char *path, const char *name,
     if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>",
-                               "(L"JAVA_PACKAGE"/SVNClient;Ljava/lang/String;"
-                               "Ljava/lang/String;Ljava/lang/String;[B)V");
+                               "(L"JAVA_PACKAGE"/SVNClientInterface;"
+                               "Ljava/lang/String;Ljava/lang/String;"
+                               "Ljava/lang/String;[B)V");
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
     }
