@@ -1857,9 +1857,10 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
+  svn_error_t *err1, *err2;
   SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, local_abspath,
                                      scratch_pool, scratch_pool));
-  return svn_error_compose_create(
-           func(baton, result_pool, scratch_pool),
-           svn_wc__release_write_lock(wc_ctx, local_abspath, scratch_pool));
+  err1 = func(baton, result_pool, scratch_pool);
+  err2 = svn_wc__release_write_lock(wc_ctx, local_abspath, scratch_pool);
+  return svn_error_compose_create(err1, err2);
 }
