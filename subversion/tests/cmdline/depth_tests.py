@@ -104,8 +104,10 @@ def verify_depth(msg, depth, path="."):
       if line.startswith("Depth:"):
         raise svntest.failure(msg)
   else:
-    svntest.actions.run_and_verify_svn_match_any(
-      msg, "^Depth: %s\n$" % depth, [], "info", path)
+    expected_stdout = svntest.verify.ExpectedOutput("Depth: %s\n" % depth,
+                                                    match_all=False)
+    svntest.actions.run_and_verify_svn(
+      msg, expected_stdout, [], "info", path)
 
 #----------------------------------------------------------------------
 # Ensure that 'checkout --depth=empty' results in a depth-empty working copy.
