@@ -49,8 +49,8 @@ XFail = svntest.testcase.XFail
 ########################################################################
 #Tests
 
-def patch_unidiff(sbox):
-  "apply a unidiff patch"
+def patch(sbox):
+  "apply a patch"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -219,8 +219,8 @@ def patch_unidiff(sbox):
                                        1) # dry-run
 
 
-def patch_unidiff_absolute_paths(sbox):
-  "apply a unidiff patch containing absolute paths"
+def patch_absolute_paths(sbox):
+  "apply a patch containing absolute paths"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -283,8 +283,8 @@ def patch_unidiff_absolute_paths(sbox):
                                        1, # check-props
                                        1) # dry-run
 
-def patch_unidiff_offset(sbox):
-  "apply a unidiff patch with offset searching"
+def patch_offset(sbox):
+  "apply a patch with offset searching"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -497,7 +497,7 @@ def patch_unidiff_offset(sbox):
                                        1) # dry-run
 
 def patch_chopped_leading_spaces(sbox):
-  "apply a unidiff patch with chopped leading spaces"
+  "apply a patch with chopped leading spaces"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -666,8 +666,8 @@ def patch_chopped_leading_spaces(sbox):
                                        1) # dry-run
 
 
-def patch_unidiff_strip1(sbox):
-  "apply a unidiff patch with -p1"
+def patch_strip1(sbox):
+  "apply a patch with -p1"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -837,7 +837,7 @@ def patch_unidiff_strip1(sbox):
                                        '-p1')
 
 def patch_add_new_dir(sbox):
-  "apply a unidiff patch with missing dirs"
+  "apply a patch with missing dirs"
   
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -898,8 +898,8 @@ def patch_add_new_dir(sbox):
                                        1, # check-props
                                        1) # dry-run
 
-def patch_unidiff_reject(sbox):
-  "apply a unidiff patch which is rejected"
+def patch_reject(sbox):
+  "apply a patch which is rejected"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -968,8 +968,8 @@ def patch_unidiff_reject(sbox):
                                        1, # check-props
                                        1) # dry-run
 
-def patch_unidiff_keywords(sbox):
-  "apply a unidiff patch containing keywords"
+def patch_keywords(sbox):
+  "apply a patch containing keywords"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1034,14 +1034,14 @@ def patch_unidiff_keywords(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              patch_unidiff,
-              patch_unidiff_absolute_paths,
-              patch_unidiff_offset,
+              patch,
+              patch_absolute_paths,
+              patch_offset,
               patch_chopped_leading_spaces,
-              patch_unidiff_strip1,
+              patch_strip1,
               patch_add_new_dir,
-              patch_unidiff_reject,
-              patch_unidiff_keywords,
+              patch_reject,
+              patch_keywords,
             ]
 
 if __name__ == '__main__':
