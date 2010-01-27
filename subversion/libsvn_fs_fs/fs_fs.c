@@ -7511,11 +7511,18 @@ pack_body(void *baton,
                                                 PATH_MIN_UNPACKED_REV, pool),
                                 pool));
 
-   SVN_ERR(read_min_unpacked_rev(&min_unpacked_revprop,
-                                 svn_dirent_join(pb->fs->path,
-                                                 PATH_MIN_UNPACKED_REVPROP,
-                                                 pool),
-                                 pool));
+  if (format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+    {
+      SVN_ERR(read_min_unpacked_rev(&min_unpacked_revprop,
+                                    svn_dirent_join(pb->fs->path,
+                                                    PATH_MIN_UNPACKED_REVPROP,
+                                                    pool),
+                                    pool));
+    }
+  else
+    {
+      min_unpacked_revprop = 0;
+    }
 
   SVN_ERR(get_youngest(&youngest, pb->fs->path, pool));
   completed_shards = (youngest + 1) / max_files_per_dir;
@@ -7541,19 +7548,20 @@ pack_body(void *baton,
                          pb->cancel_func, pb->cancel_baton, iterpool));
     }
 
-  for (i = min_unpacked_revprop / max_files_per_dir; i < completed_shards; i++)
-    {
-      svn_pool_clear(iterpool);
+  if (format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+    for (i = min_unpacked_revprop / max_files_per_dir; i < completed_shards; i++)
+      {
+        svn_pool_clear(iterpool);
 
-      if (pb->cancel_func)
-        SVN_ERR(pb->cancel_func(pb->cancel_baton));
+        if (pb->cancel_func)
+          SVN_ERR(pb->cancel_func(pb->cancel_baton));
 
-      SVN_ERR(pack_revprop_shard(pb->fs,
-                                 revprops_path, pb->fs->path, i,
-                                 max_files_per_dir,
-                                 pb->notify_func, pb->notify_baton,
-                                 pb->cancel_func, pb->cancel_baton, iterpool));
-    }
+        SVN_ERR(pack_revprop_shard(pb->fs,
+                                   revprops_path, pb->fs->path, i,
+                                   max_files_per_dir,
+                                   pb->notify_func, pb->notify_baton,
+                                   pb->cancel_func, pb->cancel_baton, iterpool));
+      }
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
