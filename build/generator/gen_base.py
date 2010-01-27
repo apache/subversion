@@ -712,7 +712,9 @@ class TargetJavaClasses(TargetJava):
     self.output_dir = self.classes
 
   def add_dependencies(self):
-    sources =_collect_paths(self.sources, self.path)
+    sources = []
+    for p in self.path.split():
+      sources.extend(_collect_paths(self.sources, p))
 
     for src, reldir in sources:
       if src[-5:] == '.java':
@@ -750,7 +752,7 @@ class TargetJavaClasses(TargetJava):
     # collect all the paths where stuff might get built
     ### we should collect this from the dependency nodes rather than
     ### the sources. "what dir are you going to put yourself into?"
-    self.gen_obj.target_dirs.append(self.path)
+    self.gen_obj.target_dirs.extend(self.path.split())
     self.gen_obj.target_dirs.append(self.classes)
     for pattern in self.sources.split():
       dirname = build_path_dirname(pattern)
