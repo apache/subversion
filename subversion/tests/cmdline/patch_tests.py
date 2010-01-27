@@ -968,6 +968,66 @@ def patch_unidiff_reject(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+def patch_unidiff_keywords(sbox):
+  "apply a unidiff patch containing keywords"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Set gamma contents
+  gamma_contents = "$Rev$\nHello there! I'm the file 'gamma'.\n"
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  svntest.main.file_write(gamma_path, gamma_contents)
+  # Expand the keyword
+  svntest.main.run_svn(None, 'propset', 'svn:keywords', 'Rev',
+                       os.path.join(wc_dir, 'A', 'D', 'gamma'))
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma'       : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/gamma', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+
+  # Apply patch
+
+  unidiff_patch = [
+   "Index: gamma\n",
+   "===================================================================\n",
+   "--- A/D/gamma	(revision 3)\n",
+   "+++ A/D/gamma	(working copy)\n",
+   "@@ -1,2 +1,3 @@\n",
+   " $Rev$\n",
+   " Hello there! I'm the file 'gamma'.\n",
+   "+booo\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  gamma_contents = "$Rev: 2 $\nHello there! I'm the file 'gamma'.\nbooo\n"
+  expected_disk.tweak('A/D/gamma', contents=gamma_contents,
+                      props={'svn:keywords' : 'Rev'})
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/gamma', status='M ', wc_rev=2)
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
 
 ########################################################################
 #Run the tests
@@ -981,6 +1041,7 @@ test_list = [ None,
               patch_unidiff_strip1,
               patch_add_new_dir,
               patch_unidiff_reject,
+              patch_unidiff_keywords,
             ]
 
 if __name__ == '__main__':

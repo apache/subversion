@@ -295,6 +295,7 @@ svn_subst_translate_stream(svn_stream_t *src_stream,
  * The stream returned is allocated in @a pool.
  *
  * If the inner stream implements resetting via svn_stream_reset(),
+ * or marking and seeking via svn_stream_mark() and svn_stream_seek(),
  * the translated stream will too.
  *
  * @since New in 1.4.
