@@ -2015,7 +2015,7 @@ svn_client_mergeinfo_log(const char *path_or_url,
       svn_merge_range_t *youngest_range = svn_merge_range_dup(
         APR_ARRAY_IDX(master_inheritable_rangelist,
         master_inheritable_rangelist->nelts - 1,
-        svn_merge_range_t *), iterpool);
+        svn_merge_range_t *), scratch_pool);
       apr_array_header_t *youngest_rangelist;
 
       youngest_range->start = youngest_range->end - 1;
