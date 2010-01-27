@@ -227,7 +227,8 @@ def run_and_verify_svn2(message, expected_stdout, expected_stderr,
 
      - If it is an array of strings, create a vanilla ExpectedOutput.
 
-     - If it is a single string, create a RegexOutput.
+     - If it is a single string, create a RegexOutput that must match every
+       line (for stdout) or any line (for stderr) of the expected output.
 
      - If it is already an instance of ExpectedOutput
        (e.g. UnorderedOutput), leave it alone.

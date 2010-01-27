@@ -63,6 +63,20 @@ class TestCase:
     }
 
   def __init__(self, delegate=None, cond_func=lambda: True, doc=None, wip=None):
+    """Create a test case instance based on DELEGATE.
+
+    COND_FUNC is a callable that is evaluated at test run time and should
+    return a boolean value that determines how a pass or failure is
+    interpreted: see the specialized kinds of test case such as XFail and
+    Skip for details.  The evaluation of COND_FUNC is deferred so that it
+    can base its decision on useful bits of information that are not
+    available at __init__ time (like the fact that we're running over a
+    particular RA layer).
+
+    DOC is ...
+
+    WIP is ...
+    """
     assert hasattr(cond_func, '__call__')
 
     self._delegate = delegate
@@ -163,7 +177,9 @@ class XFail(TestCase):
     TEST_CASE is run normally.  The evaluation of COND_FUNC is
     deferred so that it can base its decision on useful bits of
     information that are not available at __init__ time (like the fact
-    that we're running over a particular RA layer)."""
+    that we're running over a particular RA layer).
+
+    WIP is ..."""
 
     TestCase.__init__(self, create_test_case(test_case), cond_func, wip=wip)
 
@@ -190,7 +206,7 @@ class Skip(TestCase):
   """A test that will be skipped if its conditional is true."""
 
   def __init__(self, test_case, cond_func=lambda: True):
-    """Create an Skip instance based on TEST_CASE.  COND_FUNC is a
+    """Create a Skip instance based on TEST_CASE.  COND_FUNC is a
     callable that is evaluated at test run time and should return a
     boolean value.  If COND_FUNC returns true, then TEST_CASE is
     skipped; otherwise, TEST_CASE is run normally.
