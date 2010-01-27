@@ -846,8 +846,6 @@ maybe_bump_dir_info(struct edit_baton *eb,
      or a directory is not yet "done".  */
   while (bdi != NULL)
     {
-      apr_pool_t *destroy_pool;
-
       if (--bdi->ref_count > 0)
         return SVN_NO_ERROR;    /* directory isn't done yet */
 
@@ -856,10 +854,7 @@ maybe_bump_dir_info(struct edit_baton *eb,
       if (! bdi->skipped)
         SVN_ERR(complete_directory(eb, bdi->local_abspath,
                                    bdi->parent == NULL, pool));
-
-      destroy_pool = bdi->pool;
       bdi = bdi->parent;
-      svn_pool_destroy(destroy_pool);
     }
   /* we exited the for loop because there are no more parents */
 
@@ -3000,6 +2995,7 @@ close_directory(void *dir_baton,
   apr_array_header_t *entry_props, *wc_props, *regular_props;
   apr_hash_t *base_props = NULL, *working_props = NULL;
   apr_hash_t *new_base_props = NULL, *new_actual_props = NULL;
+  struct bump_dir_info *bdi;
 
   /* Skip if we're in a conflicted tree. */
   if (db->skip_this)
@@ -3182,6 +3178,14 @@ close_directory(void *dir_baton,
       notify->old_revision = db->old_revision;
 
       eb->notify_func(db->edit_baton->notify_baton, notify, pool);
+    }
+
+  bdi = db->bump_info;
+  while(bdi && !bdi->ref_count)
+    {
+      apr_pool_t *destroy_pool = bdi->pool;
+      bdi = bdi->parent;
+      svn_pool_destroy(destroy_pool);
     }
 
   return SVN_NO_ERROR;
