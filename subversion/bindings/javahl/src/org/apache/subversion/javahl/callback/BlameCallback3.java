@@ -25,7 +25,6 @@ package org.apache.subversion.javahl.callback;
 
 import org.apache.subversion.javahl.ClientException;
 
-import java.util.Date;
 import java.util.Map;
 
 /**

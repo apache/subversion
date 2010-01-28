@@ -28,13 +28,6 @@ import org.apache.subversion.javahl.callback.*;
 import java.io.OutputStream;
 
 import java.util.Map;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Date;
-import java.text.ParseException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 
 /**
  * This is the main client class.  All Subversion client APIs are
