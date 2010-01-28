@@ -1682,6 +1682,8 @@ insert_working_node(svn_sqlite__db_t *sdb,
   if (working_node->kind == svn_node_dir
       && *working_node->local_relpath != '\0')
     SVN_ERR(svn_sqlite__bind_text(stmt, 5, "subdir"));
+  else if (working_node->kind == svn_node_none)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 5, "unknown"));
   else
     SVN_ERR(svn_sqlite__bind_text(stmt, 5,
                                   svn_node_kind_to_word(working_node->kind)));
