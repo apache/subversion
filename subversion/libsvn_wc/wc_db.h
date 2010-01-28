@@ -77,13 +77,25 @@ extern "C" {
    resulting impact on memory consumption (which should still be minimal).
 
 
-   PARAMETER NAMING
+   PARAMETER CONVENTIONS
+
+   * Parameter Order
+     - any output arguments
+     - DB
+     - LOCAL_ABSPATH
+     - any other input arguments
+     - RESULT_POOL
+     - SCRATCH_POOL
 
    * DB
      This parameter is the primary context for all operations on the
      metadata for working copies. This parameter is passed to almost every
      function, and maintains information and state about every working
      copy "touched" by any of the APIs in this interface.
+
+   * *_ABSPATH
+     All *_ABSPATH parameters in this API are absolute paths in the local
+     filesystem, represented in Subversion internal canonical form.
 
    * LOCAL_ABSPATH
      This parameter specifies a particular *versioned* node in the local
@@ -257,12 +269,6 @@ typedef struct {
 } svn_wc__db_lock_t;
 
 
-/* ### note conventions of "result_pool" for the pool where return results
-   ### are allocated, and "scratch_pool" for the pool that is used for
-   ### intermediate allocations (and which can be safely cleared upon
-   ### return from the function).
-*/
-
 /* ### NOTE: I have not provided docstrings for most of this file at this
    ### point in time. The shape and extent of this API is still in massive
    ### flux. I'm iterating in public, but do not want to doc until it feels
@@ -270,16 +276,6 @@ typedef struct {
 */
 
 /* ### where/how to handle: text_time, locks, working_size */
-
-/* ### update docstrings: all paths should be internal/canonical */
-
-/**
- * ### KFF: Would be good to state, here or in an introductory comment
- * ### at the top of this file, whether subsequent 'path' parameters
- * ### are absolute, or relative to the root at which @a *db was
- * ### opened, or perhaps that both are acceptable.
- */
-/* ### all paths in this API are absolute, and internal/canonical form.  */
 
 
 /**
@@ -1221,15 +1217,6 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
    ###   original_root_url will be NULL
    ###   original_uuid will be NULL
    ###   original_revision will be SVN_INVALID_REVNUM
-
-   ### KFF: The position of 'db' in the parameter list is sort of
-   ### floating around (e.g., compare this func with the next one).
-   ### Would be nice to keep it consistent.  For example, it always
-   ### comes first, or always comes first after any result params, or
-   ### whatever.
-   ### BH: 'db' is the first argument after the output arguments, the next
-   ### is always 'local_abspath'. Next are other input arguments. Result
-   ### and scratch pool are last.
 
    ### note that @a base_shadowed can be derived. if the status specifies
    ### an add/copy/move *and* there is a corresponding node in BASE, then
