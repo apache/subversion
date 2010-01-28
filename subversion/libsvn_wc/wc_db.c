@@ -261,7 +261,6 @@ static const svn_token_map_t kind_map[] = {
   { "symlink", svn_wc__db_kind_symlink },
   { "subdir", svn_wc__db_kind_subdir },
   { "unknown", svn_wc__db_kind_unknown },
-  { "none", svn_wc__db_kind_unknown },
   { NULL }
 };
 
