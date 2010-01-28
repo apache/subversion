@@ -78,7 +78,7 @@ Examples
 Here's a sample viewspec file:
 
     Format: 1
-    Url: http://svn.collab.net/repos/svn
+    Url: http://svn.apache.org/repos/asf/subversion
     Revision: 36366
 
     trunk/**

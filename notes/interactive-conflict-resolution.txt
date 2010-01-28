@@ -63,5 +63,5 @@ So your conflict-callback is going to have be careful of NULL values:
        -> CLI simply says, "You want to delete the prop, they want to
           set its value to blah."  No other diff offered.
 
-http://svn.collab.net/repos/svn/trunk/subversion/svn/conflict-callbacks.c
+http://svn.apache.org/repos/asf/subversion/trunk/subversion/svn/conflict-callbacks.c
 contains the conflict resolution callback for the command-line client.
