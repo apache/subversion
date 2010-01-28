@@ -34,6 +34,7 @@ import re
 import shutil
 import sys
 import tarfile
+import tempfile
 
 import svntest
 
@@ -60,10 +61,11 @@ def replace_sbox_with_tarfile(sbox, tar_filename):
   tarpath = os.path.join(os.path.dirname(sys.argv[0]), 'upgrade_tests_data',
                          tar_filename)
   t = tarfile.open(tarpath, 'r:bz2')
+  extract_dir = tempfile.mkdtemp(dir=svntest.main.temp_dir)
   for member in t.getmembers():
-    t.extract(member, svntest.main.temp_dir)
+    t.extract(member, extract_dir)
 
-  shutil.move(os.path.join(svntest.main.temp_dir, tar_filename.split('.')[0]),
+  shutil.move(os.path.join(extract_dir, tar_filename.split('.')[0]),
               sbox.wc_dir)
 
 
