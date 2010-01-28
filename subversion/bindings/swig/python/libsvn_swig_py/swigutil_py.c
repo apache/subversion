@@ -1187,10 +1187,10 @@ svn_swig_py_unwrap_struct_ptr(PyObject *source,
     int status = svn_swig_ConvertPtr(source, ptr_dest, type_descriptor);
 
     if (status != 0)
-    {
+      {
         PyErr_SetString(PyExc_TypeError, "not a SWIG proxy of correct type");
         return -1;
-    }
+      }
 
     return 0;
 }
