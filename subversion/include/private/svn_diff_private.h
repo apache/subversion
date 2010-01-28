@@ -81,6 +81,12 @@ typedef struct svn_hunk_t {
   svn_linenum_t original_length;
   svn_linenum_t modified_start;
   svn_linenum_t modified_length;
+
+  /* Number of lines starting with ' ' before first '+' or '-'. */
+  svn_linenum_t leading_context;
+
+  /* Number of lines starting with ' ' after last '+' or '-'. */
+  svn_linenum_t trailing_context;
 } svn_hunk_t;
 
 /* Data type to manage parsing of patches. */
