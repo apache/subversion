@@ -35,7 +35,7 @@ webpagetext = '''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 nightly release of Subversion (r%d).</p>
 
 <p>This distribution is automatically generated from the latest sources from
-<a href="http://svn.collab.net/repos/svn/trunk/">Subversion trunk</a>.
+<a href="http://svn.apache.org/repos/asf/subversion/trunk/">Subversion trunk</a>.
 It may not even compile, and is certainly <i>not</i> suitable for any sort of
 production use.  This distribution has not been tested, and may cause any
 number of problems, up to and including death and bodily injury.  Only use this

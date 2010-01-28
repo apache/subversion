@@ -167,4 +167,4 @@ Notes
 [6] http://www.wxwidgets.org/
 [7] http://mapserver.gis.umn.edu/
 [8] http://svn.haxx.se/dev/archive-2003-10/0215.shtml
-[9] http://svn.collab.net/repos/svn/branches/ctypes-python-bindings/
+[9] http://svn.apache.org/repos/asf/subversion/branches/ctypes-python-bindings/
