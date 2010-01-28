@@ -281,7 +281,7 @@ get_dir_entries(apr_hash_t **entries_p,
                 trail_t *trail,
                 apr_pool_t *pool)
 {
-  apr_hash_t *entries = apr_hash_make(pool);
+  apr_hash_t *entries = NULL;
   apr_hash_index_t *hi;
   svn_string_t entries_raw;
   svn_skel_t *entries_skel;
@@ -290,7 +290,7 @@ get_dir_entries(apr_hash_t **entries_p,
   if (noderev->kind != svn_node_dir)
     return svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-       _("Attempted to create entry in non-directory parent"));
+       _("Attempted to get entries of a non-directory node"));
 
   /* If there's a DATA-KEY, there might be entries to fetch. */
   if (noderev->data_key)
