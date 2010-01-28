@@ -471,10 +471,10 @@ def patch_offset(sbox):
 
   expected_output = [
     'U         %s\n' % os.path.join('A', 'mu'),
-    '>         applied hunk @@ -6,6 +6,6 @@ with offset -1\n',
-    '>         applied hunk @@ -14,11 +17,11 @@ with offset 4\n',
+    '>         applied hunk @@ -6,6 +6,9 @@ with offset -1\n',
+    '>         applied hunk @@ -14,11 +17,8 @@ with offset 4\n',
     'U         iota\n',
-    '>         applied hunk @@ -5,6 +5,6 @@ with offset -3\n',
+    '>         applied hunk @@ -5,6 +5,7 @@ with offset -3\n',
   ]
 
   expected_disk = svntest.main.greek_state.copy()
