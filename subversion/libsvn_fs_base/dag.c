@@ -1636,7 +1636,8 @@ node_origins_update(const char *new_txn_id,
 
   /* To find the nodes that originate in the old txn, we'll look in the
    * "changes" table. Any change that added a node could have created a new
-   * node id. */
+   * node id, but that change may have been superceded by a later change that
+   * deleted that node id and its corresponding 'node-origins' record. */
   SVN_ERR(svn_fs_bdb__changes_fetch_raw(&changes, trail->fs, old_txn_id, trail,
                                         scratch_pool));
   for (i = 0; i < changes->nelts; i++)
@@ -1650,13 +1651,21 @@ node_origins_update(const char *new_txn_id,
         {
           const svn_fs_id_t *origin_id;
           const char *node_id, *id_copy_id, *id_txn_id;
+          svn_error_t *err;
 
           /* Find the destination node id of this change */
           node_id = svn_fs_base__id_node_id(change->noderev_id);
 
           /* Fetch the old node-origin */
-          SVN_ERR(svn_fs_bdb__get_node_origin(&origin_id, trail->fs, node_id,
+          err = (svn_fs_bdb__get_node_origin(&origin_id, trail->fs, node_id,
                                               trail, iterpool));
+          if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_NODE_ORIGIN)
+            {
+              svn_error_clear(err);
+              continue;
+            }
+          SVN_ERR(err);
+
           id_copy_id = svn_fs_base__id_copy_id(origin_id);
           id_txn_id = svn_fs_base__id_txn_id(origin_id);
 
