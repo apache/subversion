@@ -1089,8 +1089,9 @@ apr_hash_t *svn_swig_py_path_revs_hash_from_dict(PyObject *dict,
   return hash;
 }
 
-apr_hash_t *svn_swig_py_changed_path_hash_from_dict(PyObject *dict,
-                                                    apr_pool_t *pool)
+apr_hash_t *svn_swig_py_struct_ptr_hash_from_dict(PyObject *dict,
+                                                  swig_type_info *type,
+                                                  apr_pool_t *pool)
 {
   apr_hash_t *hash;
   PyObject *keys;
@@ -1111,26 +1112,27 @@ apr_hash_t *svn_swig_py_changed_path_hash_from_dict(PyObject *dict,
   for (i = 0; i < num_keys; i++)
     {
       PyObject *key = PyList_GetItem(keys, i);
-      PyObject *py_changed_path = PyDict_GetItem(dict, key);
-      const char *path = make_string_from_ob(key, pool);
-      svn_log_changed_path_t *changed_path;
-      if (!path)
+      PyObject *value = PyDict_GetItem(dict, key);
+      const char *c_key = make_string_from_ob(key, pool);
+      void *struct_ptr;
+      int status;
+
+      if (!c_key)
         {
           PyErr_SetString(PyExc_TypeError,
                           "dictionary keys aren't strings");
           Py_DECREF(keys);
           return NULL;
         }
-      svn_swig_ConvertPtrString(py_changed_path, (void *)&changed_path,
-                                "svn_log_changed_path_t *");
-      if (!changed_path)
+      status = svn_swig_ConvertPtr(value, &struct_ptr, type);
+      if (status != 0)
         {
           PyErr_SetString(PyExc_TypeError,
-                          "dictionary values aren't svn_log_changed_path_t");
+            "dictionary values aren't SWIG proxies of correct type");
           Py_DECREF(keys);
           return NULL;
         }
-      apr_hash_set(hash, path, APR_HASH_KEY_STRING, changed_path);
+      apr_hash_set(hash, c_key, APR_HASH_KEY_STRING, struct_ptr);
     }
   Py_DECREF(keys);
   return hash;

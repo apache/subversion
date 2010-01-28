@@ -204,7 +204,8 @@
       SWIG_fail;
   }
 
-  $1 = svn_swig_py_changed_path_hash_from_dict($input, _global_pool);
+  $1 = svn_swig_py_struct_ptr_hash_from_dict($input,
+    $descriptor(svn_log_changed_path_t *), _global_pool);
   if (PyErr_Occurred()) {
     SWIG_fail;
   }

@@ -225,11 +225,12 @@ apr_hash_t *svn_swig_py_path_revs_hash_from_dict(PyObject *dict,
                                                  apr_pool_t *pool);
 
 /* helper function to convert a Python dictionary mapping strings to
-   strings into an apr_hash_t mapping const char *'s to svn_string_t *'s,
-   allocated in POOL. */
+   SWIG wrappers described by type into an apr_hash_t mapping const char *'s to
+   struct pointers, allocated in POOL. */
 SVN_SWIG_SWIGUTIL_EXPORT
-apr_hash_t *svn_swig_py_changed_path_hash_from_dict(PyObject *dict,
-                                                    apr_pool_t *pool);
+apr_hash_t *svn_swig_py_struct_ptr_hash_from_dict(PyObject *dict,
+                                                  swig_type_info *type,
+                                                  apr_pool_t *pool);
 
 /* Callback function for use in data structure conversion routines. It is
    supposed to extract a C value of a certain type from object, write it into
