@@ -476,25 +476,24 @@ init_patch_target(patch_target_t **target,
                               new_target->keywords, TRUE, result_pool);
 
       /* We'll also need a stream to write rejected hunks to.
-       * We don't expand keywords in reject files. */
+       * We don't expand keywords, nor normalise line-endings,
+       * in reject files. */
       SVN_ERR(svn_stream_open_unique(&new_target->reject_raw,
                                      &new_target->reject_path, NULL,
                                      svn_io_file_del_on_pool_cleanup,
                                      result_pool, scratch_pool));
       new_target->reject = svn_subst_stream_translated(
                                new_target->reject_raw,
-                               new_target->eol_str,
-                               new_target->eol_style ==
-                                 svn_subst_eol_style_fixed,
+                               new_target->eol_str, FALSE,
                                new_target->keywords, FALSE,
                                result_pool);
 
       /* The reject stream needs a diff header. */
       diff_header = apr_psprintf(scratch_pool, "--- %s%s+++ %s%s",
                                  new_target->canon_path_from_patchfile,
-                                 new_target->eol_str,
+                                 APR_EOL_STR,
                                  new_target->canon_path_from_patchfile,
-                                 new_target->eol_str);
+                                 APR_EOL_STR);
       len = strlen(diff_header);
       SVN_ERR(svn_stream_write(new_target->reject, diff_header, &len));
     }
@@ -732,9 +731,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
 {
   svn_linenum_t matched_line;
 
-  /* Now try to match the hunk.
-   *
-   * An original offset of zero means that this hunk wants to create
+  /* An original offset of zero means that this hunk wants to create
    * a new file, potentially overwriting all content of an existing
    * file in the WC. Don't bother matching hunks in that case, since
    * the hunk applies at line 1. */
@@ -1012,7 +1009,7 @@ maybe_send_patch_notification(const patch_target_t *target,
 }
 
 /* Apply a PATCH to a working copy at ABS_WC_PATH.
- * Use client context CTX to send notifiations and retrieve WC_CTX.
+ * Use client context CTX to send notifications and retrieve WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
  * Do all allocations in POOL. */
@@ -1148,11 +1145,11 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
            * result in place. */
           if (target->added && ! target->parent_dir_exists)
             {
-              /* Check if we can safely create the target's parent. */
               const char *abs_path;
               apr_array_header_t *components;
               int missing_components;
 
+              /* Check if we can safely create the target's parent. */
               abs_path = apr_pstrdup(pool, abs_wc_path);
               components = svn_path_decompose(target->rel_path, pool);
               missing_components = 0;
