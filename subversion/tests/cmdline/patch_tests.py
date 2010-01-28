@@ -1029,6 +1029,137 @@ def patch_keywords(sbox):
                                        1, # check-props
                                        1) # dry-run
 
+def patch_with_fuzz(sbox):
+  "apply a patch with fuzz"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # We have replaced a couple of lines to cause fuzz. Those lines contains
+  # the word fuzz
+  mu_contents = [
+    "Line replaced for fuzz = 1\n",
+    "\n",
+    "We wish to congratulate you over your email success in our computer\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "Line replaced for fuzz = 2 with only the second context line changed\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 13th June. 2009\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+    "\n",
+    "Line replaced for fuzz = 2\n",
+    "Line replaced for fuzz = 2\n",
+  ]
+
+  # Set mu contents
+  svntest.main.file_write(mu_path, ''.join(mu_contents))
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'       : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                      expected_status, None, wc_dir)
+
+  unidiff_patch = [
+    "Index: mu\n",
+    "===================================================================\n",
+    "--- A/mu\t(revision 0)\n",
+    "+++ A/mu\t(revision 0)\n",
+    "@@ -1,6 +1,7 @@\n",
+    " Dear internet user,\n",
+    " \n",
+    " We wish to congratulate you over your email success in our computer\n",
+    "+A new line here\n",
+    " Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    " in which email addresses were used. All participants were selected\n",
+    " through a computer ballot system drawn from over 100,000 company\n",
+    "@@ -7,6 +8,7 @@\n",
+    " and 50,000,000 individual email addresses from all over the world.\n",
+    " \n",
+    " Your email address drew and have won the sum of  750,000 Euros\n",
+    "+Another new line\n",
+    " ( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    " file with\n",
+    "     REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "@@ -19,6 +20,7 @@\n",
+    " To claim your winning prize, you are to contact the appointed\n",
+    " agent below as soon as possible for the immediate release of your\n",
+    " winnings with the below details.\n",
+    "+A third new line\n",
+    " \n",
+    " Again, we wish to congratulate you over your email success in our\n"
+    " computer Balloting.\n"
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  mu_contents = [
+    "Line replaced for fuzz = 1\n",
+    "\n",
+    "We wish to congratulate you over your email success in our computer\n",
+    "A new line here\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "Line replaced for fuzz = 2 with only the second context line changed\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "Another new line\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 13th June. 2009\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+    "A third new line\n",
+    "\n",
+    "Line replaced for fuzz = 2\n",
+    "Line replaced for fuzz = 2\n",
+  ]
+
+  expected_output = [
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+  ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=''.join(mu_contents))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 ########################################################################
 #Run the tests
 
@@ -1042,6 +1173,7 @@ test_list = [ None,
               patch_add_new_dir,
               patch_reject,
               patch_keywords,
+              patch_with_fuzz,
             ]
 
 if __name__ == '__main__':

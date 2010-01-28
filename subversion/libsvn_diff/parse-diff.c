@@ -224,6 +224,9 @@ parse_next_hunk(svn_hunk_t **hunk,
   svn_stream_t *original_text;
   svn_stream_t *modified_text;
   svn_linenum_t original_lines;
+  svn_linenum_t leading_context;
+  svn_linenum_t trailing_context;
+  svn_boolean_t changed_line_seen;
   apr_pool_t *iterpool;
 
   if (apr_file_eof(patch->patch_file) == APR_EOF)
@@ -235,6 +238,9 @@ parse_next_hunk(svn_hunk_t **hunk,
 
   in_hunk = FALSE;
   hunk_seen = FALSE;
+  leading_context = 0;
+  trailing_context = 0;
+  changed_line_seen = FALSE;
   *hunk = apr_pcalloc(result_pool, sizeof(**hunk));
 
   /* Get current seek position -- APR has no ftell() :( */
@@ -278,20 +284,28 @@ parse_next_hunk(svn_hunk_t **hunk,
             }
 
           c = line->data[0];
-          if (original_lines > 0 && (c == ' ' || c == '-'))
-            {
-              hunk_seen = TRUE;
-              original_lines--;
-            }
-          else if (c == '+')
-            {
-              hunk_seen = TRUE;
-            }
           /* Tolerate chopped leading spaces on empty lines. */
-          else if (original_lines > 0 && ! eof && line->len == 0)
+          if (original_lines > 0 && (c == ' ' || (! eof && line->len == 0)))
             {
               hunk_seen = TRUE;
               original_lines--;
+              if (changed_line_seen)
+                trailing_context++;
+              else
+                leading_context++;
+            }
+          else if (c == '+' || c == '-')
+            {
+              hunk_seen = TRUE;
+              changed_line_seen = TRUE;
+
+              /* A hunk may have context in the middle. We only want the
+                 last lines of context. */
+              if (trailing_context > 0)
+                trailing_context = 0;
+
+              if (original_lines > 0 && c == '-')
+                original_lines--;
             }
           else
             {
@@ -363,6 +377,8 @@ parse_next_hunk(svn_hunk_t **hunk,
       (*hunk)->diff_text = diff_text;
       (*hunk)->original_text = original_text;
       (*hunk)->modified_text = modified_text;
+      (*hunk)->leading_context = leading_context;
+      (*hunk)->trailing_context = trailing_context;
     }
   else
     /* Something went wrong, just discard the result. */
