@@ -368,15 +368,6 @@ public interface ISVNClient
             throws ClientException;
 
     /**
-     * Creates a directory directly in a repository or creates a
-     * directory on disk and schedules it for addition.
-     * @param path      directories to be created
-     * @param message   commit message to used if path contains urls
-     * @throws ClientException
-     */
-    void mkdir(String[] path, String message) throws ClientException;
-
-    /**
      * Recursively cleans up a local directory, finishing any
      * incomplete operations, removing lockfiles, etc.
      * @param path a local directory.
@@ -756,20 +747,6 @@ public interface ISVNClient
      * @since 1.2
      */
     PropertyData[] revProperties(String path, Revision rev)
-            throws ClientException;
-
-    /**
-     * set one revsision property of one item
-     * @param path      path of the item
-     * @param name      name of the property
-     * @param rev       revision to retrieve
-     * @param value     value of the property
-     * @param force     use force to set
-     * @throws ClientException
-     * @since 1.2
-     */
-    void setRevProperty(String path, String name, Revision rev, String value,
-                        boolean force)
             throws ClientException;
 
     /**
