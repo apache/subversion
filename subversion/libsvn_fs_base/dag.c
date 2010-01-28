@@ -1036,8 +1036,8 @@ svn_fs_base__dag_delete_if_mutable(svn_fs_t *fs,
         }
     }
 
-  /* ... then delete the node itself, after deleting any mutable
-     representations and strings it points to. */
+  /* ... then delete the node itself, any mutable representations and
+     strings it points to, and possibly its node-origins record. */
   return svn_fs_base__dag_remove_node(fs, id, txn_id, trail, pool);
 }
 
