@@ -1620,6 +1620,8 @@ insert_base_node(svn_sqlite__db_t *sdb,
   /* ### kind might be "symlink" or "unknown" */
   if (base_node->kind == svn_node_dir && *base_node->local_relpath != '\0')
     SVN_ERR(svn_sqlite__bind_text(stmt, 8, "subdir"));
+  else if (base_node->kind == svn_node_none)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 5, "unknown"));
   else
     SVN_ERR(svn_sqlite__bind_text(stmt, 8,
                                   svn_node_kind_to_word(base_node->kind)));
