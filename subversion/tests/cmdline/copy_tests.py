@@ -4274,8 +4274,12 @@ def reverse_merge_move(sbox):
 
   wc_dir = sbox.wc_dir
   a_dir = os.path.join(wc_dir, 'A')
-  a_repo_url = sbox.repo_url+ '/A'
+  a_repo_url = sbox.repo_url + '/A'
   sbox.build()
+
+  # Create another working copy path and checkout.
+  wc2_dir = sbox.add_wc_path('2')
+  rav_svn(None, None, [], 'co', sbox.repo_url, wc2_dir)
 
   # Update working directory and ensure that we are at revision 1.
   rav_svn(None, ["At revision 1.\n"], [], 'up', wc_dir)
@@ -4304,6 +4308,16 @@ def reverse_merge_move(sbox):
           'ci', '-m',
           'Revert svn merge. svn mv %s %s.' % (first_path, second_path), a_dir)
 
+  # Update second working copy. There was a bug (at least on the 1.6.x
+  # branch) in which this update received both "first" and "second".
+  expected_output = svntest.wc.State(wc2_dir, {
+      'A/New'         : Item(status='A '),
+      'A/New/second'  : Item(status='A '),
+      })
+  svntest.actions.run_and_verify_update(wc2_dir,
+                                        expected_output,
+                                        None,
+                                        None)
 
 ########################################################################
 # Run the tests
