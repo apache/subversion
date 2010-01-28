@@ -144,12 +144,15 @@ unset HTTPS_PROXY
 
 say "Using '$APXS'..."
 
+# Find the source and build directories. The build dir can be found if it is
+# the current working dir or the source dir.
+pushd ${SCRIPTDIR}/../../../ > /dev/null
+ABS_SRCDIR=$(pwd)
+popd > /dev/null
 if [ -x subversion/svn/svn ]; then
   ABS_BUILDDIR=$(pwd)
-elif [ -x $SCRIPTDIR/../../svn/svn ]; then
-  pushd $SCRIPTDIR/../../../ >/dev/null
-  ABS_BUILDDIR=$(pwd)
-  popd >/dev/null
+elif [ -x $ABS_SRCDIR/subversion/svn/svn ]; then
+  ABS_BUILDDIR=$ABS_SRCDIR
 else
   fail "Run this script from the root of Subversion's build tree!"
 fi
@@ -368,7 +371,7 @@ else
   pushd "$ABS_BUILDDIR/subversion/tests/cmdline/" >/dev/null
   TEST="$1"
   shift
-  time "./${TEST}_tests.py" "--url=$BASE_URL" "$@"
+  time "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" "$@"
   r=$?
   popd >/dev/null
 fi
