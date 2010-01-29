@@ -209,7 +209,7 @@ notices and license terms. Your use of the source code for the these
 subcomponents is subject to the terms and conditions of the following
 licenses.
 
-For the python bindings test suite:
+For the python bindings test suite (subversion/bindings/swig/python/tests/):
 
 # I.  Licensed to the Apache Software Foundation (ASF) under one
 #     or more contributor license agreements.  See the NOTICE file
