@@ -98,13 +98,8 @@ typedef struct {
   const char *patched_path;
 
   /* The reject stream, write-only, not seekable.
-   * Hunks that are rejected will be written to this stream.
-   * The data in the underlying file needs to be in repository-normal form,
-   * so EOL transformation and keyword contraction is done transparently. */
+   * Hunks that are rejected will be written to this stream. */
   svn_stream_t *reject;
-
-  /* The reject stream, without EOL transformation and keyword contraction. */
-  svn_stream_t *reject_raw;
 
   /* Path to the temporary file underlying the reject stream. */
   const char *reject_path;
@@ -482,15 +477,10 @@ init_patch_target(patch_target_t **target,
       /* We'll also need a stream to write rejected hunks to.
        * We don't expand keywords, nor normalise line-endings,
        * in reject files. */
-      SVN_ERR(svn_stream_open_unique(&new_target->reject_raw,
+      SVN_ERR(svn_stream_open_unique(&new_target->reject,
                                      &new_target->reject_path, NULL,
                                      svn_io_file_del_on_pool_cleanup,
                                      result_pool, scratch_pool));
-      new_target->reject = svn_subst_stream_translated(
-                               new_target->reject_raw,
-                               new_target->eol_str, FALSE,
-                               new_target->keywords, FALSE,
-                               result_pool);
 
       /* The reject stream needs a diff header. */
       diff_header = apr_psprintf(scratch_pool, "--- %s%s+++ %s%s",
@@ -1123,7 +1113,7 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
     }
 
   /* Close the patched and reject streams so that their content is
-   * flushed to disk. This will also close the raw streams. */
+   * flushed to disk. This will also close any underlying streams. */
   SVN_ERR(svn_stream_close(target->patched));
   SVN_ERR(svn_stream_close(target->reject));
 
