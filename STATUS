@@ -201,8 +201,7 @@ Candidate changes:
     It's misleading for 'svnadmin verify' to say a repository is fine
     when in reality it isn't.
   Votes:
-    +1: jwhitlock
-    +0: danielsh
+    +1: jwhitlock, danielsh
 
 Veto-blocked changes:
 =====================
