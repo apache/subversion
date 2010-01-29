@@ -1348,7 +1348,7 @@ def switch_relative_external(sbox):
                                      '--quiet', wc_dir)
 
   # Okay.  We now want to switch A to A_copy, which *should* cause
-  # A/D/ext to point to the URL for A_copy/D/ext.
+  # A/D/ext to point to the URL for A_copy/B (instead of A/B).
   svntest.actions.run_and_verify_svn(None, None, [], 'sw',
                                      '--quiet', A_copy_url, A_path)
 
