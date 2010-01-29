@@ -125,7 +125,7 @@ public class SVNClient implements SVNClientInterface
         Status[] statusArray = status(path, false, onServer, true, false, false);
         if (statusArray == null || statusArray.length == 0)
             return null;
-        return status(path, false, onServer, true, false, false)[0];
+        return statusArray[0];
     }
 
     /**
