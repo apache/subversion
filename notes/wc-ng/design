@@ -56,6 +56,11 @@ defined.  When explicitly considering which trees relate to the
 working copy at one time or another, the following trees can be
 found:
 
+  ###
+  ### WARNING: the following descriptions don't correspond to either
+  ###   the WC-NG DB concepts or the command-line user concepts.
+  ###
+
  * BASE: The tree of nodes from the repository, against which local changes
      are made.  Also known as "pristine".  Each node is as it was in the
      repository at a particular revision and URL, as recorded per node in
