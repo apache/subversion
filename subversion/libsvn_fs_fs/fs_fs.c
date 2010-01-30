@@ -6065,7 +6065,11 @@ commit_obliteration_body(void *baton, apr_pool_t *pool)
   apr_off_t changed_path_offset;
   char *buf;
 
-  SVN_ERR_ASSERT(! is_packed_rev(cb->fs, rev));
+  /* ### Someday support obliterating packed revisions. Maybe. */
+  if (is_packed_rev(cb->fs, rev))
+    return svn_error_create(SVN_ERR_FS_GENERAL, NULL,
+                            _("Obliteration of already-packed revision "
+                              "is not supported"));
 
   /* Get the next node_id and copy_id to use. */
   if (ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
