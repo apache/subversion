@@ -326,6 +326,7 @@ JAVA_CLASSPATH=$(abs_srcdir)/subversion/bindings/javahl/src:@JAVA_CLASSPATH@
 javahl_java_CLASSPATH=$(JAVA_CLASSPATH)
 javahl_compat_CLASSPATH=$(JAVA_CLASSPATH)
 javahl_tests_CLASSPATH=$(JAVA_CLASSPATH)
+javahl_compat_tests_CLASSPATH=$(JAVA_CLASSPATH)
 
 RUBY = @RUBY@
 RUBY_MAJOR = @RUBY_MAJOR@
@@ -430,6 +431,10 @@ clean-javahl:
 	rm -f $(libsvnjavahl_PATH)/*.la $(JAVAHL_JAR)
 	rm -f $(libsvnjavahl_PATH)/*.lo
 	rm -f $(libsvnjavahl_PATH)/*.o
+
+check-javahl-compat: javahl-compat-tests
+	@FIX_JAVAHL_LIB@
+	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_compat_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.apache.subversion.javahl.RunTests
 
 check-javahl: javahl
 	@FIX_JAVAHL_LIB@
