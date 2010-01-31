@@ -119,7 +119,7 @@ def main(input, output, filename):
     output.write('#define %s_DECLARE_STATEMENTS(varname) \\\n' % (var_name,)
                  + '  static const char * const varname[] = { \\\n'
                  + ', \\\n'.join('    STMT_%d' % (i,) for i in range(stmt_count))
-                 + ' \\\n  }\n')
+                 + ', \\\n    NULL \\\n  }\n')
 
 
 if __name__ == '__main__':
