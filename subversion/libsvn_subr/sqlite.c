@@ -117,6 +117,16 @@ exec_sql(svn_sqlite__db_t *db, const char *sql)
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_sqlite__exec_statements(svn_sqlite__db_t *db, int stmt_idx)
+{
+  SVN_ERR_ASSERT(stmt_idx < db->nbr_statements);
+
+  return svn_error_return(exec_sql(db, db->statement_strings[stmt_idx]));
+}
+
+
 svn_error_t *
 svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                           int stmt_idx)
@@ -898,7 +908,8 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 #endif
 
   /* Validate the schema, upgrading if necessary. */
-  SVN_ERR(check_format(*db, latest_schema, upgrade_sql, scratch_pool));
+  if (upgrade_sql != NULL)
+    SVN_ERR(check_format(*db, latest_schema, upgrade_sql, scratch_pool));
 
   /* Store the provided statements. */
   if (statements)
