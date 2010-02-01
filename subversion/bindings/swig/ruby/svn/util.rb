@@ -32,12 +32,6 @@ end
 
 require 'tempfile'
 
-unless respond_to?(:__send!)
-  module Kernel
-    alias __send! __send__
-  end
-end
-
 module Svn
   module Util
     module_function
