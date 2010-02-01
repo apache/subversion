@@ -203,6 +203,13 @@ Candidate changes:
   Votes:
     +1: jwhitlock, danielsh
 
+ * r905303
+   Make 'svnadmin hotcopy' copy fsfs.conf for FSFS repositories.
+   Justification:
+     svnadmin hotcopy is supposed to copy all files.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
