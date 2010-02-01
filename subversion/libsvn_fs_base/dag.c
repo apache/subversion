@@ -1691,6 +1691,9 @@ node_origins_update(const char *new_txn_id,
 /* Modify each row in the "copies" table that is keyed by a (const char *)
  * copy-id listed in COPY_IDS, changing the txn-id component of its
  * "dst_noderev_id" field from OLD_TXN_ID to NEW_TXN_ID.
+ * If the dst_noderev_id then references a node-revision that does not exist,
+ * it must have been obliterated, so remove each such copy-id from COPY_IDS
+ * and from the "copies" table.
  * Each entry in COPY_IDS must match exactly one row in the "copies" table.
  *
  * Work within TRAIL. */
@@ -1701,14 +1704,18 @@ copies_update(const char *new_txn_id,
               trail_t *trail,
               apr_pool_t *scratch_pool)
 {
-  int i;
+  int i, i_out;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
+  /* Loop over COPY_IDS, reading from index I, writing to index I_OUT.
+   * At the end, if I_OUT < I then some elements have been deleted. */
+  i_out = 0;
   for (i = 0; i < copy_ids->nelts; i++)
     {
       const char *copy_id = APR_ARRAY_IDX(copy_ids, i, const char *);
       copy_t *copy;
       const char *id_node_id, *id_copy_id, *id_txn_id;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
@@ -1725,14 +1732,31 @@ copies_update(const char *new_txn_id,
       copy->dst_noderev_id = svn_fs_base__id_create(id_node_id, id_copy_id,
                                                     new_txn_id, iterpool);
 
-      /* Write the new "copy" row back under the same key (copy_id) */
-      SVN_ERR(svn_fs_bdb__create_copy(trail->fs, copy_id,
-                                      copy->src_path, copy->src_txn_id,
-                                      copy->dst_noderev_id, copy->kind,
-                                      trail, iterpool));
-    }
+      /* Depending on whether the new node-revision exists ... */
+      err = svn_fs_bdb__get_node_revision(NULL, trail->fs,
+                                          copy->dst_noderev_id, trail,
+                                          iterpool);
+      if (err == NULL)
+        {
+          /* Write the new "copy" row back under the same key (copy_id) */
+          SVN_ERR(svn_fs_bdb__create_copy(trail->fs, copy_id,
+                                          copy->src_path, copy->src_txn_id,
+                                          copy->dst_noderev_id, copy->kind,
+                                          trail, iterpool));
+          APR_ARRAY_IDX(copy_ids, i_out++, const char *) = copy_id;
+        }
+      else
+        {
+          svn_error_clear(err);
 
+          /* Delete the copy id from COPY_IDS, and delete the copy row from
+           * the "copies" table. */
+          SVN_ERR(svn_fs_bdb__delete_copy(trail->fs, copy_id, trail, iterpool));
+        }
+    }
+  copy_ids->nelts = i_out;
   svn_pool_destroy(iterpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -1767,6 +1791,10 @@ svn_fs_base__dag_commit_obliteration_txn(svn_revnum_t replacing_rev,
   if (txn_obj->copies)
     SVN_ERR(copies_update(txn->id, old_txn_id, txn_obj->copies, trail,
                           scratch_pool));
+
+  /* Write back the new txn in case we changed its "copies" list */
+  SVN_ERR(svn_fs_bdb__put_txn(trail->fs, txn_obj, txn->id, trail,
+                              scratch_pool));
 
   /* Replace the revision entry in the `revisions' table. */
   revision.txn_id = txn->id;
