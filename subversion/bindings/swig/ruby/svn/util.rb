@@ -33,7 +33,7 @@ end
 require 'tempfile'
 
 module Svn
-  module Util
+  module Util #:nodoc:
     module_function
     def to_ruby_class_name(name)
       name.split("_").collect do |x|

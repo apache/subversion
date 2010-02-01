@@ -26,7 +26,7 @@ require "svn/error"
 require "svn/ext/core"
 
 class Time
-  MILLION = 1_000_000
+  MILLION = 1_000_000 #:nodoc:
 
   class << self
     def from_apr_time(apr_time)
