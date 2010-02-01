@@ -6577,7 +6577,7 @@ do_file_merge(const char *url1,
                                                          merges,
                                                          subpool));
               notify->merge_range = apr_pcalloc(subpool,
-                                                sizeof(svn_merge_range_t *));
+                                                sizeof(svn_merge_range_t));
               notify->merge_range->start = oldest_rev;
               notify->merge_range->end = youngest_rev;
               notify->merge_range->inheritable = TRUE;
