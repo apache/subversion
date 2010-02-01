@@ -332,6 +332,56 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
   return SVN_NO_ERROR;
 }
 
+struct do_wc_to_wc_moves_with_locks_baton {
+  svn_client_ctx_t *ctx;
+  svn_client__copy_pair_t *pair;
+  const char *dst_parent_abspath;
+  svn_boolean_t lock_src;
+  svn_boolean_t lock_dst;
+};
+
+/* The locked bit of do_wc_to_wc_moves. */
+static svn_error_t *
+do_wc_to_wc_moves_with_locks2(void *baton,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  struct do_wc_to_wc_moves_with_locks_baton *b = baton;
+  const char *dst_abspath;
+
+  dst_abspath = svn_dirent_join(b->dst_parent_abspath, b->pair->base_name,
+                                scratch_pool);
+
+  SVN_ERR(svn_wc_copy3(b->ctx->wc_ctx, b->pair->src_abs, dst_abspath,
+                       b->ctx->cancel_func, b->ctx->cancel_baton,
+                       b->ctx->notify_func2, b->ctx->notify_baton2,
+                       scratch_pool));
+
+  SVN_ERR(svn_wc_delete4(b->ctx->wc_ctx, b->pair->src_abs, FALSE, FALSE,
+                         b->ctx->cancel_func, b->ctx->cancel_baton,
+                         b->ctx->notify_func2, b->ctx->notify_baton2,
+                         scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Wrapper to add an optional second lock */
+static svn_error_t *
+do_wc_to_wc_moves_with_locks1(void *baton,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  struct do_wc_to_wc_moves_with_locks_baton *b = baton;
+
+  if (b->lock_dst)
+    SVN_ERR(svn_wc__call_with_write_lock(do_wc_to_wc_moves_with_locks2, b,
+                                         b->ctx->wc_ctx, b->dst_parent_abspath,
+                                         result_pool, scratch_pool));
+  else
+    SVN_ERR(do_wc_to_wc_moves_with_locks2(b, result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* Move each COPY_PAIR->SRC into COPY_PAIR->DST, deleting COPY_PAIR->SRC
    afterwards.  Use POOL for temporary allocations. */
@@ -347,14 +397,10 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      svn_wc_adm_access_t *src_access;
-      svn_wc_adm_access_t *dst_access;
-      svn_boolean_t close_dst_access = FALSE;
-      svn_boolean_t close_src_access = FALSE;
       const char *src_parent;
       const char *src_parent_abspath;
-      const char *dst_abspath;
       const char *dst_parent_abspath;
+      struct do_wc_to_wc_moves_with_locks_baton baton;
 
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
@@ -370,77 +416,46 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
       SVN_ERR(svn_dirent_get_absolute(&dst_parent_abspath, pair->dst_parent,
                                       iterpool));
 
-      /* We now need to open the right combination of batons.
+      SVN_ERR(svn_dirent_get_absolute(&pair->src_abs, pair->src, pool));
+
+      /* We now need to lock the right combination of batons.
          Four cases:
            1) src_parent == dst_parent
            2) src_parent is parent of dst_parent
            3) dst_parent is parent of src_parent
-           4) src_parent and dst_parent are disjoint */
-      if (strcmp(src_parent_abspath, dst_parent_abspath) == 0)
+           4) src_parent and dst_parent are disjoint
+         We can handle 1) as either 2) or 3) */
+      if (strcmp(src_parent_abspath, dst_parent_abspath) == 0
+          || svn_dirent_is_child(src_parent_abspath, dst_parent_abspath,
+                                 iterpool))
         {
-          SVN_ERR(svn_wc__adm_open_in_context(&src_access, ctx->wc_ctx,
-                                              src_parent, TRUE, -1,
-                                              ctx->cancel_func,
-                                              ctx->cancel_baton, iterpool));
-          dst_access = src_access;
-          close_src_access = TRUE;
-        }
-      else if (svn_dirent_is_child(src_parent_abspath, dst_parent_abspath,
-                                   iterpool))
-        {
-          SVN_ERR(svn_wc__adm_open_in_context(&src_access, ctx->wc_ctx,
-                                              src_parent, TRUE, -1,
-                                              ctx->cancel_func,
-                                              ctx->cancel_baton, iterpool));
-          SVN_ERR(svn_wc_adm_retrieve(&dst_access, src_access,
-                                      pair->dst_parent, iterpool));
-          close_src_access = TRUE;
+          baton.lock_src = TRUE;
+          baton.lock_dst = FALSE;
         }
       else if (svn_dirent_is_child(dst_parent_abspath, src_parent_abspath,
                                    iterpool))
         {
-          SVN_ERR(svn_wc__adm_open_in_context(&dst_access, ctx->wc_ctx,
-                                              pair->dst_parent, TRUE, -1,
-                                              ctx->cancel_func,
-                                              ctx->cancel_baton, iterpool));
-          SVN_ERR(svn_wc_adm_retrieve(&src_access, dst_access, src_parent,
-                                      iterpool));
-          close_dst_access = TRUE;
+          baton.lock_src = FALSE;
+          baton.lock_dst = TRUE;
         }
       else
         {
-          SVN_ERR(svn_wc__adm_open_in_context(&src_access, ctx->wc_ctx,
-                                              src_parent, TRUE, -1,
-                                              ctx->cancel_func,
-                                              ctx->cancel_baton, iterpool));
-          SVN_ERR(svn_wc__adm_open_in_context(&dst_access, ctx->wc_ctx,
-                                              pair->dst_parent, TRUE, -1,
-                                              ctx->cancel_func,
-                                              ctx->cancel_baton, iterpool));
-          close_dst_access = TRUE;
-          close_src_access = TRUE;
+          baton.lock_src = TRUE;
+          baton.lock_dst = TRUE;
         }
 
       /* Perform the copy and then the delete. */
-      SVN_ERR(svn_dirent_get_absolute(&pair->src_abs, pair->src, pool));
-      dst_abspath = svn_dirent_join(dst_parent_abspath, pair->base_name,
-                                    iterpool);
-      err = svn_wc_copy3(ctx->wc_ctx, pair->src_abs, dst_abspath,
-                         ctx->cancel_func, ctx->cancel_baton,
-                         ctx->notify_func2, ctx->notify_baton2, iterpool);
-      if (err)
-        break;
+      baton.ctx = ctx;
+      baton.pair = pair;
+      baton.dst_parent_abspath = dst_parent_abspath;
+      if (baton.lock_src)
+        SVN_ERR(svn_wc__call_with_write_lock(do_wc_to_wc_moves_with_locks1,
+                                             &baton,
+                                             ctx->wc_ctx, src_parent_abspath,
+                                             iterpool, iterpool));
+      else
+        SVN_ERR(do_wc_to_wc_moves_with_locks1(&baton, iterpool, iterpool));
 
-      /* Perform the delete. */
-      SVN_ERR(svn_wc_delete4(ctx->wc_ctx, pair->src_abs, FALSE, FALSE,
-                             ctx->cancel_func, ctx->cancel_baton,
-                             ctx->notify_func2, ctx->notify_baton2,
-                             iterpool));
-
-      if (close_dst_access)
-        SVN_ERR(svn_wc_adm_close2(dst_access, iterpool));
-      if (close_src_access)
-        SVN_ERR(svn_wc_adm_close2(src_access, iterpool));
     }
   svn_pool_destroy(iterpool);
 
