@@ -1087,10 +1087,15 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
    RAS->capabilities with the server's capabilities as read from the
    response headers.  Use POOL only for temporary allocation.
 
-   NOTE:  This function also expects the server to announce the
+   If the server is kind enough to tell us the current youngest
+   revision of the target repository, set *YOUNGEST_REV to that value;
+   set it to SVN_INVALID_REVNUM otherwise.
+ 
+  NOTE:  This function also expects the server to announce the
    activity collection.  */
 svn_error_t *
 svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
+                                   svn_revnum_t *youngest_rev,
                                    apr_pool_t *pool);
 
 /*

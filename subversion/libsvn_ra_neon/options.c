@@ -128,13 +128,20 @@ static const char *capability_server_yes = "server-yes";
 
 /* Store in RAS the capabilities and other interesting tidbits of
    information discovered from REQ's headers.  Use POOL for temporary
-   allocation only. */
+   allocation only.
+
+   Also, set *YOUNGEST_REV to the current youngest revision if we can
+   detect that from the OPTIONS exchange; set it to SVN_INVALID_REVNUM
+   otherwise.  */
 static void
 parse_capabilities(ne_request *req,
                    svn_ra_neon__session_t *ras,
+                   svn_revnum_t *youngest_rev,
                    apr_pool_t *pool)
 {
   const char *val;
+
+  *youngest_rev = SVN_INVALID_REVNUM;
 
   /* Start out assuming all capabilities are unsupported. */
   apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
@@ -197,11 +204,10 @@ parse_capabilities(ne_request *req,
     }
 
   /* Not strictly capabilities, but while we're here, we might as well... */
-#if 0
   if ((val = ne_get_response_header(req, SVN_DAV_YOUNGEST_REV_HEADER)))
     {
+      *youngest_rev = SVN_STR_TO_REV(val);
     }
-#endif
   if ((val = ne_get_response_header(req, SVN_DAV_REPOS_UUID_HEADER)))
     {
       ras->uuid = apr_pstrdup(ras->pool, val);
@@ -243,6 +249,7 @@ parse_capabilities(ne_request *req,
 
 svn_error_t *
 svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
+                                   svn_revnum_t *youngest_rev,
                                    apr_pool_t *pool)
 {
   svn_ra_neon__request_t* req;
@@ -254,6 +261,8 @@ svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
 
   oc.pool = pool;
   oc.cdata = svn_stringbuf_create("", pool);
+
+  *youngest_rev = SVN_INVALID_REVNUM;
 
   req = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
 
@@ -298,7 +307,7 @@ svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
     }
 
   ras->act_coll = apr_pstrdup(ras->pool, oc.activity_coll->data);
-  parse_capabilities(req->ne_req, ras, pool);
+  parse_capabilities(req->ne_req, ras, youngest_rev, pool);
 
  cleanup:
   svn_ra_neon__request_destroy(req);
@@ -312,8 +321,9 @@ svn_ra_neon__get_activity_collection(const svn_string_t **activity_coll,
                                      svn_ra_neon__session_t *ras,
                                      apr_pool_t *pool)
 {
+  svn_revnum_t ignored_revnum;
   if (! ras->act_coll)
-    SVN_ERR(svn_ra_neon__exchange_capabilities(ras, pool));
+    SVN_ERR(svn_ra_neon__exchange_capabilities(ras, &ignored_revnum, pool));
   *activity_coll = svn_string_create(ras->act_coll, pool);
   return SVN_NO_ERROR;
 }
@@ -341,7 +351,10 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
 
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
-    SVN_ERR(svn_ra_neon__exchange_capabilities(ras, pool));
+    {
+      svn_revnum_t ignored_revnum;
+      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, &ignored_revnum, pool));
+    }
 
 
   /* Try again, now that we've fetched the capabilities. */
