@@ -470,7 +470,7 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
 
   /* This routine automatically fills in serf_sess->capabilities */
   svn_ra_serf__create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0],
-                                  serf_sess->repos_url_str, pool);
+                                  serf_sess->repos_url.path, pool);
 
   SVN_ERR(svn_ra_serf__context_run_wait(
     svn_ra_serf__get_options_done_ptr(opt_ctx), serf_sess, pool));
