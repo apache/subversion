@@ -1059,6 +1059,7 @@ def patch_with_fuzz(sbox):
     "    SERIAL NUMBER: 45327\n",
     "and PROMOTION DATE: 13th June. 2009\n",
     "\n",
+    "This line is inserted to cause an offset of +1\n",
     "To claim your winning prize, you are to contact the appointed\n",
     "agent below as soon as possible for the immediate release of your\n",
     "winnings with the below details.\n",
@@ -1131,6 +1132,7 @@ def patch_with_fuzz(sbox):
     "    SERIAL NUMBER: 45327\n",
     "and PROMOTION DATE: 13th June. 2009\n",
     "\n",
+    "This line is inserted to cause an offset of +1\n",
     "To claim your winning prize, you are to contact the appointed\n",
     "agent below as soon as possible for the immediate release of your\n",
     "winnings with the below details.\n",
@@ -1142,6 +1144,9 @@ def patch_with_fuzz(sbox):
 
   expected_output = [
     'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    '>         applied hunk @@ -1,6 +1,7 @@ with fuzz 1\n',
+    '>         applied hunk @@ -7,6 +8,7 @@ with fuzz 2\n',
+    '>         applied hunk @@ -19,6 +20,7 @@ with offset 1 and fuzz 2\n',
   ]
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', contents=''.join(mu_contents))
