@@ -504,14 +504,13 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 {
   serf_bucket_t *hdrs_bkt;
 
+  /* Create a request bucket.  Note that this sucker is kind enough to
+     add a "Host" header for us.  */
   *req_bkt =
     serf_request_bucket_request_create(request, method, url, body_bkt,
                                        serf_request_get_alloc(request));
 
   hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
-#if ! SERF_VERSION_AT_LEAST(0, 4, 0)
-  serf_bucket_headers_setn(hdrs_bkt, "Host", conn->hostinfo);
-#endif
   serf_bucket_headers_setn(hdrs_bkt, "User-Agent", conn->useragent);
 
   if (content_type)
