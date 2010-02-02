@@ -1248,6 +1248,10 @@ typedef struct svn_wc_notify_t {
    * @since New in 1.7. */
   svn_linenum_t hunk_matched_line;
 
+  /* The fuzz factor the hunk is applied with. 
+   * @since New in 1.7 */
+  svn_linenum_t hunk_fuzz;
+
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */

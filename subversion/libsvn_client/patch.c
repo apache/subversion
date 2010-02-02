@@ -1018,6 +1018,7 @@ maybe_send_patch_notification(const patch_target_t *target,
           notify->hunk_modified_start = hi->hunk->modified_start;
           notify->hunk_modified_length = hi->hunk->modified_length;
           notify->hunk_matched_line = hi->matched_line;
+          notify->hunk_fuzz = hi->fuzz;
 
           (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
         }
