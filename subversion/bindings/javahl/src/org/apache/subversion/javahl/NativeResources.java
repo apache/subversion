@@ -27,7 +27,7 @@ package org.apache.subversion.javahl;
  * Handles activities related to management of native resouces
  * (e.g. loading of native libraries).
  */
-public class NativeResources
+class NativeResources
 {
     /**
      * Version information about the underlying native libraries.

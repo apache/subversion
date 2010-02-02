@@ -20,16 +20,16 @@
  * ====================================================================
  * @endcopyright
  *
- * @file org_apache_subversion_javahl_NativeResources.cpp
+ * @file org_tigris_subversion_javahl_NativeResources.cpp
  * @brief Implementation of the native methods in the Java class
  * NativeResources.
  */
 
 #include "JNIUtil.h"
-#include "../include/org_apache_subversion_javahl_NativeResources.h"
+#include "../include/org_tigris_subversion_javahl_NativeResources.h"
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_NativeResources_initNativeLibrary
+Java_org_tigris_subversion_javahl_NativeResources_initNativeLibrary
 (JNIEnv *env, jclass jclazz)
 {
   // No usual JNIEntry here, as the prerequisite native library

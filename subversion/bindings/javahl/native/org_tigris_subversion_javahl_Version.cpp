@@ -20,37 +20,37 @@
  * ====================================================================
  * @endcopyright
  *
- * @file org_apache_subversion_javahl_Version.cpp
+ * @file org_tigris_subversion_javahl_Version.cpp
  * @brief Implementation of the native methods in the Java class Version.
  */
 
-#include "../include/org_apache_subversion_javahl_Version.h"
+#include "../include/org_tigris_subversion_javahl_Version.h"
 #include "JNIStackElement.h"
 #include "svn_version.h"
 
 JNIEXPORT jint JNICALL
-Java_org_apache_subversion_javahl_Version_getMajor(JNIEnv *env, jobject jthis)
+Java_org_tigris_subversion_javahl_Version_getMajor(JNIEnv *env, jobject jthis)
 {
   JNIEntry(Version, getMajor);
   return SVN_VER_MAJOR;
 }
 
 JNIEXPORT jint JNICALL
-Java_org_apache_subversion_javahl_Version_getMinor(JNIEnv *env, jobject jthis)
+Java_org_tigris_subversion_javahl_Version_getMinor(JNIEnv *env, jobject jthis)
 {
   JNIEntry(Version, getMinor);
   return SVN_VER_MINOR;
 }
 
 JNIEXPORT jint JNICALL
-Java_org_apache_subversion_javahl_Version_getPatch(JNIEnv *env, jobject jthis)
+Java_org_tigris_subversion_javahl_Version_getPatch(JNIEnv *env, jobject jthis)
 {
   JNIEntry(Version, getPatch);
   return SVN_VER_PATCH;
 }
 
 JNIEXPORT jstring JNICALL
-Java_org_apache_subversion_javahl_Version_getTag(JNIEnv *env, jobject jthis)
+Java_org_tigris_subversion_javahl_Version_getTag(JNIEnv *env, jobject jthis)
 {
   JNIEntry(Version, getTag);
   jstring tag = JNIUtil::makeJString(SVN_VER_TAG);
@@ -61,7 +61,7 @@ Java_org_apache_subversion_javahl_Version_getTag(JNIEnv *env, jobject jthis)
 }
 
 JNIEXPORT jstring JNICALL
-Java_org_apache_subversion_javahl_Version_getNumberTag(JNIEnv *env,
+Java_org_tigris_subversion_javahl_Version_getNumberTag(JNIEnv *env,
                                                        jobject jthis)
 {
   JNIEntry(Version, getNumberTag);
