@@ -92,7 +92,7 @@ svn_cl__obliterate(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  struct notify_baton *nb = { FALSE };
+  struct notify_baton nb = { FALSE };
   svn_opt_revision_t rev;
   svn_revnum_t revnum;
   const char *url;
@@ -103,7 +103,7 @@ svn_cl__obliterate(apr_getopt_t *os,
                                                       ctx, pool));
 
   ctx->notify_func2 = notify;
-  ctx->notify_baton2 = nb;
+  ctx->notify_baton2 = &nb;
 
   /* Parse the argument into TRUEPATH and REVNUM. */
   if (targets->nelts != 1)
