@@ -44,8 +44,87 @@ def usage_and_exit(msg):
   sys.exit(1)
 
 
-def main(input, output, filename):
-  input = input.read()
+class Processor(object):
+  re_comments = re.compile(r'/\*.*?\*/', re.MULTILINE|re.DOTALL)
+
+  # a few SQL comments that act as directives for this transform system
+  re_format = re.compile('-- *format: *([0-9]+)')
+  re_statement = re.compile('-- *STMT_([A-Z_]+)')
+  re_include = re.compile('-- *include: *([-a-z]+)')
+
+  def __init__(self, dirpath, output, var_name):
+    self.dirpath = dirpath
+    self.output = output
+    self.var_name = var_name
+
+    self.stmt_count = 0
+    self.var_printed = False
+
+  def process_file(self, input):
+    input = self.re_comments.sub('', input)
+
+    for line in input.split('\n'):
+      line = line.replace('"', '\\"')
+
+      if line.strip():
+        match = self.re_format.match(line)
+        if match:
+          vsn = match.group(1)
+
+          self.close_define()
+          self.output.write('#define %s_%s \\\n' % (self.var_name,
+                                                    match.group(1)))
+          self.var_printed = True
+
+          # no need to put the directive into the file. skip this line.
+          continue
+
+        match = self.re_statement.match(line)
+        if match:
+          name = match.group(1)
+
+          self.close_define()
+          self.output.write('#define STMT_%s %d\n' % (match.group(1),
+                                                      self.stmt_count))
+          self.output.write('#define STMT_%d \\\n' % (self.stmt_count,))
+          self.var_printed = True
+
+          self.stmt_count += 1
+
+          # no need to put the directive into the file. skip this line.
+          continue
+
+        match = self.re_include.match(line)
+        if match:
+          filepath = os.path.join(self.dirpath, match.group(1) + '.sql')
+
+          self.close_define()
+          self.process_file(open(filepath).read())
+
+          # no need to put the directive into the file. skip this line.
+          continue
+
+        if not self.var_printed:
+          self.output.write('#define %s \\\n' % self.var_name)
+          self.var_printed = True
+
+        # got something besides whitespace. write it out. include some whitespace
+        # to separate the SQL commands. and a backslash to continue the string
+        # onto the next line.
+        self.output.write('  "%s " \\\n' % line)
+
+    # previous line had a continuation. end the madness.
+    self.close_define()
+
+  def close_define(self):
+    if self.var_printed:
+      self.output.write(DEFINE_END)
+      self.var_printed = False
+
+
+def main(input_filepath, output):
+  filename = os.path.basename(input_filepath)
+  input = open(input_filepath, 'r').read()
 
   var_name = re.sub('[-.]', '_', filename).upper()
 
@@ -55,71 +134,20 @@ def main(input, output, filename):
     '\n'
     % (filename,))
 
-  var_printed = False
-  stmt_count = 0
-
-  # only used once, but we need the flags. so re.compile it is!
-  re_comments = re.compile(r'/\*.*?\*/', re.MULTILINE|re.DOTALL)
-  input = re_comments.sub('', input)
-
-  # a couple SQL comments that act as directives for this transform system
-  re_format = re.compile('-- *format: *([0-9]+)')
-  re_statement = re.compile('-- *STMT_([A-Z_]+)')
-
-  for line in input.split('\n'):
-    line = line.replace('"', '\\"')
-
-    if line.strip():
-      match = re_format.match(line)
-      if match:
-        vsn = match.group(1)
-        if var_printed:
-          # end the previous #define
-          output.write(DEFINE_END)
-        output.write('#define %s_%s \\\n' % (var_name, match.group(1)))
-        var_printed = True
-
-        # no need to put the directive into the file. skip this line.
-        continue
-
-      match = re_statement.match(line)
-      if match:
-        name = match.group(1)
-        if var_printed:
-          # end the previous #define
-          output.write(DEFINE_END)
-        output.write('#define STMT_%s %d\n' % (match.group(1), stmt_count))
-        output.write('#define STMT_%d \\\n' % (stmt_count,))
-        var_printed = True
-
-        stmt_count += 1
-
-        # no need to put the directive into the file. skip this line.
-        continue
-
-      if not var_printed:
-        output.write('#define %s \\\n' % var_name)
-        var_printed = True
-
-      # got something besides whitespace. write it out. include some whitespace
-      # to separate the SQL commands. and a backslash to continue the string
-      # onto the next line.
-      output.write('  "%s " \\\n' % line)
-
-  # previous line had a continuation. end the madness.
-  assert var_printed
-  output.write(DEFINE_END)
+  proc = Processor(os.path.dirname(input_filepath), output, var_name)
+  proc.process_file(input)
 
   ### the STMT_%d naming precludes *multiple* transform_sql headers from
   ### being used within the same .c file. for now, that's more than fine.
   ### in the future, we can always add a var_name discriminator or use
   ### the statement name itself (which should hopefully be unique across
   ### all names in use; or can easily be made so)
-  if stmt_count > 0:
-    output.write('#define %s_DECLARE_STATEMENTS(varname) \\\n' % (var_name,)
-                 + '  static const char * const varname[] = { \\\n'
-                 + ', \\\n'.join('    STMT_%d' % (i,) for i in range(stmt_count))
-                 + ', \\\n    NULL \\\n  }\n')
+  if proc.stmt_count > 0:
+    output.write(
+      '#define %s_DECLARE_STATEMENTS(varname) \\\n' % (var_name,)
+      + '  static const char * const varname[] = { \\\n'
+      + ', \\\n'.join('    STMT_%d' % (i,) for i in range(proc.stmt_count))
+      + ', \\\n    NULL \\\n  }\n')
 
 
 if __name__ == '__main__':
@@ -127,11 +155,11 @@ if __name__ == '__main__':
     usage_and_exit('Incorrect number of arguments')
 
   # Note: we could use stdin, but then we'd have no var_name
-  input_file = open(sys.argv[1], 'r')
+  input_filepath = sys.argv[1]
 
   if len(sys.argv) > 2:
     output_file = open(sys.argv[2], 'w')
   else:
     output_file = sys.stdout
 
-  main(input_file, output_file, os.path.basename(sys.argv[1]))
+  main(input_filepath, output_file)
