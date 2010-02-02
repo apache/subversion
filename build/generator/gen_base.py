@@ -216,9 +216,7 @@ class GeneratorBase:
     import transform_sql
     for hdrfile, sqlfile in self.graph.get_deps(DT_SQLHDR):
       assert len(sqlfile) == 1
-      transform_sql.main(open(sqlfile[0], 'r'),
-                         open(hdrfile, 'w'),
-                         os.path.basename(sqlfile[0]))
+      transform_sql.main(sqlfile[0], open(hdrfile, 'w'))
 
 
 class DependencyGraph:
