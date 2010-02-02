@@ -214,8 +214,10 @@ Candidate changes:
     Issue #3561: Teach ra_serf the same out-of-date fix we taught ra_neon.
     Justification:
       Feature parity with ra_neon is goodness and fixes real-world issue.
+   Branch:
+     ^/subversion/branches/1.6.x-r905326
     Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, kameshj
 
 Veto-blocked changes:
 =====================
