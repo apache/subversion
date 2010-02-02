@@ -4864,6 +4864,76 @@ def update_deleted_locked_files(sbox):
                                         expected_disk,
                                         expected_status)
 
+#----------------------------------------------------------------------
+# Test for issue #3659 svn update --depth <DEPTH> allows making a working
+# copy incomplete.
+#
+# XFail until issue #3659 is fixed.  This test needs extension to map some
+# real use cases (all add operations are missing if a directory is updated
+# without its children.)
+def update_empty_hides_entries(sbox):
+  "svn up --depth empty hides entries for next update"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  expected_disk_empty = []
+  expected_status_empty = []
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Update to revision 0 - Removes all files from WC
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None,
+                                        expected_disk_empty,
+                                        expected_status_empty,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '-r', '0',
+                                        wc_dir)
+
+  # Now update back to HEAD
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        wc_dir)
+
+  # Update to revision 0 - Removes all files from WC
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None,
+                                        expected_disk_empty,
+                                        expected_status_empty,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '-r', '0',
+                                        wc_dir)
+
+  # Update the directory itself back to HEAD
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None,
+                                        expected_disk_empty,
+                                        expected_status_empty,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '--depth', 'empty',
+                                        wc_dir)
+
+  # Now update the rest back to head
+  
+  # This operation is currently a NO-OP, because the WC-Crawler
+  # tells the repository that it contains a full tree of the HEAD
+  # revision.
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        wc_dir)
+
 
 #######################################################################
 # Run the tests
@@ -4931,6 +5001,7 @@ test_list = [ None,
               set_deep_depth_on_target_with_shallow_children,
               update_wc_of_dir_to_rev_not_containing_this_dir,
               XFail(update_deleted_locked_files),
+              XFail(update_empty_hides_entries),
              ]
 
 if __name__ == '__main__':
