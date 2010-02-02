@@ -877,7 +877,7 @@ register_hooks(apr_pool_t *pconf)
                             NULL, AP_FTYPE_CONTENT_SET);
   ap_register_input_filter("IncomingRewrite", dav_svn__location_in_filter,
                            NULL, AP_FTYPE_CONTENT_SET);
-  ap_hook_fixups(dav_svn__proxy_merge_fixup, NULL, NULL, APR_HOOK_MIDDLE);
+  ap_hook_fixups(dav_svn__proxy_request_fixup, NULL, NULL, APR_HOOK_MIDDLE);
 }
 
 

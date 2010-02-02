@@ -54,7 +54,7 @@ static void proxy_request_fixup(request_rec *r,
 }
 
 
-int dav_svn__proxy_merge_fixup(request_rec *r)
+int dav_svn__proxy_request_fixup(request_rec *r)
 {
     const char *root_dir, *master_uri, *special_uri;
 
