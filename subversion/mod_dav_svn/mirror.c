@@ -73,18 +73,21 @@ int dav_svn__proxy_request_fixup(request_rec *r)
 
         /* These are read-only requests -- the kind we like to handle
            ourselves -- but we need to make sure they aren't aimed at
-           working resource URIs before trying to field them.  Why?
-           Because working resource URIs are modeled in Subversion
-           using uncommitted Subversion transactions -- stuff our copy
-           of the repository isn't guaranteed to have on hand. */
+           resources that only exist on the master server such as
+           working resource URIs or the HTTPv2 transaction root and
+           transaction tree resouces. */
         if (r->method_number == M_PROPFIND ||
             r->method_number == M_GET) {
-            seg = ap_strstr(r->unparsed_uri, root_dir);
-            if (seg && ap_strstr_c(seg,
-                                   apr_pstrcat(r->pool, special_uri,
-                                               "/wrk/", NULL))) {
-                seg += strlen(root_dir);
-                proxy_request_fixup(r, master_uri, seg);
+            if ((seg = ap_strstr(r->unparsed_uri, root_dir))) {
+                if (ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
+                                                 "/wrk/", NULL))
+                    || ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
+                                                    "/txn/", NULL))
+                    || ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
+                                                    "/txr/", NULL))) {
+                    seg += strlen(root_dir);
+                    proxy_request_fixup(r, master_uri, seg);
+                }
             }
             return OK;
         }
