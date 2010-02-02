@@ -35,10 +35,6 @@
 /* A few magic values */
 #define REP_CACHE_SCHEMA_FORMAT   1
 
-static const char * const upgrade_sql[] = { NULL,
-  REP_CACHE_DB_SQL
-  };
-
 REP_CACHE_DB_SQL_DECLARE_STATEMENTS(statements);
 
 
@@ -48,6 +44,7 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *db_path;
+  int version;
 
   /* Be idempotent. */
   if (ffd->rep_cache_db)
@@ -58,8 +55,17 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
   db_path = svn_dirent_join(fs->path, REP_CACHE_DB_NAME, pool);
   SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
                            svn_sqlite__mode_rwcreate, statements,
-                           REP_CACHE_SCHEMA_FORMAT, upgrade_sql,
+                           0, NULL,
                            fs->pool, pool));
+
+  SVN_ERR(svn_sqlite__read_schema_version(&version, ffd->rep_cache_db, pool));
+  if (version < REP_CACHE_SCHEMA_FORMAT)
+    {
+      /* Must be 0 -- an uninitialized (no schema) database. Create
+         the schema. Results in schema version of 1.  */
+      SVN_ERR(svn_sqlite__exec_statements(ffd->rep_cache_db,
+                                          STMT_CREATE_SCHEMA));
+    }
 
   return SVN_NO_ERROR;
 }

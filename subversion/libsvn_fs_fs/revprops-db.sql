@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+-- STMT_CREATE_SCHEMA
 pragma auto_vacuum = 1;
 
 /* A table for storing revision properties. */
@@ -28,6 +29,9 @@ create table revprop (revision integer UNIQUE not null,
                       properties BLOB not null);
 
 create index i_revision on revprop (revision);
+
+pragma user_version = 1;
+
 
 -- STMT_SET_REVPROP
 insert or replace into revprop(revision, properties)

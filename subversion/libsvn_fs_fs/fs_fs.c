@@ -137,13 +137,7 @@ static txn_vtable_t txn_vtable = {
   svn_fs_fs__change_txn_props
 };
 
-#define REVPROPS_SCHEMA_FORMAT   1
-
 /* SQL bits for revprops. */
-static const char * const upgrade_sql[] = { NULL,
-  REVPROPS_DB_SQL
-  };
-
 REVPROPS_DB_SQL_DECLARE_STATEMENTS(statements);
 
 /* Declarations. */
@@ -1245,7 +1239,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
                                                     PATH_REVPROPS_DB,
                                                     NULL),
                                svn_sqlite__mode_readwrite, statements,
-                               REVPROPS_SCHEMA_FORMAT, upgrade_sql,
+                               0, NULL,
                                fs->pool, pool));
     }
 
@@ -1319,8 +1313,10 @@ upgrade_body(void *baton, apr_pool_t *pool)
                                                           PATH_REVPROPS_DB,
                                                           NULL),
                                svn_sqlite__mode_rwcreate, statements,
-                               REVPROPS_SCHEMA_FORMAT, upgrade_sql,
+                               0, NULL,
                                fs->pool, pool));
+      SVN_ERR(svn_sqlite__exec_statements(ffd->revprop_db,
+                                          STMT_CREATE_SCHEMA));
     }
 
   /* Bump the format file. */
@@ -6370,8 +6366,10 @@ svn_fs_fs__create(svn_fs_t *fs,
                                                     PATH_REVPROPS_DB,
                                                     NULL),
                                svn_sqlite__mode_rwcreate, statements,
-                               REVPROPS_SCHEMA_FORMAT, upgrade_sql,
+                               0, NULL,
                                fs->pool, pool));
+      SVN_ERR(svn_sqlite__exec_statements(ffd->revprop_db,
+                                          STMT_CREATE_SCHEMA));
     }
 
   /* Create the transaction directory. */

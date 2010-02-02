@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+-- STMT_CREATE_SCHEMA
 pragma auto_vacuum = 1;
 
 /* A table mapping representation hashes to locations in a rev file. */
@@ -29,6 +30,8 @@ create table rep_cache (hash text not null primary key,
                         offset integer not null,
                         size integer not null,
                         expanded_size integer not null);
+
+pragma user_version = 1;
 
 
 -- STMT_GET_REP
