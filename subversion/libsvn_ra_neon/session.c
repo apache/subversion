@@ -768,6 +768,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
   const char *useragent = NULL;
   const char *client_string = NULL;
+  svn_revnum_t ignored_revnum;
 
   if (callbacks->get_client_string)
     callbacks->get_client_string(callback_baton, &client_string, pool);
@@ -1046,7 +1047,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
   ne_set_progress(sess2, ra_neon_neonprogress, neonprogress_baton);
   session->priv = ras;
 
-  return svn_ra_neon__exchange_capabilities(ras, pool);
+  return svn_ra_neon__exchange_capabilities(ras, &ignored_revnum, pool);
 }
 
 

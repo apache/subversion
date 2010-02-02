@@ -1092,15 +1092,25 @@ svn_error_t *svn_ra_neon__get_latest_revnum(svn_ra_session_t *session,
 {
   svn_ra_neon__session_t *ras = session->priv;
 
-  /* ### should we perform an OPTIONS to validate the server we're about
-     ### to talk to? */
-
-  /* we don't need any of the baseline URLs and stuff, but this does
-     give us the latest revision number */
-  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, NULL, NULL, latest_revnum,
-                                         ras, ras->root.path,
-                                         SVN_INVALID_REVNUM, pool));
-
+  /* If we detected HTTPv2 support, we can fetch the youngest revision
+     from a quick OPTIONS request instead of via a batch of
+     PROPFINDs. */
+  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
+    {
+      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, latest_revnum, pool));
+      if (! SVN_IS_VALID_REVNUM(*latest_revnum))
+        return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                _("The OPTIONS response did not include "
+                                  "the youngest revision"));
+    }
+  else
+    {
+      /* We don't need any of the baseline URLs and stuff, but this
+         does give us the latest revision number.  */
+      SVN_ERR(svn_ra_neon__get_baseline_info(NULL, NULL, NULL, latest_revnum,
+                                             ras, ras->root.path,
+                                             SVN_INVALID_REVNUM, pool));
+    }
   SVN_ERR(svn_ra_neon__maybe_store_auth_info(ras, pool));
 
   return NULL;
