@@ -41,6 +41,48 @@
 /*** Code. ***/
 
 
+struct notify_baton
+{
+  svn_boolean_t had_print_error; /* Used to not keep printing error messages
+                                    when we've already had one print error. */
+};
+
+/* Implements 'svn_wc_notify_func2_t'. */
+static void
+notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
+{
+  struct notify_baton *nb = baton;
+  svn_error_t *err;
+
+  switch (n->action)
+    {
+    case svn_wc_notify_delete:
+      if ((err = svn_cmdline_printf(pool, _("Obliterate %8ld %s\n"),
+                                    n->revision, n->url)))
+        goto print_error;
+      break;
+
+    default:
+      SVN_ERR_MALFUNCTION_NO_RETURN();
+    }
+
+  if ((err = svn_cmdline_fflush(stdout)))
+    goto print_error;
+
+  return;
+
+ print_error:
+  /* If we had no errors before, print this error to stderr. Else, don't print
+     anything.  The user already knows there were some output errors,
+     so there is no point in flooding her with an error per notification. */
+  if (!nb->had_print_error)
+    {
+      nb->had_print_error = TRUE;
+      svn_handle_error2(err, stderr, FALSE, "svn: ");
+    }
+  svn_error_clear(err);
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__obliterate(apr_getopt_t *os,
@@ -50,6 +92,7 @@ svn_cl__obliterate(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
+  struct notify_baton *nb = { FALSE };
   svn_opt_revision_t rev;
   svn_revnum_t revnum;
   const char *url;
@@ -58,6 +101,9 @@ svn_cl__obliterate(apr_getopt_t *os,
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
                                                       ctx, pool));
+
+  ctx->notify_func2 = notify;
+  ctx->notify_baton2 = nb;
 
   /* Parse the argument into TRUEPATH and REVNUM. */
   if (targets->nelts != 1)
