@@ -702,13 +702,16 @@ def copy_delete_commit(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      B_path, B2_path)
 
-  # delete a file
+  # delete two files
+  lambda_path = os.path.join(wc_dir, 'A', 'B2', 'lambda')
   alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', alpha_path, lambda_path)
 
   # commit copied tree containing a deleted file
   expected_output = svntest.wc.State(wc_dir, {
     'A/B2' : Item(verb='Adding'),
+    'A/B2/lambda' : Item(verb='Deleting'),
     'A/B2/E/alpha' : Item(verb='Deleting'),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -4332,7 +4335,7 @@ test_list = [ None,
               no_wc_copy_overwrites,
               copy_modify_commit,
               copy_files_with_properties,
-              copy_delete_commit,
+              XFail(copy_delete_commit),
               mv_and_revert_directory,
               SkipUnless(copy_preserve_executable_bit, svntest.main.is_posix_os),
               wc_to_repos,
