@@ -4573,9 +4573,9 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
              (added) WORKING subtree was deleted.  This can occur
              during post-commit processing when the added parent that
              was in the WORKING tree has been moved to the BASE tree. */
-          if(work_del_abspath != NULL
-             && child_presence == svn_wc__db_status_not_present
-             && *work_del_abspath == NULL)
+          if (work_del_abspath != NULL
+              && child_presence == svn_wc__db_status_not_present
+              && *work_del_abspath == NULL)
             *work_del_abspath = apr_pstrdup(result_pool, child_abspath);
 
           /* If the child did not have a BASE node associated with it, then
