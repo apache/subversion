@@ -179,6 +179,14 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "[mode: daemon, listen-once]")},
 #endif
+    {"prefer-ipv6",      '6', 0,
+     N_("prefer IPv6 when resolving the listen hostname\n"
+        "                             "
+        "[IPv4 is preferred by default. Using IPv4 and IPv6\n"
+        "                             "
+        "at the same time is not supported in daemon mode.\n"
+        "                             "
+        "Use inetd mode or tunnel mode if you need this.]")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     /* ### Making the assumption here that WIN32 never has fork and so
      * ### this option never exists when --service exists. */
@@ -380,6 +388,8 @@ int main(int argc, const char *argv[])
   apr_uint16_t port = SVN_RA_SVN_PORT;
   const char *host = NULL;
   int family = APR_INET;
+  u_int32_t sockaddr_info_flags = 0;
+  svn_boolean_t prefer_v6 = FALSE;
   int mode_opt_count = 0;
   const char *config_filename = NULL;
   const char *pid_filename = NULL;
@@ -429,6 +439,10 @@ int main(int argc, const char *argv[])
         usage(argv[0], pool);
       switch (opt)
         {
+        case '6':
+          prefer_v6 = TRUE;
+          break;
+
         case 'h':
           help(pool);
           break;
@@ -677,10 +691,24 @@ int main(int argc, const char *argv[])
     {
       apr_socket_close(sock);
       family = APR_UNSPEC;
+
+      if (prefer_v6)
+        {
+          if (host == NULL)
+            host = "::";
+          sockaddr_info_flags = APR_IPV6_ADDR_OK;
+        }
+      else
+        {
+          if (host == NULL)
+            host = "0.0.0.0";
+          sockaddr_info_flags = APR_IPV4_ADDR_OK;
+        }
     }
 #endif
 
-  status = apr_sockaddr_info_get(&sa, host, family, port, 0, pool);
+  status = apr_sockaddr_info_get(&sa, host, family, port,
+                                 sockaddr_info_flags, pool);
   if (status)
     {
       err = svn_error_wrap_apr(status, _("Can't get address info"));
