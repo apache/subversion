@@ -879,7 +879,7 @@ int dav_svn__error_response_tag(request_rec *r, dav_error *err);
 /*** mirror.c ***/
 
 /* Perform the fixup hook for the R request.  */
-int dav_svn__proxy_merge_fixup(request_rec *r);
+int dav_svn__proxy_request_fixup(request_rec *r);
 
 /* An Apache input filter which rewrites the locations in headers and
    request body.  It reads from filter F using BB data, MODE mode, BLOCK
