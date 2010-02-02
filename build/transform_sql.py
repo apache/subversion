@@ -49,7 +49,7 @@ class Processor(object):
 
   # a few SQL comments that act as directives for this transform system
   re_format = re.compile('-- *format: *([0-9]+)')
-  re_statement = re.compile('-- *STMT_([A-Z_]+)')
+  re_statement = re.compile('-- *STMT_([A-Z_0-9]+)')
   re_include = re.compile('-- *include: *([-a-z]+)')
 
   def __init__(self, dirpath, output, var_name):
