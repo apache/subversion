@@ -1521,9 +1521,7 @@ class WinGeneratorBase(GeneratorBase):
       os.path.join('subversion', 'libsvn_wc', 'wc-checks'),
       ]
     for sql in sql_sources:
-      transform_sql.main(open(sql + '.sql', 'r'),
-                         open(sql + '.h', 'w'),
-                         os.path.basename(sql + '.sql'))
+      transform_sql.main(sql + '.sql', open(sql + '.h', 'w'))
 
 
 class ProjectItem:
