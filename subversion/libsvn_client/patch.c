@@ -1029,26 +1029,30 @@ send_patch_notification(const patch_target_t *target,
 
 /* Apply a PATCH to a working copy at ABS_WC_PATH and put the result
  * into temporary files, to be installed in the working copy later.
- * Return information about the patch target in *TARGET, allocated
+ * Return information about the patch target in *PATCH_TARGET, allocated
  * in RESULT_POOL. Use WC_CTX as the working copy context.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
  * Do temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
-apply_one_patch(patch_target_t **target, svn_patch_t *patch,
+apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                 const char *abs_wc_path, svn_wc_context_t *wc_ctx,
                 int strip_count, apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
+  patch_target_t *target;
   apr_pool_t *iterpool;
   int i;
   static const int MAX_FUZZ = 2;
 
-  SVN_ERR(init_patch_target(target, patch, abs_wc_path, wc_ctx, strip_count,
+  SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
                             result_pool, scratch_pool));
 
-  if ((*target)->skipped)
-    return SVN_NO_ERROR;
+  if (target->skipped)
+    {
+      *patch_target = target;
+      return SVN_NO_ERROR;
+    }
 
   iterpool = svn_pool_create(scratch_pool);
   /* Match hunks. */
@@ -1066,64 +1070,64 @@ apply_one_patch(patch_target_t **target, svn_patch_t *patch,
        * If no match is found initially, try with fuzz. */
       do 
         {
-          SVN_ERR(get_hunk_info(&hi, *target, hunk, fuzz,
+          SVN_ERR(get_hunk_info(&hi, target, hunk, fuzz,
                                 result_pool, iterpool));
           fuzz++;
         }
       while (hi->rejected && fuzz <= MAX_FUZZ);
 
-      APR_ARRAY_PUSH((*target)->hunks, hunk_info_t *) = hi;
+      APR_ARRAY_PUSH(target->hunks, hunk_info_t *) = hi;
     }
 
   /* Apply or reject hunks. */
-  for (i = 0; i < (*target)->hunks->nelts; i++)
+  for (i = 0; i < target->hunks->nelts; i++)
     {
       hunk_info_t *hi;
 
       svn_pool_clear(iterpool);
 
-      hi = APR_ARRAY_IDX((*target)->hunks, i, hunk_info_t *);
+      hi = APR_ARRAY_IDX(target->hunks, i, hunk_info_t *);
       if (hi->rejected)
-        SVN_ERR(reject_hunk(*target, hi, iterpool));
+        SVN_ERR(reject_hunk(target, hi, iterpool));
       else
-        SVN_ERR(apply_hunk(*target, hi, iterpool));
+        SVN_ERR(apply_hunk(target, hi, iterpool));
     }
   svn_pool_destroy(iterpool);
 
-  if ((*target)->kind == svn_node_file)
+  if (target->kind == svn_node_file)
     {
       /* Copy any remaining lines to target. */
-      SVN_ERR(copy_lines_to_target(*target, 0, scratch_pool));
-      if (! (*target)->eof)
+      SVN_ERR(copy_lines_to_target(target, 0, scratch_pool));
+      if (! target->eof)
         {
           /* We could not copy the entire target file to the temporary file,
            * and would truncate the target if we copied the temporary file
            * on top of it. Cancel any modifications to the target file and
            * report is as skipped. */
-          (*target)->modified = FALSE;
-          (*target)->skipped = TRUE;
+          target->modified = FALSE;
+          target->skipped = TRUE;
         }
     }
 
-  if (! (*target)->skipped)
+  if (! target->skipped)
     {
       apr_finfo_t working_file;
       apr_finfo_t patched_file;
 
       /* Close the streams of the target so that their content is
        * flushed to disk. This will also close underlying streams. */
-      if ((*target)->kind == svn_node_file)
-        SVN_ERR(svn_stream_close((*target)->stream));
-      SVN_ERR(svn_stream_close((*target)->patched));
-      SVN_ERR(svn_stream_close((*target)->reject));
+      if (target->kind == svn_node_file)
+        SVN_ERR(svn_stream_close(target->stream));
+      SVN_ERR(svn_stream_close(target->patched));
+      SVN_ERR(svn_stream_close(target->reject));
 
       /* Get sizes of the patched temporary file and the working file.
        * We'll need those to figure out whether we should delete the
        * patched file. */
-      SVN_ERR(svn_io_stat(&patched_file, (*target)->patched_path,
+      SVN_ERR(svn_io_stat(&patched_file, target->patched_path,
                           APR_FINFO_SIZE, scratch_pool));
-      if ((*target)->kind == svn_node_file)
-        SVN_ERR(svn_io_stat(&working_file, (*target)->abs_path,
+      if (target->kind == svn_node_file)
+        SVN_ERR(svn_io_stat(&working_file, target->abs_path,
                             APR_FINFO_SIZE, scratch_pool));
       else
         working_file.size = 0;
@@ -1136,18 +1140,19 @@ apply_one_patch(patch_target_t **target, svn_patch_t *patch,
            * meant to replace a file with an empty one, this may not
            * be desirable. But the deletion can easily be reverted and
            * creating an empty file manually is not exactly hard either. */
-          (*target)->deleted = ((*target)->kind == svn_node_file);
+          target->deleted = (target->kind == svn_node_file);
         }
       else if (working_file.size == 0 && patched_file.size == 0)
         {
           /* The target was empty or non-existent to begin with
            * and nothing has changed by patching.
            * Report this as skipped if it didn't exist. */
-          if ((*target)->kind != svn_node_file)
-            (*target)->skipped = TRUE;
+          if (target->kind != svn_node_file)
+            target->skipped = TRUE;
         }
     }
 
+  *patch_target = target;
   return SVN_NO_ERROR;
 }
 
