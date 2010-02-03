@@ -2167,6 +2167,24 @@ class DeepTreesTestCase:
 
   The expected_* and error_re_string arguments are described in functions
   run_and_verify_[update|switch|merge]
+  except expected_info, which is a dict that has path keys with values
+  that are dicts as passed to run_and_verify_info():
+    expected_info = {
+      'F/alpha' : {
+        'Revision' : '3',
+        'Tree conflict' : 
+          '^local delete, incoming edit upon update'
+          + ' Source  left: .file.*/F/alpha@2'
+          + ' Source right: .file.*/F/alpha@3$',
+      },
+      'DF/D1' : {
+        'Tree conflict' : 
+          '^local delete, incoming edit upon update'
+          + ' Source  left: .dir.*/DF/D1@2'
+          + ' Source right: .dir.*/DF/D1@3$',
+      },
+      ...
+    }
 
   Note: expected_skip is only used in merge, i.e. using
   deep_trees_run_tests_scheme_for_merge.
@@ -2176,7 +2194,8 @@ class DeepTreesTestCase:
                 expected_output = None, expected_disk = None,
                 expected_status = None, expected_skip = None,
                 error_re_string = None,
-                commit_block_string = ".*remains in conflict.*"):
+                commit_block_string = ".*remains in conflict.*",
+                expected_info = None):
     self.name = name
     self.local_action = local_action
     self.incoming_action = incoming_action
@@ -2186,6 +2205,7 @@ class DeepTreesTestCase:
     self.expected_skip = expected_skip
     self.error_re_string = error_re_string
     self.commit_block_string = commit_block_string
+    self.expected_info = expected_info
 
 
 
@@ -2314,6 +2334,11 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
                             error_re_string = test_case.error_re_string)
       if x_status:
         run_and_verify_unquiet_status(base, x_status)
+
+      x_info = test_case.expected_info or {}
+      for path in x_info:
+        run_and_verify_info([x_info[path]], j(base, path))
+
     except:
       print("ERROR IN: Tests scheme for update: "
           + "while verifying in '%s'" % test_case.name)
@@ -2549,6 +2574,10 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
       run_and_verify_switch(local, local, incoming, x_out, x_disk, None,
                             error_re_string = test_case.error_re_string)
       run_and_verify_unquiet_status(local, x_status)
+
+      x_info = test_case.expected_info or {}
+      for path in x_info:
+        run_and_verify_info([x_info[path]], j(local, path))
     except:
       print("ERROR IN: Tests scheme for switch: "
           + "while verifying in '%s'" % test_case.name)
