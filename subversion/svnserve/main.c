@@ -388,7 +388,7 @@ int main(int argc, const char *argv[])
   apr_uint16_t port = SVN_RA_SVN_PORT;
   const char *host = NULL;
   int family = APR_INET;
-  u_int32_t sockaddr_info_flags = 0;
+  apr_int32_t sockaddr_info_flags = 0;
   svn_boolean_t prefer_v6 = FALSE;
   int mode_opt_count = 0;
   const char *config_filename = NULL;
