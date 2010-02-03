@@ -6,6 +6,6 @@ under Contributor License Agreements to The Apache Software Foundation
 (http://www.apache.org/).  See the accompanying COMMITTERS file and the
 revision logs for an exact contribution history.
 
-Portions of the test suite for Subversion's Python bindings are
-Copyright 2005 Edgewall Software.  For more information, see
-http://svn.apache.org/repos/asf/subversion/trunk/subversion/bindings/swig/python/tests/LICENSE
+Portions of the test suite for Subversion's Python bindings are copyrighted
+by Edgewall Software, Jonas Borgström and Christopher Lenz.
+For more information, see LICENSE.
