@@ -1147,11 +1147,11 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
       if (! dry_run)
         {
           /* Schedule the target for deletion.  Suppress
-           * notification, we'll do it manually in a minute. */
+           * notification, we'll do it manually in a minute.
+           * Also suppress cancellation. */
           SVN_ERR(svn_wc_delete4(ctx->wc_ctx, target->abs_path,
                                  FALSE /* keep_local */, FALSE,
-                                 ctx->cancel_func, ctx->cancel_baton,
-                                 NULL, NULL, pool));
+                                 NULL, NULL, NULL, NULL, pool));
         }
     }
   else
