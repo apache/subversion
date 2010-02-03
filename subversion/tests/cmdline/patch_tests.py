@@ -872,7 +872,7 @@ def patch_add_new_dir(sbox):
     'A         %s\n' % os.path.join(wc_dir, 'X'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y', 'new'),
-    'Skipped missing target: \'%s\'\n' % A_C_Y_new_path,
+    'Skipped \'%s\'\n' % A_C_Y_new_path,
     'Summary of conflicts:\n',
     '  Skipped paths: 1\n',
   ]

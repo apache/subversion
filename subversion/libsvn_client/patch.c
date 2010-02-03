@@ -969,8 +969,8 @@ maybe_send_patch_notification(const patch_target_t *target,
 
   if (action == svn_wc_notify_skip)
     {
-      if (target->kind == svn_node_none ||
-          target->kind == svn_node_unknown)
+      if (target->parent_dir_exists &&
+          (target->kind == svn_node_none || target->kind == svn_node_unknown))
         notify->content_state = svn_wc_notify_state_missing;
       else if (target->kind == svn_node_dir)
         notify->content_state = svn_wc_notify_state_obstructed;
