@@ -845,8 +845,9 @@ def patch_add_new_dir(sbox):
   patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
 
   # The first diff is adding 'new' with two missing dirs. The second is 
-  # adding 'new' with one missing dir to a 'A' that is locally deleted. Should be
-  # skipped.
+  # adding 'new' with one missing dir to a 'A' that is locally deleted
+  # (should be skipped). The third is adding 'new' with a directory that
+  # is unversioned (should be skipped as well).
   unidiff_patch = [
     "Index: new\n",
     "===================================================================\n",
@@ -860,6 +861,12 @@ def patch_add_new_dir(sbox):
     "+++ A/C/Y/new\t(revision 0)\n",
     "@@ -0,0 +1 @@\n",
     "+new\n",
+    "Index: new\n",
+    "===================================================================\n",
+    "--- A/Z/new\t(revision 0)\n",
+    "+++ A/Z/new\t(revision 0)\n",
+    "@@ -0,0 +1 @@\n",
+    "+new\n",
   ]
 
   C_path = os.path.join(wc_dir, 'A', 'C')
@@ -868,17 +875,23 @@ def patch_add_new_dir(sbox):
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   A_C_Y_new_path = os.path.join(wc_dir, 'A', 'C', 'Y', 'new')
+  A_Z_new_path = os.path.join(wc_dir, 'A', 'Z', 'new')
   expected_output = [
     'A         %s\n' % os.path.join(wc_dir, 'X'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y'),
     'A         %s\n' % os.path.join(wc_dir, 'X', 'Y', 'new'),
     'Skipped \'%s\'\n' % A_C_Y_new_path,
+    'Skipped \'%s\'\n' % A_Z_new_path,
     'Summary of conflicts:\n',
-    '  Skipped paths: 1\n',
+    '  Skipped paths: 2\n',
   ]
+
+  # Create the unversioned obstructing directory
+  os.mkdir(os.path.dirname(A_Z_new_path))
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({'X/Y/new': Item(contents='new\n')})
+  expected_disk.add({'A/Z': Item()})
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({'X' : Item(status='A ', wc_rev=0)})
@@ -886,7 +899,8 @@ def patch_add_new_dir(sbox):
   expected_status.add({'X/Y/new' : Item(status='A ', wc_rev=0)})
   expected_status.add({'A/C' : Item(status='D ', wc_rev=1)})
 
-  expected_skip = wc.State('', {A_C_Y_new_path : Item()})
+  expected_skip = wc.State('', {A_C_Y_new_path : Item(),
+                                A_Z_new_path : Item() })
 
   svntest.actions.run_and_verify_patch(wc_dir, 
                                        os.path.abspath(patch_file_path),
