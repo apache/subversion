@@ -348,7 +348,7 @@ check_local_mods(svn_boolean_t *local_mods,
   return SVN_NO_ERROR;
 }
 
-/* Attempt to initialize a patch TARGET structure for a target file
+/* Attempt to initialize a *PATCH_TARGET structure for a target file
  * described by PATCH. Use working copy context WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
@@ -356,25 +356,24 @@ check_local_mods(svn_boolean_t *local_mods,
  * Else, set *target to NULL.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
-init_patch_target(patch_target_t **target,
+init_patch_target(patch_target_t **patch_target,
                   const svn_patch_t *patch,
                   const char *base_dir,
                   svn_wc_context_t *wc_ctx, int strip_count,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  patch_target_t *new_target;
+  patch_target_t *target;
 
-  *target = NULL;
-  new_target = apr_pcalloc(result_pool, sizeof(*new_target));
+  target = apr_pcalloc(result_pool, sizeof(*target));
 
-  SVN_ERR(resolve_target_path(new_target, patch->new_filename,
+  SVN_ERR(resolve_target_path(target, patch->new_filename,
                               base_dir, strip_count, wc_ctx,
                               result_pool, scratch_pool));
 
-  new_target->local_mods = FALSE;
-  new_target->executable = FALSE;
+  target->local_mods = FALSE;
+  target->executable = FALSE;
 
-  if (! new_target->skipped)
+  if (! target->skipped)
     {
       apr_hash_t *props;
       svn_string_t *keywords_val;
@@ -382,19 +381,19 @@ init_patch_target(patch_target_t **target,
       const char *diff_header;
       apr_size_t len;
 
-      new_target->eol_str = APR_EOL_STR;
-      new_target->keywords = NULL;
-      new_target->eol_style = svn_subst_eol_style_unknown;
+      target->eol_str = APR_EOL_STR;
+      target->keywords = NULL;
+      target->eol_style = svn_subst_eol_style_unknown;
 
-      if (new_target->kind == svn_node_file)
+      if (target->kind == svn_node_file)
         {
           /* Open the file. */ 
-          SVN_ERR(svn_io_file_open(&new_target->file, new_target->abs_path,
+          SVN_ERR(svn_io_file_open(&target->file, target->abs_path,
                                    APR_READ | APR_BINARY | APR_BUFFERED,
                                    APR_OS_DEFAULT, result_pool));
 
           /* Handle svn:keyword and svn:eol-style properties. */
-          SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, new_target->abs_path,
+          SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, target->abs_path,
                                     scratch_pool, scratch_pool));
           keywords_val = apr_hash_get(props, SVN_PROP_KEYWORDS,
                                       APR_HASH_KEY_STRING);
@@ -409,15 +408,15 @@ init_patch_target(patch_target_t **target,
               SVN_ERR(svn_wc__node_get_changed_info(&changed_rev,
                                                     &changed_date,
                                                     &author, wc_ctx,
-                                                    new_target->abs_path,
+                                                    target->abs_path,
                                                     scratch_pool,
                                                     scratch_pool));
               rev_str = apr_psprintf(scratch_pool, "%"SVN_REVNUM_T_FMT,
                                      changed_rev);
               SVN_ERR(svn_wc__node_get_url(&url, wc_ctx,
-                                           new_target->abs_path,
+                                           target->abs_path,
                                            scratch_pool, scratch_pool));
-              SVN_ERR(svn_subst_build_keywords2(&new_target->keywords,
+              SVN_ERR(svn_subst_build_keywords2(&target->keywords,
                                                 keywords_val->data,
                                                 rev_str, url, changed_date,
                                                 author, result_pool));
@@ -427,81 +426,82 @@ init_patch_target(patch_target_t **target,
                                        APR_HASH_KEY_STRING);
           if (eol_style_val)
             {
-              svn_subst_eol_style_from_value(&new_target->eol_style,
-                                             &new_target->eol_str,
+              svn_subst_eol_style_from_value(&target->eol_style,
+                                             &target->eol_str,
                                              eol_style_val->data);
             }
           else
             {
               /* Just use the first EOL sequence we can find in the file. */
-              SVN_ERR(svn_eol__detect_file_eol(&new_target->eol_str,
-                                               new_target->file, scratch_pool));
+              SVN_ERR(svn_eol__detect_file_eol(&target->eol_str,
+                                               target->file, scratch_pool));
               /* But don't enforce any particular EOL-style. */
-              new_target->eol_style = svn_subst_eol_style_none;
+              target->eol_style = svn_subst_eol_style_none;
             }
 
-          if (new_target->eol_str == NULL)
+          if (target->eol_str == NULL)
             {
               /* We couldn't figure out the target files's EOL scheme,
                * just use native EOL makers. */
-              new_target->eol_str = APR_EOL_STR;
-              new_target->eol_style = svn_subst_eol_style_native;
+              target->eol_str = APR_EOL_STR;
+              target->eol_style = svn_subst_eol_style_native;
             }
 
           /* Create a stream to read from the target. */
-          new_target->stream = svn_stream_from_aprfile2(new_target->file,
+          target->stream = svn_stream_from_aprfile2(target->file,
                                                         FALSE, result_pool);
 
           /* Also check the file for local mods and the Xbit. */
-          SVN_ERR(check_local_mods(&new_target->local_mods, wc_ctx,
-                                   new_target->abs_path, scratch_pool));
-          SVN_ERR(svn_io_is_file_executable(&new_target->executable,
-                                            new_target->abs_path,
+          SVN_ERR(check_local_mods(&target->local_mods, wc_ctx,
+                                   target->abs_path, scratch_pool));
+          SVN_ERR(svn_io_is_file_executable(&target->executable,
+                                            target->abs_path,
                                             scratch_pool));
         }
 
       /* Create a temporary file to write the patched result to.
        * Expand keywords in the patched file. */
-      SVN_ERR(svn_stream_open_unique(&new_target->patched_raw,
-                                     &new_target->patched_path, NULL,
+      SVN_ERR(svn_stream_open_unique(&target->patched_raw,
+                                     &target->patched_path, NULL,
                                      svn_io_file_del_on_pool_cleanup,
                                      result_pool, scratch_pool));
-      new_target->patched = svn_subst_stream_translated(
-                              new_target->patched_raw,
-                              new_target->eol_str,
-                              new_target->eol_style ==
+      target->patched = svn_subst_stream_translated(
+                              target->patched_raw,
+                              target->eol_str,
+                              target->eol_style ==
                                 svn_subst_eol_style_fixed,
-                              new_target->keywords, TRUE, result_pool);
+                              target->keywords, TRUE, result_pool);
 
       /* We'll also need a stream to write rejected hunks to.
        * We don't expand keywords, nor normalise line-endings,
        * in reject files. */
-      SVN_ERR(svn_stream_open_unique(&new_target->reject,
-                                     &new_target->reject_path, NULL,
+      SVN_ERR(svn_stream_open_unique(&target->reject,
+                                     &target->reject_path, NULL,
                                      svn_io_file_del_on_pool_cleanup,
                                      result_pool, scratch_pool));
 
       /* The reject stream needs a diff header. */
       diff_header = apr_psprintf(scratch_pool, "--- %s%s+++ %s%s",
-                                 new_target->canon_path_from_patchfile,
+                                 target->canon_path_from_patchfile,
                                  APR_EOL_STR,
-                                 new_target->canon_path_from_patchfile,
+                                 target->canon_path_from_patchfile,
                                  APR_EOL_STR);
       len = strlen(diff_header);
-      SVN_ERR(svn_stream_write(new_target->reject, diff_header, &len));
+      SVN_ERR(svn_stream_write(target->reject, diff_header, &len));
     }
 
-  new_target->patch = patch;
-  new_target->current_line = 1;
-  new_target->modified = FALSE;
-  new_target->had_rejects = FALSE;
-  new_target->deleted = FALSE;
-  new_target->eof = FALSE;
-  new_target->pool = result_pool;
-  new_target->lines = apr_array_make(result_pool, 0,
-                                     sizeof(svn_stream_mark_t *));
-  new_target->hunks = apr_array_make(result_pool, 0, sizeof(hunk_info_t *));
-  *target = new_target;
+  target->patch = patch;
+  target->current_line = 1;
+  target->modified = FALSE;
+  target->had_rejects = FALSE;
+  target->deleted = FALSE;
+  target->eof = FALSE;
+  target->pool = result_pool;
+  target->lines = apr_array_make(result_pool, 0,
+                                 sizeof(svn_stream_mark_t *));
+  target->hunks = apr_array_make(result_pool, 0, sizeof(hunk_info_t *));
+
+  *patch_target = target;
   return SVN_NO_ERROR;
 }
 
