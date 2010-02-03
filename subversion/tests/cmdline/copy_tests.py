@@ -4335,7 +4335,7 @@ test_list = [ None,
               no_wc_copy_overwrites,
               copy_modify_commit,
               copy_files_with_properties,
-              XFail(copy_delete_commit),
+              copy_delete_commit,
               mv_and_revert_directory,
               SkipUnless(copy_preserve_executable_bit, svntest.main.is_posix_os),
               wc_to_repos,
@@ -4409,7 +4409,7 @@ test_list = [ None,
               commit_copy_depth_empty,
               copy_below_copy,
               XFail(move_below_move),
-              XFail(reverse_merge_move),
+              reverse_merge_move,
              ]
 
 if __name__ == '__main__':

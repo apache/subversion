@@ -929,25 +929,26 @@ run_deletion_postcommit(svn_wc__db_t *db,
                                     scratch_pool));
         }
 
-      /* Remember the repository this node is associated with.  */
-      SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
-                                         &repos_uuid,
-                                         db, local_abspath,
-                                         scratch_pool, scratch_pool));
-
-      /* Else, we're deleting a file, and we can safely remove files
-         from revision control without screwing something else up.  */
-      SVN_ERR(svn_wc__internal_remove_from_revision_control(
-                db, local_abspath,
-                FALSE, FALSE, cancel_func, cancel_baton, scratch_pool));
-
-      /* If the parent entry's working rev 'lags' behind new_rev... */
+      /* Get hold of repository info, if we are going to need it,
+         before deleting the file, */
       SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &parent_revision, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL,
                                        db, svn_dirent_dirname(local_abspath,
                                                               scratch_pool),
                                        scratch_pool, scratch_pool));
+      if (new_revision > parent_revision)
+        SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                           &repos_uuid, db, local_abspath,
+                                           scratch_pool, scratch_pool));
+
+      /* We're deleting a file, and we can safely remove files from
+         revision control without screwing something else up.  */
+      SVN_ERR(svn_wc__internal_remove_from_revision_control(
+                db, local_abspath,
+                FALSE, FALSE, cancel_func, cancel_baton, scratch_pool));
+
+      /* If the parent entry's working rev 'lags' behind new_rev... */
       if (new_revision > parent_revision)
         {
           /* ...then the parent's revision is now officially a

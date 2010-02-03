@@ -276,6 +276,7 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
       const char *work_del_abspath;
       const char *parent_repos_relpath;
       const char *parent_abspath;
+      svn_wc__db_status_t parent_status;
 
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
         return svn_error_return(err);
@@ -296,13 +297,25 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
       SVN_ERR_ASSERT(work_del_abspath != NULL);
       parent_abspath = svn_dirent_dirname(work_del_abspath, scratch_pool);
 
-      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
-                                       &parent_repos_relpath,
-                                       &entry->repos,
-                                       &entry->uuid,
-                                       NULL, NULL, NULL, NULL,
-                                       db, parent_abspath,
-                                       result_pool, scratch_pool));
+      /* During post-commit the parent that was previously added may
+         have been moved from the WORKING tree to the BASE tree.  */
+      SVN_ERR(svn_wc__db_read_info(&parent_status, NULL, NULL,
+                                   &parent_repos_relpath,
+                                   &entry->repos, &entry->uuid,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   db, parent_abspath,
+                                   scratch_pool, scratch_pool));
+      if (parent_status == svn_wc__db_status_added
+          || parent_status == svn_wc__db_status_obstructed_add)
+        SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
+                                         &parent_repos_relpath,
+                                         &entry->repos,
+                                         &entry->uuid,
+                                         NULL, NULL, NULL, NULL,
+                                         db, parent_abspath,
+                                         result_pool, scratch_pool));
 
       /* Now glue it all together */
       *repos_relpath = svn_relpath_join(
@@ -416,20 +429,30 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
           const char *parent_abspath;
           svn_wc__db_status_t parent_status;
 
-          /* We know the parent is in the WORKING tree (the topmost
-             node in a WORKING subtree cannot be deleted since you
-             would simply remove the whole subtree in that case).  */
+          /* The parent is in WORKING except during post-commit when
+             it may have been moved from the WORKING tree to the BASE
+             tree.  */
           parent_abspath = svn_dirent_dirname(work_del_abspath,
                                               scratch_pool);
-          SVN_ERR(svn_wc__db_scan_addition(&parent_status,
-                                           NULL,
-                                           NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL,
-                                           db,
-                                           parent_abspath,
-                                           scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_read_info(&parent_status,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       db, parent_abspath,
+                                       scratch_pool, scratch_pool));
+          if (parent_status == svn_wc__db_status_added
+              || parent_status == svn_wc__db_status_obstructed_add)
+            SVN_ERR(svn_wc__db_scan_addition(&parent_status,
+                                             NULL,
+                                             NULL, NULL, NULL,
+                                             NULL, NULL, NULL, NULL,
+                                             db,
+                                             parent_abspath,
+                                             scratch_pool, scratch_pool));
           if (parent_status == svn_wc__db_status_copied
-              || parent_status == svn_wc__db_status_moved_here)
+              || parent_status == svn_wc__db_status_moved_here
+              || parent_status == svn_wc__db_status_normal)
             {
               /* The parent is copied/moved here, so WORK_DEL_ABSPATH
                  is the root of a deleted subtree. Our COPIED status
@@ -444,7 +467,12 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
                  Note: MOVED_HERE is a concept foreign to this old
                  interface, but it is best represented as if a copy
                  had occurred, so we'll model it that way to old
-                 clients.  */
+                 clients.
+
+                 Note: svn_wc__db_status_normal corresponds to the
+                 post-commit parent that was copied or moved in
+                 WORKING but has now been converted to BASE.
+              */
               if (SVN_IS_VALID_REVNUM(entry->cmt_rev))
                 {
                   /* The scan_deletion call will tell us if there
