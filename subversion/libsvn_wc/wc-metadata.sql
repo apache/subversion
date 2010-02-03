@@ -38,8 +38,8 @@
  *   "base-deleted" -- node represents a delete of a BASE node
  */
 
-/* All the SQL below is for format 12: SVN_WC__WC_NG_VERSION  */
--- format: 12
+/* One big list of statements to create our (current) schema.  */
+-- STMT_CREATE_SCHEMA
 
 /* ------------------------------------------------------------------------- */
 
@@ -181,7 +181,9 @@ CREATE TABLE PRISTINE (
 
   /* ### this will probably go away, in favor of counting references
      ### that exist in BASE_NODE and WORKING_NODE. */
-  refcount  INTEGER NOT NULL
+  refcount  INTEGER NOT NULL,
+
+  md5_checksum  TEXT
   );
 
 
@@ -349,6 +351,15 @@ CREATE TABLE ACTUAL_NODE (
      removed in format 13, in favor of the CONFLICT_VICTIM table*/
   tree_conflict_data  TEXT,
 
+  /* A skel containing the conflict details.  */
+  conflict_data  BLOB,
+
+  /* Three columns containing the checksums of older, left and right conflict
+     texts.  Stored in a column to allow storing them in the pristine store  */
+  older_checksum  TEXT,
+  left_checksum  TEXT,
+  right_checksum  TEXT,
+
   PRIMARY KEY (wc_id, local_relpath)
   );
 
@@ -382,9 +393,37 @@ CREATE TABLE LOCK (
 
 /* ------------------------------------------------------------------------- */
 
+CREATE TABLE WORK_QUEUE (
+  /* Work items are identified by this value.  */
+  id  INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  /* A serialized skel specifying the work item.  */
+  work  BLOB NOT NULL
+  );
+
+
+/* ------------------------------------------------------------------------- */
+
+CREATE TABLE WC_LOCK (
+  /* specifies the location of this node in the local filesystem */
+  wc_id  INTEGER NOT NULL  REFERENCES WCROOT (id),
+  local_dir_relpath  TEXT NOT NULL,
+
+  locked_levels  INTEGER NOT NULL DEFAULT -1,
+
+  PRIMARY KEY (wc_id, local_dir_relpath)
+ );
+
+
+PRAGMA user_version = 16;
+
+
+/* ------------------------------------------------------------------------- */
+
 /* Format 13 introduces the work queue, and erases a few columns from the
    original schema.  */
--- format: 13
+-- STMT_UPGRADE_TO_13
+
 CREATE TABLE WORK_QUEUE (
   /* Work items are identified by this value.  */
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -397,11 +436,14 @@ CREATE TABLE WORK_QUEUE (
    erase anything there.  */
 UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
 
+PRAGMA user_version = 13;
+
+
 /* ------------------------------------------------------------------------- */
 
 /* Format 14 introduces a table for storing wc locks, and additional columns
    for storing conflict data in ACTUAL. */
--- format: 14
+-- STMT_UPGRADE_TO_14
 
 /* The existence of a row in this table implies a write lock. */
 CREATE TABLE WC_LOCK (
@@ -427,10 +469,13 @@ ADD COLUMN left_checksum  TEXT;
 ALTER TABLE ACTUAL_NODE
 ADD COLUMN right_checksum  TEXT;
 
+PRAGMA user_version = 14;
+
+
 /* ------------------------------------------------------------------------- */
 
 /* Format 15 introduces new handling for excluded nodes.  */
--- format: 15
+-- STMT_UPGRADE_TO_15
 
 UPDATE base_node
 SET
@@ -454,10 +499,13 @@ SET
   last_mod_time = NULL, properties = NULL, keep_local = NULL
 WHERE depth = 'exclude';
 
+PRAGMA user_version = 15;
+
+
 /* ------------------------------------------------------------------------- */
 
 /* Format 16 introduces some new columns for pristines and locks.  */
--- format: 16
+-- STMT_UPGRADE_TO_16
 
 /* An md5 column for the pristine table. */
 ALTER TABLE PRISTINE
@@ -470,6 +518,8 @@ ADD COLUMN locked_levels INTEGER NOT NULL DEFAULT -1;;
 /* Default the depth of existing locks to 0. */
 UPDATE wc_lock
 SET locked_levels = 0;
+
+PRAGMA user_version = 16;
 
 
 /* ------------------------------------------------------------------------- */

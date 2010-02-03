@@ -375,3 +375,7 @@ update actual_node set tree_conflict_data = null;
 
 
 /* ------------------------------------------------------------------------- */
+
+/* Grab all the statements related to the schema.  */
+
+-- include: wc-metadata
