@@ -127,11 +127,6 @@ typedef struct {
   /* True if the target had to be skipped for some reason. */
   svn_boolean_t skipped;
 
-  /* True if at least one hunk was applied to the target.
-   * The hunk may have been a no-op, however (e.g. a hunk trying
-   * to delete a line from an empty file). */
-  svn_boolean_t modified;
-
   /* True if at least one hunk was rejected. */
   svn_boolean_t had_rejects;
 
@@ -492,7 +487,6 @@ init_patch_target(patch_target_t **patch_target,
 
   target->patch = patch;
   target->current_line = 1;
-  target->modified = FALSE;
   target->had_rejects = FALSE;
   target->deleted = FALSE;
   target->eof = FALSE;
@@ -982,10 +976,8 @@ send_patch_notification(const patch_target_t *target,
         notify->content_state = svn_wc_notify_state_conflicted;
       else if (target->local_mods)
         notify->content_state = svn_wc_notify_state_merged;
-      else if (target->modified)
-        notify->content_state = svn_wc_notify_state_changed;
       else
-        notify->content_state = svn_wc_notify_state_unchanged;
+        notify->content_state = svn_wc_notify_state_changed;
     }
 
   (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
@@ -1102,9 +1094,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
         {
           /* We could not copy the entire target file to the temporary file,
            * and would truncate the target if we copied the temporary file
-           * on top of it. Cancel any modifications to the target file and
-           * report is as skipped. */
-          target->modified = FALSE;
+           * on top of it. Skip this target. */
           target->skipped = TRUE;
         }
     }
@@ -1179,8 +1169,6 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
     }
   else
     {
-      target->modified = TRUE;
-
       /* If the target's parent directory does not yet exist
        * we need to create it before we can copy the patched
        * result in place. */
