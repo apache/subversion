@@ -349,8 +349,7 @@ check_local_mods(svn_boolean_t *local_mods,
 }
 
 /* Attempt to initialize a patch TARGET structure for a target file
- * described by PATCH.
- * Use client context CTX to send notifiations and retrieve WC_CTX.
+ * described by PATCH. Use working copy context WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
  * Upon success, allocate the patch target structure in RESULT_POOL.
@@ -360,7 +359,7 @@ static svn_error_t *
 init_patch_target(patch_target_t **target,
                   const svn_patch_t *patch,
                   const char *base_dir,
-                  const svn_client_ctx_t *ctx, int strip_count,
+                  svn_wc_context_t *wc_ctx, int strip_count,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *new_target;
@@ -369,7 +368,7 @@ init_patch_target(patch_target_t **target,
   new_target = apr_pcalloc(result_pool, sizeof(*new_target));
 
   SVN_ERR(resolve_target_path(new_target, patch->new_filename,
-                              base_dir, strip_count, ctx->wc_ctx,
+                              base_dir, strip_count, wc_ctx,
                               result_pool, scratch_pool));
 
   new_target->local_mods = FALSE;
@@ -395,7 +394,7 @@ init_patch_target(patch_target_t **target,
                                    APR_OS_DEFAULT, result_pool));
 
           /* Handle svn:keyword and svn:eol-style properties. */
-          SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, new_target->abs_path,
+          SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, new_target->abs_path,
                                     scratch_pool, scratch_pool));
           keywords_val = apr_hash_get(props, SVN_PROP_KEYWORDS,
                                       APR_HASH_KEY_STRING);
@@ -409,13 +408,13 @@ init_patch_target(patch_target_t **target,
 
               SVN_ERR(svn_wc__node_get_changed_info(&changed_rev,
                                                     &changed_date,
-                                                    &author, ctx->wc_ctx,
+                                                    &author, wc_ctx,
                                                     new_target->abs_path,
                                                     scratch_pool,
                                                     scratch_pool));
               rev_str = apr_psprintf(scratch_pool, "%"SVN_REVNUM_T_FMT,
                                      changed_rev);
-              SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx,
+              SVN_ERR(svn_wc__node_get_url(&url, wc_ctx,
                                            new_target->abs_path,
                                            scratch_pool, scratch_pool));
               SVN_ERR(svn_subst_build_keywords2(&new_target->keywords,
@@ -454,7 +453,7 @@ init_patch_target(patch_target_t **target,
                                                         FALSE, result_pool);
 
           /* Also check the file for local mods and the Xbit. */
-          SVN_ERR(check_local_mods(&new_target->local_mods, ctx->wc_ctx,
+          SVN_ERR(check_local_mods(&new_target->local_mods, wc_ctx,
                                    new_target->abs_path, scratch_pool));
           SVN_ERR(svn_io_is_file_executable(&new_target->executable,
                                             new_target->abs_path,
@@ -1028,35 +1027,30 @@ send_patch_notification(const patch_target_t *target,
   return SVN_NO_ERROR;
 }
 
-/* Apply a PATCH to a working copy at ABS_WC_PATH.
- * Use client context CTX to send notifications and retrieve WC_CTX.
+/* Apply a PATCH to a working copy at ABS_WC_PATH and put the result
+ * into temporary files, to be installed in the working copy later.
+ * Return information about the patch target in *TARGET, allocated
+ * in RESULT_POOL. Use WC_CTX as the working copy context.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
- * Do all allocations in POOL. */
+ * Do temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
-apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
-                svn_boolean_t dry_run, svn_client_ctx_t *ctx,
-                int strip_count, apr_pool_t *pool)
+apply_one_patch(patch_target_t **target, svn_patch_t *patch,
+                const char *abs_wc_path, svn_wc_context_t *wc_ctx,
+                int strip_count, apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
-  patch_target_t *target;
   apr_pool_t *iterpool;
-  apr_finfo_t working_file;
-  apr_finfo_t patched_file;
   int i;
   static const int MAX_FUZZ = 2;
 
-  SVN_ERR(init_patch_target(&target, patch, abs_wc_path, ctx, strip_count,
-                            pool, pool));
-  if (target == NULL)
+  SVN_ERR(init_patch_target(target, patch, abs_wc_path, wc_ctx, strip_count,
+                            result_pool, scratch_pool));
+
+  if ((*target)->skipped)
     return SVN_NO_ERROR;
 
-  if (target->skipped)
-    {
-      SVN_ERR(send_patch_notification(target, ctx, pool));
-      return SVN_NO_ERROR;
-    }
-
-  iterpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(scratch_pool);
   /* Match hunks. */
   for (i = 0; i < patch->hunks->nelts; i++)
     {
@@ -1072,51 +1066,59 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
        * If no match is found initially, try with fuzz. */
       do 
         {
-          SVN_ERR(get_hunk_info(&hi, target, hunk, fuzz, pool, iterpool));
+          SVN_ERR(get_hunk_info(&hi, *target, hunk, fuzz,
+                                result_pool, iterpool));
           fuzz++;
         }
       while (hi->rejected && fuzz <= MAX_FUZZ);
 
-      APR_ARRAY_PUSH(target->hunks, hunk_info_t *) = hi;
+      APR_ARRAY_PUSH((*target)->hunks, hunk_info_t *) = hi;
     }
 
   /* Apply or reject hunks. */
-  for (i = 0; i < target->hunks->nelts; i++)
+  for (i = 0; i < (*target)->hunks->nelts; i++)
     {
       hunk_info_t *hi;
 
       svn_pool_clear(iterpool);
 
-      hi = APR_ARRAY_IDX(target->hunks, i, hunk_info_t *);
+      hi = APR_ARRAY_IDX((*target)->hunks, i, hunk_info_t *);
       if (hi->rejected)
-        SVN_ERR(reject_hunk(target, hi, iterpool));
+        SVN_ERR(reject_hunk(*target, hi, iterpool));
       else
-        SVN_ERR(apply_hunk(target, hi, iterpool));
+        SVN_ERR(apply_hunk(*target, hi, iterpool));
     }
   svn_pool_destroy(iterpool);
 
-  if (target->kind == svn_node_file)
+  if ((*target)->kind == svn_node_file)
     {
       /* Copy any remaining lines to target. */
-      SVN_ERR(copy_lines_to_target(target, 0, pool));
-      if (! target->eof)
+      SVN_ERR(copy_lines_to_target(*target, 0, scratch_pool));
+      if (! (*target)->eof)
         {
           /* We could not copy the entire target file to the temporary file,
            * and would truncate the target if we copied the temporary file
            * on top of it. Cancel any modifications to the target file and
            * report is as skipped. */
-          target->modified = FALSE;
-          target->skipped = TRUE;
+          (*target)->modified = FALSE;
+          (*target)->skipped = TRUE;
         }
-
-      /* Closing this stream will also close the underlying file. */
-      SVN_ERR(svn_stream_close(target->stream));
     }
 
-  /* Close the patched and reject streams so that their content is
-   * flushed to disk. This will also close any underlying streams. */
-  SVN_ERR(svn_stream_close(target->patched));
-  SVN_ERR(svn_stream_close(target->reject));
+  return SVN_NO_ERROR;
+}
+
+/* Install a patched TARGET into the working copy at ABS_WC_PATH.
+ * Use client context CTX to retrieve WC_CTX, and possibly doing
+ * notifications. If DRY_RUN is TRUE, don't modify the working copy.
+ * Do temporary allocations in POOL. */
+static svn_error_t *
+install_patched_target(patch_target_t *target, const char *abs_wc_path,
+                       svn_client_ctx_t *ctx, svn_boolean_t dry_run,
+                       apr_pool_t *pool)
+{
+  apr_finfo_t working_file;
+  apr_finfo_t patched_file;
 
   /* Get sizes of the patched temporary file and the working file.
    * We'll need those to figure out whether we should add or delete
@@ -1174,6 +1176,8 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
               const char *abs_path;
               apr_array_header_t *components;
               int missing_components;
+              int i;
+              apr_pool_t *iterpool;
 
               /* Check if we can safely create the target's parent. */
               abs_path = apr_pstrdup(pool, abs_wc_path);
@@ -1318,8 +1322,6 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
       /* ### TODO mark file as conflicted. */
     }
 
-  SVN_ERR(send_patch_notification(target, ctx, pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -1352,6 +1354,8 @@ apply_patches(void *baton,
   apr_pool_t *iterpool;
   const char *patch_eol_str;
   apr_file_t *patch_file;
+  apr_array_header_t *targets;
+  int i;
   apply_patches_baton_t *btn;
   
   btn = (apply_patches_baton_t *)baton;
@@ -1370,6 +1374,7 @@ apply_patches(void *baton,
     }
 
   /* Apply patches. */
+  targets = apr_array_make(scratch_pool, 0, sizeof(patch_target_t *));
   iterpool = svn_pool_create(scratch_pool);
   do
     {
@@ -1378,16 +1383,47 @@ apply_patches(void *baton,
       if (btn->ctx->cancel_func)
         SVN_ERR(btn->ctx->cancel_func(btn->ctx->cancel_baton));
 
-      SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, iterpool,
-                                         iterpool));
+      SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file,
+                                         scratch_pool, iterpool));
       if (patch)
         {
-          SVN_ERR(apply_one_patch(patch, btn->abs_wc_path, btn->dry_run,
-                                  btn->ctx, btn->strip_count, iterpool));
-          SVN_ERR(svn_diff__close_patch(patch));
+          patch_target_t *target;
+
+          SVN_ERR(apply_one_patch(&target, patch, btn->abs_wc_path,
+                                  btn->ctx->wc_ctx, btn->strip_count,
+                                  scratch_pool, iterpool));
+          APR_ARRAY_PUSH(targets, patch_target_t *) = target;
         }
     }
   while (patch);
+
+  /* Install patched targets into the working copy. */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      patch_target_t *target;
+
+      svn_pool_clear(iterpool);
+
+      if (btn->ctx->cancel_func)
+        SVN_ERR(btn->ctx->cancel_func(btn->ctx->cancel_baton));
+
+      target = APR_ARRAY_IDX(targets, i, patch_target_t *);
+      if (! target->skipped)
+        {
+          /* Close the streams of the target so that their content is
+           * flushed to disk. This will also close underlying streams. */
+          if (target->kind == svn_node_file)
+            SVN_ERR(svn_stream_close(target->stream));
+          SVN_ERR(svn_stream_close(target->patched));
+          SVN_ERR(svn_stream_close(target->reject));
+
+          SVN_ERR(install_patched_target(target, btn->abs_wc_path,
+                                         btn->ctx, btn->dry_run, iterpool));
+        }
+      SVN_ERR(send_patch_notification(target, btn->ctx, iterpool));
+      SVN_ERR(svn_diff__close_patch(target->patch));
+    }
+
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
