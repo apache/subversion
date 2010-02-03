@@ -406,7 +406,7 @@ compare_hunks(const void *a, const void *b)
  * Ensure that all streams which were opened for HUNK are closed.
  */
 static svn_error_t *
-close_hunk(svn_hunk_t *hunk)
+close_hunk(const svn_hunk_t *hunk)
 {
   SVN_ERR(svn_stream_close(hunk->original_text));
   SVN_ERR(svn_stream_close(hunk->modified_text));
@@ -542,13 +542,13 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
 }
 
 svn_error_t *
-svn_diff__close_patch(svn_patch_t *patch)
+svn_diff__close_patch(const svn_patch_t *patch)
 {
   int i;
 
   for (i = 0; i < patch->hunks->nelts; i++)
     {
-      svn_hunk_t *hunk = APR_ARRAY_IDX(patch->hunks, i, svn_hunk_t *);
+      const svn_hunk_t *hunk = APR_ARRAY_IDX(patch->hunks, i, svn_hunk_t *);
       SVN_ERR(close_hunk(hunk));
     }
 

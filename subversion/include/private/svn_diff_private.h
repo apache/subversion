@@ -120,7 +120,7 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
 
 /* Dispose of PATCH, closing any streams used by it. */
 svn_error_t *
-svn_diff__close_patch(svn_patch_t *patch);
+svn_diff__close_patch(const svn_patch_t *patch);
 
 #ifdef __cplusplus
 }
