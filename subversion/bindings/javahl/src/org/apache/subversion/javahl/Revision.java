@@ -47,22 +47,10 @@ public class Revision implements java.io.Serializable
     protected int revKind;
 
     /**
-     * Create a new revision
-     * @deprecated
-     * @param kind  kind of revision
-     */
-    public Revision(int kind)
-    {
-        this(kind, true);
-    }
-
-    /**
      * Internally create a new revision
      * @param kind    kind of revision
-     * @param marker  marker to differentiate from the public deprecated
-     *                version
      */
-    protected Revision(int kind, boolean marker)
+    protected Revision(int kind)
     {
         if (kind < RevisionKind.unspecified || kind > RevisionKind.head)
             throw new IllegalArgumentException(
@@ -158,33 +146,32 @@ public class Revision implements java.io.Serializable
     /**
      * last commited revision
      */
-    public static final Revision HEAD = new Revision(Kind.head, true);
+    public static final Revision HEAD = new Revision(Kind.head);
 
     /**
      * first existing revision
      */
-    public static final Revision START = new Revision(Kind.unspecified, true);
+    public static final Revision START = new Revision(Kind.unspecified);
 
     /**
      * last committed revision, needs working copy
      */
-    public static final Revision COMMITTED = new Revision(Kind.committed,
-                                                          true);
+    public static final Revision COMMITTED = new Revision(Kind.committed);
 
     /**
      * previous committed revision, needs working copy
      */
-    public static final Revision PREVIOUS = new Revision(Kind.previous, true);
+    public static final Revision PREVIOUS = new Revision(Kind.previous);
 
     /**
      * base revision of working copy
      */
-    public static final Revision BASE = new Revision(Kind.base, true);
+    public static final Revision BASE = new Revision(Kind.base);
 
     /**
      * working version in working copy
      */
-    public static final Revision WORKING = new Revision(Kind.working, true);
+    public static final Revision WORKING = new Revision(Kind.working);
 
     /**
      * Marker revision number for no real revision
@@ -213,7 +200,7 @@ public class Revision implements java.io.Serializable
          */
         public Number(long number)
         {
-            super(Kind.number, true);
+            super(Kind.number);
             if (number < 0)
                 throw new IllegalArgumentException
                     ("Invalid (negative) revision number: " + number);
@@ -278,7 +265,7 @@ public class Revision implements java.io.Serializable
          */
         public DateSpec(Date date)
         {
-            super(Kind.date, true);
+            super(Kind.date);
             if (date == null)
                 throw new IllegalArgumentException("a date must be specified");
             revDate = date;
