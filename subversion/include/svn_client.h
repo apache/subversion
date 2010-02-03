@@ -1365,8 +1365,14 @@ svn_client_switch(svn_revnum_t *result_rev,
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the
  * added item.
  *
- * If @a no_ignore is FALSE, don't add files or directories that match
- * ignore patterns.
+ * If @a no_ignore is FALSE, don't add any file or directory (or recurse
+ * into any directory) that is unversioned and found by recursion (as
+ * opposed to being the explicit target @a path) and whose name matches the
+ * svn:ignore property on its parent directory or the global-ignores list in
+ * @a ctx->config. If @a no_ignore is TRUE, do include such files and
+ * directories. (Note that an svn:ignore property can influence this
+ * behaviour only when recursing into an already versioned directory with @a
+ * force.)
  *
  * If @a add_parents is TRUE, recurse up @a path's directory and look for
  * a versioned directory.  If found, add all intermediate paths between it
@@ -1608,6 +1614,11 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * commit, allocated in @a pool.  If some components of @a url do not exist
  * then create parent directories as necessary.
  *
+ * This function reads an unversioned tree from disk and skips any ".svn"
+ * directories. Even if a file or directory being imported is part of an
+ * existing WC, this function sees it as unversioned and does not notice any
+ * existing Subversion properties in it.
+ *
  * If @a path is a directory, the contents of that directory are
  * imported directly into the directory identified by @a url.  Note that the
  * directory @a path itself is not imported -- that is, the basename of
@@ -1640,8 +1651,14 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * underneath those subdirectories).  If #svn_depth_infinity, import
  * @a path and everything under it fully recursively.
  *
- * If @a no_ignore is @c FALSE, don't add files or directories that match
- * ignore patterns.
+ * If @a no_ignore is @c FALSE, don't import any file or directory (or
+ * recurse into any directory) that is found by recursion (as opposed to
+ * being the explicit target @a path) and whose name matches the
+ * global-ignores list in @a ctx->config. If @a no_ignore is @c TRUE, do
+ * include such files and directories. (Note that svn:ignore properties are
+ * not involved, as auto-props cannot set properties on directories and even
+ * if the target is part of a WC the import ignores any existing
+ * properties.)
  *
  * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
  * node type is unknown, such as device files and pipes.
@@ -1840,6 +1857,13 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  *      set @a *result_rev to the actual revision against which the
  *      working copy was compared (@a *result_rev is not meaningful unless
  *      @a update is set).
+ *
+ * If @a no_ignore is @c FALSE, don't report any file or directory (or
+ * recurse into any directory) that is found by recursion (as opposed to
+ * being the explicit target @a path) and whose name matches the
+ * svn:ignore property on its parent directory or the global-ignores
+ * list in @a ctx->config. If @a no_ignore is @c TRUE, report each such
+ * file or directory with the status code #svn_wc_status_ignored.
  *
  * If @a ignore_externals is not set, then recurse into externals
  * definitions (if any exist) after handling the main target.  This
