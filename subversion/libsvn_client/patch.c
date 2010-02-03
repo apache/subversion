@@ -1105,6 +1105,49 @@ apply_one_patch(patch_target_t **target, svn_patch_t *patch,
         }
     }
 
+  if (! (*target)->skipped)
+    {
+      apr_finfo_t working_file;
+      apr_finfo_t patched_file;
+
+      /* Close the streams of the target so that their content is
+       * flushed to disk. This will also close underlying streams. */
+      if ((*target)->kind == svn_node_file)
+        SVN_ERR(svn_stream_close((*target)->stream));
+      SVN_ERR(svn_stream_close((*target)->patched));
+      SVN_ERR(svn_stream_close((*target)->reject));
+
+      /* Get sizes of the patched temporary file and the working file.
+       * We'll need those to figure out whether we should delete the
+       * patched file. */
+      SVN_ERR(svn_io_stat(&patched_file, (*target)->patched_path,
+                          APR_FINFO_SIZE, scratch_pool));
+      if ((*target)->kind == svn_node_file)
+        SVN_ERR(svn_io_stat(&working_file, (*target)->abs_path,
+                            APR_FINFO_SIZE, scratch_pool));
+      else
+        working_file.size = 0;
+
+      if (patched_file.size == 0 && working_file.size > 0)
+        {
+          /* If a unidiff removes all lines from a file, that usually
+           * means deletion, so we can confidently schedule the target
+           * for deletion. In the rare case where the unidiff was really
+           * meant to replace a file with an empty one, this may not
+           * be desirable. But the deletion can easily be reverted and
+           * creating an empty file manually is not exactly hard either. */
+          (*target)->deleted = ((*target)->kind == svn_node_file);
+        }
+      else if (working_file.size == 0 && patched_file.size == 0)
+        {
+          /* The target was empty or non-existent to begin with
+           * and nothing has changed by patching.
+           * Report this as skipped if it didn't exist. */
+          if ((*target)->kind != svn_node_file)
+            (*target)->skipped = TRUE;
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1117,31 +1160,6 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                        svn_client_ctx_t *ctx, svn_boolean_t dry_run,
                        apr_pool_t *pool)
 {
-  apr_finfo_t working_file;
-  apr_finfo_t patched_file;
-
-  /* Get sizes of the patched temporary file and the working file.
-   * We'll need those to figure out whether we should add or delete
-   * the patched file. */
-  SVN_ERR(svn_io_stat(&patched_file, target->patched_path, APR_FINFO_SIZE,
-                      pool));
-  if (target->kind == svn_node_file)
-    SVN_ERR(svn_io_stat(&working_file, target->abs_path, APR_FINFO_SIZE,
-                        pool));
-  else
-    working_file.size = 0;
-
-  if (patched_file.size == 0 && working_file.size > 0)
-    {
-      /* If a unidiff removes all lines from a file, that usually
-       * means deletion, so we can confidently schedule the target
-       * for deletion. In the rare case where the unidiff was really
-       * meant to replace a file with an empty one, this may not
-       * be desirable. But the deletion can easily be reverted and
-       * creating an empty file manually is not exactly hard either. */
-      target->deleted = (target->kind != svn_node_none);
-    }
-
   if (target->deleted)
     {
       if (! dry_run)
@@ -1156,160 +1174,148 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
     }
   else
     {
-      if (working_file.size == 0 && patched_file.size == 0)
-        {
-          /* The target was empty or non-existent to begin with
-           * and nothing has changed by patching.
-           * Report this as skipped if it didn't exist. */
-          if (target->kind != svn_node_file)
-            target->skipped = TRUE;
-        }
-      else
-        {
-          target->modified = TRUE;
+      target->modified = TRUE;
 
-          /* If the target's parent directory does not yet exist
-           * we need to create it before we can copy the patched
-           * result in place. */
-          if (target->added && ! target->parent_dir_exists)
+      /* If the target's parent directory does not yet exist
+       * we need to create it before we can copy the patched
+       * result in place. */
+      if (target->added && ! target->parent_dir_exists)
+        {
+          const char *abs_path;
+          apr_array_header_t *components;
+          int missing_components;
+          int i;
+          apr_pool_t *iterpool;
+
+          /* Check if we can safely create the target's parent. */
+          abs_path = apr_pstrdup(pool, abs_wc_path);
+          components = svn_path_decompose(target->rel_path, pool);
+          missing_components = 0;
+          iterpool = svn_pool_create(pool);
+          for (i = 0; i < components->nelts - 1; i++)
             {
-              const char *abs_path;
-              apr_array_header_t *components;
-              int missing_components;
-              int i;
-              apr_pool_t *iterpool;
+              const char *component;
+              svn_node_kind_t kind;
 
-              /* Check if we can safely create the target's parent. */
-              abs_path = apr_pstrdup(pool, abs_wc_path);
-              components = svn_path_decompose(target->rel_path, pool);
-              missing_components = 0;
-              iterpool = svn_pool_create(pool);
-              for (i = 0; i < components->nelts - 1; i++)
+              svn_pool_clear(iterpool);
+
+              component = APR_ARRAY_IDX(components, i,
+                                        const char *);
+              abs_path = svn_dirent_join(abs_path, component, pool);
+
+              SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx,
+                                            abs_path, TRUE,
+                                            iterpool));
+              if (kind == svn_node_file)
+                {
+                  /* Obstructed. */
+                  target->skipped = TRUE;
+                  break;
+                }
+              else if (kind == svn_node_dir)
+                {
+                  /* ### wc-ng should eventually be able to replace
+                   * directories in-place, so this schedule conflict
+                   * check will go away. We could then also make the
+                   * svn_wc__node_get_kind() call above ignore hidden
+                   * nodes.*/
+                  svn_boolean_t is_deleted;
+
+                  SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted,
+                                                         ctx->wc_ctx,
+                                                         abs_path,
+                                                         iterpool));
+                  if (is_deleted)
+                    {
+                      target->skipped = TRUE;
+                      break;
+                    }
+                }
+
+              missing_components++;
+            }
+
+          if (! target->skipped)
+            {
+              abs_path = abs_wc_path;
+              for (i = 0; i < missing_components; i++)
                 {
                   const char *component;
-                  svn_node_kind_t kind;
+                  svn_wc_status2_t *status;
 
                   svn_pool_clear(iterpool);
 
                   component = APR_ARRAY_IDX(components, i,
                                             const char *);
-                  abs_path = svn_dirent_join(abs_path, component, pool);
+                  abs_path = svn_dirent_join(abs_path, component,
+                                             pool);
 
-                  SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx,
-                                                abs_path, TRUE,
-                                                iterpool));
-                  if (kind == svn_node_file)
+                  /* Skip things we should not be messing with. */
+                  SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, abs_path,
+                                         iterpool, iterpool));
+                  if (status->text_status == svn_wc_status_unversioned ||
+                      status->text_status == svn_wc_status_ignored ||
+                      status->text_status == svn_wc_status_obstructed)
                     {
-                      /* Obstructed. */
                       target->skipped = TRUE;
                       break;
                     }
-                  else if (kind == svn_node_dir)
-                    {
-                      /* ### wc-ng should eventually be able to replace
-                       * directories in-place, so this schedule conflict
-                       * check will go away. We could then also make the
-                       * svn_wc__node_get_kind() call above ignore hidden
-                       * nodes.*/
-                      svn_boolean_t is_deleted;
 
-                      SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted,
-                                                             ctx->wc_ctx,
-                                                             abs_path,
-                                                             iterpool));
-                      if (is_deleted)
+                  if (dry_run)
+                    {
+                      if (ctx->notify_func2)
                         {
-                          target->skipped = TRUE;
-                          break;
+                          /* Just do notification. */ 
+                          svn_wc_notify_t *notify;
+                          notify = svn_wc_create_notify(abs_path,
+                                                        svn_wc_notify_add,
+                                                        iterpool);
+                          notify->kind = svn_node_dir;
+                          ctx->notify_func2(ctx->notify_baton2, notify,
+                                            iterpool);
                         }
                     }
-
-                  missing_components++;
-                }
-
-              if (! target->skipped)
-                {
-                  abs_path = abs_wc_path;
-                  for (i = 0; i < missing_components; i++)
+                  else
                     {
-                      const char *component;
-                      svn_wc_status2_t *status;
-
-                      svn_pool_clear(iterpool);
-
-                      component = APR_ARRAY_IDX(components, i,
-                                                const char *);
-                      abs_path = svn_dirent_join(abs_path, component,
-                                                 pool);
-
-                      /* Skip things we should not be messing with. */
-                      SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, abs_path,
-                                             iterpool, iterpool));
-                      if (status->text_status == svn_wc_status_unversioned ||
-                          status->text_status == svn_wc_status_ignored ||
-                          status->text_status == svn_wc_status_obstructed)
-                        {
-                          target->skipped = TRUE;
-                          break;
-                        }
-
-                      if (dry_run)
-                        {
-                          if (ctx->notify_func2)
-                            {
-                              /* Just do notification. */ 
-                              svn_wc_notify_t *notify;
-                              notify = svn_wc_create_notify(abs_path,
-                                                            svn_wc_notify_add,
-                                                            iterpool);
-                              notify->kind = svn_node_dir;
-                              ctx->notify_func2(ctx->notify_baton2, notify,
-                                                iterpool);
-                            }
-                        }
-                      else
-                        {
-                          /* Create the missing component and add it
-                           * to version control. Suppress cancellation. */
-                          SVN_ERR(svn_io_dir_make(abs_path, APR_OS_DEFAULT,
-                                                  iterpool));
-                          SVN_ERR(svn_wc_add4(ctx->wc_ctx, abs_path,
-                                              svn_depth_infinity,
-                                              NULL, SVN_INVALID_REVNUM,
-                                              NULL, NULL,
-                                              ctx->notify_func2,
-                                              ctx->notify_baton2,
+                      /* Create the missing component and add it
+                       * to version control. Suppress cancellation. */
+                      SVN_ERR(svn_io_dir_make(abs_path, APR_OS_DEFAULT,
                                               iterpool));
-                        }
+                      SVN_ERR(svn_wc_add4(ctx->wc_ctx, abs_path,
+                                          svn_depth_infinity,
+                                          NULL, SVN_INVALID_REVNUM,
+                                          NULL, NULL,
+                                          ctx->notify_func2,
+                                          ctx->notify_baton2,
+                                          iterpool));
                     }
                 }
-              svn_pool_destroy(iterpool);
             }
-
-          if (! dry_run && ! target->skipped)
-            {
-              /* Copy the patched file on top of the target file. */
-              SVN_ERR(svn_io_copy_file(target->patched_path,
-                                       target->abs_path, FALSE, pool));
-              if (target->added)
-                {
-                  /* The target file didn't exist previously,
-                   * so add it to version control.
-                   * Suppress notification, we'll do that later.
-                   * Also suppress cancellation. */
-                  SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->abs_path,
-                                      svn_depth_infinity,
-                                      NULL, SVN_INVALID_REVNUM,
-                                      NULL, NULL, NULL, NULL, pool));
-                }
-
-              /* Restore the target's executable bit if necessary. */
-              SVN_ERR(svn_io_set_file_executable(target->abs_path,
-                                                 target->executable,
-                                                 FALSE, pool));
-            }
+          svn_pool_destroy(iterpool);
         }
 
+      if (! dry_run && ! target->skipped)
+        {
+          /* Copy the patched file on top of the target file. */
+          SVN_ERR(svn_io_copy_file(target->patched_path,
+                                   target->abs_path, FALSE, pool));
+          if (target->added)
+            {
+              /* The target file didn't exist previously,
+               * so add it to version control.
+               * Suppress notification, we'll do that later.
+               * Also suppress cancellation. */
+              SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->abs_path,
+                                  svn_depth_infinity,
+                                  NULL, SVN_INVALID_REVNUM,
+                                  NULL, NULL, NULL, NULL, pool));
+            }
+
+          /* Restore the target's executable bit if necessary. */
+          SVN_ERR(svn_io_set_file_executable(target->abs_path,
+                                             target->executable,
+                                             FALSE, pool));
+        }
     }
 
   /* Write out rejected hunks, if any. */
@@ -1409,17 +1415,8 @@ apply_patches(void *baton,
 
       target = APR_ARRAY_IDX(targets, i, patch_target_t *);
       if (! target->skipped)
-        {
-          /* Close the streams of the target so that their content is
-           * flushed to disk. This will also close underlying streams. */
-          if (target->kind == svn_node_file)
-            SVN_ERR(svn_stream_close(target->stream));
-          SVN_ERR(svn_stream_close(target->patched));
-          SVN_ERR(svn_stream_close(target->reject));
-
-          SVN_ERR(install_patched_target(target, btn->abs_wc_path,
-                                         btn->ctx, btn->dry_run, iterpool));
-        }
+        SVN_ERR(install_patched_target(target, btn->abs_wc_path,
+                                       btn->ctx, btn->dry_run, iterpool));
       SVN_ERR(send_patch_notification(target, btn->ctx, iterpool));
       SVN_ERR(svn_diff__close_patch(target->patch));
     }
