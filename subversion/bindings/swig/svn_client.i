@@ -87,7 +87,7 @@
   apr_array_header_t *src_paths
 }
 
-#ifdef SWIGRUBY
+#if defined(SWIGRUBY) || defined(SWIGPERL)
 %apply const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
   apr_array_header_t *changelists
 }
