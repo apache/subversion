@@ -943,9 +943,9 @@ apply_hunk(patch_target_t *target, hunk_info_t *hi, apr_pool_t *pool)
 /* Use client context CTX to send a suitable notification for a patch TARGET.
  * Use POOL for temporary allocations. */
 static svn_error_t *
-maybe_send_patch_notification(const patch_target_t *target,
-                              const svn_client_ctx_t *ctx,
-                              apr_pool_t *pool)
+send_patch_notification(const patch_target_t *target,
+                        const svn_client_ctx_t *ctx,
+                        apr_pool_t *pool)
 {
   svn_wc_notify_t *notify;
   svn_wc_notify_action_t action;
@@ -1052,7 +1052,7 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
 
   if (target->skipped)
     {
-      SVN_ERR(maybe_send_patch_notification(target, ctx, pool));
+      SVN_ERR(send_patch_notification(target, ctx, pool));
       return SVN_NO_ERROR;
     }
 
@@ -1318,7 +1318,7 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
       /* ### TODO mark file as conflicted. */
     }
 
-  SVN_ERR(maybe_send_patch_notification(target, ctx, pool));
+  SVN_ERR(send_patch_notification(target, ctx, pool));
 
   return SVN_NO_ERROR;
 }
