@@ -1183,14 +1183,14 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
         {
           const char *abs_path;
           apr_array_header_t *components;
-          int missing_components;
+          int present_components;
           int i;
           apr_pool_t *iterpool;
 
           /* Check if we can safely create the target's parent. */
           abs_path = apr_pstrdup(pool, abs_wc_path);
           components = svn_path_decompose(target->rel_path, pool);
-          missing_components = 0;
+          present_components = 0;
           iterpool = svn_pool_create(pool);
           for (i = 0; i < components->nelts - 1; i++)
             {
@@ -1230,15 +1230,15 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                       target->skipped = TRUE;
                       break;
                     }
-                }
 
-              missing_components++;
+                  present_components++;
+                }
             }
 
           if (! target->skipped)
             {
               abs_path = abs_wc_path;
-              for (i = 0; i < missing_components; i++)
+              for (i = present_components; i < components->nelts - 1; i++)
                 {
                   const char *component;
                   svn_wc_status2_t *status;
