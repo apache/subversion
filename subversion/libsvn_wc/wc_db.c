@@ -4561,7 +4561,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
              If the child was not-present this implies the root of the
              (added) WORKING subtree was deleted.  This can occur
-             during post-commit processing when the added parent that
+             during post-commit processing when the copied parent that
              was in the WORKING tree has been moved to the BASE tree. */
           if (work_del_abspath != NULL
               && child_presence == svn_wc__db_status_not_present
