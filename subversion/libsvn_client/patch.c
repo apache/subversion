@@ -1099,17 +1099,17 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
         }
     }
 
+  /* Close the streams of the target so that their content is
+   * flushed to disk. This will also close underlying streams. */
+  if (target->kind == svn_node_file)
+    SVN_ERR(svn_stream_close(target->stream));
+  SVN_ERR(svn_stream_close(target->patched));
+  SVN_ERR(svn_stream_close(target->reject));
+
   if (! target->skipped)
     {
       apr_finfo_t working_file;
       apr_finfo_t patched_file;
-
-      /* Close the streams of the target so that their content is
-       * flushed to disk. This will also close underlying streams. */
-      if (target->kind == svn_node_file)
-        SVN_ERR(svn_stream_close(target->stream));
-      SVN_ERR(svn_stream_close(target->patched));
-      SVN_ERR(svn_stream_close(target->reject));
 
       /* Get sizes of the patched temporary file and the working file.
        * We'll need those to figure out whether we should delete the
