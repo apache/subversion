@@ -487,39 +487,43 @@ add_dir_recursive(const char *dir_abspath,
 }
 
 
-/* The main logic of the public svn_client_add4;  the only difference
-   is that this function uses an existing access baton.
-   (svn_client_add4 just generates an access baton and calls this func.) */
+struct add_with_write_lock_baton {
+  const char *local_abspath;
+  svn_depth_t depth;
+  svn_boolean_t force;
+  svn_boolean_t no_ignore;
+  svn_client_ctx_t *ctx;
+};
+
+/* The main logic of the public svn_client_add4. */
 static svn_error_t *
-add(const char *local_abspath,
-    svn_depth_t depth,
-    svn_boolean_t force,
-    svn_boolean_t no_ignore,
-    svn_client_ctx_t *ctx,
-    apr_pool_t *pool)
+add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
   svn_error_t *err;
+  struct add_with_write_lock_baton *b = baton;
 
-  SVN_ERR(svn_io_check_path(local_abspath, &kind, pool));
+  SVN_ERR(svn_io_check_path(b->local_abspath, &kind, scratch_pool));
   if (kind == svn_node_dir)
     {
       /* We use add_dir_recursive for all directory targets
          and pass depth along no matter what it is, so that the
          target's depth will be set correctly. */
-      err = add_dir_recursive(local_abspath, depth,
-                              force, no_ignore, ctx, pool);
+      err = add_dir_recursive(b->local_abspath, b->depth,
+                              b->force, b->no_ignore, b->ctx,
+                              scratch_pool);
     }
   else if (kind == svn_node_file)
-    err = add_file(local_abspath, ctx, pool);
+    err = add_file(b->local_abspath, b->ctx, scratch_pool);
   else
-    err = svn_wc_add4(ctx->wc_ctx, local_abspath, depth, NULL,
+    err = svn_wc_add4(b->ctx->wc_ctx, b->local_abspath, b->depth, NULL,
                       SVN_INVALID_REVNUM,
-                      ctx->cancel_func, ctx->cancel_baton,
-                      ctx->notify_func2, ctx->notify_baton2, pool);
+                      b->ctx->cancel_func, b->ctx->cancel_baton,
+                      b->ctx->notify_func2, b->ctx->notify_baton2,
+                      scratch_pool);
 
   /* Ignore SVN_ERR_ENTRY_EXISTS when FORCE is set.  */
-  if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
+  if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && b->force)
     {
       svn_error_clear(err);
       err = SVN_NO_ERROR;
@@ -579,9 +583,9 @@ svn_client_add4(const char *path,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
-  svn_error_t *err;
   const char *parent_abspath;
   const char *local_abspath;
+  struct add_with_write_lock_baton baton;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
@@ -606,17 +610,14 @@ svn_client_add4(const char *path,
       svn_pool_destroy(subpool);
     }
 
-  SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, parent_abspath,
-                                     pool, pool));
-
-  err = add(local_abspath, depth, force, no_ignore, ctx, pool);
-
-  /* ### Currently we rely on the fact that this releases all our write locks
-     ### recursively. */
-  return svn_error_return(
-            svn_error_compose_create(
-              err,
-              svn_wc__release_write_lock(ctx->wc_ctx, parent_abspath, pool)));
+  baton.local_abspath = local_abspath;
+  baton.depth = depth;
+  baton.force = force;
+  baton.no_ignore = no_ignore;
+  baton.ctx = ctx;
+  SVN_ERR(svn_wc__call_with_write_lock(add, &baton, ctx->wc_ctx,
+                                       parent_abspath, pool, pool));
+  return SVN_NO_ERROR;
 }
 
 
