@@ -80,41 +80,37 @@ struct handle_external_item_change_baton
 };
 
 
-/* Remove the directory at PATH from revision control, and do the same
- * to any revision controlled directories underneath PATH (including
- * directories not referred to by parent svn administrative areas);
- * then if PATH is empty afterwards, remove it, else rename it to a
+struct relegate_dir_external_with_write_lock_baton {
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+};
+
+/* Note: All arguments are in the baton above.
+ *
+ * Remove the directory at LOCAL_ABSPATH from revision control, and do the
+ * same to any revision controlled directories underneath LOCAL_ABSPATH
+ * (including directories not referred to by parent svn administrative areas);
+ * then if LOCAL_ABSPATH is empty afterwards, remove it, else rename it to a
  * unique name in the same parent directory.
  *
  * Pass CANCEL_FUNC, CANCEL_BATON to svn_wc_remove_from_revision_control.
  *
- * Use POOL for all temporary allocation.
- *
- * Note: this function is not passed a svn_wc_adm_access_t.  Instead,
- * it separately opens the object being deleted, so that if there is a
- * lock on that object, the object cannot be deleted.
+ * Use SCRATCH_POOL for all temporary allocation.
  */
 static svn_error_t *
-relegate_dir_external(const char *path,
-                      svn_wc_context_t *wc_ctx,
-                      svn_cancel_func_t cancel_func,
-                      void *cancel_baton,
-                      apr_pool_t *pool)
+relegate_dir_external(void *baton,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
+  struct relegate_dir_external_with_write_lock_baton *b = baton;
   svn_error_t *err = SVN_NO_ERROR;
-  const char *local_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, local_abspath, NULL, pool));
-  err = svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
+  err = svn_wc_remove_from_revision_control2(b->wc_ctx, b->local_abspath,
                                              TRUE, FALSE,
-                                             cancel_func, cancel_baton,
-                                             pool);
-
-  /* ### Ugly. Unlock only if not going to return an error. Revisit */
-  if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
-    SVN_ERR(svn_wc__release_write_lock(wc_ctx, local_abspath, pool));
-
+                                             b->cancel_func, b->cancel_baton,
+                                             scratch_pool);
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
       const char *parent_dir;
@@ -124,12 +120,13 @@ relegate_dir_external(const char *path,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
 
-      svn_dirent_split(path, &parent_dir, &dirname, pool);
+      svn_dirent_split(b->local_abspath, &parent_dir, &dirname, scratch_pool);
 
       /* Reserve the new dir name. */
       SVN_ERR(svn_io_open_uniquely_named(NULL, &new_path,
                                          parent_dir, dirname, ".OLD",
-                                         svn_io_file_del_none, pool, pool));
+                                         svn_io_file_del_none,
+                                         scratch_pool, scratch_pool));
 
       /* Sigh...  We must fall ever so slightly from grace.
 
@@ -150,10 +147,10 @@ relegate_dir_external(const char *path,
          no big deal.
       */
       /* Do our best, but no biggy if it fails. The rename will fail. */
-      svn_error_clear(svn_io_remove_file2(new_path, TRUE, pool));
+      svn_error_clear(svn_io_remove_file2(new_path, TRUE, scratch_pool));
 
       /* Rename. */
-      SVN_ERR(svn_io_file_rename(path, new_path, pool));
+      SVN_ERR(svn_io_file_rename(b->local_abspath, new_path, scratch_pool));
     }
 
   return svn_error_return(err);
@@ -258,12 +255,21 @@ switch_dir_external(const char *path,
   svn_pool_destroy(subpool);
 
   if (kind == svn_node_dir)
-    /* Buh-bye, old and busted ... */
-    SVN_ERR(relegate_dir_external(path,
-                                  ctx->wc_ctx,
-                                  ctx->cancel_func,
-                                  ctx->cancel_baton,
-                                  pool));
+    {
+      struct relegate_dir_external_with_write_lock_baton baton;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+      baton.local_abspath = local_abspath;
+      baton.wc_ctx = ctx->wc_ctx;
+      baton.cancel_func = ctx->cancel_func;
+      baton.cancel_baton = ctx->cancel_baton;
+
+      /* Buh-bye, old and busted ... */
+      SVN_ERR(svn_wc__call_with_write_lock(relegate_dir_external, &baton,
+                                           ctx->wc_ctx, local_abspath,
+                                           pool, pool));
+    }
   else
     {
       /* The target dir might have multiple components.  Guarantee
