@@ -914,6 +914,12 @@ svn_wc__upgrade_sdb(int *result_format,
                                                     scratch_pool),
                              start_format);
 
+  /* ### need lock-out. only one upgrade at a time. note that other code
+     ### cannot use this un-upgraded database until we finish the upgrade.  */
+
+  /* ### the code to upgrade has bit-rotted. just fail for now.  */
+  SVN_ERR_MALFUNCTION();
+
   /* Note: none of these have "break" statements; the fall-through is
      intentional. */
   switch (start_format)

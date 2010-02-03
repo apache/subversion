@@ -36,7 +36,6 @@
 #include "wc.h"
 #include "wc_db.h"
 #include "adm_files.h"
-#include "wc-metadata.h"
 #include "wc-queries.h"
 #include "entries.h"
 #include "lock.h"
@@ -202,18 +201,6 @@ typedef struct svn_wc__db_pdh_t {
    ### when we can aggregate pristine files across dirs/wcs, then we will
    ### need to undo the SKIP. */
 #define SVN__SKIP_SUBDIR
-
-/* ### duplicates entries.c */
-static const char * const upgrade_sql[] = {
-  NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL,
-  WC_METADATA_SQL_12,
-  WC_METADATA_SQL_13,
-  WC_METADATA_SQL_14,
-  WC_METADATA_SQL_15,
-  WC_METADATA_SQL_16
-};
 
 WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
 
@@ -813,7 +800,7 @@ open_db(svn_sqlite__db_t **sdb,
 
   return svn_error_return(svn_sqlite__open(sdb, sdb_abspath,
                                            smode, statements,
-                                           SVN_WC__VERSION, upgrade_sql,
+                                           0, NULL,
                                            result_pool, scratch_pool));
 }
 
@@ -1473,6 +1460,9 @@ create_db(svn_sqlite__db_t **sdb,
   SVN_ERR(open_db(sdb, dir_abspath, sdb_fname,
                   svn_sqlite__mode_rwcreate,
                   result_pool, scratch_pool));
+
+  /* Create the database's schema.  */
+  SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_SCHEMA));
 
   /* Insert the repository. */
   SVN_ERR(create_repos_id(repos_id, repos_root_url, repos_uuid, *sdb,

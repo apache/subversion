@@ -41,7 +41,7 @@
 
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
-#include "../../libsvn_wc/wc-metadata.h"
+#include "../../libsvn_wc/wc-queries.h"
 
 #include "private/svn_wc_private.h"
 
@@ -77,13 +77,7 @@
 
 #define I_TC_DATA "((conflict F file update edited deleted (version 23 " ROOT_ONE " 1 2 branch1/ft/F none) (version 23 " ROOT_ONE " 1 3 branch1/ft/F file)) (conflict G file update edited deleted (version 23 " ROOT_ONE " 1 2 branch1/ft/F none) (version 23 " ROOT_ONE " 1 3 branch1/ft/F file)) )"
 
-static const char * const data_loading_sql[] = {
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  (
-   /* Load the table and index definitions. */
-   WC_METADATA_SQL_12
-   " "
-
+static const char * const TESTING_DATA = (
    /* Load our test data.
 
       Note: do not use named-column insertions. This allows us to test
@@ -301,7 +295,7 @@ static const char * const data_loading_sql[] = {
    " "
    "insert into actual_node values ("
    "  1, 'I', '', null, null, null, null, null, 'changelist', null, "
-   "'" I_TC_DATA "');"
+   "'" I_TC_DATA "', null, null, null, null);"
    "  "
    "insert into base_node values ("
    "  1, 'M', null, null, '', 'normal', 'dir', "
@@ -313,13 +307,9 @@ static const char * const data_loading_sql[] = {
    "  null, null, "
    "  null, null, null, null, null, "
    "  null, null, null, 0, null, null, '()', 0); "
-   ),
+   );
 
-  WC_METADATA_SQL_13,
-  WC_METADATA_SQL_14,
-  WC_METADATA_SQL_15,
-  WC_METADATA_SQL_16
-};
+WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
 
 
 static svn_error_t *
@@ -329,12 +319,24 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
                                              "fake-wc", subdir, ".svn", NULL);
   const char *dbpath = svn_dirent_join(dirpath, "wc.db", scratch_pool);
   svn_sqlite__db_t *sdb;
+  const char * const my_statements[] = {
+    statements[STMT_CREATE_SCHEMA],
+    TESTING_DATA,
+    NULL
+  };
 
   SVN_ERR(svn_io_make_dir_recursively(dirpath, scratch_pool));
   svn_error_clear(svn_io_remove_file(dbpath, scratch_pool));
-  SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_rwcreate, NULL,
-                           format, data_loading_sql,
+  SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_rwcreate,
+                           my_statements,
+                           0, NULL,
                            scratch_pool, scratch_pool));
+
+  /* Create the database's schema.  */
+  SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ 0));
+
+  /* Throw our extra data into the database.  */
+  SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ 1));
 
   return SVN_NO_ERROR;
 }
