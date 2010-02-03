@@ -1229,6 +1229,7 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
                   for (i = 0; i < missing_components; i++)
                     {
                       const char *component;
+                      svn_wc_status2_t *status;
 
                       svn_pool_clear(iterpool);
 
@@ -1236,6 +1237,18 @@ apply_one_patch(svn_patch_t *patch, const char *abs_wc_path,
                                                 const char *);
                       abs_path = svn_dirent_join(abs_path, component,
                                                  pool);
+
+                      /* Skip things we should not be messing with. */
+                      SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, abs_path,
+                                             iterpool, iterpool));
+                      if (status->text_status == svn_wc_status_unversioned ||
+                          status->text_status == svn_wc_status_ignored ||
+                          status->text_status == svn_wc_status_obstructed)
+                        {
+                          target->skipped = TRUE;
+                          break;
+                        }
+
                       if (dry_run)
                         {
                           if (ctx->notify_func2)
