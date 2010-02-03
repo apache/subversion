@@ -1277,8 +1277,8 @@ svn_wc_create_notify(const char *path,
  * Allocate an #svn_wc_notify_t structure in @a pool, initialize and return
  * it.
  *
- * Set the @c url field of the created struct to @a url, @c action to, @c path
- * to "." and @a action.  Set all other fields to their @c _unknown, @c NULL or
+ * Set the @c url field of the created struct to @a url, @c path to "." and @c
+ * action to @a action.  Set all other fields to their @c _unknown, @c NULL or
  * invalid value, respectively. Make only a shallow copy of the pointer
  * @a url.
  *
