@@ -1233,6 +1233,20 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
 
                   present_components++;
                 }
+              else
+                {
+                  /* The WC_DB doesn't know much about this node.
+                   * Check what's on disk. */
+                  svn_node_kind_t disk_kind;
+ 
+                  SVN_ERR(svn_io_check_path(abs_path, &disk_kind, iterpool));
+                  if (disk_kind != svn_node_none)
+                    {
+                      /* An unversioned item is in the way. */
+                      target->skipped = TRUE;
+                      break;
+                    }
+                }
             }
 
           if (! target->skipped)
@@ -1241,7 +1255,6 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
               for (i = present_components; i < components->nelts - 1; i++)
                 {
                   const char *component;
-                  svn_wc_status2_t *status;
 
                   svn_pool_clear(iterpool);
 
@@ -1249,18 +1262,6 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                                             const char *);
                   abs_path = svn_dirent_join(abs_path, component,
                                              pool);
-
-                  /* Skip things we should not be messing with. */
-                  SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, abs_path,
-                                         iterpool, iterpool));
-                  if (status->text_status == svn_wc_status_unversioned ||
-                      status->text_status == svn_wc_status_ignored ||
-                      status->text_status == svn_wc_status_obstructed)
-                    {
-                      target->skipped = TRUE;
-                      break;
-                    }
-
                   if (dry_run)
                     {
                       if (ctx->notify_func2)
