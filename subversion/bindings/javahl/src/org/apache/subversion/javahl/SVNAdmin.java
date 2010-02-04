@@ -46,6 +46,14 @@ public class SVNAdmin
     }
 
     /**
+     * Don't call this function!  public for backward compat purposes.
+     */
+    public long getCppAddr()
+    {
+        return cppAddr;
+    }
+
+    /**
      * Build the native peer
      * @return the adress of the peer
      */
@@ -58,8 +66,9 @@ public class SVNAdmin
 
     /**
      * release the native peer (should use dispose instead)
+     * public for backward compat.  Shouldn't call this directly.
      */
-    protected native void finalize();
+    public native void finalize();
 
     /**
      * slot for the adress of the native peer. The JNI code is the only user

@@ -47,10 +47,11 @@ public class Revision implements java.io.Serializable
     protected int revKind;
 
     /**
-     * Internally create a new revision
+     * Internally create a new revision.  Public for backward compat reasons.
+     * Callers should use getInstance() instead.
      * @param kind    kind of revision
      */
-    protected Revision(int kind)
+    public Revision(int kind)
     {
         if (kind < RevisionKind.unspecified || kind > RevisionKind.head)
             throw new IllegalArgumentException(

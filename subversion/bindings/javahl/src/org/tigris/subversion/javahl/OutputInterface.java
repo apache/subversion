@@ -23,23 +23,14 @@
 
 package org.tigris.subversion.javahl;
 
+import org.apache.subversion.javahl.*;
+
 import java.io.IOException;
 
 /**
  * Interface to send data to subversion used by SVNAdmin.load.
  */
 public interface OutputInterface
+    extends org.apache.subversion.javahl.IOutput
 {
-    /**
-     * write the bytes in data to java
-     * @param data          the data to be writtem
-     * @throws IOException  throw in case of problems.
-     */
-    public int write(byte[] data) throws IOException;
-
-    /**
-     * close the output
-     * @throws IOException throw in case of problems.
-     */
-    public void close() throws IOException;
 }

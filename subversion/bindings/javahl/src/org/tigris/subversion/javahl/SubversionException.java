@@ -23,6 +23,8 @@
 
 package org.tigris.subversion.javahl;
 
+import org.apache.subversion.javahl.*;
+
 /**
  * This checked exception is thrown whenever something goes wrong with
  * the Subversion JavaHL bindings.
@@ -46,5 +48,13 @@ public class SubversionException extends Exception
     protected SubversionException(String message)
     {
         super(message);
+    }
+
+    /**
+     * This constructor is for backward compat.
+     */
+    SubversionException(org.apache.subversion.javahl.SubversionException ex)
+    {
+        super(ex.getMessage());
     }
 }
