@@ -23,6 +23,8 @@
 
 package org.tigris.subversion.javahl;
 
+import org.apache.subversion.javahl.*;
+
 /**
  * This exception is thrown whenever something goes wrong in the
  * Subversion JavaHL binding's JNI interface.
@@ -49,6 +51,14 @@ public class ClientException extends NativeException
     ClientException(String message, String source, int aprError)
     {
         super(message, source, aprError);
+    }
+
+    /**
+     * This constructor is for backward compat.
+     */
+    ClientException(org.apache.subversion.javahl.ClientException ex)
+    {
+        super(ex.getMessage(), ex.getSource(), ex.getAprError());
     }
 
     /**

@@ -23,6 +23,8 @@
 
 package org.tigris.subversion.javahl;
 
+import org.apache.subversion.javahl.*;
+
 import java.io.IOException;
 
 /**
@@ -30,17 +32,6 @@ import java.io.IOException;
  * used for SVNAdmin.load and SVNAdmin.dump
  */
 public interface InputInterface
+    extends org.apache.subversion.javahl.IInput
 {
-    /**
-     * read the number of data.length bytes from input.
-     * @param data          array to store the read bytes.
-     * @throws IOException  throw in case of problems.
-     */
-    public int read(byte [] data) throws IOException;
-
-    /**
-     * close the input
-     * @throws IOException throw in case of problems.
-     */
-    public void close() throws IOException;
 }

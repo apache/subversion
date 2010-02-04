@@ -23,6 +23,8 @@
 
 package org.tigris.subversion.javahl;
 
+import org.apache.subversion.javahl.*;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -155,6 +157,11 @@ public class Revision implements java.io.Serializable
         return new Revision.DateSpec(revisionDate);
     }
 
+    public org.apache.subversion.javahl.Revision toApache()
+    {
+        return new org.apache.subversion.javahl.Revision(revKind);
+    }
+
     /**
      * last commited revision
      */
@@ -256,6 +263,11 @@ public class Revision implements java.io.Serializable
         {
             return (int)(revNumber ^ (revNumber >>> 32));
         }
+
+        public org.apache.subversion.javahl.Revision toApache()
+        {
+            return org.apache.subversion.javahl.Revision.getInstance(revNumber);
+        }
     }
 
     /**
@@ -323,6 +335,10 @@ public class Revision implements java.io.Serializable
             return revDate.hashCode();
         }
 
+        public org.apache.subversion.javahl.Revision toApache()
+        {
+            return org.apache.subversion.javahl.Revision.getInstance(revDate);
+        }
     }
 
     /**

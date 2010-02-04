@@ -20,11 +20,11 @@
  * ====================================================================
  * @endcopyright
  *
- * @file org_tigris_subversion_javahl_SVNAdmin.cpp
+ * @file org_apache_subversion_javahl_SVNAdmin.cpp
  * @brief Implementation of the native methods in the Java class SVNAdmin
  */
 
-#include "../include/org_tigris_subversion_javahl_SVNAdmin.h"
+#include "../include/org_apache_subversion_javahl_SVNAdmin.h"
 #include "JNIUtil.h"
 #include "JNIStackElement.h"
 #include "JNIStringHolder.h"
@@ -38,7 +38,7 @@
 #include "svn_private_config.h"
 
 JNIEXPORT jlong JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_ctNative
+Java_org_apache_subversion_javahl_SVNAdmin_ctNative
 (JNIEnv *env, jobject jthis)
 {
   JNIEntry(SVNAdmin, ctNative);
@@ -47,7 +47,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_ctNative
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_dispose
+Java_org_apache_subversion_javahl_SVNAdmin_dispose
 (JNIEnv *env, jobject jthis)
 {
   JNIEntry(SVNAdmin, dispose);
@@ -61,7 +61,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_dispose
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_finalize
+Java_org_apache_subversion_javahl_SVNAdmin_finalize
 (JNIEnv *env, jobject jthis)
 {
   JNIEntry(SVNAdmin, finalize);
@@ -71,7 +71,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_finalize
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_create
+Java_org_apache_subversion_javahl_SVNAdmin_create
 (JNIEnv *env, jobject jthis, jstring jpath, jboolean jdisableFsyncCommit,
  jboolean jkeepLog, jstring jconfigpath, jstring jfstype)
 {
@@ -100,7 +100,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_create
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_deltify
+Java_org_apache_subversion_javahl_SVNAdmin_deltify
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevisionStart,
  jobject jrevisionStop)
 {
@@ -128,7 +128,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_deltify
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_dump
+Java_org_apache_subversion_javahl_SVNAdmin_dump
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jdataout,
  jobject jmessageout, jobject jrevisionStart, jobject jrevisionEnd,
  jboolean jincremental, jboolean juseDeltas)
@@ -166,7 +166,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_dump
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_hotcopy
+Java_org_apache_subversion_javahl_SVNAdmin_hotcopy
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jtargetPath,
  jboolean jcleanLogs)
 {
@@ -190,7 +190,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_hotcopy
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_listDBLogs
+Java_org_apache_subversion_javahl_SVNAdmin_listDBLogs
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jreceiver)
 {
   JNIEntry(SVNAdmin, listDBLogs);
@@ -213,7 +213,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_listDBLogs
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_listUnusedDBLogs
+Java_org_apache_subversion_javahl_SVNAdmin_listUnusedDBLogs
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jreceiver)
 {
   JNIEntry(SVNAdmin, listUnusedDBLogs);
@@ -236,7 +236,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_listUnusedDBLogs
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_load
+Java_org_apache_subversion_javahl_SVNAdmin_load
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jinputData,
  jobject joutputMsg, jboolean jignoreUUID, jboolean jforceUUID,
  jboolean jusePreCommitHook, jboolean jusePostCommitHook, jstring jrelativePath)
@@ -272,7 +272,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_load
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_lstxns
+Java_org_apache_subversion_javahl_SVNAdmin_lstxns
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jmessageReceiver)
 {
   JNIEntry(SVNAdmin, lstxns);
@@ -295,7 +295,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_lstxns
 }
 
 JNIEXPORT jlong JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_recover
+Java_org_apache_subversion_javahl_SVNAdmin_recover
 (JNIEnv *env, jobject jthis, jstring jpath)
 {
   JNIEntry(SVNAdmin, recover);
@@ -314,7 +314,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_recover
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_rmtxns
+Java_org_apache_subversion_javahl_SVNAdmin_rmtxns
 (JNIEnv *env, jobject jthis, jstring jpath, jobjectArray jtransactions)
 {
   JNIEntry(SVNAdmin, rmtxns);
@@ -373,7 +373,7 @@ setRevProp(jobject jthis, jstring jpath, jobject jrevision,
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_setLog
+Java_org_apache_subversion_javahl_SVNAdmin_setLog
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
  jstring jmessage, jboolean jbypassHooks)
 {
@@ -386,7 +386,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_setLog
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_setRevProp
+Java_org_apache_subversion_javahl_SVNAdmin_setRevProp
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
  jstring jpropName, jstring jpropValue, jboolean jusePreRevPropChangeHook,
  jboolean jusePostRevPropChangeHook)
@@ -397,7 +397,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_setRevProp
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_verify
+Java_org_apache_subversion_javahl_SVNAdmin_verify
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jmessageout,
  jobject jrevisionStart, jobject jrevisionEnd)
 {
@@ -429,7 +429,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_verify
 }
 
 JNIEXPORT jobjectArray JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_lslocks
+Java_org_apache_subversion_javahl_SVNAdmin_lslocks
 (JNIEnv *env, jobject jthis, jstring jpath)
 {
   JNIEntry(SVNAdmin, lslocks);
@@ -448,7 +448,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_lslocks
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNAdmin_rmlocks
+Java_org_apache_subversion_javahl_SVNAdmin_rmlocks
 (JNIEnv *env, jobject jthis, jstring jpath, jobjectArray jlocks)
 {
   JNIEntry(SVNAdmin, rmlocks);
