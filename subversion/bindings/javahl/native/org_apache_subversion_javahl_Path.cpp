@@ -20,19 +20,19 @@
  * ====================================================================
  * @endcopyright
  *
- * @file org_tigris_subversion_javahl_Path.cpp
+ * @file org_apache_subversion_javahl_Path.cpp
  * @brief Implementation of the native methods in the Java class Path
  */
 
 #include <jni.h>
-#include "../include/org_tigris_subversion_javahl_Path.h"
+#include "../include/org_apache_subversion_javahl_Path.h"
 #include "JNIUtil.h"
 #include "JNIStackElement.h"
 #include "JNIStringHolder.h"
 #include "Path.h"
 
 JNIEXPORT jboolean JNICALL
-Java_org_tigris_subversion_javahl_Path_isValid(JNIEnv *env,
+Java_org_apache_subversion_javahl_Path_isValid(JNIEnv *env,
                                                jclass jthis,
                                                jstring jpath)
 {
