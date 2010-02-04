@@ -125,7 +125,7 @@ StatusCallback::createJavaStatus(const char *local_abspath,
                              "Ljava/lang/String;Ljava/lang/String;"
                              "JZZLjava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;"
-                             "JLorg/tigris/subversion/javahl/Lock;"
+                             "JL"JAVA_PACKAGE"/Lock;"
                              "JJILjava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
