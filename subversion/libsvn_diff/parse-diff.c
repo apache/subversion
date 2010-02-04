@@ -217,6 +217,7 @@ parse_next_hunk(svn_hunk_t **hunk,
 {
   static const char * const minus = "--- ";
   static const char * const atat = "@@";
+  svn_stringbuf_t *line;
   svn_boolean_t eof, in_hunk, hunk_seen;
   apr_off_t pos, last_line;
   apr_off_t start, end;
@@ -250,7 +251,6 @@ parse_next_hunk(svn_hunk_t **hunk,
   iterpool = svn_pool_create(scratch_pool);
   do
     {
-      svn_stringbuf_t *line;
 
       svn_pool_clear(iterpool);
 
@@ -332,7 +332,9 @@ parse_next_hunk(svn_hunk_t **hunk,
             break;
         }
     }
-  while (! eof);
+  /* Check for the line length since a file may not have a newline at the
+   * end and we depend upon the last line to be an empty one. */
+  while (! eof || line->len > 0);
   svn_pool_destroy(iterpool);
 
   if (! eof)
