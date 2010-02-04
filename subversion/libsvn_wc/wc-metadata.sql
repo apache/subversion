@@ -221,7 +221,7 @@ CREATE TABLE WORKING_NODE (
      incomplete: nodes are being added into the WORKING tree, and the full
        information about this node is not (yet) present.
 
-     base-delete: the underlying BASE node has been marked for deletion due
+     base-deleted: the underlying BASE node has been marked for deletion due
        to a delete or a move-away (see the moved_to column to determine).  */
   presence  TEXT NOT NULL,
 
