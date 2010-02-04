@@ -19,17 +19,20 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
- */
-
-package org.tigris.subversion.javahl;
-
-import org.apache.subversion.javahl.*;
-
-/**
- * Subversion path validation and manipulation.
  *
- * @since 1.4.0
+ * @file org_apache_subversion_javahl_NativeResources.cpp
+ * @brief Implementation of the native methods in the Java class
+ * NativeResources.
  */
-public class Path extends org.apache.subversion.javahl.Path
+
+#include "JNIUtil.h"
+#include "../include/org_apache_subversion_javahl_NativeResources.h"
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_NativeResources_initNativeLibrary
+(JNIEnv *env, jclass jclazz)
 {
+  // No usual JNIEntry here, as the prerequisite native library
+  // initialization is performed here.
+  JNIUtil::JNIGlobalInit(env);
 }
