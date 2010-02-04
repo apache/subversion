@@ -268,7 +268,7 @@ class SVNTests extends TestCase
     private void initClient()
         throws SubversionException
     {
-        this.client = new Client();
+        this.client = new SVNClient();
         this.client.notification2(new MyNotifier());
         this.client.commitMessageHandler(new MyCommitMessage());
         this.client.username("jrandom");

@@ -34,7 +34,7 @@ import java.util.Map;
  * implemented in this class.  This class is not threadsafe; if you
  * need threadsafe access, use ClientSynchronized.
  */
-public class Client implements ISVNClient
+public class SVNClient implements ISVNClient
 {
     /**
      * Load the required native library.
@@ -47,7 +47,7 @@ public class Client implements ISVNClient
     /**
      * Standard empty contructor, builds just the native peer.
      */
-    public Client()
+    public SVNClient()
     {
         cppAddr = ctNative();
 
