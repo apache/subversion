@@ -219,6 +219,20 @@ Candidate changes:
     Votes:
       +1: jerenkrantz, kameshj
 
+ * r906256, 906305
+   Fix issue #3573 'local non-inheritable mergeinfo changes not properly
+   merged with updated mergeinfo'
+   Notes:
+   Justification:
+     svn:mergeinfo should be mergeable, but in this issue mergeinfo changes
+     brought down by an update were not properly merged with local changes.
+   Notes:
+     r906256 is a test demonstrating the problem and r906305 is the fix.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3573
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
