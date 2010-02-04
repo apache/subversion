@@ -926,7 +926,7 @@ diff_mergeinfo_props(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
       SVN_ERR(svn_mergeinfo_parse(&from, from_prop_val->data, pool));
       SVN_ERR(svn_mergeinfo_parse(&to, to_prop_val->data, pool));
       SVN_ERR(svn_mergeinfo_diff(deleted, added, from, to,
-                                 FALSE, pool));
+                                 TRUE, pool));
     }
   return SVN_NO_ERROR;
 }
