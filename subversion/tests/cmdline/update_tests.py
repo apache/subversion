@@ -5186,7 +5186,7 @@ def mergeinfo_updates_merge_with_local_mods(sbox):
   # Update the WC (to r8), the mergeinfo on A_COPY should now have both
   # the local mod from the uncommitted merge (/A:3* --> /A:3) and the change
   # brought down by the update (/A:3* --> /A:3*,5) leaving us with /A:3,5.
-  ### Currently this fails because of issue #3573.  The local mergeinfo change
+  ### This was failing because of issue #3573.  The local mergeinfo change
   ### is reverted, leaving '/A:3*,5' on A_COPY.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   svntest.actions.run_and_verify_svn(None, [A_COPY_path + " - /A:3,5\n"], [],
@@ -5260,7 +5260,7 @@ test_list = [ None,
               update_wc_of_dir_to_rev_not_containing_this_dir,
               XFail(update_deleted_locked_files),
               XFail(update_empty_hides_entries),
-              XFail(mergeinfo_updates_merge_with_local_mods),
+              mergeinfo_updates_merge_with_local_mods,
              ]
 
 if __name__ == '__main__':
