@@ -1120,7 +1120,7 @@ def patch_with_fuzz(sbox):
     "+A third new line\n",
     " \n",
     " Again, we wish to congratulate you over your email success in our\n"
-    " computer Balloting.\n"
+    " computer Balloting. [No trailing newline here]"
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
