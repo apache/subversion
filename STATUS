@@ -233,6 +233,18 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r877016, r902093
+   Fix issue #3390 'relative externals not updated during switch'.
+   Justification:
+     One of the selling points of relative externals was their ability
+     to be used to span branches and tags.  Not so useful if switching
+     to a different tag or branch doesn't actually cause the external
+     to point to the right place.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3390
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
