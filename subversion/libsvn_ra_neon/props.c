@@ -425,7 +425,8 @@ static svn_error_t * end_element(void *baton, int state,
 
       /* All other href's we'll treat as property values. */
       name = parent_defn->name;
-      value = svn_string_create(cdata, pc->pool);
+      value = svn_string_create(svn_uri_canonicalize(cdata, pc->pool),
+                                pc->pool);
       break;
 
     default:
