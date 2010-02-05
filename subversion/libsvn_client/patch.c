@@ -1336,11 +1336,14 @@ typedef struct {
   /* Indicates whether we're doing a dry run. */
   svn_boolean_t dry_run;
 
-  /* The client context. */
-  svn_client_ctx_t *ctx;
-
   /* Number of leading components to strip from patch target paths. */
   int strip_count;
+
+  /* Whether to apply the patch in reverse. */
+  svn_boolean_t reverse;
+
+  /* The client context. */
+  svn_client_ctx_t *ctx;
 } apply_patches_baton_t;
 
 /* Callback for use with svn_wc__call_with_write_lock().
@@ -1384,7 +1387,7 @@ apply_patches(void *baton,
         SVN_ERR(btn->ctx->cancel_func(btn->ctx->cancel_baton));
 
       SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file,
-                                         scratch_pool, iterpool));
+                                         btn->reverse, scratch_pool, iterpool));
       if (patch)
         {
           patch_target_t *target;
@@ -1425,6 +1428,7 @@ svn_client_patch(const char *abs_patch_path,
                  const char *local_abspath,
                  svn_boolean_t dry_run,
                  int strip_count,
+                 svn_boolean_t reverse,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -1439,6 +1443,7 @@ svn_client_patch(const char *abs_patch_path,
   baton.dry_run = dry_run;
   baton.ctx = ctx;
   baton.strip_count = strip_count;
+  baton.reverse = reverse;
 
   SVN_ERR(svn_wc__call_with_write_lock(apply_patches, &baton,
                                        ctx->wc_ctx, local_abspath,
