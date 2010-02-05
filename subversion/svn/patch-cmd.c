@@ -78,7 +78,7 @@ svn_cl__patch(apr_getopt_t *os,
 
   SVN_ERR(svn_client_patch(abs_patch_path, abs_target_path,
                            opt_state->dry_run, opt_state->strip_count,
-                           ctx, pool));
+                           opt_state->reverse_diff, ctx, pool));
 
   if (! opt_state->quiet)
     SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, pool));

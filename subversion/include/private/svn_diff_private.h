@@ -110,11 +110,13 @@ typedef struct svn_patch_t {
 
 /* Return the next *PATCH in PATCH_FILE.
  * If no patch can be found, set *PATCH to NULL.
+ * If reverse is TRUE, invert the patch while parsing it.
  * Allocate results in RESULT_POOL.
  * Use SCRATCH_POOL for all other allocations. */
 svn_error_t *
 svn_diff__parse_next_patch(svn_patch_t **patch,
                            apr_file_t *patch_file,
+                           svn_boolean_t reverse,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 

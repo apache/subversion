@@ -115,7 +115,8 @@ typedef enum {
   opt_reintegrate,
   opt_trust_server_cert,
   opt_show_copies_as_adds,
-  opt_ignore_keywords
+  opt_ignore_keywords,
+  opt_reverse_diff,
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -342,7 +343,10 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("don't expand keywords\n"
                        "                             "
                        "[alias: --ik]")},
-
+  {"reverse-diff", opt_reverse_diff, 0,
+                    N_("apply the unidiff in reverse\n"
+                       "                             "
+                       "[alias: --rd]")},
   /* Long-opt Aliases
    *
    * These have NULL desriptions, but an option code that matches some
@@ -358,6 +362,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"na",            opt_notice_ancestry, 0, NULL},
   {"ia",            opt_ignore_ancestry, 0, NULL},
   {"ie",            opt_ignore_externals, 0, NULL},
+  {"rd",            opt_reverse_diff, 0, NULL},
   {"ro",            opt_record_only, 0, NULL},
   {"cd",            opt_config_dir, 1, NULL},
   {"cl",            opt_changelist, 1, NULL},
@@ -800,7 +805,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  for addition. Use 'svn revert' to undo deletions and additions you\n"
      "  do not agree with.\n"
      ),
-    {'q', opt_dry_run, opt_accept, opt_merge_cmd, 'p'} },
+    {'q', opt_dry_run, 'p', opt_reverse_diff} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1711,6 +1716,9 @@ main(int argc, const char *argv[])
         break;
       case opt_ignore_keywords:
         opt_state.ignore_keywords = TRUE;
+        break;
+      case opt_reverse_diff:
+        opt_state.reverse_diff = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

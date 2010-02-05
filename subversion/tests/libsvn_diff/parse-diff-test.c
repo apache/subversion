@@ -63,12 +63,10 @@ test_parse_unidiff(apr_pool_t *pool)
   apr_file_t *patch_file;
   apr_status_t status;
   apr_size_t len;
-  apr_off_t pos;
   const char *fname = "test_parse_unidiff.patch";
-  svn_patch_t *patch;
-  svn_hunk_t *hunk;
-  svn_stringbuf_t *buf;
-  svn_boolean_t eof;
+  svn_boolean_t reverse;
+  int i;
+  apr_pool_t *iterpool;
 
   /* Create a patch file. */
   status = apr_file_open(&patch_file, fname,
@@ -83,69 +81,121 @@ test_parse_unidiff(apr_pool_t *pool)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "Cannot write to '%s'", fname);
 
-  /* Reset file pointer. */
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(patch_file, APR_SET, &pos, pool));
+  reverse = FALSE;
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < 2; i++)
+    {
+      svn_patch_t *patch;
+      svn_hunk_t *hunk;
+      svn_stringbuf_t *buf;
+      svn_boolean_t eof;
+      apr_off_t pos;
+      svn_stream_t *original_text;
+      svn_stream_t *modified_text;
 
-  /* We have two patches with one hunk each.
-   * Parse the first patch. */
-  SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, pool, pool));
-  SVN_ERR_ASSERT(patch);
-  SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/C/gamma"));
-  SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/C/gamma"));
-  SVN_ERR_ASSERT(patch->hunks->nelts == 1);
+      svn_pool_clear(iterpool);
 
-  /* Make sure original text was parsed correctly. */
-  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
-  SVN_ERR(svn_stream_readline(hunk->original_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
-  /* Now we should get EOF. */
-  SVN_ERR(svn_stream_readline(hunk->original_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(eof);
-  SVN_ERR_ASSERT(buf->len == 0);
+      /* Reset file pointer. */
+      pos = 0;
+      SVN_ERR(svn_io_file_seek(patch_file, APR_SET, &pos, iterpool));
 
-  /* Make sure modified text was parsed correctly. */
-  SVN_ERR(svn_stream_readline(hunk->modified_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
-  SVN_ERR(svn_stream_readline(hunk->modified_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, "some more bytes to 'gamma'"));
-  /* Now we should get EOF. */
-  SVN_ERR(svn_stream_readline(hunk->modified_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(eof);
-  SVN_ERR_ASSERT(buf->len == 0);
+      /* We have two patches with one hunk each.
+       * Parse the first patch. */
+      SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, reverse,
+                                         iterpool, iterpool));
+      SVN_ERR_ASSERT(patch);
+      SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/C/gamma"));
+      SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/C/gamma"));
+      SVN_ERR_ASSERT(patch->hunks->nelts == 1);
 
-  /* Parse the second patch. */
-  SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, pool, pool));
-  SVN_ERR_ASSERT(patch);
-  SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/D/gamma.orig"));
-  SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/D/gamma"));
-  SVN_ERR_ASSERT(patch->hunks->nelts == 1);
+      hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+      if (reverse)
+        {
+          /* Hunk texts come out of the parser inverted,
+           * so this inverts them a second time. */
+          original_text = hunk->modified_text;
+          modified_text = hunk->original_text;
+        }
+      else
+        {
+          original_text = hunk->original_text;
+          modified_text = hunk->modified_text;
+        }
 
-  /* Make sure original text was parsed correctly. */
-  hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
-  SVN_ERR(svn_stream_readline(hunk->original_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
-  SVN_ERR(svn_stream_readline(hunk->original_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, "some less bytes to 'gamma'"));
-  /* Now we should get EOF. */
-  SVN_ERR(svn_stream_readline(hunk->original_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(eof);
-  SVN_ERR_ASSERT(buf->len == 0);
+      /* Make sure original text was parsed correctly. */
+      SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
+      SVN_ERR_ASSERT(! eof);
+      SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
+      /* Now we should get EOF. */
+      SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
+      SVN_ERR_ASSERT(eof);
+      SVN_ERR_ASSERT(buf->len == 0);
 
-  /* Make sure modified text was parsed correctly. */
-  SVN_ERR(svn_stream_readline(hunk->modified_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(! eof);
-  SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
-  /* Now we should get EOF. */
-  SVN_ERR(svn_stream_readline(hunk->modified_text, &buf, NL, &eof, pool));
-  SVN_ERR_ASSERT(eof);
-  SVN_ERR_ASSERT(buf->len == 0);
+      /* Make sure modified text was parsed correctly. */
+      SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
+      SVN_ERR_ASSERT(! eof);
+      SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
+      SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
+      SVN_ERR_ASSERT(! eof);
+      SVN_ERR_ASSERT(! strcmp(buf->data, "some more bytes to 'gamma'"));
+      /* Now we should get EOF. */
+      SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
+      SVN_ERR_ASSERT(eof);
+      SVN_ERR_ASSERT(buf->len == 0);
 
+      /* Parse the second patch. */
+      SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, reverse, pool, pool));
+      SVN_ERR_ASSERT(patch);
+      if (reverse)
+        {
+          SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/D/gamma.orig"));
+          SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/D/gamma"));
+        }
+      else
+        {
+          SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/D/gamma.orig"));
+          SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/D/gamma"));
+        }
+      SVN_ERR_ASSERT(patch->hunks->nelts == 1);
+
+      hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_hunk_t *);
+      if (reverse)
+        {
+          /* Hunk texts come out of the parser inverted,
+           * so this inverts them a second time. */
+          original_text = hunk->modified_text;
+          modified_text = hunk->original_text;
+        }
+      else
+        {
+          original_text = hunk->original_text;
+          modified_text = hunk->modified_text;
+        }
+
+      /* Make sure original text was parsed correctly. */
+      SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
+      SVN_ERR_ASSERT(! eof);
+      SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
+      SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
+      SVN_ERR_ASSERT(! eof);
+      SVN_ERR_ASSERT(! strcmp(buf->data, "some less bytes to 'gamma'"));
+      /* Now we should get EOF. */
+      SVN_ERR(svn_stream_readline(original_text, &buf, NL, &eof, pool));
+      SVN_ERR_ASSERT(eof);
+      SVN_ERR_ASSERT(buf->len == 0);
+
+      /* Make sure modified text was parsed correctly. */
+      SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
+      SVN_ERR_ASSERT(! eof);
+      SVN_ERR_ASSERT(! strcmp(buf->data, "This is the file 'gamma'."));
+      /* Now we should get EOF. */
+      SVN_ERR(svn_stream_readline(modified_text, &buf, NL, &eof, pool));
+      SVN_ERR_ASSERT(eof);
+      SVN_ERR_ASSERT(buf->len == 0);
+
+      reverse = !reverse;
+    }
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
