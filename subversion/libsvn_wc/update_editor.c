@@ -553,6 +553,7 @@ make_dir_baton(struct dir_baton **d_p,
     }
   else
     {
+      /* This is the root baton. */
       d->name = NULL;
       d->local_abspath = eb->anchor_abspath;
     }
@@ -1824,7 +1825,8 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
         /* If this is a 'switch' operation, try to construct the switch
          * target's REPOS_RELPATH. */
         if (their_url != NULL)
-          right_repos_relpath = svn_uri_is_child(repos_root_url, their_url, pool);
+          right_repos_relpath = svn_uri_is_child(repos_root_url, their_url,
+                                                 pool);
         else
           {
             /* The complete source-right URL is not available, but it
@@ -2701,10 +2703,9 @@ add_directory(const char *path,
       if (status == svn_wc__db_status_added)
         {
           /* Specialize the added case to added, copied, moved */
-          SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL,
-                                           eb->db, db->local_abspath,
-                                           pool, pool));
+          SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, eb->db,
+                                           db->local_abspath, pool, pool));
         }
 
       switch (status)
@@ -3318,7 +3319,7 @@ close_directory(void *dir_baton,
     }
 
   bdi = db->bump_info;
-  while(bdi && !bdi->ref_count)
+  while (bdi && !bdi->ref_count)
     {
       apr_pool_t *destroy_pool = bdi->pool;
       bdi = bdi->parent;
@@ -4038,6 +4039,13 @@ add_file(const char *path,
             fb->add_existed = TRUE;
             break;
           default:
+            /* svn_wc__db_status_normal,
+             * svn_wc__db_status_moved_here,
+             * svn_wc__db_status_copied,
+             * svn_wc__db_status_deleted,
+             * svn_wc__db_status_incomplete,
+             * svn_wc__db_status_base_deleted
+             */
             {
               svn_wc_conflict_description2_t *tree_conflict = NULL;
 
