@@ -1523,7 +1523,7 @@ typedef struct svn_wc_conflict_version_t
  */
 svn_wc_conflict_version_t *
 svn_wc_conflict_version_create(const char *repos_url,
-                               const char* path_in_repos,
+                               const char *path_in_repos,
                                svn_revnum_t peg_rev,
                                svn_node_kind_t node_kind,
                                apr_pool_t *pool);
