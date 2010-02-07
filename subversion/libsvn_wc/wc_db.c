@@ -5275,6 +5275,9 @@ svn_wc__db_temp_determine_keep_local(svn_boolean_t *keep_local,
 {
   svn_sqlite__stmt_t *stmt;
 
+  /* ### This will fail for nodes that don't have a WORKING_NODE record,
+         but this is not an issue for this function, as this call is only
+         valid for deleted nodes anyway. */
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
                                  STMT_SELECT_KEEP_LOCAL_FLAG, scratch_pool));
   SVN_ERR(svn_sqlite__step_row(stmt));
