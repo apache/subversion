@@ -1878,6 +1878,8 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
                                const char *local_abspath,
                                apr_pool_t *scratch_pool);
 
+/* For a deleted node, determine its keep_local flag. (This flag will
+   go away once we have a consolidated administrative area) */
 svn_error_t *
 svn_wc__db_temp_determine_keep_local(svn_boolean_t *keep_local,
                                      svn_wc__db_t *db,
