@@ -40,16 +40,16 @@ class PoolTestCase(unittest.TestCase):
 
     # Test good object assignment operations
     client_ctx = svn.client.svn_client_create_context()
-    config = svn.core.svn_config_get_config(None)
-    client_ctx.config = config
+    auth = svn.core.svn_auth_open([])
+    client_ctx.auth_baton = auth
 
     # Check that parent pools are set correctly on struct accesses
-    self.assertEqual(client_ctx.config._parent_pool, config._parent_pool)
+    self.assertEqual(client_ctx.auth_baton._parent_pool, auth._parent_pool)
 
     # Test bad object assignment operations
     def test_bad_assignment(self):
       head_revision = svn.core.svn_opt_revision_t()
-      head_revision.kind = config
+      head_revision.kind = auth
     self.assertRaises(TypeError, test_bad_assignment)
 
   def test_assert_valid(self):
@@ -57,29 +57,29 @@ class PoolTestCase(unittest.TestCase):
 
     # Test assert_valid with destroy()
     client_ctx = svn.client.svn_client_create_context()
-    config = svn.core.svn_config_get_config(None)
-    wrapped_config = GenericSWIGWrapper(config, config._parent_pool)
-    client_ctx.config = config
-    config.assert_valid()
-    wrapped_config.assert_valid()
-    client_ctx.config.assert_valid()
-    config._parent_pool.destroy()
-    self.assertRaises(AssertionError, lambda: config.assert_valid())
-    self.assertRaises(AssertionError, lambda: wrapped_config.assert_valid())
-    self.assertRaises(AssertionError, lambda: client_ctx.config)
+    auth = svn.core.svn_auth_open([])
+    wrapped_auth = GenericSWIGWrapper(auth, auth._parent_pool)
+    client_ctx.auth_baton = auth
+    auth.assert_valid()
+    wrapped_auth.assert_valid()
+    client_ctx.auth_baton.assert_valid()
+    auth._parent_pool.destroy()
+    self.assertRaises(AssertionError, lambda: auth.assert_valid())
+    self.assertRaises(AssertionError, lambda: wrapped_auth.assert_valid())
+    self.assertRaises(AssertionError, lambda: client_ctx.auth_baton)
 
     # Test assert_valid with clear()
     client_ctx = svn.client.svn_client_create_context()
-    config = svn.core.svn_config_get_config(None)
-    wrapped_config = GenericSWIGWrapper(config, config._parent_pool)
-    client_ctx.config = config
-    config.assert_valid()
-    client_ctx.config.assert_valid()
-    wrapped_config.assert_valid()
-    config._parent_pool.clear()
-    self.assertRaises(AssertionError, lambda: config.assert_valid())
-    self.assertRaises(AssertionError, lambda: wrapped_config.assert_valid())
-    self.assertRaises(AssertionError, lambda: client_ctx.config)
+    auth = svn.core.svn_auth_open([])
+    wrapped_auth = GenericSWIGWrapper(auth, auth._parent_pool)
+    client_ctx.auth_baton = auth
+    auth.assert_valid()
+    wrapped_auth.assert_valid()
+    client_ctx.auth_baton.assert_valid()
+    auth._parent_pool.clear()
+    self.assertRaises(AssertionError, lambda: auth.assert_valid())
+    self.assertRaises(AssertionError, lambda: wrapped_auth.assert_valid())
+    self.assertRaises(AssertionError, lambda: client_ctx.auth_baton)
 
   def test_integer_struct_members(self):
     """Check that integer struct members work correctly"""
