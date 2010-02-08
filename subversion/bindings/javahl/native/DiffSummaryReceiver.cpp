@@ -69,7 +69,7 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
         return SVN_NO_ERROR;
 
       callback = env->GetMethodID(clazz, "onSummary",
-                                  "(Lorg/tigris/subversion/javahl/DiffSummary;)V");
+                                  "(L"JAVA_PACKAGE"/DiffSummary;)V");
       if (JNIUtil::isJavaExceptionThrown() || callback == 0)
         return SVN_NO_ERROR;
 
