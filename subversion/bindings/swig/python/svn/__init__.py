@@ -23,5 +23,5 @@
 #    under the License.
 ######################################################################
 
-__all__ = ['core', 'client', 'delta', 'fs', 'ra', 'repos', 'wc']
+__all__ = ['core', 'client', 'delta', 'diff', 'fs', 'ra', 'repos', 'wc']
 
