@@ -134,9 +134,8 @@ typedef struct {
    * patch was applied to it. */
   svn_boolean_t local_mods;
 
-  /* True if the target was added by the patch, which means that it
-   * did not exist on disk before patching and does exist on disk
-   * after patching. */
+  /* True if the target was added by the patch, which means that it did
+   * not exist on disk before patching and has content after patching. */
   svn_boolean_t added;
 
   /* True if the target ended up being deleted by the patch. */
@@ -283,7 +282,6 @@ resolve_target_path(patch_target_t *target,
   switch (target->kind)
     {
       case svn_node_file:
-        target->added = FALSE;
         target->parent_dir_exists = TRUE;
         break;
       case svn_node_none:
@@ -295,7 +293,6 @@ resolve_target_path(patch_target_t *target,
           /* The file is not there, that's fine. The patch might want to
            * create it. Check if the containing directory of the target
            * exists. We may need to create it later. */
-          target->added = TRUE;
           abs_dirname = svn_dirent_dirname(target->abs_path, scratch_pool);
           SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, abs_dirname,
                                         FALSE, scratch_pool));
@@ -1150,6 +1147,11 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
            * Report this as skipped if it didn't exist. */
           if (target->kind != svn_node_file)
             target->skipped = TRUE;
+        }
+      else if (target->kind != svn_node_file && patched_file.size > 0)
+        {
+          /* The patch has created a file. */
+          target->added = TRUE;
         }
     }
 
