@@ -730,11 +730,17 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   svn_linenum_t matched_line;
 
   /* An original offset of zero means that this hunk wants to create
-   * a new file, potentially overwriting all content of an existing
-   * file in the WC. Don't bother matching hunks in that case, since
-   * the hunk applies at line 1. */
-  matched_line = 1;
-  if (hunk->original_start > 0 && target->kind == svn_node_file)
+   * a new file. Don't bother matching hunks in that case, since
+   * the hunk applies at line 1. If the file already exists, the hunk
+   * is rejected. */
+  if (hunk->original_start == 0)
+    {
+      if (target->kind == svn_node_file)
+        matched_line = 0;
+      else
+        matched_line = 1;
+    }
+  else if (hunk->original_start > 0 && target->kind == svn_node_file)
     {
       svn_linenum_t saved_line = target->current_line;
       svn_boolean_t saved_eof = target->eof;
@@ -767,6 +773,11 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
 
       SVN_ERR(seek_to_line(target, saved_line, scratch_pool));
       target->eof = saved_eof;
+    }
+  else
+    {
+      /* The hunk wants to modify a file which doesn't exist. */
+      matched_line = 0;
     }
 
   (*hi) = apr_palloc(result_pool, sizeof(hunk_info_t));
