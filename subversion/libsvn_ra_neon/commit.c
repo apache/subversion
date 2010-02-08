@@ -204,9 +204,9 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
          the version resource URL of RSRC. */
       if (parent && parent->vsn_url && parent->revision == rsrc->revision)
         {
-          rsrc->vsn_url = svn_path_url_add_component(parent->vsn_url,
-                                                     rsrc->name,
-                                                     rsrc->pool);
+          rsrc->vsn_url = svn_path_url_add_component2(parent->vsn_url,
+                                                      rsrc->name,
+                                                      rsrc->pool);
           return SVN_NO_ERROR;
         }
 
@@ -232,7 +232,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
                                              rsrc->revision,
                                              pool));
 
-      url = svn_path_url_add_component(bc_url.data, bc_relative.data, pool);
+      url = svn_path_url_add_component2(bc_url.data, bc_relative.data, pool);
     }
 
   /* Get the DAV:checked-in property, which contains the URL of the
@@ -326,8 +326,8 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
      the activity, and create the activity.  The URL for our activity
      will be ACTIVITY_COLL/UUID */
   SVN_ERR(get_activity_collection(cc, &activity_collection, FALSE, pool));
-  url = svn_path_url_add_component(activity_collection->data,
-                                   uuid_buf, pool);
+  url = svn_path_url_add_component2(activity_collection->data,
+                                    uuid_buf, pool);
   SVN_ERR(svn_ra_neon__simple_request(&code, cc->ras,
                                       "MKACTIVITY", url, NULL, NULL,
                                       201 /* Created */,
@@ -339,8 +339,8 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
   if (code == 404)
     {
       SVN_ERR(get_activity_collection(cc, &activity_collection, TRUE, pool));
-      url = svn_path_url_add_component(activity_collection->data,
-                                       uuid_buf, pool);
+      url = svn_path_url_add_component2(activity_collection->data,
+                                        uuid_buf, pool);
       SVN_ERR(svn_ra_neon__simple_request(&code, cc->ras,
                                           "MKACTIVITY", url, NULL, NULL,
                                           201, 0, pool));
@@ -374,7 +374,7 @@ static svn_error_t * add_child(version_rsrc_t **child,
   rsrc->pool = pool;
   rsrc->revision = revision;
   rsrc->name = name;
-  rsrc->url = svn_path_url_add_component(parent->url, name, pool);
+  rsrc->url = svn_path_url_add_component2(parent->url, name, pool);
   rsrc->local_path = svn_path_join(parent->local_path, name, pool);
 
   /* Case 1:  the resource is truly "new".  Either it was added as a
@@ -383,7 +383,7 @@ static svn_error_t * add_child(version_rsrc_t **child,
      URL by the rules of deltaV:  "copy structure is preserved below
      the WR you COPY to."  */
   if (created || (parent->vsn_url == NULL))
-    rsrc->wr_url = svn_path_url_add_component(parent->wr_url, name, pool);
+    rsrc->wr_url = svn_path_url_add_component2(parent->wr_url, name, pool);
 
   /* Case 2: the resource is already under version-control somewhere.
      This means it has a VR URL already, and the WR URL won't exist
@@ -722,7 +722,7 @@ static svn_error_t * commit_delete_entry(const char *path,
                             NULL, FALSE, pool));
 
   /* create the URL for the child resource */
-  child = svn_path_url_add_component(parent->rsrc->wr_url, name, pool);
+  child = svn_path_url_add_component2(parent->rsrc->wr_url, name, pool);
 
   /* Start out assuming that we're deleting a file;  try to lookup the
      path itself in the token-hash, and if found, attach it to the If:
@@ -737,8 +737,8 @@ static svn_error_t * commit_delete_entry(const char *path,
           const char *token_header_val;
           const char *token_uri;
 
-          token_uri = svn_path_url_add_component(parent->cc->ras->url->data,
-                                                 path, pool);
+          token_uri = svn_path_url_add_component2(parent->cc->ras->url->data,
+                                                  path, pool);
           token_header_val = apr_psprintf(pool, "<%s> (<%s>)",
                                           token_uri, token);
           extra_headers = apr_hash_make(pool);
@@ -897,9 +897,9 @@ static svn_error_t * commit_add_dir(const char *path,
          "source" argument to the COPY request.  The "Destination:"
          header given to COPY is simply the wr_url that is already
          part of the child object. */
-      copy_src = svn_path_url_add_component(bc_url.data,
-                                            bc_relative.data,
-                                            workpool);
+      copy_src = svn_path_url_add_component2(bc_url.data,
+                                             bc_relative.data,
+                                             workpool);
 
       /* Have neon do the COPY. */
       SVN_ERR(svn_ra_neon__copy(parent->cc->ras,
@@ -1098,9 +1098,9 @@ static svn_error_t * commit_add_file(const char *path,
          "source" argument to the COPY request.  The "Destination:"
          header given to COPY is simply the wr_url that is already
          part of the file_baton. */
-      copy_src = svn_path_url_add_component(bc_url.data,
-                                            bc_relative.data,
-                                            workpool);
+      copy_src = svn_path_url_add_component2(bc_url.data,
+                                             bc_relative.data,
+                                             workpool);
 
       /* Have neon do the COPY. */
       SVN_ERR(svn_ra_neon__copy(parent->cc->ras,
@@ -1282,9 +1282,9 @@ static svn_error_t * commit_close_file(void *file_baton,
         svn_ra_neon__set_header
           (extra_headers, "If",
            apr_psprintf(pool, "<%s> (<%s>)",
-                        svn_path_url_add_component(cc->ras->url->data,
-                                                   file->rsrc->url,
-                                                   request->pool),
+                        svn_path_url_add_component2(cc->ras->url->data,
+                                                    file->rsrc->url,
+                                                    request->pool),
                         file->token));
 
       if (pb->base_checksum)
