@@ -18674,7 +18674,136 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1, 0, '--reintegrate')
-  
+
+# Test for issue #3577 '1.7 subtree mergeinfo recording breaks reintegrate'.
+def reintegrate_with_subtree_merges(sbox):
+  "reintegrate with prior subtree merges to source"
+
+  # Create a standard greek tree, branch A to A_COPY in r2, and make
+  # some changes under A in r3-6.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Some paths we'll care about
+  A_path        = os.path.join(wc_dir, "A")
+  mu_COPY_path  = os.path.join(wc_dir, "A_COPY", "mu")
+  A_COPY_path   = os.path.join(wc_dir, "A_COPY")
+  B_COPY_path   = os.path.join(wc_dir, "A_COPY", "B")
+  rho_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
+  H_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "H")
+
+  # r7 - Make a change on the A_COPY branch that will be
+  # reintegrated back to A.
+  svntest.main.file_write(mu_COPY_path, "branch work")
+  svntest.main.run_svn(None, 'commit', '-m',
+                       'Some work on the A_COPY branch', wc_dir)
+
+  # Update the WC to a uniform revision, then merge all of the changes
+  # from A to A_COPY, but do it via subtree merges so the mergeinfo
+  # record of the merges insn't neatly reflected in the root of the
+  # branch.  Commit the merge as r8.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c5',
+                                     sbox.repo_url + '/A/B',
+                                     B_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c4',
+                                     sbox.repo_url + '/A/D/G/rho',
+                                     rho_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c3',
+                                     sbox.repo_url + '/A/D/H',
+                                     H_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c6',
+                                     sbox.repo_url + '/A',
+                                     A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit', '-m',
+                                     'Merge everything from A to A_COPY',
+                                     wc_dir)
+
+  # Now update the WC and try to reintegrate.  Currently this fails because
+  # while we really have merged everything from A to A_COPY, the naive
+  # interpretation of the mergeinfo on A_COPY doesn't reflect this and thus
+  # this test currently fails with this error:
+  #
+  #    svn merge ^/A_COPY A --reintegrate
+  #    ..\..\..\subversion\svn\merge-cmd.c:358: (apr_err=195016)
+  #    ..\..\..\subversion\libsvn_client\merge.c:9318: (apr_err=195016)
+  #    svn: Reintegrate can only be used if revisions 2 through 7 were
+  #    previously merged from file:///C%3A/SVN/src-trunk-2/Debug/subversion
+  #    /tests/cmdline/svn-test-work/repositories/merge_tests-142/A to the
+  #     reintegrate source, but this is not the case:
+  #      A_COPY
+  #        Missing ranges: /A:2-5
+  #      A_COPY/B
+  #        Missing ranges: /A/B:2-4,6
+  #      A_COPY/D/G/rho
+  #        Missing ranges: /A/D/G/rho:2-3,5-6
+  #      A_COPY/D/H
+  #        Missing ranges: /A/D/H:2,4-5    
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_output = wc.State(A_path, {
+    'mu' : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(A_path, {
+    '' : Item(status=' G'),
+    })
+  expected_elision_output = wc.State(A_path, {
+    })
+  expected_A_status = wc.State(A_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='M '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_A_status.tweak(wc_rev=8)
+  expected_A_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A_COPY:2-8'}),
+    'B'         : Item(),
+    'mu'        : Item("branch work"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_A_skip = wc.State(A_COPY_path, {})
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + '/A_COPY', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_A_disk,
+                                       expected_A_status,
+                                       expected_A_skip,
+                                       None, None, None, None,
+                                       None, 1, 1, "--reintegrate")
+
 ########################################################################
 # Run the tests
 
@@ -18905,6 +19034,7 @@ test_list = [ None,
                     is_fs_case_insensitive),
               merge_into_wc_for_deleted_branch,
               reintegrate_with_self_referential_mergeinfo,
+              XFail(reintegrate_with_subtree_merges),
              ]
 
 if __name__ == '__main__':
