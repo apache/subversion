@@ -126,7 +126,7 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
         return;
 
       mid = env->GetMethodID(clazz, "onNotify",
-                             "(Lorg/tigris/subversion/javahl/NotifyInformation;)V");
+                             "(L"JAVA_PACKAGE"/NotifyInformation;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         return;
 
@@ -144,9 +144,9 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
     {
       midCT = env->GetMethodID(clazz, "<init>",
                                "(Ljava/lang/String;IILjava/lang/String;"
-                               "Lorg/tigris/subversion/javahl/Lock;"
+                               "L"JAVA_PACKAGE"/Lock;"
                                "Ljava/lang/String;IIIJLjava/lang/String;"
-                               "L" JAVA_PACKAGE "/RevisionRange;"
+                               "L"JAVA_PACKAGE"/RevisionRange;"
                                "Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
         return;

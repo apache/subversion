@@ -119,7 +119,7 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
                              "(Ljava/lang/String;Ljava/lang/String;"
                              "JILjava/lang/String;Ljava/lang/String;"
                              "JJLjava/lang/String;"
-                             "Lorg/tigris/subversion/javahl/Lock;"
+                             "L"JAVA_PACKAGE"/Lock;"
                              "ZILjava/lang/String;JJJ"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
