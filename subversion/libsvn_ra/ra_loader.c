@@ -1147,8 +1147,9 @@ svn_ra__obliterate(svn_ra_session_t *session,
   SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
 
   if (session->vtable->obliterate_path_rev == NULL)
-    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                            "obliterate not supported by this RA layer");
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
+                            _("Obliterate is not supported by this "
+                              "Repository Access method"));
 
   return session->vtable->obliterate_path_rev(session, rev, path, pool);
 }
