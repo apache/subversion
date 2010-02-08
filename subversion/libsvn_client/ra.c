@@ -384,6 +384,17 @@ svn_client_uuid_from_path2(const char **uuid,
 
 
 
+/* Convert a path or URL for display: if it is a local path, convert it to
+ * the local path style; if it is a URL, return it unchanged. */
+static const char *
+path_or_url_local_style(const char *path_or_url,
+                        apr_pool_t *pool)
+{
+  if (svn_path_is_url(path_or_url))
+    return path_or_url;
+  return svn_dirent_local_style(path_or_url, pool);
+}
+
 svn_error_t *
 svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_revnum_t *rev_p,
@@ -664,7 +675,7 @@ svn_client__repos_locations(const char **start_url,
     return svn_error_createf
       (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("Unable to find repository location for '%s' in revision %ld"),
-       svn_dirent_local_style(path, pool), start_revnum);
+       path_or_url_local_style(path, pool), start_revnum);
 
   end_path = apr_hash_get(rev_locs, &end_revnum, sizeof(svn_revnum_t));
   if (! end_path)
@@ -672,7 +683,7 @@ svn_client__repos_locations(const char **start_url,
       (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("The location for '%s' for revision %ld does not exist in the "
          "repository or refers to an unrelated object"),
-       svn_dirent_local_style(path, pool), end_revnum);
+       path_or_url_local_style(path, pool), end_revnum);
 
   /* Repository paths might be absolute, but we want to treat them as
      relative.
