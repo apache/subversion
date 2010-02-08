@@ -28,6 +28,26 @@
  *       that lets us gracefully handle objects that are allocated from
  *       a pool that's been cleared or destroyed.
  */
+ 
+%pythoncode %{
+  def _copy_metadata(value, old_value):
+    import collections
+  
+    if value is None or old_value is None or value is old_value: return
+    
+    if isinstance(value, collections.Mapping):
+      for (k, v) in value:
+        _copy_metadata(v, old_value[k])
+    elif isinstance(value, collections.Sequence):
+      for v, old_v in zip(value, old_value):
+        _copy_metadata(v, old_v)
+    else:
+      try:
+        value.__dict__.update(old_value.__dict__)
+      except AttributeError:
+        pass
+      
+%}
 
 /* Default code for all wrapped proxy classes in Python */
 %define %proxy_pythoncode(TYPE)
@@ -52,18 +72,12 @@
 
     value = _swig_getattr(self, self.__class__, name)
 
-    # Now, if this item has changed, SWIG must have generated a new object.
-    # Copy the pool metadata from the old object over to the new one.
+    # If we got back a different object than we have, we need to copy all our
+    # metadata into it, so that it looks identical
     members = self.__dict__.get("_members")
     if members is not None:
-      old_value = members.get(name)
-      if (old_value is not None and value is not None and
-          value is not old_value):
-        try:
-          value.__dict__.update(old_value.__dict__)
-        except AttributeError:
-          pass
-
+        _copy_metadata(value, members.get(name))
+        
     # Verify that the new object is good
     if hasattr(value, "assert_valid"):
       value.assert_valid()
