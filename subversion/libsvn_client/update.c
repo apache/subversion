@@ -369,7 +369,7 @@ svn_client_update3(apr_array_header_t **result_revs,
         }
       else if (err)
         {
-          /* SVN_ERR_WC_NOT_DIRECTORY: it's not versioned */
+          /* SVN_ERR_WC_NOT_WORKING_COPY: it's not versioned */
           svn_error_clear(err);
           err = SVN_NO_ERROR;
           result_rev = SVN_INVALID_REVNUM;
