@@ -1424,6 +1424,7 @@ svn_ra_local__get_deleted_rev(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra__vtable_t.obliterate_path_rev. */
 static svn_error_t *
 svn_ra_local__obliterate_path_rev(svn_ra_session_t *session,
                                   svn_revnum_t revision,
