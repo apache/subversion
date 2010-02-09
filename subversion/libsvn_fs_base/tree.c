@@ -2796,6 +2796,7 @@ svn_fs_base__commit_obliteration_txn(svn_revnum_t replacing_rev,
 {
   struct commit_args commit_args;
 
+  /* Commit the replacement transaction. */
   /* We do not need a re-try loop like the (catch up to head, try to
    * commit) loop that svn_fs_base__commit_txn() uses, because the only
    * concurrent changes that can affect this old revision are other
@@ -2806,7 +2807,9 @@ svn_fs_base__commit_obliteration_txn(svn_revnum_t replacing_rev,
   SVN_ERR(svn_fs_base__retry_txn(txn->fs, txn_body_commit_obliteration,
                                  &commit_args, FALSE, pool));
 
-  /* return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL); */
+  /* Remove the old txn and any unreferenced data attached to it. */
+  /* ### ... */
+
   return SVN_NO_ERROR;
 }
 

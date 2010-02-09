@@ -1335,8 +1335,8 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
     SVN_ERR(svn_fs_base__delete_rep_if_mutable(fs, old_data_key, txn_id,
                                                trail, pool));
 
-  /* If we've got a discardable rep (probably because we ended us
-     re-using a preexisting one).  Throw out the discardable rep. */
+  /* If we've got a discardable rep (probably because we ended up
+     re-using a preexisting one), throw out the discardable rep. */
   if (useless_data_key)
     SVN_ERR(svn_fs_base__delete_rep_if_mutable(fs, useless_data_key,
                                                txn_id, trail, pool));

@@ -56,8 +56,8 @@
 /* Set *txn_p to a transaction object allocated in POOL for the
    transaction in FS whose id is TXN_ID.  If EXPECT_DEAD is set, this
    transaction must be a dead one, else an error is returned.  If
-   EXPECT_DEAD is not set, an error is thrown if the transaction is
-   *not* dead. */
+   EXPECT_DEAD is not set, the transaction must *not* be a dead one,
+   else an error is returned. */
 static svn_error_t *
 get_txn(transaction_t **txn_p,
         svn_fs_t *fs,

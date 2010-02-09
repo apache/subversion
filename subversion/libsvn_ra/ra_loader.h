@@ -258,6 +258,7 @@ typedef struct svn_ra__vtable_t {
                                   svn_revnum_t end_revision,
                                   svn_revnum_t *revision_deleted,
                                   apr_pool_t *pool);
+  /* See svn_ra__obliterate() for details. */
   svn_error_t *(*obliterate_path_rev)(svn_ra_session_t *session,
                                       svn_revnum_t revision,
                                       const char *path,
