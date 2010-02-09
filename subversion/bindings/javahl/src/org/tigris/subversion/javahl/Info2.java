@@ -248,6 +248,32 @@ public class Info2 implements java.io.Serializable
     }
 
     /**
+     * A backward-compat constructor.
+     */
+    public Info2(org.apache.subversion.javahl.Info2 aInfo)
+    {
+        this(aInfo.getPath(), aInfo.getUrl(), aInfo.getRev(), aInfo.getKind(),
+             aInfo.getReposRootUrl(), aInfo.getReposUUID(),
+             aInfo.getLastChangedRev(),
+             aInfo.getLastChangedDate() == null ? 0
+                : aInfo.getLastChangedDate().getTime() * 1000,
+             aInfo.getLastChangedAuthor(),
+             aInfo.getLock() == null ? null : new Lock(aInfo.getLock()),
+             aInfo.isHasWcInfo(), aInfo.getSchedule(), aInfo.getCopyFromUrl(),
+             aInfo.getCopyFromRev(),
+             aInfo.getTextTime() == null ? 0
+                : aInfo.getTextTime().getTime() * 1000,
+             aInfo.getPropTime() == null ? 0
+                : aInfo.getPropTime().getTime() * 1000, aInfo.getChecksum(),
+             aInfo.getConflictOld(), aInfo.getConflictNew(),
+             aInfo.getConflictWrk(), aInfo.getPrejfile(),
+             aInfo.getChangelistName(), aInfo.getWorkingSize(),
+             aInfo.getReposSize(), aInfo.getDepth(),
+             aInfo.getConflictDescriptor() == null ? null 
+                : new ConflictDescriptor(aInfo.getConflictDescriptor()));
+    }
+
+    /**
      * return the path of the item
      */
     public String getPath()

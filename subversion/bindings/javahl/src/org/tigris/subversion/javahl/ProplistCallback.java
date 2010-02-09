@@ -23,6 +23,8 @@
 
 package org.tigris.subversion.javahl;
 
+import org.apache.subversion.javahl.callback.*;
+
 import java.util.Map;
 
 /**
@@ -30,11 +32,6 @@ import java.util.Map;
  * SVNClientInterface.properties call.
  */
 public interface ProplistCallback
+    extends org.apache.subversion.javahl.callback.ProplistCallback
 {
-    /**
-     * the method will be called for every line in a file.
-     * @param path        the path.
-     * @param properties  the properties on the path.
-     */
-    public void singlePath(String path, Map properties);
 }

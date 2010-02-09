@@ -57,7 +57,7 @@ public class ClientException extends NativeException
      * @return <code>t</code> coerced or converted into a
      * <code>ClientException</code>.
      */
-    static ClientException fromException(Throwable t)
+    static public ClientException fromException(Throwable t)
     {
         if (t instanceof ClientException)
         {

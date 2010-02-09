@@ -27,7 +27,7 @@
 #include "SVNClient.h"
 #include "JNIUtil.h"
 #include "Notify.h"
-#include "Notify2.h"
+#include "NotifyCallback.h"
 #include "CopySources.h"
 #include "DiffSummaryReceiver.h"
 #include "ConflictResolverCallback.h"
@@ -302,7 +302,7 @@ void SVNClient::notification(Notify *notify)
     m_notify = notify;
 }
 
-void SVNClient::notification2(Notify2 *notify2)
+void SVNClient::notification2(NotifyCallback *notify2)
 {
     delete m_notify2;
     m_notify2 = notify2;
@@ -1262,7 +1262,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     ctx->cancel_func = checkCancel;
     m_cancelOperation = false;
     ctx->cancel_baton = this;
-    ctx->notify_func2= Notify2::notify;
+    ctx->notify_func2= NotifyCallback::notify;
     ctx->notify_baton2 = m_notify2;
 
     ctx->progress_func = ProgressListener::progress;

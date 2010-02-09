@@ -23,8 +23,6 @@
 
 package org.tigris.subversion.javahl;
 
-import org.apache.subversion.javahl.*;
-
 /**
  * This class offers the same commands as the svnadmin commandline
  * client.
@@ -79,7 +77,8 @@ public class SVNAdmin
      */
     public Version getVersion()
     {
-        return NativeResources.version;
+        return new Version(
+                    org.apache.subversion.javahl.NativeResources.version);
     }
 
     /**

@@ -20,12 +20,12 @@
  * ====================================================================
  * @endcopyright
  *
- * @file org_tigris_subversion_javahl_SVNClient.cpp
+ * @file org_apache_subversion_javahl_SVNClient.cpp
  * @brief Implementation of the native methods in the Java class SVNClient
  */
 
-#include "../include/org_tigris_subversion_javahl_SVNClient.h"
-#include "../include/org_tigris_subversion_javahl_SVNClientLogLevel.h"
+#include "../include/org_apache_subversion_javahl_SVNClient.h"
+#include "../include/org_apache_subversion_javahl_ClientLogLevel.h"
 #include "JNIUtil.h"
 #include "JNIStackElement.h"
 #include "JNIStringHolder.h"
@@ -34,7 +34,7 @@
 #include "Revision.h"
 #include "RevisionRange.h"
 #include "Notify.h"
-#include "Notify2.h"
+#include "NotifyCallback.h"
 #include "ConflictResolverCallback.h"
 #include "ProgressListener.h"
 #include "CommitMessage.h"
@@ -58,7 +58,7 @@
 #include <iostream>
 
 JNIEXPORT jlong JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_ctNative
+Java_org_apache_subversion_javahl_SVNClient_ctNative
 (JNIEnv *env, jobject jthis)
 {
   JNIEntry(SVNClient, ctNative);
@@ -67,7 +67,7 @@ Java_org_tigris_subversion_javahl_SVNClient_ctNative
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_dispose
+Java_org_apache_subversion_javahl_SVNClient_dispose
 (JNIEnv *env, jobject jthis)
 {
   JNIEntry(SVNClient, dispose);
@@ -81,7 +81,7 @@ Java_org_tigris_subversion_javahl_SVNClient_dispose
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_finalize
+Java_org_apache_subversion_javahl_SVNClient_finalize
 (JNIEnv *env, jobject jthis)
 {
   JNIEntry(SVNClient, finalize);
@@ -91,7 +91,7 @@ Java_org_tigris_subversion_javahl_SVNClient_finalize
 }
 
 JNIEXPORT jstring JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_getAdminDirectoryName
+Java_org_apache_subversion_javahl_SVNClient_getAdminDirectoryName
 (JNIEnv *env, jobject jthis)
 {
   JNIEntry(SVNClient, getAdminDirectoryName);
@@ -105,7 +105,7 @@ Java_org_tigris_subversion_javahl_SVNClient_getAdminDirectoryName
 }
 
 JNIEXPORT jboolean JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_isAdminDirectory
+Java_org_apache_subversion_javahl_SVNClient_isAdminDirectory
 (JNIEnv *env, jobject jthis, jstring jname)
 {
   JNIEntry(SVNClient, isAdminDirectory);
@@ -123,7 +123,7 @@ Java_org_tigris_subversion_javahl_SVNClient_isAdminDirectory
 }
 
 JNIEXPORT jstring JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_getLastPath
+Java_org_apache_subversion_javahl_SVNClient_getLastPath
 (JNIEnv *env, jobject jthis)
 {
   JNIEntry(SVNClient, getLastPath);
@@ -138,7 +138,7 @@ Java_org_tigris_subversion_javahl_SVNClient_getLastPath
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_list
+Java_org_apache_subversion_javahl_SVNClient_list
 (JNIEnv *env, jobject jthis, jstring jurl, jobject jrevision,
  jobject jpegRevision, jint jdepth, jint jdirentFields,
  jboolean jfetchLocks, jobject jcallback)
@@ -166,7 +166,7 @@ Java_org_tigris_subversion_javahl_SVNClient_list
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_status
+Java_org_apache_subversion_javahl_SVNClient_status
 (JNIEnv *env, jobject jthis, jstring jpath, jint jdepth,
  jboolean jonServer, jboolean jgetAll, jboolean jnoIgnore,
  jboolean jignoreExternals, jobjectArray jchangelists,
@@ -193,7 +193,7 @@ Java_org_tigris_subversion_javahl_SVNClient_status
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_username
+Java_org_apache_subversion_javahl_SVNClient_username
 (JNIEnv *env, jobject jthis, jstring jusername)
 {
   JNIEntry(SVNClient, username);
@@ -217,7 +217,7 @@ Java_org_tigris_subversion_javahl_SVNClient_username
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_password
+Java_org_apache_subversion_javahl_SVNClient_password
 (JNIEnv *env, jobject jthis, jstring jpassword)
 {
   JNIEntry(SVNClient, password);
@@ -241,7 +241,7 @@ Java_org_tigris_subversion_javahl_SVNClient_password
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_setPrompt
+Java_org_apache_subversion_javahl_SVNClient_setPrompt
 (JNIEnv *env, jobject jthis, jobject jprompter)
 {
   JNIEntry(SVNClient, setPrompt);
@@ -259,7 +259,7 @@ Java_org_tigris_subversion_javahl_SVNClient_setPrompt
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_logMessages
+Java_org_apache_subversion_javahl_SVNClient_logMessages
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobjectArray jranges, jboolean jstopOnCopy,
  jboolean jdisoverPaths, jboolean jincludeMergedRevisions,
@@ -316,7 +316,7 @@ Java_org_tigris_subversion_javahl_SVNClient_logMessages
 }
 
 JNIEXPORT jlong JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_checkout
+Java_org_apache_subversion_javahl_SVNClient_checkout
 (JNIEnv *env, jobject jthis, jstring jmoduleName, jstring jdestPath,
  jobject jrevision, jobject jpegRevision, jint jdepth,
  jboolean jignoreExternals, jboolean jallowUnverObstructions)
@@ -351,7 +351,7 @@ Java_org_tigris_subversion_javahl_SVNClient_checkout
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_notification
+Java_org_apache_subversion_javahl_SVNClient_notification
 (JNIEnv *env, jobject jthis, jobject jnotify)
 {
   JNIEntry(SVNClient, notification);
@@ -369,7 +369,7 @@ Java_org_tigris_subversion_javahl_SVNClient_notification
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_notification2
+Java_org_apache_subversion_javahl_SVNClient_notification2
 (JNIEnv *env, jobject jthis, jobject jnotify2)
 {
   JNIEntry(SVNClient, notification2);
@@ -379,7 +379,7 @@ Java_org_tigris_subversion_javahl_SVNClient_notification2
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  Notify2 *notify2 = Notify2::makeCNotify(jnotify2);
+  NotifyCallback *notify2 = NotifyCallback::makeCNotify(jnotify2);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -387,7 +387,7 @@ Java_org_tigris_subversion_javahl_SVNClient_notification2
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_setConflictResolver
+Java_org_apache_subversion_javahl_SVNClient_setConflictResolver
 (JNIEnv *env, jobject jthis, jobject jconflictResolver)
 {
   JNIEntry(SVNClient, setConflictResolver);
@@ -406,7 +406,7 @@ Java_org_tigris_subversion_javahl_SVNClient_setConflictResolver
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_setProgressListener
+Java_org_apache_subversion_javahl_SVNClient_setProgressListener
 (JNIEnv *env, jobject jthis, jobject jprogressListener)
 {
   JNIEntry(SVNClient, setProgressListener);
@@ -425,7 +425,7 @@ Java_org_tigris_subversion_javahl_SVNClient_setProgressListener
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_commitMessageHandler
+Java_org_apache_subversion_javahl_SVNClient_commitMessageHandler
 (JNIEnv *env, jobject jthis, jobject jcommitMessage)
 {
   JNIEntry(SVNClient, commitMessageHandler);
@@ -444,7 +444,7 @@ Java_org_tigris_subversion_javahl_SVNClient_commitMessageHandler
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_remove
+Java_org_apache_subversion_javahl_SVNClient_remove
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
  jboolean jforce, jboolean keepLocal, jobject jrevpropTable)
 {
@@ -469,7 +469,7 @@ Java_org_tigris_subversion_javahl_SVNClient_remove
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_revert
+Java_org_apache_subversion_javahl_SVNClient_revert
 (JNIEnv *env, jobject jthis, jstring jpath, jint jdepth,
  jobjectArray jchangelists)
 {
@@ -492,7 +492,7 @@ Java_org_tigris_subversion_javahl_SVNClient_revert
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_add
+Java_org_apache_subversion_javahl_SVNClient_add
 (JNIEnv *env, jobject jthis, jstring jpath, jint jdepth,
  jboolean jforce, jboolean jnoIgnore, jboolean jaddParents)
 {
@@ -512,7 +512,7 @@ Java_org_tigris_subversion_javahl_SVNClient_add
 }
 
 JNIEXPORT jlongArray JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_update
+Java_org_apache_subversion_javahl_SVNClient_update
 (JNIEnv *env, jobject jthis, jobjectArray jpath, jobject jrevision,
  jint jdepth, jboolean jdepthIsSticky, jboolean jignoreExternals,
  jboolean jallowUnverObstructions)
@@ -539,7 +539,7 @@ Java_org_tigris_subversion_javahl_SVNClient_update
 }
 
 JNIEXPORT jlong JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_commit
+Java_org_apache_subversion_javahl_SVNClient_commit
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
  jint jdepth, jboolean jnoUnlock, jboolean jkeepChangelist,
  jobjectArray jchangelists, jobject jrevpropTable)
@@ -571,7 +571,7 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_copy
+Java_org_apache_subversion_javahl_SVNClient_copy
 (JNIEnv *env, jobject jthis, jobjectArray jcopySources, jstring jdestPath,
  jstring jmessage, jboolean jcopyAsChild, jboolean jmakeParents,
  jboolean jignoreExternals, jobject jrevpropTable)
@@ -604,7 +604,7 @@ Java_org_tigris_subversion_javahl_SVNClient_copy
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_move
+Java_org_apache_subversion_javahl_SVNClient_move
 (JNIEnv *env, jobject jthis, jobjectArray jsrcPaths, jstring jdestPath,
  jstring jmessage, jboolean jforce, jboolean jmoveAsChild,
  jboolean jmakeParents, jobject jrevpropTable)
@@ -637,7 +637,7 @@ Java_org_tigris_subversion_javahl_SVNClient_move
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_mkdir
+Java_org_apache_subversion_javahl_SVNClient_mkdir
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
  jboolean jmakeParents, jobject jrevpropTable)
 {
@@ -661,7 +661,7 @@ Java_org_tigris_subversion_javahl_SVNClient_mkdir
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_cleanup
+Java_org_apache_subversion_javahl_SVNClient_cleanup
 (JNIEnv *env, jobject jthis, jstring jpath)
 {
   JNIEntry(SVNClient, cleanup);
@@ -679,7 +679,7 @@ Java_org_tigris_subversion_javahl_SVNClient_cleanup
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_resolve
+Java_org_apache_subversion_javahl_SVNClient_resolve
 (JNIEnv *env, jobject jthis, jstring jpath, jint jdepth, jint jchoice)
 {
   JNIEntry(SVNClient, resolve);
@@ -697,7 +697,7 @@ Java_org_tigris_subversion_javahl_SVNClient_resolve
 }
 
 JNIEXPORT jlong JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_doExport
+Java_org_apache_subversion_javahl_SVNClient_doExport
 (JNIEnv *env, jobject jthis, jstring jsrcPath, jstring jdestPath,
  jobject jrevision, jobject jpegRevision, jboolean jforce,
  jboolean jignoreExternals, jint jdepth, jstring jnativeEOL)
@@ -735,7 +735,7 @@ Java_org_tigris_subversion_javahl_SVNClient_doExport
 }
 
 JNIEXPORT jlong JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_doSwitch
+Java_org_apache_subversion_javahl_SVNClient_doSwitch
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jurl, jobject jrevision,
  jobject jPegRevision, jint jdepth, jboolean jdepthIsSticky,
  jboolean jignoreExternals, jboolean jallowUnverObstructions)
@@ -770,7 +770,7 @@ Java_org_tigris_subversion_javahl_SVNClient_doSwitch
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_doImport
+Java_org_apache_subversion_javahl_SVNClient_doImport
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jurl, jstring jmessage,
  jint jdepth, jboolean jnoIgnore, jboolean jignoreUnknownNodeTypes,
  jobject jrevpropTable)
@@ -804,7 +804,7 @@ Java_org_tigris_subversion_javahl_SVNClient_doImport
 }
 
 JNIEXPORT jobjectArray JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_suggestMergeSources
+Java_org_apache_subversion_javahl_SVNClient_suggestMergeSources
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision)
 {
   JNIEntry(SVNClient, suggestMergeSources);
@@ -827,7 +827,7 @@ Java_org_tigris_subversion_javahl_SVNClient_suggestMergeSources
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2ZIZZZ
+Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Ljava_lang_String_2ZIZZZ
 (JNIEnv *env, jobject jthis, jstring jpath1, jobject jrevision1,
  jstring jpath2, jobject jrevision2, jstring jlocalPath, jboolean jforce,
  jint jdepth, jboolean jignoreAncestry, jboolean jdryRun, jboolean jrecordOnly)
@@ -866,7 +866,7 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2_3Lorg_tigris_subversion_javahl_RevisionRange_2Ljava_lang_String_2ZIZZZ
+Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2_3Lorg_apache_subversion_javahl_RevisionRange_2Ljava_lang_String_2ZIZZZ
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobjectArray jranges, jstring jlocalPath, jboolean jforce,
  jint jdepth, jboolean jignoreAncestry, jboolean jdryRun, jboolean jrecordOnly)
@@ -921,7 +921,7 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_mergeReintegrate
+Java_org_apache_subversion_javahl_SVNClient_mergeReintegrate
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jstring jlocalPath, jboolean jdryRun)
 {
@@ -950,7 +950,7 @@ Java_org_tigris_subversion_javahl_SVNClient_mergeReintegrate
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_properties
+Java_org_apache_subversion_javahl_SVNClient_properties
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
  jobject jpegRevision, jint jdepth, jobjectArray jchangelists,
  jobject jproplistCallback)
@@ -984,7 +984,7 @@ Java_org_tigris_subversion_javahl_SVNClient_properties
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_propertySet
+Java_org_apache_subversion_javahl_SVNClient_propertySet
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jstring jvalue,
  jint jdepth, jobjectArray jchangelists, jboolean jforce,
  jobject jrevpropTable)
@@ -1021,7 +1021,7 @@ Java_org_tigris_subversion_javahl_SVNClient_propertySet
 }
 
 JNIEXPORT jobject JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_revProperty
+Java_org_apache_subversion_javahl_SVNClient_revProperty
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jobject jrevision)
 {
   JNIEntry(SVNClient, revProperty);
@@ -1047,7 +1047,7 @@ Java_org_tigris_subversion_javahl_SVNClient_revProperty
 }
 
 JNIEXPORT jobjectArray JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_revProperties
+Java_org_apache_subversion_javahl_SVNClient_revProperties
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision)
 {
   JNIEntry(SVNClient, revProperty);
@@ -1069,7 +1069,7 @@ Java_org_tigris_subversion_javahl_SVNClient_revProperties
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_setRevProperty
+Java_org_apache_subversion_javahl_SVNClient_setRevProperty
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jobject jrevision,
  jstring jvalue, jstring joriginalValue, jboolean jforce)
 {
@@ -1105,7 +1105,7 @@ Java_org_tigris_subversion_javahl_SVNClient_setRevProperty
 }
 
 JNIEXPORT jobject JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_propertyGet
+Java_org_apache_subversion_javahl_SVNClient_propertyGet
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jobject jrevision,
  jobject jpegRevision)
 {
@@ -1136,7 +1136,7 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyGet
 }
 
 JNIEXPORT jobject JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_getMergeinfo
+Java_org_apache_subversion_javahl_SVNClient_getMergeinfo
 (JNIEnv *env, jobject jthis, jstring jtarget, jobject jpegRevision)
 {
   JNIEntry(SVNClient, getMergeinfo);
@@ -1155,7 +1155,7 @@ Java_org_tigris_subversion_javahl_SVNClient_getMergeinfo
   return cl->getMergeinfo(target, pegRevision);
 }
 
-JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_getMergeinfoLog
+JNIEXPORT void JNICALL Java_org_apache_subversion_javahl_SVNClient_getMergeinfoLog
 (JNIEnv *env, jobject jthis, jint jkind, jstring jpathOrUrl,
  jobject jpegRevision, jstring jmergeSourceUrl, jobject jsrcPegRevision,
  jboolean jdiscoverChangedPaths, jint jdepth, jobjectArray jrevProps,
@@ -1197,7 +1197,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_getMergeinfoL
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Ljava_lang_String_2I_3Ljava_lang_String_2ZZZZ
+Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Ljava_lang_String_2Ljava_lang_String_2I_3Ljava_lang_String_2ZZZZ
 (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1,
  jstring jtarget2, jobject jrevision2, jstring jrelativeToDir,
  jstring joutfileName, jint jdepth, jobjectArray jchangelists,
@@ -1247,7 +1247,7 @@ Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Ljava_lang_String_2I_3Ljava_lang_String_2ZZZZ
+Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Lorg_apache_subversion_javahl_Revision_2Lorg_apache_subversion_javahl_Revision_2Ljava_lang_String_2Ljava_lang_String_2I_3Ljava_lang_String_2ZZZZ
 (JNIEnv *env, jobject jthis, jstring jtarget, jobject jpegRevision,
  jobject jstartRevision, jobject jendRevision, jstring jrelativeToDir,
  jstring joutfileName, jint jdepth, jobjectArray jchangelists,
@@ -1297,7 +1297,7 @@ Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2I_3Ljava_lang_String_2ZLorg_tigris_subversion_javahl_DiffSummaryReceiver_2
+Java_org_apache_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2I_3Ljava_lang_String_2ZLorg_apache_subversion_javahl_callback_DiffSummaryCallback_2
 (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1,
  jstring jtarget2, jobject jrevision2, jint jdepth, jobjectArray jchangelists,
  jboolean jignoreAncestry, jobject jdiffSummaryReceiver)
@@ -1340,7 +1340,7 @@ Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lo
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2I_3Ljava_lang_String_2ZLorg_tigris_subversion_javahl_DiffSummaryReceiver_2
+Java_org_apache_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Lorg_apache_subversion_javahl_Revision_2Lorg_apache_subversion_javahl_Revision_2I_3Ljava_lang_String_2ZLorg_apache_subversion_javahl_callback_DiffSummaryCallback_2
 (JNIEnv *env, jobject jthis, jstring jtarget, jobject jPegRevision,
  jobject jStartRevision, jobject jEndRevision, jint jdepth,
  jobjectArray jchangelists, jboolean jignoreAncestry,
@@ -1380,7 +1380,7 @@ Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lo
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_fileContent
+Java_org_apache_subversion_javahl_SVNClient_fileContent
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
  jobject jpegRevision)
 {
@@ -1407,7 +1407,7 @@ Java_org_tigris_subversion_javahl_SVNClient_fileContent
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_streamFileContent
+Java_org_apache_subversion_javahl_SVNClient_streamFileContent
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
  jobject jpegRevision, jint bufSize, jobject jstream)
 {
@@ -1434,7 +1434,7 @@ Java_org_tigris_subversion_javahl_SVNClient_streamFileContent
 }
 
 JNIEXPORT jstring JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_getVersionInfo
+Java_org_apache_subversion_javahl_SVNClient_getVersionInfo
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jtrailUrl,
  jboolean jlastChanged)
 {
@@ -1453,7 +1453,7 @@ Java_org_tigris_subversion_javahl_SVNClient_getVersionInfo
   return cl->getVersionInfo(path, trailUrl, jlastChanged ? true:false);
 }
 
-JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_upgrade
+JNIEXPORT void JNICALL Java_org_apache_subversion_javahl_SVNClient_upgrade
   (JNIEnv *env, jobject jthis, jstring jpath)
 {
   JNIEntry(SVNClient, upgrade);
@@ -1471,23 +1471,23 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_upgrade
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_enableLogging
+Java_org_apache_subversion_javahl_SVNClient_enableLogging
 (JNIEnv *env, jclass jclazz, jint jlogLevel, jstring jpath)
 {
   JNIEntryStatic(SVNClient, enableLogging);
   int cLevel = JNIUtil::noLog;
   switch(jlogLevel)
     {
-    case org_tigris_subversion_javahl_SVNClientLogLevel_NoLog:
+    case org_apache_subversion_javahl_ClientLogLevel_NoLog:
       cLevel = JNIUtil::noLog;
       break;
-    case org_tigris_subversion_javahl_SVNClientLogLevel_ErrorLog:
+    case org_apache_subversion_javahl_ClientLogLevel_ErrorLog:
       cLevel = JNIUtil::errorLog;
       break;
-    case org_tigris_subversion_javahl_SVNClientLogLevel_ExceptionLog:
+    case org_apache_subversion_javahl_ClientLogLevel_ExceptionLog:
       cLevel = JNIUtil::exceptionLog;
       break;
-    case org_tigris_subversion_javahl_SVNClientLogLevel_EntryLog:
+    case org_apache_subversion_javahl_ClientLogLevel_EntryLog:
       cLevel = JNIUtil::entryLog;
       break;
     }
@@ -1496,7 +1496,7 @@ Java_org_tigris_subversion_javahl_SVNClient_enableLogging
 }
 
 JNIEXPORT jstring JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_version
+Java_org_apache_subversion_javahl_SVNClient_version
 (JNIEnv *env, jclass jclazz)
 {
   JNIEntryStatic(SVNClient, version);
@@ -1505,7 +1505,7 @@ Java_org_tigris_subversion_javahl_SVNClient_version
 }
 
 JNIEXPORT jint JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_versionMajor
+Java_org_apache_subversion_javahl_SVNClient_versionMajor
 (JNIEnv *env, jclass jclazz)
 {
   JNIEntryStatic(SVNClient, versionMajor);
@@ -1513,7 +1513,7 @@ Java_org_tigris_subversion_javahl_SVNClient_versionMajor
 }
 
 JNIEXPORT jint JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_versionMinor
+Java_org_apache_subversion_javahl_SVNClient_versionMinor
 (JNIEnv *env, jclass jclazz)
 {
   JNIEntryStatic(SVNClient, versionMinor);
@@ -1521,7 +1521,7 @@ Java_org_tigris_subversion_javahl_SVNClient_versionMinor
 }
 
 JNIEXPORT jint JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_versionMicro
+Java_org_apache_subversion_javahl_SVNClient_versionMicro
 (JNIEnv *env, jclass jclazz)
 {
   JNIEntryStatic(SVNClient, versionMicro);
@@ -1529,7 +1529,7 @@ Java_org_tigris_subversion_javahl_SVNClient_versionMicro
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_relocate
+Java_org_apache_subversion_javahl_SVNClient_relocate
 (JNIEnv *env, jobject jthis, jstring jfrom, jstring jto, jstring jpath,
  jboolean jrecurse)
 {
@@ -1557,7 +1557,7 @@ Java_org_tigris_subversion_javahl_SVNClient_relocate
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_blame
+Java_org_apache_subversion_javahl_SVNClient_blame
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jrevisionStart, jobject jrevisionEnd, jboolean jignoreMimeType,
  jboolean jincludeMergedRevisions, jobject jblameCallback)
@@ -1592,7 +1592,7 @@ Java_org_tigris_subversion_javahl_SVNClient_blame
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_setConfigDirectory
+Java_org_apache_subversion_javahl_SVNClient_setConfigDirectory
 (JNIEnv *env, jobject jthis, jstring jconfigDir)
 {
   JNIEntry(SVNClient, setConfigDirectory);
@@ -1611,7 +1611,7 @@ Java_org_tigris_subversion_javahl_SVNClient_setConfigDirectory
 }
 
 JNIEXPORT jstring JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_getConfigDirectory
+Java_org_apache_subversion_javahl_SVNClient_getConfigDirectory
 (JNIEnv *env, jobject jthis)
 {
   JNIEntry(SVNClient, getConfigDirectory);
@@ -1627,7 +1627,7 @@ Java_org_tigris_subversion_javahl_SVNClient_getConfigDirectory
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_cancelOperation
+Java_org_apache_subversion_javahl_SVNClient_cancelOperation
 (JNIEnv *env, jobject jthis)
 {
   JNIEntry(SVNClient, cancelOperation);
@@ -1641,7 +1641,7 @@ Java_org_tigris_subversion_javahl_SVNClient_cancelOperation
 }
 
 JNIEXPORT jobject JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_info
+Java_org_apache_subversion_javahl_SVNClient_info
 (JNIEnv *env, jobject jthis, jstring jpath)
 {
   JNIEntry(SVNClient, info);
@@ -1660,7 +1660,7 @@ Java_org_tigris_subversion_javahl_SVNClient_info
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_addToChangelist
+Java_org_apache_subversion_javahl_SVNClient_addToChangelist
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jchangelist,
  jint jdepth, jobjectArray jchangelists)
 {
@@ -1688,7 +1688,7 @@ Java_org_tigris_subversion_javahl_SVNClient_addToChangelist
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_removeFromChangelists
+Java_org_apache_subversion_javahl_SVNClient_removeFromChangelists
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jint jdepth,
  jobjectArray jchangelists)
 {
@@ -1711,7 +1711,7 @@ Java_org_tigris_subversion_javahl_SVNClient_removeFromChangelists
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_getChangelists
+Java_org_apache_subversion_javahl_SVNClient_getChangelists
 (JNIEnv *env, jobject jthis, jstring jroot_path, jobjectArray jchangelists,
  jint jdepth, jobject jchangelistCallback)
 {
@@ -1736,7 +1736,7 @@ Java_org_tigris_subversion_javahl_SVNClient_getChangelists
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_lock
+Java_org_apache_subversion_javahl_SVNClient_lock
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jcomment,
  jboolean jforce)
 {
@@ -1759,7 +1759,7 @@ Java_org_tigris_subversion_javahl_SVNClient_lock
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_unlock
+Java_org_apache_subversion_javahl_SVNClient_unlock
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jboolean jforce)
 {
   JNIEntry(SVNClient, unlock);
@@ -1779,7 +1779,7 @@ Java_org_tigris_subversion_javahl_SVNClient_unlock
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_info2
+Java_org_apache_subversion_javahl_SVNClient_info2
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
  jobject jpegRevision, jint jdepth, jobjectArray jchangelists,
  jobject jinfoCallback)

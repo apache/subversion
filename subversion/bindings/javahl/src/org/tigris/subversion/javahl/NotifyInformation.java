@@ -146,6 +146,23 @@ public class NotifyInformation extends EventObject
     }
 
     /**
+     * A backward-compat callback.
+     */
+    public NotifyInformation(
+                        org.apache.subversion.javahl.NotifyInformation aInfo)
+    {
+        this(aInfo.getPath(), aInfo.getAction(), aInfo.getKind(),
+             aInfo.getMimeType(),
+             aInfo.getLock() == null ? null : new Lock(aInfo.getLock()),
+             aInfo.getErrMsg(), aInfo.getContentState(), aInfo.getPropState(),
+             aInfo.getLockState(), aInfo.getRevision(),
+             aInfo.getChangelistName(),
+             aInfo.getMergeRange() == null ? null
+                : new RevisionRange(aInfo.getMergeRange()),
+             aInfo.getPathPrefix());
+    }
+
+    /**
      * @return The path of the item, which is the source of the event.
      */
     public String getPath()

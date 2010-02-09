@@ -80,7 +80,7 @@ ListCallback::doList(const char *path,
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/ListCallback");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ListCallback");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 

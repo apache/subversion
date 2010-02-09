@@ -39,6 +39,11 @@ public class Version
         aVersion = new org.apache.subversion.javahl.Version();
     }
 
+    public Version(org.apache.subversion.javahl.Version aVersion)
+    {
+        this.aVersion = aVersion;
+    }
+
     /**
      * @return The full version string for the loaded JavaHL library,
      * as defined by <code>MAJOR.MINOR.PATCH INFO</code>.

@@ -77,7 +77,7 @@ svn_error_t *Inputer::read(void *baton, char *buffer, apr_size_t *len)
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/InputInterface");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/IInput");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
@@ -139,7 +139,7 @@ svn_error_t *Inputer::close(void *baton)
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/InputInterface");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/IInput");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 

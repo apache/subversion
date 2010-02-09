@@ -26,13 +26,16 @@ package org.apache.subversion.javahl;
 /**
  * Handles activities related to management of native resouces
  * (e.g. loading of native libraries).
+ *
+ * Public for backward compat.  This class may disappear in future versions
+ * of the API.  You've been warned.
  */
-class NativeResources
+public class NativeResources
 {
     /**
      * Version information about the underlying native libraries.
      */
-    static Version version;
+    static public Version version;
 
     /**
      * Load the required native library whose path is specified by the

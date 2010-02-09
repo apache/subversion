@@ -23,16 +23,13 @@
 
 package org.tigris.subversion.javahl;
 
+import org.apache.subversion.javahl.callback.*;
+
 /**
  * This interface is used to receive every status item for
  * the SVNClientInterface.status call.
  */
 public interface ChangelistCallback
+    extends org.apache.subversion.javahl.callback.ChangelistCallback
 {
-    /**
-     * the method will be called for each status item
-     * @param path        the path of the object
-     * @param changelist  the changelist it belongs to
-     */
-    public void doChangelist(String path, String changelist);
 }

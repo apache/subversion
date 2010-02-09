@@ -57,7 +57,7 @@ ConflictResolverCallback::makeCConflictResolverCallback(jobject jconflictResolve
 
   // Sanity check that the object implements the ConflictResolverCallback
   // Java interface.
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/ConflictResolverCallback");
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/callback/ConflictResolverCallback");
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
@@ -105,7 +105,7 @@ ConflictResolverCallback::resolve(svn_wc_conflict_result_t **result,
   if (mid == 0)
     {
       // Initialize the callback method ID.
-      jclass clazz = env->FindClass(JAVA_PACKAGE "/ConflictResolverCallback");
+      jclass clazz = env->FindClass(JAVA_PACKAGE "/callback/ConflictResolverCallback");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 

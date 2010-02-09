@@ -62,6 +62,13 @@ public class SVNClient implements ISVNClient
         }
     }
 
+    /** Don't call this function!  Public fucntion for backward compat reasons
+      */
+    public long getCppAddr()
+    {
+        return cppAddr;
+    }
+
     /**
      * Build the native peer
      * @return the adress of the peer
@@ -76,7 +83,7 @@ public class SVNClient implements ISVNClient
     /**
      * release the native peer (should use dispose instead)
      */
-    protected native void finalize();
+    public native void finalize();
 
     /**
      * slot for the adress of the native peer. The JNI code is the only user
@@ -101,6 +108,12 @@ public class SVNClient implements ISVNClient
      * @since 1.3
      */
     public native boolean isAdminDirectory(String name);
+
+    /**
+      * @deprecated
+      * @since 1.0
+      */
+    public native String getLastPath();
 
     /**
      * @since 1.5
@@ -156,6 +169,12 @@ public class SVNClient implements ISVNClient
                                 int depth, boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
+
+    /**
+     * @since 1.0
+     * @deprecated
+     */
+    public native void notification(Notify notify);
 
     /**
      * @since 1.2
@@ -508,6 +527,14 @@ public class SVNClient implements ISVNClient
      * @since 1.0
      */
     public native void cancelOperation()
+            throws ClientException;
+
+    /**
+     * @deprecated Use {@link #info2(String, Revision, Revision, int, String[],
+     *                               InfoCallback)} instead.
+     * @since 1.0
+     */
+    public native Info info(String path)
             throws ClientException;
 
     /**

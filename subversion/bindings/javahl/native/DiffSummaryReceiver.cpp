@@ -64,7 +64,7 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
   if (callback == 0)
     {
       // Initialize the method ID.
-      clazz = env->FindClass(JAVA_PACKAGE "/DiffSummaryReceiver");
+      clazz = env->FindClass(JAVA_PACKAGE "/callback/DiffSummaryCallback");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
