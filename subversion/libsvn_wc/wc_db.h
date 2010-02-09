@@ -680,7 +680,7 @@ svn_wc__db_base_get_props(apr_hash_t **props,
  * the names of all of its children in the array CHILDREN. The array
  * elements are const char * values.
  *
- * If the node is not a directory, then SVN_ERR_WC_NOT_DIRECTORY will
+ * If the node is not a directory, then SVN_ERR_WC_NOT_WORKING_COPY will
  * be returned.
  *
  * All returned data will be allocated in RESULT_POOL. All temporary

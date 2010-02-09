@@ -464,7 +464,7 @@ copy_versioned_files(const char *from,
  * Create PATH if it does not exist and is not obstructed, and invoke
  * NOTIFY_FUNC with NOTIFY_BATON on PATH.
  *
- * If PATH exists but is a file, then error with SVN_ERR_WC_NOT_DIRECTORY.
+ * If PATH exists but is a file, then error with SVN_ERR_WC_NOT_WORKING_COPY.
  *
  * If PATH is a already a directory, then error with
  * SVN_ERR_WC_OBSTRUCTED_UPDATE, unless FORCE, in which case just
