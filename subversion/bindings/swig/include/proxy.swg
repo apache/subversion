@@ -30,15 +30,24 @@
  */
  
 %pythoncode %{
-  def _copy_metadata(value, old_value):
+  import sys
+
+  # Abstract Base Classes aren't available until 2.6
+  if sys.version_info >= (2, 6):
     import collections
-  
+    _sequence_type = collections.Sequence
+    _mapping_type = collections.Mapping
+  else:
+    _sequence_type = list
+    _mapping_type = dict
+
+  def _copy_metadata(value, old_value):
     if value is None or old_value is None or value is old_value: return
     
-    if isinstance(value, collections.Mapping):
+    if isinstance(value, _mapping_type):
       for (k, v) in value:
         _copy_metadata(v, old_value[k])
-    elif isinstance(value, collections.Sequence):
+    elif isinstance(value, _sequence_type):
       for v, old_v in zip(value, old_value):
         _copy_metadata(v, old_v)
     else:
@@ -46,7 +55,6 @@
         value.__dict__.update(old_value.__dict__)
       except AttributeError:
         pass
-      
 %}
 
 /* Default code for all wrapped proxy classes in Python */
