@@ -66,6 +66,15 @@ public class DiffSummary extends EventObject
     }
 
     /**
+     * This constructor is for backward compat.
+     */
+    DiffSummary(org.apache.subversion.javahl.DiffSummary aSummary)
+    {
+        this(aSummary.getPath(), aSummary.getDiffKind().hashCode(),
+             aSummary.propsChanged(), aSummary.getNodeKind());
+    }
+
+    /**
      * @return The path we have a diff for.
      */
     public String getPath()
@@ -146,6 +155,13 @@ public class DiffSummary extends EventObject
                 throw new IllegalArgumentException("Diff kind " + diffKind +
                                                    " not recognized");
             }
+        }
+
+        public static DiffKind fromApache(
+            org.apache.subversion.javahl.DiffSummary.DiffKind aKind)
+        {
+            /* This is cheating... */
+            return getInstance(aKind.hashCode());
         }
 
         /**

@@ -154,6 +154,15 @@ public class PropertyData
     }
 
     /**
+     * this constructor is used for backward compat
+     */
+    PropertyData(org.apache.subversion.javahl.PropertyData aPropertyData)
+    {
+        this(aPropertyData.getPath(), aPropertyData.getName(),
+             aPropertyData.getValue());
+    }
+
+    /**
      * Returns the name of the property
      * @return the name
      */

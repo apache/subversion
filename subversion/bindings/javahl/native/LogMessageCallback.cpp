@@ -75,7 +75,7 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
   static jmethodID sm_mid = 0;
   if (sm_mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/LogMessageCallback");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/LogMessageCallback");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 

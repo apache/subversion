@@ -23,6 +23,8 @@
 
 package org.tigris.subversion.javahl;
 
+import org.apache.subversion.javahl.*;
+
 import java.io.OutputStream;
 
 import java.util.Map;
@@ -41,47 +43,32 @@ import java.text.SimpleDateFormat;
  */
 public class SVNClient implements SVNClientInterface
 {
-    /**
-     * Load the required native library.
-     */
-    static
-    {
-        NativeResources.loadNativeLibrary();
-    }
+    private org.apache.subversion.javahl.SVNClient aSVNClient;
 
     /**
      * Standard empty contructor, builds just the native peer.
      */
     public SVNClient()
     {
-        cppAddr = ctNative();
-
-        // Ensure that Subversion's config file area and templates exist.
-        try
-        {
-            setConfigDirectory(null);
-        }
-        catch (ClientException suppressed)
-        {
-            // Not an exception-worthy problem, continue on.
-        }
+        aSVNClient = new org.apache.subversion.javahl.SVNClient();
+        cppAddr = aSVNClient.getCppAddr();
     }
-
-    /**
-     * Build the native peer
-     * @return the adress of the peer
-     */
-    private native long ctNative();
 
      /**
      * release the native peer (should not depend on finalize)
      */
-    public native void dispose();
+    public void dispose()
+    {
+        aSVNClient.dispose();
+    }
 
     /**
      * release the native peer (should use dispose instead)
      */
-    protected native void finalize();
+    protected void finalize()
+    {
+        aSVNClient.finalize();
+    }
 
     /**
      * slot for the adress of the native peer. The JNI code is the only user
@@ -94,24 +81,34 @@ public class SVNClient implements SVNClientInterface
      */
     public Version getVersion()
     {
-        return NativeResources.version;
+        return new Version(
+                        org.apache.subversion.javahl.NativeResources.version);
     }
 
     /**
      * @since 1.3
      */
-    public native String getAdminDirectoryName();
+    public String getAdminDirectoryName()
+    {
+        return aSVNClient.getAdminDirectoryName();
+    }
 
     /**
      * @since 1.3
      */
-    public native boolean isAdminDirectory(String name);
+    public boolean isAdminDirectory(String name)
+    {
+        return aSVNClient.isAdminDirectory(name);
+    }
 
     /**
      * @deprecated
      * @since 1.0
      */
-    public native String getLastPath();
+    public String getLastPath()
+    {
+        return aSVNClient.getLastPath();
+    }
 
     /**
      * @deprecated Use {@link #status(String, int, boolean, boolean,
@@ -177,11 +174,39 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void status(String path, int depth, boolean onServer,
-                              boolean getAll, boolean noIgnore,
-                              boolean ignoreExternals, String[] changelists,
-                              StatusCallback callback)
-            throws ClientException;
+    public void status(String path, int depth, boolean onServer,
+                       boolean getAll, boolean noIgnore,
+                       boolean ignoreExternals, String[] changelists,
+                       StatusCallback callback)
+            throws ClientException
+    {
+        class aStatusCallback
+            implements org.apache.subversion.javahl.callback.StatusCallback
+        {
+            StatusCallback callback;
+
+            public aStatusCallback(StatusCallback callback)
+            {
+                this.callback = callback;
+            }
+
+            public void doStatus(org.apache.subversion.javahl.Status aStatus)
+            {
+                callback.doStatus(new Status(aStatus));
+            }
+        }
+
+        try
+        {
+            aSVNClient.status(path, depth, onServer, getAll, noIgnore,
+                              ignoreExternals, changelists,
+                              new aStatusCallback(callback));
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #list(String, Revision, Revision, int, int,
@@ -214,25 +239,66 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void list(String url, Revision revision,
+    public void list(String url, Revision revision,
                             Revision pegRevision, int depth, int direntFields,
                             boolean fetchLocks, ListCallback callback)
-            throws ClientException;
+            throws ClientException
+    {
+        class aListCallback
+            implements org.apache.subversion.javahl.callback.ListCallback
+        {
+            private ListCallback callback;
+
+            public aListCallback(ListCallback callback)
+            {
+                this.callback = callback;
+            }
+
+            public void doEntry(org.apache.subversion.javahl.DirEntry dirent,
+                                org.apache.subversion.javahl.Lock lock)
+            {
+                callback.doEntry(new DirEntry(dirent),
+                                 lock == null ? null : new Lock(lock));
+            }
+        }
+
+        try
+        {
+            aSVNClient.list(url,
+                         revision == null ? null : revision.toApache(),
+                         pegRevision == null ? null : pegRevision.toApache(),
+                         depth, direntFields, fetchLocks,
+                         new aListCallback(callback));
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.0
      */
-    public native void username(String username);
+    public void username(String username)
+    {
+        aSVNClient.username(username);
+    }
 
     /**
      * @since 1.0
      */
-    public native void password(String password);
+    public void password(String password)
+    {
+        aSVNClient.password(password);
+    }
 
     /**
      * @since 1.0
      */
-    public native void setPrompt(PromptUserPassword prompt);
+    public void setPrompt(PromptUserPassword prompt)
+    {
+        aSVNClient.setPrompt(prompt);
+    }
 
     /**
      * @deprecated Use {@link #logMessages(String, Revision, Revision, Revision,
@@ -326,16 +392,69 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.6
      */
-    public native void logMessages(String path,
-                                   Revision pegRevision,
-                                   RevisionRange[] revisionRanges,
-                                   boolean stopOnCopy,
-                                   boolean discoverPath,
-                                   boolean includeMergedRevisions,
-                                   String[] revProps,
-                                   long limit,
-                                   LogMessageCallback callback)
-            throws ClientException;
+    public void logMessages(String path, Revision pegRevision,
+                            RevisionRange[] revisionRanges,
+                            boolean stopOnCopy, boolean discoverPath,
+                            boolean includeMergedRevisions, String[] revProps,
+                            long limit, LogMessageCallback callback)
+            throws ClientException
+    {
+        class aLogMessageCallback
+            implements org.apache.subversion.javahl.callback.LogMessageCallback
+        {
+            private LogMessageCallback callback;
+
+            public aLogMessageCallback(LogMessageCallback callback)
+            {
+                this.callback = callback;
+            }
+
+            public void singleMessage(
+                    org.apache.subversion.javahl.ChangePath[] aChangedPaths,
+                    long revision, Map revprops, boolean hasChildren)
+            {
+                ChangePath[] changedPaths;
+                
+                if (aChangedPaths != null)
+                {
+                    changedPaths = new ChangePath[aChangedPaths.length];
+
+                    for (int i = 0; i < aChangedPaths.length; i++)
+                    {
+                        changedPaths[i] = new ChangePath(aChangedPaths[i]);
+                    }
+                }
+                else
+                {
+                    changedPaths = null;
+                }
+
+                callback.singleMessage(changedPaths, revision, revprops,
+                                       hasChildren);
+            }
+        }
+
+        try
+        {
+            org.apache.subversion.javahl.RevisionRange[] aRevisions = 
+              new org.apache.subversion.javahl.RevisionRange[revisionRanges.length];
+
+            for (int i = 0; i < revisionRanges.length; i++)
+            {
+                aRevisions[i] = revisionRanges[i].toApache();
+            }
+
+            aSVNClient.logMessages(path,
+                         pegRevision == null ? null :pegRevision.toApache(),
+                         aRevisions, stopOnCopy, discoverPath,
+                         includeMergedRevisions, revProps, limit,
+                         new aLogMessageCallback(callback));
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #checkout(String, String, Revision, Revision,
@@ -368,37 +487,160 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native long checkout(String moduleName, String destPath,
-                                Revision revision, Revision pegRevision,
-                                int depth, boolean ignoreExternals,
-                                boolean allowUnverObstructions)
-            throws ClientException;
+    public long checkout(String moduleName, String destPath, Revision revision,
+                         Revision pegRevision, int depth,
+                         boolean ignoreExternals,
+                         boolean allowUnverObstructions)
+            throws ClientException
+    {
+        try
+        {
+            return aSVNClient.checkout(moduleName, destPath,
+                          revision == null ? null : revision.toApache(),
+                          pegRevision == null ? null : pegRevision.toApache(),
+                          depth, ignoreExternals, allowUnverObstructions);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #notification2(Notify2)} instead.
      * @since 1.0
      */
-    public native void notification(Notify notify);
+    public void notification(Notify notify)
+    {
+        aSVNClient.notification(notify);
+    }
 
     /**
      * @since 1.2
      */
-    public native void notification2(Notify2 notify);
+    public void notification2(Notify2 notify)
+    {
+        class MyNotifyCallback
+            implements org.apache.subversion.javahl.callback.NotifyCallback
+        {
+            Notify2 notify;
+
+            public MyNotifyCallback(Notify2 notify)
+            {
+                this.notify = notify;
+            }
+
+            public void onNotify(
+                        org.apache.subversion.javahl.NotifyInformation aInfo)
+            {
+                notify.onNotify(new NotifyInformation(aInfo));
+            }
+        }
+
+        aSVNClient.notification2(new MyNotifyCallback(notify));
+    }
 
     /**
      * @since 1.5
      */
-    public native void setConflictResolver(ConflictResolverCallback listener);
+    public void setConflictResolver(ConflictResolverCallback listener)
+    {
+        class MyConflictResolverCallback
+            implements org.apache.subversion.javahl.callback.ConflictResolverCallback
+        {
+            private ConflictResolverCallback callback;
+
+            public MyConflictResolverCallback(
+                                        ConflictResolverCallback callback)
+            {
+                this.callback = callback;
+            }
+
+            public org.apache.subversion.javahl.ConflictResult resolve(
+                    org.apache.subversion.javahl.ConflictDescriptor aDescrip)
+                throws org.apache.subversion.javahl.SubversionException
+            {
+                try
+                {
+                    return callback.resolve(
+                                new ConflictDescriptor(aDescrip)).toApache();
+                }
+                catch (SubversionException ex)
+                {
+                    throw org.apache.subversion.javahl.ClientException.fromException(ex);
+                }
+            }
+        }
+
+        aSVNClient.setConflictResolver(
+                                    new MyConflictResolverCallback(listener));
+    }
 
     /**
      * @since 1.5
      */
-    public native void setProgressListener(ProgressListener listener);
+    public void setProgressListener(ProgressListener listener)
+    {
+        class MyProgressListener
+            implements org.apache.subversion.javahl.callback.ProgressCallback
+        {
+            private ProgressListener listener;
+
+            MyProgressListener(ProgressListener listener)
+            {
+                this.listener = listener;
+            }
+
+            public void onProgress(org.apache.subversion.javahl.ProgressEvent
+                                                                        event)
+            {
+                listener.onProgress(new ProgressEvent(event));
+            }
+        }
+
+        MyProgressListener aListener = new MyProgressListener(listener);
+
+        aSVNClient.setProgressCallback(aListener);
+    }
 
     /**
      * @since 1.0
      */
-    public native void commitMessageHandler(CommitMessage messageHandler);
+    public void commitMessageHandler(CommitMessage messageHandler)
+    {
+        class MyCommitMessageHandler
+            implements org.apache.subversion.javahl.CommitMessage
+        {
+            private CommitMessage handler;
+
+            MyCommitMessageHandler(CommitMessage handler)
+            {
+                this.handler = handler;
+            }
+
+            public String getLogMessage(
+                org.apache.subversion.javahl.CommitItem[] elementsToBeCommited)
+            {
+                CommitItem[] aElements =
+                        new CommitItem[elementsToBeCommited.length];
+
+                for (int i = 0; i < elementsToBeCommited.length; i++)
+                {
+                    aElements[i] = new CommitItem(elementsToBeCommited[i]);
+                }
+
+                if (handler == null)
+                  return "";
+
+                return handler.getLogMessage(aElements);
+            }
+        }
+
+        MyCommitMessageHandler aHandler =
+                                new MyCommitMessageHandler(messageHandler);
+
+        aSVNClient.commitMessageHandler(aHandler);
+    }
 
     /**
      * @deprecated Use {@link #remove(String[], String, boolean, boolean, Map)}
@@ -414,9 +656,19 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void remove(String[] path, String message, boolean force,
-                              boolean keepLocal, Map revpropTable)
-            throws ClientException;
+    public void remove(String[] path, String message, boolean force,
+                       boolean keepLocal, Map revpropTable)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.remove(path, message, force, keepLocal, revpropTable);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #revert(String, int, String[])} instead.
@@ -431,8 +683,18 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void revert(String path, int depth, String[] changelists)
-            throws ClientException;
+    public void revert(String path, int depth, String[] changelists)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.revert(path, depth, changelists);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #add(String, int, boolean, boolean, boolean)}
@@ -459,9 +721,19 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void add(String path, int depth, boolean force,
+    public void add(String path, int depth, boolean force,
                            boolean noIgnores, boolean addParents)
-        throws ClientException;
+        throws ClientException
+    {
+        try
+        {
+            aSVNClient.add(path, depth, force, noIgnores, addParents);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #update(String[], Revision, int, boolean,
@@ -502,11 +774,23 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native long[] update(String[] path, Revision revision,
-                                int depth, boolean depthIsSticky,
-                                boolean ignoreExternals,
-                                boolean allowUnverObstructions)
-            throws ClientException;
+    public long[] update(String[] path, Revision revision, int depth,
+                         boolean depthIsSticky, boolean ignoreExternals,
+                         boolean allowUnverObstructions)
+            throws ClientException
+    {
+        try
+        {
+            return aSVNClient.update(path,
+                                revision == null ? null : revision.toApache(),
+                                depth, depthIsSticky, ignoreExternals,
+                                allowUnverObstructions);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
@@ -535,19 +819,49 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native long commit(String[] path, String message, int depth,
-                              boolean noUnlock, boolean keepChangelist,
-                              String[] changelists, Map revpropTable)
-            throws ClientException;
+    public long commit(String[] path, String message, int depth,
+                       boolean noUnlock, boolean keepChangelist,
+                       String[] changelists, Map revpropTable)
+            throws ClientException
+    {
+        try
+        {
+            return aSVNClient.commit(path, message, depth, noUnlock,
+                                     keepChangelist, changelists,
+                                     revpropTable);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.7
      */
-    public native void copy(CopySource[] sources, String destPath,
-                            String message, boolean copyAsChild,
-                            boolean makeParents, boolean ignoreExternals,
-                            Map revpropTable)
-            throws ClientException;
+    public void copy(CopySource[] sources, String destPath, String message,
+                     boolean copyAsChild, boolean makeParents,
+                     boolean ignoreExternals, Map revpropTable)
+            throws ClientException
+    {
+        try
+        {
+            org.apache.subversion.javahl.CopySource[] aCopySources =
+                new org.apache.subversion.javahl.CopySource[sources.length];
+
+            for (int i = 0; i < sources.length; i++)
+            {
+                aCopySources[i] = sources[i].toApache();
+            }
+
+            aSVNClient.copy(aCopySources, destPath, message, copyAsChild,
+                            makeParents, ignoreExternals, revpropTable);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
@@ -580,10 +894,21 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void move(String[] srcPaths, String destPath, String message,
-                            boolean force, boolean moveAsChild,
-                            boolean makeParents, Map revpropTable)
-            throws ClientException;
+    public void move(String[] srcPaths, String destPath, String message,
+                     boolean force, boolean moveAsChild,
+                     boolean makeParents, Map revpropTable)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.move(srcPaths, destPath, message, force, moveAsChild,
+                            makeParents, revpropTable);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
@@ -614,9 +939,19 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void mkdir(String[] path, String message,
-                             boolean makeParents, Map revpropTable)
-            throws ClientException;
+    public void mkdir(String[] path, String message,
+                      boolean makeParents, Map revpropTable)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.mkdir(path, message, makeParents, revpropTable);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #mkdir(String[], String, boolean, Map)} instead.
@@ -631,8 +966,18 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.0
      */
-    public native void cleanup(String path)
-            throws ClientException;
+    public void cleanup(String path)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.cleanup(path);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #resolve(String, int, int)} instead.
@@ -655,8 +1000,18 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void resolve(String path, int depth, int conflictResult)
-        throws SubversionException;
+    public void resolve(String path, int depth, int conflictResult)
+        throws SubversionException
+    {
+        try
+        {
+            aSVNClient.resolve(path, depth, conflictResult);
+        }
+        catch (org.apache.subversion.javahl.SubversionException ex)
+        {
+            throw new SubversionException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #doExport(String, String, Revision, Revision,
@@ -690,11 +1045,23 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native long doExport(String srcPath, String destPath,
-                                Revision revision, Revision pegRevision,
-                                boolean force, boolean ignoreExternals,
-                                int depth, String nativeEOL)
-            throws ClientException;
+    public long doExport(String srcPath, String destPath, Revision revision,
+                         Revision pegRevision, boolean force,
+                         boolean ignoreExternals, int depth, String nativeEOL)
+            throws ClientException
+    {
+        try
+        {
+            return aSVNClient.doExport(srcPath, destPath,
+                          revision == null ? null : revision.toApache(),
+                          pegRevision == null ? null : pegRevision.toApache(),
+                          force, ignoreExternals, depth, nativeEOL);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #doSwitch(String, String, Revision, boolean)}
@@ -712,11 +1079,25 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native long doSwitch(String path, String url, Revision revision,
-                                Revision pegRevision, int depth,
-                                boolean depthIsSticky, boolean ignoreExternals,
-                                boolean allowUnverObstructions)
-            throws ClientException;
+    public long doSwitch(String path, String url, Revision revision,
+                         Revision pegRevision, int depth,
+                         boolean depthIsSticky, boolean ignoreExternals,
+                         boolean allowUnverObstructions)
+            throws ClientException
+    {
+        try
+        {
+            return aSVNClient.doSwitch(path, url,
+                          revision == null ? null : revision.toApache(),
+                          pegRevision == null ? null : pegRevision.toApache(),
+                          depth, depthIsSticky, ignoreExternals,
+                          allowUnverObstructions);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #doImport(String, String, String, int, boolean,
@@ -734,18 +1115,38 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void doImport(String path, String url, String message,
-                                int depth, boolean noIgnore,
-                                boolean ignoreUnknownNodeTypes,
-                                Map revpropTable)
-            throws ClientException;
+    public void doImport(String path, String url, String message,
+                         int depth, boolean noIgnore,
+                         boolean ignoreUnknownNodeTypes, Map revpropTable)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.doImport(path, url, message, depth, noIgnore,
+                                ignoreUnknownNodeTypes, revpropTable);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.5
      */
-    public native String[] suggestMergeSources(String path,
-                                               Revision pegRevision)
-            throws SubversionException;
+    public String[] suggestMergeSources(String path, Revision pegRevision)
+            throws SubversionException
+    {
+        try
+        {
+            return aSVNClient.suggestMergeSources(path,
+                         pegRevision == null ? null : pegRevision.toApache());
+        }
+        catch (org.apache.subversion.javahl.SubversionException ex)
+        {
+            throw new SubversionException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #merge(String, Revision, String, Revision,
@@ -780,12 +1181,26 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void merge(String path1, Revision revision1, String path2,
-                             Revision revision2, String localPath,
-                             boolean force, int depth,
-                             boolean ignoreAncestry, boolean dryRun,
-                             boolean recordOnly)
-            throws ClientException;
+    public void merge(String path1, Revision revision1, String path2,
+                      Revision revision2, String localPath, boolean force,
+                      int depth, boolean ignoreAncestry, boolean dryRun,
+                      boolean recordOnly)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.merge(path1,
+                             revision1 == null ? null : revision1.toApache(),
+                             path2,
+                             revision2 == null ? null : revision2.toApache(),
+                             localPath, force, depth, ignoreAncestry,
+                             dryRun, recordOnly);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #merge(String, Revision, RevisionRange[],
@@ -806,37 +1221,135 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void merge(String path, Revision pegRevision,
-                             RevisionRange[] revisions, String localPath,
-                             boolean force, int depth, boolean ignoreAncestry,
-                             boolean dryRun, boolean recordOnly)
-            throws ClientException;
+    public void merge(String path, Revision pegRevision,
+                      RevisionRange[] revisions, String localPath,
+                      boolean force, int depth, boolean ignoreAncestry,
+                      boolean dryRun, boolean recordOnly)
+            throws ClientException
+    {
+        try
+        {
+            org.apache.subversion.javahl.RevisionRange[] aRevisions = 
+              new org.apache.subversion.javahl.RevisionRange[revisions.length];
+
+            for (int i = 0; i < revisions.length; i++)
+            {
+                aRevisions[i] = revisions[i].toApache();
+            }
+
+            aSVNClient.merge(path,
+                         pegRevision == null ? null : pegRevision.toApache(),
+                         aRevisions, localPath, force, depth,
+                         ignoreAncestry, dryRun, recordOnly);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.5
      */
-    public native void mergeReintegrate(String path, Revision pegRevision,
-                                        String localPath, boolean dryRun)
-            throws ClientException;
+    public void mergeReintegrate(String path, Revision pegRevision,
+                                 String localPath, boolean dryRun)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.mergeReintegrate(path,
+                        pegRevision == null ? null : pegRevision.toApache(),
+                        localPath, dryRun);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.5
      */
-    public native Mergeinfo getMergeinfo(String path, Revision pegRevision)
-            throws SubversionException;
+    public Mergeinfo getMergeinfo(String path, Revision pegRevision)
+            throws SubversionException
+    {
+        try
+        {
+            org.apache.subversion.javahl.Mergeinfo aMergeinfo = 
+                         aSVNClient.getMergeinfo(path,
+                         pegRevision == null ? null : pegRevision.toApache());
+
+            if (aMergeinfo == null)
+                return null;
+
+            return new Mergeinfo(aMergeinfo);
+        }
+        catch (org.apache.subversion.javahl.SubversionException ex)
+        {
+            throw new SubversionException(ex);
+        }
+    }
 
     /**
      * @since 1.7
      */
-    public native void getMergeinfoLog(int kind, String pathOrUrl,
-                                       Revision pegRevision,
-                                       String mergeSourceUrl,
-                                       Revision srcPegRevision,
-                                       boolean discoverChangedPaths,
-                                       int depth,
-                                       String[] revprops,
-                                       LogMessageCallback callback)
-        throws ClientException;
+    public void getMergeinfoLog(int kind, String pathOrUrl,
+                                Revision pegRevision, String mergeSourceUrl,
+                                Revision srcPegRevision,
+                                boolean discoverChangedPaths, int depth,
+                                String[] revprops, LogMessageCallback callback)
+        throws ClientException
+    {
+        class aLogMessageCallback
+            implements org.apache.subversion.javahl.callback.LogMessageCallback
+        {
+            private LogMessageCallback callback;
+
+            aLogMessageCallback(LogMessageCallback callback)
+            {
+                this.callback = callback;
+            }
+
+            public void singleMessage(
+                    org.apache.subversion.javahl.ChangePath[] aChangedPaths,
+                    long revision, Map revprops, boolean hasChildren)
+            {
+                ChangePath[] changedPaths;
+
+                if (aChangedPaths != null)
+                {
+                    changedPaths = new ChangePath[aChangedPaths.length];
+
+                    for (int i = 0; i < aChangedPaths.length; i++)
+                    {
+                        changedPaths[i] = new ChangePath(aChangedPaths[i]);
+                    }
+                }
+                else
+                {
+                    changedPaths = null;
+                }
+
+                callback.singleMessage(changedPaths, revision, revprops,
+                                       hasChildren);
+            }
+        }
+
+        try
+        {
+            aSVNClient.getMergeinfoLog(kind, pathOrUrl,
+                        pegRevision == null ? null : pegRevision.toApache(),
+                        mergeSourceUrl,
+                        srcPegRevision == null ? null :
+                                                    srcPegRevision.toApache(),
+                        discoverChangedPaths, depth, revprops,
+                        new aLogMessageCallback(callback));
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #getMergeinfoLog(int, String, Revision, String,
@@ -910,13 +1423,28 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.7
      */
-    public native void diff(String target1, Revision revision1, String target2,
-                            Revision revision2, String relativeToDir,
-                            String outFileName, int depth,
-                            String[] changelists, boolean ignoreAncestry,
-                            boolean noDiffDeleted, boolean force,
-                            boolean copiesAsAdds)
-            throws ClientException;
+    public void diff(String target1, Revision revision1, String target2,
+                     Revision revision2, String relativeToDir,
+                     String outFileName, int depth, String[] changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.diff(target1,
+                        revision1 == null ? null : revision1.toApache(),
+                        target2,
+                        revision2 == null ? null : revision2.toApache(),
+                        relativeToDir, outFileName, depth, changelists,
+                        ignoreAncestry, noDiffDeleted, force,
+                        copiesAsAdds);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #diff(String, Revision, Revision, Revision,
@@ -957,34 +1485,80 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.7
      */
-    public native void diff(String target, Revision pegRevision,
-                            Revision startRevision, Revision endRevision,
-                            String relativeToDir, String outFileName,
-                            int depth, String[] changelists,
-                            boolean ignoreAncestry, boolean noDiffDeleted,
-                            boolean force, boolean copiesAsAdds)
-            throws ClientException;
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String relativeToDir, String outFileName, int depth,
+                     String[] changelists, boolean ignoreAncestry,
+                     boolean noDiffDeleted, boolean force,
+                     boolean copiesAsAdds)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.diff(target,
+                     pegRevision == null ? null : pegRevision.toApache(),
+                     startRevision == null ? null : startRevision.toApache(),
+                     endRevision == null ? null : endRevision.toApache(),
+                     relativeToDir, outFileName, depth, changelists,
+                     ignoreAncestry, noDiffDeleted, force, copiesAsAdds);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.5
      */
-    public native void diffSummarize(String target1, Revision revision1,
-                                     String target2, Revision revision2,
-                                     int depth, String[] changelists,
-                                     boolean ignoreAncestry,
-                                     DiffSummaryReceiver receiver)
-            throws ClientException;
+    public void diffSummarize(String target1, Revision revision1,
+                              String target2, Revision revision2,
+                              int depth, String[] changelists,
+                              boolean ignoreAncestry,
+                              DiffSummaryReceiver receiver)
+            throws ClientException
+    {
+        try
+        {
+            MyDiffSummaryReceiver aReceiver =
+                                        new MyDiffSummaryReceiver(receiver);
+            aSVNClient.diffSummarize(target1,
+                            revision1 == null ? null : revision1.toApache(),
+                            target2,
+                            revision2 == null ? null : revision2.toApache(),
+                            depth, changelists, ignoreAncestry, aReceiver);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.5
      */
-    public native void diffSummarize(String target, Revision pegRevision,
-                                     Revision startRevision,
-                                     Revision endRevision,
-                                     int depth, String[] changelists,
-                                     boolean ignoreAncestry,
-                                     DiffSummaryReceiver receiver)
-            throws ClientException;
+    public void diffSummarize(String target, Revision pegRevision,
+                              Revision startRevision, Revision endRevision,
+                              int depth, String[] changelists,
+                              boolean ignoreAncestry,
+                              DiffSummaryReceiver receiver)
+            throws ClientException
+    {
+        try
+        {
+            MyDiffSummaryReceiver aReceiver =
+                                        new MyDiffSummaryReceiver(receiver);
+            aSVNClient.diffSummarize(target,
+                       pegRevision == null ? null : pegRevision.toApache(),
+                       startRevision == null ? null : startRevision.toApache(),
+                       endRevision == null ? null : endRevision.toApache(),
+                       depth, changelists, ignoreAncestry, aReceiver);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #properties(String, Revision, Revision,
@@ -1043,11 +1617,23 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void properties(String path, Revision revision,
-                                  Revision pegRevision, int depth,
-                                  String[] changelists,
-                                  ProplistCallback callback)
-            throws ClientException;
+    public void properties(String path, Revision revision,
+                           Revision pegRevision, int depth,
+                           String[] changelists, ProplistCallback callback)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.properties(path,
+                          revision == null ? null : revision.toApache(),
+                          pegRevision == null ? null : pegRevision.toApache(),
+                          depth, changelists, callback);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #propertySet(String, String, String, int,
@@ -1101,10 +1687,21 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void propertySet(String path, String name, String value,
-                                   int depth, String[] changelists,
-                                   boolean force, Map revpropTable)
-            throws ClientException;
+    public void propertySet(String path, String name, String value, int depth,
+                            String[] changelists, boolean force,
+                            Map revpropTable)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.propertySet(path, name, value, depth, changelists,
+                                   force, revpropTable);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #propertyRemove(String, String, int, String[])}
@@ -1188,15 +1785,45 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.0
      */
-    public native PropertyData revProperty(String path, String name,
-                                           Revision rev)
-            throws ClientException;
+    public PropertyData revProperty(String path, String name, Revision rev)
+            throws ClientException
+    {
+        try
+        {
+            return new PropertyData(aSVNClient.revProperty(path, name,
+                                         rev == null ? null : rev.toApache()));
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.2
      */
-    public native PropertyData[] revProperties(String path, Revision rev)
-            throws ClientException;
+    public PropertyData[] revProperties(String path, Revision rev)
+            throws ClientException
+    {
+        try
+        {
+            org.apache.subversion.javahl.PropertyData[] aPropData =
+                              aSVNClient.revProperties(path,
+                                          rev == null ? null : rev.toApache());
+            PropertyData[] propData = new PropertyData[aPropData.length];
+
+            for (int i = 0; i < aPropData.length; i++)
+            {
+                propData[i] = new PropertyData(aPropData[i]);
+            }
+
+            return propData;
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #setRevProperty(String, String, Revision, String,
@@ -1213,10 +1840,22 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.6
      */
-    public native void setRevProperty(String path, String name, Revision rev,
-                                      String value, String originalValue,
-                                      boolean force)
-            throws ClientException;
+    public void setRevProperty(String path, String name, Revision rev,
+                               String value, String originalValue,
+                               boolean force)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.setRevProperty(path, name,
+                                      rev == null ? null : rev.toApache(),
+                                      value, originalValue, force);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #propertyGet(String, String, Revision)} instead.
@@ -1241,10 +1880,21 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.2
      */
-    public native PropertyData propertyGet(String path, String name,
-                                           Revision revision,
-                                           Revision pegRevision)
-            throws ClientException;
+    public PropertyData propertyGet(String path, String name,
+                                    Revision revision, Revision pegRevision)
+            throws ClientException
+    {
+        try
+        {
+            return new PropertyData(aSVNClient.propertyGet(path, name,
+                        revision == null ? null : revision.toApache(),
+                        pegRevision == null ? null : pegRevision.toApache()));
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #fileContent(String, Revision, Revision)}
@@ -1260,24 +1910,58 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.2
      */
-    public native byte[] fileContent(String path, Revision revision,
-                                     Revision pegRevision)
-            throws ClientException;
+    public byte[] fileContent(String path, Revision revision,
+                              Revision pegRevision)
+            throws ClientException
+    {
+        try
+        {
+            return aSVNClient.fileContent(path,
+                         revision == null ? null : revision.toApache(),
+                         pegRevision == null ? null : pegRevision.toApache());
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.0
      */
-    public native void streamFileContent(String path, Revision revision,
-                                         Revision pegRevision, int bufferSize,
-                                         OutputStream stream)
-            throws ClientException;
+    public void streamFileContent(String path, Revision revision,
+                                  Revision pegRevision, int bufferSize,
+                                  OutputStream stream)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.streamFileContent(path,
+                          revision == null ? null : revision.toApache(),
+                          pegRevision == null ? null : pegRevision.toApache(),
+                          bufferSize, stream);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.0
      */
-    public native void relocate(String from, String to, String path,
-                                boolean recurse)
-            throws ClientException;
+    public void relocate(String from, String to, String path, boolean recurse)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.relocate(from, to, path, recurse);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #blame(String, Revision, Revision, Revision,
@@ -1353,72 +2037,206 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.7
      */
-    public native void blame(String path, Revision pegRevision,
-                             Revision revisionStart,
-                             Revision revisionEnd, boolean ignoreMimeType,
-                             boolean includeMergedRevisions,
-                             BlameCallback3 callback)
-            throws ClientException;
+    public void blame(String path, Revision pegRevision,
+                      Revision revisionStart, Revision revisionEnd,
+                      boolean ignoreMimeType, boolean includeMergedRevisions,
+                      BlameCallback3 callback)
+            throws ClientException
+    {
+        class MyBlameCallback
+            implements org.apache.subversion.javahl.callback.BlameCallback3
+        {
+            private BlameCallback3 callback;
+
+            public MyBlameCallback(BlameCallback3 callback)
+            {
+                this.callback = callback;
+            }
+
+            public void singleLine(long lineNum, long revision, Map revProps,
+                                   long mergedRevision, Map mergedRevProps,
+                                   String mergedPath, String line,
+                                   boolean localChange)
+                throws org.apache.subversion.javahl.ClientException
+            {
+                try
+                {
+                    callback.singleLine(lineNum, revision, revProps,
+                                        mergedRevision, mergedRevProps,
+                                        mergedPath, line, localChange);
+                }
+                catch (ClientException ex)
+                {
+                    throw org.apache.subversion.javahl.ClientException.fromException(ex);
+                }
+            }
+        }
+
+        try
+        {
+            MyBlameCallback wrapper = new MyBlameCallback(callback);
+
+            aSVNClient.blame(path,
+                     pegRevision == null ? null : pegRevision.toApache(),
+                     revisionStart == null ? null : revisionStart.toApache(),
+                     revisionEnd == null ? null : revisionEnd.toApache(),
+                     ignoreMimeType, includeMergedRevisions, wrapper);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.0
      */
-    public native void setConfigDirectory(String configDir)
-            throws ClientException;
+    public void setConfigDirectory(String configDir)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.setConfigDirectory(configDir);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.0
      */
-    public native String getConfigDirectory()
-            throws ClientException;
+    public String getConfigDirectory()
+            throws ClientException
+    {
+        try
+        {
+            return aSVNClient.getConfigDirectory();
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.0
      */
-    public native void cancelOperation()
-            throws ClientException;
+    public void cancelOperation()
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.cancelOperation();
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #info2(String, Revision, Revision, int, String[],
      *                               InfoCallback)} instead.
      * @since 1.0
      */
-    public native Info info(String path)
-            throws ClientException;
+    public Info info(String path)
+            throws ClientException
+    {
+        try
+        {
+            return new Info(aSVNClient.info(path));
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.5
      */
-    public native void addToChangelist(String[] paths, String changelist,
-                                       int depth, String[] changelists)
-            throws ClientException;
+    public void addToChangelist(String[] paths, String changelist, int depth,
+                                String[] changelists)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.addToChangelist(paths, changelist, depth, changelists);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.5
      */
-    public native void removeFromChangelists(String[] paths, int depth,
-                                             String[] changelists)
-            throws ClientException;
+    public void removeFromChangelists(String[] paths, int depth,
+                                      String[] changelists)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.removeFromChangelists(paths, depth, changelists);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.5
      */
-    public native void getChangelists(String rootPath, String[] changelists,
-                                      int depth, ChangelistCallback callback)
-            throws ClientException;
+    public void getChangelists(String rootPath, String[] changelists,
+                               int depth, ChangelistCallback callback)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.getChangelists(rootPath, changelists, depth, callback);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.2
      */
-    public native String getVersionInfo(String path, String trailUrl,
-                                        boolean lastChanged)
-            throws ClientException;
+    public String getVersionInfo(String path, String trailUrl,
+                                 boolean lastChanged)
+            throws ClientException
+    {
+        try
+        {
+            return aSVNClient.getVersionInfo(path, trailUrl, lastChanged);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.7
      */
-    public native void upgrade(String path)
-            throws ClientException;
+    public void upgrade(String path)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.upgrade(path);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * Enable logging in the JNI-code
@@ -1426,7 +2244,11 @@ public class SVNClient implements SVNClientInterface
      *                      SVNClientLogLevel)
      * @param logFilePath   path of the log file
      */
-    public static native void enableLogging(int logLevel, String logFilePath);
+    public static void enableLogging(int logLevel, String logFilePath)
+    {
+        org.apache.subversion.javahl.SVNClient.enableLogging(logLevel,
+                                                             logFilePath);
+    }
 
     /**
      * class for the constants of the logging levels.
@@ -1441,40 +2263,72 @@ public class SVNClient implements SVNClientInterface
      * Returns version information of subversion and the javahl binding
      * @return version information
      */
-    public static native String version();
+    public static String version()
+    {
+        return org.apache.subversion.javahl.SVNClient.version();
+    }
 
     /**
      * Returns the major version of the javahl binding. Same version of the
      * javahl support the same interfaces
      * @return major version number
      */
-    public static native int versionMajor();
+    public static int versionMajor()
+    {
+        return org.apache.subversion.javahl.SVNClient.versionMajor();
+    }
 
     /**
      * Returns the minor version of the javahl binding. Same version of the
      * javahl support the same interfaces
      * @return minor version number
      */
-    public static native int versionMinor();
+    public static int versionMinor()
+    {
+        return org.apache.subversion.javahl.SVNClient.versionMinor();
+    }
 
     /**
      * Returns the micro (patch) version of the javahl binding. Same version of
      * the javahl support the same interfaces
      * @return micro version number
      */
-    public static native int versionMicro();
+    public static int versionMicro()
+    {
+        return org.apache.subversion.javahl.SVNClient.versionMicro();
+    }
 
     /**
      * @since 1.2
      */
-    public native void lock(String[] path, String comment, boolean force)
-            throws ClientException;
+    public void lock(String[] path, String comment, boolean force)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.lock(path, comment, force);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @since 1.2
      */
-    public native void unlock(String[] path, boolean force)
-            throws ClientException;
+    public void unlock(String[] path, boolean force)
+            throws ClientException
+    {
+        try
+        {
+            aSVNClient.unlock(path, force);
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * @deprecated Use {@link #info2(String, Revision, Revision, int, String[],
@@ -1494,10 +2348,40 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void info2(String pathOrUrl, Revision revision,
+    public void info2(String pathOrUrl, Revision revision,
                              Revision pegRevision, int depth,
                              String[] changelists, InfoCallback callback)
-            throws ClientException;
+            throws ClientException
+    {
+        class aInfoCallback
+            implements org.apache.subversion.javahl.callback.InfoCallback
+        {
+            private InfoCallback callback;
+
+            public aInfoCallback(InfoCallback callback)
+            {
+                this.callback = callback;
+            }
+
+            public void singleInfo(org.apache.subversion.javahl.Info2 aInfo)
+            {
+                callback.singleInfo(aInfo == null ? null : new Info2(aInfo));
+            }
+        }
+
+        try
+        {
+            aSVNClient.info2(pathOrUrl,
+                          revision == null ? null : revision.toApache(),
+                          pegRevision == null ? null : pegRevision.toApache(),
+                          depth, changelists,
+                          new aInfoCallback(callback));
+        }
+        catch (org.apache.subversion.javahl.ClientException ex)
+        {
+            throw new ClientException(ex);
+        }
+    }
 
     /**
      * A private wrapper function for RevisionRanges.
@@ -1688,6 +2572,22 @@ public class SVNClient implements SVNClientInterface
             } catch (ParseException e) {
                 throw ClientException.fromException(e);
             }
+        }
+    }
+
+    private class MyDiffSummaryReceiver
+        implements org.apache.subversion.javahl.callback.DiffSummaryCallback
+    {
+        private DiffSummaryReceiver callback;
+
+        public MyDiffSummaryReceiver(DiffSummaryReceiver callback)
+        {
+            this.callback = callback;
+        }
+
+        public void onSummary(org.apache.subversion.javahl.DiffSummary summary)
+        {
+            callback.onSummary(new DiffSummary(summary));
         }
     }
 }

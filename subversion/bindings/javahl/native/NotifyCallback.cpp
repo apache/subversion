@@ -20,11 +20,11 @@
  * ====================================================================
  * @endcopyright
  *
- * @file Notify2.cpp
- * @brief Implementation of the class Notify2
+ * @file NotifyCallback.cpp
+ * @brief Implementation of the class NotifyCallback
  */
 
-#include "Notify2.h"
+#include "NotifyCallback.h"
 #include "JNIUtil.h"
 #include "CreateJ.h"
 #include "EnumMapper.h"
@@ -34,7 +34,7 @@
  * Create a new object and store the Java object.
  * @param notify    global reference to the Java object
  */
-Notify2::Notify2(jobject p_notify)
+NotifyCallback::NotifyCallback(jobject p_notify)
 {
   m_notify = p_notify;
 }
@@ -43,7 +43,7 @@ Notify2::Notify2(jobject p_notify)
  * Destroy the object and delete the global reference to the Java
  * object.
  */
-Notify2::~Notify2()
+NotifyCallback::~NotifyCallback()
 {
   if (m_notify != NULL)
     {
@@ -56,7 +56,7 @@ Notify2::~Notify2()
  * Create a C++ peer object for the Java object.
  * @param notify    a local reference to the Java object
  */
-Notify2 *Notify2::makeCNotify(jobject notify)
+NotifyCallback *NotifyCallback::makeCNotify(jobject notify)
 {
   // If the Java object is null -> no C++ peer needed.
   if (notify == NULL)
@@ -64,7 +64,7 @@ Notify2 *Notify2::makeCNotify(jobject notify)
   JNIEnv *env = JNIUtil::getEnv();
 
   // Sanity check, that the object implements Notify.
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/Notify2");
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/NotifyCallback");
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
@@ -84,7 +84,7 @@ Notify2 *Notify2::makeCNotify(jobject notify)
     return NULL;
 
   // Create the peer.
-  return new Notify2(myNotify);
+  return new NotifyCallback(myNotify);
 }
 
 /**
@@ -94,10 +94,10 @@ Notify2 *Notify2::makeCNotify(jobject notify)
  * @param pool an apr pool to allocated memory
  */
 void
-Notify2::notify(void *baton, const svn_wc_notify_t *notify, apr_pool_t *pool)
+NotifyCallback::notify(void *baton, const svn_wc_notify_t *notify, apr_pool_t *pool)
 {
   // A Notify object is used as the baton.
-  Notify2 *that = (Notify2 *) baton;
+  NotifyCallback *that = (NotifyCallback *) baton;
   if (that) // sanity check
     {
       // Call our method.
@@ -112,7 +112,7 @@ Notify2::notify(void *baton, const svn_wc_notify_t *notify, apr_pool_t *pool)
  * @param pool an apr pool to allocated memory
  */
 void
-Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
+NotifyCallback::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -121,7 +121,7 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/Notify2");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/NotifyCallback");
       if (JNIUtil::isJavaExceptionThrown())
         return;
 

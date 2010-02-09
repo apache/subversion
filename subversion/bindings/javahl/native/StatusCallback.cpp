@@ -77,7 +77,7 @@ StatusCallback::doStatus(const char *local_abspath,
   // it can be cached.
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/StatusCallback");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/StatusCallback");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 

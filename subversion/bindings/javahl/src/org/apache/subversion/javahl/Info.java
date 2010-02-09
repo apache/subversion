@@ -21,7 +21,7 @@
  * @endcopyright
  */
 
-package org.tigris.subversion.javahl;
+package org.apache.subversion.javahl;
 
 import java.util.Date;
 
@@ -138,20 +138,6 @@ public class Info implements java.io.Serializable
         this.incomplete = incomplete;
         this.copyRev = copyRev;
         this.copyUrl = copyUrl;
-    }
-
-    /**
-     * A backward-compat constructor
-     */
-    public Info(org.apache.subversion.javahl.Info aInfo)
-    {
-        this(aInfo.getName(), aInfo.getUrl(), aInfo.getUuid(),
-             aInfo.getRepository(), aInfo.getSchedule(), aInfo.getNodeKind(),
-             aInfo.getAuthor(), aInfo.getRevision(),
-             aInfo.getLastChangedRevision(), aInfo.getLastChangedDate(),
-             aInfo.getLastDateTextUpdate(), aInfo.getLastDatePropsUpdate(),
-             aInfo.isCopied(), aInfo.isDeleted(), aInfo.isAbsent(),
-             aInfo.isIncomplete(), aInfo.getCopyRev(), aInfo.getCopyUrl());
     }
 
     /**

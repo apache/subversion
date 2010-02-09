@@ -72,7 +72,7 @@ ChangelistCallback::doChangelist(const char *path, const char *changelist,
   // it can be cached.
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/ChangelistCallback");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ChangelistCallback");
       if (JNIUtil::isJavaExceptionThrown())
         return;
 

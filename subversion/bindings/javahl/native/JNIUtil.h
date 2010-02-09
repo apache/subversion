@@ -39,7 +39,7 @@ class SVNBase;
 #include <string>
 struct svn_error_t;
 
-#define JAVA_PACKAGE "org/tigris/subversion/javahl"
+#define JAVA_PACKAGE "org/apache/subversion/javahl"
 
 /**
  * Class to hold a number of JNI related utility methods.  No Objects

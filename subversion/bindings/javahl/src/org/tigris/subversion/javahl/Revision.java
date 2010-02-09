@@ -162,6 +162,22 @@ public class Revision implements java.io.Serializable
         return new org.apache.subversion.javahl.Revision(revKind);
     }
 
+    public static Revision createFromApache(
+                                    org.apache.subversion.javahl.Revision aRev)
+    {
+        int kind = aRev.getKind();
+
+        switch (kind)
+        {
+            case org.apache.subversion.javahl.Revision.Kind.number:
+                return getInstance(((org.apache.subversion.javahl.Revision.Number) aRev).getNumber());
+            case org.apache.subversion.javahl.Revision.Kind.date:
+                return getInstance(((org.apache.subversion.javahl.Revision.DateSpec) aRev).getDate());
+            default:
+                return getInstance(kind);
+        }
+    }
+
     /**
      * last commited revision
      */

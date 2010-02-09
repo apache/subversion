@@ -318,6 +318,34 @@ public class Status implements java.io.Serializable
     }
 
     /**
+     * A backward-compat wrapper.
+     */
+    public Status(org.apache.subversion.javahl.Status aStatus)
+    {
+        this(aStatus.getPath(), aStatus.getUrl(), aStatus.getNodeKind(),
+             aStatus.getRevisionNumber(),
+             aStatus.getLastChangedRevisionNumber(),
+             aStatus.getLastChangedDateMicros(), aStatus.getLastCommitAuthor(),
+             aStatus.getTextStatus(), aStatus.getPropStatus(),
+             aStatus.getRepositoryTextStatus(),
+             aStatus.getRepositoryPropStatus(),
+             aStatus.isLocked(), aStatus.isCopied(), aStatus.hasTreeConflict(),
+             aStatus.getConflictDescriptor() == null ? null
+                : new ConflictDescriptor(aStatus.getConflictDescriptor()),
+             aStatus.getConflictOld(), aStatus.getConflictNew(),
+             aStatus.getConflictWorking(), aStatus.getUrlCopiedFrom(),
+             aStatus.getRevisionCopiedFromNumber(), aStatus.isSwitched(),
+             aStatus.isFileExternal(), aStatus.getLockToken(),
+             aStatus.getLockOwner(), aStatus.getLockComment(),
+             aStatus.getLockCreationDateMicros(),
+             aStatus.getReposLock() == null ? null
+                : new Lock(aStatus.getReposLock()),
+             aStatus.getReposLastCmtRevisionNumber(),
+             aStatus.getReposLastCmtDateMicros(), aStatus.getReposKind(),
+             aStatus.getReposLastCmtAuthor(), aStatus.getChangelist());
+    }
+
+    /**
      * Returns the file system path of the item
      * @return path of status entry
      */

@@ -96,8 +96,11 @@ public class Lock implements java.io.Serializable
     Lock(org.apache.subversion.javahl.Lock aLock)
     {
         this(aLock.getOwner(), aLock.getPath(), aLock.getToken(),
-             aLock.getComment(), aLock.getCreationDate().getTime() * 1000,
-             aLock.getExpirationDate().getTime() * 1000);
+             aLock.getComment(),
+             aLock.getCreationDate() == null ? 0
+                : aLock.getCreationDate().getTime() * 1000,
+             aLock.getExpirationDate() == null ? 0
+                : aLock.getExpirationDate().getTime() * 1000);
     }
 
     /**

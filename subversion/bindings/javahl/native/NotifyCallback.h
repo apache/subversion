@@ -20,8 +20,8 @@
  * ====================================================================
  * @endcopyright
  *
- * @file Notify2.h
- * @brief Interface of the class Notify2
+ * @file NotifyCallback.h
+ * @brief Interface of the class NotifyCallback
  */
 
 #ifndef NOTIFY2_H
@@ -34,7 +34,7 @@
  * This class passes notification from subversion to a Java object
  * (1.2 version).
  */
-class Notify2
+class NotifyCallback
 {
  private:
   /**
@@ -43,11 +43,11 @@ class Notify2
    * SVNClient.notification call.
    */
   jobject m_notify;
-  Notify2(jobject p_notify);
+  NotifyCallback(jobject p_notify);
 
  public:
-  static Notify2 *makeCNotify(jobject notify);
-  ~Notify2();
+  static NotifyCallback *makeCNotify(jobject notify);
+  ~NotifyCallback();
 
   /**
    * Implementation of the svn_wc_notify_func_t API.

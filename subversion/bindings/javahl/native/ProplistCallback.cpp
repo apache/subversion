@@ -75,7 +75,7 @@ svn_error_t *ProplistCallback::singlePath(const char *path,
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/ProplistCallback");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ProplistCallback");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 

@@ -52,6 +52,16 @@ public class ChangePath implements java.io.Serializable
         this.nodeKind = nodeKind;
     }
 
+    /**
+     * A backward-compat constructor.
+     */
+    public ChangePath(org.apache.subversion.javahl.ChangePath aChangePath)
+    {
+        this(aChangePath.getPath(), aChangePath.getCopySrcRevision(),
+             aChangePath.getCopySrcPath(), aChangePath.getAction(),
+             aChangePath.getNodeKind());
+    }
+
     /** Path of commited item */
     private String path;
 
