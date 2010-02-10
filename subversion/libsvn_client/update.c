@@ -239,7 +239,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   ffb->repos_root = repos_root;
   ffb->pool = pool;
 
-  /* Build a boton for the externals-info-gatherer callback. */
+  /* Build a baton for the externals-info-gatherer callback. */
   efb.externals_new = apr_hash_make(pool);
   efb.externals_old = apr_hash_make(pool);
   efb.ambient_depths = apr_hash_make(pool);
