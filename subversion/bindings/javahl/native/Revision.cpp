@@ -25,7 +25,7 @@
  */
 
 #include "Revision.h"
-#include "../include/org_tigris_subversion_javahl_RevisionKind.h"
+#include "../include/org_apache_subversion_javahl_RevisionKind.h"
 #include "JNIUtil.h"
 
 const svn_opt_revision_kind Revision::START = svn_opt_revision_unspecified;
@@ -71,10 +71,10 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
 
       switch(jKind)
         {
-        case org_tigris_subversion_javahl_RevisionKind_unspecified:
+        case org_apache_subversion_javahl_RevisionKind_unspecified:
           m_revision.kind = svn_opt_revision_unspecified;
           break;
-        case org_tigris_subversion_javahl_RevisionKind_number:
+        case org_apache_subversion_javahl_RevisionKind_number:
           m_revision.kind = svn_opt_revision_number;
           {
             static jfieldID fidNum = 0;
@@ -97,7 +97,7 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
             m_revision.value.number = (svn_revnum_t) jNumber;
           }
           break;
-        case org_tigris_subversion_javahl_RevisionKind_date:
+        case org_apache_subversion_javahl_RevisionKind_date:
           m_revision.kind = svn_opt_revision_date;
           {
             static jfieldID fidDate = 0;
@@ -147,19 +147,19 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
             m_revision.value.date = jMillSec * 1000;
           }
           break;
-        case org_tigris_subversion_javahl_RevisionKind_committed:
+        case org_apache_subversion_javahl_RevisionKind_committed:
           m_revision.kind = svn_opt_revision_committed;
           break;
-        case org_tigris_subversion_javahl_RevisionKind_previous:
+        case org_apache_subversion_javahl_RevisionKind_previous:
           m_revision.kind = svn_opt_revision_previous;
           break;
-        case org_tigris_subversion_javahl_RevisionKind_base:
+        case org_apache_subversion_javahl_RevisionKind_base:
           m_revision.kind = svn_opt_revision_base;
           break;
-        case org_tigris_subversion_javahl_RevisionKind_working:
+        case org_apache_subversion_javahl_RevisionKind_working:
           m_revision.kind = svn_opt_revision_working;
           break;
-        case org_tigris_subversion_javahl_RevisionKind_head:
+        case org_apache_subversion_javahl_RevisionKind_head:
           m_revision.kind = svn_opt_revision_head;
           break;
         }

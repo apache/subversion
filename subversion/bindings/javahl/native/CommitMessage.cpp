@@ -28,7 +28,7 @@
 #include "JNIUtil.h"
 #include <apr_tables.h>
 #include "svn_client.h"
-#include "../include/org_tigris_subversion_javahl_CommitItemStateFlags.h"
+#include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
 
 CommitMessage::CommitMessage(jobject jcommitMessage)
 {
@@ -148,19 +148,19 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
       jint jstateFlags = 0;
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         jstateFlags |=
-          org_tigris_subversion_javahl_CommitItemStateFlags_Add;
+          org_apache_subversion_javahl_CommitItemStateFlags_Add;
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
         jstateFlags |=
-          org_tigris_subversion_javahl_CommitItemStateFlags_Delete;
+          org_apache_subversion_javahl_CommitItemStateFlags_Delete;
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
         jstateFlags |=
-          org_tigris_subversion_javahl_CommitItemStateFlags_TextMods;
+          org_apache_subversion_javahl_CommitItemStateFlags_TextMods;
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
         jstateFlags |=
-          org_tigris_subversion_javahl_CommitItemStateFlags_PropMods;
+          org_apache_subversion_javahl_CommitItemStateFlags_PropMods;
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
         jstateFlags |=
-          org_tigris_subversion_javahl_CommitItemStateFlags_IsCopy;
+          org_apache_subversion_javahl_CommitItemStateFlags_IsCopy;
 
       jstring jurl = JNIUtil::makeJString(item->url);
 

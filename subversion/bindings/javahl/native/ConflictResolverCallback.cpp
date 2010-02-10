@@ -26,7 +26,7 @@
 
 #include "svn_error.h"
 
-#include "../include/org_tigris_subversion_javahl_ConflictResult.h"
+#include "../include/org_apache_subversion_javahl_ConflictResult.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include "EnumMapper.h"
@@ -201,20 +201,20 @@ svn_wc_conflict_choice_t ConflictResolverCallback::javaChoiceToC(jint jchoice)
 {
   switch (jchoice)
     {
-    case org_tigris_subversion_javahl_ConflictResult_postpone:
+    case org_apache_subversion_javahl_ConflictResult_postpone:
     default:
       return svn_wc_conflict_choose_postpone;
-    case org_tigris_subversion_javahl_ConflictResult_chooseBase:
+    case org_apache_subversion_javahl_ConflictResult_chooseBase:
       return svn_wc_conflict_choose_base;
-    case org_tigris_subversion_javahl_ConflictResult_chooseTheirsFull:
+    case org_apache_subversion_javahl_ConflictResult_chooseTheirsFull:
       return svn_wc_conflict_choose_theirs_full;
-    case org_tigris_subversion_javahl_ConflictResult_chooseMineFull:
+    case org_apache_subversion_javahl_ConflictResult_chooseMineFull:
       return svn_wc_conflict_choose_mine_full;
-    case org_tigris_subversion_javahl_ConflictResult_chooseTheirsConflict:
+    case org_apache_subversion_javahl_ConflictResult_chooseTheirsConflict:
       return svn_wc_conflict_choose_theirs_conflict;
-    case org_tigris_subversion_javahl_ConflictResult_chooseMineConflict:
+    case org_apache_subversion_javahl_ConflictResult_chooseMineConflict:
       return svn_wc_conflict_choose_mine_conflict;
-    case org_tigris_subversion_javahl_ConflictResult_chooseMerged:
+    case org_apache_subversion_javahl_ConflictResult_chooseMerged:
       return svn_wc_conflict_choose_merged;
     }
 }

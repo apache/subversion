@@ -31,6 +31,36 @@ package org.apache.subversion.javahl.callback;
 public interface UserPasswordCallback
 {
     /**
+     * Reject the connection to the server.
+     */
+    public static final int Reject = 0;
+
+    /**
+     * Accept the connection to the server <i>once</i>.
+     */
+    public static final int AcceptTemporary = 1;
+
+    /**
+     * @deprecated Use the correctly spelled "AcceptTemporary"
+     * constant instead.
+     */
+    public static final int AccecptTemporary = AcceptTemporary;
+
+    /**
+     * Accept the connection to the server <i>forever</i>.
+     */
+    public static final int AcceptPermanently = 2;
+
+    /**
+     * If there are problems with the certifcate of the SSL-server, this
+     * callback will be used to deside if the connection will be used.
+     * @param info              the probblems with the certificate.
+     * @param allowPermanently  if AcceptPermantly is a legal answer
+     * @return                  one of Reject/AcceptTemporary/AcceptPermanently
+     */
+    public int askTrustSSLServer(String info, boolean allowPermanently);
+
+    /**
      * Ask the user for username and password
      * The entered username/password is retrieved by the getUsername
      * getPasswort methods.
