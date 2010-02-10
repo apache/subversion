@@ -7212,6 +7212,10 @@ typedef struct log_noop_baton_t
   /* Absolute repository path of MERGE_B->TARGET_ABSPATH. */
   const char *target_repos_abs;
 
+  /* Absolute repository path of younger of the two merge sources
+     being diffed. */
+  const char *source_repos_abs;
+
   /* Initially empty rangelists allocated in POOL. */
   apr_array_header_t *operative_ranges;
   apr_array_header_t *merged_ranges;
@@ -7257,20 +7261,17 @@ log_noop_revs(void *baton,
   for (hi = apr_hash_first(pool, log_entry->changed_paths2);
        hi;
        hi = apr_hash_next(hi))
-  {
-      const char *log_path = svn_apr_hash_index_key(hi);
-      const char *path = log_path;
+    {
+      const char *path = svn_apr_hash_index_key(hi);
       const char *rel_path;
       const char *cwmi_path;
       apr_array_header_t *paths_explicit_rangelist = NULL;
       svn_boolean_t mergeinfo_inherited = FALSE;
 
-      /* Adjust REL_PATH so it is relative to the top most directory. */
-      rel_path = svn_uri_skip_ancestor(log_path, path);
-
-      if (rel_path[0] == '/') /* Remove any leading '/'. */
-        rel_path++;
-
+      /* Adjust REL_PATH so it is relative to the merge source then use it to
+         calculate what path in the merge target would be affected by this
+         revision. */
+      rel_path = svn_uri_skip_ancestor(log_gap_baton->source_repos_abs, path);
       cwmi_path = svn_dirent_join(log_gap_baton->merge_b->target_abspath,
                                   rel_path, pool);
 
@@ -7348,8 +7349,7 @@ log_noop_revs(void *baton,
 
    URL1, REVISION1, URL2, REVISION2, NOTIFY_B, and MERGE_B are
    cascaded from the arguments of the same name in do_directory_merge().
-   RA_SESSION is the session for the younger of URL1@REVISION1 and
-   URL2@REVISION2.
+   RA_SESSION is the session for URL2@REVISION2.
 
    Find all the ranges required by subtrees in
    NOTIFY_B->CHILDREN_WITH_MERGEINFO that are *not* required by
@@ -7359,7 +7359,7 @@ log_noop_revs(void *baton,
    these ranges from all of the subtree's REMAINING_RANGES.
 
    This function should only be called when honoring mergeinfo during
-   forward merges.
+   forward merges (i.e. REVISION1 < REVSION2).
 */
 static svn_error_t *
 remove_noop_subtree_ranges(const char *url1,
@@ -7469,6 +7469,10 @@ remove_noop_subtree_ranges(const char *url1,
   SVN_ERR(svn_client__path_relative_to_root(
                     &(log_gap_baton.target_repos_abs), merge_b->ctx->wc_ctx,
                     merge_b->target_abspath, repos_root_url, TRUE, NULL,
+                    result_pool, scratch_pool));
+  SVN_ERR(svn_client__path_relative_to_root(
+                    &(log_gap_baton.source_repos_abs), merge_b->ctx->wc_ctx,
+                    url2, repos_root_url, TRUE, NULL,
                     result_pool, scratch_pool));
   log_gap_baton.merged_ranges = merged_ranges;
   log_gap_baton.operative_ranges = operative_ranges;
