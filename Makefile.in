@@ -426,7 +426,7 @@ install-static: @INSTALL_STATIC_RULES@
 # JavaHL target aliases
 javahl: mkdir-init javahl-java javahl-javah javahl-callback-javah javahl-lib @JAVAHL_TESTS_TARGET@
 install-javahl: javahl install-javahl-java install-javahl-javah install-javahl-lib
-javahl-compat: mkdir-init javahl-compat-java javahl-javah javahl-lib @JAVAHL_TESTS_TARGET@ javahl-compat-tests
+javahl-compat: javahl-compat-java javahl @JAVAHL_COMPAT_TESTS_TARGET@
 
 clean-javahl:
 	rm -rf $(javahl_java_PATH) $(javahl_javah_PATH) @JAVAHL_OBJDIR@
@@ -437,11 +437,11 @@ clean-javahl:
 
 check-javahl-compat: javahl-compat-tests
 	@FIX_JAVAHL_LIB@
-	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_compat_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.apache.subversion.javahl.RunTests
+	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_compat_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
 
 check-javahl: javahl
 	@FIX_JAVAHL_LIB@
-	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
+	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.apache.subversion.javahl.RunTests
 
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/cmdline/basic_tests.py"
