@@ -29,9 +29,9 @@
 #include "EnumMapper.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
-#include "../include/org_tigris_subversion_javahl_NodeKind.h"
-#include "../include/org_tigris_subversion_javahl_Revision.h"
-#include "../include/org_tigris_subversion_javahl_StatusKind.h"
+#include "../include/org_apache_subversion_javahl_NodeKind.h"
+#include "../include/org_apache_subversion_javahl_Revision.h"
+#include "../include/org_apache_subversion_javahl_StatusKind.h"
 
 /**
  * Create a StatusCallback object
@@ -135,16 +135,16 @@ StatusCallback::createJavaStatus(const char *local_abspath,
     return NULL;
 
   jstring jUrl = NULL;
-  jint jNodeKind = org_tigris_subversion_javahl_NodeKind_unknown;
-  jlong jRevision = org_tigris_subversion_javahl_Revision_SVN_INVALID_REVNUM;
+  jint jNodeKind = org_apache_subversion_javahl_NodeKind_unknown;
+  jlong jRevision = org_apache_subversion_javahl_Revision_SVN_INVALID_REVNUM;
   jlong jLastChangedRevision =
-    org_tigris_subversion_javahl_Revision_SVN_INVALID_REVNUM;
+    org_apache_subversion_javahl_Revision_SVN_INVALID_REVNUM;
   jlong jLastChangedDate = 0;
   jstring jLastCommitAuthor = NULL;
-  jint jTextType = org_tigris_subversion_javahl_StatusKind_none;
-  jint jPropType = org_tigris_subversion_javahl_StatusKind_none;
-  jint jRepositoryTextType = org_tigris_subversion_javahl_StatusKind_none;
-  jint jRepositoryPropType = org_tigris_subversion_javahl_StatusKind_none;
+  jint jTextType = org_apache_subversion_javahl_StatusKind_none;
+  jint jPropType = org_apache_subversion_javahl_StatusKind_none;
+  jint jRepositoryTextType = org_apache_subversion_javahl_StatusKind_none;
+  jint jRepositoryPropType = org_apache_subversion_javahl_StatusKind_none;
   jboolean jIsLocked = JNI_FALSE;
   jboolean jIsCopied = JNI_FALSE;
   jboolean jIsSwitched = JNI_FALSE;
@@ -156,16 +156,16 @@ StatusCallback::createJavaStatus(const char *local_abspath,
   jstring jConflictWorking = NULL;
   jstring jURLCopiedFrom = NULL;
   jlong jRevisionCopiedFrom =
-    org_tigris_subversion_javahl_Revision_SVN_INVALID_REVNUM;
+    org_apache_subversion_javahl_Revision_SVN_INVALID_REVNUM;
   jstring jLockToken = NULL;
   jstring jLockComment = NULL;
   jstring jLockOwner = NULL;
   jlong jLockCreationDate = 0;
   jobject jLock = NULL;
   jlong jOODLastCmtRevision =
-    org_tigris_subversion_javahl_Revision_SVN_INVALID_REVNUM;
+    org_apache_subversion_javahl_Revision_SVN_INVALID_REVNUM;
   jlong jOODLastCmtDate = 0;
-  jint jOODKind = org_tigris_subversion_javahl_NodeKind_none;
+  jint jOODKind = org_apache_subversion_javahl_NodeKind_none;
   jstring jOODLastCmtAuthor = NULL;
   jstring jChangelist = NULL;
   if (status != NULL)
