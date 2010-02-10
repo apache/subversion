@@ -163,6 +163,22 @@ public class SVNClient implements SVNClientInterface
                            boolean ignoreExternals)
             throws ClientException
     {
+        class MyStatusCallback implements StatusCallback
+        {
+            private List statuses = new ArrayList();
+
+            public void doStatus(Status status)
+            {
+                statuses.add(status);
+            }
+
+            public Status[] getStatusArray()
+            {
+                return (Status[]) statuses.toArray(new Status[
+                                                            statuses.size()]);
+            }
+        }
+
         MyStatusCallback callback = new MyStatusCallback();
 
         status(path, Depth.unknownOrImmediates(descend), onServer, getAll,
@@ -228,6 +244,45 @@ public class SVNClient implements SVNClientInterface
                                   Revision pegRevision, boolean recurse)
             throws ClientException
     {
+        class MyListCallback implements ListCallback
+        {
+            private List dirents = new ArrayList();
+
+            public void doEntry(DirEntry dirent, Lock lock)
+            {
+                // All of this is meant to retain backward compatibility with
+                // the old svn_client_ls-style API.  For further information
+                // about what is going on here, see the comments in
+                // libsvn_client/list.c:store_dirent().
+
+                if (dirent.getPath().length() == 0)
+                {
+                    if (dirent.getNodeKind() == NodeKind.file)
+                    {
+                        String absPath = dirent.getAbsPath();
+                        int lastSeparator = absPath.lastIndexOf('/');
+                        String path = absPath.substring(lastSeparator,
+                                                        absPath.length());
+                        dirent.setPath(path);
+                    }
+                    else
+                    {
+                        // It's the requested directory, which we don't want
+                        // to add.
+                        return;
+                    }
+                }
+
+                dirents.add(dirent);
+            }
+
+            public DirEntry[] getDirEntryArray()
+            {
+                return (DirEntry[]) dirents.toArray(new DirEntry[
+                                                            dirents.size()]);
+            }
+        }
+
         MyListCallback callback = new MyListCallback();
 
         list(url, revision, pegRevision, Depth.infinityOrImmediates(recurse),
@@ -356,11 +411,49 @@ public class SVNClient implements SVNClientInterface
                                     long limit)
             throws ClientException
     {
+        class MyLogMessageCallback implements LogMessageCallback
+        {
+            private List messages = new ArrayList();
+
+            public void singleMessage(ChangePath[] changedPaths,
+                                      long revision,
+                                      Map revprops,
+                                      boolean hasChildren)
+            {
+                String author = (String) revprops.get("svn:author");
+                String message = (String) revprops.get("svn:log");
+                long timeMicros;
+
+                try {
+                    LogDate date = new LogDate((String) revprops.get(
+                                                                "svn:date"));
+                    timeMicros = date.getTimeMicros();
+                } catch (ParseException ex) {
+                    timeMicros = 0;
+                }
+
+                LogMessage msg = new LogMessage(changedPaths, revision,
+                                                author, timeMicros, message);
+
+                /* Filter out the SVN_INVALID_REVNUM message which pre-1.5
+                   clients won't expect, nor understand. */
+                if (revision != Revision.SVN_INVALID_REVNUM)
+                    messages.add(msg);
+            }
+
+            public LogMessage[] getMessages()
+            {
+                return (LogMessage[]) messages.toArray(
+                                            new LogMessage[messages.size()]);
+            }
+        }
+
         MyLogMessageCallback callback = new MyLogMessageCallback();
         String[] revProps = { "svn:log", "svn:date", "svn:author" };
 
         logMessages(path, revisionEnd, revisionStart, revisionEnd,
-                    stopOnCopy, discoverPath, false, revProps, limit, callback);
+                    stopOnCopy, discoverPath, false, revProps, limit,
+                    callback);
 
         return callback.getMessages();
     }
@@ -2013,8 +2106,26 @@ public class SVNClient implements SVNClientInterface
                       BlameCallback callback)
             throws ClientException
     {
-        BlameCallbackWrapper cw = new BlameCallbackWrapper(callback);
-        blame(path, pegRevision, revisionStart, revisionEnd, false, false, cw);
+        class BlameCallbackWrapper implements BlameCallback2
+        {
+            private BlameCallback oldCallback;
+
+            public BlameCallbackWrapper(BlameCallback callback)
+            {
+                oldCallback = callback;
+            }
+
+            public void singleLine(Date date, long revision, String author,
+                                   Date merged_date, long merged_revision,
+                                   String merged_author, String merged_path,
+                                   String line)
+            {
+                oldCallback.singleLine(date, revision, author, line);
+            }
+        }
+
+        blame(path, pegRevision, revisionStart, revisionEnd, false, false,
+              new BlameCallbackWrapper(callback));
     }
 
     /**
@@ -2377,6 +2488,21 @@ public class SVNClient implements SVNClientInterface
                          Revision pegRevision, boolean recurse)
             throws ClientException
     {
+        class MyInfoCallback implements InfoCallback
+        {
+            private List infos = new ArrayList();
+
+            public void singleInfo(Info2 info)
+            {
+                infos.add(info);
+            }
+
+            public Info2[] getInfoArray()
+            {
+                return (Info2[]) infos.toArray(new Info2[infos.size()]);
+            }
+        }
+
         MyInfoCallback callback = new MyInfoCallback();
         info2(pathOrUrl, revision, pegRevision,
               Depth.infinityOrEmpty(recurse), null, callback);
@@ -2430,150 +2556,6 @@ public class SVNClient implements SVNClientInterface
         RevisionRange[] ranges = new RevisionRange[1];
         ranges[0] = new RevisionRange(rev1, rev2);
         return ranges;
-    }
-
-    /**
-     * A private log message callback implementation used by thin wrappers.
-     * Instances of this class are not thread-safe.
-     */
-    private class MyLogMessageCallback implements LogMessageCallback
-    {
-        private List messages = new ArrayList();
-
-        public void singleMessage(ChangePath[] changedPaths,
-                                  long revision,
-                                  Map revprops,
-                                  boolean hasChildren)
-        {
-            String author = (String) revprops.get("svn:author");
-            String message = (String) revprops.get("svn:log");
-            long timeMicros;
-
-            try {
-                LogDate date = new LogDate((String) revprops.get("svn:date"));
-                timeMicros = date.getTimeMicros();
-            } catch (ParseException ex) {
-                timeMicros = 0;
-            }
-
-            LogMessage msg = new LogMessage(changedPaths,
-                                            revision,
-                                            author,
-                                            timeMicros,
-                                            message);
-
-            /* Filter out the SVN_INVALID_REVNUM message which pre-1.5
-               clients won't expect, nor understand. */
-            if (revision != Revision.SVN_INVALID_REVNUM)
-                messages.add(msg);
-        }
-
-        public LogMessage[] getMessages()
-        {
-            return (LogMessage[]) messages.toArray(
-                                            new LogMessage[messages.size()]);
-        }
-    }
-
-    /**
-     * A private info callback implementation used by thin wrappers.
-     * Instances of this class are not thread-safe.
-     */
-    private class MyInfoCallback implements InfoCallback
-    {
-        private List infos = new ArrayList();
-
-        public void singleInfo(Info2 info)
-        {
-            infos.add(info);
-        }
-
-        public Info2[] getInfoArray()
-        {
-            return (Info2[]) infos.toArray(new Info2[infos.size()]);
-        }
-    }
-
-    /**
-     * A private status callback implementation used by thin wrappers.
-     * Instances of this class are not thread-safe.
-     */
-    private class MyStatusCallback implements StatusCallback
-    {
-        private List statuses = new ArrayList();
-
-        public void doStatus(Status status)
-        {
-            statuses.add(status);
-        }
-
-        public Status[] getStatusArray()
-        {
-            return (Status[]) statuses.toArray(new Status[statuses.size()]);
-        }
-    }
-
-    /**
-     * A private list callback implementation used by thin wrappers.
-     * Instances of this class are not thread-safe.
-     */
-    private class MyListCallback implements ListCallback
-    {
-        private List dirents = new ArrayList();
-
-        public void doEntry(DirEntry dirent, Lock lock)
-        {
-            // All of this is meant to retain backward compatibility with
-            // the old svn_client_ls-style API.  For further information about
-            // what is going on here, see the comments in
-            // libsvn_client/list.c:store_dirent().
-
-            if (dirent.getPath().length() == 0)
-            {
-                if (dirent.getNodeKind() == NodeKind.file)
-                {
-                    String absPath = dirent.getAbsPath();
-                    int lastSeparator = absPath.lastIndexOf('/');
-                    String path = absPath.substring(lastSeparator,
-                                                    absPath.length());
-                    dirent.setPath(path);
-                }
-                else
-                {
-                    // It's the requested directory, which we don't want
-                    // to add.
-                    return;
-                }
-            }
-
-            dirents.add(dirent);
-        }
-
-        public DirEntry[] getDirEntryArray()
-        {
-            return (DirEntry[]) dirents.toArray(new DirEntry[dirents.size()]);
-        }
-    }
-
-    /**
-     * A private wrapper for compatibility of blame implementations.
-     */
-    private class BlameCallbackWrapper implements BlameCallback2
-    {
-        private BlameCallback oldCallback;
-
-        public BlameCallbackWrapper(BlameCallback callback)
-        {
-            oldCallback = callback;
-        }
-
-        public void singleLine(Date date, long revision, String author,
-                               Date merged_date, long merged_revision,
-                               String merged_author, String merged_path,
-                               String line)
-        {
-            oldCallback.singleLine(date, revision, author, line);
-        }
     }
 
     private class MyDiffSummaryReceiver
