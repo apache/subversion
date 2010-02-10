@@ -716,9 +716,8 @@ svn_io_copy_file(const char *src,
 {
   apr_file_t *from_file, *to_file;
   apr_status_t apr_err;
-  const char *src_apr, *dst_tmp_apr;
   const char *dst_tmp;
-  svn_error_t *err, *err2;
+  svn_error_t *err;
 
   /* ### NOTE: sometimes src == dst. In this case, because we copy to a
      ###   temporary file, and then rename over the top of the destination,
@@ -738,8 +737,6 @@ svn_io_copy_file(const char *src,
     return SVN_NO_ERROR;
 #endif
 
-  SVN_ERR(cstring_from_utf8(&src_apr, src, pool));
-
   SVN_ERR(svn_io_file_open(&from_file, src, APR_READ | APR_BINARY,
                          APR_OS_DEFAULT, pool));
 
@@ -749,7 +746,6 @@ svn_io_copy_file(const char *src,
   SVN_ERR(svn_io_open_unique_file3(&to_file, &dst_tmp,
                                    svn_dirent_dirname(dst, pool),
                                    svn_io_file_del_none, pool, pool));
-  SVN_ERR(cstring_from_utf8(&dst_tmp_apr, dst_tmp, pool));
 
   apr_err = copy_contents(from_file, to_file, pool);
 
@@ -763,21 +759,17 @@ svn_io_copy_file(const char *src,
    else
      err = NULL;
 
-  err2 = svn_io_file_close(from_file, pool);
-  if (! err)
-    err = err2;
-  else
-    svn_error_clear(err2);
-  err2 = svn_io_file_close(to_file, pool);
-  if (! err)
-    err = err2;
-  else
-    svn_error_clear(err2);
+  err = svn_error_compose_create(err,
+                                 svn_io_file_close(from_file, pool));
+
+  err = svn_error_compose_create(err,
+                                 svn_io_file_close(to_file, pool));
+
   if (err)
     {
-      apr_err = apr_file_remove(dst_tmp_apr, pool);
-      WIN32_RETRY_LOOP(apr_err, apr_file_remove(dst_tmp_apr, pool));
-      return err;
+      return svn_error_compose_create(
+                                 err,
+                                 svn_io_remove_file2(dst_tmp, TRUE, pool));
     }
 
   /* If copying perms, set the perms on dst_tmp now, so they will be
@@ -787,7 +779,7 @@ svn_io_copy_file(const char *src,
   if (copy_perms)
     SVN_ERR(svn_io_copy_perms(src, dst_tmp, pool));
 
-  return svn_io_file_rename(dst_tmp, dst, pool);
+  return svn_error_return(svn_io_file_rename(dst_tmp, dst, pool));
 }
 
 
