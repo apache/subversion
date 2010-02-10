@@ -2029,9 +2029,47 @@ public class SVNClient implements SVNClientInterface
                       BlameCallback2 callback)
             throws ClientException
     {
-        BlameCallback2Wrapper cw = new BlameCallback2Wrapper(callback);
+        class BlameCallback2Wrapper implements BlameCallback3
+        {
+            private BlameCallback2 oldCallback;
+
+            public BlameCallback2Wrapper(BlameCallback2 callback)
+            {
+                oldCallback = callback;
+            }
+
+            public void singleLine(long lineNum, long revision, Map revProps,
+                                   long mergedRevision, Map mergedRevProps,
+                                   String mergedPath, String line,
+                                   boolean localChange)
+                throws ClientException
+            {
+                DateFormat df =
+                        new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+
+                try
+                {
+                    oldCallback.singleLine(
+                        df.parse((String) revProps.get("svn:date")),
+                        revision,
+                        (String) revProps.get("svn:author"),
+                        mergedRevProps == null ? null
+                            : df.parse((String)
+                                            mergedRevProps.get("svn:date")),
+                        mergedRevision,
+                        mergedRevProps == null ? null
+                            : (String) mergedRevProps.get("svn:author"),
+                        mergedPath, line);
+                }
+                catch (ParseException e)
+                {
+                    throw ClientException.fromException(e);
+                }
+            }
+        }
+
         blame(path, pegRevision, revisionStart, revisionEnd, ignoreMimeType,
-              includeMergedRevisions, cw);
+              includeMergedRevisions, new BlameCallback2Wrapper(callback));
     }
 
     /**
@@ -2535,43 +2573,6 @@ public class SVNClient implements SVNClientInterface
                                String line)
         {
             oldCallback.singleLine(date, revision, author, line);
-        }
-    }
-
-    /**
-     * A private wrapper for compatibility of blame implementations.
-     */
-    private class BlameCallback2Wrapper implements BlameCallback3
-    {
-        private BlameCallback2 oldCallback;
-
-        public BlameCallback2Wrapper(BlameCallback2 callback)
-        {
-            oldCallback = callback;
-        }
-
-        public void singleLine(long lineNum, long revision, Map revProps,
-                               long mergedRevision, Map mergedRevProps,
-                               String mergedPath, String line,
-                               boolean localChange)
-            throws ClientException
-        {
-            DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
-
-            try {
-                oldCallback.singleLine(
-                    df.parse((String) revProps.get("svn:date")),
-                    revision,
-                    (String) revProps.get("svn:author"),
-                    mergedRevProps == null ? null
-                        : df.parse((String) mergedRevProps.get("svn:date")),
-                    mergedRevision,
-                    mergedRevProps == null ? null
-                        : (String) mergedRevProps.get("svn:author"),
-                    mergedPath, line);
-            } catch (ParseException e) {
-                throw ClientException.fromException(e);
-            }
         }
     }
 
