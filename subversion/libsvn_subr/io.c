@@ -2949,7 +2949,7 @@ svn_io_file_rename(const char *from_path, const char *to_path,
   status = apr_file_rename(from_path_apr, to_path_apr, pool);
 
 #ifdef WIN32
-  if (APR_STATUS_IS_EACCES(status))
+  if (APR_STATUS_IS_EACCES(status) || APR_STATUS_IS_EEXIST(status))
     {
       /* Set the destination file writable because Windows will not
          allow us to rename when to_path is read-only, but will
