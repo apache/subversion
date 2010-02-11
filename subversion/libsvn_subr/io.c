@@ -2949,6 +2949,8 @@ svn_io_file_rename(const char *from_path, const char *to_path,
   status = apr_file_rename(from_path_apr, to_path_apr, pool);
 
 #ifdef WIN32
+  /* If the target file is read only NTFS reports EACCESS and
+     FAT/FAT32 reports EEXIST */
   if (APR_STATUS_IS_EACCES(status) || APR_STATUS_IS_EEXIST(status))
     {
       /* Set the destination file writable because Windows will not
