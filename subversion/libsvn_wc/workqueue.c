@@ -55,6 +55,7 @@
 #define OP_DELETION_POSTCOMMIT "deletion-postcommit"
 #define OP_POSTCOMMIT "postcommit"
 #define OP_INSTALL_PROPERTIES "install-properties"
+#define OP_DELETE "delete"
 
 
 struct work_item_dispatch {
@@ -1664,6 +1665,121 @@ svn_wc__wq_add_install_properties(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* ------------------------------------------------------------------------ */
+
+/* OP_DELETE */
+
+static svn_error_t *
+run_delete(svn_wc__db_t *db,
+           const svn_skel_t *work_item,
+           svn_cancel_func_t cancel_func,
+           void *cancel_baton,
+           apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg = work_item->children->next;
+  const char *local_abspath;
+  svn_wc__db_kind_t kind;
+  svn_boolean_t was_added, was_copied, was_replaced, base_shadowed;
+  svn_wc_entry_t tmp_entry;
+
+  local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
+  arg = arg->next;
+  kind = svn_skel__parse_int(arg, scratch_pool);
+  arg = arg->next;
+  was_added = svn_skel__parse_int(arg, scratch_pool);
+  arg = arg->next;
+  was_copied = svn_skel__parse_int(arg, scratch_pool);
+  arg = arg->next;
+  was_replaced = svn_skel__parse_int(arg, scratch_pool);
+  arg = arg->next;
+  base_shadowed = svn_skel__parse_int(arg, scratch_pool);
+
+  /* Edit the entry to reflect the now deleted state.
+     entries.c:fold_entry() clears the values of copied, copyfrom_rev
+     and copyfrom_url. */
+  tmp_entry.schedule = svn_wc_schedule_delete;
+  SVN_ERR(svn_wc__entry_modify2(db, local_abspath, svn_node_unknown, TRUE,
+                                &tmp_entry, SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                                scratch_pool));
+
+  if (was_replaced && was_copied)
+    {
+      const char *props_base, *props_revert;
+      svn_error_t *err;
+
+      SVN_ERR(svn_wc__prop_path(&props_base, local_abspath, kind,
+                                svn_wc__props_base, scratch_pool));
+      SVN_ERR(svn_wc__prop_path(&props_revert, local_abspath, kind,
+                                svn_wc__props_revert, scratch_pool));
+      err = svn_io_file_rename(props_base, props_revert, scratch_pool);
+      if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
+        return svn_error_quick_wrap(err, _("Can't move source to dest"));
+      svn_error_clear(err);
+
+      if (kind != svn_wc__db_kind_dir)
+        {
+          const char *text_base, *text_revert;
+
+          SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath,
+                                         FALSE, scratch_pool));
+
+          SVN_ERR(svn_wc__text_revert_path(&text_revert, db,
+                                           local_abspath, scratch_pool));
+          err = svn_io_file_rename(text_revert, text_base, scratch_pool);
+          if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
+            return svn_error_quick_wrap(err, _("Can't move source to dest"));
+          svn_error_clear(err);
+        }
+    }
+  if (was_added)
+    {
+      const char *props_base, *props_working;
+      svn_error_t *err;
+
+      SVN_ERR(svn_wc__prop_path(&props_base, local_abspath, kind,
+                                svn_wc__props_base, scratch_pool));
+      SVN_ERR(svn_wc__prop_path(&props_working, local_abspath, kind,
+                                svn_wc__props_working, scratch_pool));
+      
+      err = svn_io_remove_file2(props_base, TRUE, scratch_pool);
+      if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
+        return svn_error_quick_wrap(err, _("Can't move source to dest"));
+      svn_error_clear(err);
+      err = svn_io_remove_file2(props_working, TRUE, scratch_pool);
+      if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
+        return svn_error_quick_wrap(err, _("Can't move source to dest"));
+      svn_error_clear(err);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__wq_add_delete(svn_wc__db_t *db,
+                      const char *parent_abspath,
+                      const char *local_abspath,
+                      svn_wc__db_kind_t kind,
+                      svn_boolean_t was_added,
+                      svn_boolean_t was_copied,
+                      svn_boolean_t was_replaced,
+                      svn_boolean_t base_shadowed,
+                      apr_pool_t *scratch_pool)
+{
+  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
+
+  svn_skel__prepend_int(base_shadowed, work_item, scratch_pool);
+  svn_skel__prepend_int(was_replaced, work_item, scratch_pool);
+  svn_skel__prepend_int(was_copied, work_item, scratch_pool);
+  svn_skel__prepend_int(was_added, work_item, scratch_pool);
+  svn_skel__prepend_int(kind, work_item, scratch_pool);
+  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
+  svn_skel__prepend_str(OP_DELETE, work_item, scratch_pool);
+
+  SVN_ERR(svn_wc__db_wq_add(db, parent_abspath, work_item, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ------------------------------------------------------------------------ */
 
@@ -1675,6 +1791,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
   { OP_POSTCOMMIT, run_postcommit },
   { OP_INSTALL_PROPERTIES, run_install_properties },
+  { OP_DELETE, run_delete },
 
   /* Sentinel.  */
   { NULL }

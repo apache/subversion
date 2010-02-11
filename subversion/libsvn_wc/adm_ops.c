@@ -1123,7 +1123,6 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   svn_boolean_t was_copied = FALSE;
   svn_boolean_t was_deleted = FALSE; /* Silence a gcc uninitialized warning */
   svn_error_t *err;
-  const char *parent_abspath = svn_dirent_dirname(local_abspath, pool);
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_boolean_t base_shadowed;
@@ -1229,63 +1228,14 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 
   if (kind != svn_wc__db_kind_dir || !was_add || was_deleted)
     {
-      /* We need to mark this entry for deletion in its parent's entries
-         file, so we split off base_name from the parent path, then fold in
-         the addition of a delete flag. */
-      svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
-      svn_wc_entry_t tmp_entry;
+      const char *parent_abspath = svn_dirent_dirname(local_abspath, pool);
 
-      /* Edit the entry to reflect the now deleted state.
-         entries.c:fold_entry() clears the values of copied, copyfrom_rev
-         and copyfrom_url. */
-      tmp_entry.schedule = svn_wc_schedule_delete;
-      SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
-                                         parent_abspath,
-                                         local_abspath, &tmp_entry,
-                                         SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                                         pool, pool));
-      SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
+      SVN_ERR(svn_wc__wq_add_delete(wc_ctx->db, parent_abspath, local_abspath,
+                                    kind, was_add, was_copied, was_replace,
+                                    base_shadowed, pool));
 
-      /* is it a replacement with history? */
-      if (was_replace && was_copied)
-        {
-          const char *text_base, *text_revert;
-
-          SVN_ERR(svn_wc__text_base_path(&text_base, wc_ctx->db, local_abspath,
-                                         FALSE, pool));
-
-          SVN_ERR(svn_wc__text_revert_path(&text_revert, wc_ctx->db,
-                                           local_abspath, pool));
-
-          if (kind != svn_wc__db_kind_dir) /* Dirs don't have text-bases */
-            /* Restore the original text-base */
-            SVN_ERR(svn_wc__loggy_move(&log_accum,
-                                       parent_abspath,
-                                       text_revert, text_base,
-                                       pool, pool));
-          SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
-
-          SVN_ERR(svn_wc__loggy_revert_props_restore(&log_accum, wc_ctx->db,
-                                                     local_abspath,
-                                                     parent_abspath, pool));
-          SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
-        }
-      if (was_add)
-        {
-          SVN_ERR(svn_wc__loggy_props_delete(&log_accum, wc_ctx->db,
-                                             local_abspath, parent_abspath,
-                                             svn_wc__props_base, pool));
-          SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
-
-          SVN_ERR(svn_wc__loggy_props_delete(&log_accum, wc_ctx->db,
-                                             local_abspath, parent_abspath,
-                                             svn_wc__props_working, pool));
-          SVN_WC__FLUSH_LOG_ACCUM(db, parent_abspath, log_accum, pool);
-        }
-
-      SVN_ERR(svn_wc__wq_add_loggy(db, parent_abspath, log_accum, pool));
-
-      SVN_ERR(svn_wc__run_log2(db, parent_abspath, pool));
+      SVN_ERR(svn_wc__wq_run(db, parent_abspath, cancel_func, cancel_baton,
+                             pool));
     }
 
   /* Report the deletion to the caller. */

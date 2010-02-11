@@ -108,6 +108,25 @@ svn_wc__wq_add_install_properties(svn_wc__db_t *db,
                                   svn_boolean_t force_base_install,
                                   apr_pool_t *scratch_pool);
 
+/* Add a work item to delete a node.
+
+   ### LOCAL_ABSPATH is the node to be deleted and the queue exists in
+   PARENT_ABSPATH (because when LOCAL_ABSPATH is a directory it might
+   not exist on disk).  This use of PARENT_ABSPATH is inherited from
+   the log file conversion but perhaps we don't need to use a work
+   queue when deleting a directory that does not exist on disk.
+ */
+svn_error_t *
+svn_wc__wq_add_delete(svn_wc__db_t *db,
+                      const char *parent_abspath,
+                      const char *local_abspath,
+                      svn_wc__db_kind_t kind,
+                      svn_boolean_t was_added,
+                      svn_boolean_t was_copied,
+                      svn_boolean_t was_replaced,
+                      svn_boolean_t base_shadowed,
+                      apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
