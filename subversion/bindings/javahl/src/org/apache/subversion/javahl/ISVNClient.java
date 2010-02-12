@@ -850,7 +850,7 @@ public interface ISVNClient
     void blame(String path, Revision pegRevision, Revision revisionStart,
                Revision revisionEnd, boolean ignoreMimeType,
                boolean includeMergedRevisions,
-               BlameCallback3 callback) throws ClientException;
+               BlameCallback callback) throws ClientException;
 
     /**
      * Set directory for the configuration information, taking the

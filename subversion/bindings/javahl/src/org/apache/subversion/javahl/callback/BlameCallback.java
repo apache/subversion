@@ -33,7 +33,7 @@ import java.util.Map;
  *
  * @since 1.7
  */
-public interface BlameCallback3
+public interface BlameCallback
 {
     /**
      * the method will be called for every line in a file.

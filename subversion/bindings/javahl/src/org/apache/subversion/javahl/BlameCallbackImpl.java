@@ -38,7 +38,7 @@ import java.text.SimpleDateFormat;
  *
  * @since 1.5
  */
-public class BlameCallbackImpl implements BlameCallback3
+public class BlameCallbackImpl implements BlameCallback
 {
 
     /** list of blame records (lines) */

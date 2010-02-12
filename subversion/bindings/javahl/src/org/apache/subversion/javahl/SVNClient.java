@@ -508,7 +508,7 @@ public class SVNClient implements ISVNClient
                              Revision revisionStart,
                              Revision revisionEnd, boolean ignoreMimeType,
                              boolean includeMergedRevisions,
-                             BlameCallback3 callback)
+                             BlameCallback callback)
             throws ClientException;
 
     /**
