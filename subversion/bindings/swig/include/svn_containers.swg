@@ -55,17 +55,7 @@
 
 %hash_argout_typemap(dirents, svn_dirent_t *)
 %hash_argout_typemap(locks, svn_lock_t *)
-#ifdef SWIGPYTHON
-/* FIXME: We are effectively treating this hash as an opaque blob...
-   this is because we currently do not have suitable typemaps to convert
-   it back to an apr_hash_t * for use. */
-%typemap(argout) apr_hash_t **cfg_hash {
-  %append_output(svn_swig_NewPointerObj(*$1, $descriptor(apr_hash_t *),
-                                        _global_py_pool, args));
-}
-#else
 %hash_argout_typemap(cfg_hash, svn_config_t *)
-#endif
 
 /* -----------------------------------------------------------------------
    Output of apr_hash_t * <const char *, svn_string_t *>
@@ -214,6 +204,44 @@
 {
   %append_output(svn_swig_py_changed_path_hash_to_dict($1));
 }
+
+/* apr_hash_t * <const char *, svn_config_t *> */
+%typemap(in) apr_hash_t *config
+  (apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
+{
+  if (_global_pool == NULL)
+  {
+    if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                    &_global_py_pool, &_global_pool))
+      SWIG_fail;
+  }
+
+  $1 = svn_swig_py_struct_ptr_hash_from_dict($input,
+    $descriptor(svn_config_t *), _global_pool);
+  if (PyErr_Occurred())
+    SWIG_fail;
+}
+
+%typemap(out) apr_hash_t *config
+{
+  /* HACK. We don't know which pool the config comes from, and we
+     can't copy it, because svn_config_t is not copyable. So we'll just
+     assume that it's the parent struct's pool. It shouldn't matter
+     anyway, because the only way a non-null config can end up in
+     svn_client_ctx_t is if we assigned it ourselves, in which case the copy
+     that's stored in the Python object will become the result; so this is just
+     a safety net. */
+  apr_pool_t *parent_pool;
+  PyObject *parent_py_pool;
+  
+  if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                  &parent_py_pool, &parent_pool))
+    SWIG_fail;
+  
+  %append_output(svn_swig_py_convert_hash($1, $descriptor(svn_config_t *),
+    parent_py_pool));
+}
+
 #endif
 
 #ifdef SWIGRUBY
