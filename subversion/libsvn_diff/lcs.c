@@ -30,7 +30,7 @@
 
 
 /*
- * Calculate the Longest Common Subsequence between two datasources.
+ * Calculate the Longest Common Subsequence (LCS) between two datasources.
  * This function is what makes the diff code tick.
  *
  * The LCS algorithm implemented here is described by Sun Wu,
