@@ -428,13 +428,17 @@ print_info(void *baton,
 
   if (info->tree_conflict)
     {
-      const char *desc, *src_left_version, *src_right_version;
+      const char *desc;
+      const char *src_left_version;
+      const char *src_right_version;
 
       SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
                 &desc, info->tree_conflict, pool));
+
       src_left_version =
         svn_cl__node_description(info->tree_conflict->src_left_version,
                                  info->repos_root_URL, pool);
+
       src_right_version =
         svn_cl__node_description(info->tree_conflict->src_right_version,
                                  info->repos_root_URL, pool);
