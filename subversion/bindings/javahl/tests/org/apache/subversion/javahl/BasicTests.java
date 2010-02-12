@@ -34,11 +34,14 @@ import java.io.ByteArrayOutputStream;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat; 
 
 
 /**
@@ -3915,7 +3918,7 @@ public class BasicTests extends SVNTests
          * Class represeting one line of the lines, i.e. a blame record
          *
          */
-        public static class BlameLine
+        public class BlameLine
         {
 
             private long revision;
