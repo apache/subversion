@@ -33,3 +33,4 @@ doc/doxygen.conf
 **/*.txt
 **/*.svg
 **/*.rtf
+**/*.example
