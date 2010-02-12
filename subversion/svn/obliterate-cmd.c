@@ -119,7 +119,7 @@ svn_cl__obliterate(apr_getopt_t *os,
                             _("Target must specify a URL"));
   revnum = rev.value.number;
 
-  SVN_ERR(svn_client__obliterate(url, revnum, ctx, pool));
+  SVN_ERR(svn_client__obliterate_path_rev(url, revnum, ctx, pool));
 
   return SVN_NO_ERROR;
 }

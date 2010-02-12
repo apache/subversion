@@ -1137,10 +1137,10 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
 }
 
 svn_error_t *
-svn_ra__obliterate(svn_ra_session_t *session,
-                   svn_revnum_t rev,
-                   const char *path,
-                   apr_pool_t *pool)
+svn_ra__obliterate_path_rev(svn_ra_session_t *session,
+                            svn_revnum_t rev,
+                            const char *path,
+                            apr_pool_t *pool)
 {
   const char *session_url;
 

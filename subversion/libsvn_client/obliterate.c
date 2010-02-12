@@ -29,10 +29,10 @@
 
 
 svn_error_t *
-svn_client__obliterate(const char *url,
-                       svn_revnum_t rev,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *pool)
+svn_client__obliterate_path_rev(const char *url,
+                                svn_revnum_t rev,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
   const char *path;
@@ -42,7 +42,7 @@ svn_client__obliterate(const char *url,
 
   path = "";  /* relative to URL of session */
 
-  SVN_ERR(svn_ra__obliterate(ra_session, rev, path, pool));
+  SVN_ERR(svn_ra__obliterate_path_rev(ra_session, rev, path, pool));
 
   if (ctx->notify_func2)
     {
