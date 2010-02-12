@@ -1461,15 +1461,15 @@ svn_io_start_cmd(apr_proc_t *cmd_proc,
  * Wait for the process @a *cmd_proc to complete and optionally retrieve
  * its exit code.  @a cmd is used only in error messages.
  *
- * If @a exitcode is not NULL, and SVN_NO_ERROR is returned, @a *exitcode
- * will contain the exit code of the process.  If @a exitcode is NULL and
- * the exit code is non-zero, then an #SVN_ERR_EXTERNAL_PROGRAM error
- * will be returned.
+ * If @a exitcode is not NULL, set @a *exitcode to the exit code of the
+ * process and do not consider any exit code to be an error.  If @a exitcode
+ * is NULL, then if the exit code of the process is non-zero then return an
+ * #SVN_ERR_EXTERNAL_PROGRAM error.
  *
- * If @a exitwhy is not NULL, and SVN_NO_ERROR is returned, @a *exitwhy
- * will indicate why the process terminated.  If @a exitwhy is NULL,
- * and the exit reason is not @c APR_PROC_CHECK_EXIT(), then an
- * #SVN_ERR_EXTERNAL_PROGRAM error will be returned.
+ * If @a exitwhy is not NULL, set @a *exitwhy to indicate why the process
+ * terminated and do not consider any reason to be an error.  If @a exitwhy
+ * is NULL, then if the termination reason is not @c APR_PROC_CHECK_EXIT()
+ * then return an #SVN_ERR_EXTERNAL_PROGRAM error.
  *
  * @since New in 1.3.
  */
