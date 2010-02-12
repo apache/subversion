@@ -108,10 +108,16 @@ extern "C" {
      the working copy.
 
    * WRI_ABSPATH
-     This is a "Working copy Root Indicator" path. It does not refer to a
-     specific versioned node, but rather to an implied location in the
-     local filesystem, which further implies a working copy root. The
-     given operation will be performed within the context of that root.
+     This is a "Working copy Root Indicator" path. This refers to a location
+     in the local filesystem that is anywhere inside a working copy. The given
+     operation will be performed within the context of the root of that
+     working copy. This does necessarily need to refer to a specific versioned
+     node or the root of a working copy (although it can) -- any location,
+     existing or not, is sufficient, as long as it is inside a working copy.
+     ### TODO: Define behaviour for switches and externals.
+     ### Preference has been stated that WRI_ABSPATH should imply the root
+     ### of the parent WC of all switches and externals, but that may
+     ### not play out well, especially with multiple repositories involved.
 */
 
 /** Context data structure for interacting with the administrative data. */
