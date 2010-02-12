@@ -84,7 +84,7 @@ BlameCallback::singleLine(apr_int64_t line_no, svn_revnum_t revision,
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/BlameCallback3");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/BlameCallback");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
