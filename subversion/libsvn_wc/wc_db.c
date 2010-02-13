@@ -5645,6 +5645,12 @@ is_wclocked(svn_boolean_t *locked,
 
   SVN_ERR(svn_sqlite__reset(stmt));
 
+  if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
+    {
+      *locked = FALSE;
+      return SVN_NO_ERROR;
+    }
+
   return svn_error_return(is_wclocked(locked, db,
                                       svn_dirent_dirname(local_abspath,
                                                          scratch_pool),
