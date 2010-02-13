@@ -111,9 +111,10 @@ extern "C" {
      This is a "Working copy Root Indicator" path. This refers to a location
      in the local filesystem that is anywhere inside a working copy. The given
      operation will be performed within the context of the root of that
-     working copy. This does necessarily need to refer to a specific versioned
-     node or the root of a working copy (although it can) -- any location,
-     existing or not, is sufficient, as long as it is inside a working copy.
+     working copy. This does not necessarily need to refer to a specific
+     versioned node or the root of a working copy (although it can) -- any
+     location, existing or not, is sufficient, as long as it is inside a
+     working copy.
      ### TODO: Define behaviour for switches and externals.
      ### Preference has been stated that WRI_ABSPATH should imply the root
      ### of the parent WC of all switches and externals, but that may
