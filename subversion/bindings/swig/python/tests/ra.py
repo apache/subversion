@@ -50,7 +50,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.fs = repos.fs(self.repos)
 
     self.callbacks = ra.Callbacks()
-    self.ra_ctx = ra.open2(REPOS_URL, self.callbacks, None, None)
+    self.ra_ctx = ra.open2(REPOS_URL, self.callbacks, {})
 
   def tearDown(self):
     self.ra_ctx = None
