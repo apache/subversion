@@ -19,6 +19,7 @@
 #
 #
 import unittest, weakref, setup_path
+import os, tempfile
 import svn.core, svn.client, libsvn.core
 from svn.core import *
 from libsvn.core import application_pool, GenericSWIGWrapper
@@ -50,6 +51,33 @@ class PoolTestCase(unittest.TestCase):
     def test_bad_assignment(self):
       head_revision = svn.core.svn_opt_revision_t()
       head_revision.kind = auth
+    self.assertRaises(TypeError, test_bad_assignment)
+
+  def test_object_hash_struct_members(self):
+    """Check that struct members which are hashes of objects work correctly"""
+
+    # Get an empty config
+    (cfg_fd, cfg_name) = tempfile.mkstemp(prefix="conf-")
+    os.close(cfg_fd)
+
+    try:
+      cfg = svn.core.svn_config_read(
+        svn.core.svn_dirent_internal_style(cfg_name),
+        False)
+    finally:
+      os.remove(cfg_name)
+
+    client_ctx = svn.client.svn_client_create_context()
+    category = svn.core.SVN_CONFIG_CATEGORY_SERVERS
+    client_ctx.config = { category: cfg }
+
+    # Check that parent pools are set correctly
+    self.assertEqual(client_ctx.config[category]._parent_pool,
+      cfg._parent_pool)
+
+    # Test invalid assignment
+    def test_bad_assignment(self):
+      client_ctx.config = 42
     self.assertRaises(TypeError, test_bad_assignment)
 
   def test_assert_valid(self):
