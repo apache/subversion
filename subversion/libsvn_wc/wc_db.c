@@ -58,9 +58,9 @@
 #define SDB_FILE  "wc.db"
 #define SDB_FILE_UPGRADE "wc.db.upgrade"
 
-#define PRISTINE_STORAGE_RELPATH ".svn/pristine"
-#define PRISTINE_TEMPDIR_RELPATH ".svn"
-#define WCROOT_TEMPDIR_RELPATH       ".svn/tmp"
+#define PRISTINE_STORAGE_RELPATH "pristine"
+#define PRISTINE_TEMPDIR_RELPATH ""
+#define WCROOT_TEMPDIR_RELPATH   "tmp"
 
 
 /*
@@ -461,9 +461,11 @@ get_pristine_fname(const char **pristine_abspath,
   /* ### need to fix this to use a symbol for ".svn". we don't need
      ### to use join_many since we know "/" is the separator for
      ### internal canonical paths */
-  base_dir_abspath = svn_dirent_join(pdh->wcroot->abspath,
-                                     PRISTINE_STORAGE_RELPATH,
-                                     scratch_pool);
+  base_dir_abspath = svn_dirent_join_many(scratch_pool,
+                                          pdh->wcroot->abspath,
+                                          svn_wc_get_adm_dir(scratch_pool),
+                                          PRISTINE_STORAGE_RELPATH,
+                                          NULL);
 
   /* We should have a valid checksum and (thus) a valid digest. */
   SVN_ERR_ASSERT(hexdigest != NULL);
@@ -2314,9 +2316,11 @@ svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  *temp_dir_abspath = svn_dirent_join(pdh->wcroot->abspath,
-                                      PRISTINE_TEMPDIR_RELPATH,
-                                      result_pool);
+  *temp_dir_abspath = svn_dirent_join_many(result_pool,
+                                           pdh->wcroot->abspath,
+                                           svn_wc_get_adm_dir(scratch_pool),
+                                           PRISTINE_TEMPDIR_RELPATH,
+                                           NULL);
   return SVN_NO_ERROR;
 }
 
@@ -5564,9 +5568,11 @@ svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  *temp_dir_abspath = svn_dirent_join(pdh->wcroot->abspath,
-                                      WCROOT_TEMPDIR_RELPATH,
-                                      result_pool);
+  *temp_dir_abspath = svn_dirent_join_many(result_pool,
+                                           pdh->wcroot->abspath,
+                                           svn_wc_get_adm_dir(scratch_pool),
+                                           WCROOT_TEMPDIR_RELPATH,
+                                           NULL);
   return SVN_NO_ERROR;
 }
 
