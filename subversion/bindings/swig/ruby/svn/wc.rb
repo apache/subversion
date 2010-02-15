@@ -704,5 +704,50 @@ module Svn
         Wc.process_committed_queue(self, access, new_rev, rev_date, rev_author)
       end
     end
+
+    Context = SWIG::TYPE_p_svn_wc_context_t
+    # A context is not associated with a particular working copy, but as
+    # operations are performed, will load the appropriate working copy
+    # information.
+    class Context
+      class << self
+
+        # Creates an new instance of Context.
+        #
+        # ==== arguments
+        #
+        # * <tt>:config</tt> <i>(default=>nil)</i> A \
+        # Svn::Core::Config with options that apply to this Context.
+        def new(arguments={})
+          optional_arguments_defaults = { :config => nil }
+          arguments = optional_arguments_defaults.merge(arguments)
+          context = Wc.context_create(arguments[:config])
+          return context
+        end
+
+        # Creates an new instance of Context for use in the block, the context 
+        # is destroyed when the block completes.
+        #
+        # ==== arguments
+        #
+        # see new.
+        def create(arguments={})
+          context = new(arguments)
+          begin
+            yield context
+          ensure
+            context.destroy if context
+          end
+        end
+
+      end
+
+      # Destroys the context, releasing any acquired resources.
+      # The context is unavailable for any further operations.
+      def destroy
+        Wc.context_destroy(self)
+      end
+    end
+
   end
 end
