@@ -61,6 +61,7 @@ enum svnsync__opt {
   svnsync_opt_sync_password,
   svnsync_opt_config_dir,
   svnsync_opt_config_options,
+  svnsync_opt_disable_locking,
   svnsync_opt_version,
   svnsync_opt_trust_server_cert,
   svnsync_opt_allow_non_empty,
@@ -103,13 +104,14 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "the destination repository by any method other than 'svnsync'.\n"
          "In other words, the destination repository should be a read-only\n"
          "mirror of the source repository.\n"),
-      { SVNSYNC_OPTS_DEFAULT, 'q', svnsync_opt_allow_non_empty } },
+      { SVNSYNC_OPTS_DEFAULT, 'q', svnsync_opt_allow_non_empty,
+        svnsync_opt_disable_locking } },
     { "synchronize", synchronize_cmd, { "sync" },
       N_("usage: svnsync synchronize DEST_URL\n"
          "\n"
          "Transfer all pending revisions to the destination from the source\n"
          "with which it was initialized.\n"),
-      { SVNSYNC_OPTS_DEFAULT, 'q' } },
+      { SVNSYNC_OPTS_DEFAULT, 'q', svnsync_opt_disable_locking } },
     { "copy-revprops", copy_revprops_cmd, { 0 },
       N_("usage: svnsync copy-revprops DEST_URL [REV[:REV2]]\n"
          "\n"
@@ -125,7 +127,7 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "REV and REV2 must be revisions which were previously transferred\n"
          "to the destination.  You may use \"HEAD\" for either revision to\n"
          "mean \"the last revision transferred\".\n"),
-      { SVNSYNC_OPTS_DEFAULT, 'q' } },
+      { SVNSYNC_OPTS_DEFAULT, 'q', svnsync_opt_disable_locking } },
     { "info", info_cmd, { 0 },
       N_("usage: svnsync info DEST_URL\n"
          "\n"
@@ -180,6 +182,12 @@ static const apr_getopt_option_t svnsync_options[] =
                           "For example:\n"
                           "                             "
                           "    servers:global:http-library=serf")},
+    {"disable-locking",  svnsync_opt_disable_locking, 0,
+                       N_("Disable built-in locking. Use of this option can\n"
+                          "                             "
+                          "corrupt the mirror unless you ensure that no other\n"
+                          "                             "
+                          "instance of svnsync is running concurrently.")},
     {"version",        svnsync_opt_version, 0,
                        N_("show program version information")},
     {"help",           'h', 0,
@@ -201,6 +209,7 @@ typedef struct {
   const char *sync_password;
   const char *config_dir;
   apr_hash_t *config;
+  svn_boolean_t disable_locking;
   svn_boolean_t quiet;
   svn_boolean_t allow_non_empty;
   svn_boolean_t version;
@@ -798,7 +807,10 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL,
                        &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
-  SVN_ERR(with_locked(to_session, do_initialize, baton, pool));
+  if (opt_baton->disable_locking)
+    SVN_ERR(do_initialize(to_session, baton, pool));
+  else
+    SVN_ERR(with_locked(to_session, do_initialize, baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1276,7 +1288,10 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL,
                        &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
-  SVN_ERR(with_locked(to_session, do_synchronize, baton, pool));
+  if (opt_baton->disable_locking)
+    SVN_ERR(do_synchronize(to_session, baton, pool));
+  else
+    SVN_ERR(with_locked(to_session, do_synchronize, baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1433,7 +1448,10 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL,
                        &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
-  SVN_ERR(with_locked(to_session, do_copy_revprops, baton, pool));
+  if (opt_baton->disable_locking)
+    SVN_ERR(do_copy_revprops(to_session, baton, pool));
+  else
+    SVN_ERR(with_locked(to_session, do_copy_revprops, baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1664,6 +1682,11 @@ main(int argc, const char *argv[])
             if (err)
               return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
             break;
+
+          case svnsync_opt_disable_locking:
+            opt_baton.disable_locking = TRUE;
+            break;
+
           case svnsync_opt_version:
             opt_baton.version = TRUE;
             break;
