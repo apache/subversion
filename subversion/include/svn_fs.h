@@ -537,7 +537,7 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
 /** @} */
 
 
-/** Filesystem Nodes.
+/** Filesystem Nodes and Node-Revisions.
  *
  * In a Subversion filesystem, a `node' corresponds roughly to an
  * `inode' in a Unix filesystem:
@@ -550,9 +550,11 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
  *   different name.  So a node's identity isn't bound to a particular
  *   filename.
  *
- * A `node revision' refers to a node's contents at a specific point in
- * time.  Changing a node's contents always creates a new revision of that
- * node.  Once created, a node revision's contents never change.
+ * A `node revision' refers to one particular version of a node's contents,
+ * that existed over a specific period of time (one or more repository
+ * revisions).  Changing a node's contents always creates a new revision of
+ * that node, which is to say creates a new `node revision'.  Once created,
+ * a node revision's contents never change.
  *
  * When we create a node, its initial contents are the initial revision of
  * the node.  As users make changes to the node over time, we create new
@@ -562,16 +564,30 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
  * the filesystem.  Instead, we just remove the reference to the node
  * from the directory.
  *
+ * Each node revision is a part of exactly one node, and appears only once
+ * in the history of that node.  It is uniquely identified by a node
+ * revision id, #svn_fs_id_t.  Its node revision id also identifies which
+ * node it is a part of.
+ *
+ * @note: Often when we talk about `the node' within the context of a single
+ * revision (or transaction), we implicitly mean `the node as it appears in
+ * this revision (or transaction)', or in other words `the node revision'.
+ *
+ * @note: Commonly, a node revision will have the same content as some other
+ * node revisions in the same node and in different nodes.  The FS libraries
+ * allow different node revisions to share the same data without storing a
+ * separate copy of the data.
+ *
  * @defgroup svn_fs_nodes Filesystem nodes
  * @{
  */
 
-/** An object representing a node-id.  */
+/** An object representing a node-revision id.  */
 typedef struct svn_fs_id_t svn_fs_id_t;
 
 
-/** Return -1, 0, or 1 if node revisions @a a and @a b are unrelated,
- * equivalent, or otherwise related (respectively).
+/** Return -1, 0, or 1 if node revisions @a a and @a b are respectively
+ * unrelated, equivalent, or otherwise related (part of the same node).
  */
 int
 svn_fs_compare_ids(const svn_fs_id_t *a,
@@ -579,8 +595,8 @@ svn_fs_compare_ids(const svn_fs_id_t *a,
 
 
 
-/** Return non-zero IFF the nodes associated with @a id1 and @a id2 are
- * related, else return zero.
+/** Return TRUE if node revisions @a id1 and @a id2 are related (part of the
+ * same node), else return FALSE.
  */
 svn_boolean_t
 svn_fs_check_related(const svn_fs_id_t *id1,
@@ -602,7 +618,7 @@ svn_fs_parse_id(const char *data,
 
 
 /** Return a Subversion string containing the unparsed form of the
- * node or node revision id @a id.  Allocate the string containing the
+ * node revision id @a id.  Allocate the string containing the
  * unparsed form in @a pool.
  */
 svn_string_t *
@@ -928,7 +944,8 @@ svn_fs_change_txn_props(svn_fs_txn_t *txn,
  *
  * An #svn_fs_root_t object represents the root directory of some
  * revision or transaction in a filesystem.  To refer to particular
- * node, you provide a root, and a directory path relative that root.
+ * node or node revision, you provide a root, and a directory path
+ * relative to that root.
  *
  * @defgroup svn_fs_roots Filesystem roots
  * @{
