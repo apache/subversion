@@ -320,11 +320,11 @@ svn_wc__get_revert_contents(svn_stream_t **contents,
 svn_error_t *
 svn_wc__prop_path(const char **prop_path,
                   const char *path,
-                  svn_wc__db_kind_t kind,
+                  svn_wc__db_kind_t node_kind,
                   svn_wc__props_kind_t props_kind,
                   apr_pool_t *pool)
 {
-  if (kind == svn_wc__db_kind_dir)
+  if (node_kind == svn_wc__db_kind_dir)
     {
       static const char * names[] = {
         SVN_WC__ADM_DIR_PROP_BASE,    /* svn_wc__props_base */
