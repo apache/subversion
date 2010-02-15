@@ -100,7 +100,7 @@ svn_wc__text_revert_path(const char **result_abspath,
    and svn_node_file. */
 svn_error_t *svn_wc__prop_path(const char **prop_path,
                                const char *path,
-                               svn_wc__db_kind_t kind,
+                               svn_wc__db_kind_t node_kind,
                                svn_wc__props_kind_t props_kind,
                                apr_pool_t *pool);
 
