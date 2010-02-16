@@ -1,0 +1,85 @@
+Note from user visits by Hyrum - Jan., Feb. 2010
+
+Introduction
+============
+I've recently had an opportunity to visit with a number of corporate users
+of Subversion.  My basic question was "what should you think the future of
+Subversion should be?"  While not everybody spoke to that question, all the
+responses were illuminating, so I'm recording them here for posterity.
+
+(These aren't all of the people I've talked to, just the ones which had the
+most feedback.)
+
+
+User 1
+======
+
+Background
+----------
+A large corporate installation of Subversion.  The development manager I
+spoke with supervises several thousand developers.  They use Subversion, but
+there is some grassroots movement from his developers to switch to a DVCS.
+
+Concerns
+--------
+Branching & merging too slow
+Overall speed
+"Branching & merging fixed by the end of the year, or you are dead."
+Refactoring support
+"If you are going to fail, I'll leave as soon as possible."
+Great interest in obliterate support
+
+Places Subversion stands out
+----------------------------
+Multi-platform support
+(others)
+
+Take-aways
+----------
+Overall, the meeting was a bit negative, but that's what I expected (and asked
+for, even).  Hearing folks' concerns is how we improve.  In the end, I came
+to the realization that we wouldn't be having the conversation if folk like
+him didn't see hope, and didn't want to see improvement.  As a development
+manager, the idea of moving to a DVCS is not very appealing at all, and he
+wants to see Subversion succeed.
+
+
+User 2
+======
+
+Background
+----------
+Another large corporate installation, recently moved from CVS to Subversion.
+~3000 developers.
+
+Concerns
+--------
+Obliterate support
+Tags are useless (would essentially like revnum aliases of some kind)
+No zero-change commit support.
+Long option names
+Atomic import (a delete and import in one rev)
+Merge ancestry issues are painful
+Want 'svn diff@WORKING'
+Various scalability concerns
+Long-running merge operations
+
+Places Subversion stands out
+----------------------------
+Much better than CVS in every practical way
+
+Take-aways
+----------
+A lot of the Concerns are actually somewhat-valid feature requests.  We should
+attempt to vet them, and if found justifiable, implement them.
+
+
+Other Users
+===========
+I talked to one user who had actually written a custom client, which allowed
+them to implement overlay checkouts, which was important for their work flow.
+I was duly impressed, in a sort of "what-in-the-world?" way.
+
+A chip design firm is interested in using Subversion to version their
+artifacts, and was interested to know what kinds of integration exist for
+the various chip design tools.
