@@ -896,15 +896,7 @@ mark_tree_deleted(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_temp_op_delete(db, dir_abspath, iterpool));
 
       if (keep_local)
-      {
-        svn_wc_entry_t tmp_entry;
-        tmp_entry.keep_local = keep_local;
-
-        SVN_ERR(svn_wc__entry_modify2(db, dir_abspath, svn_node_dir, FALSE,
-                                      &tmp_entry,
-                                      SVN_WC__ENTRY_MODIFY_KEEP_LOCAL,
-                                      iterpool));
-      }
+        SVN_ERR(svn_wc__db_temp_set_keep_local(db, dir_abspath, TRUE, iterpool));
     }
 
   /* Destroy our per-iteration pool. */

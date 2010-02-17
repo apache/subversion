@@ -1893,6 +1893,14 @@ svn_wc__db_temp_determine_keep_local(svn_boolean_t *keep_local,
                                      const char *local_abspath,
                                      apr_pool_t *scratch_pool);
 
+/* For a deleted directory, set its keep_local flag. (This flag will
+   go away once we have a consolidated administrative area) */
+svn_error_t *
+svn_wc__db_temp_set_keep_local(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               svn_boolean_t keep_local,
+                               apr_pool_t *scratch_pool);
+
 /* Removes all references of LOCAL_ABSPATH from its working copy
    using DB. When FLUSH_ENTRY_CACHE is set to TRUE, flush the related
    entries caches. */

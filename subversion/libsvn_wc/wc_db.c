@@ -5356,6 +5356,33 @@ svn_wc__db_temp_determine_keep_local(svn_boolean_t *keep_local,
 }
 
 svn_error_t *
+svn_wc__db_temp_set_keep_local(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               svn_boolean_t keep_local,
+                               apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  /* First flush the entries */
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  flush_entries(pdh);
+
+  /* Then update the database */
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_UPDATE_KEEP_LOCAL_FLAG, scratch_pool));
+
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, keep_local ? 1 : 0));
+
+  return svn_error_return(svn_sqlite__step_done(stmt));
+}
+
+svn_error_t *
 svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
