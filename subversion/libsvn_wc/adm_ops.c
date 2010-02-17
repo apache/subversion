@@ -836,7 +836,6 @@ mark_tree_deleted(svn_wc__db_t *db,
   apr_pool_t *iterpool = svn_pool_create(pool);
   const apr_array_header_t *children;
   const svn_wc_entry_t *entry;
-  svn_wc_entry_t tmp_entry;
   int i;
 
   /* Read the entries file for this directory. */
@@ -848,6 +847,7 @@ mark_tree_deleted(svn_wc__db_t *db,
       const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath;
       svn_boolean_t hidden;
+      svn_wc__db_kind_t kind;
 
       /* Clear our per-iteration pool. */
       svn_pool_clear(iterpool);
@@ -859,11 +859,10 @@ mark_tree_deleted(svn_wc__db_t *db,
       if (hidden)
         continue;
 
-      SVN_ERR(svn_wc__get_entry(&entry, db, child_abspath, FALSE,
-                                svn_node_unknown, FALSE, iterpool, iterpool));
+      SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, FALSE, iterpool));
 
       /* If this is a directory, recurse. */
-      if (entry->kind == svn_node_dir)
+      if (kind == svn_wc__db_kind_dir)
         {
           SVN_ERR(mark_tree_deleted(db, child_abspath,
                                     keep_local,
@@ -872,24 +871,7 @@ mark_tree_deleted(svn_wc__db_t *db,
                                     iterpool));
         }
 
-      /* If this node has no function after the delete, remove it
-         directly. Otherwise svn_wc__entry_modify2 would do this for us,
-         but using the entries api would leave the db handle open */
-      /* ### BH: This check matches the only case in fold_scheduling()
-                 that removes the entry via delete scheduling */
-      if (entry->schedule == svn_wc_schedule_add && !entry->deleted)
-        {
-          SVN_ERR(svn_wc__entry_remove(db, child_abspath, pool));
-          SVN_ERR(svn_wc__db_temp_forget_directory(db, dir_abspath, pool));
-        }
-      else
-        {
-          tmp_entry.schedule = svn_wc_schedule_delete;
-          SVN_ERR(svn_wc__entry_modify2(db, child_abspath, svn_node_unknown,
-                                        TRUE, &tmp_entry,
-                                        SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                                        iterpool));
-        }
+      SVN_ERR(svn_wc__db_temp_op_delete(db, child_abspath, pool));
 
       /* Tell someone what we've done. */
       if (notify_func != NULL)
@@ -911,14 +893,18 @@ mark_tree_deleted(svn_wc__db_t *db,
      case, so KEEP_LOCAL doesn't need to be set either. */
   if (entry->schedule != svn_wc_schedule_add)
     {
-      tmp_entry.schedule = svn_wc_schedule_delete;
-      tmp_entry.keep_local = keep_local;
+      SVN_ERR(svn_wc__db_temp_op_delete(db, dir_abspath, iterpool));
 
-      SVN_ERR(svn_wc__entry_modify2(db, dir_abspath, svn_node_dir, FALSE,
-                                    &tmp_entry,
-                                    SVN_WC__ENTRY_MODIFY_SCHEDULE |
-                                    SVN_WC__ENTRY_MODIFY_KEEP_LOCAL,
-                                    iterpool));
+      if (keep_local)
+      {
+        svn_wc_entry_t tmp_entry;
+        tmp_entry.keep_local = keep_local;
+
+        SVN_ERR(svn_wc__entry_modify2(db, dir_abspath, svn_node_dir, FALSE,
+                                      &tmp_entry,
+                                      SVN_WC__ENTRY_MODIFY_KEEP_LOCAL,
+                                      iterpool));
+      }
     }
 
   /* Destroy our per-iteration pool. */
@@ -1230,6 +1216,12 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
     {
       const char *parent_abspath = svn_dirent_dirname(local_abspath, pool);
 
+      /* ### The following two operations should be inside one SqLite
+             transaction. For even better behavior the tree operation
+             before this block needs the same handling. 
+             Luckily most of this is for free once properties and pristine
+             are handled in the WC-NG way. */
+      SVN_ERR(svn_wc__db_temp_op_delete(wc_ctx->db, local_abspath, pool));
       SVN_ERR(svn_wc__wq_add_delete(wc_ctx->db, parent_abspath, local_abspath,
                                     kind, was_add, was_copied, was_replace,
                                     base_shadowed, pool));
