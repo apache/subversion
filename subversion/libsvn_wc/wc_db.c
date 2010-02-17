@@ -3112,6 +3112,70 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_temp_op_delete(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool)
+{
+  const svn_wc_entry_t *entry;
+  svn_error_t *err;
+
+  /* ### Initial implementation: Copy the entry based code here. This will be
+         more logical when we look at BASE_NODE and WORKING_NODE */
+
+  err = svn_wc__get_entry(&entry, db, local_abspath, FALSE, svn_node_unknown,
+                          FALSE, scratch_pool, scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
+    {
+      svn_error_clear(err);
+      err = NULL;
+    }
+  else
+    SVN_ERR(err);
+
+  if (entry->schedule == svn_wc_schedule_add)
+    {
+      svn_boolean_t deleted;
+
+      SVN_ERR(svn_wc__node_is_deleted(&deleted, db, local_abspath, scratch_pool));
+
+      if (!deleted)
+        {
+          /* This case is easy.. Just delete the entry */
+          SVN_ERR(svn_wc__entry_remove(db, local_abspath, scratch_pool));
+          SVN_ERR(svn_wc__db_temp_forget_directory(db, local_abspath, scratch_pool));
+
+          return SVN_NO_ERROR;
+        }
+    }
+
+    {
+      svn_wc_entry_t tmp_entry;
+      const char *name = entry->name;
+
+      tmp_entry.schedule = svn_wc_schedule_delete;
+
+      /* Don't update the directory entries for locally added directories
+         and directories that are missing. (The first scenario abort()s
+         and the second gives a WC missing error) */
+      if (entry->kind != svn_node_dir ||
+          (entry->schedule != svn_wc_schedule_add && *entry->name == '\0'))
+        SVN_ERR(svn_wc__entry_modify2(db, local_abspath, entry->kind,
+                                      FALSE, &tmp_entry,
+                                      SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                                      scratch_pool));
+
+      /* And update the parent stub */
+      if (entry->kind == svn_node_dir)
+        SVN_ERR(svn_wc__entry_modify2(db, local_abspath, svn_node_dir,
+                                      TRUE, &tmp_entry,
+                                      SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                                      scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_read_info(svn_wc__db_status_t *status,

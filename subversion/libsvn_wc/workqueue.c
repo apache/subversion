@@ -1680,7 +1680,6 @@ run_delete(svn_wc__db_t *db,
   const char *local_abspath;
   svn_wc__db_kind_t kind;
   svn_boolean_t was_added, was_copied, was_replaced, base_shadowed;
-  svn_wc_entry_t tmp_entry;
 
   local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
   arg = arg->next;
@@ -1693,14 +1692,6 @@ run_delete(svn_wc__db_t *db,
   was_replaced = svn_skel__parse_int(arg, scratch_pool);
   arg = arg->next;
   base_shadowed = svn_skel__parse_int(arg, scratch_pool);
-
-  /* Edit the entry to reflect the now deleted state.
-     entries.c:fold_entry() clears the values of copied, copyfrom_rev
-     and copyfrom_url. */
-  tmp_entry.schedule = svn_wc_schedule_delete;
-  SVN_ERR(svn_wc__entry_modify2(db, local_abspath, svn_node_unknown, TRUE,
-                                &tmp_entry, SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                                scratch_pool));
 
   if (was_replaced && was_copied)
     {
