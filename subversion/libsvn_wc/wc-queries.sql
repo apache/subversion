@@ -339,6 +339,10 @@ values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);
 select keep_local from working_node
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_KEEP_LOCAL_FLAG
+update working_node set keep_local= ?3
+where wc_id = ?1 and local_relpath = ?2;
+
 -- STMT_SELECT_NOT_PRESENT
 select 1 from base_node
 where wc_id = ?1 and local_relpath = ?2 and presence = 'not-present';

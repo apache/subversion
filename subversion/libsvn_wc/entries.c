@@ -2604,8 +2604,7 @@ fold_entry(apr_hash_t *entries,
   /* has-props, prop-mods, cachable-props, and present-props are deprecated,
      so we do not copy them. */
 
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_KEEP_LOCAL)
-    cur_entry->keep_local = entry->keep_local;
+  /* keep_local is no longer modified with this function */
 
   /* Note that we don't bother to fold entry->depth, because it is
      only meaningful on the this-dir entry anyway. */
