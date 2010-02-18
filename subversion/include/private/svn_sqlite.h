@@ -27,6 +27,7 @@
 #include <apr_pools.h>
 
 #include "svn_types.h"
+#include "svn_checksum.h"
 #include "svn_error.h"
 
 #include "private/svn_token.h"  /* for svn_token_map_t  */
