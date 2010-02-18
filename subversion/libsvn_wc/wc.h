@@ -106,8 +106,9 @@ extern "C" {
  * from the filesystem into wc.db), and some columns to ACTUAL_NODE for
  * future use.
  *
- * The change from 14 to 15 switched from presence='exclude' to using
- * depth='exclude' within the BASE_NODE and WORKING_NODE tables.
+ * The change from 14 to 15 switched from depth='exclude' on directories to
+ * using presence='exclude' within the BASE_NODE and WORKING_NODE tables.
+ * This change also enabled exclude support on files and symlinks.
  *
  * The change from 15 to 16 added 'locked_levels' to WC_LOCK, setting
  * any existing locks to a level of 0. The 'md5_checksum' column was
