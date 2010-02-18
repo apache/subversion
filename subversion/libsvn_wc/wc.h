@@ -98,10 +98,20 @@ extern "C" {
  *
  * The change from 11 to 12 was a switch from 'entries' to 'wc.db'.
  *
- * The change from 12 to 13 added the WORK_QUEUE table into 'wc.db', and
- * moved the wcprops into the 'dav_cache' column in BASE_NODE.
+ * The change from 12 to 13 added the WORK_QUEUE table into 'wc.db', moved
+ * the wcprops into the 'dav_cache' column in BASE_NODE, and stopped using
+ * the 'incomplete_children' column of BASE_NODE.
  *
- * The change from 13 to 14 added the WCLOCKS table.
+ * The change from 13 to 14 added the WCLOCKS table (and migrated locks
+ * from the filesystem into wc.db), and some columns to ACTUAL_NODE for
+ * future use.
+ *
+ * The change from 14 to 15 switched from presence='exclude' to using
+ * depth='exclude' within the BASE_NODE and WORKING_NODE tables.
+ *
+ * The change from 15 to 16 added 'locked_levels' to WC_LOCK, setting
+ * any existing locks to a level of 0. The 'md5_checksum' column was
+ * added to PRISTINE for future use.
  *
  * == 1.7.x shipped with format ???
  *
