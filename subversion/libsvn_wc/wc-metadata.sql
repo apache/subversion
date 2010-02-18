@@ -163,6 +163,12 @@ CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
 
 
 /* ------------------------------------------------------------------------- */
+
+/* The PRISTINE table keeps track of pristine texts. Each pristine text is
+   stored in a file which may be compressed. Each pristine text is
+   referenced by any number of rows in the BASE_NODE and WORKING_NODE
+   tables.
+ */
 /* ### BH: Will CHECKSUM be the same key as used for indexing a file in the
            Pristine store? If that key is SHA-1 we might need an alternative
            MD5 checksum column on this table to use with the current delta
@@ -190,6 +196,30 @@ CREATE TABLE PRISTINE (
 
 /* ------------------------------------------------------------------------- */
 
+/* The WORKING_NODE table describes tree changes in the WC relative to the
+   BASE_NODE table. Every path for which a row exists in the WORKING_NODE
+   table also has a row in the BASE_NODE table.
+
+   The WORKING_NODE row for a given path exists iff a node at this path
+   is itself one of:
+
+     - deleted
+     - moved away [1]
+
+   and/or one of:
+
+     - added
+     - copied here [1]
+     - moved here [1]
+
+   or if this path is a child (or grandchild, etc.) under any such node.
+   (### Exact meaning of "child" when mixed-revision, switched, etc.?)
+
+   [1] The WC-NG "move" operation requires that both the source and
+   destination paths are represented in the BASE_NODE and WORKING_NODE
+   tables. The "copy" operation takes as its source a repository node,
+   regardless whether that node is also represented in the WC.
+ */
 CREATE TABLE WORKING_NODE (
   /* specifies the location of this node in the local filesystem */
   wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
@@ -306,6 +336,16 @@ CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (wc_id, parent_relpath);
 
 /* ------------------------------------------------------------------------- */
 
+/* The ACTUAL_NODE table describes text changes and property changes on each
+   node in the WC, relative to the WORKING_NODE table row for the same path
+   (if present) or else to the BASE_TABLE row for the same path (which must
+   exist).
+
+   The ACTUAL_NODE table row for a given path exists iff the node at that
+   path is known to have text or property changes relative to its
+   WORKING_NODE row. ("Is known" because a text change on disk may not yet
+   have been discovered and recorded here.)
+ */
 CREATE TABLE ACTUAL_NODE (
   /* specifies the location of this node in the local filesystem */
   wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
