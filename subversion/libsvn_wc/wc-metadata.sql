@@ -377,11 +377,7 @@ CREATE TABLE ACTUAL_NODE (
   /* ### also, shouldn't these be local_relpaths too?
      ### they aren't currently, but that would be more consistent with other
      ### columns. (though it would require a format bump). */
-  /* ### BH: Shouldn't we move all these into the new CONFLICT_VICTIM table? */
-  /* ### HKW: I think so.  These columns pre-date that table, and are just
-     ###      a mapping from svn_wc_entry_t.  I haven't thought about how the
-     ###      CONFLICT_VICTIM table would need to be extended for this, though.
-     ###      (may want do to that before the f13 bump, if possible) */
+  /* ### These columns will eventually be merged into conflict_data below. */
   conflict_old  TEXT,
   conflict_new  TEXT,
   conflict_working  TEXT,
@@ -396,7 +392,9 @@ CREATE TABLE ACTUAL_NODE (
   text_mod  TEXT,
 
   /* if a directory, serialized data for all of tree conflicts therein.
-     removed in format 13, in favor of the CONFLICT_VICTIM table*/
+     ### This column will eventually be merged into the conflict_data column,
+     ### but within the ACTUAL node of the tree conflict victim itself, rather
+     ### than the node of the tree conflict victim's parent directory. */
   tree_conflict_data  TEXT,
 
   /* A skel containing the conflict details.  */
