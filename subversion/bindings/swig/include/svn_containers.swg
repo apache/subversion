@@ -576,27 +576,13 @@
 
 #ifdef SWIGPYTHON
 %typemap(in) apr_array_header_t *providers {
-    svn_auth_provider_object_t *provider;
-    int targlen;
-    if (!PySequence_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "not a sequence");
-        SWIG_fail;
-    }
-    
-    targlen = PySequence_Length($input);
-    if (targlen < 0)
-        return NULL;
-
-    $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
-    ($1)->nelts = targlen;
-    while (targlen--) {
-        provider = svn_swig_MustGetPtr(PySequence_GetItem($input, targlen),
-          $descriptor(svn_auth_provider_object_t *), $svn_argnum);
-        if (PyErr_Occurred()) {
-          SWIG_fail;
-        }
-        APR_ARRAY_IDX($1, targlen, svn_auth_provider_object_t *) = provider;
-    }
+    $1 = (apr_array_header_t *) svn_swig_py_seq_to_array($input,
+      sizeof(const svn_auth_provider_object_t *),
+      svn_swig_py_unwrap_struct_ptr,
+      $descriptor(svn_auth_provider_object_t *),
+      _global_pool);
+    if (PyErr_Occurred())
+      SWIG_fail;
 }
 #endif
 
