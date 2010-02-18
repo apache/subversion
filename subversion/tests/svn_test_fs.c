@@ -24,8 +24,17 @@
 #include <string.h>
 #include <apr_pools.h>
 
+#ifdef _MSC_VER
+#include <direct.h>
+#define getcwd _getcwd
+#else
+#include <unistd.h> /* for getcwd() */
+#endif
+
 #include "svn_test.h"
 
+#include "svn_string.h"
+#include "svn_utf.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -223,6 +232,36 @@ svn_test__create_repos(svn_repos_t **repos_p,
     }
 
   *repos_p = repos;
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper function.  Set URL to a "file://" url for the current directory,
+   suffixed by the forward-slash-style relative path SUFFIX, performing all
+   allocation in POOL. */
+svn_error_t *
+svn_test__current_directory_url(const char **url,
+                                const char *suffix,
+                                apr_pool_t *pool)
+{
+  /* 8KB is a lot, but it almost guarantees that any path will fit. */
+  char curdir[8192];
+  const char *utf8_ls_curdir, *utf8_is_curdir, *unencoded_url;
+
+  if (! getcwd(curdir, sizeof(curdir)))
+    return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
+
+  SVN_ERR(svn_utf_cstring_to_utf8(&utf8_ls_curdir, curdir, pool));
+  utf8_is_curdir = svn_path_internal_style(utf8_ls_curdir, pool);
+
+  unencoded_url = apr_psprintf(pool, "file://%s%s%s%s",
+                               (utf8_is_curdir[0] != '/') ? "/" : "",
+                               utf8_is_curdir,
+                               (suffix[0] && suffix[0] != '/') ? "/" : "",
+                               suffix);
+
+  *url = svn_path_uri_encode(unencoded_url, pool);
+
   return SVN_NO_ERROR;
 }
 
@@ -606,55 +645,186 @@ svn_test__check_greek_tree(svn_fs_root_t *root,
   return SVN_NO_ERROR;
 }
 
+/**
+ * Loads the greek tree in a directory at ROOT_DIR under transaction TXN_ROOT.
+ * ROOT_DIR should be created by the caller.
+ *
+ * Note: this function will not commit the transaction.
+ */
+svn_error_t *
+svn_test__create_greek_tree_at(svn_fs_root_t *txn_root,
+                               const char *root_dir,
+                               apr_pool_t *pool)
+{
+  char *iota =     svn_relpath_join(root_dir, "iota", pool);
+  char *A =        svn_relpath_join(root_dir, "A", pool);
+  char *Amu =      svn_relpath_join(root_dir, "A/mu", pool);
+  char *AB =       svn_relpath_join(root_dir, "A/B", pool);
+  char *ABlambda = svn_relpath_join(root_dir, "A/B/lambda", pool);
+  char *ABE =      svn_relpath_join(root_dir, "A/B/E", pool);
+  char *ABEalpha = svn_relpath_join(root_dir, "A/B/E/alpha", pool);
+  char *ABEbeta =  svn_relpath_join(root_dir, "A/B/E/beta", pool);
+  char *ABF =      svn_relpath_join(root_dir, "A/B/F", pool);
+  char *AC =       svn_relpath_join(root_dir, "A/C", pool);
+  char *AD =       svn_relpath_join(root_dir, "A/D", pool);
+  char *ADgamma =  svn_relpath_join(root_dir, "A/D/gamma", pool);
+  char *ADG =      svn_relpath_join(root_dir, "A/D/G", pool);
+  char *ADGpi =    svn_relpath_join(root_dir, "A/D/G/pi", pool);
+  char *ADGrho =   svn_relpath_join(root_dir, "A/D/G/rho", pool);
+  char *ADGtau =   svn_relpath_join(root_dir, "A/D/G/tau", pool);
+  char *ADH =      svn_relpath_join(root_dir, "A/D/H", pool);
+  char *ADHchi =   svn_relpath_join(root_dir, "A/D/H/chi", pool);
+  char *ADHpsi =   svn_relpath_join(root_dir, "A/D/H/psi", pool);
+  char *ADHomega = svn_relpath_join(root_dir, "A/D/H/omega", pool);
 
+  SVN_ERR(svn_fs_make_file(txn_root, iota, pool));
+  SVN_ERR(svn_test__set_file_contents
+          (txn_root, iota, "This is the file 'iota'.\n", pool));
+  SVN_ERR(svn_fs_make_dir  (txn_root, A, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, Amu, pool));
+  SVN_ERR(svn_test__set_file_contents
+          (txn_root, Amu, "This is the file 'mu'.\n", pool));
+  SVN_ERR(svn_fs_make_dir  (txn_root, AB, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, ABlambda, pool));
+  SVN_ERR(svn_test__set_file_contents
+          (txn_root, ABlambda, "This is the file 'lambda'.\n", pool));
+  SVN_ERR(svn_fs_make_dir  (txn_root, ABE, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, ABEalpha, pool));
+  SVN_ERR(svn_test__set_file_contents
+          (txn_root, ABEalpha, "This is the file 'alpha'.\n", pool));
+  SVN_ERR(svn_fs_make_file(txn_root, ABEbeta, pool));
+  SVN_ERR(svn_test__set_file_contents
+          (txn_root, ABEbeta, "This is the file 'beta'.\n", pool));
+  SVN_ERR(svn_fs_make_dir  (txn_root, ABF, pool));
+  SVN_ERR(svn_fs_make_dir  (txn_root, AC, pool));
+  SVN_ERR(svn_fs_make_dir  (txn_root, AD, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, ADgamma, pool));
+  SVN_ERR(svn_test__set_file_contents
+          (txn_root, ADgamma, "This is the file 'gamma'.\n", pool));
+  SVN_ERR(svn_fs_make_dir  (txn_root, ADG, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, ADGpi, pool));
+  SVN_ERR(svn_test__set_file_contents
+          (txn_root, ADGpi, "This is the file 'pi'.\n", pool));
+  SVN_ERR(svn_fs_make_file(txn_root, ADGrho, pool));
+  SVN_ERR(svn_test__set_file_contents
+          (txn_root, ADGrho, "This is the file 'rho'.\n", pool));
+  SVN_ERR(svn_fs_make_file(txn_root, ADGtau, pool));
+  SVN_ERR(svn_test__set_file_contents
+          (txn_root, ADGtau, "This is the file 'tau'.\n", pool));
+  SVN_ERR(svn_fs_make_dir  (txn_root, ADH, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, ADHchi, pool));
+  SVN_ERR(svn_test__set_file_contents
+          (txn_root, ADHchi, "This is the file 'chi'.\n", pool));
+  SVN_ERR(svn_fs_make_file(txn_root, ADHpsi, pool));
+  SVN_ERR(svn_test__set_file_contents
+          (txn_root, ADHpsi, "This is the file 'psi'.\n", pool));
+  SVN_ERR(svn_fs_make_file(txn_root, ADHomega, pool));
+  SVN_ERR(svn_test__set_file_contents
+          (txn_root, ADHomega, "This is the file 'omega'.\n", pool));
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_test__create_greek_tree(svn_fs_root_t *txn_root,
                             apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs_make_file(txn_root, "iota", pool));
-  SVN_ERR(svn_test__set_file_contents
-          (txn_root, "iota", "This is the file 'iota'.\n", pool));
-  SVN_ERR(svn_fs_make_dir  (txn_root, "A", pool));
-  SVN_ERR(svn_fs_make_file(txn_root, "A/mu", pool));
-  SVN_ERR(svn_test__set_file_contents
-          (txn_root, "A/mu", "This is the file 'mu'.\n", pool));
-  SVN_ERR(svn_fs_make_dir  (txn_root, "A/B", pool));
-  SVN_ERR(svn_fs_make_file(txn_root, "A/B/lambda", pool));
-  SVN_ERR(svn_test__set_file_contents
-          (txn_root, "A/B/lambda", "This is the file 'lambda'.\n", pool));
-  SVN_ERR(svn_fs_make_dir  (txn_root, "A/B/E", pool));
-  SVN_ERR(svn_fs_make_file(txn_root, "A/B/E/alpha", pool));
-  SVN_ERR(svn_test__set_file_contents
-          (txn_root, "A/B/E/alpha", "This is the file 'alpha'.\n", pool));
-  SVN_ERR(svn_fs_make_file(txn_root, "A/B/E/beta", pool));
-  SVN_ERR(svn_test__set_file_contents
-          (txn_root, "A/B/E/beta", "This is the file 'beta'.\n", pool));
-  SVN_ERR(svn_fs_make_dir  (txn_root, "A/B/F", pool));
-  SVN_ERR(svn_fs_make_dir  (txn_root, "A/C", pool));
-  SVN_ERR(svn_fs_make_dir  (txn_root, "A/D", pool));
-  SVN_ERR(svn_fs_make_file(txn_root, "A/D/gamma", pool));
-  SVN_ERR(svn_test__set_file_contents
-          (txn_root, "A/D/gamma", "This is the file 'gamma'.\n", pool));
-  SVN_ERR(svn_fs_make_dir  (txn_root, "A/D/G", pool));
-  SVN_ERR(svn_fs_make_file(txn_root, "A/D/G/pi", pool));
-  SVN_ERR(svn_test__set_file_contents
-          (txn_root, "A/D/G/pi", "This is the file 'pi'.\n", pool));
-  SVN_ERR(svn_fs_make_file(txn_root, "A/D/G/rho", pool));
-  SVN_ERR(svn_test__set_file_contents
-          (txn_root, "A/D/G/rho", "This is the file 'rho'.\n", pool));
-  SVN_ERR(svn_fs_make_file(txn_root, "A/D/G/tau", pool));
-  SVN_ERR(svn_test__set_file_contents
-          (txn_root, "A/D/G/tau", "This is the file 'tau'.\n", pool));
-  SVN_ERR(svn_fs_make_dir  (txn_root, "A/D/H", pool));
-  SVN_ERR(svn_fs_make_file(txn_root, "A/D/H/chi", pool));
-  SVN_ERR(svn_test__set_file_contents
-          (txn_root, "A/D/H/chi", "This is the file 'chi'.\n", pool));
-  SVN_ERR(svn_fs_make_file(txn_root, "A/D/H/psi", pool));
-  SVN_ERR(svn_test__set_file_contents
-          (txn_root, "A/D/H/psi", "This is the file 'psi'.\n", pool));
-  SVN_ERR(svn_fs_make_file(txn_root, "A/D/H/omega", pool));
-  SVN_ERR(svn_test__set_file_contents
-          (txn_root, "A/D/H/omega", "This is the file 'omega'.\n", pool));
+  return svn_test__create_greek_tree_at(txn_root, "", pool);
+}
+
+svn_error_t *
+svn_test__create_blame_repository(svn_repos_t **out_repos,
+                                  const char *test_name,
+                                  const svn_test_opts_t *opts,
+                                  apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *revision_root;
+  svn_revnum_t youngest_rev = 0;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos, test_name,
+                                 opts, pool));
+  *out_repos = repos;
+
+  fs = svn_repos_fs(repos);
+
+  /* Revision 1:  Add trunk, tags, branches. */
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
+                                            "initial", "log msg", pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "trunk", pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "tags", pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "branches", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  /* Revision 2:  Add the Greek tree on the trunk. */
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
+                                            "initial", "log msg", pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree_at(txn_root, "trunk", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  /* Revision 3:  Tweak trunk/A/mu. */
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
+                                            "user-trunk", "log msg", pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "trunk/A/mu",
+                                      "A\nB\nC\nD\nE\nF\nG\nH\nI", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  /* Revision 4:  Copy trunk to branches/1.0.x. */
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
+                                            "copy", "log msg", pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_revision_root(&revision_root, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_copy(revision_root, "trunk",
+                      txn_root, "branches/1.0.x",
+                      pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  /* Revision 5:  Tweak trunk/A/mu. */
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
+                                            "user-trunk", "log msg", pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "trunk/A/mu",
+                                      "A\nB\nC -- trunk edit\nD\nE\nF\nG\nH\nI",
+                                      pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  /* Revision 6:  Tweak branches/1.0.x/A/mu. */
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
+                                            "user-branch", "log msg", pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "branches/1.0.x/A/mu",
+                                      "A\nB\nC\nD -- branch edit\nE\nF\nG\nH\nI",
+                                      pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  /* Revision 7:  Merge trunk to branch. */
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
+                                            "user-merge1", "log msg", pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "branches/1.0.x/A/mu",
+                                      "A\nB\nC -- trunk edit\nD -- branch edit"
+                                      "\nE\nF\nG\nH\nI", pool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "/branches/1.0.x", "svn:mergeinfo",
+                                  svn_string_create("/trunk:4-6", pool),
+                                  pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  /* Revision 8:  Merge branch to trunk. */
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
+                                            "user-merge2", "log msg", pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "trunk/A/mu",
+                                      "A\nB\nC -- trunk edit\nD -- branch edit\n"
+                                      "E\nF\nG\nH\nI", pool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "/trunk", "svn:mergeinfo",
+                                  svn_string_create("/branches/1.0.x:4-7", pool),
+                                  pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
   return SVN_NO_ERROR;
 }
