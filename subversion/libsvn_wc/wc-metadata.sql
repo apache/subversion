@@ -175,6 +175,7 @@ CREATE TABLE PRISTINE (
      ### that no compression has been applied. */
   compression  INTEGER,
 
+  /* The size in bytes of the file in which the pristine text is stored. */
   /* ### used to verify the pristine file is "proper". NULL if unknown,
      ### and (thus) the pristine copy is incomplete/unusable. */
   size  INTEGER,
