@@ -2340,6 +2340,118 @@ get_logs(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+
+/* Tests for svn_repos_get_file_revsN() */
+
+typedef struct {
+    svn_revnum_t rev;
+    const char *path;
+    svn_boolean_t result_of_merge;
+    const char *author;
+} file_revs_t;
+
+/* Finds the revision REV in the hash table passed in in BATON, and checks
+   if the PATH and RESULT_OF_MERGE match are as expected. */
+static svn_error_t *
+file_rev_handler(void *baton, const char *path, svn_revnum_t rev,
+                 apr_hash_t *rev_props, svn_boolean_t result_of_merge,
+                 svn_txdelta_window_handler_t *delta_handler,
+                 void **delta_baton, apr_array_header_t *prop_diffs,
+                 apr_pool_t *pool)
+{
+  apr_hash_t *ht = baton;
+  const char *author;
+  file_revs_t *file_rev = apr_hash_get(ht, &rev, sizeof(svn_revnum_t));
+
+  if (!file_rev)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "Revision rev info not expected for rev %ld "
+                             "from path %s",
+                             rev, path);
+
+  author = svn_prop_get_value(rev_props,
+                              SVN_PROP_REVISION_AUTHOR);
+
+  SVN_TEST_STRING_ASSERT(author, file_rev->author);
+  SVN_TEST_STRING_ASSERT(path, file_rev->path);
+  SVN_TEST_ASSERT(rev == file_rev->rev);
+  SVN_TEST_ASSERT(result_of_merge == file_rev->result_of_merge);
+
+  /* Remove this revision from this list so we'll be able to verify that we
+     have seen all expected revisions. */
+  apr_hash_set(ht, &rev, sizeof(svn_revnum_t), NULL);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_get_file_revs(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  svn_repos_t *repos = NULL;
+  svn_fs_t *fs;
+  svn_revnum_t youngest_rev = 0;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  int i;
+
+  file_revs_t trunk_results[] = {
+    { 2, "/trunk/A/mu", FALSE, "initial" },
+    { 3, "/trunk/A/mu", FALSE, "user-trunk" },
+    { 4, "/branches/1.0.x/A/mu", TRUE, "copy" },
+    { 5, "/trunk/A/mu", FALSE, "user-trunk" },
+    { 6, "/branches/1.0.x/A/mu", TRUE, "user-branch" },
+    { 7, "/branches/1.0.x/A/mu", TRUE, "user-merge1" },
+    { 8, "/trunk/A/mu", FALSE, "user-merge2" },
+  };
+  file_revs_t branch_results[] = {
+    { 2, "/trunk/A/mu", FALSE, "initial" },
+    { 3, "/trunk/A/mu", FALSE, "user-trunk" },
+    { 4, "/branches/1.0.x/A/mu", FALSE, "copy" },
+    { 5, "/trunk/A/mu", TRUE, "user-trunk" },
+    { 6, "/branches/1.0.x/A/mu", FALSE, "user-branch" },
+    { 7, "/branches/1.0.x/A/mu", FALSE, "user-merge1" },
+  };
+  apr_hash_t *ht_trunk_results = apr_hash_make(subpool);
+  apr_hash_t *ht_branch_results = apr_hash_make(subpool);
+
+  for (i = 0; i < sizeof(trunk_results) / sizeof(trunk_results[0]); i++)
+    apr_hash_set(ht_trunk_results, &trunk_results[i].rev,
+                 sizeof(svn_revnum_t), &trunk_results[i]);
+
+  for (i = 0; i < sizeof(branch_results) / sizeof(branch_results[0]); i++)
+    apr_hash_set(ht_branch_results, &branch_results[i].rev,
+                 sizeof(svn_revnum_t), &branch_results[i]);
+
+  /* Create the repository and verify blame results. */
+  SVN_ERR(svn_test__create_blame_repository(&repos, "test-repo-get-filerevs",
+                                            opts, subpool));
+  fs = svn_repos_fs(repos);
+
+  SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, subpool));
+
+  /* Verify blame of /trunk/A/mu */
+  SVN_ERR(svn_repos_get_file_revs2(repos, "/trunk/A/mu", 0, youngest_rev,
+                                   1, NULL, NULL,
+                                   file_rev_handler,
+                                   ht_trunk_results,
+                                   subpool));
+  SVN_TEST_ASSERT(apr_hash_count(ht_trunk_results) == 0);
+
+  /* Verify blame of /branches/1.0.x/A/mu */
+  SVN_ERR(svn_repos_get_file_revs2(repos, "/branches/1.0.x/A/mu", 0,
+                                   youngest_rev,
+                                   1, NULL, NULL,
+                                   file_rev_handler,
+                                   ht_branch_results,
+                                   subpool));
+  SVN_TEST_ASSERT(apr_hash_count(ht_branch_results) == 0);
+
+  /* ### TODO: Verify blame of /branches/1.0.x/A/mu in range 6-7 */
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
 
 
 /* The test table.  */
@@ -2373,5 +2485,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test if revprops are validated by repos"),
     SVN_TEST_OPTS_PASS(get_logs,
                        "test svn_repos_get_logs ranges and limits"),
+    SVN_TEST_OPTS_PASS(test_get_file_revs,
+                       "test svn_repos_get_file_revsN"),
     SVN_TEST_NULL
   };
