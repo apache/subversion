@@ -88,7 +88,6 @@
        sync'ing to disk and clearing appropriate caches.
      install_props_file(): Used with loggy.
      svn_wc__install_props(): Used with loggy.
-     svn_wc__loggy_props_delete(): Used with loggy.
      svn_wc__loggy_revert_props_create(): Used with loggy.
      svn_wc__loggy_revert_props_restore(): Used with loggy.
  */
@@ -568,25 +567,6 @@ svn_wc__working_props_committed(svn_wc__db_t *db,
   /* svn_io_file_rename() retains a read-only bit, so there's no
      need to explicitly set it. */
   return svn_error_return(svn_io_file_rename(working, base, scratch_pool));
-}
-
-
-svn_error_t *
-svn_wc__loggy_props_delete(svn_stringbuf_t **log_accum,
-                           svn_wc__db_t *db,
-                           const char *local_abspath,
-                           const char *adm_abspath,
-                           svn_wc__props_kind_t props_kind,
-                           apr_pool_t *pool)
-{
-  svn_wc__db_kind_t kind;
-  const char *props_file;
-
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, pool));
-  SVN_ERR(svn_wc__prop_path(&props_file, local_abspath, kind, props_kind,
-                            pool));
-  return svn_error_return(
-    svn_wc__loggy_remove(log_accum, adm_abspath, props_file, pool, pool));
 }
 
 
