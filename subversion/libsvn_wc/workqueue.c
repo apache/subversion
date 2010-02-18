@@ -1735,15 +1735,15 @@ run_delete(svn_wc__db_t *db,
 
   local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
   arg = arg->next;
-  kind = svn_skel__parse_int(arg, scratch_pool);
+  kind = (svn_wc__db_kind_t) svn_skel__parse_int(arg, scratch_pool);
   arg = arg->next;
-  was_added = svn_skel__parse_int(arg, scratch_pool);
+  was_added = (svn_boolean_t) svn_skel__parse_int(arg, scratch_pool);
   arg = arg->next;
-  was_copied = svn_skel__parse_int(arg, scratch_pool);
+  was_copied = (svn_boolean_t) svn_skel__parse_int(arg, scratch_pool);
   arg = arg->next;
-  was_replaced = svn_skel__parse_int(arg, scratch_pool);
+  was_replaced = (svn_boolean_t) svn_skel__parse_int(arg, scratch_pool);
   arg = arg->next;
-  base_shadowed = svn_skel__parse_int(arg, scratch_pool);
+  base_shadowed = (svn_boolean_t) svn_skel__parse_int(arg, scratch_pool);
 
   if (was_replaced && was_copied)
     {
