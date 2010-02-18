@@ -199,8 +199,7 @@ CREATE TABLE PRISTINE (
 /* ------------------------------------------------------------------------- */
 
 /* The WORKING_NODE table describes tree changes in the WC relative to the
-   BASE_NODE table. Every path for which a row exists in the WORKING_NODE
-   table also has a row in the BASE_NODE table.
+   BASE_NODE table.
 
    The WORKING_NODE row for a given path exists iff a node at this path
    is itself one of:
@@ -341,7 +340,7 @@ CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (wc_id, parent_relpath);
 /* The ACTUAL_NODE table describes text changes and property changes on each
    node in the WC, relative to the WORKING_NODE table row for the same path
    (if present) or else to the BASE_TABLE row for the same path (which must
-   exist).
+   exist in that case).
 
    The ACTUAL_NODE table row for a given path exists iff the node at that
    path is known to have text or property changes relative to its
