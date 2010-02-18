@@ -751,7 +751,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 # references to the providers are gone, they will still be alive,
 # keeping the baton valid.
 %feature("pythonappend") svn_auth_open %{
-   val.__dict__["_deps"] = list(args[0])
+  val.__dict__["_deps"] = list(args[0])
 %}
 #endif
 
