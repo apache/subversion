@@ -254,7 +254,8 @@ CREATE TABLE WORKING_NODE (
        information about this node is not (yet) present.
 
      base-deleted: the underlying BASE node has been marked for deletion due
-       to a delete or a move-away (see the moved_to column to determine).  */
+       to a delete or a move-away (see the moved_to column to determine
+       which), and has not been replaced.  */
   presence  TEXT NOT NULL,
 
   /* the kind of the new node. may be "unknown" if the node is not present. */
@@ -286,8 +287,8 @@ CREATE TABLE WORKING_NODE (
   /* for kind==symlink, this specifies the target. */
   symlink_target  TEXT,
 
-  /* Where this node was copied/moved from. Set only on the root of the
-     operation, and implied for all children. */
+  /* Where this node was copied/moved from. All copyfrom_* fields are set
+     only on the root of the operation, and are NULL for all children. */
   copyfrom_repos_id  INTEGER REFERENCES REPOSITORY (id),
   /* ### BH: Should we call this copyfrom_repos_relpath and skip the initial '/'
      ### to match the other repository paths used in sqlite and to make it easier
@@ -295,14 +296,19 @@ CREATE TABLE WORKING_NODE (
   copyfrom_repos_path  TEXT,
   copyfrom_revnum  INTEGER,
 
+  /* ### JF: For an old-style move, "copyfrom" info stores its source, but a
+     new WC-NG "move" is intended to be a "true rename" so its copyfrom
+     revision is implicit, being in effect (new head - 1) at commit time.
+     For a (new) move, we need to store or deduce the copyfrom local-relpath;
+     perhaps add a column called "moved_from". */
+
   /* Boolean value, specifying if this node was moved here (rather than just
      copied). The source of the move is specified in copyfrom_*.  */
   moved_here  INTEGER,
 
-  /* If the underlying node was moved (rather than just deleted), this
+  /* If the underlying node was moved away (rather than just deleted), this
      specifies the local_relpath of where the BASE node was moved to.
-     This is set only on the root of a move, and implied for all children.
-     The whole moved subtree is marked with presence=base-deleted
+     This is set only on the root of a move, and is NULL for all children.
 
      Note that moved_to never refers to *this* node. It always refers
      to the "underlying" node, whether that is BASE or a child node
@@ -314,7 +320,7 @@ CREATE TABLE WORKING_NODE (
      ### question which is better answered some other way. */
   last_mod_time  INTEGER,  /* an APR date/time (usec since 1970) */
 
-  /* serialized skel of this node's properties. could be NULL if we
+  /* serialized skel of this node's properties. NULL if we
      have no information about the properties (a non-present node). */
   properties  BLOB,
 
