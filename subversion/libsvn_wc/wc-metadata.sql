@@ -22,17 +22,19 @@
  */
 
 /*
- * the KIND column in these tables has one of the following values:
+ * the KIND column in these tables has one of the following values
+ * (documented in the corresponding C type #svn_wc__db_kind_t):
  *   "file"
  *   "dir"
  *   "symlink"
  *   "unknown"
  *   "subdir"
  *
- * the PRESENCE column in these tables has one of the following values:
+ * the PRESENCE column in these tables has one of the following values
+ * (see also the C type #svn_wc__db_status_t):
  *   "normal"
  *   "absent" -- server has declared it "absent" (ie. authz failure)
- *   "excluded" -- administratively excluded
+ *   "excluded" -- administratively excluded (ie. sparse WC)
  *   "not-present" -- node not present at this REV
  *   "incomplete" -- state hasn't been filled in
  *   "base-deleted" -- node represents a delete of a BASE node
