@@ -440,11 +440,24 @@ create_wcroot(wcroot_t **wcroot,
 }
 
 
+/* Returns in PRISTINE_ABSPATH a new string allocated from RESULT_POOL,
+   holding the local absolute path to the file location that is dedicated
+   to hold CHECKSUM's pristine file, relating to the pristine store
+   configured for the working copy indicated by PDH. The returned path
+   does not necessarily currently exist.
+#ifndef SVN__SKIP_SUBDIR
+   Iff CREATE_SUBDIR is TRUE, then this function will make sure that the
+   parent directory of PRISTINE_ABSPATH exists. This is only useful when
+   about to create a new pristine.
+#endif
+   Any other allocations are made in SCRATCH_POOL. */
 static svn_error_t *
 get_pristine_fname(const char **pristine_abspath,
                    svn_wc__db_pdh_t *pdh,
                    const svn_checksum_t *checksum,
+#ifndef SVN__SKIP_SUBDIR
                    svn_boolean_t create_subdir,
+#endif
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
@@ -2255,7 +2268,9 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
   /* ### should we look in the PRISTINE table for anything?  */
 
   SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, checksum,
+#ifndef SVN__SKIP_SUBDIR
                              FALSE /* create_subdir */,
+#endif
                              scratch_pool, scratch_pool));
 
   return svn_error_return(svn_stream_open_readonly(
@@ -2283,7 +2298,10 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
 #if 0
   const char *path;
 
-  SVN_ERR(get_pristine_fname(&path, pdh, checksum, TRUE /* create_subdir */,
+  SVN_ERR(get_pristine_fname(&path, pdh, checksum,
+#ifndef SVN__SKIP_SUBDIR
+                             TRUE /* create_subdir */,
+#endif
                              scratch_pool, scratch_pool));
 
   SVN_ERR(svn_stream_open_writable(contents, path, result_pool, scratch_pool));
@@ -2359,7 +2377,9 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
   VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, sha1_checksum,
+#ifndef SVN__SKIP_SUBDIR
                              TRUE /* create_subdir */,
+#endif
                              scratch_pool, scratch_pool));
 
   /* Put the file into its target location.  */
