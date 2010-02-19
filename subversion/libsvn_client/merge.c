@@ -4470,7 +4470,7 @@ record_skips(const char *mergeinfo_path,
          ### http://subversion.tigris.org/issues/show_bug.cgi?id=3440. */
       apr_hash_set(merges, skipped_abspath,
                    APR_HASH_KEY_STRING,
-                   apr_array_make(pool, 0, sizeof(svn_merge_range_t)));
+                   apr_array_make(pool, 0, sizeof(svn_merge_range_t *)));
 
       if (nbr_skips < notify_b->nbr_notifications)
         /* ### Use RANGELIST as the mergeinfo for all children of
