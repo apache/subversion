@@ -346,10 +346,14 @@ CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (wc_id, parent_relpath);
    (if present) or else to the BASE_TABLE row for the same path (which must
    exist in that case).
 
-   The ACTUAL_NODE table row for a given path exists iff the node at that
+   The ACTUAL_NODE table row for a given path exists if the node at that
    path is known to have text or property changes relative to its
    WORKING_NODE row. ("Is known" because a text change on disk may not yet
    have been discovered and recorded here.)
+
+   The ACTUAL_NODE table row for a given path may also exist in other cases,
+   including if the "changelist" or any of the conflict columns have a
+   non-null value.
  */
 CREATE TABLE ACTUAL_NODE (
   /* specifies the location of this node in the local filesystem */
