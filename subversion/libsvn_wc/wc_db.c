@@ -2253,6 +2253,7 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
   const char *pristine_abspath;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(contents != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
@@ -2267,11 +2268,12 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
 
   /* ### should we look in the PRISTINE table for anything?  */
 
-  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, checksum,
+  err = get_pristine_fname(&pristine_abspath, pdh, checksum,
 #ifndef SVN__SKIP_SUBDIR
-                             FALSE /* create_subdir */,
+                           FALSE /* create_subdir */,
 #endif
-                             scratch_pool, scratch_pool));
+                           scratch_pool, scratch_pool);
+  SVN_ERR(err);
 
   return svn_error_return(svn_stream_open_readonly(
                             contents, pristine_abspath,
@@ -2356,6 +2358,7 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
   const char *pristine_abspath;
   apr_finfo_t finfo;
   svn_sqlite__stmt_t *stmt;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(tempfile_abspath));
   SVN_ERR_ASSERT(sha1_checksum != NULL);
@@ -2376,11 +2379,12 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, sha1_checksum,
+  err = get_pristine_fname(&pristine_abspath, pdh, sha1_checksum,
 #ifndef SVN__SKIP_SUBDIR
-                             TRUE /* create_subdir */,
+                           TRUE /* create_subdir */,
 #endif
-                             scratch_pool, scratch_pool));
+                           scratch_pool, scratch_pool);
+  SVN_ERR(err);
 
   /* Put the file into its target location.  */
   SVN_ERR(svn_io_file_rename(tempfile_abspath, pristine_abspath,
