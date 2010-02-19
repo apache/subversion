@@ -127,15 +127,14 @@ extern "C" {
  *     mergeinfo.
  *
  * (d) @c svn_mergeinfo_catalog_t, called a "mergeinfo catalog".  A hash
- *     mapping paths (@c const char *, starting with slashes) to
- *     @c svn_mergeinfo_t.
+ *     mapping paths (@c const char *) to @c svn_mergeinfo_t.
  *
  * Both @c svn_mergeinfo_t and @c svn_mergeinfo_catalog_t are just
  * typedefs for @c apr_hash_t *; there is no static type-checking, and
  * you still use standard @c apr_hash_t functions to interact with
  * them.
  *
- * Note that while the keys of mergeinfos are always relative to the
+ * Note that while the keys of mergeinfos are always absolute from the
  * repository root, the keys of a catalog may be relative to something
  * else, such as an RA session root.
  */
