@@ -171,10 +171,6 @@ CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
    referenced by any number of rows in the BASE_NODE and WORKING_NODE
    and ACTUAL_NODE tables.
  */
-/* ### BH: Will CHECKSUM be the same key as used for indexing a file in the
-           Pristine store? If that key is SHA-1 we might need an alternative
-           MD5 checksum column on this table to use with the current delta
-           editors that don't understand SHA-1. */
 CREATE TABLE PRISTINE (
   /* ### the hash algorithm (MD5 or SHA-1) is encoded in this value */
   checksum  TEXT NOT NULL PRIMARY KEY,
@@ -192,6 +188,8 @@ CREATE TABLE PRISTINE (
      ### that exist in BASE_NODE and WORKING_NODE. */
   refcount  INTEGER NOT NULL,
 
+  /* Alternative MD5 checksum used for communicating with older
+     repositories. */
   md5_checksum  TEXT
   );
 
@@ -290,9 +288,6 @@ CREATE TABLE WORKING_NODE (
   /* Where this node was copied/moved from. All copyfrom_* fields are set
      only on the root of the operation, and are NULL for all children. */
   copyfrom_repos_id  INTEGER REFERENCES REPOSITORY (id),
-  /* ### BH: Should we call this copyfrom_repos_relpath and skip the initial '/'
-     ### to match the other repository paths used in sqlite and to make it easier
-     ### to join these paths? */
   copyfrom_repos_path  TEXT,
   copyfrom_revnum  INTEGER,
 
@@ -368,15 +363,6 @@ CREATE TABLE ACTUAL_NODE (
   properties  BLOB,
 
   /* basenames of the conflict files. */
-  /* ### do we want to record the revnums which caused this?  
-     ### BH: Yes, probably urls too if it is caused by a merge. Preferably
-     ###     the same info as currently passed to the interactive conflict
-     ###     handler. I would like url@rev for left, right and original, but
-     ###     some of those are available in other ways. Refer to repository
-     ###     table instead of full urls? .*/
-  /* ### also, shouldn't these be local_relpaths too?
-     ### they aren't currently, but that would be more consistent with other
-     ### columns. (though it would require a format bump). */
   /* ### These columns will eventually be merged into conflict_data below. */
   conflict_old  TEXT,
   conflict_new  TEXT,
