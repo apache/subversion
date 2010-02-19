@@ -1991,8 +1991,9 @@ svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
             {
               apr_array_header_t *new_rangelist;
 
-              svn_rangelist_intersect(&new_rangelist, rangelist,
-                                      filter_rangelist, FALSE, pool);
+              SVN_ERR(svn_rangelist_intersect(&new_rangelist, rangelist,
+                                              filter_rangelist, FALSE,
+                                              pool));
               if (new_rangelist->nelts)
                 apr_hash_set(*filtered_mergeinfo,
                              apr_pstrdup(pool, path),
