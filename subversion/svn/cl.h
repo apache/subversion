@@ -698,7 +698,8 @@ svn_cl__indent_string(const char *str,
 
 
 /* Return a string showing NODE's kind, URL and revision, to the extent that
- * that information is available in NODE.
+ * that information is available in NODE. If NODE itself is NULL, this prints
+ * just a 'none' node kind.
  * WC_REPOS_ROOT_URL should reflect the target working copy's repository
  * root URL. If NODE is from that same URL, the printed URL is abbreviated
  * to caret notation (^/). WC_REPOS_ROOT_URL may be NULL, in which case

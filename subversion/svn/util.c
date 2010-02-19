@@ -1266,6 +1266,12 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
   const char *root_str = "^";
   const char *path_str = "...";
 
+  if (!node)
+    /* Printing "(none)" the harder way to ensure conformity (mostly with
+     * translations). */
+    return apr_psprintf(pool, "(%s)",
+                        svn_cl__node_kind_str_human_readable(svn_node_none));
+
   /* Construct a "caret notation" ^/URL if NODE matches WC_REPOS_ROOT_URL.
    * Otherwise show the complete URL, and if we can't, show dots. */
 

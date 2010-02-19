@@ -1746,11 +1746,12 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
   /* A conflict was detected. Append log commands to the log accumulator
    * to record it. */
   {
-    const char *repos_root_url;
+    const char *repos_root_url = NULL;
     const char *left_repos_relpath;
     svn_revnum_t left_revision;
     svn_node_kind_t left_kind;
     const char *right_repos_relpath;
+    const char *added_repos_relpath = NULL;
     svn_node_kind_t conflict_node_kind;
     svn_wc_conflict_version_t *src_left_version;
     svn_wc_conflict_version_t *src_right_version;
@@ -1760,25 +1761,36 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
      * node would have if it was reverted. */
     if (reason == svn_wc_conflict_reason_added)
       {
-        /* Source-left does not exist.
-         * We will still report the URL and revision onto which this node
-         * is locally added. We don't report the locally added node kind,
-         * since that would be 'target', not 'source-left'. */
         svn_wc__db_status_t added_status;
 
+        /* ###TODO: It would be nice to tell the user at which URL and
+         * ### revision source-left was empty, which could be quite difficult
+         * ### to code, and is a slight theoretical leap of the svn mind.
+         * ### Update should show
+         * ###   URL: svn_wc__db_scan_addition( &repos_relpath )
+         * ###   REV: The base revision of the parent of before this update
+         * ###        started
+         * ###        ### BUT what if parent was updated/switched away with
+         * ###        ### depth=empty after this node was added?
+         * ### Switch should show
+         * ###   URL: scan_addition URL of before this switch started
+         * ###   REV: same as above */
+
+        /* In case of a local addition, source-left is non-existent / empty. */
         left_kind = svn_node_none;
+        left_revision = SVN_INVALID_REVNUM;
+        left_repos_relpath = NULL;
 
+        /* Still get the repository root needed by both 'update' and 'switch',
+         * and the would-be repos_relpath needed to construct the source-right
+         * in case of an 'update'. Check sanity while we're at it. */
         SVN_ERR(svn_wc__db_scan_addition(&added_status, NULL,
-                                         &left_repos_relpath,
+                                         &added_repos_relpath,
                                          &repos_root_url,
-                                         NULL, NULL, NULL, NULL,
-                                         &left_revision,
-                                         eb->db,
-                                         local_abspath,
-                                         pool,
-                                         pool));
+                                         NULL, NULL, NULL, NULL, NULL,
+                                         eb->db, local_abspath, pool, pool));
 
-        /* Sanity. */
+        /* This better really be an added status. */
         SVN_ERR_ASSERT(added_status == svn_wc__db_status_added
                        || added_status == svn_wc__db_status_obstructed_add
                        || added_status == svn_wc__db_status_copied
@@ -1843,15 +1855,18 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
       }
     else
       {
-        /* This is an 'update', so REPOS_RELPATH is the same as for
-         * source-left. */
-        right_repos_relpath = left_repos_relpath;
+        /* This is an 'update', so REPOS_RELPATH would be the same as for
+         * source-left. However, we don't have a source-left for locally
+         * added files. */
+        right_repos_relpath = (reason == svn_wc_conflict_reason_added ?
+                               added_repos_relpath : left_repos_relpath);
       }
 
-    /* Determine PCONFLICT's overall node kind. We give it the source-right
-     * revision (THEIR_NODE_KIND) -- unless source-right is deleted and hence
-     * == svn_node_none, in which case we take it from source-left, which has
-     * to be the node kind that was deleted in source-right. */
+    /* Determine PCONFLICT's overall node kind, which is not allowed to be
+     * svn_node_none. We give it the source-right revision (THEIR_NODE_KIND)
+     * -- unless source-right is deleted and hence == svn_node_none, in which
+     * case we take it from source-left, which has to be the node kind that
+     * was deleted. */
     conflict_node_kind = (action == svn_wc_conflict_action_delete ?
                           left_kind : their_node_kind);
     SVN_ERR_ASSERT(conflict_node_kind == svn_node_file
@@ -1860,11 +1875,16 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
 
     /* Construct the tree conflict info structs. */
 
-    src_left_version = svn_wc_conflict_version_create(repos_root_url,
-                                                      left_repos_relpath,
-                                                      left_revision,
-                                                      left_kind,
-                                                      pool);
+    if (left_repos_relpath == NULL)
+      /* A locally added path in conflict with an incoming add.
+       * Send an 'empty' left revision. */
+      src_left_version = NULL;
+    else
+      src_left_version = svn_wc_conflict_version_create(repos_root_url,
+                                                        left_repos_relpath,
+                                                        left_revision,
+                                                        left_kind,
+                                                        pool);
     
     src_right_version = svn_wc_conflict_version_create(repos_root_url,
                                                        right_repos_relpath,
