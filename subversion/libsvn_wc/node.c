@@ -294,7 +294,8 @@ svn_wc__internal_node_get_url(const char **url,
   if (repos_relpath == NULL)
     {
       if (status == svn_wc__db_status_normal
-          || status == svn_wc__db_status_incomplete)
+          || status == svn_wc__db_status_incomplete
+          || status == svn_wc__db_status_deleted)
         {
           SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
                                              NULL,
