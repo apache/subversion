@@ -172,7 +172,9 @@ CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
    and ACTUAL_NODE tables.
  */
 CREATE TABLE PRISTINE (
-  /* ### the hash algorithm (MD5 or SHA-1) is encoded in this value */
+  /* The SHA-1 checksum of the pristine text. This is a unique key. The
+     SHA-1 checksum of a pristine text is assumed to be unique among all
+     pristine texts referenced from this database. */
   checksum  TEXT NOT NULL PRIMARY KEY,
 
   /* ### enumerated values specifying type of compression. NULL implies
@@ -189,7 +191,8 @@ CREATE TABLE PRISTINE (
   refcount  INTEGER NOT NULL,
 
   /* Alternative MD5 checksum used for communicating with older
-     repositories. */
+     repositories. Not guaranteed to be unique among table rows.
+     NULL if not (yet) calculated. */
   md5_checksum  TEXT
   );
 
