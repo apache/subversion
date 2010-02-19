@@ -4735,11 +4735,11 @@ drive_merge_report_editor(const char *target_abspath,
         }
     }
 
-      /* Temporarily point our second RA session to URL1, too.  We use
-         this to request individual file contents. */
-      SVN_ERR(svn_client__ensure_ra_session_url(&old_sess2_url,
-                                                merge_b->ra_session2,
-                                                url1, pool));
+  /* Temporarily point our second RA session to URL1, too.  We use
+     this to request individual file contents. */
+  SVN_ERR(svn_client__ensure_ra_session_url(&old_sess2_url,
+                                            merge_b->ra_session2,
+                                            url1, pool));
 
   /* Get the diff editor and a reporter with which to, ultimately,
      drive it. */
