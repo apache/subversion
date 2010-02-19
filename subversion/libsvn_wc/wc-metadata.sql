@@ -169,7 +169,7 @@ CREATE INDEX I_PARENT ON BASE_NODE (wc_id, parent_relpath);
 /* The PRISTINE table keeps track of pristine texts. Each pristine text is
    stored in a file which may be compressed. Each pristine text is
    referenced by any number of rows in the BASE_NODE and WORKING_NODE
-   tables.
+   and ACTUAL_NODE tables.
  */
 /* ### BH: Will CHECKSUM be the same key as used for indexing a file in the
            Pristine store? If that key is SHA-1 we might need an alternative
