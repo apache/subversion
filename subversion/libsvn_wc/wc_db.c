@@ -3176,7 +3176,6 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
 
     {
       svn_wc_entry_t tmp_entry;
-      const char *name = entry->name;
 
       tmp_entry.schedule = svn_wc_schedule_delete;
 
