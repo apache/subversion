@@ -1849,7 +1849,9 @@ write_entry(svn_wc__db_t *db,
            then it needs a BASE node. */
        if (! (entry->copied
                || (this_dir->copied
-                   && this_dir->schedule == svn_wc_schedule_add)))
+                   && (this_dir->schedule == svn_wc_schedule_add ||
+                       this_dir->schedule == svn_wc_schedule_delete ||
+                       this_dir->schedule == svn_wc_schedule_replace))))
           base_node = MAYBE_ALLOC(base_node, scratch_pool);
         break;
 
