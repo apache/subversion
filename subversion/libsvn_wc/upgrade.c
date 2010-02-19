@@ -284,12 +284,23 @@ get_versioned_subdirs(apr_array_header_t **children,
 }
 
 
+static const char *
+build_lockfile_path(const char *local_dir_abspath,
+                    apr_pool_t *result_pool)
+{
+  return svn_dirent_join_many(result_pool,
+                              local_dir_abspath,
+                              ".svn", /* ### switch to dynamic?  */
+                              "lock",
+                              NULL);
+}
+
+
 /* Create a physical lock file in the admin directory for ABSPATH.  */
 static svn_error_t *
 create_physical_lock(const char *abspath, apr_pool_t *scratch_pool)
 {
-  const char *lock_abspath =
-        svn_dirent_join_many(scratch_pool, abspath, ".svn", "lock", NULL);
+  const char *lock_abspath = build_lockfile_path(abspath, scratch_pool);
   svn_error_t *err;
   apr_file_t *file;
 
@@ -306,6 +317,31 @@ create_physical_lock(const char *abspath, apr_pool_t *scratch_pool)
     }
 
   return svn_error_return(err);
+}
+
+
+static void
+wipe_wcprops(const char *wcroot_abspath, apr_pool_t *scratch_pool)
+{
+  /* For formats <= SVN_WC__WCPROPS_MANY_FILES_VERSION, we toss the wcprops
+     for the directory itself, and then all the wcprops for the files.  */
+  svn_error_clear(svn_io_remove_file2(
+                    svn_wc__adm_child(wcroot_abspath,
+                                      WCPROPS_FNAME_FOR_DIR,
+                                      scratch_pool),
+                    TRUE, scratch_pool));
+  svn_error_clear(svn_io_remove_dir2(
+                    svn_wc__adm_child(wcroot_abspath,
+                                      WCPROPS_SUBDIR_FOR_FILES,
+                                      scratch_pool),
+                    FALSE, NULL, NULL, scratch_pool));
+
+  /* And for later formats, they are aggregated into one file.  */
+  svn_error_clear(svn_io_remove_file2(
+                    svn_wc__adm_child(wcroot_abspath,
+                                      WCPROPS_ALL_DATA,
+                                      scratch_pool),
+                    TRUE, scratch_pool));
 }
 
 
@@ -415,32 +451,17 @@ upgrade_to_wcng(svn_wc__db_t *db,
                                                  scratch_pool));
     }
 
-  if (old_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
+  /* Zap any wcprops files.  */
+  wipe_wcprops(dir_abspath, scratch_pool);
+
+  /* We don't want README.txt or empty-file after format 7.  */
+  if (old_format <= 7)
     {
-      /* Remove wcprops directory, dir-props, README.txt and empty-file
-         files.
-         We just silently ignore errors, because keeping these files is
-         not catastrophic. */
-
-      svn_error_clear(svn_io_remove_dir2(
-          svn_wc__adm_child(dir_abspath, WCPROPS_SUBDIR_FOR_FILES,
-                            scratch_pool),
-          FALSE, NULL, NULL, scratch_pool));
-
-      svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(dir_abspath, WCPROPS_FNAME_FOR_DIR, scratch_pool),
-          TRUE, scratch_pool));
       svn_error_clear(svn_io_remove_file2(
           svn_wc__adm_child(dir_abspath, ADM_EMPTY_FILE, scratch_pool),
           TRUE, scratch_pool));
       svn_error_clear(svn_io_remove_file2(
           svn_wc__adm_child(dir_abspath, ADM_README, scratch_pool),
-          TRUE, scratch_pool));
-    }
-  else
-    {
-      svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(dir_abspath, WCPROPS_ALL_DATA, scratch_pool),
           TRUE, scratch_pool));
     }
 
@@ -452,8 +473,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
   /* ### well, actually.... we don't recursively delete subdir locks here,
      ### we rely upon their own upgrade processes to do it. */
   SVN_ERR(svn_wc__db_wclock_remove(db, dir_abspath, scratch_pool));
-  SVN_ERR(svn_io_remove_file2(svn_dirent_join_many(scratch_pool, dir_abspath,
-                                                   ".svn", "lock", NULL),
+  SVN_ERR(svn_io_remove_file2(build_lockfile_path(dir_abspath, scratch_pool),
                               FALSE,
                               scratch_pool));
 
@@ -463,7 +483,17 @@ upgrade_to_wcng(svn_wc__db_t *db,
 }
 
 
-#if 0
+static svn_error_t *
+bump_to_13(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_13));
+
+  return SVN_NO_ERROR;
+}
+
+
+#if 0 /* ### no tree conflict migration yet */
+
 /* ### duplicated from wc_db.c  */
 static const char *
 kind_to_word(svn_wc__db_kind_t kind)
@@ -701,7 +731,8 @@ migrate_tree_conflicts(svn_sqlite__db_t *sdb,
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
-#endif
+
+#endif /* ### no tree conflict migration yet */
 
 
 static svn_error_t *
@@ -709,9 +740,8 @@ migrate_locks(const char *wcroot_abspath,
               svn_sqlite__db_t *sdb,
               apr_pool_t *scratch_pool)
 {
-  const char *lockfile_abspath =
-        svn_dirent_join_many(scratch_pool, wcroot_abspath, ".svn", "lock",
-                             NULL);
+  const char *lockfile_abspath = build_lockfile_path(wcroot_abspath,
+                                                     scratch_pool);
   svn_node_kind_t kind;
 
   SVN_ERR(svn_io_check_path(lockfile_abspath, &kind, scratch_pool));
@@ -723,13 +753,44 @@ migrate_locks(const char *wcroot_abspath,
          ### go to a centralized system. */
       SVN_ERR(svn_sqlite__bindf(stmt, "is", 1, ""));
       SVN_ERR(svn_sqlite__step_done(stmt));
-
-      SVN_ERR(svn_io_remove_file2(lockfile_abspath, FALSE, scratch_pool));
     }
 
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+bump_to_14(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  const char *wcroot_abspath = baton;
+
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_14));
+
+  SVN_ERR(migrate_locks(wcroot_abspath, sdb, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+bump_to_15(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_15));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+bump_to_16(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_16));
+
+  return SVN_NO_ERROR;
+}
+
+
+#if 0 /* ### no props migration yet */
 
 static svn_error_t *
 migrate_props(const char *wcroot_abspath,
@@ -867,36 +928,38 @@ migrate_props(const char *wcroot_abspath,
 }
 
 
-#if 0
-/* This implements svn_sqlite__transaction_callback_t */
 static svn_error_t *
-bump_database_to_17(void *baton,
-                    svn_sqlite__db_t *sdb,
-                    apr_pool_t *scratch_pool)
+bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
+  const char *wcroot_abspath = baton;
+
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_17));
+
+  /* ### or something like this... */
+  SVN_ERR(migrate_props(wcroot_abspath, sdb, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+#endif /* ### no props migration yet */
+
+
+
+#if 0 /* ### no tree conflict migration yet */
+
+static svn_error_t *
+bump_to_XXX(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  const char *wcroot_abspath = baton;
+
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_XXX));
+
   SVN_ERR(migrate_tree_conflicts(sdb, scratch_pool));
 
-  /* NOTE: this *is* transactional, so the version will not be bumped
-     unless our overall transaction is committed.  */
-  SVN_ERR(svn_sqlite__set_schema_version(sdb, 15, scratch_pool));
-
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-bump_to_17(const char *wcroot_abspath,
-           svn_sqlite__db_t *sdb,
-           apr_pool_t *scratch_pool)
-{
-  /* ### migrate disk bits here.  */
-
-  /* Perform the database upgrade. The last thing this does is to bump
-     the recorded version to 17.  */
-  SVN_ERR(svn_sqlite__with_transaction(sdb, bump_database_to_17, NULL, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-#endif
+#endif /* ### no tree conflict migration yet */
 
 
 svn_error_t *
@@ -917,40 +980,71 @@ svn_wc__upgrade_sdb(int *result_format,
   /* ### need lock-out. only one upgrade at a time. note that other code
      ### cannot use this un-upgraded database until we finish the upgrade.  */
 
-  /* ### the code to upgrade has bit-rotted. just fail for now.  */
-  SVN_ERR_MALFUNCTION();
-
   /* Note: none of these have "break" statements; the fall-through is
      intentional. */
   switch (start_format)
     {
       case 12:
-        /* Nothing to do for the 12->13 bump.  */
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_13,
+                                             (void *)wcroot_abspath,
+                                             scratch_pool));
+
+        /* If the transaction succeeded, then we don't need the wcprops        
+           files. We stopped writing them partway through format 12, but
+           we may be upgrading from an "early 12" and need to toss those
+           files. We aren't going to migrate them because it is *also*
+           possible that current/real data is sitting within the database.
+           This is why STMT_UPGRADE_TO_13 just clears the 'dav_cache'
+           column -- we cannot definitely state that the column values
+           are Proper.  */
+        /* ### what happens if this throws an error? meaning: next time thru
+           ### the upgrade cycle, we start at format 13? there could be
+           ### stray files. maybe just always wipe these during any
+           ### format upgrade.  */
+        wipe_wcprops(wcroot_abspath, scratch_pool);
         ++start_format;
 
       case 13:
-        SVN_ERR(migrate_locks(wcroot_abspath, sdb, scratch_pool));
-        SVN_ERR(svn_sqlite__set_schema_version(sdb, 14, scratch_pool));
+        /* Build WCLOCKS and migrate any physical lock.  */
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_14,
+                                             (void *)wcroot_abspath,
+                                             scratch_pool));
+
+        /* If the transaction succeeded, then any lock has been migrated,
+           and we can toss the physical file.  */
+        svn_error_clear(svn_io_remove_file2(
+                          build_lockfile_path(wcroot_abspath, scratch_pool),
+                          TRUE,
+                          scratch_pool));
         ++start_format;
 
       case 14:
-        /* Nothing to do here for format 15 */
-        SVN_ERR(svn_sqlite__set_schema_version(sdb, 15, scratch_pool));
+        /* Revamp the recording of 'excluded' nodes.  */
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_15,
+                                             (void *)wcroot_abspath,
+                                             scratch_pool));
         ++start_format;
 
       case 15:
-        /* Nothing to do here for format 16 */
-        SVN_ERR(svn_sqlite__set_schema_version(sdb, 16, scratch_pool));
+        /* Perform some minor changes to the schema.  */
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_16,
+                                             (void *)wcroot_abspath,
+                                             scratch_pool));
         ++start_format;
 
 #if 0
       case 16:
-        SVN_ERR(migrate_props(wcroot_abspath, sdb, scratch_pool));
-        SVN_ERR(svn_sqlite__set_schema_version(sdb, 17, scratch_pool));
+        /* Move the properties into the database.  */
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_17,
+                                             (void *)wcroot_abspath,
+                                             scratch_pool));
         ++start_format;
 
-      case 17:
-        SVN_ERR(bump_to_17(wcroot_abspath, sdb, scratch_pool));
+      case 99:
+        /* Revamp the recording of tree conflicts.  */
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_XXX,
+                                             (void *)wcroot_abspath,
+                                             scratch_pool));
         ++start_format;
 #endif
 
