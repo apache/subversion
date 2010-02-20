@@ -230,6 +230,7 @@ CREATE TABLE WORKING_NODE (
   /* parent's local_relpath for aggregating children of a given parent.
      this will be "" if the parent is the wcroot.  Since a wcroot will
      never have a WORKING node the parent_relpath will never be null. */
+  /* ### would be nice to make this column NOT NULL.  */
   parent_relpath  TEXT,
 
   /* Is this node "present" or has it been excluded for some reason?
@@ -343,7 +344,7 @@ CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (wc_id, parent_relpath);
 
 /* The ACTUAL_NODE table describes text changes and property changes on each
    node in the WC, relative to the WORKING_NODE table row for the same path
-   (if present) or else to the BASE_TABLE row for the same path (which must
+   (if present) or else to the BASE_NODE row for the same path (which must
    exist in that case).
 
    The ACTUAL_NODE table row for a given path exists if the node at that
@@ -552,7 +553,7 @@ ADD COLUMN md5_checksum  TEXT;
 
 /* Add the locked_levels column to record the depth of a lock. */
 ALTER TABLE WC_LOCK
-ADD COLUMN locked_levels INTEGER NOT NULL DEFAULT -1;;
+ADD COLUMN locked_levels  INTEGER NOT NULL DEFAULT -1;
 
 /* Default the depth of existing locks to 0. */
 UPDATE wc_lock
