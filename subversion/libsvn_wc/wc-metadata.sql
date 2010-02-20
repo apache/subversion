@@ -228,8 +228,8 @@ CREATE TABLE WORKING_NODE (
   local_relpath  TEXT NOT NULL,
 
   /* parent's local_relpath for aggregating children of a given parent.
-     this will be "" if the parent is the wcroot. NULL if this is the
-     wcroot node. */
+     Since a wcroot will never have a WORKING node the parent_relpath
+     will never be null. */
   parent_relpath  TEXT,
 
   /* Is this node "present" or has it been excluded for some reason?
