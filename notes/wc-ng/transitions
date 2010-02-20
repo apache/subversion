@@ -115,6 +115,9 @@ key
 - : operation not allowed or no change required
 x : original state not allowed
 
+### it would be nice to call out the operations that are "not allowed"
+
+
 notes
 -----
 [1] <none> if the root of the copy, not-present otherwise.
@@ -140,3 +143,11 @@ automatically delete an excluded node?  There are arguments for and
 against.  If commit doesn't automatically delete the node can the user
 delete it in the working tree?  Like WORKING_NODE.presence incomplete
 the problem is that revert would not be able to cope.
+
+### gstein sez: commit should NOT do a deletion for an excluded node.
+###   the presence is typically used for (say) copying a large tree,
+###   and then excluding the subtree within the copy from the working
+###   copy. maybe the user doesn't want all that stuff there. at
+###   commit time, the copy is performed, and nothing more. if you
+###   wanted to delete this node, then switch it to depth=empty
+###   and presence=not-present.
