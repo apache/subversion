@@ -1,12 +1,22 @@
-Delete and revert both operate on WORKING_NODE.presence while leaving
-BASE_NODE.presence untouched.
+Delete and revert both modify WORKING_NODE while leaving BASE_NODE (if
+it exists) unchanged.  The two operations can modify or delete the
+WORKING_NODE associated with a BASE_NODE.  Delete can also create a
+new WORKING_NODE.
 
-Possible BASE_NODE.presence values:
-<none>, normal, incomplete, absent, excluded, not-present
+The original state before the operation can be characterised by
+BASE_NODE.presence and WORKING_NODE.presence, and only
+WORKING_NODE.presence changes (except when a new WORKING_NODE is
+created).
 
-Possible WORKING_NODE.presence values:
-<none>, normal, incomplete, absent, excluded, not-present, base-deleted
+There are 5 possible BASE_NODE.presence values: 
+  normal, incomplete, absent, excluded, not-present
+in addition to <none> when the BASE_NODE does not exist.
 
+There are 6 possible WORKING_NODE.presence values:
+  normal, incomplete, absent, excluded, not-present, base-deleted
+in addition to <none> when the WORKING_NODE does not exist.
+
+When removing a WORKING_NODE any ACTUAL_NODE is also removed.
 
 ------original-state-------            ----delete----
 BASE_NODE      WORKING_NODE            WORKING_NODE
@@ -18,15 +28,15 @@ BASE_NODE      WORKING_NODE            WORKING_NODE
 <none>         not-present             -
 <none>         base-deleted            -
 normal         <none>                  base-deleted
-normal         normal                  <none> or not-present [1]
-normal         incomplete              <none> or - [2]
+normal         normal                  base-deleted or not-present [4]
+normal         incomplete              base-deleted or - [5]
 normal         absent                  -
 normal         excluded                - [3]
 normal         not-present             -
 normal         base-deleted            -
 incomplete     <none>                  base-deleted
-incomplete     normal                  <none> or not-present [1]
-incomplete     incomplete              <none> or - [2]
+incomplete     normal                  base-deleted or not-present [4]
+incomplete     incomplete              base-deleted or - [5]
 incomplete     absent                  -
 incomplete     excluded                - [3]
 incomplete     not-present             -
@@ -39,8 +49,8 @@ absent         excluded                x
 absent         not-present             x
 absent         base-deleted            x
 excluded       <none>                  base-deleted
-excluded       normal                  <none> or not-present [1]
-excluded       incomplete              <none> or - [2]
+excluded       normal                  base-deleted or not-present [4]
+excluded       incomplete              base-deleted or - [5]
 excluded       absent                  -
 excluded       excluded                - [3]
 excluded       not-present             -
@@ -57,22 +67,22 @@ not-present    base-deleted            -
 ------original-state-------            ---revert---
 BASE_NODE      WORKING_NODE            WORKING_NODE
 <none>         <none>                  -
-<none>         normal                  <none> or - [4]
-<none>         incomplete              <none> or - [4]
+<none>         normal                  <none> or - [6]
+<none>         incomplete              <none> or - [6]
 <none>         absent                  -
 <none>         excluded                -
 <none>         not-present             normal
 <none>         base-deleted            <none>
 normal         <none>                  -
-normal         normal                  <none> or - [4]
-normal         incomplete              <none> or - [4]
+normal         normal                  <none> or - [6]
+normal         incomplete              <none> or - [6]
 normal         absent                  -
 normal         excluded                -
 normal         not-present             normal
 normal         base-deleted            <none>
 incomplete     <none>                  -
-incomplete     normal                  <none> or - [4]
-incomplete     incomplete              <none> or - [4]
+incomplete     normal                  <none> or - [6]
+incomplete     incomplete              <none> or - [6]
 incomplete     absent                  -
 incomplete     excluded                -
 incomplete     not-present             normal
@@ -85,15 +95,15 @@ absent         excluded                x
 absent         not-present             x
 absent         base-deleted            x
 excluded       <none>                  -
-excluded       normal                  <none> or - [4]
-excluded       incomplete              <none> or - [4]
+excluded       normal                  <none> or - [6]
+excluded       incomplete              <none> or - [6]
 excluded       absent                  -
 excluded       excluded                -
 excluded       not-present             normal
 excluded       base-deleted            <none>
 not-present    <none>                  -
-not-present    normal                  <none> or - [4]
-not-present    incomplete              <none> or - [4]
+not-present    normal                  <none> or - [6]
+not-present    incomplete              <none> or - [6]
 not-present    absent                  -
 not-present    excluded                -
 not-present    not-present             normal
@@ -110,7 +120,9 @@ notes
 [1] <none> if the root of the copy, not-present otherwise.
 [2] <none> if the root of the copy, - otherwise
 [3] A sparse copy, should commit automatically delete an excluded node?
-[4] <none> if the root of the copy, - otherwise
+[4] base-deleted if the root of the copy, not-present otherwise
+[5] base-deleted if the root of the copy, - otherwise
+[6] <none> if the root of the copy, - otherwise
 
 
 Generally BASE_NODE.presence normal and incomplete are treated the
