@@ -165,12 +165,6 @@ Candidate changes:
    Justification:
      Bug reporter says, "For me, this problem forces us to stay with
      Subversion 1.4."
-   Notes:
-     rhuijben: This patch triggers several errors in the python test suite
-               for me. File Deletes are asynchronous on Windows and after
-               applying this patch some delete calls in our test suite's
-               cleanup code get an access denied, which is not handled there.
-               The tests themselves complete successfully.
    Branch:
      ^/subversion/branches/1.6.x-r898963
    Votes:
