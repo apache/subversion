@@ -15,17 +15,6 @@ Status of 1.6.10:
 
 Candidate changes:
 
- * r878078, r878088, r878102, r878196
-   Make KWallet window attached to terminal window.
-   Justification:
-     Without this change, KWallet window can appear behind terminal window
-     and is left after killing terminal.
-   Votes:
-     +1: arfrever
-     -0: peters, stsp (without r878196) (code is ugly and Linux-specific -
-                                            would getenv("WINDOWID") work
-                                            instead?)
-
  * r878216, r878341, r878343, r876862, r877203, r877595, r877665, r877597, r878269,
    r878321, r878399, r878423, r878426
    Fix issue #3432 'Merge can record mergeinfo from natural history gaps'
@@ -158,18 +147,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r898963, r899826, r899828
-   Fix issue #3501 - Repos & wc issues with some NFS clients, notably NetBSD,
-   due to buggy interaction between unlink, rewinddir, and NFS caching.
-   Branch resolves two trivial conflicts.
-   Justification:
-     Bug reporter says, "For me, this problem forces us to stay with
-     Subversion 1.4."
-   Branch:
-     ^/subversion/branches/1.6.x-r898963
-   Votes:
-     +1: peters, rhuijben
-
  * r901752
    Allow 'svn log' on an uncommitted copy/move destination.
    Notes:
@@ -282,5 +259,28 @@ Veto-blocked changes:
      -1: rhuijben (Introduces new features and changes output;
                    I think it should be removed from STATUS)
 
+ * r878078, r878088, r878102, r878196
+   Make KWallet window attached to terminal window.
+   Justification:
+     Without this change, KWallet window can appear behind terminal window
+     and is left after killing terminal.
+   Votes:
+     +1: arfrever
+     -0: peters, -1: stsp ("/proc/%ld/stat" is ugly and Linux-specific -
+                           would just getenv("WINDOWID") work instead?)
+
 Approved changes:
 =================
+
+ * r898963, r899826, r899828
+   Fix issue #3501 - Repos & wc issues with some NFS clients, notably NetBSD,
+   due to buggy interaction between unlink, rewinddir, and NFS caching.
+   Branch resolves two trivial conflicts.
+   Justification:
+     Bug reporter says, "For me, this problem forces us to stay with
+     Subversion 1.4."
+   Branch:
+     ^/subversion/branches/1.6.x-r898963
+   Votes:
+     +1: peters, rhuijben, stsp
+
