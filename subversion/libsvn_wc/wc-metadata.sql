@@ -84,9 +84,9 @@ CREATE TABLE BASE_NODE (
   local_relpath  TEXT NOT NULL,
 
   /* the repository this node is part of, and the relative path [to its
-     root] within that repository.  these may be NULL, implying it should
-     be derived from the parent and local_relpath.  non-NULL typically
-     indicates a switched node.
+     root] within revision "revnum" of that repository.  These may be NULL,
+     implying they should be derived from the parent and local_relpath.
+     Non-NULL typically indicates a switched node.
 
      Note: they must both be NULL, or both non-NULL. */
   repos_id  INTEGER REFERENCES REPOSITORY (id),
@@ -101,25 +101,32 @@ CREATE TABLE BASE_NODE (
      The "base-deleted" presence value is not allowed.  */
   presence  TEXT NOT NULL,
 
-  /* what kind of node is this? may be "unknown" if the node is not present */
+  /* The node kind: "file", "dir", or "symlink", or "unknown" if the node is
+     not present. */
   kind  TEXT NOT NULL,
 
-  /* this could be NULL for non-present nodes -- no info. */
+  /* The revision number in which "repos_relpath" applies in "repos_id".
+     this could be NULL for non-present nodes -- no info. */
   revnum  INTEGER,
 
-  /* if this node is a file, then the checksum and its translated size
-     (given the properties on this file) are specified by the following
-     two fields. translated_size may be NULL if the size has not (yet)
-     been computed. The kind of checksum (e.g. SHA-1, MD5) is stored in the
-     value */
+  /* If this node is a file, then the SHA-1 checksum of the pristine text. */
   checksum  TEXT,
+
+  /* The size in bytes of the working file when it had no local text
+     modifications. This means the size of the text when translated from
+     repository-normal format to working copy format with EOL style
+     translated and keywords expanded according to the properties in the
+     "properties" column of this row.
+
+     NULL if this node is not a file or if the size has not (yet) been
+     computed. */
   translated_size  INTEGER,
 
   /* Information about the last change to this node. changed_rev must be
      not-null if this node has presence=="normal". changed_date and
      changed_author may be null if the corresponding revprops are missing.
 
-     All three values may be null for non-present nodes.  */
+     All three values are null for a not-present node.  */
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,
@@ -244,7 +251,7 @@ CREATE TABLE WORKING_NODE (
 
      not-present: the node (or parent) was originally copied or moved-here.
        A subtree of that source has since been deleted. There may be
-       underlying BASE node to replace. For an add-without-history, the
+       underlying BASE node to replace. For a move-here or copy-here, the
        records are simply removed rather than switched to not-present.
        Note this reflects a deletion only. It is not possible move-away
        nodes from the WORKING tree. The purported destination would receive
@@ -263,18 +270,25 @@ CREATE TABLE WORKING_NODE (
   /* the kind of the new node. may be "unknown" if the node is not present. */
   kind  TEXT NOT NULL,
 
-  /* if this node was added-with-history AND is a file, then the checksum
-     and its translated size (given the properties on this file) are
-     specified by the following two fields. translated_size may be NULL
-     if the size has not (yet) been computed. */
+  /* The SHA-1 checksum of the pristine text, if this node is a file and was
+     moved here or copied here, else NULL. */
   checksum  TEXT,
+
+  /* The size in bytes of the working file when it had no local text
+     modifications. This means the size of the text when translated from
+     repository-normal format to working copy format with EOL style
+     translated and keywords expanded according to the properties in the
+     "properties" column of this row.
+
+     NULL if this node is not a file, or is not moved here or copied here,
+     or if the size has not (yet) been computed. */
   translated_size  INTEGER,
 
-  /* If this node was added-with-history, then the following fields may
+  /* If this node was moved here or copied here, then the following fields may
      have information about their source node. See BASE_NODE.changed_* for
      more information.
 
-     For added or not-present nodes, these may be null.  */
+     For an added or not-present node, these are null.  */
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,
