@@ -287,6 +287,30 @@ svn_client__wc_delete(const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Callback baton for delete_with_write_lock_baton. */
+struct delete_with_write_lock_baton
+{
+  const char *path;
+  svn_boolean_t force;
+  svn_boolean_t keep_local;
+  svn_client_ctx_t *ctx;
+};
+
+/* Implements svn_wc__with_write_lock_func_t. */
+static svn_error_t *
+delete_with_write_lock_func(void *baton,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  struct delete_with_write_lock_baton *args = baton;
+
+  /* Let the working copy library handle the PATH. */
+  return svn_client__wc_delete(args->path, args->force,
+                               FALSE, args->keep_local,
+                               args->ctx->notify_func2,
+                               args->ctx->notify_baton2,
+                               args->ctx, scratch_pool);
+}
 
 svn_error_t *
 svn_client_delete3(svn_commit_info_t **commit_info_p,
@@ -311,28 +335,24 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
 
       for (i = 0; i < paths->nelts; i++)
         {
-          svn_wc_adm_access_t *adm_access;
+          struct delete_with_write_lock_baton dwwlb;
           const char *path = APR_ARRAY_IDX(paths, i, const char *);
-          const char *parent_path;
+          const char *local_abspath;
 
           svn_pool_clear(subpool);
-          parent_path = svn_dirent_dirname(path, subpool);
 
           /* See if the user wants us to stop. */
           if (ctx->cancel_func)
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-          /* Let the working copy library handle the PATH. */
-          SVN_ERR(svn_wc__adm_open_in_context(&adm_access, ctx->wc_ctx,
-                                              parent_path, TRUE, -1,
-                                              ctx->cancel_func,
-                                              ctx->cancel_baton, subpool));
-          SVN_ERR(svn_client__wc_delete(path, force,
-                                        FALSE, keep_local,
-                                        ctx->notify_func2,
-                                        ctx->notify_baton2,
-                                        ctx, subpool));
-          SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
+          dwwlb.path = path;
+          dwwlb.force = force;
+          dwwlb.keep_local = keep_local;
+          dwwlb.ctx = ctx;
+          SVN_ERR(svn_wc__call_with_write_lock(delete_with_write_lock_func,
+                                               &dwwlb, ctx->wc_ctx,
+                                               local_abspath, pool, subpool));
         }
       svn_pool_destroy(subpool);
     }
