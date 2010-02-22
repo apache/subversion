@@ -607,8 +607,8 @@ to help us keep track of whom to consider for commit access.  The list
 was generated from "svn&nbsp;log" output by <a
 href="http://svn.apache.org/repos/asf/subversion/trunk/tools/dev/contribulyze.py"
 >contribulyze.py</a>, which looks for log messages that use the <a
-href="http://subversion.tigris.org/hacking.html#crediting">special
-contribution format</a>.</p>
+href="http://subversion.apache.org/docs/community-guide/conventions.html#crediting"
+>special contribution format</a>.</p>
 
 <p><i>Please do not use this list as a generic guide to who has
 contributed what to Subversion!</i> It omits existing <a
@@ -717,7 +717,7 @@ def usage():
   print('in which you can browse to see who contributed what.')
   print('')
   print('The log input should use the contribution-tracking format defined')
-  print('in http://subversion.tigris.org/hacking.html#crediting.')
+  print('in http://subversion.apache.org/docs/community-guide/conventions.html#crediting.')
   print('')
   print('Options:')
   print('')

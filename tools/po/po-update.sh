@@ -78,7 +78,7 @@ make_pot()
     --flag=file_printf_from_utf8:3:c-format \
     --flag=do_io_file_wrapper_cleanup:3:c-format \
     --flag=do_io_file_wrapper_cleanup:4:c-format \
-    --msgid-bugs-address=dev@subversion.tigris.org \
+    --msgid-bugs-address=dev@subversion.apache.org \
     --add-comments --files-from=- -o subversion.pot )
     pot_done=1
   fi

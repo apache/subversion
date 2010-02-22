@@ -1,6 +1,6 @@
 "FSFS" is the name of a Subversion filesystem implementation, an
 alternative to the original Berkeley DB-based implementation.  See
-http://subversion.tigris.org/ for information about Subversion.  This
+http://subversion.apache.org/ for information about Subversion.  This
 is a propaganda document for FSFS, to help people determine if they
 should be interested in using it instead of the BDB filesystem.
 

@@ -143,8 +143,8 @@ no thorough investigation of existing solutions which might meet the
 above requirements has been done.  This incomplete canvasing may not
 paint an accurate picture, however.
 
-A branch <https://svn.collab.net/repos/svn/branches/server-l10n> has
-been created to explore a solution to the above requirements.  While
+A branch <http://svn.apache.org/repos/asf/subversion/branches/server-l10n/>
+has been created to explore a solution to the above requirements.  While
 the L10N module is important, how that module is applied to both the
 server-side and client-side is possibly even more so; an
 implementation which meets the requirements should not dramatically
