@@ -266,8 +266,9 @@ Veto-blocked changes:
      and is left after killing terminal.
    Votes:
      +1: arfrever
-     -0: peters, -1: stsp ("/proc/%ld/stat" is ugly and Linux-specific -
-                           would just getenv("WINDOWID") work instead?)
+     -0: peters
+     -1: stsp ("/proc/%ld/stat" is ugly and Linux-specific -
+               would just getenv("WINDOWID") work instead?)
 
 Approved changes:
 =================
