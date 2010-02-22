@@ -1901,9 +1901,8 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
  this causes problems if you are using this kind of loop inside a
  function that is recursively deleting a directory, because when you
  get around to removing the directory it will still have something in
- it.
-
- Similar problem has been observed on FreeBSD.
+ it. A similar problem has been observed in other BSDs. This bug has
+ since been fixed. See http://www.vnode.ch/fixing_seekdir for details.
 
  The workaround is to delete the files only _after_ the initial
  directory scan.  A previous workaround involving rewinddir is
@@ -1940,11 +1939,11 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
     {
       /* if the directory doesn't exist, our mission is accomplished */
       if (ignore_enoent && APR_STATUS_IS_ENOENT(err->apr_err))
-	{
-	  svn_error_clear(err);
-	  return SVN_NO_ERROR;
-	}
-      return err;
+        {
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      return svn_error_return(err);
     }
 
   for (ent = apr_hash_first(subpool, dirents); ent; ent = apr_hash_next(ent))
