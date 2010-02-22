@@ -271,16 +271,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r898963, r899826, r899828
-   Fix issue #3501 - Repos & wc issues with some NFS clients, notably NetBSD,
-   due to buggy interaction between unlink, rewinddir, and NFS caching.
-   Branch resolves two trivial conflicts.
-   Justification:
-     Bug reporter says, "For me, this problem forces us to stay with
-     Subversion 1.4."
-   Branch:
-     ^/subversion/branches/1.6.x-r898963
-   Votes:
-     +1: peters, rhuijben, stsp
-
