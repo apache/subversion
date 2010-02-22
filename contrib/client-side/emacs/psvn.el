@@ -28,7 +28,7 @@
 ;; if you upgrade to a higher version, you need to do a fresh checkout
 
 ;; psvn.el is an interface for the revision control tool subversion
-;; (see http://subversion.tigris.org)
+;; (see http://subversion.apache.org)
 ;; psvn.el provides a similar interface for subversion as pcl-cvs for cvs.
 ;; At the moment the following commands are implemented:
 ;;

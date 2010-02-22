@@ -79,8 +79,8 @@ Dir.chdir(archive_dir) do
     s.date = Time.now
     s.version = Svn::Core::VER_NUM
     s.summary = "The Ruby bindings for Subversion."
-    s.email = "dev@subversion.tigris.org"
-    s.homepage = "http://subversion.tigris.org/"
+    s.email = "dev@subversion.apache.org"
+    s.homepage = "http://subversion.apache.org/"
     s.description = s.summary
     s.authors = ["Kouhei Sutou"]
     s.files = Dir.glob(File.join("**", "*")).delete_if {|x| /\.gem$/i =~ x}

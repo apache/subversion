@@ -47,7 +47,7 @@ us test this code, you're very welcome to download and test these packages.
 If you are looking for a copy of Subversion for production use, this
 is <i>not it</i>; you should instead grab the latest stable release
 from the <a
-href="http://subversion.tigris.org/project_packages.html">Download
+href="http://subversion.apache.org/packages.html">Download
 area</a>.</p>
 
 <h2 style="font-size: 18pt">Note to operating system distro package
