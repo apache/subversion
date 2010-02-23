@@ -235,6 +235,14 @@ where wc_id = ?1 and local_relpath = ?2;
 update working_node set depth = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_WORKING_PRESENCE
+update working_node set presence = ?3
+where wc_id = ?1 and local_relpath =?2;
+
+-- STMT_UPDATE_WORKING_KIND
+update working_node set kind = ?3
+where wc_id = ?1 and local_relpath =?2;
+
 -- STMT_LOOK_FOR_WORK
 SELECT id FROM WORK_QUEUE LIMIT 1;
 
@@ -303,6 +311,15 @@ INSERT OR REPLACE INTO BASE_NODE (
 /* NOTE: ?6 is duplicated because we insert the same value in two columns.  */
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15);
 
+-- STMT_INSERT_WORKING_NODE_FROM_BASE_NODE
+INSERT INTO WORKING_NODE (
+    wc_id, local_relpath, parent_relpath, presence, kind, checksum,
+    translated_size, changed_rev, changed_date, changed_author, depth,
+    symlink_target, last_mod_time )
+SELECT wc_id, local_relpath, parent_relpath, presence, kind, checksum,
+    translated_size, changed_rev, changed_date, changed_author, depth,
+    symlink_target, last_mod_time FROM BASE_NODE
+WHERE wc_id = ?1 AND local_relpath = ?2;
 
 /* ------------------------------------------------------------------------- */
 

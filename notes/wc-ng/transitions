@@ -151,3 +151,6 @@ the problem is that revert would not be able to cope.
 ###   commit time, the copy is performed, and nothing more. if you
 ###   wanted to delete this node, then switch it to depth=empty
 ###   and presence=not-present.
+
+Pre-centralisation directories can be obstructed, any such nodes can
+be treated as presence=normal.
