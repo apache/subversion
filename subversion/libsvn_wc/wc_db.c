@@ -2130,6 +2130,63 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
 }
 
 
+/* A WORKING version of svn_wc__db_base_get_info, stripped down to
+   just the status column. */
+static svn_error_t *
+db_working_get_status(svn_wc__db_status_t *status,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    {
+      svn_wc__db_kind_t node_kind = svn_sqlite__column_token(stmt, 1,
+                                                             kind_map);
+
+      *status = svn_sqlite__column_token(stmt, 0, presence_map);
+
+      if (node_kind == svn_wc__db_kind_subdir
+          && *status == svn_wc__db_status_normal)
+        {
+          /* We're looking at the subdir record in the *parent* directory,
+             which implies per-dir .svn subdirs. We should be looking
+             at the subdir itself; therefore, it is missing or obstructed
+             in some way. Inform the caller.  */
+          *status = svn_wc__db_status_obstructed;
+        }
+    }
+  else
+    {
+      err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                              _("The node '%s' was not found."),
+                              svn_dirent_local_style(local_abspath,
+                                                     scratch_pool));
+    }
+
+
+  return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+}
+
+
 svn_error_t *
 svn_wc__db_base_get_prop(const svn_string_t **propval,
                          svn_wc__db_t *db,
@@ -3136,66 +3193,317 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Update the working node for LOCAL_ABSPATH setting presence=STATUS */
+static svn_error_t *
+db_working_update_presence(svn_wc__db_status_t status,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  wcroot_t *wcroot;
+  svn_sqlite__stmt_t *stmt;
+  svn_sqlite__db_t *sdb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+  wcroot = pdh->wcroot;
+  sdb = wcroot->sdb;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_WORKING_PRESENCE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__bind_token(stmt, 3, presence_map, status));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  flush_entries(pdh);
+
+  /* ### Parent stub?  I don't know; I'll punt for now as it passes
+         the regression tests as is and the problem will evaporate
+         when the db is centralised. */
+
+  return SVN_NO_ERROR;
+}
+
+/* Delete working and actual nodes for LOCAL_ABSPATH */
+static svn_error_t *
+db_working_actual_remove(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  wcroot_t *wcroot;
+  svn_sqlite__db_t *sdb;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  VERIFY_USABLE_PDH(pdh);
+  wcroot = pdh->wcroot;
+  sdb = wcroot->sdb;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  flush_entries(pdh);
+
+  if (!strcmp(local_relpath, ""))
+    {
+      /* ### Delete parent stub. Remove when db is centralised. */
+      SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                                 scratch_pool));
+      local_relpath = svn_dirent_basename(local_abspath, NULL);
+      VERIFY_USABLE_PDH(pdh);
+      wcroot = pdh->wcroot;
+      sdb = wcroot->sdb;
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_WORKING_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+      flush_entries(pdh);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Insert a working node for LOCAL_ABSPATH with presence=STATUS. */
+static svn_error_t *
+db_working_insert(svn_wc__db_status_t status,
+                  svn_wc__db_t *db,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  wcroot_t *wcroot;
+  svn_sqlite__stmt_t *stmt;
+  svn_sqlite__db_t *sdb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+  wcroot = pdh->wcroot;
+  sdb = wcroot->sdb;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_INSERT_WORKING_NODE_FROM_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* ### Do update as part of the insert so that there is only one query? */
+  SVN_ERR(db_working_update_presence(status, db, local_abspath, scratch_pool));
+
+  flush_entries(pdh);
+
+  if (!strcmp(local_relpath, ""))
+    {
+      /* ### Insert parent stub. Remove when db is centralised. */
+      SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                                 scratch_pool));
+      local_relpath = svn_dirent_basename(local_abspath, NULL);
+      VERIFY_USABLE_PDH(pdh);
+      wcroot = pdh->wcroot;
+      sdb = wcroot->sdb;
+      /* ### Should the parent stub have a full row like this? */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_INSERT_WORKING_NODE_FROM_BASE_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_UPDATE_WORKING_PRESENCE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__bind_token(stmt, 3, presence_map, status));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_WORKING_KIND));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 3, "subdir"));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+      flush_entries(pdh);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Set *ROOT_OF_COPY to TRUE if LOCAL_ABSPATH is the root of a copy,
+   to FALSE otherwise. */
+static svn_error_t*
+is_root_of_copy(svn_boolean_t *root_of_copy,
+                svn_wc__db_t *db,
+                const char *local_abspath,
+                apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  const char *op_root_abspath;
+  const char *original_repos_relpath, *original_repos_root;
+  const char *original_repos_uuid;
+  svn_revnum_t original_revision;
+
+  SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath,
+                                   NULL, NULL, NULL,
+                                   &original_repos_relpath,
+                                   &original_repos_root,
+                                   &original_repos_uuid,
+                                   &original_revision,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+  SVN_ERR_ASSERT(status == svn_wc__db_status_added
+                 || status == svn_wc__db_status_copied);
+
+  *root_of_copy = op_root_abspath && !strcmp(local_abspath, op_root_abspath);
+
+  if (*root_of_copy && status == svn_wc__db_status_copied)
+    {
+      /* ### merge sets the wrong copyfrom when adding a tree and so
+             the root detection above is unreliable.  I'm "fixing" it
+             here because I just need to detect whether this is an
+             instance of the merge bug, and that's easier than fixing
+             scan_addition or merge. */
+      const char *parent_abspath = svn_dirent_dirname(local_abspath,
+                                                      scratch_pool);
+      svn_wc__db_status_t parent_status;
+      const char *parent_original_repos_relpath, *parent_original_repos_root;
+      const char *parent_original_repos_uuid;
+      svn_revnum_t parent_original_revision;
+      svn_error_t *err;
+
+      err = svn_wc__db_scan_addition(&parent_status,
+                                     NULL, NULL, NULL, NULL,
+                                     &parent_original_repos_relpath,
+                                     &parent_original_repos_root,
+                                     &parent_original_repos_uuid,
+                                     &parent_original_revision,
+                                     db, parent_abspath,
+                                     scratch_pool, scratch_pool);
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+            return svn_error_return(err);
+          /* It really is a root */
+          svn_error_clear(err);
+        }
+      else if (parent_status == svn_wc__db_status_copied
+               && original_revision == parent_original_revision
+               && !strcmp(original_repos_uuid, parent_original_repos_uuid)
+               && !strcmp(original_repos_root, parent_original_repos_root)
+               && !strcmp(original_repos_relpath,
+                          svn_dirent_join(parent_original_repos_relpath,
+                                          svn_dirent_basename(local_abspath,
+                                                              scratch_pool),
+                                          scratch_pool)))
+        /* An instance of the merge bug */
+        *root_of_copy = FALSE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Delete LOCAL_ABSPATH.  Implements the delete transition from
+   notes/wc-ng/transitions. */
 svn_error_t *
 svn_wc__db_temp_op_delete(svn_wc__db_t *db,
                           const char *local_abspath,
                           apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
   svn_error_t *err;
+  svn_boolean_t base_none, working_none, new_working_none;
+  svn_wc__db_status_t base_status, working_status, new_working_status;
 
-  /* ### Initial implementation: Copy the entry based code here. This will be
-         more logical when we look at BASE_NODE and WORKING_NODE */
-
-  err = svn_wc__get_entry(&entry, db, local_abspath, FALSE, svn_node_unknown,
-                          FALSE, scratch_pool, scratch_pool);
-
-  if (err && err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
+  err = svn_wc__db_base_get_info(&base_status,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 db, local_abspath, scratch_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
+      base_none = TRUE;
       svn_error_clear(err);
-      err = NULL;
     }
+  else if (! err)
+    base_none = FALSE;
   else
-    SVN_ERR(err);
+    return svn_error_return(err);
 
-  if (entry->schedule == svn_wc_schedule_add)
+  if (!base_none && base_status == svn_wc__db_status_absent)
+    return SVN_NO_ERROR; /* ### return an error? */
+
+  err = db_working_get_status(&working_status,
+                              db, local_abspath, scratch_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
-      svn_boolean_t deleted;
+      working_none = TRUE;
+      svn_error_clear(err);
+    }
+  else if (! err)
+    working_none = FALSE;
+  else
+    return svn_error_return(err);
 
-      SVN_ERR(svn_wc__node_is_deleted(&deleted, db, local_abspath, scratch_pool));
+  if (base_none && working_none)
+    return SVN_NO_ERROR; /* ### return an error? */
 
-      if (!deleted)
+  new_working_none = working_none;
+  new_working_status = working_status;
+  if (working_none)
+    {
+      if (base_status == svn_wc__db_status_normal
+          || base_status == svn_wc__db_status_obstructed
+          || base_status == svn_wc__db_status_incomplete
+          || base_status == svn_wc__db_status_excluded)
         {
-          /* This case is easy.. Just delete the entry */
-          SVN_ERR(svn_wc__entry_remove(db, local_abspath, scratch_pool));
-          SVN_ERR(svn_wc__db_temp_forget_directory(db, local_abspath, scratch_pool));
-
-          return SVN_NO_ERROR;
+          new_working_none = FALSE;
+          new_working_status = svn_wc__db_status_base_deleted;
         }
     }
-
+  else if ((working_status == svn_wc__db_status_normal
+            || working_status == svn_wc__db_status_obstructed)
+           && (base_none || base_status == svn_wc__db_status_not_present))
     {
-      svn_wc_entry_t tmp_entry;
-
-      tmp_entry.schedule = svn_wc_schedule_delete;
-
-      /* Don't update the directory entries for locally added directories
-         and directories that are missing. (The first scenario abort()s
-         and the second gives a WC missing error) */
-      if (entry->kind != svn_node_dir ||
-          (entry->schedule != svn_wc_schedule_add && *entry->name == '\0'))
-        SVN_ERR(svn_wc__entry_modify2(db, local_abspath, entry->kind,
-                                      FALSE, &tmp_entry,
-                                      SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                                      scratch_pool));
-
-      /* And update the parent stub */
-      if (entry->kind == svn_node_dir)
-        SVN_ERR(svn_wc__entry_modify2(db, local_abspath, svn_node_dir,
-                                      TRUE, &tmp_entry,
-                                      SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                                      scratch_pool));
+      svn_boolean_t root_of_copy;
+      SVN_ERR(is_root_of_copy(&root_of_copy, db, local_abspath, scratch_pool));
+      if (root_of_copy)
+        new_working_none = TRUE;
+      else
+        new_working_status = svn_wc__db_status_not_present;
     }
+  else if (working_status == svn_wc__db_status_normal)
+    {
+      svn_boolean_t root_of_copy;
+      SVN_ERR(is_root_of_copy(&root_of_copy, db, local_abspath, scratch_pool));
+      if (root_of_copy)
+        new_working_status = svn_wc__db_status_base_deleted;
+      else
+        new_working_status = svn_wc__db_status_not_present;
+    }
+  else if (working_status == svn_wc__db_status_incomplete)
+    {
+      svn_boolean_t root_of_copy;
+      SVN_ERR(is_root_of_copy(&root_of_copy, db, local_abspath, scratch_pool));
+      if (root_of_copy)
+        new_working_none = TRUE;
+    }
+
+  if (new_working_none && !working_none)
+    SVN_ERR(db_working_actual_remove(db, local_abspath, scratch_pool));
+  else if (!new_working_none && working_none)
+    SVN_ERR(db_working_insert(new_working_status,
+                              db, local_abspath, scratch_pool));
+  else if (!new_working_none && !working_none
+           && new_working_status != working_status)
+    SVN_ERR(db_working_update_presence(new_working_status,
+                                       db, local_abspath, scratch_pool));
+  /* ### else nothing to do, return an error? */
 
   return SVN_NO_ERROR;
 }
