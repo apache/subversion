@@ -1,5 +1,5 @@
-The SVN Vision meeting will be held on March 24-26 in NYC.  This is a
-preliminary agenda; feel free to hack it at will.
+The SVN Vision meeting will be held on March 24-26 at the GooglePlex
+in NYC.  This is a preliminary agenda; feel free to hack it at will.
 
 The general plan is to discuss stuff on March 24, 25, and then spend the
 morning of March 26 putting the results together in order to present to dev@.
@@ -8,6 +8,7 @@ then bid each other farewell until Berlin in June.
 
 Potential topics for discussion:
  * Feedback from users we've talked to
- * Beyond Subversion 1.7.
  * What is the new Vision for Subversion?
+ * Beyond Subversion 1.7 -- a high-level roadmap proposal
+ * How do we encourage additional investment (of time, talent, and treasure)?
  * Subversion 2.0 (the Elephant in the Room)
