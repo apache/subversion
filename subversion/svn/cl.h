@@ -379,7 +379,11 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
    unversioned items found in the working copy.
 
    When DETAILED is set, and REPOS_LOCKS is set, treat missing repository locks
-   as broken WC locks. */
+   as broken WC locks.
+   
+   Increment *TEXT_CONFLICTS, *PROP_CONFLICTS, or *TREE_CONFLICTS if
+   a conflict was encountered.
+   */
 svn_error_t *
 svn_cl__print_status(const char *path,
                      const svn_wc_status2_t *status,
@@ -387,6 +391,9 @@ svn_cl__print_status(const char *path,
                      svn_boolean_t show_last_committed,
                      svn_boolean_t skip_unrecognized,
                      svn_boolean_t repos_locks,
+                     unsigned int *text_conflicts,
+                     unsigned int *prop_conflicts,
+                     unsigned int *tree_conflicts,
                      apr_pool_t *pool);
 
 

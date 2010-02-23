@@ -105,6 +105,9 @@ print_status(const char *path,
              svn_boolean_t show_last_committed,
              svn_boolean_t repos_locks,
              const svn_wc_status2_t *status,
+             unsigned int *text_conflicts,
+             unsigned int *prop_conflicts,
+             unsigned int *tree_conflicts,
              apr_pool_t *pool)
 {
   enum svn_wc_status_kind text_status = status->text_status;
@@ -122,6 +125,14 @@ print_status(const char *path,
       svn_cl__get_human_readable_tree_conflict_description(
         &desc, status->tree_conflict, pool);
       tree_desc_line = apr_psprintf(pool, "\n      >   %s", desc);
+      (*tree_conflicts)++;
+    }
+  else
+    {
+      if (text_status == svn_wc_status_conflicted)
+        (*text_conflicts)++;
+      if (status->prop_status == svn_wc_status_conflicted)
+        (*prop_conflicts)++;
     }
 
   if (detailed)
@@ -363,6 +374,9 @@ svn_cl__print_status(const char *path,
                      svn_boolean_t show_last_committed,
                      svn_boolean_t skip_unrecognized,
                      svn_boolean_t repos_locks,
+                     unsigned int *text_conflicts,
+                     unsigned int *prop_conflicts,
+                     unsigned int *tree_conflicts,
                      apr_pool_t *pool)
 {
   if (! status
@@ -373,5 +387,5 @@ svn_cl__print_status(const char *path,
 
   return print_status(svn_dirent_local_style(path, pool),
                       detailed, show_last_committed, repos_locks, status,
-                      pool);
+                      text_conflicts, prop_conflicts, tree_conflicts, pool);
 }
