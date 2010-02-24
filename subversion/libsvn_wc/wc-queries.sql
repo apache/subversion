@@ -315,7 +315,7 @@ INSERT INTO WORKING_NODE (
 SELECT wc_id, local_relpath, parent_relpath, ?3 AS presence, kind, checksum,
     translated_size, changed_rev, changed_date, changed_author, depth,
     symlink_target, last_mod_time FROM BASE_NODE
-WHERE wc_id = ?1 AND local_relpath = ?2
+WHERE wc_id = ?1 AND local_relpath = ?2;
 
 /* ------------------------------------------------------------------------- */
 
