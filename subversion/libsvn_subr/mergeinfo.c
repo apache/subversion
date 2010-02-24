@@ -1917,12 +1917,14 @@ svn_mergeinfo__filter_catalog_by_ranges(svn_mergeinfo_catalog_t *filtered_cat,
                                         svn_mergeinfo_catalog_t catalog,
                                         svn_revnum_t youngest_rev,
                                         svn_revnum_t oldest_rev,
-                                        apr_pool_t *pool)
+                                        svn_boolean_t include_range,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
 
-  *filtered_cat = apr_hash_make(pool);
-  for (hi = apr_hash_first(pool, catalog);
+  *filtered_cat = apr_hash_make(result_pool);
+  for (hi = apr_hash_first(scratch_pool, catalog);
        hi;
        hi = apr_hash_next(hi))
     {
@@ -1938,10 +1940,12 @@ svn_mergeinfo__filter_catalog_by_ranges(svn_mergeinfo_catalog_t *filtered_cat,
                                                         mergeinfo,
                                                         youngest_rev,
                                                         oldest_rev,
-                                                        pool));
+                                                        include_range,
+                                                        result_pool,
+                                                        scratch_pool));
       if (apr_hash_count(filtered_mergeinfo))
         apr_hash_set(*filtered_cat,
-                     apr_pstrdup(pool, path),
+                     apr_pstrdup(result_pool, path),
                      APR_HASH_KEY_STRING,
                      filtered_mergeinfo);
     }
@@ -1954,17 +1958,22 @@ svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
                                           svn_mergeinfo_t mergeinfo,
                                           svn_revnum_t youngest_rev,
                                           svn_revnum_t oldest_rev,
-                                          apr_pool_t *pool)
+                                          svn_boolean_t include_range,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool)
 {
-  *filtered_mergeinfo = apr_hash_make(pool);
+  *filtered_mergeinfo = apr_hash_make(result_pool);
 
   if (mergeinfo)
     {
       apr_hash_index_t *hi;
       apr_array_header_t *filter_rangelist =
-        svn_rangelist__initialize(oldest_rev, youngest_rev, TRUE, pool);
+        svn_rangelist__initialize(oldest_rev, youngest_rev, TRUE,
+                                  scratch_pool);
 
-      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(scratch_pool, mergeinfo);
+           hi;
+           hi = apr_hash_next(hi))
         {
           const void *key;
           void *value;
@@ -1979,12 +1988,17 @@ svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
             {
               apr_array_header_t *new_rangelist;
 
-              SVN_ERR(svn_rangelist_intersect(&new_rangelist, rangelist,
-                                              filter_rangelist, FALSE,
-                                              pool));
+              if (include_range)
+                SVN_ERR(svn_rangelist_intersect(&new_rangelist, rangelist,
+                                                filter_rangelist, FALSE,
+                                                result_pool));
+              else
+                SVN_ERR(svn_rangelist_remove(&new_rangelist, filter_rangelist,
+                                             rangelist, FALSE, result_pool));
+
               if (new_rangelist->nelts)
                 apr_hash_set(*filtered_mergeinfo,
-                             apr_pstrdup(pool, path),
+                             apr_pstrdup(result_pool, path),
                              APR_HASH_KEY_STRING,
                              new_rangelist);
             }
