@@ -439,28 +439,27 @@ get_empty_tmp_file(const char **tmp_filename,
 }
 
 
-/* Return the url for LOCAL_ABSPATH of type KIND which can be unknown,
- * allocated in RESULT_POOL, or null if unable to obtain a url.
+/* Return the url for LOCAL_ABSPATH allocated in RESULT_POOL, or NULL if
+ * unable to obtain a url.
  *
  * Use WC_CTX to retrieve information on LOCAL_ABSPATH, and do
  * all temporary allocation in SCRATCH_POOL.
  */
 static const char *
-get_entry_url(svn_wc_context_t *wc_ctx,
-              const char *local_abspath,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
+node_get_url_ignore_errors(svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   const char *url;
 
   err = svn_wc__node_get_url(&url, wc_ctx, local_abspath, result_pool,
                                                           scratch_pool);
-
-  if (err || !url)
+  if (err)
     {
       svn_error_clear(err);
-      return NULL;
+      url = NULL;
     }
 
   return url;
@@ -591,8 +590,8 @@ make_dir_baton(struct dir_baton **d_p,
       /* updates are the odds ones.  if we're updating a path already
          present on disk, we use its original URL.  otherwise, we'll
          telescope based on its parent's URL. */
-      d->new_URL = get_entry_url(eb->wc_ctx, d->local_abspath,
-                                 dir_pool, scratch_pool);
+      d->new_URL = node_get_url_ignore_errors(eb->wc_ctx, d->local_abspath,
+                                              dir_pool, scratch_pool);
       if ((! d->new_URL) && pb)
         d->new_URL = svn_path_url_add_component2(pb->new_URL, d->name,
                                                  dir_pool);
@@ -1005,10 +1004,11 @@ make_file_baton(struct file_baton **f_p,
     }
   else
     {
-      f->new_URL = get_entry_url(pb->edit_baton->wc_ctx,
-                                 svn_dirent_join(pb->local_abspath,
-                                                 f->name, scratch_pool),
-                                 file_pool, scratch_pool);
+      f->new_URL = node_get_url_ignore_errors(pb->edit_baton->wc_ctx,
+                                              svn_dirent_join(pb->local_abspath,
+                                                              f->name,
+                                                              scratch_pool),
+                                              file_pool, scratch_pool);
     }
 
   f->pool              = file_pool;
