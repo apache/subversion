@@ -3106,7 +3106,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
 svn_error_t *
 svn_client_cleanup(const char *dir,
                    svn_client_ctx_t *ctx,
-                   apr_pool_t *pool);
+                   apr_pool_t *scratch_pool);
 
 
 /** @} */
