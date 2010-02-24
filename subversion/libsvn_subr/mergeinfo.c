@@ -1622,13 +1622,7 @@ svn_rangelist_inheritable2(apr_array_header_t **inheritable_rangelist,
           /* We want only the non-inheritable ranges bound by START
              and END removed. */
           apr_array_header_t *ranges_inheritable =
-            apr_array_make(scratch_pool, 0, sizeof(svn_merge_range_t *));
-          svn_merge_range_t *range = apr_palloc(scratch_pool, sizeof(*range));
-
-          range->start = start;
-          range->end = end;
-          range->inheritable = inheritable;
-          APR_ARRAY_PUSH(ranges_inheritable, svn_merge_range_t *) = range;
+            svn_rangelist__initialize(start, end, inheritable, scratch_pool);
 
           if (rangelist->nelts)
             SVN_ERR(svn_rangelist_remove(inheritable_rangelist,
@@ -1967,14 +1961,8 @@ svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
   if (mergeinfo)
     {
       apr_hash_index_t *hi;
-      svn_merge_range_t *range = apr_palloc(pool, sizeof(*range));
       apr_array_header_t *filter_rangelist =
-        apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
-
-      range->start = oldest_rev;
-      range->end = youngest_rev;
-      range->inheritable = TRUE;
-      APR_ARRAY_PUSH(filter_rangelist, svn_merge_range_t *) = range;
+        svn_rangelist__initialize(oldest_rev, youngest_rev, TRUE, pool);
 
       for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
         {
@@ -2050,3 +2038,21 @@ svn_mergeinfo__string_has_noninheritable(svn_boolean_t *is_noninheritable,
 
   return SVN_NO_ERROR;
 }
+
+apr_array_header_t *
+svn_rangelist__initialize(svn_revnum_t start,
+                          svn_revnum_t end,
+                          svn_boolean_t inheritable,
+                          apr_pool_t *result_pool)
+{
+  apr_array_header_t *rangelist =
+    apr_array_make(result_pool, 1, sizeof(svn_merge_range_t *));
+  svn_merge_range_t *range = apr_pcalloc(result_pool, sizeof(*range));
+
+  range->start = start;
+  range->end = end;
+  range->inheritable = inheritable;
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
+  return rangelist;
+}
+
