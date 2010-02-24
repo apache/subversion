@@ -58,12 +58,6 @@ struct notify_baton
   unsigned int tree_conflicts;
   unsigned int skipped_paths;
 
-  /* Conflict stats for update and merge (for externals). */
-  unsigned int ext_text_conflicts;
-  unsigned int ext_prop_conflicts;
-  unsigned int ext_tree_conflicts;
-  unsigned int ext_skipped_paths;
-
   /* The cwd, for use in decomposing absolute paths. */
   const char *path_prefix;
 };
@@ -73,32 +67,19 @@ svn_error_t *
 svn_cl__print_conflict_stats(void *notify_baton, apr_pool_t *pool)
 {
   struct notify_baton *nb = notify_baton;
-  const char *header;
   unsigned int text_conflicts;
   unsigned int prop_conflicts;
   unsigned int tree_conflicts;
   unsigned int skipped_paths;
 
-  if (nb->in_external)
-    {
-      header = _("Summary of conflicts in external item:\n");
-      text_conflicts = nb->ext_text_conflicts;
-      prop_conflicts = nb->ext_prop_conflicts;
-      tree_conflicts = nb->ext_tree_conflicts;
-      skipped_paths = nb->ext_skipped_paths;
-    }
-  else
-    {
-      header = _("Summary of conflicts:\n");
-      text_conflicts = nb->text_conflicts;
-      prop_conflicts = nb->prop_conflicts;
-      tree_conflicts = nb->tree_conflicts;
-      skipped_paths = nb->skipped_paths;
-    }
+  text_conflicts = nb->text_conflicts;
+  prop_conflicts = nb->prop_conflicts;
+  tree_conflicts = nb->tree_conflicts;
+  skipped_paths = nb->skipped_paths;
 
   if (text_conflicts > 0 || prop_conflicts > 0
     || tree_conflicts > 0 || skipped_paths > 0)
-      SVN_ERR(svn_cmdline_printf(pool, "%s", header));
+      SVN_ERR(svn_cmdline_printf(pool, "%s", _("Summary of conflicts:\n")));
 
   if (text_conflicts > 0)
     SVN_ERR(svn_cmdline_printf
@@ -146,8 +127,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   switch (n->action)
     {
     case svn_wc_notify_skip:
-      nb->in_external ? nb->ext_skipped_paths++
-                      : nb->skipped_paths++;
+      nb->skipped_paths++;
       if (n->content_state == svn_wc_notify_state_missing)
         {
           if ((err = svn_cmdline_printf
@@ -194,8 +174,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       nb->received_some_change = TRUE;
       if (n->content_state == svn_wc_notify_state_conflicted)
         {
-          nb->in_external ? nb->ext_text_conflicts++
-                          : nb->text_conflicts++;
+          nb->text_conflicts++;
           if ((err = svn_cmdline_printf(pool, "C    %s\n", path_local)))
             goto print_error;
         }
@@ -210,8 +189,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       nb->received_some_change = TRUE;
       if (n->content_state == svn_wc_notify_state_conflicted)
         {
-          nb->in_external ? nb->ext_text_conflicts++
-                          : nb->text_conflicts++;
+          nb->text_conflicts++;
           statchar_buf[0] = 'C';
         }
       else
@@ -219,8 +197,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
       if (n->prop_state == svn_wc_notify_state_conflicted)
         {
-          nb->in_external ? nb->ext_prop_conflicts++
-                          : nb->prop_conflicts++;
+          nb->prop_conflicts++;
           statchar_buf[1] = 'C';
         }
       else if (n->prop_state == svn_wc_notify_state_merged)
@@ -286,8 +263,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         nb->received_some_change = TRUE;
         if (n->content_state == svn_wc_notify_state_conflicted)
           {
-            nb->in_external ? nb->ext_text_conflicts++
-                            : nb->text_conflicts++;
+            nb->text_conflicts++;
             statchar_buf[0] = 'C';
           }
         else if (n->kind == svn_node_file)
@@ -391,8 +367,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       {
         if (n->content_state == svn_wc_notify_state_conflicted)
           {
-            nb->in_external ? nb->ext_text_conflicts++
-                            : nb->text_conflicts++;
+            nb->text_conflicts++;
             statchar_buf[0] = 'C';
           }
         else if (n->kind == svn_node_file)
@@ -405,8 +380,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
         if (n->prop_state == svn_wc_notify_state_conflicted)
           {
-            nb->in_external ? nb->ext_prop_conflicts++
-                            : nb->prop_conflicts++;
+            nb->prop_conflicts++;
             statchar_buf[1] = 'C';
           }
         else if (n->prop_state == svn_wc_notify_state_merged)
@@ -451,8 +425,6 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         {
           svn_handle_warning2(stderr, n->err, "svn: ");
           nb->in_external = FALSE;
-          nb->ext_text_conflicts = nb->ext_prop_conflicts
-            = nb->ext_tree_conflicts = nb->ext_skipped_paths = 0;
           if ((err = svn_cmdline_printf(pool, "\n")))
             goto print_error;
         }
@@ -768,8 +740,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_tree_conflict:
-      nb->in_external ? nb->ext_tree_conflicts++
-                      : nb->tree_conflicts++;
+      nb->tree_conflicts++;
       if ((err = svn_cmdline_printf(pool, "   C %s\n", path_local)))
         goto print_error;
       break;
@@ -856,10 +827,6 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
   nb->prop_conflicts = 0;
   nb->tree_conflicts = 0;
   nb->skipped_paths = 0;
-  nb->ext_text_conflicts = 0;
-  nb->ext_prop_conflicts = 0;
-  nb->ext_tree_conflicts = 0;
-  nb->ext_skipped_paths = 0;
   SVN_ERR(svn_dirent_get_absolute(&nb->path_prefix, "", pool));
 
   *notify_func_p = notify;
