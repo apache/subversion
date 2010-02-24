@@ -191,6 +191,15 @@ svn_mergeinfo__string_has_noninheritable(svn_boolean_t *is_noninheritable,
                                          const char *mergeinfo_str,
                                          apr_pool_t *scratch_pool);
 
+/* Return a rangelist with one svn_merge_range_t * element defined by START,
+   END, and INHERITABLE.  The rangelist and its contents are allocated in
+   RESULT_POOL. */
+apr_array_header_t *
+svn_rangelist__initialize(svn_revnum_t start,
+                          svn_revnum_t end,
+                          svn_boolean_t inheritable,
+                          apr_pool_t *result_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

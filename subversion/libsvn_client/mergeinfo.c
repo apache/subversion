@@ -1303,19 +1303,15 @@ filter_log_entry_with_rangelist(void *baton,
                                 apr_pool_t *pool)
 {
   struct filter_log_entry_baton_t *fleb = baton;
-  svn_merge_range_t *range;
   apr_array_header_t *intersection, *this_rangelist;
 
   if (fleb->ctx->cancel_func)
     SVN_ERR(fleb->ctx->cancel_func(fleb->ctx->cancel_baton));
 
-  this_rangelist = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
-  range = apr_pcalloc(pool, sizeof(*range));
-  range->start = log_entry->revision - 1;
-  range->end = log_entry->revision;
-  range->inheritable = TRUE;
-  APR_ARRAY_PUSH(this_rangelist, svn_merge_range_t *) = range;
-
+  this_rangelist = svn_rangelist__initialize(log_entry->revision - 1,
+                                             log_entry->revision,
+                                             TRUE, pool);
+  
   /* Don't consider inheritance yet, see if LOG_ENTRY->REVISION is
      fully or partially represented in BATON->RANGELIST. */
   SVN_ERR(svn_rangelist_intersect(&intersection, fleb->rangelist,
@@ -1344,14 +1340,9 @@ filter_log_entry_with_rangelist(void *baton,
       apr_hash_index_t *hi;
       svn_boolean_t all_subtrees_have_this_rev = TRUE;
       apr_array_header_t *this_rev_rangelist =
-        apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+        svn_rangelist__initialize(log_entry->revision - 1,
+                                  log_entry->revision, TRUE, pool);
       apr_pool_t *iterpool = svn_pool_create(pool);
-
-      range = apr_pcalloc(pool, sizeof(*range));
-      range->start = log_entry->revision - 1;
-      range->end = log_entry->revision;
-      range->inheritable = TRUE;
-      APR_ARRAY_PUSH(this_rev_rangelist, svn_merge_range_t *) = range;
 
       for (hi = apr_hash_first(pool, log_entry->changed_paths2);
            hi;
@@ -2016,13 +2007,11 @@ svn_client_mergeinfo_log(const char *path_or_url,
         APR_ARRAY_IDX(master_inheritable_rangelist,
         master_inheritable_rangelist->nelts - 1,
         svn_merge_range_t *), scratch_pool);
-      apr_array_header_t *youngest_rangelist;
-
-      youngest_range->start = youngest_range->end - 1;
-      youngest_rangelist = apr_array_make(scratch_pool, 1,
-                                          sizeof(svn_merge_range_t *));
-      APR_ARRAY_PUSH(youngest_rangelist, svn_merge_range_t *) =
-        youngest_range;
+      apr_array_header_t *youngest_rangelist =
+        svn_rangelist__initialize(youngest_range->end - 1,
+                                  youngest_range->end,
+                                  youngest_range->inheritable,
+                                  scratch_pool);;
 
       for (hi = apr_hash_first(scratch_pool, source_history);
            hi;
