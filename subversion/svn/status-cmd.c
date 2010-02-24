@@ -79,11 +79,9 @@ struct status_cache
 static svn_error_t *
 print_conflict_stats(struct status_baton *sb, apr_pool_t *pool)
 {
-  const char *header = _("Summary of conflicts:\n");
-
   if (sb->text_conflicts > 0 || sb->prop_conflicts > 0 ||
       sb->tree_conflicts > 0)
-      SVN_ERR(svn_cmdline_printf(pool, "%s", header));
+      SVN_ERR(svn_cmdline_printf(pool, "%s", _("Summary of conflicts:\n")));
 
   if (sb->text_conflicts > 0)
     SVN_ERR(svn_cmdline_printf
