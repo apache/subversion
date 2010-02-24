@@ -3307,10 +3307,8 @@ db_working_insert(svn_wc__db_status_t status,
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                     STMT_INSERT_WORKING_NODE_FROM_BASE_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__bind_token(stmt, 3, presence_map, status));
   SVN_ERR(svn_sqlite__step_done(stmt));
-
-  /* ### Do update as part of the insert so that there is only one query? */
-  SVN_ERR(db_working_update_presence(status, db, local_abspath, scratch_pool));
 
   flush_entries(pdh);
 
@@ -3326,10 +3324,6 @@ db_working_insert(svn_wc__db_status_t status,
       /* ### Should the parent stub have a full row like this? */
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                     STMT_INSERT_WORKING_NODE_FROM_BASE_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                        STMT_UPDATE_WORKING_PRESENCE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__bind_token(stmt, 3, presence_map, status));
       SVN_ERR(svn_sqlite__step_done(stmt));
