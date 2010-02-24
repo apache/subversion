@@ -239,10 +239,6 @@ where wc_id = ?1 and local_relpath = ?2;
 update working_node set presence = ?3
 where wc_id = ?1 and local_relpath =?2;
 
--- STMT_UPDATE_WORKING_KIND
-update working_node set kind = ?3
-where wc_id = ?1 and local_relpath =?2;
-
 -- STMT_LOOK_FOR_WORK
 SELECT id FROM WORK_QUEUE LIMIT 1;
 

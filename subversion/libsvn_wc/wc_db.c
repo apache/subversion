@@ -2131,12 +2131,19 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
 
 
 /* A WORKING version of svn_wc__db_base_get_info, stripped down to
-   just the status column. */
+   just the status column.
+
+   ### This function should not exist!  What I really want is presence
+   ### not status, and so it's a mistake to return an
+   ### svn_wc__db_status_t here as it doesn't have quite the same
+   ### meaning as status returned by other functions.  I think I need
+   ### to abandon this function and work out how to decode status back
+   ### into presence :(
+*/
 static svn_error_t *
 db_working_get_status(svn_wc__db_status_t *status,
                       svn_wc__db_t *db,
                       const char *local_abspath,
-                      apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -3326,23 +3333,19 @@ db_working_insert(svn_wc__db_status_t status,
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__bind_token(stmt, 3, presence_map, status));
       SVN_ERR(svn_sqlite__step_done(stmt));
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_WORKING_KIND));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 3, "subdir"));
-      SVN_ERR(svn_sqlite__step_done(stmt));
       flush_entries(pdh);
     }
 
   return SVN_NO_ERROR;
 }
 
-/* Set *ROOT_OF_COPY to TRUE if LOCAL_ABSPATH is the root of a copy,
-   to FALSE otherwise. */
+/* Set *ROOT_OF_COPY to TRUE if LOCAL_ABSPATH is an add or the root of
+   a copy, to FALSE otherwise. */
 static svn_error_t*
-is_root_of_copy(svn_boolean_t *root_of_copy,
-                svn_wc__db_t *db,
-                const char *local_abspath,
-                apr_pool_t *scratch_pool)
+is_add_or_root_of_copy(svn_boolean_t *add_or_root_of_copy,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
   const char *op_root_abspath;
@@ -3362,9 +3365,11 @@ is_root_of_copy(svn_boolean_t *root_of_copy,
   SVN_ERR_ASSERT(status == svn_wc__db_status_added
                  || status == svn_wc__db_status_copied);
 
-  *root_of_copy = op_root_abspath && !strcmp(local_abspath, op_root_abspath);
+  *add_or_root_of_copy = (status == svn_wc__db_status_added
+                          || (op_root_abspath
+                              && !strcmp(local_abspath, op_root_abspath)));
 
-  if (*root_of_copy && status == svn_wc__db_status_copied)
+  if (*add_or_root_of_copy && status == svn_wc__db_status_copied)
     {
       /* ### merge sets the wrong copyfrom when adding a tree and so
              the root detection above is unreliable.  I'm "fixing" it
@@ -3404,7 +3409,7 @@ is_root_of_copy(svn_boolean_t *root_of_copy,
                                                               scratch_pool),
                                           scratch_pool)))
         /* An instance of the merge bug */
-        *root_of_copy = FALSE;
+        *add_or_root_of_copy = FALSE;
     }
 
   return SVN_NO_ERROR;
@@ -3439,7 +3444,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
     return SVN_NO_ERROR; /* ### return an error? */
 
   err = db_working_get_status(&working_status,
-                              db, local_abspath, scratch_pool, scratch_pool);
+                              db, local_abspath, scratch_pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       working_none = TRUE;
@@ -3470,27 +3475,30 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
             || working_status == svn_wc__db_status_obstructed)
            && (base_none || base_status == svn_wc__db_status_not_present))
     {
-      svn_boolean_t root_of_copy;
-      SVN_ERR(is_root_of_copy(&root_of_copy, db, local_abspath, scratch_pool));
-      if (root_of_copy)
+      svn_boolean_t add_or_root_of_copy;
+      SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
+                                     db, local_abspath, scratch_pool));
+      if (add_or_root_of_copy)
         new_working_none = TRUE;
       else
         new_working_status = svn_wc__db_status_not_present;
     }
   else if (working_status == svn_wc__db_status_normal)
     {
-      svn_boolean_t root_of_copy;
-      SVN_ERR(is_root_of_copy(&root_of_copy, db, local_abspath, scratch_pool));
-      if (root_of_copy)
+      svn_boolean_t add_or_root_of_copy;
+      SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
+                                     db, local_abspath, scratch_pool));
+      if (add_or_root_of_copy)
         new_working_status = svn_wc__db_status_base_deleted;
       else
         new_working_status = svn_wc__db_status_not_present;
     }
   else if (working_status == svn_wc__db_status_incomplete)
     {
-      svn_boolean_t root_of_copy;
-      SVN_ERR(is_root_of_copy(&root_of_copy, db, local_abspath, scratch_pool));
-      if (root_of_copy)
+      svn_boolean_t add_or_root_of_copy;
+      SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
+                                     db, local_abspath, scratch_pool));
+      if (add_or_root_of_copy)
         new_working_none = TRUE;
     }
 
