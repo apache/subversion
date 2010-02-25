@@ -304,14 +304,9 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
 {
   svn_error_t *err;
   svn_mergeinfo_t repos_mergeinfo;
-  const char *old_session_url;
   apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
 
   APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
-
-  /* Temporarily point the session at the root of the repository. */
-  SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
-                                            NULL, pool));
 
   /* Fetch the mergeinfo. */
   err = svn_ra_get_mergeinfo(ra_session, &repos_mergeinfo, rel_paths, rev,
@@ -326,10 +321,6 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
       else
         return err;
     }
-
-  /* If we reparented the session, put it back where our caller had it. */
-  if (old_session_url)
-    SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
 
   /* Grab only the mergeinfo provided for REL_PATH. */
   if (repos_mergeinfo)
@@ -392,21 +383,28 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                                NULL, ctx, pool));
           if (apr_hash_get(props, target_wcpath, APR_HASH_KEY_STRING) == NULL)
             {
-              const char *repos_rel_path;
+              const char *session_url = NULL;
+              apr_pool_t *sesspool = NULL;
 
-              if (ra_session == NULL)
-                SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
-                                                             NULL, NULL, NULL,
-                                                             FALSE, TRUE, ctx,
-                                                             pool));
-
-              SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, url,
-                                                        entry->repos, FALSE,
-                                                        ra_session, NULL,
-                                                        pool));
+              if (ra_session)
+                {
+                  SVN_ERR(svn_client__ensure_ra_session_url(&session_url,
+                                                            ra_session,
+                                                            url, pool));
+                }
+              else
+                {
+                  sesspool = svn_pool_create(pool);
+                  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
+                                                               NULL, NULL, NULL,
+                                                               FALSE, TRUE,
+                                                               ctx,
+                                                               sesspool));
+                }
+              
               SVN_ERR(svn_client__get_repos_mergeinfo(ra_session,
                                                       &repos_mergeinfo,
-                                                      repos_rel_path,
+                                                      "",
                                                       target_rev,
                                                       inherit,
                                                       TRUE,
@@ -415,6 +413,18 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                 {
                   *target_mergeinfo = repos_mergeinfo;
                   *indirect = TRUE;
+                }
+
+              /* If we created an RA_SESSION above, destroy it.
+                 Otherwise, if reparented an existing session, point
+                 it back where it was when we were called. */
+              if (sesspool)
+                {
+                  svn_pool_destroy(sesspool);
+                }
+              else if (session_url)
+                {
+                  SVN_ERR(svn_ra_reparent(ra_session, session_url, pool));
                 }
             }
         }

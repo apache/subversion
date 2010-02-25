@@ -2838,7 +2838,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
       svn_boolean_t inherited;
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(recorded_mergeinfo, entry,
                                                     &inherited, FALSE,
-                                                    inherit, ra_session,
+                                                    inherit, NULL,
                                                     target_wcpath,
                                                     adm_access, ctx, pool));
       if (indirect)
