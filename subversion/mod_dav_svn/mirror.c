@@ -128,7 +128,7 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
     locate_ctx_t *ctx = f->ctx;
     apr_status_t rv;
     apr_bucket *bkt;
-    const char *master_uri, *root_dir;
+    const char *master_uri, *root_dir, *canonicalized_uri;
     apr_uri_t uri;
 
     /* Don't filter if we're in a subrequest or we aren't setup to
@@ -143,7 +143,11 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
        (that is, if our root path matches that of the master server). */
     apr_uri_parse(r->pool, master_uri, &uri);
     root_dir = dav_svn__get_root_dir(r);
-    if (strcmp(uri.path, root_dir) == 0) {
+    if (uri.path)
+        canonicalized_uri = svn_dirent_canonicalize(uri.path, r->pool);
+    else
+        canonicalized_uri = uri.path;
+    if (strcmp(canonicalized_uri, root_dir) == 0) {
         ap_remove_input_filter(f);
         return ap_get_brigade(f->next, bb, mode, block, readbytes);
     }
@@ -156,7 +160,7 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
 
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
-        ctx->remotepath = uri.path;
+        ctx->remotepath = canonicalized_uri;
         ctx->remotepath_len = strlen(ctx->remotepath);
         ctx->localpath = root_dir;
         ctx->localpath_len = strlen(ctx->localpath);
@@ -226,7 +230,7 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
         start_foo += strlen(master_uri);
         new_uri = ap_construct_url(r->pool,
                                    apr_pstrcat(r->pool,
-                                               dav_svn__get_root_dir(r),
+                                               dav_svn__get_root_dir(r), "/",
                                                start_foo, NULL),
                                    r);
         apr_table_set(r->headers_out, "Location", new_uri);
@@ -240,7 +244,7 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
     request_rec *r = f->r;
     locate_ctx_t *ctx = f->ctx;
     apr_bucket *bkt;
-    const char *master_uri, *root_dir;
+    const char *master_uri, *root_dir, *canonicalized_uri;
     apr_uri_t uri;
 
     /* Don't filter if we're in a subrequest or we aren't setup to
@@ -255,7 +259,11 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
        (that is, if our root path matches that of the master server). */
     apr_uri_parse(r->pool, master_uri, &uri);
     root_dir = dav_svn__get_root_dir(r);
-    if (strcmp(uri.path, root_dir) == 0) {
+    if (uri.path)
+        canonicalized_uri = svn_dirent_canonicalize(uri.path, r->pool);
+    else
+        canonicalized_uri = uri.path;
+    if (strcmp(canonicalized_uri, root_dir) == 0) {
         ap_remove_output_filter(f);
         return ap_pass_brigade(f->next, bb);
     }
@@ -268,7 +276,7 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
 
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
-        ctx->remotepath = uri.path;
+        ctx->remotepath = canonicalized_uri;
         ctx->remotepath_len = strlen(ctx->remotepath);
         ctx->localpath = root_dir;
         ctx->localpath_len = strlen(ctx->localpath);

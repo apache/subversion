@@ -169,7 +169,8 @@ create_dir_config(apr_pool_t *p, char *dir)
   /* NOTE: dir==NULL creates the default per-dir config */
   dir_conf_t *conf = apr_pcalloc(p, sizeof(*conf));
 
-  conf->root_dir = dir;
+  if (dir)
+    conf->root_dir = svn_dirent_canonicalize(dir, p);
   conf->bulk_updates = CONF_FLAG_ON;
   conf->v2_protocol = CONF_FLAG_ON;
 
