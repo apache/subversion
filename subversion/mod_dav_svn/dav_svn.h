@@ -352,7 +352,7 @@ const char * dav_svn__get_master_uri(request_rec *r);
 /* Return the activities db */
 const char * dav_svn__get_activities_db(request_rec *r);
 
-/* Return the root directory */
+/* Return the root directory in canonicalized form */
 const char * dav_svn__get_root_dir(request_rec *r);
 
 
