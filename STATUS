@@ -256,6 +256,14 @@ Candidate changes:
    Votes:
      +1: kameshj
 
+ * r916286
+   This backport depends on the above group only for the conflict free port.
+   Justification:
+    Vague commit error when server has been configured with <Location /svn/>
+    and write through proxy.
+   Votes:
+     +1: kameshj
+
 Veto-blocked changes:
 =====================
 
