@@ -239,6 +239,23 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r878590, r878607, r878625, r878626, r878627
+   In trunk we optimized the common case of 'find-and-replace with same uri'
+   of proxied content thanks to issue 3445.
+   r878590 is just a change that adds FIXME marker to code comment. We take it
+   to avoid spurious conflicts with other revisions.
+   r878607 Special cases no-op find and replace.
+   "r878625, r878626, r878627" are follow-up to r878607 and the other long 
+   pending Master info leak to the clients.
+   Justification:
+    1. This group has the most common 'optimization' fix of *not* groking the
+       proxied response to find and replace with same string.
+    2. Fixes the master information leak via the Location header.
+    3. Need this to be ported for the other defect to be ported
+       without conflict.
+   Votes:
+     +1: kameshj
+
 Veto-blocked changes:
 =====================
 
