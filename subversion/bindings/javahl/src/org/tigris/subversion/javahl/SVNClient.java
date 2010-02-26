@@ -30,7 +30,6 @@ import java.io.OutputStream;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Date;
 import java.text.ParseException;
 import java.text.DateFormat;
@@ -1686,17 +1685,14 @@ public class SVNClient implements SVNClientInterface
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
         properties(path, revision, pegRevision, Depth.empty, null, callback);
 
-        Map propMap = callback.getProperties(path);
+        Map<String, String> propMap = callback.getProperties(path);
         if (propMap == null)
             return new PropertyData[0];
         PropertyData[] props = new PropertyData[propMap.size()];
 
-        Iterator it = propMap.keySet().iterator();
         int i = 0;
-
-        while (it.hasNext())
+        for (String key : propMap.keySet())
         {
-            String key = (String) it.next();
             props[i] = new PropertyData(path, key, (String) propMap.get(key));
             i++;
         }
