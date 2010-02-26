@@ -29,7 +29,6 @@ import org.apache.subversion.javahl.DirEntry;*/
 
 import java.io.*;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Date;
 
@@ -53,10 +52,8 @@ public class WC
     public void materialize(File root) throws IOException
     {
         // generate all directories first
-        Iterator<Item> it = items.values().iterator();
-        while (it.hasNext())
+        for (Item item : items.values())
         {
-            Item item = it.next();
             if (item.myContent == null) // is a directory
             {
                 File dir = new File(root, item.myPath);
@@ -65,10 +62,8 @@ public class WC
             }
         }
         // generate all files with the content in the second run
-        it = items.values().iterator();
-        while (it.hasNext())
+        for (Item item : items.values())
         {
-            Item item = it.next();
             if (item.myContent != null) // is a file
             {
                 File file = new File(root, item.myPath);
@@ -146,11 +141,8 @@ public class WC
      */
     public void setRevision(long revision)
     {
-        Iterator<Item> iter = this.items.values().iterator();
-
-        while (iter.hasNext())
+        for (Item item : this.items.values())
         {
-            Item item = iter.next();
             item.workingCopyRev = revision;
         }
     }
@@ -299,10 +291,9 @@ public class WC
     public WC copy()
     {
         WC c = new WC();
-        Iterator<Item> it = items.values().iterator();
-        while (it.hasNext())
+        for (Item item : items.values())
         {
-            it.next().copy(c);
+            item.copy(c);
         }
         return c;
     }
@@ -334,10 +325,8 @@ public class WC
     void check(DirEntry[] tested, String basePath, boolean recursive)
     {
         // clear the touched flag of all items
-        Iterator<Item> it = items.values().iterator();
-        while (it.hasNext())
+        for (Item item : items.values())
         {
-            Item item = it.next();
             item.touched = false;
         }
 
@@ -351,22 +340,22 @@ public class WC
             basePath = "";
         }
         // check all returned DirEntry's
-        for (int i = 0; i < tested.length; i++)
+        for (DirEntry entry : tested)
         {
-            String name = basePath + tested[i].getPath();
-            Item item = (Item) items.get(name);
+            String name = basePath + entry.getPath();
+            Item item = items.get(name);
             Assert.assertNotNull("null paths won't be found in working copy",
                                  item);
             if (item.myContent != null)
             {
-                Assert.assertEquals("Expected '" + tested[i] + "' to be file",
-                        tested[i].getNodeKind(),
+                Assert.assertEquals("Expected '" + entry + "' to be file",
+                        entry.getNodeKind(),
                         item.nodeKind == -1 ? NodeKind.file : item.nodeKind);
             }
             else
             {
-                Assert.assertEquals("Expected '" + tested[i] + "' to be dir",
-                        tested[i].getNodeKind(),
+                Assert.assertEquals("Expected '" + entry + "' to be dir",
+                        entry.getNodeKind(),
                         item.nodeKind == -1 ? NodeKind.dir : item.nodeKind);
             }
             item.touched = true;
@@ -374,10 +363,8 @@ public class WC
 
         // all items should have been in items, should had their touched flag
         // set
-        it = items.values().iterator();
-        while (it.hasNext())
+        for (Item item : items.values())
         {
-            Item item = (Item) it.next();
             if (!item.touched)
             {
                 if (item.myPath.startsWith(basePath) &&
@@ -390,12 +377,12 @@ public class WC
 
                     // Look deeper under the tree.
                     boolean found = false;
-                    for (int i = 0; i < tested.length; i++)
+                    for (DirEntry entry : tested)
                     {
-                        if (tested[i].getNodeKind() == NodeKind.dir)
+                        if (entry.getNodeKind() == NodeKind.dir)
                         {
                             if (item.myPath.startsWith(basePath +
-                                                       tested[i].getPath()))
+                                                       entry.getPath()))
                             {
                                 found = true;
                                 break;
@@ -439,10 +426,8 @@ public class WC
         throws IOException
     {
         // clear the touched flag of all items
-        Iterator<Item> it = items.values().iterator();
-        while (it.hasNext())
+        for (Item item : items.values())
         {
-            Item item = it.next();
             item.touched = false;
         }
 
@@ -450,9 +435,9 @@ public class WC
                 workingCopyPath.replace(File.separatorChar, '/');
 
         // check all result Staus object
-        for (int i = 0; i < tested.length; i++)
+        for (Status status : tested)
         {
-            String path = tested[i].getPath();
+            String path = status.getPath();
             Assert.assertTrue("status path starts not with working copy path",
                     path.startsWith(normalizeWCPath));
 
@@ -467,27 +452,27 @@ public class WC
                 // this is the working copy root itself
                 path = "";
 
-            Item item = (Item) items.get(path);
+            Item item = items.get(path);
             Assert.assertNotNull("status not found in working copy: " + path,
                     item);
             Assert.assertEquals("wrong text status in working copy: " + path,
-                    item.textStatus, tested[i].getTextStatus());
+                    item.textStatus, status.getTextStatus());
             if (item.workingCopyRev != -1)
                 Assert.assertEquals("wrong revision number in working copy: "
                             + path,
-                        item.workingCopyRev, tested[i].getRevisionNumber());
+                        item.workingCopyRev, status.getRevisionNumber());
             Assert.assertEquals("lock status wrong: " + path,
-                    item.isLocked, tested[i].isLocked());
+                    item.isLocked, status.isLocked());
             Assert.assertEquals("switch status wrong: " + path,
-                    item.isSwitched, tested[i].isSwitched());
+                    item.isSwitched, status.isSwitched());
             Assert.assertEquals("wrong prop status in working copy: " + path,
-                    item.propStatus, tested[i].getPropStatus());
+                    item.propStatus, status.getPropStatus());
             if (item.myContent != null)
             {
                 Assert.assertEquals("state says file, working copy not: " + path,
-                        tested[i].getNodeKind(),
+                        status.getNodeKind(),
                         item.nodeKind == -1 ? NodeKind.file : item.nodeKind);
-                if (tested[i].getTextStatus() == Status.Kind.normal ||
+                if (status.getTextStatus() == Status.Kind.normal ||
                         item.checkContent)
                 {
                     File input = new File(workingCopyPath, item.myPath);
@@ -507,7 +492,7 @@ public class WC
             else
             {
                 Assert.assertEquals("state says dir, working copy not: " + path,
-                        tested[i].getNodeKind(),
+                        status.getNodeKind(),
                         item.nodeKind == -1 ? NodeKind.dir : item.nodeKind);
             }
 
@@ -516,18 +501,18 @@ public class WC
                 Assert.assertEquals("Last commit revisions for OOD path '"
                                     + item.myPath + "' don't match:",
                                     item.reposLastCmtRevision,
-                                    tested[i].getReposLastCmtRevisionNumber());
+                                    status.getReposLastCmtRevisionNumber());
                 Assert.assertEquals("Last commit kinds for OOD path '"
                                     + item.myPath + "' don't match:",
-                                    item.reposKind, tested[i].getReposKind());
+                                    item.reposKind, status.getReposKind());
 
                 // Only the last committed rev and kind is available for
                 // paths deleted in the repos.
-                if (tested[i].getRepositoryTextStatus() != Status.Kind.deleted)
+                if (status.getRepositoryTextStatus() != Status.Kind.deleted)
                 {
                     long lastCmtTime =
-                        (tested[i].getReposLastCmtDate() == null ?
-                         0 : tested[i].getReposLastCmtDate().getTime());
+                        (status.getReposLastCmtDate() == null ?
+                         0 : status.getReposLastCmtDate().getTime());
                     Assert.assertEquals("Last commit dates for OOD path '" +
                                         item.myPath + "' don't match:",
                                         new Date(item.reposLastCmtDate),
@@ -535,7 +520,7 @@ public class WC
                     Assert.assertEquals("Last commit authors for OOD path '"
                                         + item.myPath + "' don't match:",
                                         item.reposLastCmtAuthor,
-                                        tested[i].getReposLastCmtAuthor());
+                                        status.getReposLastCmtAuthor());
                 }
             }
             item.touched = true;
@@ -543,10 +528,8 @@ public class WC
 
         // all items which have the touched flag not set, are missing in the
         // result array
-        it = items.values().iterator();
-        while (it.hasNext())
+        for (Item item : items.values())
         {
-            Item item = (Item) it.next();
             Assert.assertTrue("item in working copy not found in status",
                     item.touched);
         }

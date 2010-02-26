@@ -29,7 +29,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
@@ -328,10 +327,9 @@ class SVNTests extends TestCase
         if (path.isDirectory())
         {
             // Recurse (depth-first), deleting contents.
-            File[] dirContents = path.listFiles();
-            for (int i = 0; i < dirContents.length; i++)
+            for (File file : path.listFiles())
             {
-                removeDirOrFile(dirContents[i]);
+                removeDirOrFile(file);
             }
         }
 
@@ -816,9 +814,8 @@ class SVNTests extends TestCase
         public String getLogMessage(CommitItem[] elementsToBeCommited)
         {
             // check all received CommitItems are expected as received
-            for (int i = 0; i < elementsToBeCommited.length; i++)
+            for (CommitItem commitItem : elementsToBeCommited)
             {
-                CommitItem commitItem = elementsToBeCommited[i];
                 // since imports do not provide a url, the key is either url or
                 // path
                 String key;
@@ -827,18 +824,15 @@ class SVNTests extends TestCase
                 else
                     key = commitItem.getPath();
 
-                MyCommitItem myItem = (MyCommitItem) expectedCommitItems.get(
-                        key);
+                MyCommitItem myItem = expectedCommitItems.get(key);
                 // check commit item is expected and has the expected data
                 assertNotNull("commit item for "+key+ " not expected", myItem);
                 myItem.test(commitItem, key);
             }
 
             // all remaining expected commit items are missing
-            for (Iterator iterator = expectedCommitItems.keySet().iterator();
-                 iterator.hasNext();)
+            for (String str : expectedCommitItems.keySet())
             {
-                String str =  (String) iterator.next();
                 fail("commit item for "+str+" not found");
             }
             return logMessage;
