@@ -3521,10 +3521,10 @@ typedef struct svn_wc_status2_t
   /** Can be @c NULL if not under version control. */
   const svn_wc_entry_t *entry;
 
-  /** The status of the entries text. */
+  /** The status of the entry itself, including its text if it is a file. */
   enum svn_wc_status_kind text_status;
 
-  /** The status of the entries properties. */
+  /** The status of the entry's properties. */
   enum svn_wc_status_kind prop_status;
 
   /** a directory can be 'locked' if a working copy update was interrupted. */
