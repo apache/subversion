@@ -2193,7 +2193,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         class MyBlameCallback
-            implements org.apache.subversion.javahl.callback.BlameCallback3
+            implements org.apache.subversion.javahl.callback.BlameCallback
         {
             private BlameCallback3 callback;
 
