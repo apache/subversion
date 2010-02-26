@@ -158,7 +158,7 @@ AC_DEFUN(SVN_FIND_JDK,
     if test -z "$JAVAC_FLAGS"; then
       JAVAC_FLAGS="-target $JAVA_OLDEST_WORKING_VER -source 1.5"
       if test "$enable_debugging" = "yes"; then
-        JAVAC_FLAGS="-g $JAVAC_FLAGS"
+        JAVAC_FLAGS="-g -Xlint:unchecked $JAVAC_FLAGS"
       fi
     fi
 
