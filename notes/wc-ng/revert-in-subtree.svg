@@ -66,6 +66,13 @@
        inkscape:vp_y="0 : 1000 : 0"
        inkscape:vp_x="0 : 0.5 : 1"
        sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective
+       id="perspective2958"
+       inkscape:persp3d-origin="0.5 : 0.33333333 : 1"
+       inkscape:vp_z="1 : 0.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_x="0 : 0.5 : 1"
+       sodipodi:type="inkscape:persp3d" />
   </defs>
   <sodipodi:namedview
      id="base"
@@ -552,14 +559,10 @@
          x="620"
          id="tspan3081"
          sodipodi:role="line">normal</tspan><tspan
-         id="tspan3083"
+         id="tspan3085"
          y="837.36218"
          x="620"
-         sodipodi:role="line">cp-from: r90,</tspan><tspan
-         id="tspan3085"
-         y="852.36218"
-         x="620"
-         sodipodi:role="line">   ^/.../dist2</tspan></text>
+         sodipodi:role="line">cp-from: NULL</tspan></text>
     <use
        x="0"
        y="0"
@@ -581,14 +584,10 @@
          sodipodi:role="line"
          x="820"
          y="837.36218"
-         id="tspan3091">cp-from: r90,</tspan><tspan
+         id="tspan3093">cp-from: NULL</tspan><tspan
          sodipodi:role="line"
          x="820"
          y="852.36218"
-         id="tspan3093">   ^/.../test.sh2</tspan><tspan
-         sodipodi:role="line"
-         x="820"
-         y="867.36218"
          id="tspan3101">pristine: XXX2</tspan></text>
     <text
        xml:space="preserve"
@@ -675,5 +674,74 @@
          y="407.36218"
          id="tspan4425"
          style="font-size:10px">especially &quot;revert&quot;, will work inside a subtree that is already locally modified (e.g. replaced).</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:12px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+       x="420"
+       y="912.36218"
+       id="text5084-9"><tspan
+         sodipodi:role="line"
+         id="tspan5086-6"
+         x="420"
+         y="912.36218">(root of copy)</tspan><tspan
+         sodipodi:role="line"
+         x="420"
+         y="927.36218"
+         id="tspan5088-0">cp-from: r90,</tspan><tspan
+         sodipodi:role="line"
+         x="420"
+         y="942.36218"
+         id="tspan5090-7">   ^/br2/tools2</tspan></text>
+    <text
+       id="text3079-0"
+       y="912.36218"
+       x="620"
+       style="font-size:12px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+       xml:space="preserve"><tspan
+         y="912.36218"
+         x="620"
+         id="tspan3081-1"
+         sodipodi:role="line">(child of copy)</tspan><tspan
+         id="tspan3083"
+         y="927.36218"
+         x="620"
+         sodipodi:role="line">cp-from: r90,</tspan><tspan
+         id="tspan3085-0"
+         y="942.36218"
+         x="620"
+         sodipodi:role="line">   ^/br2/tools2/dist2</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:12px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+       x="820"
+       y="912.36218"
+       id="text3087-1"><tspan
+         sodipodi:role="line"
+         id="tspan3089-3"
+         x="820"
+         y="912.36218">(child of copy)</tspan><tspan
+         sodipodi:role="line"
+         x="820"
+         y="927.36218"
+         id="tspan3091">cp-from: r90,</tspan><tspan
+         sodipodi:role="line"
+         x="820"
+         y="942.36218"
+         id="tspan3093-7">   ^/br2/.../test.sh2</tspan><tspan
+         sodipodi:role="line"
+         x="820"
+         y="957.36218"
+         id="tspan3101-7">pristine: XXX2</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:8px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+       x="50"
+       y="922.36218"
+       id="text3041"><tspan
+         sodipodi:role="line"
+         id="tspan3043"
+         x="50"
+         y="922.36218"
+         style="font-size:12px">Implied WORKING info</tspan></text>
   </g>
 </svg>
