@@ -26,6 +26,7 @@ package org.apache.subversion.javahl;
 import org.apache.subversion.javahl.callback.*;
 
 import java.io.OutputStream;
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -78,7 +79,7 @@ public interface ISVNClient
      */
     void status(String path, int depth, boolean onServer,
                 boolean getAll, boolean noIgnore, boolean ignoreExternals,
-                String[] changelists, StatusCallback callback)
+                Collection<String> changelists, StatusCallback callback)
             throws ClientException;
 
     /**
@@ -227,7 +228,7 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    void revert(String path, int depth, String[] changelists)
+    void revert(String path, int depth, Collection<String> changelists)
             throws ClientException;
 
     /**
@@ -302,7 +303,7 @@ public interface ISVNClient
      */
     long commit(String[] path, String message, int depth,
                 boolean noUnlock, boolean keepChangelist,
-                String[] changelists, Map<String, String> revpropTable)
+                Collection<String> changelists, Map<String, String> revpropTable)
             throws ClientException;
 
     /**
@@ -572,7 +573,7 @@ public interface ISVNClient
      */
     void diff(String target1, Revision revision1, String target2,
               Revision revision2, String relativeToDir, String outFileName,
-              int depth, String[] changelists, boolean ignoreAncestry,
+              int depth, Collection<String> changelists, boolean ignoreAncestry,
               boolean noDiffDeleted, boolean force, boolean copiesAsAdds)
             throws ClientException;
 
@@ -596,7 +597,7 @@ public interface ISVNClient
      */
     void diff(String target, Revision pegRevision, Revision startRevision,
               Revision endRevision, String relativeToDir, String outFileName,
-              int depth, String[] changelists, boolean ignoreAncestry,
+              int depth, Collection<String> changelists, boolean ignoreAncestry,
               boolean noDiffDeleted, boolean force, boolean copiesAsAdds)
             throws ClientException;
 
@@ -623,8 +624,8 @@ public interface ISVNClient
      */
     void diffSummarize(String target1, Revision revision1,
                        String target2, Revision revision2,
-                       int depth, String[] changelists, boolean ignoreAncestry,
-                       DiffSummaryCallback receiver)
+                       int depth, Collection<String> changelists,
+                       boolean ignoreAncestry, DiffSummaryCallback receiver)
             throws ClientException;
 
     /**
@@ -657,8 +658,8 @@ public interface ISVNClient
      */
     void diffSummarize(String target, Revision pegRevision,
                        Revision startRevision, Revision endRevision,
-                       int depth, String[] changelists, boolean ignoreAncestry,
-                       DiffSummaryCallback receiver)
+                       int depth, Collection<String> changelists,
+                       boolean ignoreAncestry, DiffSummaryCallback receiver)
         throws ClientException;
 
     /**
@@ -674,7 +675,8 @@ public interface ISVNClient
      * @since 1.5
      */
     void properties(String path, Revision revision, Revision pegRevision,
-                    int depth, String[] changelists, ProplistCallback callback)
+                    int depth, Collection<String> changelists,
+                    ProplistCallback callback)
             throws ClientException;
 
     /**
@@ -693,7 +695,7 @@ public interface ISVNClient
      * @since 1.5
      */
     void propertySet(String path, String name, String value, int depth,
-                     String[] changelists, boolean force,
+                     Collection<String> changelists, boolean force,
                      Map<String, String> revpropTable)
             throws ClientException;
 
@@ -707,7 +709,7 @@ public interface ISVNClient
      * @since 1.5
      */
     void propertyRemove(String path, String name, int depth,
-                        String[] changelists)
+                        Collection<String> changelists)
             throws ClientException;
 
     /**
@@ -723,7 +725,7 @@ public interface ISVNClient
      * @since 1.5
      */
     void propertyCreate(String path, String name, String value, int depth,
-                        String[] changelists, boolean force)
+                        Collection<String> changelists, boolean force)
             throws ClientException;
 
     /**
@@ -889,7 +891,7 @@ public interface ISVNClient
      * @since 1.5
      */
     void addToChangelist(String[] paths, String changelist, int depth,
-                         String[] changelists)
+                         Collection<String> changelists)
             throws ClientException;
 
     /**
@@ -899,7 +901,8 @@ public interface ISVNClient
      * @param changelists changelists to filter by
      * @since 1.5
      */
-    void removeFromChangelists(String[] paths, int depth, String[] changelist)
+    void removeFromChangelists(String[] paths, int depth,
+                               Collection<String> changelists)
             throws ClientException;
 
     /**
@@ -910,7 +913,7 @@ public interface ISVNClient
      * @param callback    the callback to return the changelists through
      * @since 1.5
      */
-    void getChangelists(String rootPath, String[] changelists, int depth,
+    void getChangelists(String rootPath, Collection<String> changelists, int depth,
                         ChangelistCallback callback)
             throws ClientException;
 
@@ -946,7 +949,7 @@ public interface ISVNClient
      * @since 1.5
      */
     void info2(String pathOrUrl, Revision revision, Revision pegRevision,
-               int depth, String[] changelists, InfoCallback callback)
+               int depth, Collection<String> changelists, InfoCallback callback)
         throws ClientException;
 
     /**

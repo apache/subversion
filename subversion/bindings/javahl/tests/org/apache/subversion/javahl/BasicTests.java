@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
 import java.text.ParseException;
+import java.util.Collection;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Date;
@@ -2253,18 +2254,18 @@ public class BasicTests extends SVNTests
         // build the working copy
         OneTest thisTest = new OneTest();
         String changelistName = "changelist1";
-        String[] changelists = new String[] { changelistName };
+        Collection<String> changelists = new ArrayList<String>();
+        changelists.add(changelistName);
         MyChangelistCallback clCallback = new MyChangelistCallback();
 
         String[] paths = new String[]
           {fileToSVNPath(new File(thisTest.getWCPath(), "iota"), true)};
         // Add a path to a changelist, and check to see if it got added
         client.addToChangelist(paths, changelistName, Depth.infinity, null);
-        String[] cl = new String[1];
         client.getChangelists(thisTest.getWCPath(), changelists,
                               Depth.infinity, clCallback);
-        cl[0] = (String) clCallback.get(paths[0]).get(0);
-        assertTrue(java.util.Arrays.equals(cl, changelists));
+        Collection<String> cl = clCallback.get(paths[0]);
+        assertTrue(changelists.equals(cl));
         // Does status report this changelist?
         MyStatusCallback statusCallback = new MyStatusCallback();
         client.status(paths[0], Depth.immediates, false, false, false, false,
@@ -3552,7 +3553,8 @@ public class BasicTests extends SVNTests
         }
     }
 
-    private class MyChangelistCallback extends HashMap<String, List<String>>
+    private class MyChangelistCallback
+        extends HashMap<String, Collection<String>>
         implements ChangelistCallback
     {
         public void doChangelist(String path, String changelist)
@@ -3560,8 +3562,8 @@ public class BasicTests extends SVNTests
             if (super.containsKey(path))
             {
                 // Append the changelist to the existing list
-                List<String> changelistList = super.get(path);
-                changelistList.add(changelist);
+                Collection<String> changelists = super.get(path);
+                changelists.add(changelist);
             }
             else
             {
@@ -3572,7 +3574,7 @@ public class BasicTests extends SVNTests
             }
         }
 
-        public List<String> get(String path)
+        public Collection<String> get(String path)
         {
             return super.get(path);
         }
@@ -3623,7 +3625,7 @@ public class BasicTests extends SVNTests
 
     private PropertyData[] collectProperties(String path, Revision revision,
                                              Revision pegRevision, int depth,
-                                             String[] changelists)
+                                             Collection<String> changelists)
         throws ClientException
     {
         class MyProplistCallback implements ProplistCallback
@@ -3712,7 +3714,7 @@ public class BasicTests extends SVNTests
 
     private Info2[] collectInfos(String pathOrUrl, Revision revision,
                                  Revision pegRevision, int depth,
-                                 String[] changelists)
+                                 Collection<String> changelists)
         throws ClientException
     {
         class MyInfoCallback implements InfoCallback

@@ -29,6 +29,7 @@ import java.io.OutputStream;
 
 import java.util.Map;
 import java.util.List;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Date;
 import java.text.ParseException;
@@ -213,7 +214,9 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.status(path, depth, onServer, getAll, noIgnore,
-                              ignoreExternals, changelists,
+                              ignoreExternals,
+                              changelists == null ? null
+                                : Arrays.asList(changelists),
                               new aStatusCallback(callback));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
@@ -777,7 +780,8 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.revert(path, depth, changelists);
+            aSVNClient.revert(path, depth, changelists == null ? null
+                                : Arrays.asList(changelists));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -916,7 +920,9 @@ public class SVNClient implements SVNClientInterface
         try
         {
             return aSVNClient.commit(path, message, depth, noUnlock,
-                                     keepChangelist, changelists,
+                                     keepChangelist,
+                                     changelists == null ? null
+                                       : Arrays.asList(changelists),
                                      revpropTable);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
@@ -1525,7 +1531,9 @@ public class SVNClient implements SVNClientInterface
                         revision1 == null ? null : revision1.toApache(),
                         target2,
                         revision2 == null ? null : revision2.toApache(),
-                        relativeToDir, outFileName, depth, changelists,
+                        relativeToDir, outFileName, depth,
+                        changelists == null ? null
+                            : Arrays.asList(changelists),
                         ignoreAncestry, noDiffDeleted, force,
                         copiesAsAdds);
         }
@@ -1588,7 +1596,8 @@ public class SVNClient implements SVNClientInterface
                      pegRevision == null ? null : pegRevision.toApache(),
                      startRevision == null ? null : startRevision.toApache(),
                      endRevision == null ? null : endRevision.toApache(),
-                     relativeToDir, outFileName, depth, changelists,
+                     relativeToDir, outFileName, depth,
+                     changelists == null ? null : Arrays.asList(changelists),
                      ignoreAncestry, noDiffDeleted, force, copiesAsAdds);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
@@ -1615,7 +1624,10 @@ public class SVNClient implements SVNClientInterface
                             revision1 == null ? null : revision1.toApache(),
                             target2,
                             revision2 == null ? null : revision2.toApache(),
-                            depth, changelists, ignoreAncestry, aReceiver);
+                            depth,
+                            changelists == null ? null
+                              : Arrays.asList(changelists),
+                            ignoreAncestry, aReceiver);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1641,7 +1653,9 @@ public class SVNClient implements SVNClientInterface
                        pegRevision == null ? null : pegRevision.toApache(),
                        startRevision == null ? null : startRevision.toApache(),
                        endRevision == null ? null : endRevision.toApache(),
-                       depth, changelists, ignoreAncestry, aReceiver);
+                       depth, changelists == null ? null
+                            : Arrays.asList(changelists),
+                       ignoreAncestry, aReceiver);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1713,7 +1727,8 @@ public class SVNClient implements SVNClientInterface
             aSVNClient.properties(path,
                           revision == null ? null : revision.toApache(),
                           pegRevision == null ? null : pegRevision.toApache(),
-                          depth, changelists, callback);
+                          depth, changelists == null ? null
+                                : Arrays.asList(changelists), callback);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1780,7 +1795,9 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.propertySet(path, name, value, depth, changelists,
+            aSVNClient.propertySet(path, name, value, depth,
+                                   changelists == null ? null
+                                    : Arrays.asList(changelists),
                                    force, revpropTable);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
@@ -2305,7 +2322,9 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.addToChangelist(paths, changelist, depth, changelists);
+            aSVNClient.addToChangelist(paths, changelist, depth,
+                                       changelists == null ? null
+                                        : Arrays.asList(changelists));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -2322,7 +2341,9 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.removeFromChangelists(paths, depth, changelists);
+            aSVNClient.removeFromChangelists(paths, depth,
+                                             changelists == null ? null
+                                               : Arrays.asList(changelists));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -2339,7 +2360,9 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.getChangelists(rootPath, changelists, depth, callback);
+            aSVNClient.getChangelists(rootPath, changelists == null ? null
+                                        : Arrays.asList(changelists),
+                                      depth, callback);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -2531,7 +2554,8 @@ public class SVNClient implements SVNClientInterface
             aSVNClient.info2(pathOrUrl,
                           revision == null ? null : revision.toApache(),
                           pegRevision == null ? null : pegRevision.toApache(),
-                          depth, changelists,
+                          depth, changelists == null ? null
+                            : Arrays.asList(changelists),
                           new aInfoCallback(callback));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
