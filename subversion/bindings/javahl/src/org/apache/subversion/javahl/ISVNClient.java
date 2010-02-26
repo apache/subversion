@@ -216,7 +216,7 @@ public interface ISVNClient
      * @since 1.5
      */
     void remove(String[] path, String message, boolean force,
-                boolean keepLocal, Map revpropTable)
+                boolean keepLocal, Map<String, String> revpropTable)
             throws ClientException;
 
     /**
@@ -302,7 +302,7 @@ public interface ISVNClient
      */
     long commit(String[] path, String message, int depth,
                 boolean noUnlock, boolean keepChangelist,
-                String[] changelists, Map revpropTable)
+                String[] changelists, Map<String, String> revpropTable)
             throws ClientException;
 
     /**
@@ -325,7 +325,7 @@ public interface ISVNClient
      */
     void copy(CopySource[] sources, String destPath, String message,
               boolean copyAsChild, boolean makeParents,
-              boolean ignoreExternals, Map revpropTable)
+              boolean ignoreExternals, Map<String, String> revpropTable)
             throws ClientException;
 
     /**
@@ -348,7 +348,7 @@ public interface ISVNClient
      */
     void move(String[] srcPaths, String destPath, String message,
               boolean force, boolean moveAsChild, boolean makeParents,
-              Map revpropTable)
+              Map<String, String> revpropTable)
         throws ClientException;
 
     /**
@@ -364,7 +364,7 @@ public interface ISVNClient
      * @since 1.5
      */
     void mkdir(String[] path, String message, boolean makeParents,
-               Map revpropTable)
+               Map<String, String> revpropTable)
             throws ClientException;
 
     /**
@@ -446,7 +446,7 @@ public interface ISVNClient
      */
     void doImport(String path, String url, String message, int depth,
                   boolean noIgnore, boolean ignoreUnknownNodeTypes,
-                  Map revpropTable)
+                  Map<String, String> revpropTable)
             throws ClientException;
 
     /**
@@ -694,7 +694,7 @@ public interface ISVNClient
      */
     void propertySet(String path, String name, String value, int depth,
                      String[] changelists, boolean force,
-                     Map revpropTable)
+                     Map<String, String> revpropTable)
             throws ClientException;
 
     /**
