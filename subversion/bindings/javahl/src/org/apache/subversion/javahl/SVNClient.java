@@ -27,6 +27,7 @@ import org.apache.subversion.javahl.callback.*;
 
 import java.io.OutputStream;
 
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -118,10 +119,21 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void status(String path, int depth, boolean onServer,
-                              boolean getAll, boolean noIgnore,
-                              boolean ignoreExternals, String[] changelists,
-                              StatusCallback callback)
+    public void status(String path, int depth, boolean onServer, boolean getAll,
+                       boolean noIgnore, boolean ignoreExternals,
+                       Collection<String> changelists, StatusCallback callback)
+            throws ClientException
+    {
+        this.status(path, depth, onServer, getAll, noIgnore, ignoreExternals,
+                    changelists == null ? null :
+                      changelists.toArray(new String[changelists.size()]),
+                    callback);
+    }
+
+    private native void status(String path, int depth, boolean onServer,
+                               boolean getAll, boolean noIgnore,
+                               boolean ignoreExternals, String[] changelists,
+                               StatusCallback callback)
             throws ClientException;
 
     /**
@@ -207,7 +219,15 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void revert(String path, int depth, String[] changelists)
+    public void revert(String path, int depth, Collection<String> changelists)
+            throws ClientException
+    {
+        this.revert(path, depth,
+                    changelists == null ? null :
+                      changelists.toArray(new String[changelists.size()]));
+    }
+
+    private native void revert(String path, int depth, String[] changelists)
             throws ClientException;
 
     /**
@@ -241,10 +261,22 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native long commit(String[] path, String message, int depth,
-                              boolean noUnlock, boolean keepChangelist,
-                              String[] changelists,
-                              Map<String, String> revpropTable)
+    public long commit(String[] path, String message, int depth,
+                       boolean noUnlock, boolean keepChangelist,
+                       Collection<String> changelists,
+                       Map<String, String> revpropTable)
+            throws ClientException
+    {
+        return this.commit(path, message, depth, noUnlock, keepChangelist,
+                    changelists == null ? null :
+                      changelists.toArray(new String[changelists.size()]),
+                    revpropTable);
+    }
+
+    private native long commit(String[] path, String message, int depth,
+                               boolean noUnlock, boolean keepChangelist,
+                               String[] changelists,
+                               Map<String, String> revpropTable)
             throws ClientException;
 
     /**
@@ -367,82 +399,171 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.7
      */
-    public native void diff(String target1, Revision revision1, String target2,
-                            Revision revision2, String relativeToDir,
-                            String outFileName, int depth,
-                            String[] changelists, boolean ignoreAncestry,
-                            boolean noDiffDeleted, boolean force,
-                            boolean copiesAsAdds)
+    public void diff(String target1, Revision revision1, String target2,
+                     Revision revision2, String relativeToDir,
+                     String outFileName, int depth,
+                     Collection<String> changelists, boolean ignoreAncestry,
+                     boolean noDiffDeleted, boolean force,
+                     boolean copiesAsAdds)
+            throws ClientException
+    {
+        this.diff(target1, revision1, target2, revision2, relativeToDir,
+                    outFileName, depth,
+                    changelists == null ? null :
+                      changelists.toArray(new String[changelists.size()]),
+                    ignoreAncestry, noDiffDeleted, force, copiesAsAdds);
+                
+    }
+
+    private native void diff(String target1, Revision revision1, String target2,
+                             Revision revision2, String relativeToDir,
+                             String outFileName, int depth,
+                             String[] changelists, boolean ignoreAncestry,
+                             boolean noDiffDeleted, boolean force,
+                             boolean copiesAsAdds)
             throws ClientException;
 
     /**
      * @since 1.7
      */
-    public native void diff(String target, Revision pegRevision,
-                            Revision startRevision, Revision endRevision,
-                            String relativeToDir, String outFileName,
-                            int depth, String[] changelists,
-                            boolean ignoreAncestry, boolean noDiffDeleted,
-                            boolean force, boolean copiesAsAdds)
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String relativeToDir, String outFileName,
+                     int depth, Collection<String> changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds)
+            throws ClientException
+    {
+        this.diff(target, pegRevision, startRevision, endRevision,
+                    relativeToDir, outFileName, depth,
+                    changelists == null ? null :
+                      changelists.toArray(new String[changelists.size()]),
+                    ignoreAncestry, noDiffDeleted, force, copiesAsAdds);
+    }
+
+    private native void diff(String target, Revision pegRevision,
+                             Revision startRevision, Revision endRevision,
+                             String relativeToDir, String outFileName,
+                             int depth, String[] changelists,
+                             boolean ignoreAncestry, boolean noDiffDeleted,
+                             boolean force, boolean copiesAsAdds)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public native void diffSummarize(String target1, Revision revision1,
-                                     String target2, Revision revision2,
-                                     int depth, String[] changelists,
-                                     boolean ignoreAncestry,
-                                     DiffSummaryCallback receiver)
+    public void diffSummarize(String target1, Revision revision1,
+                              String target2, Revision revision2,
+                              int depth, Collection<String> changelists,
+                              boolean ignoreAncestry,
+                              DiffSummaryCallback receiver)
+            throws ClientException
+    {
+        this.diffSummarize(target1, revision1, target2, revision2, depth,
+                    changelists == null ? null :
+                      changelists.toArray(new String[changelists.size()]),
+                    ignoreAncestry, receiver);
+    }
+
+    private native void diffSummarize(String target1, Revision revision1,
+                                      String target2, Revision revision2,
+                                      int depth, String[] changelists,
+                                      boolean ignoreAncestry,
+                                      DiffSummaryCallback receiver)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public native void diffSummarize(String target, Revision pegRevision,
-                                     Revision startRevision,
-                                     Revision endRevision,
-                                     int depth, String[] changelists,
-                                     boolean ignoreAncestry,
-                                     DiffSummaryCallback receiver)
+    public void diffSummarize(String target, Revision pegRevision,
+                              Revision startRevision,
+                              Revision endRevision,
+                              int depth, Collection<String> changelists,
+                              boolean ignoreAncestry,
+                              DiffSummaryCallback receiver)
+            throws ClientException
+    {
+        this.diffSummarize(target, pegRevision, startRevision, endRevision,
+                    depth,
+                    changelists == null ? null :
+                      changelists.toArray(new String[changelists.size()]),
+                    ignoreAncestry, receiver);
+    }
+
+    private native void diffSummarize(String target, Revision pegRevision,
+                                      Revision startRevision,
+                                      Revision endRevision,
+                                      int depth, String[] changelists,
+                                      boolean ignoreAncestry,
+                                      DiffSummaryCallback receiver)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public native void properties(String path, Revision revision,
-                                  Revision pegRevision, int depth,
-                                  String[] changelists,
-                                  ProplistCallback callback)
+    public void properties(String path, Revision revision,
+                           Revision pegRevision, int depth,
+                           Collection<String> changelists,
+                           ProplistCallback callback)
+            throws ClientException
+    {
+        this.properties(path, revision, pegRevision, depth,
+                    changelists == null ? null :
+                      changelists.toArray(new String[changelists.size()]),
+                    callback);
+    }
+
+    private native void properties(String path, Revision revision,
+                                   Revision pegRevision, int depth,
+                                   String[] changelists,
+                                   ProplistCallback callback)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public native void propertySet(String path, String name, String value,
-                                   int depth, String[] changelists,
-                                   boolean force,
-                                   Map<String, String> revpropTable)
+    public void propertySet(String path, String name, String value,
+                            int depth, Collection<String> changelists,
+                            boolean force, Map<String, String> revpropTable)
+            throws ClientException
+    {
+        this.propertySet(path, name, value, depth,
+                    changelists == null ? null :
+                      changelists.toArray(new String[changelists.size()]),
+                    force, revpropTable);
+    }
+
+    private native void propertySet(String path, String name, String value,
+                                    int depth, String[] changelists,
+                                    boolean force,
+                                    Map<String, String> revpropTable)
             throws ClientException;
 
     /**
      * @since 1.5
      */
     public void propertyRemove(String path, String name, int depth,
-                               String[] changelists)
+                               Collection<String> changelists)
             throws ClientException
     {
-        propertySet(path, name, null, depth, changelists, false, null);
+        propertySet(path, name, null, depth,
+                    changelists == null ? null :
+                      changelists.toArray(new String[changelists.size()]),
+                    false, null);
     }
 
     /**
      * @since 1.5
      */
     public void propertyCreate(String path, String name, String value,
-                               int depth, String[] changelists, boolean force)
+                               int depth, Collection<String> changelists,
+                               boolean force)
             throws ClientException
     {
-        propertySet(path, name, value, depth, changelists, force, null);
+        propertySet(path, name, value, depth,
+                    changelists == null ? null :
+                      changelists.toArray(new String[changelists.size()]),
+                    force, null);
     }
 
     /**
@@ -545,22 +666,50 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void addToChangelist(String[] paths, String changelist,
-                                       int depth, String[] changelists)
+    public void addToChangelist(String[] paths, String changelist,
+                                int depth, Collection<String> changelists)
+            throws ClientException
+    {
+        this.addToChangelist(paths, changelist, depth,
+                    changelists == null ? null :
+                      changelists.toArray(new String[changelists.size()]));
+    }
+
+    private native void addToChangelist(String[] paths, String changelist,
+                                        int depth, String[] changelists)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public native void removeFromChangelists(String[] paths, int depth,
-                                             String[] changelists)
+    public void removeFromChangelists(String[] paths, int depth,
+                                      Collection<String> changelists)
+            throws ClientException
+    {
+        this.removeFromChangelists(paths, depth,
+                    changelists == null ? null :
+                      changelists.toArray(new String[changelists.size()]));
+    }
+
+    private native void removeFromChangelists(String[] paths, int depth,
+                                              String[] changelists)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public native void getChangelists(String rootPath, String[] changelists,
-                                      int depth, ChangelistCallback callback)
+    public void getChangelists(String rootPath, Collection<String> changelists,
+                               int depth, ChangelistCallback callback)
+            throws ClientException
+    {
+        this.getChangelists(rootPath,
+                    changelists == null ? null :
+                      changelists.toArray(new String[changelists.size()]),
+                    depth, callback);
+    }
+
+    private native void getChangelists(String rootPath, String[] changelists,
+                                       int depth, ChangelistCallback callback)
             throws ClientException;
 
     /**
@@ -635,8 +784,19 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void info2(String pathOrUrl, Revision revision,
-                             Revision pegRevision, int depth,
-                             String[] changelists, InfoCallback callback)
+    public void info2(String pathOrUrl, Revision revision,
+                      Revision pegRevision, int depth,
+                      Collection<String> changelists, InfoCallback callback)
+            throws ClientException
+    {
+        this.info2(pathOrUrl, revision, pegRevision, depth, 
+                   changelists == null ? null :
+                     changelists.toArray(new String[changelists.size()]),
+                   callback);
+    }
+
+    private native void info2(String pathOrUrl, Revision revision,
+                              Revision pegRevision, int depth,
+                              String[] changelists, InfoCallback callback)
             throws ClientException;
 }
