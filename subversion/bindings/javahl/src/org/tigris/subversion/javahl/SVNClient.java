@@ -165,7 +165,7 @@ public class SVNClient implements SVNClientInterface
     {
         class MyStatusCallback implements StatusCallback
         {
-            private List statuses = new ArrayList();
+            private List<Status> statuses = new ArrayList<Status>();
 
             public void doStatus(Status status)
             {
@@ -174,8 +174,7 @@ public class SVNClient implements SVNClientInterface
 
             public Status[] getStatusArray()
             {
-                return (Status[]) statuses.toArray(new Status[
-                                                            statuses.size()]);
+                return statuses.toArray(new Status[statuses.size()]);
             }
         }
 
@@ -246,7 +245,7 @@ public class SVNClient implements SVNClientInterface
     {
         class MyListCallback implements ListCallback
         {
-            private List dirents = new ArrayList();
+            private List<DirEntry> dirents = new ArrayList<DirEntry>();
 
             public void doEntry(DirEntry dirent, Lock lock)
             {
@@ -278,8 +277,7 @@ public class SVNClient implements SVNClientInterface
 
             public DirEntry[] getDirEntryArray()
             {
-                return (DirEntry[]) dirents.toArray(new DirEntry[
-                                                            dirents.size()]);
+                return dirents.toArray(new DirEntry[dirents.size()]);
             }
         }
 
@@ -413,7 +411,7 @@ public class SVNClient implements SVNClientInterface
     {
         class MyLogMessageCallback implements LogMessageCallback
         {
-            private List messages = new ArrayList();
+            private List<LogMessage> messages = new ArrayList<LogMessage>();
 
             public void singleMessage(ChangePath[] changedPaths,
                                       long revision,
@@ -443,8 +441,7 @@ public class SVNClient implements SVNClientInterface
 
             public LogMessage[] getMessages()
             {
-                return (LogMessage[]) messages.toArray(
-                                            new LogMessage[messages.size()]);
+                return messages.toArray(new LogMessage[messages.size()]);
             }
         }
 
@@ -2490,7 +2487,7 @@ public class SVNClient implements SVNClientInterface
     {
         class MyInfoCallback implements InfoCallback
         {
-            private List infos = new ArrayList();
+            private List<Info2> infos = new ArrayList<Info2>();
 
             public void singleInfo(Info2 info)
             {
@@ -2499,7 +2496,7 @@ public class SVNClient implements SVNClientInterface
 
             public Info2[] getInfoArray()
             {
-                return (Info2[]) infos.toArray(new Info2[infos.size()]);
+                return infos.toArray(new Info2[infos.size()]);
             }
         }
 

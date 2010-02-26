@@ -36,7 +36,7 @@ public class BlameCallbackImpl implements BlameCallback, BlameCallback2
 {
 
     /** list of blame records (lines) */
-    private List lines = new ArrayList();
+    private List<BlameLine> lines = new ArrayList<BlameLine>();
 
     /*
      * (non-Javadoc)
@@ -92,7 +92,7 @@ public class BlameCallbackImpl implements BlameCallback, BlameCallback2
         {
             return null;
         }
-        return (BlameLine) this.lines.get(i);
+        return this.lines.get(i);
     }
 
     /**
