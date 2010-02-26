@@ -59,6 +59,6 @@ public interface LogMessageCallback
      */
     public void singleMessage(ChangePath[] changedPaths,
                               long revision,
-                              Map revprops,
+                              Map<String, String> revprops,
                               boolean hasChildren);
 }

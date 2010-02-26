@@ -36,5 +36,5 @@ public interface ProplistCallback
      * @param path        the path.
      * @param properties  the properties on the path.
      */
-    public void singlePath(String path, Map properties);
+    public void singlePath(String path, Map<String, String> properties);
 }
