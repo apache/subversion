@@ -1093,7 +1093,8 @@ public interface SVNClientInterface
 
     /**
      * Retrieve either merged or eligible-to-be-merged revisions.
-     * @param kind                   kind of revisions to receive
+     * @param kind                   kind of revisions to receive: 1 for
+     * merged revisions, any other number for eligible-to-be-merged revisions.
      * @param pathOrUrl              target of merge
      * @param pegRevision            peg rev for pathOrUrl
      * @param mergeSourceUrl         the source of the merge
@@ -1113,7 +1114,8 @@ public interface SVNClientInterface
 
     /**
      * Retrieve either merged or eligible-to-be-merged revisions.
-     * @param kind                   kind of revisions to receive
+     * @param kind                   kind of revisions to receive: 1 for
+     * merged revisions, any other number for eligible-to-be-merged revisions.
      * @param pathOrUrl              target of merge
      * @param pegRevision            peg rev for pathOrUrl
      * @param mergeSourceUrl         the source of the merge
