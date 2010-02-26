@@ -28,6 +28,7 @@ import org.apache.subversion.javahl.callback.*;
 import java.io.OutputStream;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -282,10 +283,21 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.7
      */
-    public native void copy(CopySource[] sources, String destPath,
-                            String message, boolean copyAsChild,
-                            boolean makeParents, boolean ignoreExternals,
-                            Map<String, String> revpropTable)
+    public void copy(List<CopySource> sources, String destPath,
+                     String message, boolean copyAsChild,
+                     boolean makeParents, boolean ignoreExternals,
+                     Map<String, String> revpropTable)
+            throws ClientException
+    {
+        this.copy(sources.toArray(new CopySource[sources.size()]),
+                  destPath, message, copyAsChild, makeParents,
+                  ignoreExternals, revpropTable);
+    }
+
+    private native void copy(CopySource[] sources, String destPath,
+                             String message, boolean copyAsChild,
+                             boolean makeParents, boolean ignoreExternals,
+                             Map<String, String> revpropTable)
             throws ClientException;
 
     /**

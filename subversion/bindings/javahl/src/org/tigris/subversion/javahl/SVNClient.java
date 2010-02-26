@@ -941,12 +941,13 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            org.apache.subversion.javahl.CopySource[] aCopySources =
-                new org.apache.subversion.javahl.CopySource[sources.length];
+            List<org.apache.subversion.javahl.CopySource> aCopySources =
+                new ArrayList<org.apache.subversion.javahl.CopySource>(
+                                                            sources.length);
 
-            for (int i = 0; i < sources.length; i++)
+            for (CopySource src : sources)
             {
-                aCopySources[i] = sources[i].toApache();
+                aCopySources.add(src.toApache());
             }
 
             aSVNClient.copy(aCopySources, destPath, message, copyAsChild,
