@@ -50,11 +50,11 @@ public class Mergeinfo implements java.io.Serializable
      * A mapping of repository-relative paths to a list of revision
      * ranges.
      */
-    private Map mergeSources;
+    private Map<String, List<RevisionRange>> mergeSources;
 
     public Mergeinfo()
     {
-        mergeSources = new HashMap();
+        mergeSources = new HashMap<String, List<RevisionRange>>();
     }
 
     /**
@@ -92,9 +92,9 @@ public class Mergeinfo implements java.io.Serializable
      */
     public void addRevisionRange(String mergeSrc, RevisionRange range)
     {
-        List revisions = this.getRevisions(mergeSrc);
+        List<RevisionRange> revisions = this.getRevisions(mergeSrc);
         if (revisions == null)
-            revisions = new ArrayList();
+            revisions = new ArrayList<RevisionRange>();
         revisions.add(range);
         this.setRevisionList(mergeSrc, revisions);
     }
@@ -105,10 +105,10 @@ public class Mergeinfo implements java.io.Serializable
      */
     public String[] getPaths()
     {
-        Set pathSet = mergeSources.keySet();
+        Set<String> pathSet = mergeSources.keySet();
         if (pathSet == null)
             return null;
-        return (String []) pathSet.toArray(new String[pathSet.size()]);
+        return pathSet.toArray(new String[pathSet.size()]);
     }
 
     /**
@@ -116,11 +116,11 @@ public class Mergeinfo implements java.io.Serializable
      * @param mergeSrc The merge source URL, or <code>null</code>.
      * @return List of RevisionRange objects, or <code>null</code>.
      */
-    public List getRevisions(String mergeSrc)
+    public List<RevisionRange> getRevisions(String mergeSrc)
     {
         if (mergeSrc == null)
             return null;
-        return (List) mergeSources.get(mergeSrc);
+        return mergeSources.get(mergeSrc);
     }
 
     /**
@@ -130,11 +130,10 @@ public class Mergeinfo implements java.io.Serializable
      */
     public RevisionRange[] getRevisionRange(String mergeSrc)
     {
-        List revisions = this.getRevisions(mergeSrc);
+        List<RevisionRange> revisions = this.getRevisions(mergeSrc);
         if (revisions == null)
             return null;
-        return (RevisionRange [])
-            revisions.toArray(new RevisionRange[revisions.size()]);
+        return revisions.toArray(new RevisionRange[revisions.size()]);
     }
 
     /**
@@ -181,14 +180,14 @@ public class Mergeinfo implements java.io.Serializable
      */
     private void parseRevisions(String path, String revisions)
     {
-        List rangeList = this.getRevisions(path);
+        List<RevisionRange> rangeList = this.getRevisions(path);
         StringTokenizer st = new StringTokenizer(revisions, ",");
         while (st.hasMoreTokens())
         {
             String revisionElement = st.nextToken();
             RevisionRange range = new RevisionRange(revisionElement);
             if (rangeList == null)
-                rangeList = new ArrayList();
+                rangeList = new ArrayList<RevisionRange>();
             rangeList.add(range);
         }
         if (rangeList != null)
@@ -203,7 +202,7 @@ public class Mergeinfo implements java.io.Serializable
      * @param mergeSrc The merge source URL.
      * @param range List of RevisionRange objects to add.
      */
-    private void setRevisionList(String mergeSrc, List range)
+    private void setRevisionList(String mergeSrc, List<RevisionRange> range)
     {
         mergeSources.put(mergeSrc, range);
     }

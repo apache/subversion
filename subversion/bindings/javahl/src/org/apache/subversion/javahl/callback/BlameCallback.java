@@ -47,8 +47,9 @@ public interface BlameCallback
      * @param line              the line in the file.
      * @param localChange       true if the line was locally modified.
      */
-    public void singleLine(long lineNum, long revision, Map revProps,
-                           long mergedRevision, Map mergedRevProps,
+    public void singleLine(long lineNum, long revision,
+                           Map<String, String> revProps, long mergedRevision,
+                           Map<String, String> mergedRevProps,
                            String mergedPath, String line, boolean localChange)
         throws ClientException;
 }
