@@ -890,14 +890,13 @@ public class BasicTests extends SVNTests
 
         // Copy files from A/B/E to A/B/F.
         String[] srcPaths = { "alpha", "beta" };
-        CopySource[] sources = new CopySource[srcPaths.length];
-        for (int i = 0; i < srcPaths.length; i++)
+        List<CopySource> sources = new ArrayList<CopySource>(srcPaths.length);
+        for (String fileName : srcPaths)
         {
-            String fileName = srcPaths[i];
-            sources[i] =
+            sources.add(
                 new CopySource(new File(thisTest.getWorkingCopy(),
                                         "A/B/E/" + fileName).getPath(),
-                               firstRevision, pegRevision);
+                               firstRevision, pegRevision));
             wc.addItem("A/B/F/" + fileName,
                        wc.getItemContent("A/B/E/" + fileName));
             wc.setItemWorkingCopyRevision("A/B/F/" + fileName, 2);
@@ -921,9 +920,10 @@ public class BasicTests extends SVNTests
         assertExpectedSuggestion(thisTest.getUrl() + "/A/B/E/alpha", "A/B/F/alpha", thisTest);
 
         // Now test a WC to URL copy
-        CopySource wcSource[] = new CopySource[1];
-        wcSource[0] = new CopySource(new File(thisTest.getWorkingCopy(),
-                                        "A/B").getPath(), Revision.WORKING, Revision.WORKING);
+        List<CopySource> wcSource = new ArrayList<CopySource>(1);
+        wcSource.add(new CopySource(new File(thisTest.getWorkingCopy(),
+                                        "A/B").getPath(), Revision.WORKING,
+                                    Revision.WORKING));
         client.commitMessageHandler(null);
         client.copy(wcSource,
                     thisTest.getUrl() + "/parent/A/B",
@@ -2757,9 +2757,10 @@ public class BasicTests extends SVNTests
         // copy A to branches (r3)
         addExpectedCommitItem(null, thisTest.getUrl(), "branches/A",
                               NodeKind.none, CommitItemStateFlags.Add);
-        client.copy(new CopySource[] { new CopySource(thisTest.getUrl() + "/A",
-                                       Revision.HEAD, Revision.HEAD) },
-                    thisTest.getUrl() + "/branches/A",
+        List<CopySource> srcs = new ArrayList<CopySource>(1);
+        srcs.add(new CopySource(thisTest.getUrl() + "/A", Revision.HEAD,
+                                Revision.HEAD));
+        client.copy(srcs, thisTest.getUrl() + "/branches/A",
                     "create A branch", true, false, false, null);
 
         // update the WC (to r3) so that it has the branches folder

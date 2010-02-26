@@ -27,6 +27,7 @@ import org.apache.subversion.javahl.callback.*;
 
 import java.io.OutputStream;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -324,7 +325,7 @@ public interface ISVNClient
      * @throws ClientException If the copy operation fails.
      * @since 1.7
      */
-    void copy(CopySource[] sources, String destPath, String message,
+    void copy(List<CopySource> sources, String destPath, String message,
               boolean copyAsChild, boolean makeParents,
               boolean ignoreExternals, Map<String, String> revpropTable)
             throws ClientException;
