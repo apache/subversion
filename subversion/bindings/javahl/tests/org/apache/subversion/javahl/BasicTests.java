@@ -763,7 +763,7 @@ public class BasicTests extends SVNTests
         MyProplistCallback callback = new MyProplistCallback();
 
         client.properties(itemPath, null, null, Depth.empty, null, callback);
-        Map propMap = callback.getProperties(itemPath);
+        Map<String, String> propMap = callback.getProperties(itemPath);
         Iterator it = propMap.keySet().iterator();
 
         while (it.hasNext())
@@ -2314,7 +2314,7 @@ public class BasicTests extends SVNTests
         Mergeinfo mergeInfo = client.getMergeinfo(targetPath, Revision.HEAD);
         assertNotNull("Missing merge info on '" + targetPath + '\'',
                       mergeInfo);
-        List ranges = mergeInfo.getRevisions(mergeSrc);
+        List<RevisionRange> ranges = mergeInfo.getRevisions(mergeSrc);
         assertTrue("Missing merge info for source '" + mergeSrc + "' on '" +
                    targetPath + '\'', ranges != null && !ranges.isEmpty());
         RevisionRange range = (RevisionRange) ranges.get(0);
@@ -2351,10 +2351,10 @@ public class BasicTests extends SVNTests
     {
         class Callback implements LogMessageCallback {
 
-            List revList = new ArrayList();
+            List<Long> revList = new ArrayList<Long>();
 
             public void singleMessage(ChangePath[] changedPaths, long revision,
-                    Map revprops, boolean hasChildren) {
+                    Map<String, String> revprops, boolean hasChildren) {
                 revList.add(new Long(revision));
             }
 
@@ -3444,17 +3444,17 @@ public class BasicTests extends SVNTests
 
         class RevpropLogCallback implements LogMessageCallback
         {
-            Map revprops;
+            Map<String, String> revprops;
 
             public void singleMessage(ChangePath[] changedPaths,
                                       long revision,
-                                      Map revprops,
+                                      Map<String, String> revprops,
                                       boolean hasChildren)
             {
                 this.revprops = revprops;
             }
 
-            public Map getRevprops()
+            public Map<String, String> getRevprops()
             {
                 return revprops;
             }
@@ -3476,7 +3476,7 @@ public class BasicTests extends SVNTests
                 CommitItemStateFlags.TextMods);
 
         // commit the changes, with some extra revprops
-        Map revprops = new HashMap();
+        Map<String, String> revprops = new HashMap<String, String>();
         revprops.put("kfogel", "rockstar");
         revprops.put("cmpilato", "theman");
         assertEquals("wrong revision number from commit",
@@ -3496,11 +3496,11 @@ public class BasicTests extends SVNTests
                            false, false, false,
                            new String[] {"kfogel", "cmpilato"}, 0,
                            callback);
-        Map fetchedProps = callback.getRevprops();
+        Map<String, String> fetchedProps = callback.getRevprops();
 
         assertEquals("wrong number of fetched revprops", revprops.size(),
                      fetchedProps.size());
-        Set keys = fetchedProps.keySet();
+        Set<String> keys = fetchedProps.keySet();
         for (Iterator it = keys.iterator(); it.hasNext(); )
           {
             String key = (String) it.next();
@@ -3545,7 +3545,7 @@ public class BasicTests extends SVNTests
      * A DiffSummaryReceiver implementation which collects all DiffSummary
      * notifications.
      */
-    private static class DiffSummaries extends HashMap
+    private static class DiffSummaries extends HashMap<String, DiffSummary>
         implements DiffSummaryCallback
     {
         // Update the serialVersionUID when there is a incompatible
@@ -3558,7 +3558,7 @@ public class BasicTests extends SVNTests
         }
     }
 
-    private class MyChangelistCallback extends HashMap
+    private class MyChangelistCallback extends HashMap<String, List<String>>
         implements ChangelistCallback
     {
         public void doChangelist(String path, String changelist)
@@ -3566,21 +3566,21 @@ public class BasicTests extends SVNTests
             if (super.containsKey(path))
             {
                 // Append the changelist to the existing list
-                List changelistList = (List) super.get(path);
+                List<String> changelistList = super.get(path);
                 changelistList.add(changelist);
             }
             else
             {
                 // Create a new changelist with that list
-                List changelistList = new ArrayList();
+                List<String> changelistList = new ArrayList<String>();
                 changelistList.add(changelist);
                 super.put(path, changelistList);
             }
         }
 
-        public List get(String path)
+        public List<String> get(String path)
         {
-            return (List) super.get(path);
+            return super.get(path);
         }
     }
 
@@ -3598,22 +3598,23 @@ public class BasicTests extends SVNTests
 
     private class MyProplistCallback implements ProplistCallback
     {
-        Map propMap = new HashMap();
+        Map<String, Map<String, String>> propMap =
+                                    new HashMap<String, Map<String, String>>();
 
-        public void singlePath(String path, Map props)
+        public void singlePath(String path, Map<String, String> props)
         {
             propMap.put(path, props);
         }
 
-        public Map getProperties(String path)
+        public Map<String, String> getProperties(String path)
         {
-            return (Map) propMap.get(path);
+            return propMap.get(path);
         }
     } 
 
     private class MyStatusCallback implements StatusCallback
     {
-        private List statuses = new ArrayList();
+        private List<Status> statuses = new ArrayList<Status>();
 
         public void doStatus(Status status)
         {
@@ -3622,7 +3623,7 @@ public class BasicTests extends SVNTests
 
         public Status[] getStatusArray()
         {
-            return (Status[]) statuses.toArray(new Status[statuses.size()]);
+            return statuses.toArray(new Status[statuses.size()]);
         }
     }
 
@@ -3633,16 +3634,17 @@ public class BasicTests extends SVNTests
     {
         class MyProplistCallback implements ProplistCallback
         {
-            Map propMap = new HashMap();
+            Map<String, Map<String, String>> propMap =
+                                new HashMap<String, Map<String, String>>();
 
-            public void singlePath(String path, Map props)
+            public void singlePath(String path, Map<String, String> props)
             {
                 propMap.put(path, props);
             }
 
-            public Map getProperties(String path)
+            public Map<String, String> getProperties(String path)
             {
-                return (Map) propMap.get(path);
+                return propMap.get(path);
             }
         }
 
@@ -3650,7 +3652,7 @@ public class BasicTests extends SVNTests
         client.properties(path, revision, revision, depth, changelists,
                 callback);
 
-        Map propMap = callback.getProperties(path);
+        Map<String, String> propMap = callback.getProperties(path);
         if (propMap == null)
             return new PropertyData[0];
         PropertyData[] props = new PropertyData[propMap.size()];
@@ -3675,7 +3677,7 @@ public class BasicTests extends SVNTests
     {
         class MyListCallback implements ListCallback
         {
-            private List dirents = new ArrayList();
+            private List<DirEntry> dirents = new ArrayList<DirEntry>();
 
             public void doEntry(DirEntry dirent, Lock lock)
             {
@@ -3707,8 +3709,7 @@ public class BasicTests extends SVNTests
 
             public DirEntry[] getDirEntryArray()
             {
-                return (DirEntry[]) dirents.toArray(
-                                                new DirEntry[dirents.size()]);
+                return dirents.toArray(new DirEntry[dirents.size()]);
             }
         }
 
@@ -3725,7 +3726,7 @@ public class BasicTests extends SVNTests
     {
         class MyInfoCallback implements InfoCallback
         {
-            private List infos = new ArrayList();
+            private List<Info2> infos = new ArrayList<Info2>();
 
             public void singleInfo(Info2 info)
             {
@@ -3734,7 +3735,7 @@ public class BasicTests extends SVNTests
 
             public Info2[] getInfoArray()
             {
-                return (Info2[]) infos.toArray(new Info2[infos.size()]);
+                return infos.toArray(new Info2[infos.size()]);
             }
         }
 
@@ -3754,11 +3755,11 @@ public class BasicTests extends SVNTests
     {
         class MyLogMessageCallback implements LogMessageCallback
         {
-            private List messages = new ArrayList();
+            private List<LogMessage> messages = new ArrayList<LogMessage>();
 
             public void singleMessage(ChangePath[] changedPaths,
                                       long revision,
-                                      Map revprops,
+                                      Map<String, String> revprops,
                                       boolean hasChildren)
             {
                 String author = (String) revprops.get("svn:author");
@@ -3784,8 +3785,7 @@ public class BasicTests extends SVNTests
 
             public LogMessage[] getMessages()
             {
-                return (LogMessage[]) messages.toArray(
-                                            new LogMessage[messages.size()]);
+                return messages.toArray(new LogMessage[messages.size()]);
             }
         }
 
@@ -3827,7 +3827,7 @@ public class BasicTests extends SVNTests
     {
 
         /** list of blame records (lines) */
-        private List lines = new ArrayList();
+        private List<BlameLine> lines = new ArrayList<BlameLine>();
 
         public void singleLine(Date changed, long revision, String author,
                                String line)
@@ -3846,8 +3846,10 @@ public class BasicTests extends SVNTests
                                        line));
         }
 
-        public void singleLine(long lineNum, long rev, Map revProps,
-                               long mergedRevision, Map mergedRevProps,
+        public void singleLine(long lineNum, long rev,
+                               Map<String, String> revProps,
+                               long mergedRevision,
+                               Map<String, String> mergedRevProps,
                                String mergedPath, String line,
                                boolean localChange)
             throws ClientException
@@ -3902,7 +3904,7 @@ public class BasicTests extends SVNTests
             {
                 return null;
             }
-            return (BlameLine) this.lines.get(i);
+            return this.lines.get(i);
         }
 
         /**

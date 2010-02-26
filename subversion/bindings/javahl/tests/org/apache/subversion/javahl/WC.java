@@ -43,7 +43,7 @@ public class WC
      * the map of the items of the working copy. The relative path is the key
      * for the map
      */
-    Map items = new HashMap();
+    Map<String, Item> items = new HashMap<String, Item>();
 
     /**
      * Generate from the expected state of the working copy a new working copy
@@ -53,10 +53,10 @@ public class WC
     public void materialize(File root) throws IOException
     {
         // generate all directories first
-        Iterator it = items.values().iterator();
+        Iterator<Item> it = items.values().iterator();
         while (it.hasNext())
         {
-            Item item = (Item) it.next();
+            Item item = it.next();
             if (item.myContent == null) // is a directory
             {
                 File dir = new File(root, item.myPath);
@@ -68,7 +68,7 @@ public class WC
         it = items.values().iterator();
         while (it.hasNext())
         {
-            Item item = (Item) it.next();
+            Item item = it.next();
             if (item.myContent != null) // is a file
             {
                 File file = new File(root, item.myPath);
@@ -146,11 +146,11 @@ public class WC
      */
     public void setRevision(long revision)
     {
-        Iterator iter = this.items.values().iterator();
+        Iterator<Item> iter = this.items.values().iterator();
 
         while (iter.hasNext())
         {
-            Item item = (Item) iter.next();
+            Item item = iter.next();
             item.workingCopyRev = revision;
         }
     }
@@ -162,7 +162,7 @@ public class WC
      */
     public String getItemContent(String path)
     {
-        return ((Item) items.get(path)).myContent;
+        return items.get(path).myContent;
     }
 
     /**
@@ -299,10 +299,10 @@ public class WC
     public WC copy()
     {
         WC c = new WC();
-        Iterator it = items.values().iterator();
+        Iterator<Item> it = items.values().iterator();
         while (it.hasNext())
         {
-            ((Item) it.next()).copy(c);
+            it.next().copy(c);
         }
         return c;
     }
@@ -334,10 +334,10 @@ public class WC
     void check(DirEntry[] tested, String basePath, boolean recursive)
     {
         // clear the touched flag of all items
-        Iterator it = items.values().iterator();
+        Iterator<Item> it = items.values().iterator();
         while (it.hasNext())
         {
-            Item item = (Item) it.next();
+            Item item = it.next();
             item.touched = false;
         }
 
@@ -439,10 +439,10 @@ public class WC
         throws IOException
     {
         // clear the touched flag of all items
-        Iterator it = items.values().iterator();
+        Iterator<Item> it = items.values().iterator();
         while (it.hasNext())
         {
-            Item item = (Item) it.next();
+            Item item = it.next();
             item.touched = false;
         }
 
