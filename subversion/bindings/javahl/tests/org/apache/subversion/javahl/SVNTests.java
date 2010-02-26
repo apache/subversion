@@ -124,7 +124,7 @@ class SVNTests extends TestCase
      * the map of all items expected to be received by the callback for the
      * log message. After each commit, this will be cleared
      */
-    protected Map expectedCommitItems;
+    protected Map<String, MyCommitItem> expectedCommitItems;
 
     /**
      * Common root directory for all tests. Can be set by the command
@@ -274,7 +274,7 @@ class SVNTests extends TestCase
         this.client.username("jrandom");
         this.client.password("rayjandom");
         this.client.setConfigDirectory(this.conf.getAbsolutePath());
-        this.expectedCommitItems = new HashMap();
+        this.expectedCommitItems = new HashMap<String, MyCommitItem>();
     }
 
     /**
@@ -915,7 +915,7 @@ class SVNTests extends TestCase
 
     private class MyStatusCallback implements StatusCallback
     {
-        private List statuses = new ArrayList();
+        private List<Status> statuses = new ArrayList<Status>();
 
         public void doStatus(Status status)
         {
