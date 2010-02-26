@@ -36,7 +36,6 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
@@ -163,19 +162,19 @@ public class BasicTests extends SVNTests
 
         // Subversion "paths" which aren't URLs.
         String[] paths = { "/path", "c:\\path" };
-        for (int i = 0; i < paths.length; i++)
+        for (String path : paths)
         {
-            assertFalse("'" + paths[i] + "' should not be considered a URL",
-                        Path.isURL(paths[i]));
+            assertFalse("'" + path + "' should not be considered a URL",
+                        Path.isURL(path));
         }
 
         // Subversion "paths" which are URLs.
         paths = new String[] { "http://example.com", "svn://example.com",
                                "svn+ssh://example.com", "file:///src/svn/" };
-        for (int i = 0; i < paths.length; i++)
+        for (String path : paths)
         {
-            assertTrue("'" + paths[i] + "' should be considered a URL",
-                       Path.isURL(paths[i]));
+            assertTrue("'" + path + "' should be considered a URL",
+                       Path.isURL(path));
         }
     }
 
@@ -764,11 +763,8 @@ public class BasicTests extends SVNTests
 
         client.properties(itemPath, null, null, Depth.empty, null, callback);
         Map<String, String> propMap = callback.getProperties(itemPath);
-        Iterator it = propMap.keySet().iterator();
-
-        while (it.hasNext())
+        for (String key : propMap.keySet())
         {
-            String key = (String) it.next();
             assertEquals("cqcq", key);
             assertEquals("qrz", (String) propMap.get(key));
         }
@@ -2215,9 +2211,8 @@ public class BasicTests extends SVNTests
         infos = collectInfos(thisTest.getWCPath(), null, null, Depth.infinity,
                              null);
         assertEquals(failureMsg, 21, infos.length);
-        for (int i = 0; i < infos.length; i++)
+        for (Info2 info : infos)
         {
-            Info2 info = infos[i];
             assertNull("Unexpected changelist present",
                        info.getChangelistName());
 
@@ -2361,8 +2356,8 @@ public class BasicTests extends SVNTests
             public long[] getRevisions() {
                 long[] revisions = new long[revList.size()];
                 int i = 0;
-                for (Iterator iter = revList.iterator(); iter.hasNext();) {
-                    Long revision = (Long) iter.next();
+                for (Long revision : revList)
+                {
                     revisions[i] = revision.longValue();
                     i++;
                 }
@@ -3501,9 +3496,8 @@ public class BasicTests extends SVNTests
         assertEquals("wrong number of fetched revprops", revprops.size(),
                      fetchedProps.size());
         Set<String> keys = fetchedProps.keySet();
-        for (Iterator it = keys.iterator(); it.hasNext(); )
+        for (String key : keys)
           {
-            String key = (String) it.next();
             assertEquals("revprops check", revprops.get(key),
                          fetchedProps.get(key));
           }
@@ -3657,13 +3651,10 @@ public class BasicTests extends SVNTests
             return new PropertyData[0];
         PropertyData[] props = new PropertyData[propMap.size()];
 
-        Iterator it = propMap.keySet().iterator();
         int i = 0;
-
-        while (it.hasNext())
+        for (String key : propMap.keySet())
         {
-            String key = (String) it.next();
-            props[i] = new PropertyData(path, key, (String) propMap.get(key));
+            props[i] = new PropertyData(path, key, propMap.get(key));
             i++;
         }
 
