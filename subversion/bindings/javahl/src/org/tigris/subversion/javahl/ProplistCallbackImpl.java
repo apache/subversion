@@ -33,7 +33,7 @@ import java.util.Map;
  */
 public class ProplistCallbackImpl implements ProplistCallback
 {
-    Map propMap = new HashMap();
+    Map<String, Map> propMap = new HashMap<String, Map>();
 
     public void singlePath(String path, Map props)
     {
@@ -42,6 +42,6 @@ public class ProplistCallbackImpl implements ProplistCallback
 
     public Map getProperties(String path)
     {
-        return (Map) propMap.get(path);
+        return propMap.get(path);
     }
 }
