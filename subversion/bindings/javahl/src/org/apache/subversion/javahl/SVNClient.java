@@ -28,6 +28,7 @@ import org.apache.subversion.javahl.callback.*;
 import java.io.OutputStream;
 
 import java.util.Collection;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 
@@ -163,17 +164,34 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.6
      */
-    public native void logMessages(String path,
-                                   Revision pegRevision,
-                                   RevisionRange[] revisionRanges,
-                                   boolean stopOnCopy,
-                                   boolean discoverPath,
-                                   boolean includeMergedRevisions,
-                                   String[] revProps,
-                                   long limit,
-                                   LogMessageCallback callback)
-            throws ClientException;
+    public void logMessages(String path,
+                            Revision pegRevision,
+                            RevisionRange[] revisionRanges,
+                            boolean stopOnCopy,
+                            boolean discoverPath,
+                            boolean includeMergedRevisions,
+                            Set<String> revProps,
+                            long limit,
+                            LogMessageCallback callback)
+            throws ClientException
+    {
+        this.logMessages(path, pegRevision, revisionRanges, stopOnCopy,
+                         discoverPath, includeMergedRevisions,
+                         revProps == null ? null
+                            : revProps.toArray(new String[revProps.size()]),
+                         limit, callback);
+    }
 
+    private native void logMessages(String path,
+                                    Revision pegRevision,
+                                    RevisionRange[] revisionRanges,
+                                    boolean stopOnCopy,
+                                    boolean discoverPath,
+                                    boolean includeMergedRevisions,
+                                    String[] revProps,
+                                    long limit,
+                                    LogMessageCallback callback)
+            throws ClientException;
     /**
      * @since 1.5
      */
@@ -398,14 +416,31 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.7
      */
-    public native void getMergeinfoLog(int kind, String pathOrUrl,
-                                       Revision pegRevision,
-                                       String mergeSourceUrl,
-                                       Revision srcPegRevision,
-                                       boolean discoverChangedPaths,
-                                       int depth,
-                                       String[] revprops,
-                                       LogMessageCallback callback)
+    public void getMergeinfoLog(int kind, String pathOrUrl,
+                                Revision pegRevision,
+                                String mergeSourceUrl,
+                                Revision srcPegRevision,
+                                boolean discoverChangedPaths,
+                                int depth,
+                                Set<String> revProps,
+                                LogMessageCallback callback)
+        throws ClientException
+    {
+        this.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                             srcPegRevision, discoverChangedPaths, depth,
+                             revProps == null ? null
+                                : revProps.toArray(new String[revProps.size()]),
+                             callback);
+    }
+
+    private native void getMergeinfoLog(int kind, String pathOrUrl,
+                                        Revision pegRevision,
+                                        String mergeSourceUrl,
+                                        Revision srcPegRevision,
+                                        boolean discoverChangedPaths,
+                                        int depth,
+                                        String[] revProps,
+                                        LogMessageCallback callback)
         throws ClientException;
 
     /**
