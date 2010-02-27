@@ -28,6 +28,7 @@ import org.apache.subversion.javahl.callback.*;
 import java.io.OutputStream;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 
 /**
@@ -150,7 +151,7 @@ public interface ISVNClient
     void logMessages(String path, Revision pegRevision,
                      RevisionRange[] ranges, boolean stopOnCopy,
                      boolean discoverPath, boolean includeMergedRevisions,
-                     String[] revProps, long limit,
+                     Set<String> revProps, long limit,
                      LogMessageCallback callback)
             throws ClientException;
 
@@ -551,7 +552,7 @@ public interface ISVNClient
     void getMergeinfoLog(int kind, String pathOrUrl,
                          Revision pegRevision, String mergeSourceUrl,
                          Revision srcPegRevision, boolean discoverChangedPaths,
-                         int depth, String[] revprops,
+                         int depth, Set<String> revProps,
                          LogMessageCallback callback)
         throws ClientException;
 

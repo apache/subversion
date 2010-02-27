@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
@@ -3487,11 +3488,13 @@ public class BasicTests extends SVNTests
 
         // Fetch our revprops from the server
         RevpropLogCallback callback = new RevpropLogCallback();
+        Set<String> revProps = new HashSet<String>(2);
+        revProps.add("kfogel");
+        revProps.add("cmpilato");
         client.logMessages(thisTest.getWCPath(), Revision.getInstance(2),
                            toRevisionRange(Revision.getInstance(2),
                                            Revision.getInstance(2)),
-                           false, false, false,
-                           new String[] {"kfogel", "cmpilato"}, 0,
+                           false, false, false, revProps, 0,
                            callback);
         Map<String, String> fetchedProps = callback.getRevprops();
 
@@ -3784,7 +3787,10 @@ public class BasicTests extends SVNTests
         }
 
         MyLogMessageCallback callback = new MyLogMessageCallback();
-        String[] revProps = { "svn:log", "svn:date", "svn:author" };
+        Set<String> revProps = new HashSet<String>();
+        revProps.add("svn:log");
+        revProps.add("svn:date");
+        revProps.add("svn:author");
         client.logMessages(path, pegRevision, revisionRanges, stopOnCopy,
                            discoverPath, includeMergedRevisions, revProps,
                            limit, callback);

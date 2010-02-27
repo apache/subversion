@@ -29,6 +29,7 @@ import java.io.OutputStream;
 
 import java.util.Map;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Date;
@@ -539,8 +540,10 @@ public class SVNClient implements SVNClientInterface
             aSVNClient.logMessages(path,
                          pegRevision == null ? null :pegRevision.toApache(),
                          aRevisions, stopOnCopy, discoverPath,
-                         includeMergedRevisions, revProps, limit,
-                         new aLogMessageCallback(callback));
+                         includeMergedRevisions,
+                         revProps == null ? null
+                            : new HashSet<String>(Arrays.asList(revProps)),
+                         limit, new aLogMessageCallback(callback));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1438,7 +1441,9 @@ public class SVNClient implements SVNClientInterface
                         mergeSourceUrl,
                         srcPegRevision == null ? null :
                                                     srcPegRevision.toApache(),
-                        discoverChangedPaths, depth, revprops,
+                        discoverChangedPaths, depth,
+                        revprops == null ? null
+                          : new HashSet<String>(Arrays.asList(revprops)),
                         new aLogMessageCallback(callback));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
