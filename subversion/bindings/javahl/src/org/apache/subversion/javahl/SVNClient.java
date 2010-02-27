@@ -259,18 +259,6 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public long update(String path, Revision revision, int depth,
-                       boolean depthIsSticky, boolean ignoreExternals,
-                       boolean allowUnverObstructions)
-            throws ClientException
-    {
-        return update(new String[]{path}, revision, depth, depthIsSticky,
-                      ignoreExternals, allowUnverObstructions)[0];
-    }
-
-    /**
-     * @since 1.5
-     */
     public native long[] update(String[] path, Revision revision,
                                 int depth, boolean depthIsSticky,
                                 boolean ignoreExternals,
