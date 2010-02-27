@@ -250,25 +250,6 @@ public interface ISVNClient
         throws ClientException;
 
     /**
-     * Updates the directory or file from repository
-     * @param path target file.
-     * @param revision the revision number to update.
-     *                 Revision.HEAD will update to the
-     *                 latest revision.
-     * @param depth  the depth to recursively update.
-     * @param depthIsSticky if set, and depth is not {@link Depth#unknown},
-     *                      then also set the ambient depth value to depth.
-     * @param ignoreExternals if externals are ignored during update
-     * @param allowUnverObstructions allow unversioned paths that obstruct adds
-     * @throws ClientException
-     * @since 1.5
-     */
-    long update(String path, Revision revision, int depth,
-                boolean depthIsSticky, boolean ignoreExternals,
-                boolean allowUnverObstructions)
-            throws ClientException;
-
-    /**
      * Updates the directories or files from repository
      * @param path array of target files.
      * @param revision the revision number to update.
