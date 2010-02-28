@@ -237,7 +237,7 @@ Candidate changes:
    Justification:
      Issue #3242 is a hot issue.  Hot topic, hot tempers, etc.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, ivan
 
  * r878590, r878607, r878625, r878626, r878627
    In trunk we optimized the common case of 'find-and-replace with same uri'
