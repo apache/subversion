@@ -45,8 +45,10 @@ static void proxy_request_fixup(request_rec *r,
 
     r->proxyreq = PROXYREQ_REVERSE;
     r->uri = r->unparsed_uri;
-    r->filename = apr_pstrcat(r->pool, "proxy:", master_uri,
-                              uri_segment, NULL);
+    r->filename = (char *) svn_path_uri_encode(apr_pstrcat(r->pool, "proxy:",
+                                                           master_uri,
+                                                           uri_segment,
+                                                           NULL), r->pool);
     r->handler = "proxy-server";
     ap_add_output_filter("LocationRewrite", NULL, r, r->connection);
     ap_add_output_filter("ReposRewrite", NULL, r, r->connection);
@@ -78,7 +80,7 @@ int dav_svn__proxy_request_fixup(request_rec *r)
            transaction tree resouces. */
         if (r->method_number == M_PROPFIND ||
             r->method_number == M_GET) {
-            if ((seg = ap_strstr(r->unparsed_uri, root_dir))) {
+            if ((seg = ap_strstr(r->uri, root_dir))) {
                 if (ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
                                                  "/wrk/", NULL))
                     || ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
@@ -95,7 +97,7 @@ int dav_svn__proxy_request_fixup(request_rec *r)
         /* If this is a write request aimed at a public URI (such as
            MERGE, LOCK, UNLOCK, etc.) or any as-yet-unhandled request
            using a "special URI", we have to doctor it a bit for proxying. */
-        seg = ap_strstr(r->unparsed_uri, root_dir);
+        seg = ap_strstr(r->uri, root_dir);
         if (seg && (r->method_number == M_MERGE ||
                     r->method_number == M_LOCK ||
                     r->method_number == M_UNLOCK ||
@@ -158,6 +160,11 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
        ### PUT requests and properties in PROPPATCH requests.
        ### See issue #3445 for details. */
 
+    /* We are url encoding the current url and the master url
+       as incoming(from client) request body has it encoded already. */
+    canonicalized_uri = (char *) svn_path_uri_encode(canonicalized_uri,
+                                                     r->pool);
+    root_dir = (char *) svn_path_uri_encode(root_dir, r->pool);
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
         ctx->remotepath = canonicalized_uri;
@@ -216,6 +223,7 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
     /* Don't filter if we're in a subrequest or we aren't setup to
        proxy anything. */
     master_uri = dav_svn__get_master_uri(r);
+    master_uri = (char *) svn_path_uri_encode(master_uri, r->pool);
     if (r->main || !master_uri) {
         ap_remove_output_filter(f);
         return ap_pass_brigade(f->next, bb);
@@ -233,6 +241,7 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
                                                dav_svn__get_root_dir(r), "/",
                                                start_foo, NULL),
                                    r);
+        new_uri = (char *) svn_path_uri_encode(new_uri, r->pool);
         apr_table_set(r->headers_out, "Location", new_uri);
     }
     return ap_pass_brigade(f->next, bb);
@@ -274,6 +283,11 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
        ### they return in the process of trying to do URI fix-ups.
        ### See issue #3445 for details. */
 
+    /* We are url encoding the current url and the master url
+       as incoming(from master) request body has it encoded already. */
+    canonicalized_uri = (char *) svn_path_uri_encode(canonicalized_uri,
+                                                     r->pool);
+    root_dir = (char *) svn_path_uri_encode(root_dir, r->pool);
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
         ctx->remotepath = canonicalized_uri;
