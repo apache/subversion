@@ -2940,6 +2940,94 @@ svn_fs_base__deltify(svn_fs_t *fs,
 }
 
 
+struct txn_obliterate_rep_args
+{
+  const svn_fs_id_t *id;
+  svn_boolean_t has_pred;
+  const svn_fs_id_t *pred_id;
+};
+
+static svn_error_t *
+txn_body_obliterate_rep(void *baton, trail_t *trail)
+{
+  struct txn_obliterate_rep_args *args = baton;
+  dag_node_t *node, *pred_node;
+
+  SVN_ERR(svn_fs_base__dag_get_node(&node, trail->fs, args->id,
+                                    trail, trail->pool));
+  if (args->has_pred)
+    {
+      SVN_ERR(svn_fs_base__dag_get_node(&pred_node, trail->fs, args->pred_id,
+                                        trail, trail->pool));
+    }
+  else
+    {
+      pred_node = NULL;
+    }
+
+  SVN_ERR(svn_fs_base__dag_obliterate_rep(node, pred_node, trail, trail->pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_base__obliterate_rep(svn_fs_t *fs,
+                            const char *path,
+                            svn_revnum_t revision,
+                            apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
+  const char *txn_id;
+  struct rev_get_txn_id_args get_txn_args;
+  const svn_fs_id_t *id;
+  svn_node_kind_t kind;
+  struct txn_pred_count_args pred_count_args;
+  struct txn_obliterate_rep_args oblit_args;
+
+  SVN_ERR(svn_fs_base__revision_root(&root, fs, revision, pool));
+  get_txn_args.txn_id = &txn_id;
+  get_txn_args.revision = revision;
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_rev_get_txn_id, &get_txn_args,
+                                 FALSE, pool));
+
+  SVN_ERR(base_node_id(&id, root, path, pool));
+  if (strcmp(svn_fs_base__id_txn_id(id), txn_id))
+    return svn_error_createf(SVN_ERR_FS_NOT_MUTABLE, NULL,
+                             _("Unexpected immutable node at '%s'"), path);
+
+  SVN_ERR(base_check_path(&kind, root, path, pool));
+  if (kind != svn_node_file)
+    return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
+                             _("Cannot obliterate '%s' as it is not a file"),
+                             path);
+
+  pred_count_args.id = id;
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_count, &pred_count_args,
+                                 FALSE, pool));
+
+  if (pred_count_args.pred_count > 0)
+    {
+      struct txn_pred_id_args pred_id_args;
+
+      pred_id_args.id = id;
+      pred_id_args.pool = pool;
+      SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_id, &pred_id_args,
+                                     FALSE, pool));
+
+      oblit_args.has_pred = TRUE;
+      oblit_args.pred_id = pred_id_args.pred_id;
+    }
+  else
+    {
+      oblit_args.has_pred = FALSE;
+    }
+  oblit_args.id = id;
+
+  return svn_fs_base__retry_txn(fs, txn_body_obliterate_rep, &oblit_args,
+                                TRUE, pool);
+}
+
+
 
 /* Modifying directories */
 

@@ -558,6 +558,15 @@ svn_error_t *svn_fs_base__dag_deltify(dag_node_t *target,
                                       trail_t *trail,
                                       apr_pool_t *pool);
 
+/* Obliterate NODE's data by constructing a new representation that
+   consists of a no-change delta from PRED_NODE, and changing NODE to
+   use that new rep, and leaving the old rep alone in case it is used
+   by other nodes.  If PRED_NODE is null
+   then construct a representation with an empty fulltext instead. */
+svn_error_t *svn_fs_base__dag_obliterate_rep(dag_node_t *node,
+                                             dag_node_t *pred_node,
+                                             trail_t *trail,
+                                             apr_pool_t *pool);
 
 /* Index NODE's backing data representations by their checksum.  Do
    this as part of TRAIL.  Use POOL for allocations. */

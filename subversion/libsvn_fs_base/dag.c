@@ -1530,6 +1530,33 @@ svn_fs_base__dag_deltify(dag_node_t *target,
 }
 
 
+svn_error_t *
+svn_fs_base__dag_obliterate_rep(dag_node_t *node,
+                                dag_node_t *pred_node,
+                                trail_t *trail,
+                                apr_pool_t *pool)
+{
+  node_revision_t *node_rev, *pred_node_rev;
+  svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
+  const char *pred_key;
+
+  SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, node->id, trail, pool));
+  if (pred_node)
+    {
+      SVN_ERR(svn_fs_bdb__get_node_revision(&pred_node_rev, fs, pred_node->id,
+                                            trail, pool));
+      pred_key = pred_node_rev->data_key;
+    }
+  else
+    {
+      pred_key = NULL;
+    }
+
+  return svn_fs_base__rep_obliterate(trail->fs, node_rev->data_key, pred_key,
+                                     trail, pool);
+}
+
+
 /* Maybe store a `checksum-reps' index record for the representation whose
    key is REP.  (If there's already a rep for this checksum, we don't
    bother overwriting it.)  */
