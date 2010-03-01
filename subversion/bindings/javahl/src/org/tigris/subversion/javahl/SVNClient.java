@@ -529,12 +529,12 @@ public class SVNClient implements SVNClientInterface
 
         try
         {
-            org.apache.subversion.javahl.RevisionRange[] aRevisions = 
-              new org.apache.subversion.javahl.RevisionRange[revisionRanges.length];
+            List<org.apache.subversion.javahl.RevisionRange> aRevisions = 
+              new ArrayList<org.apache.subversion.javahl.RevisionRange>(revisionRanges.length);
 
-            for (int i = 0; i < revisionRanges.length; i++)
+            for (RevisionRange range : revisionRanges)
             {
-                aRevisions[i] = revisionRanges[i].toApache();
+                aRevisions.add(range.toApache());
             }
 
             aSVNClient.logMessages(path,
@@ -1328,12 +1328,12 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            org.apache.subversion.javahl.RevisionRange[] aRevisions = 
-              new org.apache.subversion.javahl.RevisionRange[revisions.length];
+            List<org.apache.subversion.javahl.RevisionRange> aRevisions = 
+              new ArrayList<org.apache.subversion.javahl.RevisionRange>(revisions.length);
 
-            for (int i = 0; i < revisions.length; i++)
+            for (RevisionRange range : revisions )
             {
-                aRevisions[i] = revisions[i].toApache();
+                aRevisions.add(range.toApache());
             }
 
             aSVNClient.merge(path,
