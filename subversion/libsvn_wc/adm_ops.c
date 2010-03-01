@@ -1187,7 +1187,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__db_temp_op_delete(wc_ctx->db, local_abspath, pool));
       SVN_ERR(svn_wc__wq_add_delete(wc_ctx->db, parent_abspath, local_abspath,
                                     kind, was_add, was_copied, was_replace,
-                                    base_shadowed, pool));
+                                    pool));
 
       SVN_ERR(svn_wc__wq_run(db, parent_abspath, cancel_func, cancel_baton,
                              pool));

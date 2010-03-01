@@ -1731,7 +1731,7 @@ run_delete(svn_wc__db_t *db,
   const svn_skel_t *arg = work_item->children->next;
   const char *local_abspath;
   svn_wc__db_kind_t kind;
-  svn_boolean_t was_added, was_copied, was_replaced, base_shadowed;
+  svn_boolean_t was_added, was_copied, was_replaced;
 
   local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
   arg = arg->next;
@@ -1742,8 +1742,6 @@ run_delete(svn_wc__db_t *db,
   was_copied = (svn_boolean_t) svn_skel__parse_int(arg, scratch_pool);
   arg = arg->next;
   was_replaced = (svn_boolean_t) svn_skel__parse_int(arg, scratch_pool);
-  arg = arg->next;
-  base_shadowed = (svn_boolean_t) svn_skel__parse_int(arg, scratch_pool);
 
   if (was_replaced && was_copied)
     {
@@ -1805,12 +1803,10 @@ svn_wc__wq_add_delete(svn_wc__db_t *db,
                       svn_boolean_t was_added,
                       svn_boolean_t was_copied,
                       svn_boolean_t was_replaced,
-                      svn_boolean_t base_shadowed,
                       apr_pool_t *scratch_pool)
 {
   svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
 
-  svn_skel__prepend_int(base_shadowed, work_item, scratch_pool);
   svn_skel__prepend_int(was_replaced, work_item, scratch_pool);
   svn_skel__prepend_int(was_copied, work_item, scratch_pool);
   svn_skel__prepend_int(was_added, work_item, scratch_pool);
