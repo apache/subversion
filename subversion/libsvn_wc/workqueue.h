@@ -131,7 +131,6 @@ svn_wc__wq_add_delete(svn_wc__db_t *db,
                       svn_boolean_t was_added,
                       svn_boolean_t was_copied,
                       svn_boolean_t was_replaced,
-                      svn_boolean_t base_shadowed,
                       apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
