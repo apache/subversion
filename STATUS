@@ -272,6 +272,15 @@ Candidate changes:
    Votes:
      +1: kameshj
 
+ * r917640
+   Correctly handle invocations of 'svnlook plist --revprop' when
+   used with '-t TXN_NAME' instead of '-r REV'.
+   Justification:
+     Users are assuming that this works (and trying to employ the
+     functionality in pre-commit hooks), but it clearly doesn't.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
