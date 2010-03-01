@@ -754,18 +754,6 @@ public interface ISVNClient
      * @param path      path of the item
      * @param name      name of property
      * @param revision  revision of the item
-     * @return the Property
-     * @throws ClientException
-     * @since 1.2
-     */
-    PropertyData propertyGet(String path, String name, Revision revision)
-            throws ClientException;
-
-    /**
-     * Retrieve one property of one item
-     * @param path      path of the item
-     * @param name      name of property
-     * @param revision  revision of the item
      * @param pegRevision the revision to interpret path
      * @return the Property
      * @throws ClientException
