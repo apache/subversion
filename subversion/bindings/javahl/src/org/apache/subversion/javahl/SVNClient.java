@@ -233,9 +233,17 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void remove(String[] path, String message, boolean force,
-                              boolean keepLocal,
-                              Map<String, String> revpropTable)
+    public void remove(Set<String> paths, String message, boolean force,
+                       boolean keepLocal, Map<String, String> revpropTable)
+            throws ClientException
+    {
+        this.remove(paths.toArray(new String[paths.size()]), message, force,
+                    keepLocal, revpropTable);
+    }
+
+    private native void remove(String[] paths, String message, boolean force,
+                               boolean keepLocal,
+                               Map<String, String> revpropTable)
             throws ClientException;
 
     /**
@@ -262,28 +270,39 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native long[] update(String[] path, Revision revision,
-                                int depth, boolean depthIsSticky,
-                                boolean ignoreExternals,
-                                boolean allowUnverObstructions)
+    public long[] update(Set<String> paths, Revision revision,
+                         int depth, boolean depthIsSticky,
+                         boolean ignoreExternals,
+                         boolean allowUnverObstructions)
+            throws ClientException
+    {
+        return update(paths.toArray(new String[paths.size()]), revision, depth,
+                      depthIsSticky, ignoreExternals, allowUnverObstructions);
+    }
+
+    private native long[] update(String[] paths, Revision revision,
+                                 int depth, boolean depthIsSticky,
+                                 boolean ignoreExternals,
+                                 boolean allowUnverObstructions)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public long commit(String[] path, String message, int depth,
+    public long commit(Set<String> paths, String message, int depth,
                        boolean noUnlock, boolean keepChangelist,
                        Collection<String> changelists,
                        Map<String, String> revpropTable)
             throws ClientException
     {
-        return this.commit(path, message, depth, noUnlock, keepChangelist,
+        return this.commit(paths.toArray(new String[paths.size()]),
+                    message, depth, noUnlock, keepChangelist,
                     changelists == null ? null :
                       changelists.toArray(new String[changelists.size()]),
                     revpropTable);
     }
 
-    private native long commit(String[] path, String message, int depth,
+    private native long commit(String[] paths, String message, int depth,
                                boolean noUnlock, boolean keepChangelist,
                                String[] changelists,
                                Map<String, String> revpropTable)
@@ -321,7 +340,16 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void mkdir(String[] path, String message,
+    public void mkdir(Set<String> paths, String message,
+                      boolean makeParents,
+                      Map<String, String> revpropTable)
+            throws ClientException
+    {
+        this.mkdir(paths.toArray(new String[paths.size()]), message,
+                   makeParents, revpropTable);
+    }
+
+    private native void mkdir(String[] paths, String message,
                              boolean makeParents,
                              Map<String, String> revpropTable)
             throws ClientException;
@@ -716,11 +744,12 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public void addToChangelist(String[] paths, String changelist,
+    public void addToChangelist(Set<String> paths, String changelist,
                                 int depth, Collection<String> changelists)
             throws ClientException
     {
-        this.addToChangelist(paths, changelist, depth,
+        this.addToChangelist(paths.toArray(new String[paths.size()]),
+                    changelist, depth,
                     changelists == null ? null :
                       changelists.toArray(new String[changelists.size()]));
     }
@@ -732,11 +761,12 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public void removeFromChangelists(String[] paths, int depth,
+    public void removeFromChangelists(Set<String> paths, int depth,
                                       Collection<String> changelists)
             throws ClientException
     {
-        this.removeFromChangelists(paths, depth,
+        this.removeFromChangelists(paths.toArray(new String[paths.size()]),
+                    depth,
                     changelists == null ? null :
                       changelists.toArray(new String[changelists.size()]));
     }
@@ -822,13 +852,25 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.2
      */
-    public native void lock(String[] path, String comment, boolean force)
+    public void lock(Set<String> paths, String comment, boolean force)
+            throws ClientException
+    {
+        this.lock(paths.toArray(new String[paths.size()]), comment, force);
+    }
+
+    private native void lock(String[] paths, String comment, boolean force)
             throws ClientException;
 
     /**
      * @since 1.2
      */
-    public native void unlock(String[] path, boolean force)
+    public void unlock(Set<String> paths, boolean force)
+            throws ClientException
+    {
+        this.unlock(paths.toArray(new String[paths.size()]), force);
+    }
+
+    private native void unlock(String[] paths, boolean force)
             throws ClientException;
 
     /**

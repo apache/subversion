@@ -218,7 +218,7 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    void remove(String[] path, String message, boolean force,
+    void remove(Set<String> path, String message, boolean force,
                 boolean keepLocal, Map<String, String> revpropTable)
             throws ClientException;
 
@@ -263,7 +263,7 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    long[] update(String[] path, Revision revision, int depth,
+    long[] update(Set<String> path, Revision revision, int depth,
                   boolean depthIsSticky, boolean ignoreExternals,
                   boolean allowUnverObstructions) throws ClientException;
 
@@ -284,7 +284,7 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    long commit(String[] path, String message, int depth,
+    long commit(Set<String> path, String message, int depth,
                 boolean noUnlock, boolean keepChangelist,
                 Collection<String> changelists, Map<String, String> revpropTable)
             throws ClientException;
@@ -347,7 +347,7 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    void mkdir(String[] path, String message, boolean makeParents,
+    void mkdir(Set<String> path, String message, boolean makeParents,
                Map<String, String> revpropTable)
             throws ClientException;
 
@@ -873,7 +873,7 @@ public interface ISVNClient
      * @param changelists changelists to filter by
      * @since 1.5
      */
-    void addToChangelist(String[] paths, String changelist, int depth,
+    void addToChangelist(Set<String> paths, String changelist, int depth,
                          Collection<String> changelists)
             throws ClientException;
 
@@ -884,7 +884,7 @@ public interface ISVNClient
      * @param changelists changelists to filter by
      * @since 1.5
      */
-    void removeFromChangelists(String[] paths, int depth,
+    void removeFromChangelists(Set<String> paths, int depth,
                                Collection<String> changelists)
             throws ClientException;
 
@@ -908,7 +908,7 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.2
      */
-    void lock(String[] path, String comment, boolean force)
+    void lock(Set<String> path, String comment, boolean force)
             throws ClientException;
 
     /**
@@ -918,7 +918,7 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.2
      */
-    void unlock(String[] path, boolean force)
+    void unlock(Set<String> path, boolean force)
             throws ClientException;
 
     /**

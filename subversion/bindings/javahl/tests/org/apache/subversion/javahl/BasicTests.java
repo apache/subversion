@@ -285,7 +285,7 @@ public class BasicTests extends SVNTests
                               thisTest.getUrl(), "A/D/G/rho", NodeKind.file,
                               CommitItemStateFlags.TextMods);
         assertEquals("wrong revision number from commit",
-                     rev = client.commit(new String[]{thisTest.getWCPath()},
+                     rev = client.commit(thisTest.getWCPathSet(),
                                          "log msg", Depth.infinity,
                                          false, false, null, null),
                      expectedRev++);
@@ -303,13 +303,13 @@ public class BasicTests extends SVNTests
         String rhoAuthor = status.getLastCommitAuthor();
 
         // ----- r3: delete file A/D/G/pi ---------------------------
-        client.remove(new String[] {thisTest.getWCPath() + "/A/D/G/pi"}, null,
+        client.remove(thisTest.getWCPathSet("/A/D/G/pi"), null,
                       false, false, null);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                               "A/D/G/pi", NodeKind.file,
                               CommitItemStateFlags.Delete);
         assertEquals("wrong revision number from commit",
-                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                     rev = client.commit(thisTest.getWCPathSet(),
                                          "log msg", Depth.infinity,
                                          false, false, null, null),
                      expectedRev++);
@@ -317,7 +317,7 @@ public class BasicTests extends SVNTests
 
         thisTest.getWc().setItemWorkingCopyRevision("A/D/G", rev);
         assertEquals("wrong revision from update",
-                 client.update(new String[] {thisTest.getWCPath() + "/A/D/G"},
+                 client.update(thisTest.getWCPathSet("/A/D/G"),
                                null, Depth.unknown, false, false, false)[0],
                      rev);
         long GCommitRev = rev;
@@ -331,7 +331,7 @@ public class BasicTests extends SVNTests
                               "A/D/G/tau",NodeKind.file,
                               CommitItemStateFlags.TextMods);
         assertEquals("wrong revision number from commit",
-                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                     rev = client.commit(thisTest.getWCPathSet(),
                                          "log msg", Depth.infinity, false,
                                          false, null, null),
                      expectedRev++);
@@ -348,13 +348,13 @@ public class BasicTests extends SVNTests
         String tauAuthor = status.getLastCommitAuthor();
 
         // ----- r5: delete dir with no children  A/C ---------------
-        client.remove(new String[] {thisTest.getWCPath() + "/A/C"}, null,
+        client.remove(thisTest.getWCPathSet("/A/C"), null,
                       false, false, null);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                               "A/C", NodeKind.dir,
                               CommitItemStateFlags.Delete);
         assertEquals("wrong revision number from commit",
-                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                     rev = client.commit(thisTest.getWCPathSet(),
                                          "log msg", Depth.infinity, false,
                                          false, null, null),
                      expectedRev++);
@@ -369,7 +369,7 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                               "A/B/I", NodeKind.dir, CommitItemStateFlags.Add);
         assertEquals("wrong revision number from commit",
-                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                     rev = client.commit(thisTest.getWCPathSet(),
                                          "log msg",  Depth.infinity, false,
                                          false, null, null),
                      expectedRev++);
@@ -385,7 +385,7 @@ public class BasicTests extends SVNTests
         // ----- r7: Update then commit prop change on root dir -----
         thisTest.getWc().setRevision(rev);
         assertEquals("wrong revision from update",
-                     client.update(new String[] {thisTest.getWCPath()}, null,
+                     client.update(thisTest.getWCPathSet(), null,
                             Depth.unknown, false, false, false)[0], rev);
         thisTest.checkStatus();
         client.propertySet(thisTest.getWCPath(), "propname", "propval",
@@ -394,7 +394,7 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(), null,
                               NodeKind.dir, CommitItemStateFlags.PropMods);
         assertEquals("wrong revision number from commit",
-                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                     rev = client.commit(thisTest.getWCPathSet(),
                                          "log msg", Depth.infinity, false,
                                          false, null, null),
                      expectedRev++);
@@ -412,7 +412,7 @@ public class BasicTests extends SVNTests
                               CommitItemStateFlags.TextMods +
                               CommitItemStateFlags.Add);
         assertEquals("wrong revision number from commit",
-                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                     rev = client.commit(thisTest.getWCPathSet(),
                                          "log msg", Depth.infinity, false,
                                          false, null, null),
                      expectedRev++);
@@ -432,7 +432,7 @@ public class BasicTests extends SVNTests
                               "A/B/F", NodeKind.dir,
                               CommitItemStateFlags.PropMods);
         assertEquals("wrong revision number from commit",
-                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                     rev = client.commit(thisTest.getWCPathSet(),
                                          "log msg", Depth.infinity, false,
                                          false, null, null),
                      expectedRev++);
@@ -447,13 +447,13 @@ public class BasicTests extends SVNTests
         String FAuthor = status.getLastCommitAuthor();
 
         // ----- r10-11: Replace file A/D/H/chi with file -----------
-        client.remove(new String[] {thisTest.getWCPath() + "/A/D/H/chi"},
+        client.remove(thisTest.getWCPathSet("/A/D/H/chi"),
                       null, false, false, null);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                               "A/D/H/chi", NodeKind.file,
                               CommitItemStateFlags.Delete);
         assertEquals("wrong revision number from commit",
-                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                     rev = client.commit(thisTest.getWCPathSet(),
                                          "log msg", Depth.infinity, false,
                                          false, null, null),
                      expectedRev++);
@@ -469,7 +469,7 @@ public class BasicTests extends SVNTests
                               CommitItemStateFlags.TextMods +
                               CommitItemStateFlags.Add);
         assertEquals("wrong revision number from commit",
-                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                     rev = client.commit(thisTest.getWCPathSet(),
                                          "log msg", Depth.infinity, false,
                                          false, null, null),
                      expectedRev++);
@@ -484,13 +484,13 @@ public class BasicTests extends SVNTests
         String chiAuthor = status.getLastCommitAuthor();
 
         // ----- r12: Delete dir A/B/E with children ----------------
-        client.remove(new String[] {thisTest.getWCPath() + "/A/B/E"}, null,
+        client.remove(thisTest.getWCPathSet("/A/B/E"), null,
                       false, false, null);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                               "A/B/E", NodeKind.dir,
                               CommitItemStateFlags.Delete);
         assertEquals("wrong revision number from commit",
-                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                     rev = client.commit(thisTest.getWCPathSet(),
                                          "log msg", Depth.infinity, false,
                                          false, null, null),
                      expectedRev++);
@@ -500,8 +500,8 @@ public class BasicTests extends SVNTests
 
         thisTest.getWc().setItemWorkingCopyRevision("A/B", rev);
         assertEquals("wrong revision from update",
-                 client.update(new String[] {thisTest.getWCPath() + "/A/B"},
-                        null, Depth.unknown, false, false, false)[0],
+                 client.update(thisTest.getWCPathSet("/A/B"),
+                               null, Depth.unknown, false, false, false)[0],
                      rev);
         Info2 Binfo = collectInfos(thisTest.getWCPath() + "/A/B", null, null,
                                    Depth.empty, null)[0];
@@ -511,20 +511,20 @@ public class BasicTests extends SVNTests
         String BAuthor = Binfo.getLastChangedAuthor();
 
         // ----- r13-14: Replace file A/D/H/psi with dir ------------
-        client.remove(new String[]{thisTest.getWCPath() + "/A/D/H/psi"}, null,
+        client.remove(thisTest.getWCPathSet("/A/D/H/psi"), null,
                       false, false, null);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
                               "A/D/H/psi", NodeKind.file,
                               CommitItemStateFlags.Delete);
         assertEquals("wrong revision number from commit",
-                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                     rev = client.commit(thisTest.getWCPathSet(),
                                          "log msg", Depth.infinity, false,
                                          false, null, null),
                      expectedRev++);
         thisTest.getWc().removeItem("A/D/H/psi");
         thisTest.getWc().setRevision(rev);
         assertEquals("wrong revision from update",
-                     client.update(new String[] {thisTest.getWCPath()}, null,
+                     client.update(thisTest.getWCPathSet(), null,
                             Depth.unknown, false, false, false)[0], rev);
         thisTest.getWc().addItem("A/D/H/psi", null);
         dir = new File(thisTest.getWorkingCopy(), "A/D/H/psi");
@@ -534,7 +534,7 @@ public class BasicTests extends SVNTests
                               "A/D/H/psi", NodeKind.dir,
                               CommitItemStateFlags.Add);
         assertEquals("wrong revision number from commit",
-                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                     rev = client.commit(thisTest.getWCPathSet(),
                                          "log msg", Depth.infinity, false,
                                          false, null, null),
                      expectedRev++);
@@ -551,7 +551,7 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         assertEquals("wrong revision from update",
-                     client.update(new String[] {thisTest.getWCPath()},
+                     client.update(thisTest.getWCPathSet(),
                                    Revision.getInstance(1), Depth.unknown,
                                    false, false, false)[0],
                      1);
@@ -662,7 +662,7 @@ public class BasicTests extends SVNTests
         thisTest.getWc().setItemTextStatus("A/B/lambda", Status.Kind.missing);
 
         // remove A/D/G
-        client.remove(new String[]{thisTest.getWCPath() + "/A/D/G"}, null,
+        client.remove(thisTest.getWCPathSet("/A/D/G"), null,
                       false, false, null);
         thisTest.getWc().setItemTextStatus("A/D/G", Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/G/pi", Status.Kind.deleted);
@@ -720,7 +720,7 @@ public class BasicTests extends SVNTests
 
         // commit the changes
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[]{thisTest.getWCPath()},
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null),
                      2);
@@ -815,7 +815,7 @@ public class BasicTests extends SVNTests
 
         // commit the changes
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[]{thisTest.getWCPath()},
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null),
                      2);
@@ -825,7 +825,7 @@ public class BasicTests extends SVNTests
 
         // update the backup test
         assertEquals("wrong revision number from update",
-                     client.update(new String[] {backupTest.getWCPath()}, null,
+                     client.update(backupTest.getWCPathSet(), null,
                                    Depth.unknown, false, false, false)[0],
                      2);
 
@@ -856,9 +856,10 @@ public class BasicTests extends SVNTests
                               CommitItemStateFlags.Add);
         addExpectedCommitItem(null, thisTest.getUrl(), "Y/Z", NodeKind.none,
                               CommitItemStateFlags.Add);
-        client.mkdir(new String[]{thisTest.getUrl() + "/Y",
-                                  thisTest.getUrl() + "/Y/Z"}, "log_msg",
-                                  false, null);
+        Set<String> urls = new HashSet<String>(2);
+        urls.add(thisTest.getUrl() + "/Y");
+        urls.add(thisTest.getUrl() + "/Y/Z");
+        client.mkdir(urls, "log_msg", false, null);
 
         // add the new directories the expected working copy layout
         thisTest.getWc().addItem("Y", null);
@@ -868,7 +869,7 @@ public class BasicTests extends SVNTests
 
         // update the working copy
         assertEquals("wrong revision from update",
-                     client.update(new String[] {thisTest.getWCPath()}, null,
+                     client.update(thisTest.getWCPathSet(), null,
                             Depth.unknown, false, false, false)[0],
                      2);
 
@@ -912,7 +913,7 @@ public class BasicTests extends SVNTests
 
         // Commit the changes, and check the state of the WC.
         assertEquals("Unexpected WC revision number after commit",
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "Copy files", Depth.infinity, false, false,
                                    null, null),
                      2);
@@ -932,7 +933,7 @@ public class BasicTests extends SVNTests
 
         // update the WC to get new folder and confirm the copy
         assertEquals("wrong revision number from update",
-                     client.update(new String[] {thisTest.getWCPath()}, null,
+                     client.update(thisTest.getWCPathSet(), null,
                                    Depth.unknown, false, false, false)[0],
                      3);
     }
@@ -974,7 +975,7 @@ public class BasicTests extends SVNTests
 
         // Commit the changes, and check the state of the WC.
         assertEquals("Unexpected WC revision number after commit",
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "Move files", Depth.infinity, false, false,
                                    null, null), 2);
         thisTest.checkStatus();
@@ -1084,7 +1085,7 @@ public class BasicTests extends SVNTests
 
         // commit the changes
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[]{thisTest.getWCPath()},
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null),
                      2);
@@ -1121,7 +1122,7 @@ public class BasicTests extends SVNTests
 
         // commit these changes to the repository
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[]{thisTest.getWCPath()},
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null),
                      3);
@@ -1163,8 +1164,8 @@ public class BasicTests extends SVNTests
 
         // update the backup working copy
         assertEquals("wrong revision number from update",
-                     client.update(new String[] {backupTest.getWCPath()}, null,
-                            Depth.unknown, false, false, false)[0],
+                     client.update(backupTest.getWCPathSet(), null,
+                                   Depth.unknown, false, false, false)[0],
                      3);
 
         // check the status of the backup working copy
@@ -1214,7 +1215,7 @@ public class BasicTests extends SVNTests
 
         // commit the changes in the first working copy
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[]{thisTest.getWCPath()},
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null),
                      2);
@@ -1275,7 +1276,7 @@ public class BasicTests extends SVNTests
 
         // update the backup working copy from the repository
         assertEquals("wrong revision number from update",
-                     client.update(new String[] {backupTest.getWCPath()}, null,
+                     client.update(backupTest.getWCPathSet(), null,
                             Depth.unknown, false, false, false)[0],
                      2);
 
@@ -1389,8 +1390,7 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         // create & add the directory X
-        client.mkdir(new String[] {thisTest.getWCPath()+"/X"}, null, false,
-                null);
+        client.mkdir(thisTest.getWCPathSet("/X"), null, false, null);
         thisTest.getWc().addItem("X", null);
         thisTest.getWc().setItemTextStatus("X", Status.Kind.added);
 
@@ -1406,7 +1406,7 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         // delete the directory A/B/E
-        client.remove(new String[] {thisTest.getWCPath()+"/A/B/E"}, null, true,
+        client.remove(thisTest.getWCPathSet("/A/B/E"), null, true,
                       false, null);
         removeDirOrFile(new File(thisTest.getWorkingCopy(), "A/B/E"));
         thisTest.getWc().setItemTextStatus("A/B/E", Status.Kind.deleted);
@@ -1475,6 +1475,7 @@ public class BasicTests extends SVNTests
 
         // modify A/D/H/chi
         File file = new File(thisTest.getWorkingCopy(), "A/D/H/chi");
+        Set<String> pathSet = new HashSet<String>();
         PrintWriter pw = new PrintWriter(new FileOutputStream(file, true));
         pw.print("added to chi");
         pw.close();
@@ -1508,7 +1509,9 @@ public class BasicTests extends SVNTests
 
         // create & add the directory A/B/X
         file = new File(thisTest.getWCPath(), "A/B/X");
-        client.mkdir(new String[] {file.getAbsolutePath()}, null, false, null);
+        pathSet.clear();
+        pathSet.add(file.getAbsolutePath());
+        client.mkdir(pathSet, null, false, null);
         thisTest.getWc().addItem("A/B/X", null);
         thisTest.getWc().setItemTextStatus("A/B/X", Status.Kind.added);
 
@@ -1523,7 +1526,9 @@ public class BasicTests extends SVNTests
 
         // create & add the directory A/B/Y
         file = new File(thisTest.getWCPath(), "A/B/Y");
-        client.mkdir(new String[] {file.getAbsolutePath()}, null, false, null);
+        pathSet.clear();
+        pathSet.add(file.getAbsolutePath());
+        client.mkdir(pathSet, null, false, null);
         thisTest.getWc().addItem("A/B/Y", null);
         thisTest.getWc().setItemTextStatus("A/B/Y", Status.Kind.added);
 
@@ -1536,7 +1541,7 @@ public class BasicTests extends SVNTests
         {
             // remove of A/D/H/chi without force should fail, because it is
             // modified
-            client.remove(new String[] {thisTest.getWCPath()+"/A/D/H/chi"},
+            client.remove(thisTest.getWCPathSet("/A/D/H/chi"),
                     null, false, false, null);
             fail("missing exception");
         }
@@ -1548,7 +1553,7 @@ public class BasicTests extends SVNTests
         {
             // remove of A/D/H without force should fail, because A/D/H/chi is
             // modified
-            client.remove(new String[] {thisTest.getWCPath()+"/A/D/H"}, null,
+            client.remove(thisTest.getWCPathSet("/A/D/H"), null,
                     false, false, null);
             fail("missing exception");
         }
@@ -1560,7 +1565,7 @@ public class BasicTests extends SVNTests
         {
             // remove of A/D/G/rho without force should fail, because it has
             // a new property
-            client.remove(new String[] {thisTest.getWCPath()+"/A/D/G/rho"},
+            client.remove(thisTest.getWCPathSet("/A/D/G/rho"),
                     null, false, false, null);
             fail("missing exception");
         }
@@ -1572,7 +1577,7 @@ public class BasicTests extends SVNTests
         {
             // remove of A/D/G without force should fail, because A/D/G/rho has
             // a new property
-            client.remove(new String[] {thisTest.getWCPath()+"/A/D/G"}, null,
+            client.remove(thisTest.getWCPathSet("/A/D/G"), null,
                     false, false, null);
             fail("missing exception");
         }
@@ -1584,7 +1589,7 @@ public class BasicTests extends SVNTests
         {
             // remove of A/B/F without force should fail, because it has
             // a new property
-            client.remove(new String[] {thisTest.getWCPath()+"/A/B/F"}, null,
+            client.remove(thisTest.getWCPathSet("/A/B/F"), null,
                     false, false, null);
             fail("missing exception");
         }
@@ -1596,7 +1601,7 @@ public class BasicTests extends SVNTests
         {
             // remove of A/B without force should fail, because A/B/F has
             // a new property
-            client.remove(new String[] {thisTest.getWCPath()+"/A/B"}, null,
+            client.remove(thisTest.getWCPathSet("/A/B"), null,
                     false, false, null);
             fail("missing exception");
         }
@@ -1608,8 +1613,8 @@ public class BasicTests extends SVNTests
         {
             // remove of A/C/sigma without force should fail, because it is
             // unversioned
-            client.remove(new String[] {thisTest.getWCPath()+"/A/C/sigma"},
-                    null, false, false, null);
+            client.remove(thisTest.getWCPathSet("/A/C/sigma"),
+                          null, false, false, null);
             fail("missing exception");
         }
         catch(ClientException expected)
@@ -1620,8 +1625,8 @@ public class BasicTests extends SVNTests
         {
             // remove of A/C without force should fail, because A/C/sigma is
             // unversioned
-            client.remove(new String[] {thisTest.getWCPath()+"/A/C"}, null,
-                    false, false, null);
+            client.remove(thisTest.getWCPathSet("/A/C"), null,
+                          false, false, null);
             fail("missing exception");
         }
         catch(ClientException expected)
@@ -1631,8 +1636,8 @@ public class BasicTests extends SVNTests
         try
         {
             // remove of A/B/X without force should fail, because it is new
-            client.remove(new String[] {thisTest.getWCPath()+"/A/B/X"}, null,
-                    false, false, null);
+            client.remove(thisTest.getWCPathSet("/A/B/X"), null,
+                          false, false, null);
             fail("missing exception");
         }
         catch(ClientException expected)
@@ -1643,53 +1648,56 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         // the following removes should all work
-        client.remove(new String[] {thisTest.getWCPath()+"/A/B/E"}, null,
-                false, false, null);
+        client.remove(thisTest.getWCPathSet("/A/B/E"), null,
+                      false, false, null);
         thisTest.getWc().setItemTextStatus("A/B/E",Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/B/E/alpha",Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/B/E/beta",Status.Kind.deleted);
-        client.remove(new String[] {thisTest.getWCPath()+"/A/D/H"}, null, true,
+        client.remove(thisTest.getWCPathSet("/A/D/H"), null, true,
                       false, null);
         thisTest.getWc().setItemTextStatus("A/D/H",Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/H/chi",Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/H/omega",Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/H/psi",Status.Kind.deleted);
-        client.remove(new String[] {thisTest.getWCPath()+"/A/D/G"}, null, true,
+        client.remove(thisTest.getWCPathSet("/A/D/G"), null, true,
                       false, null);
         thisTest.getWc().setItemTextStatus("A/D/G",Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/G/rho",Status.Kind.deleted);
         thisTest.getWc().setItemPropStatus("A/D/G/rho", Status.Kind.none);
         thisTest.getWc().setItemTextStatus("A/D/G/pi",Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/G/tau",Status.Kind.deleted);
-        client.remove(new String[] {thisTest.getWCPath()+"/A/B/F"}, null, true,
+        client.remove(thisTest.getWCPathSet("/A/B/F"), null, true,
                       false, null);
         thisTest.getWc().setItemTextStatus("A/B/F",Status.Kind.deleted);
         thisTest.getWc().setItemPropStatus("A/B/F", Status.Kind.none);
-        client.remove(new String[] {thisTest.getWCPath()+"/A/C"}, null, true,
+        client.remove(thisTest.getWCPathSet("/A/C"), null, true,
                       false, null);
         thisTest.getWc().setItemTextStatus("A/C",Status.Kind.deleted);
-        client.remove(new String[] {thisTest.getWCPath()+"/A/B/X"}, null, true,
+        client.remove(thisTest.getWCPathSet("/A/B/X"), null, true,
                       false, null);
         file = new File(thisTest.getWorkingCopy(), "iota");
         file.delete();
-        client.remove(new String[] {file.getAbsolutePath()}, null, true, false,
-                      null);
+        pathSet.clear();
+        pathSet.add(file.getAbsolutePath());
+        client.remove(pathSet, null, true, false, null);
         thisTest.getWc().setItemTextStatus("iota",Status.Kind.deleted);
         file = new File(thisTest.getWorkingCopy(), "A/D/gamma");
         file.delete();
-        client.remove(new String[] {file.getAbsolutePath()}, null, false,
-                      false, null);
+        pathSet.clear();
+        pathSet.add(file.getAbsolutePath());
+        client.remove(pathSet, null, false, false, null);
         thisTest.getWc().setItemTextStatus("A/D/gamma",Status.Kind.deleted);
-        client.remove(new String[] {file.getAbsolutePath()}, null, true, false,
-                      null);
-        client.remove(new String[] {thisTest.getWCPath()+"/A/B/E"}, null,
-                false, false, null);
+        pathSet.clear();
+        pathSet.add(file.getAbsolutePath());
+        client.remove(pathSet, null, true, false, null);
+        client.remove(thisTest.getWCPathSet("/A/B/E"), null,
+                      false, false, null);
         thisTest.getWc().removeItem("A/B/X");
         thisTest.getWc().removeItem("A/B/X/xi");
         thisTest.getWc().removeItem("A/C/sigma");
         thisTest.getWc().removeItem("A/C/Q");
         thisTest.checkStatus();
-        client.remove(new String[] {thisTest.getWCPath()+"/A/D"},null, true,
+        client.remove(thisTest.getWCPathSet("/A/D"),null, true,
                       false, null);
         thisTest.getWc().setItemTextStatus("A/D", Status.Kind.deleted);
         thisTest.getWc().removeItem("A/D/Y");
@@ -1719,15 +1727,17 @@ public class BasicTests extends SVNTests
         pw = new PrintWriter(new FileOutputStream(file));
         pw.print("unversioned foo");
         pw.close();
-        client.remove(new String[] {file.getAbsolutePath()}, null, true,
-                      false, null);
+        pathSet.clear();
+        pathSet.add(file.getAbsolutePath());
+        client.remove(pathSet, null, true, false, null);
         assertFalse("failed to remove unversioned file foo", file.exists());
 
         try
         {
             // delete non-existant file foo
-            client.remove(new String[] {file.getAbsolutePath()}, null, true,
-                          false, null);
+            Set<String> paths = new HashSet<String>(1);
+            paths.add(file.getAbsolutePath());
+            client.remove(paths, null, true, false, null);
             fail("missing exception");
         }
         catch(ClientException expected)
@@ -1737,8 +1747,8 @@ public class BasicTests extends SVNTests
         // delete file iota in the repository
         addExpectedCommitItem(null, thisTest.getUrl(), "iota", NodeKind.none,
                 CommitItemStateFlags.Delete);
-        client.remove(new String[] {thisTest.getUrl()+"/iota"},
-                "delete iota URL", false, false, null);
+        client.remove(thisTest.getUrlSet("/iota"),
+                      "delete iota URL", false, false, null);
     }
 
     public void testBasicCheckoutDeleted() throws Throwable
@@ -1747,7 +1757,7 @@ public class BasicTests extends SVNTests
         OneTest thisTest = new OneTest();
 
         // delete A/D and its content
-        client.remove(new String[] {thisTest.getWCPath()+"/A/D"}, null, true,
+        client.remove(thisTest.getWCPathSet("/A/D"), null, true,
                       false, null);
         thisTest.getWc().setItemTextStatus("A/D", Status.Kind.deleted);
         thisTest.getWc().setItemTextStatus("A/D/G", Status.Kind.deleted);
@@ -1768,8 +1778,8 @@ public class BasicTests extends SVNTests
                 thisTest.getUrl(), "A/D", NodeKind.dir,
                 CommitItemStateFlags.Delete);
         assertEquals("wrong revision from commit",
-                client.commit(new String[]{thisTest.getWCPath()}, "log message",
-                        Depth.infinity, false, false, null, null),2);
+                client.commit(thisTest.getWCPathSet(), "log message",
+                              Depth.infinity, false, false, null, null),2);
         thisTest.getWc().removeItem("A/D");
         thisTest.getWc().removeItem("A/D/G");
         thisTest.getWc().removeItem("A/D/G/rho");
@@ -1799,10 +1809,11 @@ public class BasicTests extends SVNTests
     {
         // create working copy
         OneTest thisTest = new OneTest();
+        Set<String> gammaSet = new HashSet<String>(1);
+        gammaSet.add(thisTest.getWCPath() + "/A/D/gamma");
 
         //  remove A/D/gamma
-        client.remove(new String[] {thisTest.getWCPath()+"/A/D/gamma"}, null,
-                false, false, null);
+        client.remove(gammaSet, null, false, false, null);
         thisTest.getWc().setItemTextStatus("A/D/gamma", Status.Kind.deleted);
 
         // check the working copy status
@@ -1812,8 +1823,7 @@ public class BasicTests extends SVNTests
         {
             // creating a directory in the place of the deleted file should
             // fail
-            client.mkdir(new String[] {thisTest.getWCPath()+"/A/D/gamma"},
-                    null, false, null);
+            client.mkdir(gammaSet, null, false, null);
             fail("can change node kind");
         }
         catch(ClientException e)
@@ -1829,8 +1839,8 @@ public class BasicTests extends SVNTests
                 thisTest.getUrl(), "A/D/gamma", NodeKind.file,
                 CommitItemStateFlags.Delete);
         assertEquals("wrong revision number from commit",
-                client.commit(new String[]{thisTest.getWCPath()},"log message",
-                        Depth.infinity, false, false, null, null), 2);
+                client.commit(thisTest.getWCPathSet(), "log message",
+                              Depth.infinity, false, false, null, null), 2);
         thisTest.getWc().removeItem("A/D/gamma");
 
         // check the working copy status
@@ -1840,8 +1850,7 @@ public class BasicTests extends SVNTests
         {
             // creating a directory in the place of the deleted file should
             // still fail
-            client.mkdir(new String[] {thisTest.getWCPath()+"/A/D/gamma"},
-                    null, false, null);
+            client.mkdir(gammaSet, null, false, null);
             fail("can change node kind");
         }
         catch(ClientException e)
@@ -1853,15 +1862,14 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         // update the working copy
-        client.update(new String[] {thisTest.getWCPath()}, null, Depth.unknown,
-                false, false, false);
+        client.update(thisTest.getWCPathSet(), null, Depth.unknown,
+                      false, false, false);
 
         // check the working copy status
         thisTest.checkStatus();
 
         // now creating the directory should succeed
-        client.mkdir(new String[] {thisTest.getWCPath()+"/A/D/gamma"}, null,
-                false, null);
+        client.mkdir(gammaSet, null, false, null);
         thisTest.getWc().addItem("A/D/gamma", null);
         thisTest.getWc().setItemTextStatus("A/D/gamma", Status.Kind.added);
 
@@ -1897,8 +1905,8 @@ public class BasicTests extends SVNTests
 
         // update the working
         assertEquals("wrong revision from update",
-                client.update(new String[] {thisTest.getWCPath()}, null,
-                        Depth.unknown, false, false, false)[0],2);
+                client.update(thisTest.getWCPathSet(), null,
+                              Depth.unknown, false, false, false)[0],2);
         thisTest.getWc().addItem("dirA", null);
         thisTest.getWc().setItemWorkingCopyRevision("dirA",2);
         thisTest.getWc().addItem("dirA/dirB", null);
@@ -2063,8 +2071,8 @@ public class BasicTests extends SVNTests
 
         // udpate the working copy
         assertEquals("wrong revision from update", 2,
-                client.update(new String[] {thisTest.getWCPath()}, null,
-                        Depth.unknown, false, false, false)[0]);
+                     client.update(thisTest.getWCPathSet(), null,
+                     Depth.unknown, false, false, false)[0]);
         thisTest.getWc().addItem("dir", null);
         thisTest.getWc().addItem("dir/foo.c", "");
 
@@ -2154,6 +2162,8 @@ public class BasicTests extends SVNTests
     {
         // build the first working copy
         OneTest thisTest = new OneTest();
+        Set<String> muPathSet = new HashSet<String>(1);
+        muPathSet.add(thisTest.getWCPath()+"/A/mu");
 
         client.propertySet(thisTest.getWCPath()+"/A/mu",
                            PropertyData.NEEDS_LOCK, "*", Depth.empty,
@@ -2163,24 +2173,22 @@ public class BasicTests extends SVNTests
                               thisTest.getUrl(), "A/mu",NodeKind.file,
                               CommitItemStateFlags.PropMods);
         assertEquals("bad revision number on commit", 2,
-                     client.commit(new String[] {thisTest.getWCPath()},
+                     client.commit(thisTest.getWCPathSet(),
                                    "message", Depth.infinity, false, false,
                                    null, null));
         File f = new File(thisTest.getWCPath()+"/A/mu");
         assertEquals("file should be read only now", false, f.canWrite());
-        client.lock(new String[] {thisTest.getWCPath()+"/A/mu"},
-                    "comment", false);
+        client.lock(muPathSet, "comment", false);
         assertEquals("file should be read write now", true, f.canWrite());
-        client.unlock(new String[]{thisTest.getWCPath()+"/A/mu"}, false);
+        client.unlock(muPathSet, false);
         assertEquals("file should be read only now", false, f.canWrite());
-        client.lock(new String[]{thisTest.getWCPath()+"/A/mu"},
-                    "comment", false);
+        client.lock(muPathSet, "comment", false);
         assertEquals("file should be read write now", true, f.canWrite());
         addExpectedCommitItem(thisTest.getWCPath(),
                               thisTest.getUrl(), "A/mu",NodeKind.file,
                               0);
         assertEquals("rev number from commit", -1,
-                     client.commit(new String[]{thisTest.getWCPath()},
+                     client.commit(thisTest.getWCPathSet(),
                                    "message", Depth.infinity, false, false,
                                    null, null));
         assertEquals("file should be read write now", true, f.canWrite());
@@ -2188,8 +2196,7 @@ public class BasicTests extends SVNTests
         try
         {
             // Attempt to lock an invalid path
-            client.lock(new String[]{thisTest.getWCPath()+"/A/mu2"}, "comment",
-                        false);
+            client.lock(thisTest.getWCPathSet("/A/mu2"), "comment", false);
             fail("missing exception");
         }
         catch (ClientException expected)
@@ -2260,17 +2267,19 @@ public class BasicTests extends SVNTests
         changelists.add(changelistName);
         MyChangelistCallback clCallback = new MyChangelistCallback();
 
-        String[] paths = new String[]
-          {fileToSVNPath(new File(thisTest.getWCPath(), "iota"), true)};
+        String path = fileToSVNPath(new File(thisTest.getWCPath(), "iota"),
+                                    true);
+        Set<String> paths = new HashSet<String>(1);
+        paths.add(path);
         // Add a path to a changelist, and check to see if it got added
         client.addToChangelist(paths, changelistName, Depth.infinity, null);
         client.getChangelists(thisTest.getWCPath(), changelists,
                               Depth.infinity, clCallback);
-        Collection<String> cl = clCallback.get(paths[0]);
+        Collection<String> cl = clCallback.get(path);
         assertTrue(changelists.equals(cl));
         // Does status report this changelist?
         MyStatusCallback statusCallback = new MyStatusCallback();
-        client.status(paths[0], Depth.immediates, false, false, false, false,
+        client.status(path, Depth.immediates, false, false, false, false,
                     null, statusCallback);
         Status[] status = statusCallback.getStatusArray();
         assertEquals(status[0].getChangelist(), changelistName);
@@ -2429,7 +2438,7 @@ public class BasicTests extends SVNTests
         appendText(thisTest, "A/mu", "xxx", 4);
         appendText(thisTest, "A/D/G/rho", "yyy", 4);
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null),
                      4);
@@ -2480,7 +2489,7 @@ public class BasicTests extends SVNTests
                               "branches/A/D/G/rho", NodeKind.file,
                               CommitItemStateFlags.TextMods);
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null), 5);
 
@@ -2488,7 +2497,7 @@ public class BasicTests extends SVNTests
         appendText(thisTest, "A/mu", "xxxr6", 6);
         appendText(thisTest, "A/D/G/rho", "yyyr6", 6);
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null),
                      6);
@@ -2521,7 +2530,7 @@ public class BasicTests extends SVNTests
         // Merge and commit some changes (r4).
         appendText(thisTest, "A/mu", "xxx", 4);
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null),
                      4);
@@ -2542,7 +2551,7 @@ public class BasicTests extends SVNTests
                               "branches/A/mu", NodeKind.file,
                               CommitItemStateFlags.TextMods);
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null), 5);
     }
@@ -2564,21 +2573,21 @@ public class BasicTests extends SVNTests
         // Merge and commit some changes to main (r4).
         appendText(thisTest, "A/mu", "xxx", 4);
         assertEquals("wrong revision number from main commit",
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null),
                      4);
         // Merge and commit some changes to branch (r5).
         appendText(thisTest, "branches/A/D/G/rho", "yyy", -1);
         assertEquals("wrong revision number from branch commit",
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null),
                      5);
 
         // update the branch WC (to r5) before merge
-        client.update(new String[] {thisTest.getWCPath() + "/branches"},
-                Revision.HEAD, Depth.unknown, false, false, false);
+        client.update(thisTest.getWCPathSet("/branches"), Revision.HEAD,
+                      Depth.unknown, false, false, false);
 
         String branchPath = thisTest.getWCPath() + "/branches/A";
         String modUrl = thisTest.getUrl() + "/A";
@@ -2596,7 +2605,7 @@ public class BasicTests extends SVNTests
                               "branches/A/mu", NodeKind.file,
                               CommitItemStateFlags.TextMods);
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null), 6);
 
@@ -2611,8 +2620,8 @@ public class BasicTests extends SVNTests
         catch(ClientException e)
         {
             // update the WC (to r6) and try again
-            client.update(new String[] {thisTest.getWCPath()}, Revision.HEAD,
-                    Depth.unknown, false, false, false);
+            client.update(thisTest.getWCPathSet(), Revision.HEAD,
+                          Depth.unknown, false, false, false);
             client.mergeReintegrate(branchUrl, Revision.HEAD,
                                     thisTest.getWCPath() + "/A", false);
         }
@@ -2624,7 +2633,7 @@ public class BasicTests extends SVNTests
                               "A/D/G/rho", NodeKind.file,
                               CommitItemStateFlags.TextMods);
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null), 7);
 
@@ -2655,13 +2664,13 @@ public class BasicTests extends SVNTests
         // Merge and commit a change (r2).
         File mu = appendText(thisTest, "A/mu", "xxx", 2);
         assertEquals("wrong revision number from commit", 2,
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null));
 
         // Backdate the WC to the previous revision (r1).
-        client.update(new String[] {thisTest.getWCPath()},
-            Revision.getInstance(1), Depth.unknown, false, false, false);
+        client.update(thisTest.getWCPathSet(), Revision.getInstance(1),
+                      Depth.unknown, false, false, false);
 
         // Prep for a merge conflict by changing A/mu in a different
         // way.
@@ -2703,7 +2712,7 @@ public class BasicTests extends SVNTests
         appendText(thisTest, "A/mu", "xxx", 4);
         appendText(thisTest, "A/D/G/rho", "yyy", 4);
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null),
                      4);
@@ -2723,7 +2732,7 @@ public class BasicTests extends SVNTests
                               "branches/A", NodeKind.dir,
                               CommitItemStateFlags.PropMods);
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, false, false,
                                    null, null), 5);
 
@@ -2755,8 +2764,9 @@ public class BasicTests extends SVNTests
         // create branches directory in the repository (r2)
         addExpectedCommitItem(null, thisTest.getUrl(), "branches",
                               NodeKind.none, CommitItemStateFlags.Add);
-        client.mkdir(new String[]{thisTest.getUrl() + "/branches"}, "log_msg",
-                false, null);
+        Set<String> paths = new HashSet<String>(1);
+        paths.add(thisTest.getUrl() + "/branches");
+        client.mkdir(paths, "log_msg", false, null);
 
         // copy A to branches (r3)
         addExpectedCommitItem(null, thisTest.getUrl(), "branches/A",
@@ -2768,8 +2778,8 @@ public class BasicTests extends SVNTests
                     "create A branch", true, false, false, null);
 
         // update the WC (to r3) so that it has the branches folder
-        client.update(new String[] {thisTest.getWCPath()}, Revision.HEAD,
-                Depth.unknown, false, false, false);
+        client.update(thisTest.getWCPathSet(), Revision.HEAD,
+                      Depth.unknown, false, false, false);
 
         return thisTest;
     }
@@ -2911,7 +2921,8 @@ public class BasicTests extends SVNTests
                     // Set svn:eol-style=native on iota
                     client.propertyCreate(iotaPath, "svn:eol-style", "native",
                                           Depth.empty, null, false);
-                    String[] paths = new String[] {iotaPath};
+                    Set<String> paths = new HashSet<String>(1);
+                    paths.add(iotaPath);
                     addExpectedCommitItem(thisTest.getWCPath(),
                             thisTest.getUrl(), "iota",NodeKind.file,
                             CommitItemStateFlags.PropMods);
@@ -3081,7 +3092,7 @@ public class BasicTests extends SVNTests
         client.notification2(notify);
         // update the test
         assertEquals("wrong revision number from update",
-                client.update(new String[] {thisTest.getWCPath()}, null,
+                client.update(thisTest.getWCPathSet(), null,
                         Depth.unknown, false, false, false)[0], 1);
     }
 
@@ -3107,8 +3118,8 @@ public class BasicTests extends SVNTests
         // update the test to try to cancel an operation
         try
         {
-            client.update(new String[] {thisTest.getWCPath()}, null,
-                    Depth.unknown, false, false, false);
+            client.update(thisTest.getWCPathSet(), null,
+                          Depth.unknown, false, false, false);
             fail("missing exception for canceled operation");
         }
         catch (ClientException e)
@@ -3139,8 +3150,8 @@ public class BasicTests extends SVNTests
         // Perform an update to exercise the progress notification.
         try
         {
-            client.update(new String[] {thisTest.getWCPath()}, null,
-                    Depth.unknown, false, false, false);
+            client.update(thisTest.getWCPathSet(), null,
+                          Depth.unknown, false, false, false);
             fail("No progress reported");
         }
         catch (RuntimeException progressReported)
@@ -3189,7 +3200,7 @@ public class BasicTests extends SVNTests
 
         // Commit the changes, and check the state of the WC.
         assertEquals("Unexpected WC revision number after commit",
-                     client.commit(new String[] { thisTest.getWCPath() },
+                     client.commit(thisTest.getWCPathSet(),
                                    "Move files", Depth.infinity, false, false,
                                    null, null), 2);
         thisTest.checkStatus();
@@ -3202,8 +3213,8 @@ public class BasicTests extends SVNTests
 
         // update the tc test
         assertEquals("wrong revision number from update",
-                     client.update(new String[] {tcTest.getWCPath()}, null,
-                            Depth.unknown, false, false, false)[0],
+                     client.update(tcTest.getWCPathSet(), null,
+                                   Depth.unknown, false, false, false)[0],
                      2);
 
         // set the expected working copy layout for the tc test
@@ -3317,8 +3328,9 @@ public class BasicTests extends SVNTests
                               CommitItemStateFlags.TextMods +
                               CommitItemStateFlags.Add);
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[] {thisTest.getWCPath()},
-                     "log msg", Depth.infinity, false, false, null, null), 2);
+                     client.commit(thisTest.getWCPathSet(),
+                                   "log msg", Depth.infinity, false, false,
+                                   null, null), 2);
         thisTest.getWc().addItem("A/D/H/nu", "This is the file 'nu'.");
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/D/H/nu", Depth.immediates,
@@ -3335,8 +3347,8 @@ public class BasicTests extends SVNTests
         try
         {
             // obstructed update should fail
-            client.update(new String[] {backupTest.getWCPath()}, null,
-                    Depth.unknown, false, false, false);
+            client.update(backupTest.getWCPathSet(), null,
+                          Depth.unknown, false, false, false);
             fail("obstructed update should fail by default");
         }
         catch (ClientException expected)
@@ -3345,7 +3357,7 @@ public class BasicTests extends SVNTests
 
         // Attempt to update backup WC with "--force"
         assertEquals("wrong revision from update",
-                     client.update(new String[] {backupTest.getWCPath()},
+                     client.update(backupTest.getWCPathSet(),
                                    null, Depth.infinity, false, false,
                                    true)[0],
                      2);
@@ -3481,7 +3493,7 @@ public class BasicTests extends SVNTests
         revprops.put("kfogel", "rockstar");
         revprops.put("cmpilato", "theman");
         assertEquals("wrong revision number from commit",
-                     client.commit(new String[]{thisTest.getWCPath()},
+                     client.commit(thisTest.getWCPathSet(),
                                    "log msg", Depth.infinity, true, true,
                                    null, revprops),
                      2);

@@ -751,13 +751,14 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public void remove(String[] path, String message, boolean force,
+    public void remove(String[] paths, String message, boolean force,
                        boolean keepLocal, Map revpropTable)
             throws ClientException
     {
         try
         {
-            aSVNClient.remove(path, message, force, keepLocal, revpropTable);
+            aSVNClient.remove(new HashSet<String>(Arrays.asList(paths)),
+                              message, force, keepLocal, revpropTable);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -870,14 +871,14 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public long[] update(String[] path, Revision revision, int depth,
+    public long[] update(String[] paths, Revision revision, int depth,
                          boolean depthIsSticky, boolean ignoreExternals,
                          boolean allowUnverObstructions)
             throws ClientException
     {
         try
         {
-            return aSVNClient.update(path,
+            return aSVNClient.update(new HashSet<String>(Arrays.asList(paths)),
                                 revision == null ? null : revision.toApache(),
                                 depth, depthIsSticky, ignoreExternals,
                                 allowUnverObstructions);
@@ -915,14 +916,15 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public long commit(String[] path, String message, int depth,
+    public long commit(String[] paths, String message, int depth,
                        boolean noUnlock, boolean keepChangelist,
                        String[] changelists, Map revpropTable)
             throws ClientException
     {
         try
         {
-            return aSVNClient.commit(path, message, depth, noUnlock,
+            return aSVNClient.commit(new HashSet<String>(Arrays.asList(paths)),
+                                     message, depth, noUnlock,
                                      keepChangelist,
                                      changelists == null ? null
                                        : Arrays.asList(changelists),
@@ -1038,13 +1040,14 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public void mkdir(String[] path, String message,
+    public void mkdir(String[] paths, String message,
                       boolean makeParents, Map revpropTable)
             throws ClientException
     {
         try
         {
-            aSVNClient.mkdir(path, message, makeParents, revpropTable);
+            aSVNClient.mkdir(new HashSet<String>(Arrays.asList(paths)),
+                             message, makeParents, revpropTable);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -2328,9 +2331,9 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.addToChangelist(paths, changelist, depth,
-                                       changelists == null ? null
-                                        : Arrays.asList(changelists));
+            aSVNClient.addToChangelist(
+                  new HashSet<String>(Arrays.asList(paths)), changelist, depth,
+                  changelists == null ? null : Arrays.asList(changelists));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -2347,9 +2350,10 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.removeFromChangelists(paths, depth,
-                                             changelists == null ? null
-                                               : Arrays.asList(changelists));
+            aSVNClient.removeFromChangelists(
+                        new HashSet<String>(Arrays.asList(paths)), depth,
+                        changelists == null ? null
+                           : Arrays.asList(changelists));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -2472,12 +2476,13 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.2
      */
-    public void lock(String[] path, String comment, boolean force)
+    public void lock(String[] paths, String comment, boolean force)
             throws ClientException
     {
         try
         {
-            aSVNClient.lock(path, comment, force);
+            aSVNClient.lock(new HashSet<String>(Arrays.asList(paths)),
+                            comment, force);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -2488,12 +2493,13 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.2
      */
-    public void unlock(String[] path, boolean force)
+    public void unlock(String[] paths, boolean force)
             throws ClientException
     {
         try
         {
-            aSVNClient.unlock(path, force);
+            aSVNClient.unlock(new HashSet<String>(Arrays.asList(paths)),
+                              force);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
