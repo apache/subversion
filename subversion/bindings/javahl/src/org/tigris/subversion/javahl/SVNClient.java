@@ -28,6 +28,7 @@ import org.apache.subversion.javahl.*;
 import java.io.OutputStream;
 
 import java.util.Map;
+import java.util.HashMap;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Arrays;
@@ -504,8 +505,11 @@ public class SVNClient implements SVNClientInterface
 
             public void singleMessage(
                     org.apache.subversion.javahl.ChangePath[] aChangedPaths,
-                    long revision, Map revprops, boolean hasChildren)
+                    long revision, Map<String, byte[]> revprops,
+                    boolean hasChildren)
             {
+                Map<String, String> oldRevprops =
+                                                new HashMap<String, String>();
                 ChangePath[] changedPaths;
                 
                 if (aChangedPaths != null)
@@ -522,7 +526,12 @@ public class SVNClient implements SVNClientInterface
                     changedPaths = null;
                 }
 
-                callback.singleMessage(changedPaths, revision, revprops,
+                for (String key : revprops.keySet())
+                {
+                    oldRevprops.put(key, new String(revprops.get(key)));
+                }
+
+                callback.singleMessage(changedPaths, revision, oldRevprops,
                                        hasChildren);
             }
         }
@@ -1716,7 +1725,7 @@ public class SVNClient implements SVNClientInterface
         int i = 0;
         for (String key : propMap.keySet())
         {
-            props[i] = new PropertyData(path, key, (String) propMap.get(key));
+            props[i] = new PropertyData(path, key, propMap.get(key));
             i++;
         }
 
@@ -2182,15 +2191,16 @@ public class SVNClient implements SVNClientInterface
                 try
                 {
                     oldCallback.singleLine(
-                        df.parse((String) revProps.get("svn:date")),
+                        df.parse(new String((byte[]) revProps.get("svn:date"))),
                         revision,
-                        (String) revProps.get("svn:author"),
+                        new String((byte[]) revProps.get("svn:author")),
                         mergedRevProps == null ? null
-                            : df.parse((String)
-                                            mergedRevProps.get("svn:date")),
+                            : df.parse(new String((byte [])
+                                            mergedRevProps.get("svn:date"))),
                         mergedRevision,
                         mergedRevProps == null ? null
-                            : (String) mergedRevProps.get("svn:author"),
+                            : new String((byte[])
+                                mergedRevProps.get("svn:author")),
                         mergedPath, line);
                 }
                 catch (ParseException e)
