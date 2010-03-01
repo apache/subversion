@@ -158,7 +158,8 @@ jobject ProplistCallback::makeMapFromHash(apr_hash_t *prop_hash,
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
-      jstring jpropVal = JNIUtil::makeJString(val->data);
+      jbyteArray jpropVal = JNIUtil::makeJByteArray(
+                                    (const signed char *)val->data, val->len);
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 

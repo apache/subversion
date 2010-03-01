@@ -764,11 +764,11 @@ public class BasicTests extends SVNTests
         MyProplistCallback callback = new MyProplistCallback();
 
         client.properties(itemPath, null, null, Depth.empty, null, callback);
-        Map<String, String> propMap = callback.getProperties(itemPath);
+        Map<String, byte[]> propMap = callback.getProperties(itemPath);
         for (String key : propMap.keySet())
         {
             assertEquals("cqcq", key);
-            assertEquals("qrz", (String) propMap.get(key));
+            assertEquals("qrz", new String(propMap.get(key)));
         }
 
         wc.setItemPropStatus("A/B/E/alpha", Status.Kind.modified);
@@ -2361,7 +2361,7 @@ public class BasicTests extends SVNTests
             List<Long> revList = new ArrayList<Long>();
 
             public void singleMessage(ChangePath[] changedPaths, long revision,
-                    Map<String, String> revprops, boolean hasChildren) {
+                    Map<String, byte[]> revprops, boolean hasChildren) {
                 revList.add(new Long(revision));
             }
 
@@ -3457,17 +3457,17 @@ public class BasicTests extends SVNTests
 
         class RevpropLogCallback implements LogMessageCallback
         {
-            Map<String, String> revprops;
+            Map<String, byte[]> revprops;
 
             public void singleMessage(ChangePath[] changedPaths,
                                       long revision,
-                                      Map<String, String> revprops,
+                                      Map<String, byte[]> revprops,
                                       boolean hasChildren)
             {
                 this.revprops = revprops;
             }
 
-            public Map<String, String> getRevprops()
+            public Map<String, byte[]> getRevprops()
             {
                 return revprops;
             }
@@ -3511,7 +3511,7 @@ public class BasicTests extends SVNTests
                                            Revision.getInstance(2)),
                            false, false, false, revProps, 0,
                            callback);
-        Map<String, String> fetchedProps = callback.getRevprops();
+        Map<String, byte[]> fetchedProps = callback.getRevprops();
 
         assertEquals("wrong number of fetched revprops", revprops.size(),
                      fetchedProps.size());
@@ -3519,7 +3519,7 @@ public class BasicTests extends SVNTests
         for (String key : keys)
           {
             assertEquals("revprops check", revprops.get(key),
-                         fetchedProps.get(key));
+                         new String(fetchedProps.get(key)));
           }
     }
 
@@ -3613,15 +3613,15 @@ public class BasicTests extends SVNTests
 
     private class MyProplistCallback implements ProplistCallback
     {
-        Map<String, Map<String, String>> propMap =
-                                    new HashMap<String, Map<String, String>>();
+        Map<String, Map<String, byte[]>> propMap =
+                                    new HashMap<String, Map<String, byte[]>>();
 
-        public void singlePath(String path, Map<String, String> props)
+        public void singlePath(String path, Map<String, byte[]> props)
         {
             propMap.put(path, props);
         }
 
-        public Map<String, String> getProperties(String path)
+        public Map<String, byte[]> getProperties(String path)
         {
             return propMap.get(path);
         }
@@ -3649,15 +3649,15 @@ public class BasicTests extends SVNTests
     {
         class MyProplistCallback implements ProplistCallback
         {
-            Map<String, Map<String, String>> propMap =
-                                new HashMap<String, Map<String, String>>();
+            Map<String, Map<String, byte[]>> propMap =
+                                new HashMap<String, Map<String, byte[]>>();
 
-            public void singlePath(String path, Map<String, String> props)
+            public void singlePath(String path, Map<String, byte[]> props)
             {
                 propMap.put(path, props);
             }
 
-            public Map<String, String> getProperties(String path)
+            public Map<String, byte[]> getProperties(String path)
             {
                 return propMap.get(path);
             }
@@ -3667,7 +3667,7 @@ public class BasicTests extends SVNTests
         client.properties(path, revision, revision, depth, changelists,
                 callback);
 
-        Map<String, String> propMap = callback.getProperties(path);
+        Map<String, byte[]> propMap = callback.getProperties(path);
         if (propMap == null)
             return new PropertyData[0];
         PropertyData[] props = new PropertyData[propMap.size()];
@@ -3675,7 +3675,8 @@ public class BasicTests extends SVNTests
         int i = 0;
         for (String key : propMap.keySet())
         {
-            props[i] = new PropertyData(path, key, propMap.get(key));
+            props[i] = new PropertyData(path, key,
+                                        new String(propMap.get(key)));
             i++;
         }
 
@@ -3771,16 +3772,16 @@ public class BasicTests extends SVNTests
 
             public void singleMessage(ChangePath[] changedPaths,
                                       long revision,
-                                      Map<String, String> revprops,
+                                      Map<String, byte[]> revprops,
                                       boolean hasChildren)
             {
-                String author = (String) revprops.get("svn:author");
-                String message = (String) revprops.get("svn:log");
+                String author = new String(revprops.get("svn:author"));
+                String message = new String(revprops.get("svn:log"));
                 long timeMicros;
 
                 try {
-                    LogDate date = new LogDate((String)
-                                                    revprops.get("svn:date"));
+                    LogDate date = new LogDate(new String(
+                                                    revprops.get("svn:date")));
                     timeMicros = date.getTimeMicros();
                 } catch (ParseException ex) {
                     timeMicros = 0;
@@ -3862,9 +3863,9 @@ public class BasicTests extends SVNTests
         }
 
         public void singleLine(long lineNum, long rev,
-                               Map<String, String> revProps,
+                               Map<String, byte[]> revProps,
                                long mergedRevision,
-                               Map<String, String> mergedRevProps,
+                               Map<String, byte[]> mergedRevProps,
                                String mergedPath, String line,
                                boolean localChange)
             throws ClientException
@@ -3873,14 +3874,14 @@ public class BasicTests extends SVNTests
 
             try {
                 singleLine(
-                    df.parse((String) revProps.get("svn:date")),
+                    df.parse(new String(revProps.get("svn:date"))),
                     rev,
-                    (String) revProps.get("svn:author"),
+                    new String(revProps.get("svn:author")),
                     mergedRevProps == null ? null
-                        : df.parse((String) mergedRevProps.get("svn:date")),
+                        : df.parse(new String(mergedRevProps.get("svn:date"))),
                     mergedRevision,
                     mergedRevProps == null ? null
-                        : (String) mergedRevProps.get("svn:author"),
+                        : new String(mergedRevProps.get("svn:author")),
                     mergedPath, line);
             } catch (ParseException e) {
                 throw ClientException.fromException(e);
