@@ -1104,7 +1104,7 @@ Java_org_apache_subversion_javahl_SVNClient_setRevProperty
                      jforce ? true: false);
 }
 
-JNIEXPORT jobject JNICALL
+JNIEXPORT jbyteArray JNICALL
 Java_org_apache_subversion_javahl_SVNClient_propertyGet
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jobject jrevision,
  jobject jpegRevision)

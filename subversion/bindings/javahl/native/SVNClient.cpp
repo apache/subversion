@@ -889,9 +889,9 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
 /**
  * Get a property.
  */
-jobject SVNClient::propertyGet(jobject jthis, const char *path,
-                               const char *name, Revision &revision,
-                               Revision &pegRevision)
+jbyteArray SVNClient::propertyGet(jobject jthis, const char *path,
+                                  const char *name, Revision &revision,
+                                  Revision &pegRevision)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
@@ -922,7 +922,8 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
     if (propval == NULL)
         return NULL;
 
-    return CreateJ::Property(jthis, path, name, propval);
+    return JNIUtil::makeJByteArray((const signed char *)propval->data,
+                                   propval->len);
 }
 
 void SVNClient::properties(const char *path, Revision &revision,

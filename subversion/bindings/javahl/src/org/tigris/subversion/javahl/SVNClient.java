@@ -1999,9 +1999,10 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            return new PropertyData(aSVNClient.propertyGet(path, name,
+            return new PropertyData(path, name,
+                    new String(aSVNClient.propertyGet(path, name,
                         revision == null ? null : revision.toApache(),
-                        pegRevision == null ? null : pegRevision.toApache()));
+                        pegRevision == null ? null : pegRevision.toApache())));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
