@@ -720,7 +720,7 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.0
      */
-    PropertyData revProperty(String path, String name, Revision rev)
+    byte[] revProperty(String path, String name, Revision rev)
             throws ClientException;
 
     /**

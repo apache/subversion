@@ -175,8 +175,8 @@ class SVNClient :public SVNBase
   void list(const char *url, Revision &revision, Revision &pegRevision,
             svn_depth_t depth, int direntFields, bool fetchLocks,
             ListCallback *callback);
-  jobject revProperty(jobject jthis, const char *path, const char *name,
-                      Revision &rev);
+  jbyteArray revProperty(jobject jthis, const char *path, const char *name,
+                         Revision &rev);
   void setRevProperty(jobject jthis, const char *path, const char *name,
                       Revision &rev, const char *value,
                       const char *original_value, bool force);

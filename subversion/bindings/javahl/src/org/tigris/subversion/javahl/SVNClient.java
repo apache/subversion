@@ -1902,8 +1902,9 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            return new PropertyData(aSVNClient.revProperty(path, name,
-                                         rev == null ? null : rev.toApache()));
+            return new PropertyData(path, name,
+                            new String(aSVNClient.revProperty(path, name,
+                                       rev == null ? null : rev.toApache())));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
