@@ -18545,8 +18545,10 @@ def merge_into_wc_for_deleted_branch(sbox):
 
 # Test for a reintegrate bug which can occur when the merge source
 # has mergeinfo that explicitly describes common history with the reintegrate
-# target, see http://mail-archives.apache.org/mod_mbox/subversion-dev/
-# 200912.mbox/%3C6cfe18eb0912161438wfb5234bj118aacdff7ffb25f@mail.gmail.com%3E
+# target, see http://svn.haxx.se/dev/archive-2009-12/0338.shtml
+#
+# Also tests Issue #3591 'reintegrate merges update subtree mergeinfo
+# unconditionally'.
 def reintegrate_with_self_referential_mergeinfo(sbox):
   "source has target's history as explicit mergeinfo"
 
@@ -18593,23 +18595,22 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
                                      '-m', 'Work done on the A2.1 branch.',
                                      wc_dir)
   
-  # Update to uniform revision and reintegrated A2.1 back to A2.
+  # Update to uniform revision and reintegrate A2.1 back to A2.
+  # Note that the mergeinfo on A2/B is not changed by the reintegration
+  # and so is not expected to by updated to describe the merge.
   svntest.actions.run_and_verify_svn(None, ["At revision 8.\n"], [],
                                      'up', wc_dir)
-
-  # Now merge all available revisions from A to A_COPY:
   expected_output = wc.State(A2_path, {
     'mu' : Item(status='U '),
     })
   expected_mergeinfo_output = wc.State(A2_path, {
     ''  : Item(status=' U'),
-    'B' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A2_path, {
     })
   expected_status = wc.State(A2_path, {
     ''          : Item(status=' M'),
-    'B'         : Item(status=' M'),
+    'B'         : Item(status='  '),
     'mu'        : Item(status='M '),
     'B/E'       : Item(status='  '),
     'B/E/alpha' : Item(status='  '),
@@ -18631,7 +18632,7 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
   expected_status.tweak(wc_rev=8)
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:3\n/A2.1:7-8'}),
-    'B'         : Item(props={SVN_PROP_MERGEINFO : '/A/B:4\n/A2.1/B:7-8'}),
+    'B'         : Item(props={SVN_PROP_MERGEINFO : '/A/B:4'}),
     'mu'        : Item("New A2.1 stuff"),
     'B/E'       : Item(),
     'B/E/alpha' : Item("This is the file 'alpha'.\n"),
@@ -18664,6 +18665,9 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
   #  ..\..\..\subversion\libsvn_fs_fs\tree.c:2886: (apr_err=160013)
   #  ..\..\..\subversion\libsvn_fs_fs\tree.c:669: (apr_err=160013)
   #  svn: File not found: revision 4, path '/A2'
+  #
+  # This currently fails because the mergeinfo on A2/B gets updated, even
+  # though no paths within that subtree are affected by the reintegration.
   svntest.actions.run_and_verify_merge(A2_path, None, None,
                                        sbox.repo_url + '/A2.1', None,
                                        expected_output,
@@ -19033,7 +19037,7 @@ test_list = [ None,
               XFail(committed_case_only_move_and_revert,
                     is_fs_case_insensitive),
               merge_into_wc_for_deleted_branch,
-              reintegrate_with_self_referential_mergeinfo,
+              XFail(reintegrate_with_self_referential_mergeinfo),
               reintegrate_with_subtree_merges,
              ]
 
