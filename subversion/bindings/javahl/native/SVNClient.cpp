@@ -1463,8 +1463,8 @@ svn_stream_t *SVNClient::createReadStream(apr_pool_t *pool, const char *path,
     return read_stream;
 }
 
-jobject SVNClient::revProperty(jobject jthis, const char *path,
-                               const char *name, Revision &rev)
+jbyteArray SVNClient::revProperty(jobject jthis, const char *path,
+                                  const char *name, Revision &rev)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
@@ -1498,7 +1498,8 @@ jobject SVNClient::revProperty(jobject jthis, const char *path,
     if (propval == NULL)
         return NULL;
 
-    return CreateJ::Property(jthis, path, name, propval);
+    return JNIUtil::makeJByteArray((const signed char *)propval->data,
+                                   propval->len);
 }
 void SVNClient::relocate(const char *from, const char *to, const char *path,
                          bool recurse)
