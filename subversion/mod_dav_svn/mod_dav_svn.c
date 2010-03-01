@@ -170,7 +170,7 @@ create_dir_config(apr_pool_t *p, char *dir)
   dir_conf_t *conf = apr_pcalloc(p, sizeof(*conf));
 
   if (dir)
-    conf->root_dir = svn_dirent_canonicalize(dir, p);
+    conf->root_dir = svn_uri_canonicalize(dir, p);
   conf->bulk_updates = CONF_FLAG_ON;
   conf->v2_protocol = CONF_FLAG_ON;
 
