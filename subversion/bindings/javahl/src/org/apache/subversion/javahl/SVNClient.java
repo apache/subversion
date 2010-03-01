@@ -667,16 +667,6 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.2
      */
-    public PropertyData propertyGet(String path, String name,
-                                    Revision revision)
-            throws ClientException
-    {
-        return propertyGet(path, name, revision, revision);
-    }
-
-    /**
-     * @since 1.2
-     */
     public native PropertyData propertyGet(String path, String name,
                                            Revision revision,
                                            Revision pegRevision)
