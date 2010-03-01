@@ -28,6 +28,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -687,12 +689,41 @@ class SVNTests extends TestCase
         }
 
         /**
+         * Return the working copy directory name as part of a Set
+         * @return a Set containing only the working copy directory
+         */
+        public Set<String> getWCPathSet()
+        {
+            Set<String> paths = new HashSet<String>(1);
+            paths.add(workingCopy.getAbsolutePath());
+            return paths;
+        }
+
+        /**
+         * Return the working copy subpath as part of a Set
+         * @return a Set containing only the given working copy path
+         */
+        public Set<String> getWCPathSet(String subpath)
+        {
+            Set<String> paths = new HashSet<String>(1);
+            paths.add(workingCopy.getAbsolutePath() + subpath);
+            return paths;
+        }
+
+        /**
          * Returns the url of repository
          * @return  the url
          */
         public String getUrl()
         {
             return url;
+        }
+
+        public Set<String> getUrlSet(String subpath)
+        {
+            Set<String> urls = new HashSet<String>(1);
+            urls.add(url + subpath);
+            return urls;
         }
 
         /**
