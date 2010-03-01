@@ -59,6 +59,7 @@ typedef struct {
  * Configuration
  */
 
+/* Implements the #create_dir_config method of Apache's #module vtable. */
 static void *
 create_authz_svn_dir_config(apr_pool_t *p, char *d)
 {
@@ -72,6 +73,7 @@ create_authz_svn_dir_config(apr_pool_t *p, char *d)
   return conf;
 }
 
+/* Implements the #cmds member of Apache's #module vtable. */
 static const command_rec authz_svn_cmds[] =
 {
   AP_INIT_FLAG("AuthzSVNAuthoritative", ap_set_flag_slot,
@@ -674,6 +676,7 @@ auth_checker(request_rec *r)
  * Module flesh
  */
 
+/* Implements the #register_hooks method of Apache's #module vtable. */
 static void
 register_hooks(apr_pool_t *p)
 {

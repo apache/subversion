@@ -141,6 +141,7 @@ init_dso(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp)
   return OK;
 }
 
+/* Implements the #create_server_config method of Apache's #module vtable. */
 static void *
 create_server_config(apr_pool_t *p, server_rec *s)
 {
@@ -148,6 +149,7 @@ create_server_config(apr_pool_t *p, server_rec *s)
 }
 
 
+/* Implements the #merge_server_config method of Apache's #module vtable. */
 static void *
 merge_server_config(apr_pool_t *p, void *base, void *overrides)
 {
@@ -163,6 +165,7 @@ merge_server_config(apr_pool_t *p, void *base, void *overrides)
 }
 
 
+/* Implements the #create_dir_config method of Apache's #module vtable. */
 static void *
 create_dir_config(apr_pool_t *p, char *dir)
 {
@@ -180,6 +183,7 @@ create_dir_config(apr_pool_t *p, char *dir)
 }
 
 
+/* Implements the #merge_dir_config method of Apache's #module vtable. */
 static void *
 merge_dir_config(apr_pool_t *p, void *base, void *overrides)
 {
@@ -769,6 +773,7 @@ static int dav_svn__handler(request_rec *r)
 
 /** Module framework stuff **/
 
+/* Implements the #cmds member of Apache's #module vtable. */
 static const command_rec cmds[] =
 {
   /* per directory/location */
@@ -847,6 +852,7 @@ static dav_provider provider =
 };
 
 
+/* Implements the #register_hooks method of Apache's #module vtable. */
 static void
 register_hooks(apr_pool_t *pconf)
 {
