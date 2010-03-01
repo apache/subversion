@@ -264,6 +264,14 @@ Candidate changes:
    Votes:
      +1: kameshj
 
+ * r917523
+   This backport depends on the above 2 groups only for the conflict free port.
+   Justification:
+    If the configured slave url has the *encodable* characters *write through*
+    is not happening rather commit happens in slave itself.
+   Votes:
+     +1: kameshj
+
 Veto-blocked changes:
 =====================
 
