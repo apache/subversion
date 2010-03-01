@@ -256,7 +256,7 @@ Candidate changes:
    Votes:
      +1: kameshj
 
- * r916286
+ * r916286, r917512
    This backport depends on the above group only for the conflict free port.
    Justification:
     Vague commit error when server has been configured with <Location /svn/>
