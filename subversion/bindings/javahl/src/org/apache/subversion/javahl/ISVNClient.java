@@ -149,7 +149,7 @@ public interface ISVNClient
      * @since 1.6
      */
     void logMessages(String path, Revision pegRevision,
-                     RevisionRange[] ranges, boolean stopOnCopy,
+                     List<RevisionRange> ranges, boolean stopOnCopy,
                      boolean discoverPath, boolean includeMergedRevisions,
                      Set<String> revProps, long limit,
                      LogMessageCallback callback)
@@ -479,7 +479,7 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    void merge(String path, Revision pegRevision, RevisionRange[] revisions,
+    void merge(String path, Revision pegRevision, List<RevisionRange> revisions,
                String localPath, boolean force, int depth,
                boolean ignoreAncestry, boolean dryRun, boolean recordOnly)
              throws ClientException;

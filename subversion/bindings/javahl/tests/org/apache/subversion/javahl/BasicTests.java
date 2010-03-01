@@ -2102,9 +2102,10 @@ public class BasicTests extends SVNTests
         OneTest thisTest = new OneTest();
 
         // get the commit message of the initial import and test it
+        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
+        ranges.add(new RevisionRange(null, null));
         LogMessage lm[] = collectLogMessages(thisTest.getWCPath(), null,
-                        new RevisionRange[] { new RevisionRange(null, null) },
-                        false, true, false, 0);
+                                             ranges, false, true, false, 0);
         assertEquals("wrong number of objects", 1, lm.length);
         assertEquals("wrong message", "Log Message", lm[0].getMessage());
         assertEquals("wrong revision", 1, lm[0].getRevisionNumber());
@@ -2528,8 +2529,9 @@ public class BasicTests extends SVNTests
         String branchPath = thisTest.getWCPath() + "/branches/A";
         String modUrl = thisTest.getUrl() + "/A";
         Revision unspec = new Revision(RevisionKind.unspecified);
-        client.merge(modUrl, Revision.HEAD,
-                     new RevisionRange[] { new RevisionRange(unspec, unspec) },
+        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
+        ranges.add(new RevisionRange(unspec, unspec));
+        client.merge(modUrl, Revision.HEAD, ranges,
                      branchPath, true, Depth.infinity, false, false, false);
 
         // commit the changes so that we can verify merge
@@ -2581,8 +2583,9 @@ public class BasicTests extends SVNTests
         String branchPath = thisTest.getWCPath() + "/branches/A";
         String modUrl = thisTest.getUrl() + "/A";
         Revision unspec = new Revision(RevisionKind.unspecified);
-        client.merge(modUrl, Revision.HEAD,
-                     new RevisionRange[] { new RevisionRange(unspec, unspec) },
+        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
+        ranges.add(new RevisionRange(unspec, unspec));
+        client.merge(modUrl, Revision.HEAD, ranges,
                      branchPath, true, Depth.infinity, false, false, false);
 
         // commit the changes so that we can verify merge
@@ -2665,9 +2668,9 @@ public class BasicTests extends SVNTests
         mu = appendText(thisTest, "A/mu", "yyy", 1);
 
         // Merge in the previous changes to A/mu (from r2).
-        RevisionRange[] ranges = new RevisionRange[1];
-        ranges[0] = new RevisionRange(new Revision.Number(1),
-                                      new Revision.Number(2));
+        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
+        ranges.add(new RevisionRange(new Revision.Number(1),
+                                     new Revision.Number(2)));
         client.merge(thisTest.getUrl(), Revision.HEAD, ranges,
                      thisTest.getWCPath(), false, Depth.infinity, false,
                      false, false);
@@ -2709,9 +2712,9 @@ public class BasicTests extends SVNTests
         String branchPath = thisTest.getWCPath() + "/branches/A";
         String modUrl = thisTest.getUrl() + "/A";
 
-        RevisionRange[] ranges = new RevisionRange[1];
-        ranges[0] = new RevisionRange(new Revision.Number(2),
-                                      new Revision.Number(4));
+        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
+        ranges.add(new RevisionRange(new Revision.Number(2),
+                                     new Revision.Number(4)));
         client.merge(modUrl, Revision.HEAD, ranges,
                      branchPath, true, Depth.infinity, false, false, true);
 
@@ -3533,10 +3536,10 @@ public class BasicTests extends SVNTests
         }
     }
 
-    private RevisionRange[] toRevisionRange(Revision rev1, Revision rev2)
+    private List<RevisionRange> toRevisionRange(Revision rev1, Revision rev2)
     {
-        RevisionRange[] ranges = new RevisionRange[1];
-        ranges[0] = new RevisionRange(rev1, rev2);
+        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
+        ranges.add(new RevisionRange(rev1, rev2));
         return ranges;
     }
 
@@ -3743,7 +3746,7 @@ public class BasicTests extends SVNTests
     }
 
     private LogMessage[] collectLogMessages(String path, Revision pegRevision,
-                                            RevisionRange[] revisionRanges,
+                                            List<RevisionRange> revisionRanges,
                                             boolean stopOnCopy,
                                             boolean discoverPath,
                                             boolean includeMergedRevisions,
