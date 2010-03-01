@@ -166,13 +166,13 @@ Candidate changes:
    Votes:
      +1: neels
 
-* r904594
-  Update 'svnadmin verify' to recognize malformed/missing revprops files
-  Justification:
-    It's misleading for 'svnadmin verify' to say a repository is fine
-    when in reality it isn't.
-  Votes:
-    +1: jwhitlock, danielsh
+ * r904594
+   Update 'svnadmin verify' to recognize malformed/missing revprops files
+   Justification:
+     It's misleading for 'svnadmin verify' to say a repository is fine
+     when in reality it isn't.
+   Votes:
+     +1: jwhitlock, danielsh
 
  * r905303
    Make 'svnadmin hotcopy' copy fsfs.conf for FSFS repositories.
@@ -181,14 +181,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
-  * r905326
-    Issue #3561: Teach ra_serf the same out-of-date fix we taught ra_neon.
-    Justification:
-      Feature parity with ra_neon is goodness and fixes real-world issue.
+ * r905326
+   Issue #3561: Teach ra_serf the same out-of-date fix we taught ra_neon.
+   Justification:
+     Feature parity with ra_neon is goodness and fixes real-world issue.
    Branch:
      ^/subversion/branches/1.6.x-r905326
-    Votes:
-      +1: jerenkrantz, kameshj
+   Votes:
+     +1: jerenkrantz, kameshj
 
  * r906256, 906305
    Fix issue #3573 'local non-inheritable mergeinfo changes not properly
@@ -248,27 +248,27 @@ Candidate changes:
    "r878625, r878626, r878627" are follow-up to r878607 and the other long 
    pending Master info leak to the clients.
    Justification:
-    1. This group has the most common 'optimization' fix of *not* groking the
-       proxied response to find and replace with same string.
-    2. Fixes the master information leak via the Location header.
-    3. Need this to be ported for the other defect to be ported
-       without conflict.
+     1. This group has the most common 'optimization' fix of *not* groking the
+        proxied response to find and replace with same string.
+     2. Fixes the master information leak via the Location header.
+     3. Need this to be ported for the other defect to be ported
+        without conflict.
    Votes:
      +1: kameshj
 
  * r916286, r917512
    This backport depends on the above group only for the conflict free port.
    Justification:
-    Vague commit error when server has been configured with <Location /svn/>
-    and write through proxy.
+     Vague commit error when server has been configured with <Location /svn/>
+     and write through proxy.
    Votes:
      +1: kameshj
 
  * r917523
    This backport depends on the above 2 groups only for the conflict free port.
    Justification:
-    If the configured slave url has the *encodable* characters *write through*
-    is not happening rather commit happens in slave itself.
+     If the configured slave url has the *encodable* characters *write through*
+     is not happening rather commit happens in slave itself.
    Votes:
      +1: kameshj
 
