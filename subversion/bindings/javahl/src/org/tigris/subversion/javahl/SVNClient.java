@@ -165,27 +165,16 @@ public class SVNClient implements SVNClientInterface
                            boolean ignoreExternals)
             throws ClientException
     {
-        class MyStatusCallback implements StatusCallback
-        {
-            private List<Status> statuses = new ArrayList<Status>();
-
-            public void doStatus(Status status)
-            {
-                statuses.add(status);
-            }
-
-            public Status[] getStatusArray()
-            {
-                return statuses.toArray(new Status[statuses.size()]);
-            }
-        }
-
-        MyStatusCallback callback = new MyStatusCallback();
+        final List<Status> statuses = new ArrayList<Status>();
 
         status(path, Depth.unknownOrImmediates(descend), onServer, getAll,
-               noIgnore, ignoreExternals, null, callback);
+               noIgnore, ignoreExternals, null,
+               new StatusCallback() {
+                public void doStatus(Status status)
+                    { statuses.add(status); }
+               });
 
-        return callback.getStatusArray();
+        return statuses.toArray(new Status[statuses.size()]);
     }
 
     /**
@@ -194,32 +183,19 @@ public class SVNClient implements SVNClientInterface
     public void status(String path, int depth, boolean onServer,
                        boolean getAll, boolean noIgnore,
                        boolean ignoreExternals, String[] changelists,
-                       StatusCallback callback)
+                       final StatusCallback callback)
             throws ClientException
     {
-        class aStatusCallback
-            implements org.apache.subversion.javahl.callback.StatusCallback
-        {
-            StatusCallback callback;
-
-            public aStatusCallback(StatusCallback callback)
-            {
-                this.callback = callback;
-            }
-
-            public void doStatus(org.apache.subversion.javahl.Status aStatus)
-            {
-                callback.doStatus(new Status(aStatus));
-            }
-        }
-
         try
         {
             aSVNClient.status(path, depth, onServer, getAll, noIgnore,
                               ignoreExternals,
                               changelists == null ? null
                                 : Arrays.asList(changelists),
-                              new aStatusCallback(callback));
+        new org.apache.subversion.javahl.callback.StatusCallback () {
+         public void doStatus(org.apache.subversion.javahl.Status aStatus)
+                    { callback.doStatus(new Status(aStatus)); }
+                });
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -298,34 +274,23 @@ public class SVNClient implements SVNClientInterface
      */
     public void list(String url, Revision revision,
                             Revision pegRevision, int depth, int direntFields,
-                            boolean fetchLocks, ListCallback callback)
+                            boolean fetchLocks, final ListCallback callback)
             throws ClientException
     {
-        class aListCallback
-            implements org.apache.subversion.javahl.callback.ListCallback
-        {
-            private ListCallback callback;
-
-            public aListCallback(ListCallback callback)
-            {
-                this.callback = callback;
-            }
-
-            public void doEntry(org.apache.subversion.javahl.DirEntry dirent,
-                                org.apache.subversion.javahl.Lock lock)
-            {
-                callback.doEntry(new DirEntry(dirent),
-                                 lock == null ? null : new Lock(lock));
-            }
-        }
-
         try
         {
             aSVNClient.list(url,
                          revision == null ? null : revision.toApache(),
                          pegRevision == null ? null : pegRevision.toApache(),
                          depth, direntFields, fetchLocks,
-                         new aListCallback(callback));
+        new org.apache.subversion.javahl.callback.ListCallback () {
+            public void doEntry(org.apache.subversion.javahl.DirEntry dirent,
+                                org.apache.subversion.javahl.Lock lock)
+            {
+                callback.doEntry(new DirEntry(dirent),
+                                 lock == null ? null : new Lock(lock));
+            }
+                });
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -622,51 +587,33 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.2
      */
-    public void notification2(Notify2 notify)
+    public void notification2(final Notify2 notify)
     {
-        class MyNotifyCallback
-            implements org.apache.subversion.javahl.callback.NotifyCallback
-        {
-            Notify2 notify;
-
-            public MyNotifyCallback(Notify2 notify)
-            {
-                this.notify = notify;
-            }
-
+        aSVNClient.notification2(
+          new org.apache.subversion.javahl.callback.NotifyCallback () {
             public void onNotify(
                         org.apache.subversion.javahl.NotifyInformation aInfo)
             {
                 notify.onNotify(new NotifyInformation(aInfo));
             }
-        }
-
-        aSVNClient.notification2(new MyNotifyCallback(notify));
+          });
     }
 
     /**
      * @since 1.5
      */
-    public void setConflictResolver(ConflictResolverCallback listener)
+    public void setConflictResolver(final ConflictResolverCallback listener)
     {
         class MyConflictResolverCallback
             implements org.apache.subversion.javahl.callback.ConflictResolverCallback
         {
-            private ConflictResolverCallback callback;
-
-            public MyConflictResolverCallback(
-                                        ConflictResolverCallback callback)
-            {
-                this.callback = callback;
-            }
-
             public org.apache.subversion.javahl.ConflictResult resolve(
                     org.apache.subversion.javahl.ConflictDescriptor aDescrip)
                 throws org.apache.subversion.javahl.SubversionException
             {
                 try
                 {
-                    return callback.resolve(
+                    return listener.resolve(
                                 new ConflictDescriptor(aDescrip)).toApache();
                 }
                 catch (SubversionException ex)
@@ -676,52 +623,32 @@ public class SVNClient implements SVNClientInterface
             }
         }
 
-        aSVNClient.setConflictResolver(
-                                    new MyConflictResolverCallback(listener));
+        aSVNClient.setConflictResolver(new MyConflictResolverCallback());
     }
 
     /**
      * @since 1.5
      */
-    public void setProgressListener(ProgressListener listener)
+    public void setProgressListener(final ProgressListener listener)
     {
-        class MyProgressListener
-            implements org.apache.subversion.javahl.callback.ProgressCallback
-        {
-            private ProgressListener listener;
-
-            MyProgressListener(ProgressListener listener)
-            {
-                this.listener = listener;
-            }
-
+        aSVNClient.setProgressCallback(
+        new org.apache.subversion.javahl.callback.ProgressCallback () {
             public void onProgress(org.apache.subversion.javahl.ProgressEvent
                                                                         event)
             {
                 listener.onProgress(new ProgressEvent(event));
             }
-        }
-
-        MyProgressListener aListener = new MyProgressListener(listener);
-
-        aSVNClient.setProgressCallback(aListener);
+        });
     }
 
     /**
      * @since 1.0
      */
-    public void commitMessageHandler(CommitMessage messageHandler)
+    public void commitMessageHandler(final CommitMessage messageHandler)
     {
         class MyCommitMessageHandler
             implements org.apache.subversion.javahl.CommitMessage
         {
-            private CommitMessage handler;
-
-            MyCommitMessageHandler(CommitMessage handler)
-            {
-                this.handler = handler;
-            }
-
             public String getLogMessage(
                 org.apache.subversion.javahl.CommitItem[] elementsToBeCommited)
             {
@@ -733,17 +660,14 @@ public class SVNClient implements SVNClientInterface
                     aElements[i] = new CommitItem(elementsToBeCommited[i]);
                 }
 
-                if (handler == null)
+                if (messageHandler == null)
                   return "";
 
-                return handler.getLogMessage(aElements);
+                return messageHandler.getLogMessage(aElements);
             }
         }
 
-        MyCommitMessageHandler aHandler =
-                                new MyCommitMessageHandler(messageHandler);
-
-        aSVNClient.commitMessageHandler(aHandler);
+        aSVNClient.commitMessageHandler(new MyCommitMessageHandler());
     }
 
     /**
@@ -1408,19 +1332,13 @@ public class SVNClient implements SVNClientInterface
                                 Revision pegRevision, String mergeSourceUrl,
                                 Revision srcPegRevision,
                                 boolean discoverChangedPaths, int depth,
-                                String[] revprops, LogMessageCallback callback)
+                                String[] revprops,
+                                final LogMessageCallback callback)
         throws ClientException
     {
         class aLogMessageCallback
             implements org.apache.subversion.javahl.callback.LogMessageCallback
         {
-            private LogMessageCallback callback;
-
-            aLogMessageCallback(LogMessageCallback callback)
-            {
-                this.callback = callback;
-            }
-
             public void singleMessage(
                     org.apache.subversion.javahl.ChangePath[] aChangedPaths,
                     long revision, Map revprops, boolean hasChildren)
@@ -1456,7 +1374,7 @@ public class SVNClient implements SVNClientInterface
                         discoverChangedPaths, depth,
                         revprops == null ? null
                           : new HashSet<String>(Arrays.asList(revprops)),
-                        new aLogMessageCallback(callback));
+                        new aLogMessageCallback());
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -2136,29 +2054,19 @@ public class SVNClient implements SVNClientInterface
      */
     public void blame(String path, Revision pegRevision,
                       Revision revisionStart, Revision revisionEnd,
-                      BlameCallback callback)
+                      final BlameCallback callback)
             throws ClientException
     {
-        class BlameCallbackWrapper implements BlameCallback2
-        {
-            private BlameCallback oldCallback;
-
-            public BlameCallbackWrapper(BlameCallback callback)
-            {
-                oldCallback = callback;
-            }
-
+        blame(path, pegRevision, revisionStart, revisionEnd, false, false,
+          new BlameCallback2 () {
             public void singleLine(Date date, long revision, String author,
                                    Date merged_date, long merged_revision,
                                    String merged_author, String merged_path,
                                    String line)
             {
-                oldCallback.singleLine(date, revision, author, line);
+                callback.singleLine(date, revision, author, line);
             }
-        }
-
-        blame(path, pegRevision, revisionStart, revisionEnd, false, false,
-              new BlameCallbackWrapper(callback));
+          });
     }
 
     /**
@@ -2170,18 +2078,11 @@ public class SVNClient implements SVNClientInterface
     public void blame(String path, Revision pegRevision,
                       Revision revisionStart, Revision revisionEnd,
                       boolean ignoreMimeType, boolean includeMergedRevisions,
-                      BlameCallback2 callback)
+                      final BlameCallback2 callback)
             throws ClientException
     {
         class BlameCallback2Wrapper implements BlameCallback3
         {
-            private BlameCallback2 oldCallback;
-
-            public BlameCallback2Wrapper(BlameCallback2 callback)
-            {
-                oldCallback = callback;
-            }
-
             public void singleLine(long lineNum, long revision, Map revProps,
                                    long mergedRevision, Map mergedRevProps,
                                    String mergedPath, String line,
@@ -2193,7 +2094,7 @@ public class SVNClient implements SVNClientInterface
 
                 try
                 {
-                    oldCallback.singleLine(
+                    callback.singleLine(
                         df.parse(new String((byte[]) revProps.get("svn:date"))),
                         revision,
                         new String((byte[]) revProps.get("svn:author")),
@@ -2214,7 +2115,7 @@ public class SVNClient implements SVNClientInterface
         }
 
         blame(path, pegRevision, revisionStart, revisionEnd, ignoreMimeType,
-              includeMergedRevisions, new BlameCallback2Wrapper(callback));
+              includeMergedRevisions, new BlameCallback2Wrapper());
     }
 
     /**
@@ -2223,19 +2124,12 @@ public class SVNClient implements SVNClientInterface
     public void blame(String path, Revision pegRevision,
                       Revision revisionStart, Revision revisionEnd,
                       boolean ignoreMimeType, boolean includeMergedRevisions,
-                      BlameCallback3 callback)
+                      final BlameCallback3 callback)
             throws ClientException
     {
         class MyBlameCallback
             implements org.apache.subversion.javahl.callback.BlameCallback
         {
-            private BlameCallback3 callback;
-
-            public MyBlameCallback(BlameCallback3 callback)
-            {
-                this.callback = callback;
-            }
-
             public void singleLine(long lineNum, long revision, Map revProps,
                                    long mergedRevision, Map mergedRevProps,
                                    String mergedPath, String line,
@@ -2257,13 +2151,12 @@ public class SVNClient implements SVNClientInterface
 
         try
         {
-            MyBlameCallback wrapper = new MyBlameCallback(callback);
-
             aSVNClient.blame(path,
                      pegRevision == null ? null : pegRevision.toApache(),
                      revisionStart == null ? null : revisionStart.toApache(),
                      revisionEnd == null ? null : revisionEnd.toApache(),
-                     ignoreMimeType, includeMergedRevisions, wrapper);
+                     ignoreMimeType, includeMergedRevisions,
+                     new MyBlameCallback());
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -2531,25 +2424,14 @@ public class SVNClient implements SVNClientInterface
                          Revision pegRevision, boolean recurse)
             throws ClientException
     {
-        class MyInfoCallback implements InfoCallback
-        {
-            private List<Info2> infos = new ArrayList<Info2>();
+        final List<Info2> infos = new ArrayList<Info2>();
 
-            public void singleInfo(Info2 info)
-            {
-                infos.add(info);
-            }
-
-            public Info2[] getInfoArray()
-            {
-                return infos.toArray(new Info2[infos.size()]);
-            }
-        }
-
-        MyInfoCallback callback = new MyInfoCallback();
         info2(pathOrUrl, revision, pegRevision,
-              Depth.infinityOrEmpty(recurse), null, callback);
-        return callback.getInfoArray();
+              Depth.infinityOrEmpty(recurse), null, new InfoCallback () {
+              public void singleInfo(Info2 info)
+                  { infos.add(info); }
+              });
+        return infos.toArray(new Info2[infos.size()]);
     }
 
     /**
@@ -2557,25 +2439,10 @@ public class SVNClient implements SVNClientInterface
      */
     public void info2(String pathOrUrl, Revision revision,
                              Revision pegRevision, int depth,
-                             String[] changelists, InfoCallback callback)
+                             String[] changelists,
+                             final InfoCallback callback)
             throws ClientException
     {
-        class aInfoCallback
-            implements org.apache.subversion.javahl.callback.InfoCallback
-        {
-            private InfoCallback callback;
-
-            public aInfoCallback(InfoCallback callback)
-            {
-                this.callback = callback;
-            }
-
-            public void singleInfo(org.apache.subversion.javahl.Info2 aInfo)
-            {
-                callback.singleInfo(aInfo == null ? null : new Info2(aInfo));
-            }
-        }
-
         try
         {
             aSVNClient.info2(pathOrUrl,
@@ -2583,7 +2450,12 @@ public class SVNClient implements SVNClientInterface
                           pegRevision == null ? null : pegRevision.toApache(),
                           depth, changelists == null ? null
                             : Arrays.asList(changelists),
-                          new aInfoCallback(callback));
+        new org.apache.subversion.javahl.callback.InfoCallback () {
+            public void singleInfo(org.apache.subversion.javahl.Info2 aInfo)
+            {
+                callback.singleInfo(aInfo == null ? null : new Info2(aInfo));
+            }
+        });
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
