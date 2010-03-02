@@ -653,7 +653,7 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.2
      */
-    public native PropertyData[] revProperties(String path, Revision rev)
+    public native Map<String, byte[]> revProperties(String path, Revision rev)
             throws ClientException;
 
     /**

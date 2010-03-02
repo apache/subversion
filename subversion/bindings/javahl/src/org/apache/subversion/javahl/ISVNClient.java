@@ -731,7 +731,7 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.2
      */
-    PropertyData[] revProperties(String path, Revision rev)
+    Map<String, byte[]> revProperties(String path, Revision rev)
             throws ClientException;
 
     /**

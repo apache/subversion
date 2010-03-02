@@ -1046,7 +1046,7 @@ Java_org_apache_subversion_javahl_SVNClient_revProperty
   return cl->revProperty(jthis, path, name, revision);
 }
 
-JNIEXPORT jobjectArray JNICALL
+JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_SVNClient_revProperties
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision)
 {

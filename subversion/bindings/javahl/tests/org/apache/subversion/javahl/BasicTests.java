@@ -745,12 +745,10 @@ public class BasicTests extends SVNTests
 
         client.propertySet(itemPath, "abc", "def", Depth.empty, null, false,
                 null);
-        PropertyData[] properties = collectProperties(itemPath, null, null,
-                                        Depth.empty, null);
+        Map<String, byte[]> properties = collectProperties(itemPath, null,
+                                                    null, Depth.empty, null);
 
-        PropertyData prop = properties[0];
-        assertEquals("abc", prop.getName());
-        assertEquals("def", prop.getValue());
+        assertEquals("def", new String(properties.get("abc")));
 
         wc.setItemPropStatus("iota", Status.Kind.modified);
         thisTest.checkStatus();
@@ -2166,7 +2164,7 @@ public class BasicTests extends SVNTests
         muPathSet.add(thisTest.getWCPath()+"/A/mu");
 
         client.propertySet(thisTest.getWCPath()+"/A/mu",
-                           PropertyData.NEEDS_LOCK, "*", Depth.empty,
+                           Property.NEEDS_LOCK, "*", Depth.empty,
                            null, false, null);
 
         addExpectedCommitItem(thisTest.getWCPath(),
@@ -3642,7 +3640,8 @@ public class BasicTests extends SVNTests
         }
     }
 
-    private PropertyData[] collectProperties(String path, Revision revision,
+    private Map<String, byte[]> collectProperties(String path,
+                                             Revision revision,
                                              Revision pegRevision, int depth,
                                              Collection<String> changelists)
         throws ClientException
@@ -3667,20 +3666,7 @@ public class BasicTests extends SVNTests
         client.properties(path, revision, revision, depth, changelists,
                 callback);
 
-        Map<String, byte[]> propMap = callback.getProperties(path);
-        if (propMap == null)
-            return new PropertyData[0];
-        PropertyData[] props = new PropertyData[propMap.size()];
-
-        int i = 0;
-        for (String key : propMap.keySet())
-        {
-            props[i] = new PropertyData(path, key,
-                                        new String(propMap.get(key)));
-            i++;
-        }
-
-        return props;
+        return callback.getProperties(path);
     }
 
     private DirEntry[] collectDirEntries(String url, Revision revision,

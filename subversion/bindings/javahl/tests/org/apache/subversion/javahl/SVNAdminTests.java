@@ -26,6 +26,7 @@ import org.apache.subversion.javahl.callback.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * This class is used for testing the SVNAdmin class
@@ -61,19 +62,11 @@ public class SVNAdminTests extends SVNTests
         final String MSG = "Initial repository creation";
         admin.setRevProp(thisTest.getRepositoryPath(), Revision.getInstance(0),
                          "svn:log", MSG, false, false);
-        PropertyData[] pdata = client.revProperties(
+        Map<String, byte[]> pdata = client.revProperties(
                                       makeReposUrl(thisTest.getRepository()),
                                       Revision.getInstance(0));
         assertNotNull("expect non null rev props");
-        String logMessage = null;
-        for (int i = 0; i < pdata.length; i++)
-        {
-            if ("svn:log".equals(pdata[i].getName()))
-            {
-                logMessage = pdata[i].getValue();
-                break;
-            }
-        }
+        String logMessage = new String(pdata.get("svn:log"));
         assertEquals("expect rev prop change to take effect", MSG, logMessage);
     }
     public void testLoadRepo()

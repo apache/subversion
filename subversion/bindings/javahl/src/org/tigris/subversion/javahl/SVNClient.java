@@ -1929,14 +1929,17 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            org.apache.subversion.javahl.PropertyData[] aPropData =
+            Map<String, byte[]> aProps =
                               aSVNClient.revProperties(path,
                                           rev == null ? null : rev.toApache());
-            PropertyData[] propData = new PropertyData[aPropData.length];
+            PropertyData[] propData = new PropertyData[aProps.size()];
 
-            for (int i = 0; i < aPropData.length; i++)
+            int i = 0;
+            for (String key : aProps.keySet())
             {
-                propData[i] = new PropertyData(aPropData[i]);
+                propData[i] = new PropertyData(path, key,
+                                               new String(aProps.get(key)));
+                i++;
             }
 
             return propData;
