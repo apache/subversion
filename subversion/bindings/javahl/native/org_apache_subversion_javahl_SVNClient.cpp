@@ -1043,7 +1043,7 @@ Java_org_apache_subversion_javahl_SVNClient_revProperty
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
-  return cl->revProperty(jthis, path, name, revision);
+  return cl->revProperty(path, name, revision);
 }
 
 JNIEXPORT jobject JNICALL
@@ -1065,7 +1065,7 @@ Java_org_apache_subversion_javahl_SVNClient_revProperties
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
-  return cl->revProperties(jthis, path, revision);
+  return cl->revProperties(path, revision);
 }
 
 JNIEXPORT void JNICALL
@@ -1100,7 +1100,7 @@ Java_org_apache_subversion_javahl_SVNClient_setRevProperty
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->setRevProperty(jthis, path, name, revision, value, original_value,
+  cl->setRevProperty(path, name, revision, value, original_value,
                      jforce ? true: false);
 }
 
@@ -1132,7 +1132,7 @@ Java_org_apache_subversion_javahl_SVNClient_propertyGet
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
-  return cl->propertyGet(jthis, path, name, revision, pegRevision);
+  return cl->propertyGet(path, name, revision, pegRevision);
 }
 
 JNIEXPORT jobject JNICALL

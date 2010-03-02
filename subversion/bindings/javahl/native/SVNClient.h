@@ -65,7 +65,7 @@ class SVNClient :public SVNBase
              InfoCallback *callback);
   void unlock(Targets &targets, bool force);
   void lock(Targets &targets, const char *comment, bool force);
-  jobject revProperties(jobject jthis, const char *path, Revision &revision);
+  jobject revProperties(const char *path, Revision &revision);
   void cancelOperation();
   void commitMessageHandler(CommitMessage *commitMessage);
   const char *getConfigDirectory();
@@ -174,15 +174,14 @@ class SVNClient :public SVNBase
   void list(const char *url, Revision &revision, Revision &pegRevision,
             svn_depth_t depth, int direntFields, bool fetchLocks,
             ListCallback *callback);
-  jbyteArray revProperty(jobject jthis, const char *path, const char *name,
-                         Revision &rev);
-  void setRevProperty(jobject jthis, const char *path, const char *name,
+  jbyteArray revProperty(const char *path, const char *name, Revision &rev);
+  void setRevProperty(const char *path, const char *name,
                       Revision &rev, const char *value,
                       const char *original_value, bool force);
   jstring getVersionInfo(const char *path, const char *trailUrl,
                          bool lastChanged);
   void upgrade(const char *path);
-  jbyteArray propertyGet(jobject jthis, const char *path, const char *name,
+  jbyteArray propertyGet(const char *path, const char *name,
                          Revision &revision, Revision &pegRevision);
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,

@@ -889,9 +889,8 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
 /**
  * Get a property.
  */
-jbyteArray SVNClient::propertyGet(jobject jthis, const char *path,
-                                  const char *name, Revision &revision,
-                                  Revision &pegRevision)
+jbyteArray SVNClient::propertyGet(const char *path, const char *name,
+                                  Revision &revision, Revision &pegRevision)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
@@ -1464,7 +1463,7 @@ svn_stream_t *SVNClient::createReadStream(apr_pool_t *pool, const char *path,
     return read_stream;
 }
 
-jbyteArray SVNClient::revProperty(jobject jthis, const char *path,
+jbyteArray SVNClient::revProperty(const char *path,
                                   const char *name, Revision &rev)
 {
     SVN::Pool requestPool;
@@ -1652,7 +1651,7 @@ void SVNClient::unlock(Targets &targets, bool force)
     SVN_JNI_ERR(svn_client_unlock((apr_array_header_t*)targetsApr, force,
                                   ctx, requestPool.pool()), );
 }
-void SVNClient::setRevProperty(jobject jthis, const char *path,
+void SVNClient::setRevProperty(const char *path,
                                const char *name, Revision &rev,
                                const char *value, const char *original_value,
                                bool force)
@@ -1885,8 +1884,7 @@ void SVNClient::upgrade(const char *path)
     SVN_JNI_ERR(svn_client_upgrade(path, ctx, requestPool.pool()), );
 }
 
-jobject SVNClient::revProperties(jobject jthis, const char *path,
-                                 Revision &revision)
+jobject SVNClient::revProperties(const char *path, Revision &revision)
 {
     apr_hash_t *props;
     SVN::Pool requestPool;
