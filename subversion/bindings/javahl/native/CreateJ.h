@@ -50,6 +50,9 @@ class CreateJ
   static jobjectArray
   RevisionRangeArray(apr_array_header_t *ranges);
 
+  static jobject
+  StringSet(apr_array_header_t *strings);
+
  protected:
   static jobject
   ConflictVersion(const svn_wc_conflict_version_t *version);

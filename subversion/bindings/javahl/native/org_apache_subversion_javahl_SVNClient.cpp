@@ -803,7 +803,7 @@ Java_org_apache_subversion_javahl_SVNClient_doImport
                jignoreUnknownNodeTypes ? true : false, revprops);
 }
 
-JNIEXPORT jobjectArray JNICALL
+JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_SVNClient_suggestMergeSources
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision)
 {

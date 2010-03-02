@@ -100,7 +100,7 @@ class SVNClient :public SVNBase
                        Revision &srcPegRevision, bool discoverChangedPaths,
                        svn_depth_t depth, StringArray &revProps,
                        LogMessageCallback *callback);
-  jobjectArray suggestMergeSources(const char *path, Revision &pegRevision);
+  jobject suggestMergeSources(const char *path, Revision &pegRevision);
   void merge(const char *path1, Revision &revision1, const char *path2,
              Revision &revision2, const char *localPath, bool force,
              svn_depth_t depth, bool ignoreAncestry, bool dryRun,

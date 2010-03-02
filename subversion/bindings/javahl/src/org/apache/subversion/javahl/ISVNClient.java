@@ -441,7 +441,7 @@ public interface ISVNClient
      * @throws ClientException If an error occurs.
      * @since 1.5
      */
-    String[] suggestMergeSources(String path, Revision pegRevision)
+    Set<String> suggestMergeSources(String path, Revision pegRevision)
             throws SubversionException;
 
     /**

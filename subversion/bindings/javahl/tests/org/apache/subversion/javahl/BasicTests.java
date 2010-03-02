@@ -994,22 +994,22 @@ public class BasicTests extends SVNTests
     {
         String wcPath = fileToSVNPath(new File(thisTest.getWCPath(),
                                                destPath), false);
-        String[] suggestions = client.suggestMergeSources(wcPath,
-                                                          Revision.WORKING);
+        Set<String> suggestions = client.suggestMergeSources(wcPath,
+                                                             Revision.WORKING);
         assertNotNull(suggestions);
-        assertTrue(suggestions.length >= 1);
-        assertTrue("Unexpected copy source path, expected " +
-                   expectedSrc + ", got " + suggestions[0],
-                   expectedSrc.equals(suggestions[0]));
+        assertTrue(suggestions.size() >= 1);
+        assertTrue("Copy source path not found in suggestions: " +
+                   expectedSrc,
+                   suggestions.contains(expectedSrc));
 
         // Same test using URL
         String url = thisTest.getUrl() + "/" + destPath;
         suggestions = client.suggestMergeSources(url, Revision.HEAD);
         assertNotNull(suggestions);
-        assertTrue(suggestions.length >= 1);
-        assertTrue("Unexpected copy source path, expected " +
-                   expectedSrc + ", got " + suggestions[0],
-                   expectedSrc.equals(suggestions[0]));
+        assertTrue(suggestions.size() >= 1);
+        assertTrue("Copy source path not found in suggestions: " +
+                   expectedSrc,
+                   suggestions.contains(expectedSrc));
 
     }
 
@@ -2422,11 +2422,11 @@ public class BasicTests extends SVNTests
         OneTest thisTest = setupAndPerformMerge();
 
         // Verify that there are now potential merge sources.
-        String[] suggestedSrcs =
+        Set<String> suggestedSrcs =
             client.suggestMergeSources(thisTest.getWCPath() + "/branches/A",
                                        Revision.WORKING);
         assertNotNull(suggestedSrcs);
-        assertEquals(1, suggestedSrcs.length);
+        assertEquals(1, suggestedSrcs.size());
 
         // Test that getMergeinfo() returns null.
         assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
@@ -2696,11 +2696,11 @@ public class BasicTests extends SVNTests
         OneTest thisTest = setupAndPerformMerge();
 
         // Verify that there are now potential merge sources.
-        String[] suggestedSrcs =
+        Set<String> suggestedSrcs =
             client.suggestMergeSources(thisTest.getWCPath() + "/branches/A",
                                        Revision.WORKING);
         assertNotNull(suggestedSrcs);
-        assertEquals(1, suggestedSrcs.length);
+        assertEquals(1, suggestedSrcs.size());
 
         // Test that getMergeinfo() returns null.
         assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
@@ -2753,11 +2753,11 @@ public class BasicTests extends SVNTests
         OneTest thisTest = new OneTest();
 
         // Verify that there are initially no potential merge sources.
-        String[] suggestedSrcs =
+        Set<String> suggestedSrcs =
             client.suggestMergeSources(thisTest.getWCPath(),
                                        Revision.WORKING);
         assertNotNull(suggestedSrcs);
-        assertEquals(0, suggestedSrcs.length);
+        assertEquals(0, suggestedSrcs.size());
 
         // create branches directory in the repository (r2)
         addExpectedCommitItem(null, thisTest.getUrl(), "branches",

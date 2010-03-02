@@ -1175,7 +1175,8 @@ public class SVNClient implements SVNClientInterface
         try
         {
             return aSVNClient.suggestMergeSources(path,
-                         pegRevision == null ? null : pegRevision.toApache());
+                         pegRevision == null ? null : pegRevision.toApache()
+                     ).toArray(new String[0]);
         }
         catch (org.apache.subversion.javahl.SubversionException ex)
         {
