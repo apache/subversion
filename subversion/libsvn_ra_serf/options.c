@@ -42,6 +42,8 @@
 
 #include "ra_serf.h"
 
+#define SVN_IGNORE_V2_ENV_VAR "SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2"
+
 
 /*
  * This enum represents the current state of our XML parsing for an OPTIONS.
@@ -332,7 +334,19 @@ capabilities_headers_iterator_callback(void *baton,
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_ME_RESOURCE_HEADER) == 0)
         {
+#ifdef SVN_DEBUG
+          /* ### This section is throw in here for development use.  It
+             ### allows devs the chance to force the client to speak v1,
+             ### even if the server is capable of speaking v2.  We should
+             ### probably remove it before 1.7 goes final. */
+          char *ignore_v2_env_var = getenv(SVN_IGNORE_V2_ENV_VAR);
+
+          if (!(ignore_v2_env_var
+                && apr_strnatcasecmp(ignore_v2_env_var, "yes") == 0))
+            orc->session->me_resource = apr_pstrdup(orc->session->pool, val);
+#else
           orc->session->me_resource = apr_pstrdup(orc->session->pool, val);
+#endif
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_REV_STUB_HEADER) == 0)
         {
