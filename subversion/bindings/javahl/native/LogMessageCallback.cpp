@@ -25,7 +25,7 @@
  */
 
 #include "LogMessageCallback.h"
-#include "ProplistCallback.h"
+#include "CreateJ.h"
 #include "EnumMapper.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
@@ -167,7 +167,7 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
 
   jobject jrevprops = NULL;
   if (log_entry->revprops != NULL && apr_hash_count(log_entry->revprops) > 0)
-    jrevprops = ProplistCallback::makeMapFromHash(log_entry->revprops, pool);
+    jrevprops = CreateJ::PropertyMap(log_entry->revprops, pool);
 
   env->CallVoidMethod(m_callback,
                       sm_mid,
