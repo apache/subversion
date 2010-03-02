@@ -498,7 +498,7 @@ void SVNAdmin::verify(const char *path, Outputer &messageOut,
                                  requestPool.pool()), );
 }
 
-jobjectArray SVNAdmin::lslocks(const char *path)
+jobject SVNAdmin::lslocks(const char *path)
 {
   SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", NULL);
@@ -522,24 +522,41 @@ jobjectArray SVNAdmin::lslocks(const char *path)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jobjectArray ret = env->NewObjectArray(count, clazz, NULL);
+  jclass sclazz = env->FindClass("java/util/Set");
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  env->DeleteLocalRef(clazz);
+  static jmethodID init_mid = 0;
+  if (init_mid == 0)
+    {
+      init_mid = env->GetMethodID(sclazz, "<init>", "()V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  static jmethodID add_mid = 0;
+  if (add_mid == 0)
+    {
+      add_mid = env->GetMethodID(sclazz, "add",
+                                 "(Ljava/lang/Object;)Z");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  jobject map = env->NewObject(sclazz, init_mid);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  int i = 0;
   for (hi = apr_hash_first (requestPool.pool(), locks);
        hi;
-       hi = apr_hash_next (hi), ++i)
+       hi = apr_hash_next (hi))
     {
       void *val;
       apr_hash_this (hi, NULL, NULL, &val);
       svn_lock_t *lock = (svn_lock_t *)val;
       jobject jLock = CreateJ::Lock(lock);
-      env->SetObjectArrayElement(ret, i, jLock);
+
+      env->CallObjectMethod(map, add_mid, jLock);
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
@@ -548,7 +565,15 @@ jobjectArray SVNAdmin::lslocks(const char *path)
         return NULL;
     }
 
-  return ret;
+  env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  env->DeleteLocalRef(sclazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return map;
 }
 
 void SVNAdmin::rmlocks(const char *path, Targets &locks)

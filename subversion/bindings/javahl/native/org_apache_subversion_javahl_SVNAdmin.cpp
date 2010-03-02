@@ -428,7 +428,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_verify
   cl->verify(path, messageOut, revisionStart, revisionEnd);
 }
 
-JNIEXPORT jobjectArray JNICALL
+JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_SVNAdmin_lslocks
 (JNIEnv *env, jobject jthis, jstring jpath)
 {
