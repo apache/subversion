@@ -2028,7 +2028,7 @@ revert_internal(svn_wc__db_t *db,
       unversioned = TRUE;
     }
   else if (err)
-    svn_error_return(err);
+    return svn_error_return(err);
   else
     unversioned = FALSE;
 
@@ -2133,7 +2133,7 @@ revert_internal(svn_wc__db_t *db,
           const char *name = APR_ARRAY_IDX(children, i, const char *);
           const char *node_abspath;
           svn_boolean_t hidden;
-          svn_wc__db_kind_t db_kind;
+          svn_wc__db_kind_t child_db_kind;
 
           svn_pool_clear(iterpool);
 
@@ -2146,13 +2146,13 @@ revert_internal(svn_wc__db_t *db,
 
           apr_hash_set(nodes, name, APR_HASH_KEY_STRING, name);
 
-          SVN_ERR(svn_wc__db_read_kind(&db_kind, db, node_abspath, FALSE,
+          SVN_ERR(svn_wc__db_read_kind(&child_db_kind, db, node_abspath, FALSE,
                                        iterpool));
 
           /* Skip subdirectories if we're called with depth-files. */
           if ((depth == svn_depth_files) &&
-              (db_kind != svn_wc__db_kind_file) &&
-              (db_kind != svn_wc__db_kind_symlink))
+              (child_db_kind != svn_wc__db_kind_file) &&
+              (child_db_kind != svn_wc__db_kind_symlink))
             continue;
 
           /* Revert the entry. */
