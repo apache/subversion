@@ -1794,21 +1794,35 @@ static svn_error_t *
 revert_entry(svn_depth_t *depth,
              svn_wc__db_t *db,
              const char *local_abspath,
-             svn_node_kind_t kind,
-             const svn_wc_entry_t *entry,
+             svn_node_kind_t disk_kind,
              svn_boolean_t use_commit_times,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
              svn_boolean_t *did_revert,
              apr_pool_t *pool)
 {
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_boolean_t replaced;
+
   /* Initialize this even though revert_admin_things() is guaranteed
      to set it, because we don't know that revert_admin_things() will
      be called. */
   svn_boolean_t reverted = FALSE;
 
+  SVN_ERR(svn_wc__db_read_info(&status, &kind,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL,
+                               db, local_abspath, pool, pool));
+
+  SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, local_abspath, pool));
+
   /* Additions. */
-  if (entry->schedule == svn_wc_schedule_add)
+  if ((status == svn_wc__db_status_added
+       || status == svn_wc__db_status_obstructed_add)
+      && !replaced)
     {
       svn_revnum_t base_revision;
       const char *repos_relpath;
@@ -1830,9 +1844,9 @@ revert_entry(svn_depth_t *depth,
          ### shoved back into the database. this is why we need to record
          ### the repository information, and the BASE revision.  */
 
-      if (entry->kind == svn_node_file)
+      if (kind == svn_wc__db_kind_file)
         {
-          was_deleted = entry->deleted;
+          was_deleted = (status == svn_wc__db_status_not_present);
           if (was_deleted)
             {
               /* Remember the BASE revision.  */
@@ -1858,7 +1872,7 @@ revert_entry(svn_depth_t *depth,
                                                                 cancel_baton,
                                                                 pool));
         }
-      else if (entry->kind == svn_node_dir)
+      else if (kind == svn_wc__db_kind_dir)
         {
           const char *path;
           SVN_ERR(svn_wc__temp_get_relpath(&path, db, local_abspath,
@@ -1895,7 +1909,7 @@ revert_entry(svn_depth_t *depth,
                                                  pool, pool));
             }
 
-          if (kind == svn_node_none
+          if (disk_kind == svn_node_none
               || svn_wc__adm_missing(db, local_abspath, pool))
             {
               /* Schedule add but missing, just remove the entry
@@ -1940,26 +1954,23 @@ revert_entry(svn_depth_t *depth,
                     db, local_abspath,
                     repos_relpath, repos_root_url, repos_uuid,
                     base_revision,
-                    entry->kind == svn_node_dir
-                      ? svn_wc__db_kind_dir
-                      : svn_wc__db_kind_file,
+                    kind,
                     svn_wc__db_status_not_present,
                     pool));
         }
     }
   /* Regular prop and text edit. */
   /* Deletions and replacements. */
-  else if (entry->schedule == svn_wc_schedule_normal
-           || entry->schedule == svn_wc_schedule_delete
-           || entry->schedule == svn_wc_schedule_replace)
+  else if (status == svn_wc__db_status_normal
+           || status == svn_wc__db_status_deleted
+           || replaced)
     {
       /* Revert the prop and text mods (if any). */
       SVN_ERR(revert_admin_things(&reverted, db, local_abspath,
                                   use_commit_times, pool));
 
       /* Force recursion on replaced directories. */
-      if (entry->kind == svn_node_dir
-          && entry->schedule == svn_wc_schedule_replace)
+      if (kind == svn_wc__db_kind_dir && replaced)
         *depth = svn_depth_infinity;
     }
 
@@ -2075,7 +2086,7 @@ revert_internal(svn_wc__db_t *db,
       /* Actually revert this entry.  If this is a working copy root,
          we provide a base_name from the parent path. */
       if (entry)
-        SVN_ERR(revert_entry(&depth, db, local_abspath, kind, entry,
+        SVN_ERR(revert_entry(&depth, db, local_abspath, kind,
                              use_commit_times,
                              cancel_func, cancel_baton,
                              &reverted, pool));
