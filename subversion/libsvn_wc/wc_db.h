@@ -2021,6 +2021,18 @@ svn_wc__db_temp_own_lock(svn_boolean_t *own_lock,
                          const char *local_dir_abspath,
                          apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
+                                       const char *local_dir_abspath,
+                                       svn_boolean_t incomplete,
+                                       apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_temp_op_set_working_incomplete(svn_wc__db_t *db,
+                                          const char *local_dir_abspath,
+                                          svn_boolean_t incomplete,
+                                          apr_pool_t *scratch_pool);
+
 
 /** @} */
 
