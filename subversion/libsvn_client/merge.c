@@ -2508,19 +2508,25 @@ typedef struct
   /* The number of operative notifications received. */
   apr_uint32_t nbr_operative_notifications;
 
-  /* The list of absolute merged paths. */
+  /* The list of absolute merged paths.  Is NULL if MERGE_B->SOURCES_ANCESTRAL
+     and MERGE_B->REINTEGRATE_MERGE are both false. */
   apr_hash_t *merged_abspaths;
 
   /* The list of absolute skipped paths, which should be examined and
      cleared after each invocation of the callback.  The paths
-     are absolute. */
+     are absolute.  Is NULL if MERGE_B->SOURCES_ANCESTRAL and
+     MERGE_B->REINTEGRATE_MERGE are both false. */
   apr_hash_t *skipped_abspaths;
 
   /* A list of the absolute root paths of any added subtrees which might
-     require their own explicit mergeinfo. */
+     require their own explicit mergeinfo.  Is NULL if
+     MERGE_B->SOURCES_ANCESTRAL and MERGE_B->REINTEGRATE_MERGE are both
+     false. */
   apr_hash_t *added_abspaths;
 
-  /* A list of tree conflict victim absolute paths which may be NULL. */
+  /* A list of tree conflict victim absolute paths which may be NULL.  Is NULL
+     if MERGE_B->SOURCES_ANCESTRAL and MERGE_B->REINTEGRATE_MERGE are both
+     false. */
   apr_hash_t *tree_conflicted_abspaths;
 
   /* Flag indicating whether it is a single file merge or not. */
@@ -2615,63 +2621,9 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
       is_operative_notification = TRUE;
     }
 
-  /* If our merge sources are ancestors of one another... */
-  if (notify_b->merge_b->sources_ancestral)
+  if (notify_b->merge_b->sources_ancestral
+      || notify_b->merge_b->reintegrate_merge)
     {
-      notify_b->nbr_notifications++;
-
-      /* See if this is an operative directory merge. */
-      if (!(notify_b->is_single_file_merge) && is_operative_notification)
-        {
-          /* Find NOTIFY->PATH's nearest ancestor in
-             NOTIFY->CHILDREN_WITH_MERGEINFO.  Normally we consider a child in
-             NOTIFY->CHILDREN_WITH_MERGEINFO representing PATH to be an
-             ancestor of PATH, but if this is a deletion of PATH then the
-             notification must be for a proper ancestor of PATH.  This ensures
-             we don't get notifications like:
-
-               --- Merging rX into 'PARENT/CHILD'
-               D    PARENT/CHILD
-
-             But rather:
-
-               --- Merging rX into 'PARENT'
-               D    PARENT/CHILD
-          */
-          int new_nearest_ancestor_index =
-            find_nearest_ancestor(
-              notify_b->children_with_mergeinfo,
-              notify->action != svn_wc_notify_update_delete,
-              notify->path);
-
-          if (new_nearest_ancestor_index != notify_b->cur_ancestor_index)
-            {
-              svn_client__merge_path_t *child =
-                APR_ARRAY_IDX(notify_b->children_with_mergeinfo,
-                              new_nearest_ancestor_index,
-                              svn_client__merge_path_t *);
-              notify_b->cur_ancestor_index = new_nearest_ancestor_index;
-              if (!child->absent && child->remaining_ranges->nelts > 0
-                  && !(new_nearest_ancestor_index == 0
-                       && child->remaining_ranges == 0))
-                {
-                  svn_wc_notify_t *notify_merge_begin;
-                  notify_merge_begin =
-                    svn_wc_create_notify(child->abspath,
-                                         notify_b->merge_b->same_repos
-                                           ? svn_wc_notify_merge_begin
-                                           : svn_wc_notify_foreign_merge_begin,
-                                         pool);
-                  notify_merge_begin->merge_range =
-                    APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                  svn_merge_range_t *);
-                  if (notify_b->wrapped_func)
-                    (*notify_b->wrapped_func)(notify_b->wrapped_baton,
-                                              notify_merge_begin, pool);
-                }
-            }
-        }
-
       if (notify->content_state == svn_wc_notify_state_merged
           || notify->content_state == svn_wc_notify_state_changed
           || notify->prop_state == svn_wc_notify_state_merged
@@ -2734,6 +2686,64 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           if (is_root_of_added_subtree)
             apr_hash_set(notify_b->added_abspaths, added_path,
                          APR_HASH_KEY_STRING, added_path);
+        }
+    }
+
+  /* If our merge sources are ancestors of one another... */
+  if (notify_b->merge_b->sources_ancestral)
+    {
+      notify_b->nbr_notifications++;
+
+      /* See if this is an operative directory merge. */
+      if (!(notify_b->is_single_file_merge) && is_operative_notification)
+        {
+          /* Find NOTIFY->PATH's nearest ancestor in
+             NOTIFY->CHILDREN_WITH_MERGEINFO.  Normally we consider a child in
+             NOTIFY->CHILDREN_WITH_MERGEINFO representing PATH to be an
+             ancestor of PATH, but if this is a deletion of PATH then the
+             notification must be for a proper ancestor of PATH.  This ensures
+             we don't get notifications like:
+
+               --- Merging rX into 'PARENT/CHILD'
+               D    PARENT/CHILD
+
+             But rather:
+
+               --- Merging rX into 'PARENT'
+               D    PARENT/CHILD
+          */
+          int new_nearest_ancestor_index =
+            find_nearest_ancestor(
+              notify_b->children_with_mergeinfo,
+              notify->action != svn_wc_notify_update_delete,
+              notify->path);
+
+          if (new_nearest_ancestor_index != notify_b->cur_ancestor_index)
+            {
+              svn_client__merge_path_t *child =
+                APR_ARRAY_IDX(notify_b->children_with_mergeinfo,
+                              new_nearest_ancestor_index,
+                              svn_client__merge_path_t *);
+              notify_b->cur_ancestor_index = new_nearest_ancestor_index;
+              if (!child->absent && child->remaining_ranges->nelts > 0
+                  && !(new_nearest_ancestor_index == 0
+                       && child->remaining_ranges == 0))
+                {
+                  svn_wc_notify_t *notify_merge_begin;
+                  notify_merge_begin =
+                    svn_wc_create_notify(child->abspath,
+                                         notify_b->merge_b->same_repos
+                                           ? svn_wc_notify_merge_begin
+                                           : svn_wc_notify_foreign_merge_begin,
+                                         pool);
+                  notify_merge_begin->merge_range =
+                    APR_ARRAY_IDX(child->remaining_ranges, 0,
+                                  svn_merge_range_t *);
+                  if (notify_b->wrapped_func)
+                    (*notify_b->wrapped_func)(notify_b->wrapped_baton,
+                                              notify_merge_begin, pool);
+                }
+            }
         }
     }
   /* Otherwise, our merge sources aren't ancestors of one another. */
@@ -6887,9 +6897,11 @@ record_mergeinfo_for_dir_merge(const svn_merge_range_t *merged_range,
 
       /* If CHILD is a subtree, this is not a record only merge, and
          CHILD was not affected by the merge then we don't need to
-         record mergeinfo. */
+         record mergeinfo.  If this is a record only merge being done
+         as part of a reintegrate merge then we need to check if CHILD
+         was affected by the merge. */
       if (i > 0 /* Always record mergeinfo on the merge target. */
-          && !merge_b->record_only
+          && (!merge_b->record_only || merge_b->reintegrate_merge)
           && (!operative_merge
               || !subtree_touched_by_merge(child->abspath, notify_b,
                                            iterpool)))
@@ -7856,7 +7868,15 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
   return SVN_NO_ERROR;
 }
 
-/* Drive a merge of MERGE_SOURCES into working copy path TARGET_ABSPATH.
+/* Drive a merge of MERGE_SOURCES into working copy path TARGET_ABSPATH
+   and possibly record mergeinfo describing the merge -- see
+   mergeinfo_behavior().
+
+   If MODIFIED_SUBTREES is not NULL and SOURCES_ANCESTRAL or
+   REINTEGRATE_MERGE is true, then set *MODIFIED_SUBTREES to a hash
+   containing every path modified, skipped, added, or tree-conflicted
+   by the merge.  Keys and values of the hash are both (const char *)
+   absolute paths.  The contents of the hash are allocated in POOL.
 
    If SOURCES_ANCESTRAL is set, then for every merge source in
    MERGE_SOURCES, the "left" and "right" side of the merge source are
@@ -7882,13 +7902,21 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
    FORCE, DRY_RUN, RECORD_ONLY, IGNORE_ANCESTRY, DEPTH, MERGE_OPTIONS,
    and CTX are as described in the docstring for svn_client_merge_peg3().
 
+   If not NULL, RECORD_ONLY_PATHS is a hash of (const char *) paths mapped
+   to the same.  If RECORD_ONLY is true and RECORD_ONLY_PATHS is not NULL,
+   then record mergeinfo describing the merge only on subtrees which contain
+   items from RECORD_ONLY_PATHS.  If RECORD_ONLY is true and RECORD_ONLY_PATHS
+   is NULL, then record mergeinfo on every subtree with mergeinfo in
+   TARGET_ABSPATH.
+
    REINTEGRATE_MERGE is TRUE if this is a reintegrate merge.
 
    *USE_SLEEP will be set TRUE if a sleep is required to ensure timestamp
    integrity, *USE_SLEEP will be unchanged if no sleep is required.
 */
 static svn_error_t *
-do_merge(apr_array_header_t *merge_sources,
+do_merge(apr_hash_t **modified_subtrees,
+         apr_array_header_t *merge_sources,
          const char *target_abspath,
          svn_boolean_t sources_ancestral,
          svn_boolean_t sources_related,
@@ -7897,6 +7925,7 @@ do_merge(apr_array_header_t *merge_sources,
          svn_boolean_t force,
          svn_boolean_t dry_run,
          svn_boolean_t record_only,
+         apr_hash_t *record_only_paths,
          svn_boolean_t reintegrate_merge,
          svn_boolean_t squelch_mergeinfo_notifications,
          svn_depth_t depth,
@@ -7976,7 +8005,14 @@ do_merge(apr_array_header_t *merge_sources,
   notify_baton.wrapped_baton = ctx->notify_baton2;
   notify_baton.nbr_notifications = 0;
   notify_baton.nbr_operative_notifications = 0;
-  notify_baton.merged_abspaths = NULL;
+
+  /* Do we already know the specific subtrees with mergeinfo we want
+     to record-only mergeinfo on? */
+  if (record_only && record_only_paths)
+    notify_baton.merged_abspaths = record_only_paths;
+  else
+    notify_baton.merged_abspaths = NULL;
+
   notify_baton.skipped_abspaths = NULL;
   notify_baton.added_abspaths = NULL;
   notify_baton.tree_conflicted_abspaths = NULL;
@@ -8049,6 +8085,27 @@ do_merge(apr_array_header_t *merge_sources,
                                      depth, squelch_mergeinfo_notifications,
                                      &notify_baton, &merge_cmd_baton,
                                      subpool));
+
+          /* Does the caller want to know what the merge has done? */
+          if (modified_subtrees)
+            {
+              if (notify_baton.merged_abspaths)
+                *modified_subtrees =
+                  apr_hash_overlay(pool, *modified_subtrees,
+                                   notify_baton.merged_abspaths);
+              if (notify_baton.added_abspaths)
+                *modified_subtrees =
+                  apr_hash_overlay(pool, *modified_subtrees,
+                                   notify_baton.added_abspaths);
+              if (notify_baton.skipped_abspaths)
+                *modified_subtrees =
+                  apr_hash_overlay(pool, *modified_subtrees,
+                                   notify_baton.skipped_abspaths);
+              if (notify_baton.tree_conflicted_abspaths)
+                *modified_subtrees =
+                  apr_hash_overlay(pool, *modified_subtrees,
+                                   notify_baton.tree_conflicted_abspaths);
+            }
         }
 
       /* The final mergeinfo on TARGET_WCPATH may itself elide. */
@@ -8114,6 +8171,7 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
   svn_opt_revision_t peg_revision;
   const char *old_url;
   svn_boolean_t same_repos;
+  apr_hash_t *modified_subtrees = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
 
@@ -8168,15 +8226,16 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
       merge_source_t *faux_source;
       apr_array_header_t *faux_sources =
         apr_array_make(pool, 1, sizeof(merge_source_t *));
+      modified_subtrees = apr_hash_make(pool);
       faux_source = apr_pcalloc(pool, sizeof(*faux_source));
       faux_source->url1 = URL1;
       faux_source->url2 = URL2;
       faux_source->rev1 = rev1;
       faux_source->rev2 = rev2;
       APR_ARRAY_PUSH(faux_sources, merge_source_t *) = faux_source;
-      SVN_ERR(do_merge(faux_sources, target_abspath,
+      SVN_ERR(do_merge(&modified_subtrees, faux_sources, target_abspath,
                        FALSE, TRUE, same_repos,
-                       ignore_ancestry, force, dry_run, FALSE, TRUE,
+                       ignore_ancestry, force, dry_run, FALSE, NULL, TRUE,
                        FALSE, depth, merge_options, use_sleep, ctx,
                        pool));
     }
@@ -8197,13 +8256,15 @@ merge_cousins_and_supplement_mergeinfo(const char *target_abspath,
       svn_wc_notify_t *notify = svn_wc_create_notify(
         target_abspath, svn_wc_notify_merge_record_info_begin, pool);
       ctx->notify_func2(ctx->notify_baton2, notify, pool);
-      SVN_ERR(do_merge(add_sources, target_abspath,
+      SVN_ERR(do_merge(NULL, add_sources, target_abspath,
                        TRUE, TRUE, same_repos,
-                       ignore_ancestry, force, dry_run, TRUE, TRUE,
+                       ignore_ancestry, force, dry_run, TRUE,
+                       modified_subtrees, TRUE,
                        TRUE, depth, merge_options, use_sleep, ctx, pool));
-      SVN_ERR(do_merge(remove_sources, target_abspath,
+      SVN_ERR(do_merge(NULL, remove_sources, target_abspath,
                        TRUE, TRUE, same_repos,
-                       ignore_ancestry, force, dry_run, TRUE, TRUE,
+                       ignore_ancestry, force, dry_run, TRUE,
+                       modified_subtrees, TRUE,
                        TRUE, depth, merge_options, use_sleep, ctx, pool));
     }
 
@@ -8451,10 +8512,10 @@ svn_client_merge3(const char *source1,
   /* Close our temporary RA sessions. */
   svn_pool_destroy(sesspool);
 
-  err = do_merge(merge_sources, target_abspath,
+  err = do_merge(NULL, merge_sources, target_abspath,
                  ancestral, related, same_repos,
                  ignore_ancestry, force, dry_run,
-                 record_only, FALSE, FALSE, depth, merge_options,
+                 record_only, NULL, FALSE, FALSE, depth, merge_options,
                  &use_sleep, ctx, pool);
 
   if (use_sleep)
@@ -9644,9 +9705,9 @@ svn_client_merge_peg3(const char *source,
 
   /* Do the real merge!  (We say with confidence that our merge
      sources are both ancestral and related.) */
-  err = do_merge(merge_sources, target_abspath,
+  err = do_merge(NULL, merge_sources, target_abspath,
                  TRUE, TRUE, same_repos, ignore_ancestry, force, dry_run,
-                 record_only, FALSE, FALSE, depth, merge_options,
+                 record_only, NULL, FALSE, FALSE, depth, merge_options,
                  &use_sleep, ctx, pool);
 
   if (use_sleep)

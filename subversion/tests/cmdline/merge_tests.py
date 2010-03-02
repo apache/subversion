@@ -18665,9 +18665,6 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
   #  ..\..\..\subversion\libsvn_fs_fs\tree.c:2886: (apr_err=160013)
   #  ..\..\..\subversion\libsvn_fs_fs\tree.c:669: (apr_err=160013)
   #  svn: File not found: revision 4, path '/A2'
-  #
-  # This currently fails because the mergeinfo on A2/B gets updated, even
-  # though no paths within that subtree are affected by the reintegration.
   svntest.actions.run_and_verify_merge(A2_path, None, None,
                                        sbox.repo_url + '/A2.1', None,
                                        expected_output,
@@ -19037,7 +19034,7 @@ test_list = [ None,
               XFail(committed_case_only_move_and_revert,
                     is_fs_case_insensitive),
               merge_into_wc_for_deleted_branch,
-              XFail(reintegrate_with_self_referential_mergeinfo),
+              reintegrate_with_self_referential_mergeinfo,
               reintegrate_with_subtree_merges,
              ]
 
