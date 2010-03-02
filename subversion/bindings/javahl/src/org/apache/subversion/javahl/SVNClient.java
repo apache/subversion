@@ -331,10 +331,20 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void move(String[] srcPaths, String destPath, String message,
-                            boolean force, boolean moveAsChild,
-                            boolean makeParents,
-                            Map<String, String> revpropTable)
+    public void move(Set<String> srcPaths, String destPath,
+                     String message, boolean force, boolean moveAsChild,
+                     boolean makeParents, Map<String, String> revpropTable)
+            throws ClientException
+    {
+        this.move(srcPaths.toArray(new String[srcPaths.size()]), destPath,
+                  message, force, moveAsChild, makeParents, revpropTable);
+    }
+
+    private native void move(String[] srcPaths, String destPath,
+                             String message,
+                             boolean force, boolean moveAsChild,
+                             boolean makeParents,
+                             Map<String, String> revpropTable)
             throws ClientException;
 
     /**
