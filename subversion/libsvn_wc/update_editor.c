@@ -663,7 +663,6 @@ complete_directory(struct edit_baton *eb,
   const apr_array_header_t *children;
   int i;
   apr_pool_t *iterpool;
-  svn_wc_entry_t tmp_entry;
 
   /* If this is the root directory and there is a target, we can't
      mark this directory complete. */
@@ -718,10 +717,24 @@ complete_directory(struct edit_baton *eb,
     }
 
   /* Mark THIS_DIR complete. */
-  tmp_entry.incomplete = FALSE;
-  SVN_ERR(svn_wc__entry_modify2(eb->db, local_abspath, svn_node_dir, FALSE,
-                                &tmp_entry, SVN_WC__ENTRY_MODIFY_INCOMPLETE,
-                                pool));
+  SVN_ERR(svn_wc__db_temp_op_set_base_incomplete(eb->db, local_abspath, FALSE,
+                                                 pool));
+
+  /* ### If we are updating below a delete-* treeconflict, all the
+         entries are moved to the copied state. This duplicates the incomplete
+         state to WORKING_NODE, so also clear it there. */
+  {
+    svn_wc__db_status_t status;
+    SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 eb->db, local_abspath, pool, pool));
+
+    if (status == svn_wc__db_status_incomplete)
+      SVN_ERR(svn_wc__db_temp_op_set_working_incomplete(eb->db, local_abspath,
+                                                        FALSE, pool));
+  }
 
   if (eb->depth_is_sticky)
     {
@@ -1365,7 +1378,7 @@ open_root(void *edit_baton,
       svn_depth_t depth;
       svn_wc__db_status_t status;
       apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
-        SVN_WC__ENTRY_MODIFY_URL | SVN_WC__ENTRY_MODIFY_INCOMPLETE;
+        SVN_WC__ENTRY_MODIFY_URL;
 
       /* Read the depth from the entry. */
       SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1381,11 +1394,13 @@ open_root(void *edit_baton,
       /* Mark directory as being at target_revision, but incomplete. */
       tmp_entry.revision = *(eb->target_revision);
       tmp_entry.url = db->new_URL;
-      tmp_entry.incomplete = TRUE;
       SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath, svn_node_dir,
                                     FALSE,
                                     &tmp_entry, flags,
                                     pool));
+
+      SVN_ERR(svn_wc__db_temp_op_set_base_incomplete(eb->db, db->local_abspath,
+                                                     TRUE, pool));
     }
 
   return SVN_NO_ERROR;
@@ -2903,6 +2918,11 @@ add_directory(const char *path,
                                     svn_node_dir, TRUE,
                                     &tmp_entry, modify_flags, pool));
 
+      /* ### HACK: Remove the incomplete status or the next entry_modify2
+                    will move the incomplete status to WORKING_NODE */
+      SVN_ERR(svn_wc__db_temp_op_set_base_incomplete(eb->db, db->local_abspath,
+                                                     FALSE, pool));
+
       /* Mark PATH's 'this dir' entry as scheduled for deletion. */
       SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath,
                                     svn_node_dir, FALSE,
@@ -2947,7 +2967,7 @@ open_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
-    SVN_WC__ENTRY_MODIFY_URL | SVN_WC__ENTRY_MODIFY_INCOMPLETE;
+    SVN_WC__ENTRY_MODIFY_URL;
 
   svn_boolean_t already_conflicted;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
@@ -3052,12 +3072,16 @@ open_directory(const char *path,
   /* Mark directory as being at target_revision and URL, but incomplete. */
   tmp_entry.revision = *(eb->target_revision);
   tmp_entry.url = db->new_URL;
-  tmp_entry.incomplete = TRUE;
 
-  return svn_wc__entry_modify2(eb->db, db->local_abspath,
-                               svn_node_dir, FALSE,
-                              &tmp_entry, flags,
-                              pool);
+  SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath,
+                                svn_node_dir, FALSE,
+                                &tmp_entry, flags,
+                                pool));
+
+  SVN_ERR(svn_wc__db_temp_op_set_base_incomplete(eb->db, db->local_abspath,
+                                                 TRUE, pool));
+
+  return SVN_NO_ERROR;
 }
 
 

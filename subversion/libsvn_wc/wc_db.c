@@ -6153,3 +6153,76 @@ svn_wc__db_temp_own_lock(svn_boolean_t *own_lock,
   return SVN_NO_ERROR;
 
 }
+
+svn_error_t *
+svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
+                                       const char *local_dir_abspath,
+                                       svn_boolean_t incomplete,
+                                       apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_wc__db_pdh_t *pdh;
+  int affected_rows;
+  svn_wc__db_status_t base_status;
+
+  SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL,
+                                   db, local_dir_abspath,
+                                   scratch_pool, scratch_pool));
+
+  SVN_ERR_ASSERT(base_status == svn_wc__db_status_normal ||
+                 base_status == svn_wc__db_status_incomplete);
+
+  SVN_ERR(get_statement_for_path(&stmt, db, local_dir_abspath,
+                                 STMT_UPDATE_BASE_PRESENCE, scratch_pool));
+
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, incomplete ? "incomplete" : "normal"));
+
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+  if (affected_rows > 0)
+   {
+     pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+     flush_entries(pdh);
+   }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_temp_op_set_working_incomplete(svn_wc__db_t *db,
+                                       const char *local_dir_abspath,
+                                       svn_boolean_t incomplete,
+                                       apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_wc__db_pdh_t *pdh;
+  int affected_rows;
+  svn_wc__db_status_t status;
+
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL,
+                               db, local_dir_abspath,
+                               scratch_pool, scratch_pool));
+
+  SVN_ERR_ASSERT(status == svn_wc__db_status_normal ||
+                 status == svn_wc__db_status_incomplete);
+
+  SVN_ERR(get_statement_for_path(&stmt, db, local_dir_abspath,
+                                 STMT_UPDATE_WORKING_PRESENCE, scratch_pool));
+
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, incomplete ? "incomplete" : "normal"));
+
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+  if (affected_rows > 0)
+   {
+     pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+     flush_entries(pdh);
+   }
+
+  return SVN_NO_ERROR;
+}
