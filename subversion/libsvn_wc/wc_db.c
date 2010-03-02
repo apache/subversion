@@ -3497,7 +3497,14 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
     }
 
   if (new_working_none && !working_none)
-    SVN_ERR(db_working_actual_remove(db, local_abspath, scratch_pool));
+    {
+      SVN_ERR(db_working_actual_remove(db, local_abspath, scratch_pool));
+      /* ### Search the cached directories in db for directories below
+             local_abspath and close their handles to allow deleting
+             them from the working copy */
+      SVN_ERR(svn_wc__db_temp_forget_directory(db, local_abspath,
+                                               scratch_pool));
+    }
   else if (!new_working_none && working_none)
     SVN_ERR(db_working_insert(new_working_status,
                               db, local_abspath, scratch_pool));
