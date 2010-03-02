@@ -358,6 +358,12 @@ rm "$HTTPD_CFG-copy"
 
 say "HTTPD is good"
 
+if [ "$HTTP_LIBRARY" = "" ]; then
+  say "Using default dav library"
+else
+  say "Using dav library '$HTTP_LIBRARY'"
+fi
+
 if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
   exit
 fi
