@@ -8705,7 +8705,8 @@ log_find_operative_revs(void *baton,
                                          rel_path, pool);
 
       SVN_ERR(svn_mergeinfo_parse(&log_entry_as_mergeinfo,
-                                  apr_psprintf(pool, "%s:%d", path, revision),
+                                  apr_psprintf(pool, "%s:%ld",
+                                               path, revision),
                                   pool));
 
       SVN_ERR(mergeinfo_in_catalog(&in_catalog, &subtree_missing_this_rev,
@@ -8739,7 +8740,8 @@ log_find_operative_revs(void *baton,
             }
 
           SVN_ERR(svn_mergeinfo_parse(&log_entry_as_mergeinfo,
-                                      apr_psprintf(pool, "%s:%d", missing_path, revision),
+                                      apr_psprintf(pool, "%s:%ld",
+                                                   missing_path, revision),
                                       log_baton->result_pool));
           unmerged_for_key = apr_hash_get(log_baton->unmerged_catalog,
                                           subtree_missing_this_rev,
