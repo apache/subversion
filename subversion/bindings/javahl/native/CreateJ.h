@@ -53,6 +53,9 @@ class CreateJ
   static jobject
   StringSet(apr_array_header_t *strings);
 
+  static jobject
+  PropertyMap(apr_hash_t *prop_hash, apr_pool_t *pool);
+
  protected:
   static jobject
   ConflictVersion(const svn_wc_conflict_version_t *version);

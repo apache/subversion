@@ -1888,7 +1888,7 @@ jobject SVNClient::revProperties(const char *path, Revision &revision)
                                         &set_rev, ctx, requestPool.pool()),
                 NULL);
 
-    return ProplistCallback::makeMapFromHash(props, requestPool.pool());
+    return CreateJ::PropertyMap(props, requestPool.pool());
 }
 
 struct info_baton

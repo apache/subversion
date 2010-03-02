@@ -25,7 +25,7 @@
  */
 
 #include "BlameCallback.h"
-#include "ProplistCallback.h"
+#include "CreateJ.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
 /**
@@ -100,14 +100,14 @@ BlameCallback::singleLine(apr_int64_t line_no, svn_revnum_t revision,
     }
 
   // convert the parameters to their Java relatives
-  jobject jrevProps = ProplistCallback::makeMapFromHash(revProps, pool);
+  jobject jrevProps = CreateJ::PropertyMap(revProps, pool);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
   jobject jmergedRevProps = NULL;
   if (mergedRevProps != NULL)
     {
-      jmergedRevProps = ProplistCallback::makeMapFromHash(mergedRevProps, pool);
+      jmergedRevProps = CreateJ::PropertyMap(mergedRevProps, pool);
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
     }

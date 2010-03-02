@@ -436,3 +436,70 @@ CreateJ::StringSet(apr_array_header_t *strings)
 
   return set;
 }
+
+jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t *pool)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+  jclass clazz = env->FindClass("java/util/HashMap");
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  static jmethodID init_mid = 0;
+  if (init_mid == 0)
+    {
+      init_mid = env->GetMethodID(clazz, "<init>", "()V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  static jmethodID put_mid = 0;
+  if (put_mid == 0)
+    {
+      put_mid = env->GetMethodID(clazz, "put",
+                                 "(Ljava/lang/Object;Ljava/lang/Object;)"
+                                 "Ljava/lang/Object;");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  jobject map = env->NewObject(clazz, init_mid);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  apr_hash_index_t *hi;
+  int i = 0;
+  for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi), ++i)
+    {
+      const char *key;
+      svn_string_t *val;
+
+      apr_hash_this(hi, (const void **)&key, NULL, (void **)&val);
+
+      jstring jpropName = JNIUtil::makeJString(key);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+
+      jbyteArray jpropVal = JNIUtil::makeJByteArray(
+                                    (const signed char *)val->data, val->len);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+
+      env->CallObjectMethod(map, put_mid, jpropName, jpropVal);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+
+      env->DeleteLocalRef(jpropName);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+
+      env->DeleteLocalRef(jpropVal);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return map;
+}
