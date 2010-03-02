@@ -23,6 +23,8 @@
 
 package org.tigris.subversion.javahl;
 
+import java.util.Set;
+
 /**
  * This class offers the same commands as the svnadmin commandline
  * client.
@@ -447,13 +449,15 @@ public class SVNAdmin
     {
         try
         {
-            org.apache.subversion.javahl.Lock[] aLocks =
+            Set<org.apache.subversion.javahl.Lock> aLocks =
                                                     aSVNAdmin.lslocks(path);
-            Lock[] locks = new Lock[aLocks.length];
+            Lock[] locks = new Lock[aLocks.size()];
             
-            for (int i = 0; i < aLocks.length; i++)
+            int i = 0;
+            for (org.apache.subversion.javahl.Lock lock : aLocks)
             {
-                locks[i] = new Lock(aLocks[i]);
+                locks[i] = new Lock(lock);
+                i++;
             }
 
             return locks;

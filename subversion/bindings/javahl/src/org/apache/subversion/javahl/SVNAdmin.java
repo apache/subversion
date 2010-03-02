@@ -23,6 +23,8 @@
 
 package org.apache.subversion.javahl;
 
+import java.util.Set;
+
 /**
  * This class offers the same commands as the svnadmin commandline
  * client.
@@ -317,7 +319,7 @@ public class SVNAdmin
      * @throws ClientException  throw in case of problem
      * @since 1.2
      */
-    public native Lock[] lslocks(String path) throws ClientException;
+    public native Set<Lock> lslocks(String path) throws ClientException;
 
     /**
      * remove multiple locks from the repository
