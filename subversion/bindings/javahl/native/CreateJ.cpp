@@ -385,3 +385,54 @@ CreateJ::RevisionRangeArray(apr_array_header_t *ranges)
 
     return jranges;
 }
+
+jobject
+CreateJ::StringSet(apr_array_header_t *strings)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+  jclass clazz = env->FindClass("java/util/HashSet");
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  static jmethodID init_mid = 0;
+  if (init_mid == 0)
+    {
+      init_mid = env->GetMethodID(clazz, "<init>", "()V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  static jmethodID add_mid = 0;
+  if (add_mid == 0)
+    {
+      add_mid = env->GetMethodID(clazz, "add", "(Ljava/lang/Object;)Z");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  jobject set = env->NewObject(clazz, init_mid);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  for (int i = 0; i < strings->nelts; ++i)
+    {
+      const char *str = APR_ARRAY_IDX(strings, i, const char *);
+      jstring jstr = JNIUtil::makeJString(str);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+        
+      env->CallObjectMethod(set, add_mid, jstr);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+
+      env->DeleteLocalRef(jstr);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return set;
+}

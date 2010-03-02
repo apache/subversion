@@ -627,7 +627,7 @@ void SVNClient::doImport(const char *path, const char *url,
                                    requestPool.pool()), );
 }
 
-jobjectArray
+jobject
 SVNClient::suggestMergeSources(const char *path, Revision &pegRevision)
 {
     SVN::Pool requestPool;
@@ -641,26 +641,7 @@ SVNClient::suggestMergeSources(const char *path, Revision &pegRevision)
                                                  ctx, requestPool.pool()),
                 NULL);
 
-    JNIEnv *env = JNIUtil::getEnv();
-    jclass clazz = env->FindClass("java/lang/String");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    jobjectArray jsuggestions = env->NewObjectArray(sources->nelts, clazz,
-                                                    NULL);
-    for (int i = 0; i < sources->nelts; ++i)
-    {
-        const char *source = APR_ARRAY_IDX(sources, i, const char *);
-        jstring jpath = JNIUtil::makeJString(source);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-
-        env->SetObjectArrayElement(jsuggestions, i, jpath);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    return jsuggestions;
+    return CreateJ::StringSet(sources);
 }
 
 void SVNClient::merge(const char *path1, Revision &revision1,

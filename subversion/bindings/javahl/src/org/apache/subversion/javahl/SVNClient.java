@@ -396,8 +396,8 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native String[] suggestMergeSources(String path,
-                                               Revision pegRevision)
+    public native Set<String> suggestMergeSources(String path,
+                                                  Revision pegRevision)
             throws SubversionException;
 
     /**
