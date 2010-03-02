@@ -646,14 +646,12 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          apr_pool_t *scratch_pool);
 
 
-/** Return a property's value from a node in the BASE tree.
+/** Set *PROPVAL to the value of the property named PROPNAME of the node
+ * LOCAL_ABSPATH in the BASE tree.
  *
- * This is a convenience function to return a single property from the
- * BASE tree node indicated by LOCAL_ABSPATH. The property's name is
- * given in PROPNAME, and the value returned in PROPVAL.
- *
- * All returned data will be allocated in RESULT_POOL. All temporary
- * allocations will be made in SCRATCH_POOL.
+ * If the node has no property named PROPNAME, set *PROPVAL to NULL.
+ * If the node is not present in the BASE tree, return an error.
+ * Allocate *PROPVAL in RESULT_POOL.
  */
 svn_error_t *
 svn_wc__db_base_get_prop(const svn_string_t **propval,
@@ -664,14 +662,12 @@ svn_wc__db_base_get_prop(const svn_string_t **propval,
                          apr_pool_t *scratch_pool);
 
 
-/** Return all properties of the given BASE tree node.
+/** Set *PROPS to the properties of the node LOCAL_ABSPATH in the BASE tree.
  *
- * All of the properties for the node indicated by LOCAL_ABSPATH will be
- * returned in PROPS as a mapping of const char * names to
- * const svn_string_t * values.
- *
- * All returned data will be allocated in RESULT_POOL. All temporary
- * allocations will be made in SCRATCH_POOL.
+ * *PROPS maps "const char *" names to "const svn_string_t *" values.
+ * If the node has no properties, set *PROPS to an empty hash.
+ * If the node is not present in the BASE tree, return an error.
+ * Allocate *PROPS and its keys and values in RESULT_POOL.
  */
 svn_error_t *
 svn_wc__db_base_get_props(apr_hash_t **props,
@@ -952,21 +948,34 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
                           apr_pool_t *scratch_pool);
 
 
-/* ### note: there is no db_op_set_prop() function. callers must read
-   ### all the properties, change one, and write all the properties.  */
-
-/* Set the props on the ACTUAL node for LOCAL_ABSPATH to PROPS.  This will
-   overwrite whatever working props the node currently has.  PROPS maps
-   property names of type "const char *" to values of type
-   "const svn_string_t *".  Use SCRATCH_POOL for temporary allocations. */
+/** Set the properties of the node LOCAL_ABSPATH in the ACTUAL tree to
+ * PROPS.
+ *
+ * PROPS maps "const char *" names to "const svn_string_t *" values.
+ * To specify no properties, PROPS must be an empty hash, not NULL.
+ * If the node is not present, return an error.
+ *
+ * @note: This will overwrite whatever working properties the node currently
+ * has. There is no db_op_set_prop() function. Callers must read all the
+ * properties, change one, and write all the properties.
+ *
+ * @note: This will create an entry in the ACTUAL table for the node if it
+ * does not yet have one.
+ */
 svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_hash_t *props,
                         apr_pool_t *scratch_pool);
 
-/* Sets the pristine props of LOCAL_ABSPATH on BASE, or when ON_WORKING is
-   TRUE on WORKING */
+/** Set the properties of the node LOCAL_ABSPATH in the BASE tree (if
+ * ON_WORKING is FALSE) or in the WORKING tree (if ON_WORKING is TRUE) to
+ * PROPS.
+ *
+ * PROPS maps "const char *" names to "const svn_string_t *" values.
+ * To specify no properties, PROPS must be an empty hash, not NULL.
+ * If the node is not present in the specified tree, return an error.
+ */
 svn_error_t *
 svn_wc__db_temp_op_set_pristine_props(svn_wc__db_t *db,
                                       const char *local_abspath,
@@ -1268,12 +1277,13 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      apr_pool_t *scratch_pool);
 
 
-/** Return a property's value for a node, first using ACTUAL, then
- * WORKING, then BASE.  The property's name is given in PROPNAME, and
- * the value returned in PROPVAL.
+/** Set *PROPVAL to the value of the property named PROPNAME of the node
+ * LOCAL_ABSPATH in the ACTUAL tree (looking through to the WORKING or BASE
+ * tree as required).
  *
- * All returned data will be allocated in RESULT_POOL. All temporary
- * allocations will be made in SCRATCH_POOL.
+ * If the node has no property named PROPNAME, set *PROPVAL to NULL.
+ * If the node is not present, return an error.
+ * Allocate *PROPVAL in RESULT_POOL.
  */
 svn_error_t *
 svn_wc__db_read_prop(const svn_string_t **propval,
@@ -1284,13 +1294,14 @@ svn_wc__db_read_prop(const svn_string_t **propval,
                      apr_pool_t *scratch_pool);
 
 
-/* Read into PROPS the properties for LOCAL_ABSPATH in DB.  This first check
-   the ACTUAL node, then the WORKING node, and finally the BASE node for
-   properties.  PROPS maps property names of type "const char *" to values
-   of type "const svn_string_t *".
-
-   Allocate PROPS in RESULT_POOL and do temporary allocations
-   in SCRATCH_POOL. */
+/** Set *PROPS to the properties of the node LOCAL_ABSPATH in the ACTUAL
+ * tree (looking through to the WORKING or BASE tree as required).
+ *
+ * PROPS maps "const char *" names to "const svn_string_t *" values.
+ * If the node has no properties, set *PROPS to an empty hash.
+ * If the node is not present, return an error.
+ * Allocate *PROPS and its keys and values in RESULT_POOL.
+ */
 svn_error_t *
 svn_wc__db_read_props(apr_hash_t **props,
                       svn_wc__db_t *db,
@@ -1299,13 +1310,14 @@ svn_wc__db_read_props(apr_hash_t **props,
                       apr_pool_t *scratch_pool);
 
 
-/* Read into PROPS the properties for LOCAL_ABSPATH in DB.  This first check
-   the WORKING node, and then the BASE node for properties.  PROPS maps
-   property names of type "const char *" to values of type
-   "const svn_string_t *".
-
-   Allocate PROPS in RESULT_POOL and do temporary allocations
-   in SCRATCH_POOL. */
+/** Set *PROPS to the properties of the node LOCAL_ABSPATH in the WORKING
+ * tree (looking through to the BASE tree as required).
+ *
+ * *PROPS maps "const char *" names to "const svn_string_t *" values.
+ * If the node has no properties, set *PROPS to an empty hash.
+ * If the node is not present, return an error.
+ * Allocate *PROPS and its keys and values in RESULT_POOL.
+ */
 svn_error_t *
 svn_wc__db_read_pristine_props(apr_hash_t **props,
                                svn_wc__db_t *db,
