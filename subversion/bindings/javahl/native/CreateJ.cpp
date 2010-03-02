@@ -353,64 +353,6 @@ CreateJ::Lock(const svn_lock_t *lock)
     return jlock;
 }
 
-jobject
-CreateJ::Property(jobject jthis, const char *path, const char *name,
-                  svn_string_t *value)
-{
-    JNIEnv *env = JNIUtil::getEnv();
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/PropertyData");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    static jmethodID mid = 0;
-    if (mid == 0)
-    {
-        mid = env->GetMethodID(clazz, "<init>",
-                               "(L"JAVA_PACKAGE"/ISVNClient;"
-                               "Ljava/lang/String;Ljava/lang/String;"
-                               "Ljava/lang/String;[B)V");
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    jstring jPath = JNIUtil::makeJString(path);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    jstring jName = JNIUtil::makeJString(name);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    jstring jValue = JNIUtil::makeJString(value->data);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    jbyteArray jData = JNIUtil::makeJByteArray((const signed char *)value->data,
-                                               value->len);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    jobject jprop = env->NewObject(clazz, mid, jthis, jPath, jName, jValue,
-                                  jData);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    env->DeleteLocalRef(clazz);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    env->DeleteLocalRef(jPath);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    env->DeleteLocalRef(jName);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    env->DeleteLocalRef(jValue);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    env->DeleteLocalRef(jData);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    return jprop;
-}
-
 
 jobjectArray
 CreateJ::RevisionRangeArray(apr_array_header_t *ranges)

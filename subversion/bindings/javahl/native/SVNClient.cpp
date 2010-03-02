@@ -1885,8 +1885,8 @@ void SVNClient::upgrade(const char *path)
     SVN_JNI_ERR(svn_client_upgrade(path, ctx, requestPool.pool()), );
 }
 
-jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
-                                      Revision &revision)
+jobject SVNClient::revProperties(jobject jthis, const char *path,
+                                 Revision &revision)
 {
     apr_hash_t *props;
     SVN::Pool requestPool;
@@ -1909,45 +1909,7 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
                                         &set_rev, ctx, requestPool.pool()),
                 NULL);
 
-    apr_hash_index_t *hi;
-
-    int count = apr_hash_count(props);
-
-    JNIEnv *env = JNIUtil::getEnv();
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/PropertyData");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    jobjectArray jprops = env->NewObjectArray(count, clazz, NULL);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    env->DeleteLocalRef(clazz);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    int i = 0;
-    for (hi = apr_hash_first(requestPool.pool(), props);
-         hi;
-         hi = apr_hash_next(hi), ++i)
-    {
-        const char *key;
-        svn_string_t *val;
-
-        apr_hash_this(hi, (const void **)&key, NULL, (void**)&val);
-
-        jobject object = CreateJ::Property(jthis, path, key, val);
-
-        env->SetObjectArrayElement(jprops, i, object);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-
-        env->DeleteLocalRef(object);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    return jprops;
+    return ProplistCallback::makeMapFromHash(props, requestPool.pool());
 }
 
 struct info_baton

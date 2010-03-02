@@ -47,10 +47,6 @@ class CreateJ
   static jobject
   Lock(const svn_lock_t *lock);
 
-  static jobject
-  Property(jobject jthis, const char *path, const char *name,
-           svn_string_t *value);
-
   static jobjectArray
   RevisionRangeArray(apr_array_header_t *ranges);
 
