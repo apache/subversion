@@ -935,7 +935,8 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.move(srcPaths, destPath, message, force, moveAsChild,
+            aSVNClient.move(new HashSet<String>(Arrays.asList(srcPaths)),
+                            destPath, message, force, moveAsChild,
                             makeParents, revpropTable);
         }
         catch (org.apache.subversion.javahl.ClientException ex)

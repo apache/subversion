@@ -947,12 +947,14 @@ public class BasicTests extends SVNTests
         WC wc = thisTest.getWc();
 
         // Move files from A/B/E to A/B/F.
-        String[] srcPaths = { "alpha", "beta" };
-        for (int i = 0; i < srcPaths.length; i++)
+        Set<String> relPaths = new HashSet<String>(2);
+        relPaths.add("alpha");
+        relPaths.add("beta");
+        Set<String> srcPaths = new HashSet<String>(2);
+        for (String fileName : relPaths)
         {
-            String fileName = srcPaths[i];
-            srcPaths[i] = new File(thisTest.getWorkingCopy(),
-                                   "A/B/E/" + fileName).getPath();
+            srcPaths.add(new File(thisTest.getWorkingCopy(),
+                                  "A/B/E/" + fileName).getPath());
 
             wc.addItem("A/B/F/" + fileName,
                        wc.getItemContent("A/B/E/" + fileName));
@@ -3172,12 +3174,13 @@ public class BasicTests extends SVNTests
 
 
         // Move files from A/B/E to A/B/F.
-        String[] srcPaths = { "alpha" };
-        for (int i = 0; i < srcPaths.length; i++)
+        Set<String> relPaths = new HashSet<String>(1);
+        relPaths.add("alpha");
+        Set<String> srcPaths = new HashSet<String>(1);
+        for (String fileName : relPaths)
         {
-            String fileName = srcPaths[i];
-            srcPaths[i] = new File(thisTest.getWorkingCopy(),
-                                   "A/B/E/" + fileName).getPath();
+            srcPaths.add(new File(thisTest.getWorkingCopy(),
+                                   "A/B/E/" + fileName).getPath());
 
             wc.addItem("A/B/F/" + fileName,
                        wc.getItemContent("A/B/E/" + fileName));

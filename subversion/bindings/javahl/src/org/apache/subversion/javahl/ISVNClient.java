@@ -330,7 +330,7 @@ public interface ISVNClient
      * @throws ClientException If the move operation fails.
      * @since 1.5
      */
-    void move(String[] srcPaths, String destPath, String message,
+    void move(Set<String> srcPaths, String destPath, String message,
               boolean force, boolean moveAsChild, boolean makeParents,
               Map<String, String> revpropTable)
         throws ClientException;
