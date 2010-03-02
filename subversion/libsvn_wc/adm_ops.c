@@ -806,7 +806,7 @@ mark_tree_deleted(svn_wc__db_t *db,
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
   const apr_array_header_t *children;
-  const svn_wc_entry_t *entry;
+  svn_wc__db_status_t status;
   int i;
 
   /* Read the entries file for this directory. */
@@ -854,15 +854,18 @@ mark_tree_deleted(svn_wc__db_t *db,
     }
 
   /* Handle "this dir" for states that need it done post-recursion. */
-  SVN_ERR(svn_wc__get_entry(&entry, db, dir_abspath, FALSE,
-                            svn_node_dir, FALSE, iterpool, iterpool));
-
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
+                               db, dir_abspath, iterpool, iterpool));
   /* Uncommitted directories (schedule add) that are to be scheduled for
      deletion are a special case, they don't need to be changed as they
      will be removed from their parent's entry list.
      The files and directories are left on the disk in this special
      case, so KEEP_LOCAL doesn't need to be set either. */
-  if (entry->schedule != svn_wc_schedule_add)
+  if (!(status == svn_wc__db_status_added ||
+        status == svn_wc__db_status_obstructed_add))
     {
       SVN_ERR(svn_wc__db_temp_op_delete(db, dir_abspath, iterpool));
 
