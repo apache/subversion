@@ -272,14 +272,16 @@ Candidate changes:
    Votes:
      +1: kameshj
 
- * r917640
+ * r917640, r918211
    Correctly handle invocations of 'svnlook plist --revprop' when
    used with '-t TXN_NAME' instead of '-r REV'.
+   r918211 adds a regression test.
    Justification:
      Users are assuming that this works (and trying to employ the
      functionality in pre-commit hooks), but it clearly doesn't.
    Votes:
-     +1: cmpilato
+     +1: cmpilato (r917640 only)
+     +1: lgo
 
 Veto-blocked changes:
 =====================
