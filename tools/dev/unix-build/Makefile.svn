@@ -28,9 +28,9 @@
 # After the build, point your PATH to the Subversion build you want to use.
 # Note that this Makefile requires GNU make.
 
-ENABLE_PYTHON_BINDINGS = yes
-ENABLE_RUBY_BINDINGS = yes
-ENABLE_PERL_BINDINGS = no
+ENABLE_PYTHON_BINDINGS ?= yes
+ENABLE_RUBY_BINDINGS ?= yes
+ENABLE_PERL_BINDINGS ?= yes
 
 PWD		= $(shell pwd)
 
@@ -93,7 +93,6 @@ APR_ICONV_SRCDIR	= $(SRCDIR)/apr-iconv-$(APR_ICONV_VER)
 APR_UTIL_SRCDIR	= $(SRCDIR)/apr-util-$(APR_UTIL_VER)
 HTTPD_SRCDIR	= $(SRCDIR)/httpd-$(HTTPD_VER)
 NEON_SRCDIR	= $(SRCDIR)/neon-$(NEON_VER)
-SERF_SRCDIR	= $(SRCDIR)/serf-$(SERF_VER)
 SERF_SRCDIR	= $(SRCDIR)/serf-$(SERF_VER)
 SQLITE_SRCDIR	= $(SRCDIR)/sqlite-$(SQLITE_VER)
 SVN_SRCDIR	= $(SVN_WC)
@@ -599,12 +598,20 @@ $(SVN_OBJDIR)/.retrieved:
 	fi
 	touch $@
 
-ifeq ($(BRANCH),trunk)
-BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
-else ifeq ($(BRANCH_MAJOR),1.6)
-BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
-else
+ifeq ($(BRANCH_MAJOR),1.5)
 BDB_FLAG=$(PREFIX)/bdb
+else ifeq ($(BRANCH_MAJOR),1.4)
+BDB_FLAG=$(PREFIX)/bdb
+else ifeq ($(BRANCH_MAJOR),1.3)
+BDB_FLAG=$(PREFIX)/bdb
+else ifeq ($(BRANCH_MAJOR),1.2)
+BDB_FLAG=$(PREFIX)/bdb
+else ifeq ($(BRANCH_MAJOR),1.1)
+BDB_FLAG=$(PREFIX)/bdb
+else ifeq ($(BRANCH_MAJOR),1.0)
+BDB_FLAG=$(PREFIX)/bdb
+else
+BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 endif
 
 # configure svn
@@ -713,10 +720,11 @@ httpd-conf:
 	echo "    AuthUserFile $(HTTPD_CHECK_USERS)" >> $(HTTPD_CHECK_CONF)
 	echo "    Require valid-user" >> $(HTTPD_CHECK_CONF)
 	echo "</Location>" >> $(HTTPD_CHECK_CONF)
-	echo "# This Location lets you access repositories dropped in /tmp/svn/" >> $(HTTPD_CHECK_CONF)
+	echo "# This Location lets you access repositories dropped in /tmp/" >> $(HTTPD_CHECK_CONF)
 	echo "<Location /svn>" >> $(HTTPD_CHECK_CONF)
 	echo "    DAV svn" >> $(HTTPD_CHECK_CONF)
-	echo "    SVNParentPath /tmp/svn" >> $(HTTPD_CHECK_CONF)
+	echo "    SVNParentPath /tmp" >> $(HTTPD_CHECK_CONF)
+	echo "    Allow from all" >> $(HTTPD_CHECK_CONF)
 	echo "</Location>" >> $(HTTPD_CHECK_CONF)
 
 # We need this to make sure some targets below pick up the right libraries
@@ -725,23 +733,23 @@ LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)
 .PHONY: start-svnserve stop-svnserve start-httpd stop-httpd
 
 HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-            $(PREFIX)/httpd/bin/apachectl -f conf/httpd-svn-check-$(WC).conf
+			$(PREFIX)/httpd/bin/apachectl \
+			-f conf/httpd-svn-check-$(WC).conf
 HTTPD_START_CMD = $(HTTPD_CMD) -k start
 HTTPD_STOP_CMD = $(HTTPD_CMD) -k stop
 
 SVNSERVE_START_CMD = $(svn_builddir)/subversion/svnserve/svnserve \
-                     --listen-host 127.0.0.1 \
-										 --pid-file $(PWD)/svnserve-$(WC).pid \
-										 -d -r $(svn_builddir)/subversion/tests/cmdline
+			--listen-host 127.0.0.1 \
+			--pid-file $(PWD)/svnserve-$(WC).pid \
+			-d -r $(svn_builddir)/subversion/tests/cmdline
 SVNSERVE_STOP_CMD = kill `cat $(PWD)/svnserve-$(WC).pid`
 
 start-httpd: httpd-conf
 	$(HTTPD_START_CMD)
-	@echo " make check BASE_URL=http://localhost:$(HTTPD_CHECK_PORT)"
-	@echo "and"
-	@echo " http://localhost:$(HTTPD_CHECK_PORT)/svn/\*"
-	@echo "   maps to"
-	@echo " /tmp/svn/\*"
+	@echo "To run tests over http, run:"
+	@echo "    make check BASE_URL=http://localhost:$(HTTPD_CHECK_PORT)"
+	@echo "The URL http://localhost:$(HTTPD_CHECK_PORT)/svn/"
+	@echo "lets you access repositories dropped into /tmp"
 
 stop-httpd:
 	$(HTTPD_STOP_CMD)
