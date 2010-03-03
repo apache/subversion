@@ -1188,25 +1188,35 @@ prep_directory(struct dir_baton *db,
 }
 
 
-/* Accumulate tags in LOG_ACCUM (associated with ADM_ABSPATH) to set
-   ENTRY_PROPS for PATH.
+/* Container for the common "Entry props" */
+struct last_change_info
+{
+  /** last revision this was changed */
+  svn_revnum_t cmt_rev;
+
+  /** last date this was changed */
+  apr_time_t cmt_date;
+
+  /** last commit author of this item */
+  const char *cmt_author;
+};
+
+/* Accumulate last change info in LAST_CHANGE to set on LOCAL_ABSPATH.
    ENTRY_PROPS is an array of svn_prop_t* entry props.
-   If ENTRY_PROPS contains the removal of a lock token, all entryprops
-   related to a lock will be removed and LOCK_STATE, if non-NULL, will be
-   set to svn_wc_notify_lock_state_unlocked.  Else, LOCK_STATE, if non-NULL
+   If ENTRY_PROPS contains the removal of a lock token, the lock info is
+   directly removed from LOCAL_ABSPATH in DB and LOCK_STATE, if non-NULL, will
+   be set to svn_wc_notify_lock_state_unlocked.  Else, LOCK_STATE, if non-NULL
    will be set to svn_wc_lock_state_unchanged. */
 static svn_error_t *
-accumulate_entry_props(svn_stringbuf_t *log_accum,
-                       svn_wc__db_t *db,
-                       const char *adm_abspath,
+accumulate_last_change(struct last_change_info **last_change,
                        svn_wc_notify_lock_state_t *lock_state,
-                       const char *path,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
                        apr_array_header_t *entry_props,
-                       apr_pool_t *pool)
+                       apr_pool_t *scratch_pool,
+                       apr_pool_t *result_pool)
 {
   int i;
-  svn_wc_entry_t tmp_entry;
-  apr_uint64_t flags = 0;
 
   if (lock_state)
     *lock_state = svn_wc_notify_lock_state_unchanged;
@@ -1217,11 +1227,10 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
       const char *val;
 
       /* The removal of the lock-token entryprop means that the lock was
-         defunct. */
+         defunct, so remove it directly. */
       if (! strcmp(prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
         {
-          SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, log_accum, pool);
-          SVN_ERR(svn_wc__loggy_delete_lock(db, adm_abspath, path, pool));
+          SVN_ERR(svn_wc__db_lock_remove(db, local_abspath, scratch_pool));
 
           if (lock_state)
             *lock_state = svn_wc_notify_lock_state_unlocked;
@@ -1236,28 +1245,22 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
 
       val = prop->value->data;
 
+      if (*last_change == NULL)
+        {
+          *last_change = apr_pcalloc(result_pool, sizeof(**last_change));
+          (*last_change)->cmt_rev = SVN_INVALID_REVNUM;
+        }
+
       if (! strcmp(prop->name, SVN_PROP_ENTRY_LAST_AUTHOR))
-        {
-          flags |= SVN_WC__ENTRY_MODIFY_CMT_AUTHOR;
-          tmp_entry.cmt_author = val;
-        }
+        (*last_change)->cmt_author = apr_pstrdup(result_pool, val);
       else if (! strcmp(prop->name, SVN_PROP_ENTRY_COMMITTED_REV))
-        {
-          flags |= SVN_WC__ENTRY_MODIFY_CMT_REV;
-          tmp_entry.cmt_rev = SVN_STR_TO_REV(val);
-        }
+        (*last_change)->cmt_rev = SVN_STR_TO_REV(val);
       else if (! strcmp(prop->name, SVN_PROP_ENTRY_COMMITTED_DATE))
-        {
-          flags |= SVN_WC__ENTRY_MODIFY_CMT_DATE;
-          SVN_ERR(svn_time_from_cstring(&tmp_entry.cmt_date, val, pool));
-        }
+        SVN_ERR(svn_time_from_cstring(&((*last_change)->cmt_date), val,
+                                      scratch_pool));
       /* Starting with Subversion 1.7 we ignore the SVN_PROP_ENTRY_UUID
          property here. */
     }
-
-  if (flags)
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_abspath,
-                                       path, &tmp_entry, flags, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3173,6 +3176,7 @@ close_directory(void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
+  struct last_change_info *last_change = NULL;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   apr_array_header_t *entry_props, *wc_props, *regular_props;
   apr_hash_t *base_props = NULL, *working_props = NULL;
@@ -3303,10 +3307,9 @@ close_directory(void *dir_baton,
                     _("Couldn't do property merge"));
         }
 
-      SVN_ERR(accumulate_entry_props(dirprop_log, eb->db,
-                                     db->local_abspath,
-                                     NULL, db->local_abspath, entry_props,
-                                     pool));
+      SVN_ERR(accumulate_last_change(&last_change, NULL, eb->db,
+                                     db->local_abspath, entry_props,
+                                     pool, pool));
 
       /* Handle the wcprops. */
       if (wc_props && wc_props->nelts > 0)
@@ -3329,6 +3332,14 @@ close_directory(void *dir_baton,
 
   /* Flush and run the log. */
   SVN_ERR(flush_log(db, pool));
+
+  if (last_change)
+    SVN_ERR(svn_wc__db_temp_op_set_base_last_change(eb->db, db->local_abspath,
+                                                    last_change->cmt_rev,
+                                                    last_change->cmt_date,
+                                                    last_change->cmt_author,
+                                                    pool));
+
   SVN_ERR(svn_wc__run_log2(eb->db, db->local_abspath, pool));
 
   /* We're done with this directory, so remove one reference from the
@@ -4493,6 +4504,7 @@ merge_props(svn_stringbuf_t *log_accum,
             svn_wc_notify_lock_state_t *lock_state,
             apr_hash_t **new_base_props,
             apr_hash_t **new_actual_props,
+            struct last_change_info **last_change,
             svn_wc__db_t *db,
             const char *file_abspath,
             const char *dir_abspath,
@@ -4547,9 +4559,9 @@ merge_props(svn_stringbuf_t *log_accum,
      Note that no merging needs to happen; these kinds of props aren't
      versioned, so if the property is present, we overwrite the value. */
   if (entry_props)
-    SVN_ERR(accumulate_entry_props(log_accum, db, dir_abspath,
-                                   lock_state, file_abspath, entry_props,
-                                   pool));
+    SVN_ERR(accumulate_last_change(last_change, lock_state,
+                                   db, file_abspath, entry_props,
+                                   pool, pool));
   else
     *lock_state = svn_wc_notify_lock_state_unchanged;
 
@@ -4653,6 +4665,7 @@ merge_file(svn_wc_notify_state_t *content_state,
            svn_wc_notify_lock_state_t *lock_state,
            apr_hash_t **new_base_props,
            apr_hash_t **new_actual_props,
+           struct last_change_info **last_change,
            struct file_baton *fb,
            const char *new_text_base_path,
            const svn_checksum_t *actual_checksum,
@@ -4722,7 +4735,7 @@ merge_file(svn_wc_notify_state_t *content_state,
      any file content merging, since that process might expand keywords, in
      which case we want the new entryprops to be in place. */
   SVN_ERR(merge_props(log_accum, prop_state, lock_state,
-                      new_base_props, new_actual_props,
+                      new_base_props, new_actual_props, last_change,
                       eb->db, fb->local_abspath, pb->local_abspath,
                       left_version, right_version,
                       fb->propchanges,
@@ -5065,6 +5078,7 @@ close_file(void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
+  struct last_change_info *last_change = NULL;
   svn_wc_notify_state_t content_state, prop_state;
   svn_wc_notify_lock_state_t lock_state;
   svn_checksum_t *expected_checksum = NULL;
@@ -5132,8 +5146,8 @@ close_file(void *file_baton,
 
   /* It's a small world, after all. */
   SVN_ERR(merge_file(&content_state, &prop_state, &lock_state,
-                     &new_base_props, &new_actual_props, fb,
-                     new_base_path, md5_actual_checksum, pool));
+                     &new_base_props, &new_actual_props, &last_change,
+                     fb, new_base_path, md5_actual_checksum, pool));
 
 
   if (fb->added || fb->add_existed)
@@ -5144,11 +5158,15 @@ close_file(void *file_baton,
                    be removed soon anyway.
 
          ### HACK: The loggy stuff checked the preconditions for us,
-                   we just make the property code happy here. */
+                   we just make the property code happy here. 
+
+         We can also clear entry.deleted here, as we are adding a new
+         BASE_NODE anyway */
       svn_wc_entry_t tmp_entry;
       svn_stringbuf_t *create_log = NULL;
       apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_KIND
-                           | SVN_WC__ENTRY_MODIFY_REVISION;
+                           | SVN_WC__ENTRY_MODIFY_REVISION
+                           | SVN_WC__ENTRY_MODIFY_DELETED;
 
       if (fb->add_existed)
         {
@@ -5163,6 +5181,7 @@ close_file(void *file_baton,
 
       tmp_entry.kind = svn_node_file;
       tmp_entry.revision = *eb->target_revision;
+      tmp_entry.deleted = FALSE;
 
       SVN_ERR(svn_wc__loggy_entry_modify(&create_log,
                                          fb->dir_baton->local_abspath,
@@ -5175,7 +5194,22 @@ close_file(void *file_baton,
                                    fb->dir_baton->local_abspath,
                                    create_log,
                                    pool));
+
+      SVN_ERR(svn_wc__wq_run(eb->db,
+                             fb->dir_baton->local_abspath,
+                             NULL, NULL, pool));
     }
+
+  /* ### Hack: The following block should be an atomic operation (including the install
+               loggy install portions of some functions called above */
+  SVN_ERR_ASSERT(last_change != NULL); /* Should always be not NULL for files */
+
+  if (last_change)
+    SVN_ERR(svn_wc__db_temp_op_set_base_last_change(eb->db, fb->local_abspath,
+                                                    last_change->cmt_rev,
+                                                    last_change->cmt_date,
+                                                    last_change->cmt_author,
+                                                    pool));
 
   if (new_base_props || new_actual_props)
       SVN_ERR(svn_wc__install_props(eb->db, fb->local_abspath,
@@ -5866,7 +5900,7 @@ svn_wc_get_actual_target2(const char **anchor,
    be an access baton for DST_PATH.
    Use @a POOL for temporary allocations. */
 static svn_error_t *
-install_added_props(svn_stringbuf_t *log_accum,
+install_added_props(struct last_change_info **last_change,
                     svn_wc__db_t *db,
                     const char *dir_abspath,
                     const char *local_abspath,
@@ -5894,8 +5928,8 @@ install_added_props(svn_stringbuf_t *log_accum,
   }
 
   /* Install the entry props. */
-  SVN_ERR(accumulate_entry_props(log_accum, db, dir_abspath,
-                                 NULL, local_abspath, entry_props, pool));
+  SVN_ERR(accumulate_last_change(last_change, NULL, db, local_abspath,
+                                 entry_props, pool, pool));
 
   return svn_error_return(svn_wc__db_base_set_dav_cache(db, local_abspath,
                                         prop_hash_from_array(wc_props, pool),
@@ -5928,6 +5962,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   const char *temp_dir_abspath;
   svn_stringbuf_t *pre_props_accum;
   svn_stringbuf_t *post_props_accum;
+  struct last_change_info *last_change = NULL;
 
   SVN_ERR(svn_wc__text_base_path(&text_base_path, wc_ctx->db, local_abspath,
                                  FALSE, pool));
@@ -6020,7 +6055,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* Install the props before the loggy translation, so that it has access to
      the properties for this file. */
-  SVN_ERR(install_added_props(post_props_accum, wc_ctx->db, dir_abspath,
+  SVN_ERR(install_added_props(&last_change, wc_ctx->db, dir_abspath,
                               local_abspath, &new_base_props, new_props, pool));
 
   /* Copy the text base contents into a temporary file so our log
@@ -6096,6 +6131,17 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__install_props(wc_ctx->db, local_abspath, new_base_props,
                                 new_props ? new_props : new_base_props,
                                 TRUE, FALSE, pool));
+
+  SVN_ERR(svn_wc__run_log2(wc_ctx->db, dir_abspath, pool));
+
+  /* ### HACK: The following code should be performed in the same transaction as the install */
+  if (last_change)
+    SVN_ERR(svn_wc__db_temp_op_set_working_last_change(wc_ctx->db, local_abspath,
+                                                       last_change->cmt_rev,
+                                                       last_change->cmt_date,
+                                                       last_change->cmt_author,
+                                                       pool));
+  /* ### /HACK */
   SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath, post_props_accum, pool));
 
 

@@ -2587,17 +2587,7 @@ fold_entry(apr_hash_t *entries,
       ? apr_pstrdup(pool, entry->prejfile)
                           : NULL;
 
-  /* Last-commit stuff */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_CMT_REV)
-    cur_entry->cmt_rev = entry->cmt_rev;
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_CMT_DATE)
-    cur_entry->cmt_date = entry->cmt_date;
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_CMT_AUTHOR)
-    cur_entry->cmt_author = entry->cmt_author
-      ? apr_pstrdup(pool, entry->cmt_author)
-                            : NULL;
+  /* Last-commit flags are no longer passed to entry_modify() */
 
   /* LOCK flags are no longer passed to entry_modify().  */
 
