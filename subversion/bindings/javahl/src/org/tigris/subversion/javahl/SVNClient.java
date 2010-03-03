@@ -655,14 +655,17 @@ public class SVNClient implements SVNClientInterface
             implements org.apache.subversion.javahl.CommitMessage
         {
             public String getLogMessage(
-                org.apache.subversion.javahl.CommitItem[] elementsToBeCommited)
+                Set<org.apache.subversion.javahl.CommitItem> elementsToBeCommited)
             {
                 CommitItem[] aElements =
-                        new CommitItem[elementsToBeCommited.length];
+                        new CommitItem[elementsToBeCommited.size()];
 
-                for (int i = 0; i < elementsToBeCommited.length; i++)
+                int i = 0;
+                for (org.apache.subversion.javahl.CommitItem item
+                                                        : elementsToBeCommited)
                 {
-                    aElements[i] = new CommitItem(elementsToBeCommited[i]);
+                    aElements[i] = new CommitItem(item);
+                    i++;
                 }
 
                 if (messageHandler == null)

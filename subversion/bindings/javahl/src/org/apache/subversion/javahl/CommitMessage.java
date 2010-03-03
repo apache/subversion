@@ -23,6 +23,8 @@
 
 package org.apache.subversion.javahl;
 
+import java.util.Set;
+
 /**
  * This is callback interface which has to implemented by the client
  * to receive which files will be commited and to enter the log
@@ -36,5 +38,5 @@ public interface CommitMessage
      * @param elementsToBeCommited Array of elements to be commited
      * @return the log message of the commit.
      */
-    String getLogMessage(CommitItem[] elementsToBeCommited);
+    String getLogMessage(Set<CommitItem> elementsToBeCommited);
 }
