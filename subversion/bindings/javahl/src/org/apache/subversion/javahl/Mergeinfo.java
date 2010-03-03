@@ -79,8 +79,8 @@ public class Mergeinfo implements java.io.Serializable
      */
     public void addRevisions(String mergeSrc, RevisionRange[] ranges)
     {
-        for (int i = 0; i < ranges.length; i++)
-            addRevisionRange(mergeSrc, ranges[i]);
+        for (RevisionRange range : ranges)
+            addRevisionRange(mergeSrc, range);
     }
 
     /**
