@@ -30,6 +30,8 @@
 #include <jni.h>
 #include "svn_wc.h"
 
+#include <vector>
+
 /**
  * This class passes centralizes the creating of Java objects from
  * Subversion's C structures.
@@ -55,6 +57,11 @@ class CreateJ
 
   static jobject
   PropertyMap(apr_hash_t *prop_hash, apr_pool_t *pool);
+
+  /* This creates a set of Objects.  It derefs the members of the vector
+   * after putting them in the set, so they caller doesn't need to. */
+  static jobject
+  Set(std::vector<jobject> &objects);
 
  protected:
   static jobject

@@ -515,37 +515,12 @@ jobject SVNAdmin::lslocks(const char *path)
                                      requestPool.pool()),
               NULL);
 
-  int count = apr_hash_count (locks);
-
   JNIEnv *env = JNIUtil::getEnv();
   jclass clazz = env->FindClass(JAVA_PACKAGE"/Lock");
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass sclazz = env->FindClass("java/util/Set");
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  static jmethodID init_mid = 0;
-  if (init_mid == 0)
-    {
-      init_mid = env->GetMethodID(sclazz, "<init>", "()V");
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
-
-  static jmethodID add_mid = 0;
-  if (add_mid == 0)
-    {
-      add_mid = env->GetMethodID(sclazz, "add",
-                                 "(Ljava/lang/Object;)Z");
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
-
-  jobject map = env->NewObject(sclazz, init_mid);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+  std::vector<jobject> jlocks;
 
   for (hi = apr_hash_first (requestPool.pool(), locks);
        hi;
@@ -556,24 +531,14 @@ jobject SVNAdmin::lslocks(const char *path)
       svn_lock_t *lock = (svn_lock_t *)val;
       jobject jLock = CreateJ::Lock(lock);
 
-      env->CallObjectMethod(map, add_mid, jLock);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-      env->DeleteLocalRef(jLock);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+      jlocks.push_back(jLock);
     }
 
   env->DeleteLocalRef(clazz);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  env->DeleteLocalRef(sclazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  return map;
+  return CreateJ::Set(jlocks);
 }
 
 void SVNAdmin::rmlocks(const char *path, Targets &locks)
