@@ -49,8 +49,8 @@ class CreateJ
   static jobject
   Lock(const svn_lock_t *lock);
 
-  static jobjectArray
-  RevisionRangeArray(apr_array_header_t *ranges);
+  static jobject
+  RevisionRangeList(apr_array_header_t *ranges);
 
   static jobject
   StringSet(apr_array_header_t *strings);
@@ -66,6 +66,9 @@ class CreateJ
  protected:
   static jobject
   ConflictVersion(const svn_wc_conflict_version_t *version);
+
+  static jobject
+  Collection(std::vector<jobject> &object, const char *className);
 };
 
 #endif  // CREATEJ_H

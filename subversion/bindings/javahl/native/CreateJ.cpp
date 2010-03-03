@@ -354,36 +354,57 @@ CreateJ::Lock(const svn_lock_t *lock)
 }
 
 
-jobjectArray
-CreateJ::RevisionRangeArray(apr_array_header_t *ranges)
+jobject
+CreateJ::RevisionRangeList(apr_array_header_t *ranges)
 {
-    JNIEnv *env = JNIUtil::getEnv();
+  JNIEnv *env = JNIUtil::getEnv();
 
-    jclass clazz = env->FindClass(JAVA_PACKAGE "/RevisionRange");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+  jclass clazz = env->FindClass("java/util/ArrayList");
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
-    jobjectArray jranges = env->NewObjectArray(ranges->nelts, clazz, NULL);
-
-    for (int i = 0; i < ranges->nelts; ++i)
+  static jmethodID init_mid = 0;
+  if (init_mid == 0)
     {
-        // Convert svn_merge_range_t *'s to Java RevisionRange objects.
-        svn_merge_range_t *range =
-            APR_ARRAY_IDX(ranges, i, svn_merge_range_t *);
-        jobject jrange = RevisionRange::makeJRevisionRange(range);
-        if (jrange == NULL)
-            return NULL;
-
-        env->SetObjectArrayElement(jranges, i, jrange);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-
-        env->DeleteLocalRef(jrange);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
+      init_mid = env->GetMethodID(clazz, "<init>", "()V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
     }
 
-    return jranges;
+  static jmethodID add_mid = 0;
+  if (add_mid == 0)
+    {
+      add_mid = env->GetMethodID(clazz, "add", "(Ljava/lang/Object;)Z");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  jobject jranges = env->NewObject(clazz, init_mid);
+
+  for (int i = 0; i < ranges->nelts; ++i)
+    {
+      // Convert svn_merge_range_t *'s to Java RevisionRange objects.
+      svn_merge_range_t *range =
+          APR_ARRAY_IDX(ranges, i, svn_merge_range_t *);
+
+      jobject jrange = RevisionRange::makeJRevisionRange(range);
+      if (jrange == NULL)
+        return NULL;
+
+      env->CallObjectMethod(jranges, add_mid, jrange);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+
+      env->DeleteLocalRef(jrange);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return jranges;
 }
 
 jobject
