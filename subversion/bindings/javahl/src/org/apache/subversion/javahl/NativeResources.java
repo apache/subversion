@@ -80,11 +80,11 @@ public class NativeResources
         // Try to load the library by its name.  Failing that, try to
         // load it by its old name.
         String[] libraryNames = {"svnjavahl-1", "libsvnjavahl-1", "svnjavahl"};
-        for (int i = 0; i < libraryNames.length; i++)
+        for (String libraryName : libraryNames)
         {
             try
             {
-                System.loadLibrary(libraryNames[i]);
+                System.loadLibrary(libraryName);
                 init();
                 return;
             }
