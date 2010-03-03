@@ -2119,12 +2119,14 @@ public class BasicTests extends SVNTests
         assertEquals("wrong revision", 1, lm[0].getRevisionNumber());
         assertEquals("wrong user", "jrandom", lm[0].getAuthor());
         assertNotNull("changed paths set", lm[0].getChangedPaths());
-        ChangePath cp[] = lm[0].getChangedPaths();
-        assertEquals("wrong number of chang pathes", 20, cp.length);
-        assertEquals("wrong path", "/A", cp[0].getPath());
-        assertEquals("wrong copy source rev", -1, cp[0].getCopySrcRevision());
-        assertNull("wrong copy source path", cp[0].getCopySrcPath());
-        assertEquals("wrong action", 'A', cp[0].getAction());
+        Set<ChangePath> cp = lm[0].getChangedPaths();
+        assertEquals("wrong number of chang pathes", 20, cp.size());
+        ChangePath changedApath = cp.toArray(new ChangePath[1])[0];
+        assertNotNull("wrong path", changedApath);
+        assertEquals("wrong copy source rev", -1,
+                      changedApath.getCopySrcRevision());
+        assertNull("wrong copy source path", changedApath.getCopySrcPath());
+        assertEquals("wrong action", 'A', changedApath.getAction());
         assertEquals("wrong time with getTimeMicros()",
                      lm[0].getTimeMicros()/1000,
                      lm[0].getDate().getTime());
@@ -2360,8 +2362,9 @@ public class BasicTests extends SVNTests
 
             List<Long> revList = new ArrayList<Long>();
 
-            public void singleMessage(ChangePath[] changedPaths, long revision,
-                    Map<String, byte[]> revprops, boolean hasChildren) {
+            public void singleMessage(Set<ChangePath> changedPaths,
+                    long revision, Map<String, byte[]> revprops,
+                    boolean hasChildren) {
                 revList.add(new Long(revision));
             }
 
@@ -3460,7 +3463,7 @@ public class BasicTests extends SVNTests
         {
             Map<String, byte[]> revprops;
 
-            public void singleMessage(ChangePath[] changedPaths,
+            public void singleMessage(Set<ChangePath> changedPaths,
                                       long revision,
                                       Map<String, byte[]> revprops,
                                       boolean hasChildren)
@@ -3759,7 +3762,7 @@ public class BasicTests extends SVNTests
         {
             private List<LogMessage> messages = new ArrayList<LogMessage>();
 
-            public void singleMessage(ChangePath[] changedPaths,
+            public void singleMessage(Set<ChangePath> changedPaths,
                                       long revision,
                                       Map<String, byte[]> revprops,
                                       boolean hasChildren)

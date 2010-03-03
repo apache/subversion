@@ -26,6 +26,7 @@ package org.apache.subversion.javahl.callback;
 import org.apache.subversion.javahl.ChangePath;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * This interface is used to receive every log message for the log
@@ -49,7 +50,7 @@ public interface LogMessageCallback
     /**
      * The method will be called for every log message.
      *
-     * @param changedPaths   the paths that were changed
+     * @param changedPaths   a set of the paths that were changed
      * @param revision       the revision of the commit
      * @param revprops       All of the requested revision properties,
      *                       possibly including svn:date, svn:author,
@@ -57,7 +58,7 @@ public interface LogMessageCallback
      * @param hasChildren    when merge sensitive option was requested,
      *                       whether or not this entry has child entries.
      */
-    public void singleMessage(ChangePath[] changedPaths,
+    public void singleMessage(Set<ChangePath> changedPaths,
                               long revision,
                               Map<String, byte[]> revprops,
                               boolean hasChildren);

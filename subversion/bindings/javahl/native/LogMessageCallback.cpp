@@ -81,8 +81,7 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
 
       sm_mid = env->GetMethodID(clazz,
                                 "singleMessage",
-                                "([L"JAVA_PACKAGE"/ChangePath;"
-                                "JLjava/util/Map;Z)V");
+                                "(Ljava/util/Set;JLjava/util/Map;Z)V");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
@@ -105,29 +104,19 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
         return SVN_NO_ERROR;
     }
 
-  jobjectArray jChangedPaths = NULL;
+  jobject jChangedPaths = NULL;
   if (log_entry->changed_paths)
     {
-      apr_array_header_t *sorted_paths;
-      int i;
+      apr_hash_index_t *hi;
+      std::vector<jobject> jcps;
 
-      /* Get an array of sorted hash keys. */
-      sorted_paths = svn_sort__hash(log_entry->changed_paths,
-                                    svn_sort_compare_items_as_paths,
-                                    pool);
-
-      jChangedPaths = env->NewObjectArray(sorted_paths->nelts,
-                                          clazzCP,
-                                          NULL);
-
-      for (i = 0; i < sorted_paths->nelts; ++i)
+      for (hi = apr_hash_first(pool, log_entry->changed_paths);
+           hi;
+           hi = apr_hash_next(hi))
         {
-          svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
-                                                   svn_sort__item_t));
-          const char *path = (const char *)item->key;
-          svn_log_changed_path2_t *log_item
-            = (svn_log_changed_path2_t *)
-            apr_hash_get(log_entry->changed_paths, item->key, item->klen);
+          const char *path = (const char *) svn_apr_hash_index_key(hi);
+          svn_log_changed_path2_t *log_item =
+                    (svn_log_changed_path2_t *) svn_apr_hash_index_val(hi);
 
           jstring jpath = JNIUtil::makeJString(path);
           if (JNIUtil::isJavaExceptionThrown())
@@ -147,13 +136,7 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
           if (JNIUtil::isJavaExceptionThrown())
             return SVN_NO_ERROR;
 
-          env->SetObjectArrayElement(jChangedPaths, i, cp);
-          if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
-
-          env->DeleteLocalRef(cp);
-          if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
+          jcps.push_back(cp);
 
           env->DeleteLocalRef(jpath);
           if (JNIUtil::isJavaExceptionThrown())
@@ -163,6 +146,8 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
           if (JNIUtil::isJavaExceptionThrown())
             return SVN_NO_ERROR;
         }
+
+      jChangedPaths = CreateJ::Set(jcps);
     }
 
   jobject jrevprops = NULL;
