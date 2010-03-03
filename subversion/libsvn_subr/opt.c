@@ -686,6 +686,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
         {
           ret = 0;
           start_revision.kind = svn_opt_revision_unspecified;
+          start_revision.value.number = 0;
         }
       else  /* looking at non-empty peg revision */
         {
