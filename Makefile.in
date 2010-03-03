@@ -605,7 +605,9 @@ doc-javahl:
 	$(JAVADOC) -d $(top_srcdir)/doc/javadoc \
 	  -sourcepath $(top_srcdir)/subversion/bindings/javahl/src \
 	  -link http://java.sun.com/javase/6/docs/api/ \
-	  org.tigris.subversion.javahl
+	  org.tigris.subversion.javahl \
+      org.apache.subversion.javahl \
+      org.apache.subversion.javahl.callback
 
 doc-clean:
 	rm -rf $(top_srcdir)/doc/doxygen
