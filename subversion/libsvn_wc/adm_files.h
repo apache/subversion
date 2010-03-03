@@ -53,7 +53,8 @@ svn_boolean_t svn_wc__adm_area_exists(const svn_wc_adm_access_t *adm_access,
 
 
 /* Atomically rename a temporary text-base file to its canonical
-   location.  The tmp file should be closed already. */
+   location.  PATH is the path of the working file whose text-base is
+   to be moved.  The tmp file should be closed already. */
 svn_error_t *
 svn_wc__sync_text_base(const char *path, apr_pool_t *pool);
 
