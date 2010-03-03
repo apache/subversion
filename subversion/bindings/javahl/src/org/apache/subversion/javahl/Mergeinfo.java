@@ -77,7 +77,7 @@ public class Mergeinfo implements java.io.Serializable
      * @throws SubversionException If range list contains objects of
      * type other than RevisionRange.
      */
-    public void addRevisions(String mergeSrc, RevisionRange[] ranges)
+    public void addRevisions(String mergeSrc, List<RevisionRange> ranges)
     {
         for (RevisionRange range : ranges)
             addRevisionRange(mergeSrc, range);
@@ -103,12 +103,9 @@ public class Mergeinfo implements java.io.Serializable
      * Get the merge source URLs.
      * @return The merge source URLs.
      */
-    public String[] getPaths()
+    public Set<String> getPaths()
     {
-        Set<String> pathSet = mergeSources.keySet();
-        if (pathSet == null)
-            return null;
-        return pathSet.toArray(new String[pathSet.size()]);
+        return mergeSources.keySet();
     }
 
     /**
@@ -128,12 +125,9 @@ public class Mergeinfo implements java.io.Serializable
      * @param mergeSrc The merge source URL, or <code>null</code>.
      * @return Array of RevisionRange objects, or <code>null</code>.
      */
-    public RevisionRange[] getRevisionRange(String mergeSrc)
+    public List<RevisionRange> getRevisionRange(String mergeSrc)
     {
-        List<RevisionRange> revisions = this.getRevisions(mergeSrc);
-        if (revisions == null)
-            return null;
-        return revisions.toArray(new RevisionRange[revisions.size()]);
+        return this.getRevisions(mergeSrc);
     }
 
     /**

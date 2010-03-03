@@ -189,17 +189,17 @@ public class BasicTests extends SVNTests
         String mergeInfoPropertyValue =
             "/trunk:1-300,305,307,400-405\n/branches/branch:308-400";
         Mergeinfo info = new Mergeinfo(mergeInfoPropertyValue);
-        String[] paths = info.getPaths();
-        assertEquals(2, paths.length);
-        RevisionRange[] trunkRange = info.getRevisionRange("/trunk");
-        assertEquals(4, trunkRange.length);
-        assertEquals("1-300", trunkRange[0].toString());
-        assertEquals("305", trunkRange[1].toString());
-        assertEquals("307", trunkRange[2].toString());
-        assertEquals("400-405", trunkRange[3].toString());
-        RevisionRange[] branchRange =
+        Set<String> paths = info.getPaths();
+        assertEquals(2, paths.size());
+        List<RevisionRange> trunkRange = info.getRevisionRange("/trunk");
+        assertEquals(4, trunkRange.size());
+        assertEquals("1-300", trunkRange.get(0).toString());
+        assertEquals("305", trunkRange.get(1).toString());
+        assertEquals("307", trunkRange.get(2).toString());
+        assertEquals("400-405", trunkRange.get(3).toString());
+        List<RevisionRange> branchRange =
             info.getRevisionRange("/branches/branch");
-        assertEquals(1, branchRange.length);
+        assertEquals(1, branchRange.size());
     }
 
     /**
