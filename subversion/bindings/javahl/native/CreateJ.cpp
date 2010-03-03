@@ -390,29 +390,7 @@ jobject
 CreateJ::StringSet(apr_array_header_t *strings)
 {
   JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass("java/util/HashSet");
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  static jmethodID init_mid = 0;
-  if (init_mid == 0)
-    {
-      init_mid = env->GetMethodID(clazz, "<init>", "()V");
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
-
-  static jmethodID add_mid = 0;
-  if (add_mid == 0)
-    {
-      add_mid = env->GetMethodID(clazz, "add", "(Ljava/lang/Object;)Z");
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
-
-  jobject set = env->NewObject(clazz, init_mid);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+  std::vector<jobject> jstrs;
 
   for (int i = 0; i < strings->nelts; ++i)
     {
@@ -420,21 +398,11 @@ CreateJ::StringSet(apr_array_header_t *strings)
       jstring jstr = JNIUtil::makeJString(str);
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
-        
-      env->CallObjectMethod(set, add_mid, jstr);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-      env->DeleteLocalRef(jstr);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+      
+      jstrs.push_back(jstr);
     }
 
-  env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  return set;
+  return CreateJ::Set(jstrs);
 }
 
 jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t *pool)
@@ -502,4 +470,52 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t *pool)
     return NULL;
 
   return map;
+}
+
+jobject CreateJ::Set(std::vector<jobject> &objects)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+  jclass clazz = env->FindClass("java/util/HashSet");
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  static jmethodID init_mid = 0;
+  if (init_mid == 0)
+    {
+      init_mid = env->GetMethodID(clazz, "<init>", "()V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  static jmethodID add_mid = 0;
+  if (add_mid == 0)
+    {
+      add_mid = env->GetMethodID(clazz, "add", "(Ljava/lang/Object;)Z");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  jobject set = env->NewObject(clazz, init_mid);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  std::vector<jobject>::const_iterator it;
+  for (it = objects.begin(); it < objects.end(); ++it)
+    {
+      jobject jthing = *it;
+
+      env->CallObjectMethod(set, add_mid, jthing);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+
+      env->DeleteLocalRef(jthing);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return set;
 }
