@@ -529,7 +529,8 @@ read_line(patch_target_t *target,
                                        target->eol_str, FALSE,
                                        target->keywords, FALSE,
                                        result_pool));
-  target->current_line++;
+  if (! target->eof)
+    target->current_line++;
 
   return SVN_NO_ERROR;
 }
@@ -542,10 +543,16 @@ static svn_error_t *
 seek_to_line(patch_target_t *target, svn_linenum_t line,
              apr_pool_t *scratch_pool)
 {
+  svn_linenum_t saved_line;
+  svn_boolean_t saved_eof;
+
   SVN_ERR_ASSERT(line > 0);
 
   if (line == target->current_line)
     return SVN_NO_ERROR;
+
+  saved_line = target->current_line;
+  saved_eof = target->eof;
 
   if (line <= target->lines->nelts)
     {
@@ -560,13 +567,17 @@ seek_to_line(patch_target_t *target, svn_linenum_t line,
       const char *dummy;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-      while (target->current_line < line)
+      while (! target->eof && target->current_line < line)
         {
           svn_pool_clear(iterpool);
           SVN_ERR(read_line(target, &dummy, iterpool, iterpool));
         }
       svn_pool_destroy(iterpool);
     }
+
+  /* After seeking backwards from EOF position clear EOF indicator. */
+  if (saved_eof && saved_line > target->current_line)
+    target->eof = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -644,7 +655,6 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
         *matched = FALSE;
     }
   SVN_ERR(seek_to_line(target, saved_line, iterpool));
-  target->eof = FALSE;
 
   svn_pool_destroy(iterpool);
 
@@ -705,7 +715,8 @@ scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
             }
         }
 
-      SVN_ERR(seek_to_line(target, target->current_line + 1, iterpool));
+      if (! target->eof)
+        SVN_ERR(seek_to_line(target, target->current_line + 1, iterpool));
     }
   svn_pool_destroy(iterpool);
 
@@ -740,13 +751,19 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   else if (hunk->original_start > 0 && target->kind == svn_node_file)
     {
       svn_linenum_t saved_line = target->current_line;
-      svn_boolean_t saved_eof = target->eof;
 
       /* Scan for a match at the line where the hunk thinks it
        * should be going. */
       SVN_ERR(seek_to_line(target, hunk->original_start, scratch_pool));
-      SVN_ERR(scan_for_match(&matched_line, target, hunk, TRUE,
-                             hunk->original_start + 1, fuzz, scratch_pool));
+      if (target->current_line != hunk->original_start)
+        {
+          /* Seek failed. */
+          matched_line = 0;
+        }
+      else
+        SVN_ERR(scan_for_match(&matched_line, target, hunk, TRUE,
+                               hunk->original_start + 1, fuzz, scratch_pool));
+
       if (matched_line != hunk->original_start)
         {
           /* Scan the whole file again from the start. */
@@ -769,7 +786,6 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
         }
 
       SVN_ERR(seek_to_line(target, saved_line, scratch_pool));
-      target->eof = saved_eof;
     }
   else
     {
@@ -894,6 +910,8 @@ apply_hunk(patch_target_t *target, hunk_info_t *hi, apr_pool_t *pool)
 
   if (target->kind == svn_node_file)
     {
+      svn_linenum_t line;
+
       /* Move forward to the hunk's line, copying data as we go.
        * Also copy leading lines of context which matched with fuzz.
        * The target has changed on the fuzzy-matched lines,
@@ -903,9 +921,16 @@ apply_hunk(patch_target_t *target, hunk_info_t *hi, apr_pool_t *pool)
 
       /* Skip the target's version of the hunk.
        * Don't skip trailing lines which matched with fuzz. */
-      SVN_ERR(seek_to_line(target, target->current_line +
-                             hi->hunk->original_length - (2 * hi->fuzz),
-                           pool));
+      /* ### What if current line is part of hunk context? */
+      line = target->current_line + hi->hunk->original_length - (2 * hi->fuzz);
+      SVN_ERR(seek_to_line(target, line, pool));
+      if (target->current_line != line)
+        {
+          /* Seek failed, reject this hunk. */
+          hi->rejected = TRUE;
+          SVN_ERR(reject_hunk(target, hi, pool));
+          return SVN_NO_ERROR;
+        }
     }
 
   /* Write the hunk's version to the patched result.
