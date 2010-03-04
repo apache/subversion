@@ -921,7 +921,6 @@ apply_hunk(patch_target_t *target, hunk_info_t *hi, apr_pool_t *pool)
 
       /* Skip the target's version of the hunk.
        * Don't skip trailing lines which matched with fuzz. */
-      /* ### What if current line is part of hunk context? */
       line = target->current_line + hi->hunk->original_length - (2 * hi->fuzz);
       SVN_ERR(seek_to_line(target, line, pool));
       if (target->current_line != line)
