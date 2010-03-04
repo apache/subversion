@@ -430,7 +430,7 @@ get_empty_tmp_file(const char **tmp_filename,
                                          scratch_pool, scratch_pool));
   SVN_ERR(svn_io_open_unique_file3(&file, tmp_filename, temp_dir_path,
                                    svn_io_file_del_none,
-                                   result_pool, scratch_pool));
+                                   scratch_pool, scratch_pool));
   SVN_ERR(svn_io_file_close(file, scratch_pool));
 
   return svn_error_return(svn_dirent_get_absolute(tmp_filename, *tmp_filename,
