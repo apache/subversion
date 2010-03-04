@@ -424,14 +424,14 @@ get_empty_tmp_file(const char **tmp_filename,
                    apr_pool_t *scratch_pool)
 {
   const char *temp_dir_path;
-  svn_stream_t *empty_stream;
+  apr_file_t *file;
 
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_path, db, wri_abspath,
                                          scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_open_unique(&empty_stream, tmp_filename, temp_dir_path,
-                                 svn_io_file_del_none, result_pool,
-                                 scratch_pool));
-  SVN_ERR(svn_stream_close(empty_stream));
+  SVN_ERR(svn_io_open_unique_file3(&file, tmp_filename, temp_dir_path,
+                                   svn_io_file_del_none,
+                                   result_pool, scratch_pool));
+  SVN_ERR(svn_io_file_close(file, scratch_pool));
 
   return svn_error_return(svn_dirent_get_absolute(tmp_filename, *tmp_filename,
                                                   result_pool));
