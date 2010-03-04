@@ -2596,6 +2596,11 @@ struct set_props_baton
   svn_wc__db_pdh_t *pdh;
 };
 
+/* Set the 'properties' column in the 'ACTUAL_NODE' table to BATON->props.
+   Create an entry in the ACTUAL table for the node if it does not yet
+   have one.
+   To specify no properties, BATON->props must be an empty hash, not NULL.
+   BATON is of type 'struct set_props_baton'. */
 static svn_error_t *
 set_props_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
 {
