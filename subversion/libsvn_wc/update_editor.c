@@ -5142,7 +5142,13 @@ close_file(void *file_baton,
 
 #ifdef SVN_EXPERIMENTAL
   /* If we had a text change, drop the pristine into it's proper place. */
-  /* ### Where's the WC-1 equivalent code? They should be together. */
+  /* ### Where's the WC-1 equivalent code? Shouldn't they be together?
+     Bert said: In 1.0 the install of the .svn-base has to be done in loggy/wq
+     (or it can break your wc), while with the new pristine the file can and
+     should be created directly and then later in a single transaction we can
+     update all the BASE_NODE info to switch the file over and install a wq
+     item to update the in-wc file. So in a few cases it is logical that the
+     file operations are not side by side. */
   if (fb->temp_pristine_abspath)
     SVN_ERR(svn_wc__db_pristine_install(eb->db, fb->temp_pristine_abspath,
                                         sha1_actual_checksum,
