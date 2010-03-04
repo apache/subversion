@@ -116,15 +116,16 @@ svn_error_t *svn_wc__open_adm_stream(svn_stream_t **stream,
                                      apr_pool_t *scratch_pool);
 
 
-/* Open the normal or revert text base, associated with PATH, for writing.
+/* Open the normal or revert text base, associated with LOCAL_ABSPATH, for
+   writing.
    The selection is based on NEED_REVERT_BASE. The opened stream will be
    returned in STREAM and the selected path will be returned in,
-   TEMP_BASE_PATH, and both will be allocated in RESULT_POOL. Any temporary
+   TEMP_BASE_ABSPATH, and both will be allocated in RESULT_POOL. Any temporary
    allocations will be performed in SCRATCH_POOL. */
 svn_error_t *
 svn_wc__open_writable_base(svn_stream_t **stream,
-                           const char **temp_base_path,
-                           const char *path,
+                           const char **temp_base_abspath,
+                           const char *local_abspath,
                            svn_boolean_t need_revert_base,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
