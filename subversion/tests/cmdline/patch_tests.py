@@ -50,7 +50,7 @@ XFail = svntest.testcase.XFail
 #Tests
 
 def patch(sbox):
-  "apply a patch"
+  "basic patch"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -220,7 +220,7 @@ def patch(sbox):
 
 
 def patch_absolute_paths(sbox):
-  "apply a patch containing absolute paths"
+  "patch containing absolute paths"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -284,7 +284,7 @@ def patch_absolute_paths(sbox):
                                        1) # dry-run
 
 def patch_offset(sbox):
-  "apply a patch with offset searching"
+  "patch with offset searching"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -497,7 +497,7 @@ def patch_offset(sbox):
                                        1) # dry-run
 
 def patch_chopped_leading_spaces(sbox):
-  "apply a patch with chopped leading spaces"
+  "patch with chopped leading spaces"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -667,7 +667,7 @@ def patch_chopped_leading_spaces(sbox):
 
 
 def patch_strip1(sbox):
-  "apply a patch with -p1"
+  "patch with -p1"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -837,7 +837,7 @@ def patch_strip1(sbox):
                                        '-p1')
 
 def patch_add_new_dir(sbox):
-  "apply a patch with missing dirs"
+  "patch with missing dirs"
   
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -913,7 +913,7 @@ def patch_add_new_dir(sbox):
                                        1) # dry-run
 
 def patch_reject(sbox):
-  "apply a patch which is rejected"
+  "patch which is rejected"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -983,7 +983,7 @@ def patch_reject(sbox):
                                        1) # dry-run
 
 def patch_keywords(sbox):
-  "apply a patch containing keywords"
+  "patch containing keywords"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1044,7 +1044,7 @@ def patch_keywords(sbox):
                                        1) # dry-run
 
 def patch_with_fuzz(sbox):
-  "apply a patch with fuzz"
+  "patch with fuzz"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1183,7 +1183,7 @@ def patch_with_fuzz(sbox):
                                        1) # dry-run
 
 def patch_reverse(sbox):
-  "apply a patch in reverse"
+  "patch in reverse"
 
   sbox.build()
   wc_dir = sbox.wc_dir
