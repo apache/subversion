@@ -59,8 +59,8 @@ svn_error_t *
 svn_wc__sync_text_base(const char *path, apr_pool_t *pool);
 
 
-/* Return an absolute path to LOCAL_ABSPATH's text-base file.
-   If TMP is set, return a path to the tmp text-base file. */
+/* Set *RESULT_PATH to the absolute path to LOCAL_ABSPATH's text-base file,
+   or, if TMP is set, to its temporary text-base file. */
 svn_error_t *
 svn_wc__text_base_path(const char **result_path,
                        svn_wc__db_t *db,
@@ -68,7 +68,7 @@ svn_wc__text_base_path(const char **result_path,
                        svn_boolean_t tmp,
                        apr_pool_t *pool);
 
-/* Return a readonly stream on the LOCAL_ABSPATH's base file. */
+/* Set *CONTENTS to a readonly stream on the LOCAL_ABSPATH's base file. */
 svn_error_t *
 svn_wc__get_pristine_contents(svn_stream_t **contents,
                               svn_wc__db_t *db,
@@ -78,7 +78,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 
 
 
-/* Return a readonly stream on the LOCAL_ABSPATH's revert file. */
+/* Set *CONTENTS to a readonly stream on the LOCAL_ABSPATH's revert file. */
 svn_error_t *
 svn_wc__get_revert_contents(svn_stream_t **contents,
                             svn_wc__db_t *db,
@@ -87,8 +87,7 @@ svn_wc__get_revert_contents(svn_stream_t **contents,
                             apr_pool_t *scratch_pool);
 
 
-/* Retrieve an absolute path to LOCAL_ABSPATH's revert file.
-   If TMP is set, return a path to the tmp revert file. */
+/* Set *RESULT_ABSPATH to the absolute path to LOCAL_ABSPATH's revert file. */
 svn_error_t *
 svn_wc__text_revert_path(const char **result_abspath,
                          svn_wc__db_t *db,
