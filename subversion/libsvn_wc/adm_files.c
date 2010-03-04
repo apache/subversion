@@ -373,6 +373,14 @@ svn_wc__prop_path(const char **prop_path,
 
 /*** Opening and closing files in the adm area. ***/
 
+/* Create and open a writable file in the admin temporary area of the WC
+   directory PATH, in a subdirectory named SUBDIR (such as "text-base"),
+   with the name FNAME and extra EXTENSION (such as ".svn-base").  If the
+   file already exists, first delete it.  Set *STREAM to a writable stream
+   to this file, and (if SELECTED_PATH is not NULL) set *SELECTED_PATH to
+   the path to this file, both allocated in RESULT_POOL.
+
+   Closing the stream will close (but not delete) the file. */
 static svn_error_t *
 open_adm_file(svn_stream_t **stream,
               const char **selected_path,
@@ -388,12 +396,10 @@ open_adm_file(svn_stream_t **stream,
   /* Extend with tmp name. */
   path = extend_with_adm_name(path, extension, TRUE, result_pool,
                               subdir, fname, NULL);
-
-  err = svn_stream_open_writable(stream, path, result_pool, scratch_pool);
-
   if (selected_path)
     *selected_path = path;  /* note: built in result_pool */
 
+  err = svn_stream_open_writable(stream, path, result_pool, scratch_pool);
   if (err && APR_STATUS_IS_EEXIST(err->apr_err))
     {
       /* Exclusive open failed, delete and retry */
