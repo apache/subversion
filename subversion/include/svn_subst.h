@@ -292,6 +292,13 @@ svn_subst_translate_stream(svn_stream_t *src_stream,
  * contract keywords.  One stream supports both read and write
  * operations.  Reads and writes may be mixed.
  *
+ * If @a eol_str is non-@c NULL, replace whatever bytestring the input uses
+ * to denote line endings with @a eol_str in the output.  If the input has an
+ * inconsistent line ending style, then: if @a repair is @c FALSE, return
+ * @c SVN_ERR_IO_INCONSISTENT_EOL, else if @a repair is @c TRUE, convert any
+ * line ending to @a eol_str in @a .  Recognized line endings are:
+ * "\n", "\r", and "\r\n".
+ *
  * The stream returned is allocated in @a pool.
  *
  * If the inner stream implements resetting via svn_stream_reset(),
