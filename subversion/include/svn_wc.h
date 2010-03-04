@@ -6481,6 +6481,22 @@ svn_wc_cleanup(const char *path,
                void *cancel_baton,
                apr_pool_t *pool);
 
+/** Callback for retrieving a repository root for a url from upgrade.
+ *
+ * Called by svn_wc_upgrade() when no repository root and/or repository
+ * uuid are recorded in the working copy. For normal Subversion 1.5 and
+ * later working copies, this callback will not be used.
+ *
+ * @since New in 1.7.
+ */
+typedef svn_error_t * (*svn_wc_upgrade_get_repos_info_t)(
+                                    const char **repos_root,
+                                    const char **repos_uuid,
+                                    void *baton,
+                                    const char *url,
+                                    apr_pool_t *scratch_pool,
+                                    apr_pool_t *result_pool);
+
 /**
  * Upgrade the working copy at @a local_abspath to the latest metadata
  * storage format.  @a local_abspath should be an absolute path to the
@@ -6495,11 +6511,17 @@ svn_wc_cleanup(const char *path,
  * the path of the upgraded directory. @a notify_func may be @c NULL
  * if this notification is not needed.
  *
+ * If the old working copy doesn't contain a repository root and/or
+ * repository uuid, @a repos_info_func (if non-NULL) will be called
+ * with @a repos_info_baton to provide the missing information.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
 svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
+               svn_wc_upgrade_get_repos_info_t repos_info_func,
+               void *repos_info_baton,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
