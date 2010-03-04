@@ -37,7 +37,7 @@
 
 #include "svn_private_config.h"
 
- 
+
 /*** Code. ***/
 
 svn_error_t *
@@ -56,6 +56,8 @@ svn_client_cleanup(const char *path,
   return svn_error_return(err);
 }
 
+
+/* callback baton for fetch_repos_info */
 struct repos_info_baton
 {
   apr_pool_t *pool;
@@ -64,6 +66,8 @@ struct repos_info_baton
   const char *last_uuid;
 };
 
+/* svn_wc_upgrade_get_repos_info_t implementation for calling
+   svn_wc_upgrade() from svn_client_upgrade() */
 static svn_error_t *
 fetch_repos_info(const char **repos_root,
                  const char **repos_uuid,
