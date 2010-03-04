@@ -2608,16 +2608,18 @@ typedef struct svn_wc_diff_callbacks_t
 
 /* Asking questions about a working copy. */
 
-/** Set @a *wc_format to @a path's working copy format version number if
- * @a path is a valid working copy directory, else set it to 0.
- * Return error @c APR_ENOENT if @a path does not exist at all.
+/** Set @a *wc_format to @a local_abspath's working copy format version
+ * number if @a local_abspath is a valid working copy directory, else set it
+ * to 0.
+ *
+ * Return error @c APR_ENOENT if @a local_abspath does not exist at all.
  *
  * @since New in 1.7.
  */
 svn_error_t *
 svn_wc_check_wc2(int *wc_format,
                  svn_wc_context_t *wc_ctx,
-                 const char *local_path,
+                 const char *local_abspath,
                  apr_pool_t *scratch_pool);
 
 /**
@@ -6431,7 +6433,7 @@ svn_wc_get_pristine_copy_path(const char *path,
 /**
  * Recurse from @a local_abspath, cleaning up unfinished log business.  Perform
  * any temporary allocations in @a scratch_pool.  Any working copy locks under
- * @a local_path will be taken over and then cleared by this function.
+ * @a local_abspath will be taken over and then cleared by this function.
  *
  * WARNING: there is no mechanism that will protect locks that are still being
  * used.
@@ -6914,7 +6916,7 @@ svn_error_t *
 svn_wc_transmit_text_deltas3(const char **tempfile,
                              unsigned char digest[],
                              svn_wc_context_t *wc_ctx,
-                             const char *local_path,
+                             const char *local_abspath,
                              svn_boolean_t fulltext,
                              const svn_delta_editor_t *editor,
                              void *file_baton,
