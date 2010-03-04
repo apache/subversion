@@ -210,6 +210,29 @@ def upgrade_wcprops(sbox):
     '(svn:wc:ra_dav:version-url 46 /svn-test-work/local_tmp/repos/!svn/ver/1/iota)',
   }
   check_dav_cache(sbox.wc_dir, 1, expected_dav_caches)
+  
+def basic_upgrade_1_0(sbox):
+  "test upgrading a working copy created with 1.0.0"
+  replace_sbox_with_tarfile(sbox, 'upgrade_1_0.tar.bz2')
+
+  # Attempt to use the working copy, this should give an error
+  expected_stderr = wc_is_too_old_regex
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'info', sbox.wc_dir)
+
+
+  # Now upgrade the working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+
+  # Actually check the format number of the upgraded working copy
+  check_format(sbox, get_current_format())
+
+  # Now check the contents of the working copy
+  # #### This working copy is not just a basic tree,
+  #      fix with the right data once we get here
+  #expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  #run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 
 ########################################################################
@@ -222,6 +245,7 @@ test_list = [ None,
               XFail(update_1_5),
               logs_left_1_5,
               upgrade_wcprops,
+              XFail(basic_upgrade_1_0)
              ]
 
 
