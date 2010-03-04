@@ -107,7 +107,13 @@ typedef struct {
   /* The line last read from the target file. */
   svn_linenum_t current_line;
 
-  /* EOL-marker used by target file. */
+  /* The EOL-style of the target. Either 'none', 'fixed', or 'native'.
+   * See the documentation of svn_subst_eol_style_t. */
+  svn_subst_eol_style_t eol_style;
+
+  /* If the EOL_STYLE above is not 'none', this is the EOL string
+   * corresponding to the EOL-style. Else, it is the EOL string the
+   * last line read from the target file was using. */
   const char *eol_str;
 
   /* An array containing stream markers marking the beginning
@@ -149,9 +155,6 @@ typedef struct {
 
   /* The keywords of the target. */
   apr_hash_t *keywords;
-
-  /* The EOL-style of the target. */
-  svn_subst_eol_style_t eol_style;
 
   /* The pool the target is allocated in. */
   apr_pool_t *pool;
@@ -371,11 +374,12 @@ init_patch_target(patch_target_t **patch_target,
       svn_string_t *keywords_val;
       svn_string_t *eol_style_val;
       const char *diff_header;
+      svn_boolean_t repair_eol;
       apr_size_t len;
 
-      target->eol_str = APR_EOL_STR;
       target->keywords = NULL;
-      target->eol_style = svn_subst_eol_style_unknown;
+      target->eol_style = svn_subst_eol_style_none;
+      target->eol_str = NULL;
 
       if (target->kind == svn_node_file)
         {
@@ -422,26 +426,10 @@ init_patch_target(patch_target_t **patch_target,
                                              &target->eol_str,
                                              eol_style_val->data);
             }
-          else
-            {
-              /* Just use the first EOL sequence we can find in the file. */
-              SVN_ERR(svn_eol__detect_file_eol(&target->eol_str,
-                                               target->file, scratch_pool));
-              /* But don't enforce any particular EOL-style. */
-              target->eol_style = svn_subst_eol_style_none;
-            }
-
-          if (target->eol_str == NULL)
-            {
-              /* We couldn't figure out the target files's EOL scheme,
-               * just use native EOL makers. */
-              target->eol_str = APR_EOL_STR;
-              target->eol_style = svn_subst_eol_style_native;
-            }
 
           /* Create a stream to read from the target. */
           target->stream = svn_stream_from_aprfile2(target->file,
-                                                        FALSE, result_pool);
+                                                    FALSE, result_pool);
 
           /* Also check the file for local mods and the Xbit. */
           SVN_ERR(check_local_mods(&target->local_mods, wc_ctx,
@@ -451,17 +439,17 @@ init_patch_target(patch_target_t **patch_target,
                                             scratch_pool));
         }
 
-      /* Create a temporary file to write the patched result to.
-       * Expand keywords in the patched file. */
+      /* Create a temporary file to write the patched result to. */
       SVN_ERR(svn_stream_open_unique(&target->patched_raw,
                                      &target->patched_path, NULL,
                                      svn_io_file_del_on_pool_cleanup,
                                      result_pool, scratch_pool));
+      /* Expand keywords in the patched file.
+       * Repair newlines if svn:eol-style dictates a particular style. */
+      repair_eol = (target->eol_style == svn_subst_eol_style_fixed ||
+                    target->eol_style == svn_subst_eol_style_native);
       target->patched = svn_subst_stream_translated(
-                              target->patched_raw,
-                              target->eol_str,
-                              target->eol_style ==
-                                svn_subst_eol_style_fixed,
+                              target->patched_raw, target->eol_str, repair_eol,
                               target->keywords, TRUE, result_pool);
 
       /* We'll also need a stream to write rejected hunks to.
@@ -507,6 +495,7 @@ read_line(patch_target_t *target,
           apr_pool_t *result_pool)
 {
   svn_stringbuf_t *line_raw;
+  const char *eol_str;
 
   if (target->eof)
     {
@@ -522,11 +511,15 @@ read_line(patch_target_t *target,
       APR_ARRAY_PUSH(target->lines, svn_stream_mark_t *) = mark;
     }
 
-  SVN_ERR(svn_stream_readline(target->stream, &line_raw, target->eol_str,
-                              &target->eof, scratch_pool));
+  SVN_ERR(svn_stream_readline_detect_eol(target->stream, &line_raw,
+                                         &eol_str, &target->eof,
+                                         scratch_pool));
+  if (target->eol_style == svn_subst_eol_style_none)
+    target->eol_str = eol_str;
+
   /* Contract keywords. */
   SVN_ERR(svn_subst_translate_cstring2(line_raw->data, line,
-                                       target->eol_str, FALSE,
+                                       NULL, FALSE,
                                        target->keywords, FALSE,
                                        result_pool));
   if (! target->eof)
@@ -613,17 +606,16 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
   do
     {
       const char *hunk_line_translated;
-      const char *eol_str;
 
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_stream_readline_detect_eol(hunk->original_text,
-                                             &hunk_line, &eol_str,
+                                             &hunk_line, NULL,
                                              &hunk_eof, iterpool));
       /* Contract keywords, if any, before matching. */
       SVN_ERR(svn_subst_translate_cstring2(hunk_line->data,
                                            &hunk_line_translated,
-                                           eol_str, FALSE,
+                                           NULL, FALSE,
                                            target->keywords, FALSE,
                                            iterpool));
       lines_read++;
@@ -866,7 +858,7 @@ reject_hunk(patch_target_t *target, hunk_info_t *hi, apr_pool_t *pool)
                              hi->hunk->original_length,
                              hi->hunk->modified_start,
                              hi->hunk->modified_length,
-                             target->eol_str);
+                             APR_EOL_STR);
   len = strlen(hunk_header);
   SVN_ERR(svn_stream_write(target->reject, hunk_header, &len));
 
@@ -955,8 +947,15 @@ apply_hunk(patch_target_t *target, hunk_info_t *hi, apr_pool_t *pool)
                                      hunk_line->data, hunk_line->len,
                                      iterpool));
           if (eol_str)
-            SVN_ERR(try_stream_write(target->patched, target->patched_path,
-                                     eol_str, strlen(eol_str), iterpool));
+            {
+              /* Use the EOL as it was read from the patch file,
+               * unless the target's EOL style is set by svn:eol-style */
+              if (target->eol_style != svn_subst_eol_style_none)
+                eol_str = target->eol_str;
+
+              SVN_ERR(try_stream_write(target->patched, target->patched_path,
+                                       eol_str, strlen(eol_str), iterpool));
+            }
         }
     }
   while (! eof);
