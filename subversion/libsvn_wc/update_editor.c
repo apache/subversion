@@ -429,7 +429,7 @@ get_empty_tmp_file(const char **tmp_filename,
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_path, db, wri_abspath,
                                          scratch_pool, scratch_pool));
   SVN_ERR(svn_stream_open_unique(&empty_stream, tmp_filename, temp_dir_path,
-                                 svn_io_file_del_none, scratch_pool,
+                                 svn_io_file_del_none, result_pool,
                                  scratch_pool));
   SVN_ERR(svn_stream_close(empty_stream));
 
