@@ -4848,6 +4848,10 @@ svn_client_info(const char *path_or_url,
  * This is useful when applying a unidiff which was created with the
  * original and modified files swapped due to human error.
  *
+ * If @a filter_globs is not NULL, patch targets matching any glob
+ * pattern in @a filter_globs will not be patched. The match is performed
+ * on the target path as parsed from the patch file, after canonicalization.
+ *
  * If @a ctx->notify_func2 is non-NULL, invoke @a ctx->notify_func2 with
  * @a ctx->notify_baton2 as patching progresses.
  *
@@ -4862,6 +4866,7 @@ svn_client_patch(const char *abs_patch_path,
                  svn_boolean_t dry_run,
                  int strip_count,
                  svn_boolean_t reverse,
+                 apr_array_header_t *filter_globs,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
