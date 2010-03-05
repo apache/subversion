@@ -520,7 +520,14 @@ svn_wc__node_get_lock_token(const char **lock_token,
  * @a anchor_abspath is NULL.  If @a anchor_abspath is not NULL then
  * recursively acquire write locks for the anchor of @a local_abspath
  * and return the anchor path in @a *anchor_abspath.  Use @a wc_ctx
- * for working copy access.
+ * for working copy access. 
+ *
+ * Returns @c SVN_ERR_WC_LOCKED an existing lock is encountered, but
+ * may have set locks of it's own; it's not clear how the caller is
+ * expected to handle this.
+ *
+ * If @a *anchor_abspath is not NULL it will be set evenwhen
+ * SVN_ERR_WC_LOCKED is returned.
  *
  * ### @a anchor_abspath should be removed when we move to centralised
  * ### metadata as it will be unnecessary.
@@ -535,7 +542,8 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
 
 /**
  * Recursively release write locks for @a local_abspath, using @a wc_ctx
- * for working copy access.
+ * for working copy access.  Locks are not removed if work queue items are
+ * present.  Only the @c db member of @c wc_ctx is used.
  */
 svn_error_t *
 svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,

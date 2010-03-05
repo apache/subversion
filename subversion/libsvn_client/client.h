@@ -615,9 +615,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               apr_pool_t *pool);
 
 /* Switch a working copy PATH to URL@PEG_REVISION at REVISION, and (if not
-   NULL) set RESULT_REV to the switch revision.  ADM_ACCESS may be NULL, but
-   if is not, it is a write locked working copy administrative access baton
-   that has an associated baton for PATH.  Only switch as deeply as DEPTH
+   NULL) set RESULT_REV to the switch revision. A write lock will be
+   acquired and released if not held. Only switch as deeply as DEPTH
    indicates.  If TIMESTAMP_SLEEP is NULL this function will sleep before
    returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
    NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
@@ -637,7 +636,6 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *url,
                             const svn_opt_revision_t *peg_revision,
                             const svn_opt_revision_t *revision,
-                            svn_wc_adm_access_t *adm_access,
                             svn_depth_t depth,
                             svn_boolean_t depth_is_sticky,
                             svn_boolean_t *timestamp_sleep,
@@ -951,10 +949,11 @@ svn_client__do_commit(const char *base_url,
 /*** Externals (Modules) ***/
 
 /* Handle changes to the svn:externals property described by EXTERNALS_OLD,
-   EXTERNALS_NEW, and AMBIENT_DEPTHS.  The tree's top level
-   directory is at TO_PATH and should have a write lock in ADM_ACCESS
-   and corresponds to FROM_URL URL in the repository, which has a root
-   URL of REPOS_ROOT_URL.
+
+   EXTERNALS_NEW, and AMBIENT_DEPTHS.  The tree's top level directory
+   is at TO_PATH and corresponds to FROM_URL URL in the repository,
+   which has a root URL of REPOS_ROOT_URL.  A write lock should be
+   held.
 
    For each changed value of the property, discover the nature of the
    change and behave appropriately -- either check a new "external"
@@ -984,8 +983,7 @@ svn_client__do_commit(const char *base_url,
 
    Use POOL for temporary allocation. */
 svn_error_t *
-svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
-                             apr_hash_t *externals_old,
+svn_client__handle_externals(apr_hash_t *externals_old,
                              apr_hash_t *externals_new,
                              apr_hash_t *ambient_depths,
                              const char *from_url,
