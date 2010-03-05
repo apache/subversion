@@ -315,34 +315,6 @@ resolve_target_path(patch_target_t *target,
   return SVN_NO_ERROR;
 }
 
-/* Indicate in *LOCAL_MODS whether the file at LOCAL_ABSPATH, has local
-   modifications. */
-static svn_error_t *
-check_local_mods(svn_boolean_t *local_mods,
-                 svn_wc_context_t *wc_ctx,
-                 const char *local_abspath,
-                 apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  err = svn_wc_text_modified_p2(local_mods, wc_ctx, local_abspath, FALSE,
-                                pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-        {
-          /* The target file is not versioned, that's OK.
-           * We can treat it as unmodified. */
-          svn_error_clear(err);
-          *local_mods = FALSE;
-        }
-      else
-        return svn_error_return(err);
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Attempt to initialize a *PATCH_TARGET structure for a target file
  * described by PATCH. Use working copy context WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
@@ -432,8 +404,9 @@ init_patch_target(patch_target_t **patch_target,
                                                     FALSE, result_pool);
 
           /* Also check the file for local mods and the Xbit. */
-          SVN_ERR(check_local_mods(&target->local_mods, wc_ctx,
-                                   target->abs_path, scratch_pool));
+          SVN_ERR(svn_wc_text_modified_p2(&target->local_mods, wc_ctx,
+                                          target->abs_path, FALSE,
+                                          scratch_pool));
           SVN_ERR(svn_io_is_file_executable(&target->executable,
                                             target->abs_path,
                                             scratch_pool));
