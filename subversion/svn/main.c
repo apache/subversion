@@ -117,6 +117,7 @@ typedef enum {
   opt_show_copies_as_adds,
   opt_ignore_keywords,
   opt_reverse_diff,
+  opt_exclude_pattern,
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -347,6 +348,16 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("apply the unidiff in reverse\n"
                        "                             "
                        "[alias: --rd]")},
+  {"exclude-pattern", opt_exclude_pattern, 1,
+                    N_("do not operate on targets matching ARG,\n"
+                       "                             "
+                       "which may be a glob pattern such as '*.txt'.\n"
+                       "                             "
+                       "If this option is specified multiple times,\n"
+                       "                             "
+                       "all patterns are matched in turn.\n"
+                       "                             "
+                       "[alias: --ep]")},
   /* Long-opt Aliases
    *
    * These have NULL desriptions, but an option code that matches some
@@ -371,6 +382,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"ri",            opt_reintegrate, 0, NULL},
   {"sca",           opt_show_copies_as_adds, 0, NULL},
   {"ik",            opt_ignore_keywords, 0, NULL},
+  {"ep",            opt_exclude_pattern, 1, NULL},
 
   {0,               0, 0, 0},
 };
@@ -812,7 +824,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  for addition. Use 'svn revert' to undo deletions and additions you\n"
      "  do not agree with.\n"
      ),
-    {'q', opt_dry_run, 'p', opt_reverse_diff} },
+    {'q', opt_dry_run, 'p', opt_reverse_diff, opt_exclude_pattern} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1726,6 +1738,12 @@ main(int argc, const char *argv[])
         break;
       case opt_reverse_diff:
         opt_state.reverse_diff = TRUE;
+        break;
+      case opt_exclude_pattern:
+        if (opt_state.exclude_patterns == NULL)
+          opt_state.exclude_patterns = apr_array_make(pool, 1,
+                                                      sizeof (const char *));
+        APR_ARRAY_PUSH(opt_state.exclude_patterns, const char *) = opt_arg;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
