@@ -4840,7 +4840,7 @@ svn_client_info(const char *path_or_url,
  * notification feedback is provided, but the working copy is not modified.
  *
  * @a strip_count specifies how many leading path components should be
- * stripped from paths obtained from the patch. It is an error is a
+ * stripped from paths obtained from the patch. It is an error if a
  * negative strip count is passed.
  *
  * If @a reverse is @c TRUE, apply patches in reverse, deleting lines
