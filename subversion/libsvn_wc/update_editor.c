@@ -168,9 +168,6 @@ struct edit_baton
   svn_wc__db_t *db;
   svn_wc_context_t *wc_ctx;
 
-  /* ADM_ACCESS is an access baton that includes the ANCHOR directory */
-  svn_wc_adm_access_t *adm_access;
-
   /* Array of file extension patterns to preserve as extensions in
      generated conflict files. */
   apr_array_header_t *ext_patterns;
@@ -200,6 +197,11 @@ struct edit_baton
 
   /* Allow unversioned obstructions when adding a path. */
   svn_boolean_t allow_unver_obstructions;
+
+  /* The close_edit method destroys the edit pool and so runs the
+     cleanup_dir_baton cleanup handlers.  This flag is set to indicate
+     that the edit was completed successfully. */
+  svn_boolean_t close_edit_complete;
 
   /* If this is a 'switch' operation, the target URL (### corresponding to
      the ANCHOR plus TARGET path?), else NULL. */
@@ -493,6 +495,21 @@ cleanup_dir_baton(void *dir_baton)
   err = flush_log(db, pool);
   if (!err)
     err = svn_wc__run_log2(eb->db, db->local_abspath, pool);
+
+  /* If the editor aborts for some sort of error, the command line
+     client relies on pool cleanup to run outstanding work queues and
+     remove locks.  This avoids leaving the working copy locked in
+     many cases, but plays havoc with operations that do multiple
+     updates (think externals). So we flag updates that complete
+     successfully and avoid removing locks.  In 1.6 locks were
+     associated with a pool distinct from the edit pool and so were
+     removed separately. */
+  if (!err && !eb->close_edit_complete)
+    {
+      svn_wc_context_t fake_ctx;
+      fake_ctx.db = eb->db;
+      err = svn_wc__release_write_lock(&fake_ctx, db->local_abspath, pool);
+    }
 
   if (err)
     {
@@ -1141,6 +1158,7 @@ prep_directory(struct dir_baton *db,
 {
   const char *repos;
   const char *dir_abspath;
+  svn_boolean_t locked_here;
 
   dir_abspath = db->local_abspath;
 
@@ -1162,24 +1180,12 @@ prep_directory(struct dir_baton *db,
                                       db->edit_baton->uuid, ancestor_revision,
                                       db->ambient_depth, pool));
 
-  if (NULL == svn_wc__adm_retrieve_internal2(db->edit_baton->db, dir_abspath,
-                                             pool))
-    {
-      svn_wc_adm_access_t *adm_access;
-      apr_pool_t *adm_access_pool;
-      const char *rel_path;
-
-      SVN_ERR(svn_wc__temp_get_relpath(&rel_path, db->edit_baton->db,
+  SVN_ERR(svn_wc_locked2(&locked_here, NULL, db->edit_baton->wc_ctx,
+                         dir_abspath, pool));
+  if (!locked_here)
+    /* Recursive lock release on parent will release this lock. */
+    SVN_ERR(svn_wc__acquire_write_lock(NULL, db->edit_baton->wc_ctx,
                                        dir_abspath, pool, pool));
-
-      adm_access_pool = svn_wc_adm_access_pool(db->edit_baton->adm_access);
-
-      SVN_ERR(svn_wc__adm_open_in_context(&adm_access, db->edit_baton->wc_ctx,
-                                          rel_path, TRUE, -1,
-                                          db->edit_baton->cancel_func,
-                                          db->edit_baton->cancel_baton,
-                                          adm_access_pool));
-    }
 
   return SVN_NO_ERROR;
 }
@@ -2192,7 +2198,6 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
   /* ### Need to change the "base" into a "revert-base" ? */
 
   /* Determine which adm dir holds this node's entry */
-  /* ### But this will fail if eb->adm_access holds only a shallow lock. */
   SVN_ERR(svn_wc__entry_modify2(eb->db,
                                 local_abspath,
                                 entry->kind,
@@ -3374,6 +3379,7 @@ close_directory(void *dir_baton,
   while (bdi && !bdi->ref_count)
     {
       apr_pool_t *destroy_pool = bdi->pool;
+      apr_pool_cleanup_kill(destroy_pool, db, cleanup_dir_baton);
       bdi = bdi->parent;
       svn_pool_destroy(destroy_pool);
     }
@@ -4773,11 +4779,18 @@ merge_file(svn_wc_notify_state_t *content_state,
      Special case: The working file is referring to a file external? If so
                    then we must mark it as unmodified in order to avoid bogus
                    conflicts, since this file was added as a place holder to
-                   merge externals item from the repository. */
+                   merge externals item from the repository.
+
+     ### Possible entry caching bug?  Before the removal of the access
+     batons a newly added file external caused svn_wc__get_entry to
+     return an entry with entry->schedule=svn_wc_schedule_add (the
+     entry was retrieved from the cache).  Now the svn_wc__get_entry
+     call reads the entries from the database the returned entry is
+     svn_wc_schedule_replace.  2 lines marked ### EBUG below. */
   if (fb->copied_working_text)
     is_locally_modified = TRUE;
   else if (entry && entry->file_external_path
-           && entry->schedule == svn_wc_schedule_add)
+           && entry->schedule == svn_wc_schedule_replace) /* ###EBUG */
     is_locally_modified = FALSE;
   else if (! fb->existed)
     SVN_ERR(svn_wc__internal_text_modified_p(&is_locally_modified, eb->db,
@@ -4794,7 +4807,8 @@ merge_file(svn_wc_notify_state_t *content_state,
   else
     is_locally_modified = FALSE;
 
-  if (entry && entry->schedule == svn_wc_schedule_replace)
+  if (entry && entry->schedule == svn_wc_schedule_replace
+      && ! entry->file_external_path)  /* ### EBUG */
     is_replaced = TRUE;
 
   if (fb->add_existed)
@@ -5354,6 +5368,7 @@ close_edit(void *edit_baton,
      should also make eb->pool not be a subpool (see make_editor),
      and change callers of svn_client_{checkout,update,switch} to do
      better pool management. ### */
+  eb->close_edit_complete = TRUE;
   svn_pool_destroy(eb->pool);
 
   return SVN_NO_ERROR;
@@ -5397,12 +5412,10 @@ make_editor(svn_revnum_t *target_revision,
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(edit_pool);
   const svn_delta_editor_t *inner_editor;
   const char *repos_root, *repos_uuid;
-  svn_wc_adm_access_t *adm_access;
   const char *anchor;
 
-  adm_access = svn_wc__adm_retrieve_internal2(wc_ctx->db, anchor_abspath,
-                                              scratch_pool);
-  anchor = svn_wc_adm_access_path(adm_access);
+  SVN_ERR(svn_wc__temp_get_relpath(&anchor, wc_ctx->db, anchor_abspath,
+                                   result_pool, scratch_pool));
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -5433,7 +5446,6 @@ make_editor(svn_revnum_t *target_revision,
   eb->uuid                     = repos_uuid;
   eb->db                       = wc_ctx->db;
   eb->wc_ctx                   = wc_ctx;
-  eb->adm_access               = adm_access;
   eb->target_basename          = target_basename;
   eb->anchor_abspath           = anchor_abspath;
 
@@ -5457,6 +5469,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->fetch_func               = fetch_func;
   eb->fetch_baton              = fetch_baton;
   eb->allow_unver_obstructions = allow_unver_obstructions;
+  eb->close_edit_complete      = FALSE;
   eb->skipped_trees            = apr_hash_make(edit_pool);
   eb->ext_patterns             = preserved_exts;
 

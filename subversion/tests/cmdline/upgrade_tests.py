@@ -329,7 +329,7 @@ def basic_upgrade_1_0(sbox):
 test_list = [ None,
               basic_upgrade,
               upgrade_1_5,
-              XFail(update_1_5),
+              update_1_5,
               logs_left_1_5,
               upgrade_wcprops,
               basic_upgrade_1_0
