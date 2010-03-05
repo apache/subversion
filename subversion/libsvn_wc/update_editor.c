@@ -4635,23 +4635,18 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
 /* Write loggy commands to install a text base file from the given temporary
  * path TEMP_TEXT_BASE_ABSPATH (which must be in the adm temp area) to the
  * given final text-base path FINAL_TEXT_BASE_ABSPATH (which must be the
- * standard text-base path or revert-base path for the file).  Install the
- * new file's checksum CHECKSUM into ENTRY.
+ * standard text-base path or revert-base path for the file).
  *
- * Write log instructions to do this into *LOG_ACCUM, and update ENTRY and
- * ENTRY_MODIFY_FLAGS with the required changes.  Store all loggy paths as
- * paths relative to ADM_ABSPATH.
+ * Write log instructions to do this into *LOG_ACCUM.  Store all loggy paths
+ * as paths relative to ADM_ABSPATH.
  *
  * Allocate *LOG_ACCUM in RESULT_POOL if it is NULL.
  */
 static svn_error_t *
 install_text_base(svn_stringbuf_t **log_accum,
-                  svn_wc_entry_t *entry,
-                  apr_uint64_t *entry_modify_flags,
                   const char *adm_abspath,
                   const char *temp_text_base_abspath,
                   const char *final_text_base_abspath,
-                  const svn_checksum_t *checksum,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
@@ -4661,8 +4656,6 @@ install_text_base(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_abspath,
                                      final_text_base_abspath,
                                      result_pool, scratch_pool));
-  entry->checksum = svn_checksum_to_cstring(checksum, result_pool);
-  *entry_modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
   return SVN_NO_ERROR;
 }
 
@@ -5016,9 +5009,11 @@ merge_file(svn_wc_notify_state_t *content_state,
   /* Deal with installation of the new textbase, if appropriate. */
   if (new_text_base_abspath)
     {
-      SVN_ERR(install_text_base(&log_accum, &tmp_entry, &flags, pb->local_abspath,
+      SVN_ERR(install_text_base(&log_accum, pb->local_abspath,
                                 new_text_base_abspath, fb->text_base_path,
-                                actual_checksum, pool, pool));
+                                pool, pool));
+      tmp_entry.checksum = svn_checksum_to_cstring(actual_checksum, pool);
+      flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
     }
 
   /* If FB->PATH is locally deleted, but not as part of a replacement
@@ -6154,10 +6149,11 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                     pool));
 
     /* Write out log commands to set up the new text base and its checksum. */
-    SVN_ERR(install_text_base(&post_props_accum, &tmp_entry, &flags,
-                              dir_abspath,
+    SVN_ERR(install_text_base(&post_props_accum, dir_abspath,
                               tmp_text_base_abspath, text_base_path,
-                              base_checksum, pool, pool));
+                              pool, pool));
+    tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
+    flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
 
     SVN_ERR(svn_wc__loggy_entry_modify(&post_props_accum, dir_abspath,
                                        local_abspath, &tmp_entry,
