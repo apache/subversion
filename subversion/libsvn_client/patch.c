@@ -1427,6 +1427,8 @@ apply_patches(void *baton,
       SVN_ERR(svn_diff__close_patch(target->patch));
     }
 
+  SVN_ERR(svn_io_file_close(patch_file, iterpool));
+
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
