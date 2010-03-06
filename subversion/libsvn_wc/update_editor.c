@@ -1745,22 +1745,21 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
     return SVN_NO_ERROR;
 
 
-  /* Sanity checks.
-   * When the node existed before (it was locally deleted, replaced or
-   * edited), then, to be sane, 'update' can only send
-   * svn_wc_conflict_action_edit, svn_wc_conflict_action_delete or
-   * svn_wc_conflict_action_replace.  Note that if there was no action on
-   * the node, this code would not have been called in the first place. */
+  /* Sanity checks. Note that if there was no action on the node, this function
+   * would not have been called in the first place.*/
   if (reason == svn_wc_conflict_reason_edited
       || reason == svn_wc_conflict_reason_deleted
       || reason == svn_wc_conflict_reason_replaced)
+    /* When the node existed before (it was locally deleted, replaced or
+     * edited), then 'update' cannot add it "again". So it can only send
+     * _action_edit, _delete or _replace. */
     SVN_ERR_ASSERT(action == svn_wc_conflict_action_edit
                    || action == svn_wc_conflict_action_delete
                    || action == svn_wc_conflict_action_replace);
   else
   if (reason == svn_wc_conflict_reason_added)
-    /* When the node did not exist before (it was locally added), then, to
-     * be sane, 'update' can only send svn_wc_conflict_action_add. */
+    /* When the node did not exist before (it was locally added), then 'update'
+     * cannot want to modify it in any way. It can only send _action_add. */
     SVN_ERR_ASSERT(action == svn_wc_conflict_action_add);
 
 
