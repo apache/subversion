@@ -1118,7 +1118,7 @@ class TestSpawningThread(threading.Thread):
     if server_minor_version:
       args.append('--server-minor-version=' + str(server_minor_version))
 
-    result, stdout_lines, stderr_lines = spawn_process(command, 1, None, *args)
+    result, stdout_lines, stderr_lines = spawn_process(command, 0, None, *args)
     self.results.append((index, result, stdout_lines, stderr_lines))
 
     if result != 1:
