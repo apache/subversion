@@ -332,7 +332,10 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
       if (err && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
                   || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
                   || err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED))
-        svn_error_clear(err);
+        {
+          svn_error_clear(err);
+          uuid = NULL;
+        }
       else
         SVN_ERR(err);
     }
