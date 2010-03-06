@@ -322,11 +322,19 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   if (base_dir)
     {
       const char *base_dir_abspath;
+      svn_error_t *err;
 
       SVN_ERR(svn_dirent_get_absolute(&base_dir_abspath, base_dir, pool));
-      SVN_ERR(svn_wc__node_get_repos_info(NULL, &uuid, ctx->wc_ctx,
-                                          base_dir_abspath, FALSE,
-                                          pool, pool));
+      err = svn_wc__node_get_repos_info(NULL, &uuid, ctx->wc_ctx,
+                                        base_dir_abspath, FALSE,
+                                        pool, pool);
+
+      if (err && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
+                  || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
+                  || err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED))
+        svn_error_clear(err);
+      else
+        SVN_ERR(err);
     }
 
   return svn_error_return(svn_ra_open3(ra_session, base_url, uuid, cbtable, cb,
