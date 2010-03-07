@@ -74,19 +74,19 @@ public class Mergeinfo implements java.io.Serializable
     public Mergeinfo(org.apache.subversion.javahl.Mergeinfo aMergeinfo)
     {
         this();
-        String[] srcPaths = aMergeinfo.getPaths();
+        Set<String> srcPaths = aMergeinfo.getPaths();
 
-        for (int i = 0; i < srcPaths.length; i++)
+        for (String srcPath : srcPaths)
         {
-            org.apache.subversion.javahl.RevisionRange[] aRange =
-                                    aMergeinfo.getRevisionRange(srcPaths[i]);
+            List<org.apache.subversion.javahl.RevisionRange> aRanges =
+                                    aMergeinfo.getRevisionRange(srcPath);
             List<RevisionRange> list = new ArrayList<RevisionRange>();
 
-            for (int j = 0; j < aRange.length; j++)
+            for (org.apache.subversion.javahl.RevisionRange range : aRanges)
             {
-                list.add(new RevisionRange(aRange[j]));
+                list.add(new RevisionRange(range));
             }
-            mergeSources.put(srcPaths[i], list);
+            mergeSources.put(srcPath, list);
         }
     }
 

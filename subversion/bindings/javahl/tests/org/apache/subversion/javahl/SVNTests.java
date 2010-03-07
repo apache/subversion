@@ -842,7 +842,7 @@ class SVNTests extends TestCase
          * @param elementsToBeCommited  Array of elements to be commited
          * @return  the log message of the commit.
          */
-        public String getLogMessage(CommitItem[] elementsToBeCommited)
+        public String getLogMessage(Set<CommitItem> elementsToBeCommited)
         {
             // check all received CommitItems are expected as received
             for (CommitItem commitItem : elementsToBeCommited)

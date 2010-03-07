@@ -53,10 +53,6 @@ struct handle_external_item_change_baton
   /* The directory that has this externals property. */
   const char *parent_dir;
 
-  /* Access baton for parent_dir.  If the external is an export, this
-     this must be NULL, otherwise it must be non-NULL. */
-  svn_wc_adm_access_t *adm_access;
-
   /* The URL for the directory that has this externals property. */
   const char *parent_dir_url;
 
@@ -235,7 +231,7 @@ switch_dir_external(const char *path,
 
               SVN_ERR(svn_client__switch_internal(NULL, path, url,
                                                   peg_revision, revision,
-                                                  NULL, svn_depth_infinity,
+                                                  svn_depth_infinity,
                                                   TRUE, timestamp_sleep,
                                                   FALSE, FALSE, TRUE, ctx,
                                                   subpool));
@@ -293,7 +289,6 @@ switch_file_external(const char *path,
                      const char *url,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *revision,
-                     svn_wc_adm_access_t *adm_access,
                      svn_ra_session_t *ra_session,
                      const char *ra_session_url,
                      svn_revnum_t ra_revnum,
@@ -303,7 +298,6 @@ switch_file_external(const char *path,
                      apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
-  svn_wc_adm_access_t *target_adm_access;
   const char *anchor;
   const char *anchor_abspath;
   const char *local_abspath;
@@ -316,8 +310,13 @@ switch_file_external(const char *path,
   svn_boolean_t unlink_file = FALSE;
   svn_boolean_t revert_file = FALSE;
   svn_boolean_t remove_from_revision_control = FALSE;
-  svn_boolean_t close_adm_access = FALSE;
+  svn_boolean_t locked_here;
   svn_error_t *err = NULL;
+
+  /* See if the user wants last-commit timestamps instead of current ones. */
+  SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
+                              SVN_CONFIG_SECTION_MISCELLANY,
+                              SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
 
   /* There must be a working copy to place the file external into. */
   SVN_ERR(svn_wc_get_actual_target2(&anchor, &target, ctx->wc_ctx, path,
@@ -329,51 +328,41 @@ switch_file_external(const char *path,
      baton.  If this fails and returns SVN_ERR_WC_NOT_LOCKED, then try
      to get a new access baton to support inserting a file external
      into a directory external. */
-  err = svn_wc_adm_retrieve(&target_adm_access, adm_access, anchor, subpool);
-  if (err)
+  SVN_ERR(svn_wc_locked2(&locked_here, NULL, ctx->wc_ctx, anchor_abspath,
+                         subpool));
+  if (!locked_here)
     {
-      if (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
-        {
-          const char *dest_wc_repos_root_url;
-          svn_opt_revision_t peg_rev;
+      const char *dest_wc_repos_root_url;
+      svn_opt_revision_t peg_rev;
 
-          svn_error_clear(err);
-          close_adm_access = TRUE;
-          SVN_ERR(svn_wc__adm_open_in_context(&target_adm_access, ctx->wc_ctx,
-                                              anchor, TRUE, -1,
-                                              ctx->cancel_func,
-                                              ctx->cancel_baton, subpool));
+      /* Check that the repository root URL for the newly opened
+         wc is the same as the file external. */
+      peg_rev.kind = svn_opt_revision_base;
+      SVN_ERR(svn_client__get_repos_root(&dest_wc_repos_root_url,
+                                         anchor_abspath, &peg_rev,
+                                         ctx, subpool, subpool));
 
-          /* Check that the repository root URL for the newly opened
-             wc is the same as the file external. */
-          peg_rev.kind = svn_opt_revision_base;
-          SVN_ERR(svn_client__get_repos_root(&dest_wc_repos_root_url,
-                                             anchor_abspath, &peg_rev,
-                                             ctx, subpool, subpool));
+      if (0 != strcmp(repos_root_url, dest_wc_repos_root_url))
+        return svn_error_createf
+          (SVN_ERR_RA_REPOS_ROOT_URL_MISMATCH, NULL,
+           _("Cannot insert a file external from '%s' into a working "
+             "copy from a different repository rooted at '%s'"),
+           url, dest_wc_repos_root_url);
 
-          if (0 != strcmp(repos_root_url, dest_wc_repos_root_url))
-            return svn_error_createf
-              (SVN_ERR_RA_REPOS_ROOT_URL_MISMATCH, NULL,
-               _("Cannot insert a file external from '%s' into a working "
-                 "copy from a different repository rooted at '%s'"),
-               url, dest_wc_repos_root_url);
-        }
-      else
-        return svn_error_return(err);
+      SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, anchor_abspath,
+                                         subpool, subpool));
     }
 
-  SVN_ERR(svn_wc__maybe_get_entry(&entry, ctx->wc_ctx, local_abspath,
-                                  svn_node_unknown, FALSE, FALSE, subpool,
-                                  subpool));
+  err = svn_wc__maybe_get_entry(&entry, ctx->wc_ctx, local_abspath,
+                                svn_node_unknown, FALSE, FALSE, subpool,
+                                subpool);
+  if (err)
+    goto cleanup;
+
 
   /* Only one notification is done for the external, so don't notify
      for any following steps.  Use the following trick to add the file
      then switch it to the external URL. */
-
-  /* See if the user wants last-commit timestamps instead of current ones. */
-  SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
-                              SVN_CONFIG_SECTION_MISCELLANY,
-                              SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
 
   /* If there is a versioned item with this name, ensure it's a file
      external before working with it.  If there is no entry in the
@@ -383,8 +372,9 @@ switch_file_external(const char *path,
     {
       if (! entry->file_external_path)
         {
-          if (close_adm_access)
-            SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
+          if (!locked_here)
+            SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath,
+                                               subpool));
 
           return svn_error_createf
             (SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED, 0,
@@ -405,9 +395,12 @@ switch_file_external(const char *path,
          conflict on the directory.  To prevent resolving a conflict
          due to another change on the directory, do not allow a file
          external to be added when one exists. */
-      SVN_ERR(svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
-                                   &tree_conflicted, ctx->wc_ctx,
-                                   anchor_abspath, subpool));
+      err = svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
+                                 &tree_conflicted, ctx->wc_ctx,
+                                 anchor_abspath, subpool);
+      if (err)
+        goto cleanup;
+  
       if (text_conflicted || prop_conflicted || tree_conflicted)
         return svn_error_createf
           (SVN_ERR_WC_FOUND_CONFLICT, 0,
@@ -417,11 +410,14 @@ switch_file_external(const char *path,
 
       /* Try to create an empty file.  If there is a file already
          there, then don't touch it. */
-      SVN_ERR(svn_io_file_open(&f,
-                               local_abspath,
-                               APR_WRITE | APR_CREATE | APR_EXCL,
-                               APR_OS_DEFAULT,
-                               subpool));
+      err = svn_io_file_open(&f,
+                             local_abspath,
+                             APR_WRITE | APR_CREATE | APR_EXCL,
+                             APR_OS_DEFAULT,
+                             subpool);
+      if (err)
+        goto cleanup;
+
       unlink_file = TRUE;
       err = svn_io_file_close(f, pool);
       if (err)
@@ -446,7 +442,7 @@ switch_file_external(const char *path,
     }
 
   err = svn_client__switch_internal(NULL, path, url, peg_revision, revision,
-                                    target_adm_access, svn_depth_empty,
+                                    svn_depth_empty,
                                     FALSE, /* depth_is_sticky */
                                     timestamp_sleep,
                                     TRUE, /* ignore_externals */
@@ -468,8 +464,8 @@ switch_file_external(const char *path,
       remove_from_revision_control = TRUE;
   }
 
-  if (close_adm_access)
-    SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
+  if (!locked_here)
+    SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, subpool));
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
@@ -501,8 +497,9 @@ switch_file_external(const char *path,
   if (unlink_file)
     svn_error_clear(svn_io_remove_file2(path, TRUE, subpool));
 
-  if (close_adm_access)
-    SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
+  if (!locked_here)
+    svn_error_clear(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath,
+                                               subpool));
 
   svn_pool_destroy(subpool);
   return svn_error_return(err);
@@ -877,7 +874,6 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                                          new_item->url,
                                          &new_item->peg_revision,
                                          &new_item->revision,
-                                         ib->adm_access,
                                          ra_session,
                                          ra_cache.ra_session_url,
                                          ra_cache.ra_revnum,
@@ -994,7 +990,6 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                                        new_item->url,
                                        &new_item->peg_revision,
                                        &new_item->revision,
-                                       ib->adm_access,
                                        ra_session,
                                        ra_cache.ra_session_url,
                                        ra_cache.ra_revnum,
@@ -1067,7 +1062,6 @@ struct handle_externals_desc_change_baton
   const char *to_path;
 
   /* Passed through to handle_external_item_change_baton. */
-  svn_wc_adm_access_t *adm_access;
   svn_client_ctx_t *ctx;
   const char *repos_root_url;
   svn_boolean_t *timestamp_sleep;
@@ -1098,11 +1092,6 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   const char *url;
   const char *abs_parent_dir;
   svn_error_t *err;
-
-  if (cb->is_export)
-    SVN_ERR_ASSERT(!cb->adm_access);
-  else
-    SVN_ERR_ASSERT(cb->adm_access);
 
   if (cb->ambient_depths)
     {
@@ -1168,7 +1157,6 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   ib.new_desc          = new_desc_hash;
   ib.parent_dir        = (const char *) key;
   ib.repos_root_url    = cb->repos_root_url;
-  ib.adm_access        = cb->adm_access;
   ib.ctx               = cb->ctx;
   ib.is_export         = cb->is_export;
   ib.timestamp_sleep   = cb->timestamp_sleep;
@@ -1246,8 +1234,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
 
 
 svn_error_t *
-svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
-                             apr_hash_t *externals_old,
+svn_client__handle_externals(apr_hash_t *externals_old,
                              apr_hash_t *externals_new,
                              apr_hash_t *ambient_depths,
                              const char *from_url,
@@ -1272,7 +1259,6 @@ svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
   cb.from_url          = from_url;
   cb.to_path           = to_path;
   cb.repos_root_url    = repos_root_url;
-  cb.adm_access        = adm_access;
   cb.ctx               = ctx;
   cb.timestamp_sleep   = timestamp_sleep;
   cb.is_export         = FALSE;
@@ -1300,7 +1286,6 @@ svn_client__fetch_externals(apr_hash_t *externals,
   cb.externals_old     = apr_hash_make(pool);
   cb.requested_depth   = requested_depth;
   cb.ambient_depths    = NULL;
-  cb.adm_access        = NULL;
   cb.ctx               = ctx;
   cb.from_url          = from_url;
   cb.to_path           = to_path;

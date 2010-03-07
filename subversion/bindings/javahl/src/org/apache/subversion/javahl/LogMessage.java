@@ -24,6 +24,8 @@
 package org.apache.subversion.javahl;
 
 import java.util.Date;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * This class describes a single subversion revision with log message,
@@ -71,7 +73,7 @@ public class LogMessage implements java.io.Serializable
      * SVNClientInterface.logMessages is used with discoverPaths
      * true).
      */
-    private ChangePath[] changedPaths;
+    private Set<ChangePath> changedPaths;
 
     /**
      * This constructor is the original constructor from Subversion
@@ -85,7 +87,7 @@ public class LogMessage implements java.io.Serializable
      *                     of microseconds since 00:00:00 January 1,
      *                     1970 UTC
      */
-    LogMessage(ChangePath[] cp, long r, String a, Date d, String m)
+    LogMessage(Set<ChangePath> cp, long r, String a, Date d, String m)
     {
         changedPaths = cp;
         revision = r;
@@ -106,7 +108,7 @@ public class LogMessage implements java.io.Serializable
      * @param message      the log message text
      * @since 1.5
      */
-    LogMessage(ChangePath[] cp, long r, String a, long t, String m)
+    LogMessage(Set<ChangePath> cp, long r, String a, long t, String m)
     {
         changedPaths = cp;
         revision = r;
@@ -191,7 +193,7 @@ public class LogMessage implements java.io.Serializable
      * Returns the changes items by this commit
      * @return the changes items by this commit
      */
-    public ChangePath[] getChangedPaths()
+    public Set<ChangePath> getChangedPaths()
     {
         return changedPaths;
     }

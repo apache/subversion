@@ -2608,16 +2608,18 @@ typedef struct svn_wc_diff_callbacks_t
 
 /* Asking questions about a working copy. */
 
-/** Set @a *wc_format to @a path's working copy format version number if
- * @a path is a valid working copy directory, else set it to 0.
- * Return error @c APR_ENOENT if @a path does not exist at all.
+/** Set @a *wc_format to @a local_abspath's working copy format version
+ * number if @a local_abspath is a valid working copy directory, else set it
+ * to 0.
+ *
+ * Return error @c APR_ENOENT if @a local_abspath does not exist at all.
  *
  * @since New in 1.7.
  */
 svn_error_t *
 svn_wc_check_wc2(int *wc_format,
                  svn_wc_context_t *wc_ctx,
-                 const char *local_path,
+                 const char *local_abspath,
                  apr_pool_t *scratch_pool);
 
 /**
@@ -6431,7 +6433,7 @@ svn_wc_get_pristine_copy_path(const char *path,
 /**
  * Recurse from @a local_abspath, cleaning up unfinished log business.  Perform
  * any temporary allocations in @a scratch_pool.  Any working copy locks under
- * @a local_path will be taken over and then cleared by this function.
+ * @a local_abspath will be taken over and then cleared by this function.
  *
  * WARNING: there is no mechanism that will protect locks that are still being
  * used.
@@ -6479,6 +6481,22 @@ svn_wc_cleanup(const char *path,
                void *cancel_baton,
                apr_pool_t *pool);
 
+/** Callback for retrieving a repository root for a url from upgrade.
+ *
+ * Called by svn_wc_upgrade() when no repository root and/or repository
+ * uuid are recorded in the working copy. For normal Subversion 1.5 and
+ * later working copies, this callback will not be used.
+ *
+ * @since New in 1.7.
+ */
+typedef svn_error_t * (*svn_wc_upgrade_get_repos_info_t)(
+                                    const char **repos_root,
+                                    const char **repos_uuid,
+                                    void *baton,
+                                    const char *url,
+                                    apr_pool_t *scratch_pool,
+                                    apr_pool_t *result_pool);
+
 /**
  * Upgrade the working copy at @a local_abspath to the latest metadata
  * storage format.  @a local_abspath should be an absolute path to the
@@ -6493,11 +6511,17 @@ svn_wc_cleanup(const char *path,
  * the path of the upgraded directory. @a notify_func may be @c NULL
  * if this notification is not needed.
  *
+ * If the old working copy doesn't contain a repository root and/or
+ * repository uuid, @a repos_info_func (if non-NULL) will be called
+ * with @a repos_info_baton to provide the missing information.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
 svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
+               svn_wc_upgrade_get_repos_info_t repos_info_func,
+               void *repos_info_baton,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -6914,7 +6938,7 @@ svn_error_t *
 svn_wc_transmit_text_deltas3(const char **tempfile,
                              unsigned char digest[],
                              svn_wc_context_t *wc_ctx,
-                             const char *local_path,
+                             const char *local_abspath,
                              svn_boolean_t fulltext,
                              const svn_delta_editor_t *editor,
                              void *file_baton,

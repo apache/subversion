@@ -793,7 +793,7 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
     {
         addRevisions = env->GetMethodID(clazz, "addRevisions",
                                         "(Ljava/lang/String;"
-                                        "[L"JAVA_PACKAGE"/RevisionRange;)V");
+                                        "Ljava/util/List;)V");
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
     }
@@ -812,8 +812,8 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
         apr_hash_this(hi, &path, NULL, &val);
 
         jstring jpath = JNIUtil::makeJString((const char *) path);
-        jobjectArray jranges =
-            CreateJ::RevisionRangeArray((apr_array_header_t *) val);
+        jobject jranges =
+            CreateJ::RevisionRangeList((apr_array_header_t *) val);
 
         env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
 
@@ -824,6 +824,10 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
     }
+
+    env->DeleteLocalRef(clazz);
+    if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
 
     return jmergeinfo;
 }

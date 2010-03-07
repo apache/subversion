@@ -59,8 +59,8 @@ svn_error_t *
 svn_wc__sync_text_base(const char *path, apr_pool_t *pool);
 
 
-/* Return an absolute path to LOCAL_ABSPATH's text-base file.
-   If TMP is set, return a path to the tmp text-base file. */
+/* Set *RESULT_PATH to the absolute path to LOCAL_ABSPATH's text-base file,
+   or, if TMP is set, to its temporary text-base file. */
 svn_error_t *
 svn_wc__text_base_path(const char **result_path,
                        svn_wc__db_t *db,
@@ -68,7 +68,7 @@ svn_wc__text_base_path(const char **result_path,
                        svn_boolean_t tmp,
                        apr_pool_t *pool);
 
-/* Return a readonly stream on the LOCAL_ABSPATH's base file. */
+/* Set *CONTENTS to a readonly stream on the LOCAL_ABSPATH's base file. */
 svn_error_t *
 svn_wc__get_pristine_contents(svn_stream_t **contents,
                               svn_wc__db_t *db,
@@ -78,7 +78,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 
 
 
-/* Return a readonly stream on the LOCAL_ABSPATH's revert file. */
+/* Set *CONTENTS to a readonly stream on the LOCAL_ABSPATH's revert file. */
 svn_error_t *
 svn_wc__get_revert_contents(svn_stream_t **contents,
                             svn_wc__db_t *db,
@@ -87,8 +87,7 @@ svn_wc__get_revert_contents(svn_stream_t **contents,
                             apr_pool_t *scratch_pool);
 
 
-/* Retrieve an absolute path to LOCAL_ABSPATH's revert file.
-   If TMP is set, return a path to the tmp revert file. */
+/* Set *RESULT_ABSPATH to the absolute path to LOCAL_ABSPATH's revert file. */
 svn_error_t *
 svn_wc__text_revert_path(const char **result_abspath,
                          svn_wc__db_t *db,
@@ -117,15 +116,16 @@ svn_error_t *svn_wc__open_adm_stream(svn_stream_t **stream,
                                      apr_pool_t *scratch_pool);
 
 
-/* Open the normal or revert text base, associated with PATH, for writing.
+/* Open the normal or revert text base, associated with LOCAL_ABSPATH, for
+   writing.
    The selection is based on NEED_REVERT_BASE. The opened stream will be
    returned in STREAM and the selected path will be returned in,
-   TEMP_BASE_PATH, and both will be allocated in RESULT_POOL. Any temporary
+   TEMP_BASE_ABSPATH, and both will be allocated in RESULT_POOL. Any temporary
    allocations will be performed in SCRATCH_POOL. */
 svn_error_t *
 svn_wc__open_writable_base(svn_stream_t **stream,
-                           const char **temp_base_path,
-                           const char *path,
+                           const char **temp_base_abspath,
+                           const char *local_abspath,
                            svn_boolean_t need_revert_base,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
