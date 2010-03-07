@@ -325,8 +325,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
      notice that we're picking up hidden entries too (read_children never
      hides children). */
   dir_abspath = svn_dirent_join(anchor_abspath, dir_path, subpool);
-  SVN_ERR(svn_wc__db_read_children(&children, db, dir_abspath,
-                                   subpool, subpool));
+  SVN_ERR(svn_wc__db_base_get_children(&children, db, dir_abspath,
+                                       subpool, subpool));
   SVN_ERR(svn_io_get_dir_filenames(&dirents, dir_abspath, subpool));
 
   /*** Do the real reporting and recursing. ***/
