@@ -5980,6 +5980,14 @@ install_added_props(struct last_change_info **last_change,
                                         pool));
 }
 
+/* ### Note that this function is completely different from the rest of the
+       update editor in what it updates. The update editor changes only BASE
+       and ACTUAL and this function just changes WORKING and ACTUAL.
+
+       In the entries world this function shared a lot of code with the
+       update editor but in the wonderful new WC-NG world it will probably
+       do more and more by itself and would be more logically grouped with
+       the add/copy functionality in adm_ops.c and copy.c. */
 svn_error_t *
 svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
