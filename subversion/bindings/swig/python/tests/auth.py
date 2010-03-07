@@ -18,7 +18,7 @@
 # under the License.
 #
 #
-import unittest, os, setup_path, sys
+import unittest, setup_path
 
 from svn import core
 

@@ -30,11 +30,11 @@ class PoolTestCase(unittest.TestCase):
 
   def assertNotNone(self, value):
     """Assert that the specified value is not None"""
-    return self.assertNotEqual(value, None);
+    return self.assertNotEqual(value, None)
 
   def assertNone(self, value):
     """Assert that the specified value is None"""
-    return self.assertEqual(value, None);
+    return self.assertEqual(value, None)
 
   def test_object_struct_members(self):
     """Check that object struct members work correctly"""
@@ -133,7 +133,7 @@ class PoolTestCase(unittest.TestCase):
     pool = Pool(pool)
 
     # Make sure proper exceptions are raised with incorrect input
-    self.assertRaises(TypeError, lambda: Pool("abcd"));
+    self.assertRaises(TypeError, lambda: Pool("abcd"))
 
     # Check that garbage collection is working OK
     self.assertNotNone(parent_pool_ref())
@@ -165,7 +165,7 @@ class PoolTestCase(unittest.TestCase):
     pool_ref = weakref.ref(pool)
 
     # Make sure proper exceptions are raised with incorrect input
-    self.assertRaises(TypeError, lambda: svn_pool_create("abcd"));
+    self.assertRaises(TypeError, lambda: svn_pool_create("abcd"))
 
     # Test whether pools are destroyed properly
     pool = svn_pool_create(pool)
@@ -180,7 +180,7 @@ class PoolTestCase(unittest.TestCase):
     newpool2 = Pool(newpool)
     svn_pool_clear(newpool)
     self.assertRaises(AssertionError, lambda: libsvn.core.apr_pool_destroy(newpool2))
-    self.assertRaises(AssertionError, lambda: svn_pool_destroy(newpool2));
+    self.assertRaises(AssertionError, lambda: svn_pool_destroy(newpool2))
     svn_pool_destroy(newpool)
     self.assertRaises(AssertionError, lambda: svn_pool_destroy(newpool))
 
@@ -207,7 +207,7 @@ class PoolTestCase(unittest.TestCase):
     self.assertNone(libsvn.core.application_pool)
 
     # Try to allocate memory from the old application pool
-    self.assertRaises(AssertionError, lambda: svn_pool_create(application_pool));
+    self.assertRaises(AssertionError, lambda: svn_pool_create(application_pool))
 
     # Bring the application pool back to life
     svn_pool_create()
@@ -223,4 +223,4 @@ def suite():
 
 if __name__ == '__main__':
   runner = unittest.TextTestRunner()
-  runner.run(suite());
+  runner.run(suite())

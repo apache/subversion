@@ -18,7 +18,7 @@
 # under the License.
 #
 #
-import unittest, os
+import unittest
 
 import svn.core
 
