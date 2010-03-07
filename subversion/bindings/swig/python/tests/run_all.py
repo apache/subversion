@@ -18,7 +18,7 @@
 # under the License.
 #
 #
-import sys, os, unittest, setup_path
+import unittest, setup_path
 import mergeinfo, core, client, delta, pool, ra, wc, repository, auth, \
        trac.versioncontrol.tests
 
@@ -26,18 +26,18 @@ import mergeinfo, core, client, delta, pool, ra, wc, repository, auth, \
 
 def suite():
   """Run all tests"""
-  suite = unittest.TestSuite()
-  suite.addTest(core.suite())
-  suite.addTest(mergeinfo.suite())
-  suite.addTest(client.suite())
-  suite.addTest(delta.suite())
-  suite.addTest(pool.suite())
-  suite.addTest(ra.suite())
-  suite.addTest(wc.suite())
-  suite.addTest(repository.suite())
-  suite.addTest(auth.suite())
-  suite.addTest(trac.versioncontrol.tests.suite());
-  return suite
+  s = unittest.TestSuite()
+  s.addTest(core.suite())
+  s.addTest(mergeinfo.suite())
+  s.addTest(client.suite())
+  s.addTest(delta.suite())
+  s.addTest(pool.suite())
+  s.addTest(ra.suite())
+  s.addTest(wc.suite())
+  s.addTest(repository.suite())
+  s.addTest(auth.suite())
+  s.addTest(trac.versioncontrol.tests.suite())
+  return s
 
 if __name__ == '__main__':
   unittest.main(defaultTest='suite')

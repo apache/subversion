@@ -34,8 +34,8 @@ class DeltaTestCase(unittest.TestCase):
 
   def testTxWindowHandler(self):
     """Test tx_invoke_window_handler"""
-    src_stream = StringIO("hello world");
-    target_stream = StringIO("bye world");
+    src_stream = StringIO("hello world")
+    target_stream = StringIO("bye world")
 
     # Invoke the window_handler using a helper function
     window_handler, baton = \
@@ -52,4 +52,4 @@ def suite():
 
 if __name__ == '__main__':
   runner = unittest.TextTestRunner()
-  runner.run(suite());
+  runner.run(suite())

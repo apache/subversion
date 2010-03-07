@@ -18,7 +18,7 @@
 # under the License.
 #
 #
-import unittest, os, setup_path, tempfile
+import unittest, setup_path, tempfile
 from sys import version_info # For Python version check
 if version_info[0] >= 3:
   # Python >=3.0
@@ -40,7 +40,7 @@ class ChangeReceiver(delta.Editor):
     self.tgt_root = tgt_root
     self.textdeltas = []
 
-  def apply_textdelta(self, file_baton, base_checksum):
+  def apply_textdelta(self, file_baton, base_checksum, pool=None):
     def textdelta_handler(textdelta):
       if textdelta is not None:
         self.textdeltas.append(textdelta)
@@ -160,7 +160,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     # Check results
     self.assertEqual(editor.textdeltas[0].new_data, "This is a test.\n")
     self.assertEqual(editor.textdeltas[1].new_data, "A test.\n")
-    self.assertEqual(len(editor.textdeltas),2)
+    self.assertEqual(len(editor.textdeltas), 2)
 
   def test_retrieve_and_change_rev_prop(self):
     """Test playing with revprops"""
