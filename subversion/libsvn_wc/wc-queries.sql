@@ -372,6 +372,14 @@ where wc_id = ?1 and local_relpath = ?2;
 update base_node set file_external = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_BASE_LAST_CHANGE
+update base_node set changed_rev = ?3, changed_date = ?4, changed_author = ?5
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_WORKING_LAST_CHANGE
+update working_node set changed_rev = ?3, changed_date = ?4, changed_author = ?5
+where wc_id = ?1 and local_relpath = ?2;
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in upgrade.c  */

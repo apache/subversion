@@ -224,6 +224,7 @@ typedef struct svn_cl__opt_state_t
   int strip_count; /* number of leading path components to strip */
   svn_boolean_t ignore_keywords;  /* do not expand keywords */
   svn_boolean_t reverse_diff;     /* reverse a diff (e.g. when patching) */
+  apr_array_header_t *exclude_patterns; /* targets to exclude from operation */
 } svn_cl__opt_state_t;
 
 

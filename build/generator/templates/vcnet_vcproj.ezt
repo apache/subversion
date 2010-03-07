@@ -49,6 +49,7 @@
 				PreprocessorDefinitions="[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][for configs.defines][configs.defines][if-index configs.defines last][else];[end][end];_CRT_SECURE_NO_WARNINGS"
 [is configs.name "Debug"]				MinimalRebuild="TRUE"
 				RuntimeLibrary="3"
+				BasicRuntimeChecks="3"
 				BufferSecurityCheck="TRUE"
 				EnableFunctionLevelLinking="TRUE"
 [else]				StringPooling="TRUE"

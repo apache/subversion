@@ -3009,9 +3009,7 @@ def merge_dir_and_file_replace(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/C'                    : Item(verb='Sending'),
     'A/C/foo'                : Item(verb='Replacing'),
-    'A/C/foo/new file 2'     : Item(verb='Adding'),
     'A/C/foo/bar'            : Item(verb='Adding'),
-
     })
   
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)

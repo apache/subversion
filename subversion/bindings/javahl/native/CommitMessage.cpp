@@ -25,6 +25,7 @@
  */
 
 #include "CommitMessage.h"
+#include "CreateJ.h"
 #include "JNIUtil.h"
 #include <apr_tables.h>
 #include "svn_client.h"
@@ -95,11 +96,6 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
-  int count = commit_items->nelts;
-  jobjectArray jitems = env->NewObjectArray(count, clazz, NULL);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
   // Java method ids will not change during the time this library is
   // loaded, so they can be cached.
 
@@ -124,8 +120,7 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
         return NULL;
 
       midCallback = env->GetMethodID(clazz2, "getLogMessage",
-                                     "([L"JAVA_PACKAGE"/CommitItem;)"
-                                     "Ljava/lang/String;");
+                                     "(Ljava/util/Set;)Ljava/lang/String;");
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
@@ -135,7 +130,8 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
     }
 
   // create a Java CommitItem for each of the passed in commit items
-  for (int i = 0; i < count; ++i)
+  std::vector<jobject> jitems;
+  for (int i = 0; i < commit_items->nelts; ++i)
     {
       svn_client_commit_item3_t *item =
         APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
@@ -190,10 +186,9 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
         return NULL;
 
       // store the Java object into the array
-      env->SetObjectArrayElement(jitems, i, jitem);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+      jitems.push_back(jitem);
     }
+
   env->DeleteLocalRef(clazz);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
@@ -201,12 +196,7 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
   // call the Java callback method
   jstring jmessage = (jstring)env->CallObjectMethod(m_jcommitMessage,
                                                     midCallback,
-                                                    jitems);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  // release the Java object array
-  env->DeleteLocalRef(jitems);
+                                                    CreateJ::Set(jitems));
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 

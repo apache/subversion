@@ -946,7 +946,6 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     if (cmt_datestr)
       {
         SVN_ERR(svn_time_from_cstring(&entry->cmt_date, cmt_datestr, pool));
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_DATE;
       }
     else
       entry->cmt_date = 0;
@@ -956,15 +955,13 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     if (cmt_revstr)
       {
         entry->cmt_rev = SVN_STR_TO_REV(cmt_revstr);
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_REV;
       }
     else
       entry->cmt_rev = SVN_INVALID_REVNUM;
 
     entry->cmt_author = extract_string(modify_flags, atts,
                                        SVN_WC__ENTRY_ATTR_CMT_AUTHOR,
-                                       SVN_WC__ENTRY_MODIFY_CMT_AUTHOR,
-                                       FALSE, pool);
+                                       0, FALSE, pool);
   }
 
   /* NOTE: we do not set modify_flags values since the lock attributes only

@@ -547,11 +547,13 @@ fetch_repos_info(const char **repos_root_url,
 
 /* Scan from LOCAL_RELPATH upwards through parent nodes until we find a parent
    that has values in the 'repos_id' and 'repos_relpath' columns.  Return
-   that information in REPOS_ID and REPOS_RELPATH (either may be NULL). */
+   that information in REPOS_ID and REPOS_RELPATH (either may be NULL). 
+   Use LOCAL_ABSPATH for diagnostics */
 static svn_error_t *
 scan_upwards_for_repos(apr_int64_t *repos_id,
                        const char **repos_relpath,
                        const wcroot_t *wcroot,
+                       const char *local_abspath,
                        const char *local_relpath,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
@@ -588,14 +590,14 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
               err = svn_error_createf(
                 SVN_ERR_WC_CORRUPT, NULL,
                 _("Parent(s) of '%s' should have been present."),
-                svn_dirent_local_style(local_relpath, scratch_pool));
+                svn_dirent_local_style(local_abspath, scratch_pool));
             }
           else
             {
               err = svn_error_createf(
                 SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                 _("The node '%s' was not found."),
-                svn_dirent_local_style(local_relpath, scratch_pool));
+                svn_dirent_local_style(local_abspath, scratch_pool));
             }
 
           return svn_error_compose_create(err, svn_sqlite__reset(stmt));
@@ -628,7 +630,7 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
           return svn_error_createf(
             SVN_ERR_WC_CORRUPT, NULL,
             _("Parent(s) of '%s' should have repository information."),
-            svn_relpath_local_style(local_relpath, scratch_pool));
+            svn_relpath_local_style(local_abspath, scratch_pool));
         }
 
       /* Strip a path segment off the end, and append it to the suffix
@@ -2596,6 +2598,11 @@ struct set_props_baton
   svn_wc__db_pdh_t *pdh;
 };
 
+/* Set the 'properties' column in the 'ACTUAL_NODE' table to BATON->props.
+   Create an entry in the ACTUAL table for the node if it does not yet
+   have one.
+   To specify no properties, BATON->props must be an empty hash, not NULL.
+   BATON is of type 'struct set_props_baton'. */
 static svn_error_t *
 set_props_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
 {
@@ -4505,7 +4512,7 @@ determine_repos_info(apr_int64_t *repos_id,
 
   /* The REPOS_ID will be the same (### until we support mixed-repos)  */
   SVN_ERR(scan_upwards_for_repos(repos_id, &repos_parent_relpath,
-                                 pdh->wcroot,
+                                 pdh->wcroot, pdh->local_abspath,
                                  "" /* local_relpath. see above.  */,
                                  scratch_pool, scratch_pool));
 
@@ -4601,7 +4608,7 @@ svn_wc__db_lock_add(svn_wc__db_t *db,
   VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
-                                 pdh->wcroot, local_relpath,
+                                 pdh->wcroot, local_abspath, local_relpath,
                                  scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
@@ -4646,7 +4653,7 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
   VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
-                                 pdh->wcroot, local_relpath,
+                                 pdh->wcroot, local_abspath, local_relpath,
                                  scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
@@ -4683,7 +4690,7 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
   VERIFY_USABLE_PDH(pdh);
 
   SVN_ERR(scan_upwards_for_repos(&repos_id, repos_relpath,
-                                 pdh->wcroot, local_relpath,
+                                 pdh->wcroot, local_abspath, local_relpath,
                                  result_pool, scratch_pool));
 
   if (repos_root_url || repos_uuid)
@@ -6230,6 +6237,95 @@ svn_wc__db_temp_op_set_working_incomplete(svn_wc__db_t *db,
      pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
      flush_entries(pdh);
    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_temp_op_set_base_last_change(svn_wc__db_t *db,
+                                        const char *local_abspath,
+                                        svn_revnum_t changed_rev,
+                                        apr_time_t changed_date,
+                                        const char *changed_author,
+                                        apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  svn_sqlite__stmt_t *stmt;
+  const char *local_relpath;
+  int affected;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_UPDATE_BASE_LAST_CHANGE));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "isiis",
+                            pdh->wcroot->wc_id, local_relpath,
+                            (apr_int64_t)changed_rev,
+                            (apr_int64_t)changed_date,
+                            changed_author));
+
+  SVN_ERR(svn_sqlite__update(&affected, stmt));
+
+  /* ### Theoretically this check can fail if all the values match
+         the values in the database. But we only call this function
+         if the revision changes */
+  if (affected != 1)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' has no BASE_NODE"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_temp_op_set_working_last_change(svn_wc__db_t *db,
+                                           const char *local_abspath,
+                                           svn_revnum_t changed_rev,
+                                           apr_time_t changed_date,
+                                           const char *changed_author,
+                                           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  svn_sqlite__stmt_t *stmt;
+  const char *local_relpath;
+  int affected;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_UPDATE_WORKING_LAST_CHANGE));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "isiis",
+                            pdh->wcroot->wc_id, local_relpath,
+                            (apr_int64_t)changed_rev,
+                            (apr_int64_t)changed_date,
+                            changed_author));
+
+  SVN_ERR(svn_sqlite__update(&affected, stmt));
+
+  /* The following check might fail if none of the values changes.
+     But currently this function is never called in such cases */
+  if (affected != 1)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' has no WORKING_NODE"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  flush_entries(pdh);
 
   return SVN_NO_ERROR;
 }

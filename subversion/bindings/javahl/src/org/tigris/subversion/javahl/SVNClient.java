@@ -28,6 +28,7 @@ import org.apache.subversion.javahl.*;
 import java.io.OutputStream;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.HashMap;
 import java.util.List;
 import java.util.HashSet;
@@ -469,7 +470,7 @@ public class SVNClient implements SVNClientInterface
             }
 
             public void singleMessage(
-                    org.apache.subversion.javahl.ChangePath[] aChangedPaths,
+                    Set<org.apache.subversion.javahl.ChangePath> aChangedPaths,
                     long revision, Map<String, byte[]> revprops,
                     boolean hasChildren)
             {
@@ -479,12 +480,16 @@ public class SVNClient implements SVNClientInterface
                 
                 if (aChangedPaths != null)
                 {
-                    changedPaths = new ChangePath[aChangedPaths.length];
+                    changedPaths = new ChangePath[aChangedPaths.size()];
 
-                    for (int i = 0; i < aChangedPaths.length; i++)
+                    int i = 0;
+                    for (org.apache.subversion.javahl.ChangePath cp
+                                                            : aChangedPaths)
                     {
-                        changedPaths[i] = new ChangePath(aChangedPaths[i]);
+                        changedPaths[i] = new ChangePath(cp);
+                        i++;
                     }
+                    Arrays.sort(changedPaths);
                 }
                 else
                 {
@@ -650,14 +655,17 @@ public class SVNClient implements SVNClientInterface
             implements org.apache.subversion.javahl.CommitMessage
         {
             public String getLogMessage(
-                org.apache.subversion.javahl.CommitItem[] elementsToBeCommited)
+                Set<org.apache.subversion.javahl.CommitItem> elementsToBeCommited)
             {
                 CommitItem[] aElements =
-                        new CommitItem[elementsToBeCommited.length];
+                        new CommitItem[elementsToBeCommited.size()];
 
-                for (int i = 0; i < elementsToBeCommited.length; i++)
+                int i = 0;
+                for (org.apache.subversion.javahl.CommitItem item
+                                                        : elementsToBeCommited)
                 {
-                    aElements[i] = new CommitItem(elementsToBeCommited[i]);
+                    aElements[i] = new CommitItem(item);
+                    i++;
                 }
 
                 if (messageHandler == null)
@@ -1342,18 +1350,22 @@ public class SVNClient implements SVNClientInterface
             implements org.apache.subversion.javahl.callback.LogMessageCallback
         {
             public void singleMessage(
-                    org.apache.subversion.javahl.ChangePath[] aChangedPaths,
-                    long revision, Map revprops, boolean hasChildren)
+                    Set<org.apache.subversion.javahl.ChangePath> aChangedPaths,
+                    long revision, Map<String, byte[]> revprops,
+                    boolean hasChildren)
             {
                 ChangePath[] changedPaths;
 
                 if (aChangedPaths != null)
                 {
-                    changedPaths = new ChangePath[aChangedPaths.length];
+                    changedPaths = new ChangePath[aChangedPaths.size()];
 
-                    for (int i = 0; i < aChangedPaths.length; i++)
+                    int i = 0;
+                    for (org.apache.subversion.javahl.ChangePath cp
+                                                             : aChangedPaths)
                     {
-                        changedPaths[i] = new ChangePath(aChangedPaths[i]);
+                        changedPaths[i] = new ChangePath(cp);
+                        i++;
                     }
                 }
                 else

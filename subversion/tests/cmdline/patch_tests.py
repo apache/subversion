@@ -50,7 +50,7 @@ XFail = svntest.testcase.XFail
 #Tests
 
 def patch(sbox):
-  "apply a patch"
+  "basic patch"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -220,7 +220,7 @@ def patch(sbox):
 
 
 def patch_absolute_paths(sbox):
-  "apply a patch containing absolute paths"
+  "patch containing absolute paths"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -284,7 +284,7 @@ def patch_absolute_paths(sbox):
                                        1) # dry-run
 
 def patch_offset(sbox):
-  "apply a patch with offset searching"
+  "patch with offset searching"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -497,7 +497,7 @@ def patch_offset(sbox):
                                        1) # dry-run
 
 def patch_chopped_leading_spaces(sbox):
-  "apply a patch with chopped leading spaces"
+  "patch with chopped leading spaces"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -667,7 +667,7 @@ def patch_chopped_leading_spaces(sbox):
 
 
 def patch_strip1(sbox):
-  "apply a patch with -p1"
+  "patch with -p1"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -837,7 +837,7 @@ def patch_strip1(sbox):
                                        '-p1')
 
 def patch_add_new_dir(sbox):
-  "apply a patch with missing dirs"
+  "patch with missing dirs"
   
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -913,7 +913,7 @@ def patch_add_new_dir(sbox):
                                        1) # dry-run
 
 def patch_reject(sbox):
-  "apply a patch which is rejected"
+  "patch which is rejected"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -983,7 +983,7 @@ def patch_reject(sbox):
                                        1) # dry-run
 
 def patch_keywords(sbox):
-  "apply a patch containing keywords"
+  "patch containing keywords"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1044,7 +1044,7 @@ def patch_keywords(sbox):
                                        1) # dry-run
 
 def patch_with_fuzz(sbox):
-  "apply a patch with fuzz"
+  "patch with fuzz"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1183,7 +1183,7 @@ def patch_with_fuzz(sbox):
                                        1) # dry-run
 
 def patch_reverse(sbox):
-  "apply a patch in reverse"
+  "patch in reverse"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1352,6 +1352,491 @@ def patch_reverse(sbox):
                                        1, # dry-run
                                        '--reverse-diff')
 
+def patch_no_svn_eol_style(sbox):
+  "patch target with no svn:eol-style"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  if os.name == 'nt':
+    crlf = '\n'
+  else:
+    crlf = '\r\n'
+  eols = [crlf, '\015', '\n', '\012']
+
+  for target_eol in eols:
+    for patch_eol in eols:
+      mu_contents = [
+        "We wish to congratulate you over your email success in our computer",
+        target_eol,
+        "Balloting. This is a Millennium Scientific Electronic Computer Draw",
+        target_eol,
+        "in which email addresses were used. All participants were selected",
+        target_eol,
+        "through a computer ballot system drawn from over 100,000 company",
+        target_eol,
+        "and 50,000,000 individual email addresses from all over the world.",
+        target_eol,
+        "It is a promotional program aimed at encouraging internet users;",
+        target_eol,
+      ]
+
+      # Set mu contents
+      svntest.main.file_write(mu_path, ''.join(mu_contents))
+
+      unidiff_patch = [
+        "Index: mu",
+        patch_eol,
+        "===================================================================",
+        patch_eol,
+        "--- A/mu\t(revision 0)",
+        patch_eol,
+        "+++ A/mu\t(revision 0)",
+        patch_eol,
+        "@@ -1,5 +1,6 @@",
+        patch_eol,
+        " We wish to congratulate you over your email success in our computer",
+        patch_eol,
+        " Balloting. This is a Millennium Scientific Electronic Computer Draw",
+        patch_eol,
+        "+A new line here",
+        patch_eol,
+        " in which email addresses were used. All participants were selected",
+        patch_eol,
+        " through a computer ballot system drawn from over 100,000 company",
+        patch_eol,
+        " and 50,000,000 individual email addresses from all over the world.",
+        patch_eol,
+      ]
+
+      mu_contents = [
+        "We wish to congratulate you over your email success in our computer",
+        patch_eol,
+        "Balloting. This is a Millennium Scientific Electronic Computer Draw",
+        patch_eol,
+        "A new line here",
+        patch_eol,
+        "in which email addresses were used. All participants were selected",
+        patch_eol,
+        "through a computer ballot system drawn from over 100,000 company",
+        patch_eol,
+        "and 50,000,000 individual email addresses from all over the world.",
+        patch_eol,
+        "It is a promotional program aimed at encouraging internet users;",
+        target_eol,
+      ]
+
+      svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+      expected_output = [
+        'G         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+      ]
+      expected_disk = svntest.main.greek_state.copy()
+      expected_disk.tweak('A/mu', contents=''.join(mu_contents))
+
+      expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+      expected_status.tweak('A/mu', status='M ', wc_rev=1)
+
+      expected_skip = wc.State('', { })
+
+      svntest.actions.run_and_verify_patch(wc_dir,
+                                           os.path.abspath(patch_file_path),
+                                           expected_output,
+                                           expected_disk,
+                                           expected_status,
+                                           expected_skip,
+                                           None, # expected err
+                                           1, # check-props
+                                           1) # dry-run
+
+      expected_output = ["Reverted '" + mu_path + "'\n"]
+      svntest.actions.run_and_verify_svn(None, expected_output, [], 'revert', '-R', wc_dir)
+
+def patch_with_svn_eol_style(sbox):
+  "patch target with svn:eol-style"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+
+  if os.name == 'nt':
+    crlf = '\n'
+  else:
+    crlf = '\r\n'
+
+  eols = [crlf, '\015', '\n', '\012']
+  eol_styles = ['CRLF', 'CR', 'native', 'LF']
+  rev = 1
+  for target_eol, target_eol_style in zip(eols, eol_styles):
+    for patch_eol in eols:
+      mu_contents = [
+        "We wish to congratulate you over your email success in our computer",
+        target_eol,
+        "Balloting. This is a Millennium Scientific Electronic Computer Draw",
+        target_eol,
+        "in which email addresses were used. All participants were selected",
+        target_eol,
+        "through a computer ballot system drawn from over 100,000 company",
+        target_eol,
+        "and 50,000,000 individual email addresses from all over the world.",
+        target_eol,
+        "It is a promotional program aimed at encouraging internet users;",
+        target_eol,
+      ]
+
+      # Set mu contents
+      svntest.main.run_svn(None, 'rm', mu_path)
+      svntest.main.run_svn(None, 'commit', '-m', 'delete mu', mu_path)
+      svntest.main.file_write(mu_path, ''.join(mu_contents))
+      svntest.main.run_svn(None, 'add', mu_path)
+      svntest.main.run_svn(None, 'propset', 'svn:eol-style', target_eol_style,
+                           mu_path)
+      svntest.main.run_svn(None, 'commit', '-m', 'set eol-style', mu_path)
+
+      unidiff_patch = [
+        "Index: mu",
+        patch_eol,
+        "===================================================================",
+        patch_eol,
+        "--- A/mu\t(revision 0)",
+        patch_eol,
+        "+++ A/mu\t(revision 0)",
+        patch_eol,
+        "@@ -1,5 +1,6 @@",
+        patch_eol,
+        " We wish to congratulate you over your email success in our computer",
+        patch_eol,
+        " Balloting. This is a Millennium Scientific Electronic Computer Draw",
+        patch_eol,
+        "+A new line here",
+        patch_eol,
+        " in which email addresses were used. All participants were selected",
+        patch_eol,
+        " through a computer ballot system drawn from over 100,000 company",
+        patch_eol,
+        " and 50,000,000 individual email addresses from all over the world.",
+        patch_eol,
+      ]
+
+      mu_contents = [
+        "We wish to congratulate you over your email success in our computer",
+        target_eol,
+        "Balloting. This is a Millennium Scientific Electronic Computer Draw",
+        target_eol,
+        "A new line here",
+        target_eol,
+        "in which email addresses were used. All participants were selected",
+        target_eol,
+        "through a computer ballot system drawn from over 100,000 company",
+        target_eol,
+        "and 50,000,000 individual email addresses from all over the world.",
+        target_eol,
+        "It is a promotional program aimed at encouraging internet users;",
+        target_eol,
+      ]
+
+      svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+      expected_output = [
+        'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+      ]
+      expected_disk = svntest.main.greek_state.copy()
+      expected_disk.tweak('A/mu', contents=''.join(mu_contents),
+                          props={'svn:eol-style' : target_eol_style})
+
+      expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+      rev += 2
+      expected_status.tweak('A/mu', status='M ', wc_rev=rev)
+
+      expected_skip = wc.State('', { })
+
+      svntest.actions.run_and_verify_patch(wc_dir,
+                                           os.path.abspath(patch_file_path),
+                                           expected_output,
+                                           expected_disk,
+                                           expected_status,
+                                           expected_skip,
+                                           None, # expected err
+                                           1, # check-props
+                                           1) # dry-run
+
+      expected_output = ["Reverted '" + mu_path + "'\n"]
+      svntest.actions.run_and_verify_svn(None, expected_output, [], 'revert', '-R', wc_dir)
+
+def patch_with_svn_eol_style_uncommitted(sbox):
+  "patch target with uncommitted svn:eol-style"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+
+  if os.name == 'nt':
+    crlf = '\n'
+  else:
+    crlf = '\r\n'
+
+  eols = [crlf, '\015', '\n', '\012']
+  eol_styles = ['CRLF', 'CR', 'native', 'LF']
+  for target_eol, target_eol_style in zip(eols, eol_styles):
+    for patch_eol in eols:
+      mu_contents = [
+        "We wish to congratulate you over your email success in our computer",
+        '\n',
+        "Balloting. This is a Millennium Scientific Electronic Computer Draw",
+        '\n',
+        "in which email addresses were used. All participants were selected",
+        '\n',
+        "through a computer ballot system drawn from over 100,000 company",
+        '\n',
+        "and 50,000,000 individual email addresses from all over the world.",
+        '\n',
+        "It is a promotional program aimed at encouraging internet users;",
+        '\n',
+      ]
+
+      # Set mu contents
+      svntest.main.file_write(mu_path, ''.join(mu_contents))
+      svntest.main.run_svn(None, 'propset', 'svn:eol-style', target_eol_style,
+                           mu_path)
+
+      unidiff_patch = [
+        "Index: mu",
+        patch_eol,
+        "===================================================================",
+        patch_eol,
+        "--- A/mu\t(revision 0)",
+        patch_eol,
+        "+++ A/mu\t(revision 0)",
+        patch_eol,
+        "@@ -1,5 +1,6 @@",
+        patch_eol,
+        " We wish to congratulate you over your email success in our computer",
+        patch_eol,
+        " Balloting. This is a Millennium Scientific Electronic Computer Draw",
+        patch_eol,
+        "+A new line here",
+        patch_eol,
+        " in which email addresses were used. All participants were selected",
+        patch_eol,
+        " through a computer ballot system drawn from over 100,000 company",
+        patch_eol,
+        " and 50,000,000 individual email addresses from all over the world.",
+        patch_eol,
+      ]
+
+      mu_contents = [
+        "We wish to congratulate you over your email success in our computer",
+        target_eol,
+        "Balloting. This is a Millennium Scientific Electronic Computer Draw",
+        target_eol,
+        "A new line here",
+        target_eol,
+        "in which email addresses were used. All participants were selected",
+        target_eol,
+        "through a computer ballot system drawn from over 100,000 company",
+        target_eol,
+        "and 50,000,000 individual email addresses from all over the world.",
+        target_eol,
+        "It is a promotional program aimed at encouraging internet users;",
+        target_eol,
+      ]
+
+      svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+      expected_output = [
+        'G         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+      ]
+      expected_disk = svntest.main.greek_state.copy()
+      expected_disk.tweak('A/mu', contents=''.join(mu_contents),
+                          props={'svn:eol-style' : target_eol_style})
+
+      expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+      expected_status.tweak('A/mu', status='MM', wc_rev=1)
+
+      expected_skip = wc.State('', { })
+
+      svntest.actions.run_and_verify_patch(wc_dir,
+                                           os.path.abspath(patch_file_path),
+                                           expected_output,
+                                           expected_disk,
+                                           expected_status,
+                                           expected_skip,
+                                           None, # expected err
+                                           1, # check-props
+                                           1) # dry-run
+
+      expected_output = ["Reverted '" + mu_path + "'\n"]
+      svntest.actions.run_and_verify_svn(None, expected_output, [], 'revert', '-R', wc_dir)
+
+def patch_with_exclude_patterns(sbox):
+  "patch with --exclude-patterns"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  mu_contents = [
+    "Dear internet user,\n",
+    "\n",
+    "We wish to congratulate you over your email success in our computer\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 13th June. 2009\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+    "\n",
+    "Again, we wish to congratulate you over your email success in our\n"
+    "computer Balloting.\n"
+  ]
+
+  # Set mu contents
+  svntest.main.file_write(mu_path, ''.join(mu_contents))
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'       : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Apply patch
+
+  unidiff_patch = [
+    "Index: A/D/gamma\n",
+    "===================================================================\n",
+    "--- A/D/gamma\t(revision 1)\n",
+    "+++ A/D/gamma\t(working copy)\n",
+    "@@ -1 +1 @@\n",
+    "-This is the file 'gamma'.\n",
+    "+It is the file 'gamma'.\n",
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+Some more bytes\n",
+    "\n",
+    "Index: new\n",
+    "===================================================================\n",
+    "--- new	(revision 0)\n",
+    "+++ new	(revision 0)\n",
+    "@@ -0,0 +1 @@\n",
+    "+new\n",
+    "\n",
+    "--- A/mu.orig	2009-06-24 15:23:55.000000000 +0100\n",
+    "+++ A/mu	2009-06-24 15:21:23.000000000 +0100\n",
+    "@@ -6,6 +6,9 @@\n",
+    " through a computer ballot system drawn from over 100,000 company\n",
+    " and 50,000,000 individual email addresses from all over the world.\n",
+    " \n",
+    "+It is a promotional program aimed at encouraging internet users;\n",
+    "+therefore you do not need to buy ticket to enter for it.\n",
+    "+\n",
+    " Your email address drew and have won the sum of  750,000 Euros\n",
+    " ( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    " file with\n",
+    "@@ -14,11 +17,8 @@\n",
+    "     BATCH NUMBERS :\n",
+    "     EULO/1007/444/606/08;\n",
+    "     SERIAL NUMBER: 45327\n",
+    "-and PROMOTION DATE: 13th June. 2009\n",
+    "+and PROMOTION DATE: 14th June. 2009\n",
+    " \n",
+    " To claim your winning prize, you are to contact the appointed\n",
+    " agent below as soon as possible for the immediate release of your\n",
+    " winnings with the below details.\n",
+    "-\n",
+    "-Again, we wish to congratulate you over your email success in our\n",
+    "-computer Balloting.\n",
+    "Index: A/B/E/beta\n",
+    "===================================================================\n",
+    "--- A/B/E/beta	(revision 1)\n",
+    "+++ A/B/E/beta	(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'beta'.\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  gamma_contents = "It is the file 'gamma'.\n"
+  iota_contents = "This is the file 'iota'.\nSome more bytes\n"
+  new_contents = "new\n"
+  mu_contents = [
+    "Dear internet user,\n",
+    "\n",
+    "We wish to congratulate you over your email success in our computer\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "\n",
+    "It is a promotional program aimed at encouraging internet users;\n",
+    "therefore you do not need to buy ticket to enter for it.\n",
+    "\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 14th June. 2009\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+  ]
+
+  expected_output = [
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=''.join(mu_contents))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1, # dry-run
+                                       "--exclude-pattern", "A/*/gamma",
+                                       "--exclude-pattern", "new",
+                                       "--exclude-pattern", "*a")
+
 ########################################################################
 #Run the tests
 
@@ -1367,6 +1852,10 @@ test_list = [ None,
               patch_keywords,
               patch_with_fuzz,
               patch_reverse,
+              patch_no_svn_eol_style,
+              patch_with_svn_eol_style,
+              patch_with_svn_eol_style_uncommitted,
+              patch_with_exclude_patterns,
             ]
 
 if __name__ == '__main__':

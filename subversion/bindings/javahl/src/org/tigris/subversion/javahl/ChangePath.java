@@ -23,7 +23,7 @@
 
 package org.tigris.subversion.javahl;
 
-public class ChangePath implements java.io.Serializable
+public class ChangePath implements java.io.Serializable, Comparable
 {
     // Update the serialVersionUID when there is a incompatible change
     // made to this class.  See any of the following, depending upon
@@ -60,6 +60,11 @@ public class ChangePath implements java.io.Serializable
         this(aChangePath.getPath(), aChangePath.getCopySrcRevision(),
              aChangePath.getCopySrcPath(), aChangePath.getAction(),
              aChangePath.getNodeKind());
+    }
+
+    public int compareTo(Object other)
+    {
+        return path.compareTo(((ChangePath)other).path);
     }
 
     /** Path of commited item */
