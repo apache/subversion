@@ -34,8 +34,11 @@
 #include "svn_dirent_uri.h"
 #include "svn_pools.h"
 #include "client.h"
+#include "svn_pools.h"
+#include "svn_props.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Code. ***/
@@ -110,6 +113,10 @@ svn_client_upgrade(const char *path,
                    apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
+  apr_hash_t *externals;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
+  svn_opt_revision_t rev = {svn_opt_revision_unspecified, {0}};
   struct repos_info_baton info_baton;
   info_baton.pool = scratch_pool;
   info_baton.ctx = ctx;
@@ -122,6 +129,80 @@ svn_client_upgrade(const char *path,
                          ctx->cancel_func, ctx->cancel_baton,
                          ctx->notify_func2, ctx->notify_baton2,
                          scratch_pool));
+
+  /* Now it's time to upgrade the externals too. We do it after the wc 
+     upgrade to avoid that errors in the externals causes the wc upgrade to
+     fail. Thanks to caching the performance penalty of walking the wc a 
+     second time shouldn't be too severe */
+  SVN_ERR(svn_client_propget3(&externals, SVN_PROP_EXTERNALS, path, &rev, 
+                              &rev, NULL, svn_depth_infinity, NULL, ctx, 
+                              scratch_pool));
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  for (hi = apr_hash_first(scratch_pool, externals); hi; 
+       hi = apr_hash_next(hi))
+    {
+      const char *key;
+      int i;
+      apr_ssize_t klen;
+      svn_string_t *external_desc;
+      apr_array_header_t *externals_p;
+      
+      svn_pool_clear(iterpool);
+      externals_p = apr_array_make(iterpool, 1,
+                                   sizeof(svn_wc_external_item2_t*));
+
+      apr_hash_this(hi, (void*)&key, &klen, NULL);
+
+      external_desc = apr_hash_get(externals, key, klen);
+
+      SVN_ERR(svn_wc_parse_externals_description3(&externals_p, 
+                                            svn_dirent_dirname(path, 
+                                                               iterpool),
+                                                  external_desc->data, TRUE,
+                                                  iterpool));
+      for (i = 0; i < externals_p->nelts; i++)
+        {
+          svn_wc_external_item2_t *item;
+          const char *external_abspath;
+          const char *external_path;
+          svn_node_kind_t kind;
+          svn_error_t *err;
+
+          item = APR_ARRAY_IDX(externals_p, i, svn_wc_external_item2_t*);
+
+          /* The key is the path to the dir the svn:externals was set on */
+          external_path = svn_dirent_join(key, item->target_dir, iterpool);
+
+          SVN_ERR(svn_dirent_get_absolute(&external_abspath, external_path,
+                                          iterpool));
+
+          /* This is hack. We can only send dirs to svn_wc_upgrade(). This
+             way we will get an exception saying that the wc must be
+             upgraded if it's a dir. If it's a file then the lookup is done
+             in an adm_dir belonging to the real wc and since that was
+             updated before the externals no error is returned. */
+          err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, external_abspath,
+                                        FALSE, iterpool);
+
+          if (err && err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
+            {
+              SVN_ERR(svn_wc_upgrade(ctx->wc_ctx, external_abspath,
+                                     fetch_repos_info, &info_baton,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     ctx->notify_func2, ctx->notify_baton2,
+                                     iterpool));
+              svn_error_clear(err);
+            }
+          else if (err)
+            return svn_error_return(err);
+          else
+            ;
+        }
+    }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
