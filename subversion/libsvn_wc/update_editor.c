@@ -710,14 +710,14 @@ complete_directory(struct edit_baton *eb,
       /* Before we can finish, we may need to clear the exclude flag for
          target. Also give a chance to the target that is explicitly pulled
          in. */
-      svn_depth_t depth;
       svn_wc__db_kind_t kind;
+      svn_wc__db_status_t status;
       svn_error_t *err;
 
       SVN_ERR_ASSERT(strcmp(local_abspath, eb->anchor_abspath) == 0);
 
-      err = svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, &depth, NULL, NULL, NULL,
+      err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL,
                                  eb->db, eb->target_abspath, pool, pool);
@@ -729,11 +729,10 @@ complete_directory(struct edit_baton *eb,
       else if (err)
         return svn_error_return(err);
 
-      if (depth == svn_depth_exclude)
+      if (status == svn_wc__db_status_excluded)
         {
           /* There is a small chance that the target is gone in the
-             repository.  If so, we should get rid of the entry
-             (and thus get rid of the exclude flag) now. */
+             repository.  If so, we should get rid of the entry now. */
 
           if (kind == svn_wc__db_kind_dir &&
               svn_wc__adm_missing(eb->db, eb->target_abspath, pool))
@@ -745,11 +744,6 @@ complete_directory(struct edit_baton *eb,
               SVN_ERR(do_entry_deletion(eb, eb->target_abspath,
                                         NULL, FALSE, pool));
             }
-          else
-            {
-              SVN_ERR(svn_wc__set_depth(eb->db, eb->target_abspath,
-                                        eb->requested_depth, pool));
-            }
         }
 
       return SVN_NO_ERROR;
@@ -759,25 +753,12 @@ complete_directory(struct edit_baton *eb,
   SVN_ERR(svn_wc__db_temp_op_set_base_incomplete(eb->db, local_abspath, FALSE,
                                                  pool));
 
-  /* ### If we are updating below a delete-* treeconflict, all the
-         entries are moved to the copied state. This duplicates the incomplete
-         state to WORKING_NODE, so also clear it there. */
-  {
-    svn_wc__db_status_t status;
-    SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 eb->db, local_abspath, pool, pool));
-
-    if (status == svn_wc__db_status_incomplete)
-      SVN_ERR(svn_wc__db_temp_op_set_working_incomplete(eb->db, local_abspath,
-                                                        FALSE, pool));
-  }
-
   if (eb->depth_is_sticky)
     {
       svn_depth_t depth;
+
+      /* ### We should specifically check BASE_NODE here and then only remove
+             the BASE_NODE if there is a WORKING_NODE. */
 
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, &depth, NULL, NULL, NULL,
@@ -1403,11 +1384,9 @@ open_root(void *edit_baton,
         SVN_WC__ENTRY_MODIFY_URL;
 
       /* Read the depth from the entry. */
-      SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+      SVN_ERR(svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, &depth, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   eb->db, db->local_abspath, pool, pool));
+                                   NULL, eb->db, db->local_abspath, pool, pool));
       db->ambient_depth = depth;
       db->was_incomplete = (status == svn_wc__db_status_incomplete);
 
