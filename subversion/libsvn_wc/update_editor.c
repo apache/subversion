@@ -2979,10 +2979,10 @@ open_directory(const char *path,
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
     SVN_WC__ENTRY_MODIFY_URL;
-
+  svn_boolean_t base_shadowed;
   svn_boolean_t already_conflicted;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
-  svn_wc__db_status_t status;
+  svn_wc__db_status_t status, base_status;
 
   SVN_ERR(make_dir_baton(&db, path, eb, pb, FALSE, pool));
   *child_baton = db;
@@ -3009,11 +3009,20 @@ open_directory(const char *path,
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &db->old_revision, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                &db->ambient_depth, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &base_shadowed, NULL, NULL,
                                eb->db, db->local_abspath, pool, pool));
 
-  db->was_incomplete = (status == svn_wc__db_status_incomplete);
+  if (!base_shadowed)
+    base_status = status;
+  else
+    SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &db->old_revision,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     &db->ambient_depth, NULL, NULL, NULL,
+                                     NULL,
+                                     eb->db, db->local_abspath, pool, pool));
+
+  db->was_incomplete = (base_status == svn_wc__db_status_incomplete);
 
   /* Is this path a conflict victim? */
   SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
