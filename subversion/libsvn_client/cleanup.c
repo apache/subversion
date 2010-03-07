@@ -188,17 +188,16 @@ svn_client_upgrade(const char *path,
 
           if (err && err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
             {
+              svn_error_clear(err);
+
               SVN_ERR(svn_wc_upgrade(ctx->wc_ctx, external_abspath,
                                      fetch_repos_info, &info_baton,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      ctx->notify_func2, ctx->notify_baton2,
                                      iterpool));
-              svn_error_clear(err);
             }
-          else if (err)
-            return svn_error_return(err);
           else
-            ;
+            SVN_ERR(err);
         }
     }
 
