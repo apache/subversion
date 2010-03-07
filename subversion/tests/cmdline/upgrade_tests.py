@@ -141,6 +141,23 @@ def basic_upgrade(sbox):
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
+def upgrade_with_externals(sbox):
+  "upgrade with externals"
+  
+  # Create wc from tarfile, uses the same structure of the wc as the tests
+  # in externals_tests.py.
+  replace_sbox_with_tarfile(sbox, 'upgrade_with_externals.tar.bz2')
+
+  # Attempt to use the working copy, this should give an error
+  expected_stderr = wc_is_too_old_regex
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'info', sbox.wc_dir)
+  # Now upgrade the working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+
+  # Actually check the format number of the upgraded working copy
+  check_format(sbox, get_current_format())
 
 def upgrade_1_5_body(sbox, subcommand):
   replace_sbox_with_tarfile(sbox, 'upgrade_1_5.tar.bz2')
@@ -328,6 +345,7 @@ def basic_upgrade_1_0(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               basic_upgrade,
+              upgrade_with_externals,
               upgrade_1_5,
               update_1_5,
               logs_left_1_5,
