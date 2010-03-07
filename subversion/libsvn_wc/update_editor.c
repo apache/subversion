@@ -203,11 +203,11 @@ struct edit_baton
      that the edit was completed successfully. */
   svn_boolean_t close_edit_complete;
 
-  /* If this is a 'switch' operation, the target URL (### corresponding to
-     the ANCHOR plus TARGET path?), else NULL. */
-  const char *switch_url;
+  /* If this is a 'switch' operation, the new relpath of target_abspath, 
+     else NULL. */
+  const char *switch_relpath;
 
-  /* The URL to the root of the repository, or NULL. */
+  /* The URL to the root of the repository. */
   const char *repos;
 
   /* The UUID of the repos, or NULL. */
@@ -278,8 +278,8 @@ struct dir_baton
   /* Absolute path of this directory */
   const char *local_abspath;
 
-  /* The repository URL this directory will correspond to. */
-  const char *new_URL;
+  /* The repository relative path this directory will correspond to. */
+  const char *new_relpath;
 
   /* The revision of the directory before updating */
   svn_revnum_t old_revision;
@@ -440,30 +440,54 @@ get_empty_tmp_file(const char **tmp_filename,
 }
 
 
-/* Return the url for LOCAL_ABSPATH allocated in RESULT_POOL, or NULL if
- * unable to obtain a url.
+/* Return the repository relative path for LOCAL_ABSPATH allocated in
+ * RESULT_POOL, or NULL if unable to obtain.
  *
- * Use WC_CTX to retrieve information on LOCAL_ABSPATH, and do
- * all temporary allocation in SCRATCH_POOL.
+ * Use DB to retrieve information on LOCAL_ABSPATH, and do all temporary
+ * allocation in SCRATCH_POOL.
  */
 static const char *
-node_get_url_ignore_errors(svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
+node_get_relpath_ignore_errors(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
+  svn_wc__db_status_t status;
   svn_error_t *err;
-  const char *url;
+  const char *relpath = NULL;
 
-  err = svn_wc__node_get_url(&url, wc_ctx, local_abspath, result_pool,
-                                                          scratch_pool);
+  err = svn_wc__db_read_info(&status, NULL, NULL, &relpath, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL,
+                             db, local_abspath, result_pool, scratch_pool);
+
   if (err)
     {
       svn_error_clear(err);
-      url = NULL;
+      return NULL;
     }
 
-  return url;
+  if (relpath)
+    return relpath;
+
+  if (status == svn_wc__db_status_added ||
+      status == svn_wc__db_status_obstructed_add)
+    {
+      svn_error_clear(svn_wc__db_scan_addition(NULL, NULL, &relpath, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               db, local_abspath,
+                                               result_pool, scratch_pool));
+    }
+  else if (status != svn_wc__db_status_deleted &&
+           status != svn_wc__db_status_obstructed_delete)
+    {
+      svn_error_clear(svn_wc__db_scan_base_repos(&relpath, NULL, NULL,
+                                                 db, local_abspath,
+                                                 result_pool, scratch_pool));
+    }
+
+  return relpath;
 }
 
 /* Flush accumulated log entries to a log file on disk for DIR_BATON and
@@ -573,8 +597,8 @@ make_dir_baton(struct dir_baton **d_p,
       d->local_abspath = eb->anchor_abspath;
     }
 
-  /* Figure out the new_URL for this directory. */
-  if (eb->switch_url)
+  /* Figure out the new_relpath for this directory. */
+  if (eb->switch_relpath)
     {
       /* Switches are, shall we say, complex.  If this directory is
          the root directory (it has no parent), then it either gets
@@ -584,9 +608,9 @@ make_dir_baton(struct dir_baton **d_p,
       if (! pb)
         {
           if (! *eb->target_basename) /* anchor is also target */
-            d->new_URL = apr_pstrdup(dir_pool, eb->switch_url);
+            d->new_relpath = apr_pstrdup(dir_pool, eb->switch_relpath);
           else
-            d->new_URL = svn_uri_dirname(eb->switch_url, dir_pool);
+            d->new_relpath = svn_relpath_dirname(eb->switch_relpath, dir_pool);
         }
       /* Else this directory is *not* the root (has a parent).  If it
          is the target (there is a target, and this directory has no
@@ -595,10 +619,10 @@ make_dir_baton(struct dir_baton **d_p,
       else
         {
           if (*eb->target_basename && (! pb->parent_baton))
-            d->new_URL = apr_pstrdup(dir_pool, eb->switch_url);
+            d->new_relpath = apr_pstrdup(dir_pool, eb->switch_relpath);
           else
-            d->new_URL = svn_path_url_add_component2(pb->new_URL,
-                                                     d->name, dir_pool);
+            d->new_relpath = svn_relpath_join(pb->new_relpath, d->name,
+                                              dir_pool);
         }
     }
   else  /* must be an update */
@@ -606,11 +630,10 @@ make_dir_baton(struct dir_baton **d_p,
       /* updates are the odds ones.  if we're updating a path already
          present on disk, we use its original URL.  otherwise, we'll
          telescope based on its parent's URL. */
-      d->new_URL = node_get_url_ignore_errors(eb->wc_ctx, d->local_abspath,
-                                              dir_pool, scratch_pool);
-      if ((! d->new_URL) && pb)
-        d->new_URL = svn_path_url_add_component2(pb->new_URL, d->name,
-                                                 dir_pool);
+      d->new_relpath = node_get_relpath_ignore_errors(eb->db, d->local_abspath,
+                                                      dir_pool, scratch_pool);
+      if ((! d->new_relpath) && pb)
+        d->new_relpath = svn_relpath_join(pb->new_relpath, d->name, dir_pool);
     }
 
   /* the bump information lives in the edit pool */
@@ -902,8 +925,8 @@ struct file_baton
   /* Absolute path to this file */
   const char *local_abspath;
 
-  /* The repository URL this file will correspond to. */
-  const char *new_URL;
+  /* The repository relative path this file will correspond to. */
+  const char *new_relpath;
 
   /* The revision of the file before updating */
   svn_revnum_t old_revision;
@@ -1025,19 +1048,12 @@ make_file_baton(struct file_baton **f_p,
   f->local_abspath = svn_dirent_join(pb->local_abspath, f->name, file_pool);
 
   /* Figure out the new_URL for this file. */
-  if (pb->edit_baton->switch_url)
-    {
-      f->new_URL = svn_path_url_add_component2(pb->new_URL, f->name,
-                                               file_pool);
-    }
+  if (pb->edit_baton->switch_relpath)
+    f->new_relpath = svn_relpath_join(pb->new_relpath, f->name, file_pool);
   else
-    {
-      f->new_URL = node_get_url_ignore_errors(pb->edit_baton->wc_ctx,
-                                              svn_dirent_join(pb->local_abspath,
-                                                              f->name,
-                                                              scratch_pool),
-                                              file_pool, scratch_pool);
-    }
+    f->new_relpath = node_get_relpath_ignore_errors(pb->edit_baton->db,
+                                                    f->local_abspath,
+                                                    file_pool, scratch_pool);
 
   f->pool              = file_pool;
   f->edit_baton        = pb->edit_baton;
@@ -1399,7 +1415,8 @@ open_root(void *edit_baton,
 
       /* Mark directory as being at target_revision, but incomplete. */
       tmp_entry.revision = *(eb->target_revision);
-      tmp_entry.url = db->new_URL;
+      tmp_entry.url = svn_path_url_add_component2(eb->repos, db->new_relpath,
+                                                  pool);
       SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath, svn_node_dir,
                                     FALSE,
                                     &tmp_entry, flags,
@@ -1573,10 +1590,11 @@ tree_has_local_mods(svn_boolean_t *modified,
  * function. E.g. dir_opened() should pass svn_node_dir, etc.
  * In some cases of delete, svn_node_none may be used here.
  *
- * THEIR_URL is the involved node's URL on the source-right side, the
- * side that the target should become after the update. Simply put,
- * that's the URL obtained from the node's dir_baton->new_URL or
- * file_baton->new_URL (but it's more complex for a delete).
+ * THEIR_RELPATH is the involved node's repository relative path on the
+ * source-right side, the side that the target should become after the
+ * update. Simply put, that's the URL obtained from the node's 
+ * dir_baton->new_relpath or file_baton->new_relpath (but it's more
+ * complex for a delete).
  *
  * ACCEPT_DELETED is true if one of the ancestors got tree conflicted, but
  * the operation continued updating a deleted base tree.
@@ -1590,7 +1608,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                     const char *local_abspath,
                     svn_wc_conflict_action_t action,
                     svn_node_kind_t their_node_kind,
-                    const char *their_url,
+                    const char *their_relpath,
                     apr_pool_t *pool)
 {
   svn_wc__db_status_t status;
@@ -1852,13 +1870,12 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
 
     /* Find the source-right information, i.e. the state in the repository
      * to which we would like to update. */
-    if (eb->switch_url != NULL)
+    if (eb->switch_relpath)
       {
         /* If this is a 'switch' operation, try to construct the switch
          * target's REPOS_RELPATH. */
-        if (their_url != NULL)
-          right_repos_relpath = svn_uri_is_child(repos_root_url, their_url,
-                                                 pool);
+        if (their_relpath != NULL)
+          right_repos_relpath = their_relpath;
         else
           {
             /* The complete source-right URL is not available, but it
@@ -1867,8 +1884,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
              * ### TODO: Construct a proper THEIR_URL in some of the
              * delete cases that still pass NULL for THEIR_URL when
              * calling this function. Do that on the caller's side. */
-            right_repos_relpath = svn_uri_is_child(repos_root_url,
-                                                   eb->switch_url, pool);
+            right_repos_relpath = eb->switch_relpath;
             right_repos_relpath = apr_pstrcat(pool, right_repos_relpath,
                                               "_THIS_IS_INCOMPLETE", NULL);
           }
@@ -1914,7 +1930,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
 
     *pconflict = svn_wc_conflict_description_create_tree2(
                      local_abspath, conflict_node_kind,
-                     eb->switch_url ?
+                     eb->switch_relpath ?
                        svn_wc_operation_switch : svn_wc_operation_update,
                      src_left_version, src_right_version, pool);
     (*pconflict)->action = action;
@@ -2243,16 +2259,17 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
  * represented by EB. PATH is relative to EB->anchor.
  * PARENT_PATH is relative to the current working directory.
  *
- * THEIR_URL is the deleted node's URL on the source-right side, the
- * side that the target should become after the update. In other words,
- * that's the new URL the node would have if it were not deleted.
+ * THEIR_RELPATH is the deleted node's repository relative path on the
+ * source-right side, the side that the target should become after the
+ * update. In other words, that's the new URL the node would have if it
+ * were not deleted.
  *
  * Perform all allocations in POOL.
  */
 static svn_error_t *
 do_entry_deletion(struct edit_baton *eb,
                   const char *local_abspath,
-                  const char *their_url,
+                  const char *their_relpath,
                   svn_boolean_t in_deleted_and_tree_conflicted_subtree,
                   apr_pool_t *pool)
 {
@@ -2321,7 +2338,7 @@ do_entry_deletion(struct edit_baton *eb,
   if (!in_deleted_and_tree_conflicted_subtree)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
                                 svn_wc_conflict_action_delete, svn_node_none,
-                                their_url, pool));
+                                their_relpath, pool));
 
   if (tree_conflict != NULL)
     {
@@ -2355,9 +2372,13 @@ do_entry_deletion(struct edit_baton *eb,
           SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
           SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
 
-          SVN_ERR(schedule_existing_item_for_re_add(entry, eb,
-                                                    local_abspath, their_url,
-                                                    TRUE, pool));
+          SVN_ERR(schedule_existing_item_for_re_add(
+                                    entry, eb,
+                                    local_abspath,
+                                    svn_path_url_add_component2(eb->repos,
+                                                                their_relpath,
+                                                                pool),
+                                    TRUE, pool));
           return SVN_NO_ERROR;
         }
       else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
@@ -2384,9 +2405,13 @@ do_entry_deletion(struct edit_baton *eb,
           SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
           SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
 
-          SVN_ERR(schedule_existing_item_for_re_add(entry, eb,
-                                                    local_abspath, their_url,
-                                                    FALSE, pool));
+          SVN_ERR(schedule_existing_item_for_re_add(
+                                    entry, eb,
+                                    local_abspath,
+                                    svn_path_url_add_component2(eb->repos,
+                                                                their_relpath,
+                                                                pool),
+                                    FALSE, pool));
           return SVN_NO_ERROR;
         }
       else
@@ -2426,7 +2451,7 @@ do_entry_deletion(struct edit_baton *eb,
 
   SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
 
-  if (eb->switch_url)
+  if (eb->switch_relpath)
     {
       /* The SVN_WC__LOG_DELETE_ENTRY log item will cause
        * svn_wc_remove_from_revision_control() to be run.  But that
@@ -2486,7 +2511,7 @@ delete_entry(const char *path,
   struct dir_baton *pb = parent_baton;
   const char *base = svn_relpath_basename(path, pool);
   const char *local_abspath;
-  const char *their_url;
+  const char *their_relpath;
 
   local_abspath = svn_dirent_join(pb->local_abspath, base, pool);
 
@@ -2500,13 +2525,13 @@ delete_entry(const char *path,
 
   SVN_ERR(check_path_under_root(pb->local_abspath, base, pool));
 
-  their_url = svn_path_url_add_component2(pb->new_URL, base, pool);
+  their_relpath = svn_relpath_join(pb->new_relpath, base, pool);
 
   /* Flush parent log before potentially adding tree conflicts */
   flush_log(pb, pool);
 
   return do_entry_deletion(pb->edit_baton, local_abspath,
-                           their_url,
+                           their_relpath,
                            pb->in_deleted_and_tree_conflicted_subtree,
                            pool);
 }
@@ -2700,14 +2725,15 @@ add_directory(const char *path,
                          svn_dirent_local_style(db->local_abspath, pool));
             }
 
-          if (switched && !eb->switch_url)
+          if (switched && !eb->switch_relpath)
             {
               err = svn_error_createf(
                          SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                          _("Switched directory '%s' does not match "
                            "expected URL '%s'"),
                          svn_dirent_local_style(db->local_abspath, pool),
-                         db->new_URL);
+                         svn_path_url_add_component2(eb->repos,
+                                                    db->new_relpath, pool));
             }
         }
 
@@ -2781,7 +2807,7 @@ add_directory(const char *path,
                 SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                             db->local_abspath,
                                             svn_wc_conflict_action_add,
-                                            svn_node_dir, db->new_URL, pool));
+                                            svn_node_dir, db->new_relpath, pool));
 
               if (tree_conflict != NULL)
                 {
@@ -2887,10 +2913,11 @@ add_directory(const char *path,
 
           tmp_entry.revision = *(eb->target_revision);
 
-          if (eb->switch_url)
+          if (eb->switch_relpath)
             {
-              tmp_entry.url = svn_path_url_add_component2(eb->switch_url,
-                                                          db->name, pool);
+              tmp_entry.url = svn_path_url_add_component2(eb->repos,
+                                                          db->new_relpath,
+                                                          pool);
               modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
             }
 
@@ -2901,7 +2928,8 @@ add_directory(const char *path,
     }
 
   SVN_ERR(prep_directory(db,
-                         db->new_URL,
+                         svn_path_url_add_component2(eb->repos, db->new_relpath,
+                                                     pool),
                          *(eb->target_revision),
                          db->pool));
 
@@ -3037,7 +3065,7 @@ open_directory(const char *path,
   if (!db->in_deleted_and_tree_conflicted_subtree)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, db->local_abspath,
                                 svn_wc_conflict_action_edit, svn_node_dir,
-                                db->new_URL, pool));
+                                db->new_relpath, pool));
 
   /* Remember the roots of any locally deleted trees. */
   if (tree_conflict != NULL)
@@ -3075,7 +3103,8 @@ open_directory(const char *path,
 
   /* Mark directory as being at target_revision and URL, but incomplete. */
   tmp_entry.revision = *(eb->target_revision);
-  tmp_entry.url = db->new_URL;
+  tmp_entry.url = svn_path_url_add_component2(eb->repos, db->new_relpath,
+                                              pool);
 
   SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath,
                                 svn_node_dir, FALSE,
@@ -4036,14 +4065,15 @@ add_file(const char *path,
                          svn_dirent_local_style(fb->local_abspath, pool));
             }
 
-          if (switched && !eb->switch_url)
+          if (switched && !eb->switch_relpath)
             {
               err = svn_error_createf(
                          SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                          _("Switched file '%s' does not match "
                            "expected URL '%s'"),
                          svn_dirent_local_style(fb->local_abspath, pool),
-                         fb->new_URL);
+                         svn_path_url_add_component2(eb->repos,
+                                                     fb->new_relpath, pool));
             }
 
           if (err != NULL)
@@ -4119,7 +4149,7 @@ add_file(const char *path,
                 SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                             fb->local_abspath,
                                             svn_wc_conflict_action_add,
-                                            svn_node_file, fb->new_URL,
+                                            svn_node_file, fb->new_relpath,
                                             subpool));
 
               if (tree_conflict != NULL)
@@ -4236,7 +4266,7 @@ open_file(const char *path,
   if (!pb->in_deleted_and_tree_conflicted_subtree)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
                                 svn_wc_conflict_action_edit, svn_node_file,
-                                fb->new_URL, pool));
+                                fb->new_relpath, pool));
 
   /* Is this path the victim of a newly-discovered tree conflict? */
   if (tree_conflict)
@@ -4584,14 +4614,18 @@ merge_props(svn_stringbuf_t *log_accum,
 }
 
 /* Append to LOG_ACCUM, log commands to update the entry for LOCAL_ABSPATH
-   with a NEW_REVISION and a NEW_URL (if non-NULL), making sure
+   with a NEW_REVISION and a NEW_RELPATH(if non-NULL), making sure
    the entry refers to a file and has no absent or deleted state.
-   Use POOL for temporary allocations. */
+   Use POOL for temporary allocations. 
+
+   ### REPOS_ROOT must be the current repository root while still using
+       entries here */
 static svn_error_t *
 loggy_tweak_base_node(svn_stringbuf_t *log_accum,
                       const char *local_abspath,
                       svn_revnum_t new_revision,
-                      const char *new_URL,
+                      const char *repos_root,
+                      const char *new_relpath,
                       apr_pool_t *pool)
 {
   /* Write log entry which will bump the revision number.  Also, just
@@ -4621,9 +4655,10 @@ loggy_tweak_base_node(svn_stringbuf_t *log_accum,
   tmp_entry.text_time = 0;
 
   /* Possibly install a *non*-inherited URL in the entry. */
-  if (new_URL)
+  if (new_relpath)
     {
-      tmp_entry.url = new_URL;
+      tmp_entry.url = svn_path_url_add_component2(repos_root, new_relpath,
+                                                  pool);
       modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
     }
 
@@ -4757,7 +4792,8 @@ merge_file(svn_wc_notify_state_t *content_state,
      fields. This clears DELETED from any prior versioned file with the
      same name (needed before attempting to install props).  */
   SVN_ERR(loggy_tweak_base_node(log_accum, fb->local_abspath,
-                                *eb->target_revision, fb->new_URL, pool));
+                                *eb->target_revision,
+                                eb->repos, fb->new_relpath, pool));
 
   /* Install all kinds of properties.  It is important to do this before
      any file content merging, since that process might expand keywords, in
@@ -5353,9 +5389,16 @@ close_edit(void *edit_baton,
      will only remove the deleted entry!  */
   if (! eb->target_deleted)
     {
+      const char *switch_url = NULL;
+
+      if (eb->switch_relpath)
+        switch_url = svn_path_url_add_component2(eb->repos,
+                                                 eb->switch_relpath, eb->pool);
+
+
       SVN_ERR(svn_wc__do_update_cleanup(eb->db, eb->target_abspath,
                                         eb->requested_depth,
-                                        eb->switch_url,
+                                        switch_url,
                                         eb->repos,
                                         *(eb->target_revision),
                                         eb->notify_func,
@@ -5425,13 +5468,15 @@ make_editor(svn_revnum_t *target_revision,
 
   /* Get the anchor entry, so we can fetch the repository root. */
   SVN_ERR(svn_wc__node_get_repos_info(&repos_root, &repos_uuid, wc_ctx,
-                                      anchor_abspath, FALSE,
+                                      anchor_abspath, TRUE,
                                       result_pool, scratch_pool));
+
+  /* With WC-NG we need a valid repository root */
+  SVN_ERR_ASSERT(repos_root != NULL && repos_uuid != NULL);
 
   /* Disallow a switch operation to change the repository root of the target,
      if that is known. */
-  if (switch_url && repos_root &&
-      ! svn_uri_is_ancestor(repos_root, switch_url))
+  if (switch_url && !svn_uri_is_ancestor(repos_root, switch_url))
     return svn_error_createf(
        SVN_ERR_WC_INVALID_SWITCH, NULL,
        _("'%s'\n"
@@ -5443,13 +5488,20 @@ make_editor(svn_revnum_t *target_revision,
   eb->pool                     = edit_pool;
   eb->use_commit_times         = use_commit_times;
   eb->target_revision          = target_revision;
-  eb->switch_url               = switch_url;
   eb->repos                    = repos_root;
   eb->uuid                     = repos_uuid;
   eb->db                       = wc_ctx->db;
   eb->wc_ctx                   = wc_ctx;
   eb->target_basename          = target_basename;
   eb->anchor_abspath           = anchor_abspath;
+
+  if (switch_url)
+    eb->switch_relpath         = svn_path_uri_decode(
+                                    svn_uri_skip_ancestor(repos_root,
+                                                          switch_url),
+                                    scratch_pool);
+  else
+    eb->switch_relpath         = NULL;
 
   if (svn_path_is_empty(target_basename))
     eb->target_abspath = eb->anchor_abspath;
