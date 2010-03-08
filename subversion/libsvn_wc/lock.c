@@ -1045,7 +1045,7 @@ child_is_disjoint(svn_boolean_t *disjoint,
   err = svn_wc__db_read_children(&children, db, parent_abspath, scratch_pool,
                                  scratch_pool);
 
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+  if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
     {
       svn_error_clear(err);
       *disjoint = TRUE;
@@ -1329,23 +1329,6 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
                                       cancel_baton, pool));
 }
 
-svn_error_t *
-svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
-                                   svn_wc_adm_access_t **target_access,
-                                   const char **target,
-                                   svn_wc_context_t *wc_ctx,
-                                   const char *path,
-                                   svn_boolean_t write_lock,
-                                   int levels_to_lock,
-                                   svn_cancel_func_t cancel_func,
-                                   void *cancel_baton,
-                                   apr_pool_t *pool)
-{
-  return svn_error_return(open_anchor(anchor_access, target_access, target,
-                                      wc_ctx->db, TRUE, path, write_lock,
-                                      levels_to_lock, cancel_func,
-                                      cancel_baton, pool));
-}
 
 svn_error_t *
 svn_wc__adm_retrieve_from_context(svn_wc_adm_access_t **adm_access,
@@ -1881,3 +1864,15 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
   err2 = svn_wc__release_write_lock(wc_ctx, local_abspath, scratch_pool);
   return svn_error_compose_create(err1, err2);
 }
+
+svn_error_t *
+svn_wc__path_switched(svn_boolean_t *switched,
+                      svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool)
+{
+  return svn_error_return(child_is_disjoint(switched, wc_ctx->db,
+					    local_abspath, scratch_pool));
+}
+
+
