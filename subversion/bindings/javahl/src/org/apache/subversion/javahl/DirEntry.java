@@ -133,7 +133,7 @@ public class DirEntry implements java.io.Serializable
      * @param lastChanged           the date of the last change
      * @param lastAuthor            the author of the last change
      */
-    DirEntry(String path, String absPath, int nodeKind, long size,
+    public DirEntry(String path, String absPath, int nodeKind, long size,
              boolean hasProps, long lastChangedRevision, long lastChanged,
              String lastAuthor)
     {

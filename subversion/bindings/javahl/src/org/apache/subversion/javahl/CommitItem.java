@@ -76,7 +76,7 @@ public class CommitItem implements java.io.Serializable
      * @param cu    copy source url
      * @param r     revision number
      */
-    CommitItem(String p, int nk, int sf, String u, String cu, long r)
+    public CommitItem(String p, int nk, int sf, String u, String cu, long r)
     {
         path = p;
         nodeKind = nk;

@@ -41,7 +41,7 @@ public class ConflictVersion
     private int nodeKind;
 
     /** This constructor should only be called from JNI code. */
-    ConflictVersion(String reposURL, long pegRevision, String pathInRepos,
+    public ConflictVersion(String reposURL, long pegRevision, String pathInRepos,
                     int nodeKind)
     {
         this.reposURL = reposURL;

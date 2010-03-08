@@ -87,7 +87,7 @@ public class LogMessage implements java.io.Serializable
      *                     of microseconds since 00:00:00 January 1,
      *                     1970 UTC
      */
-    LogMessage(Set<ChangePath> cp, long r, String a, Date d, String m)
+    public LogMessage(Set<ChangePath> cp, long r, String a, Date d, String m)
     {
         changedPaths = cp;
         revision = r;
@@ -108,7 +108,7 @@ public class LogMessage implements java.io.Serializable
      * @param message      the log message text
      * @since 1.5
      */
-    LogMessage(Set<ChangePath> cp, long r, String a, long t, String m)
+    public LogMessage(Set<ChangePath> cp, long r, String a, long t, String m)
     {
         changedPaths = cp;
         revision = r;
