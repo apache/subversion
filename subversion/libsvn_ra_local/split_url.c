@@ -106,7 +106,7 @@ svn_ra_local__split_URL(svn_repos_t **repos,
     char *dup_path = (char *)svn_path_uri_decode(path, pool);
     if (!hostname && dup_path[1] && strchr(valid_drive_letters, dup_path[1])
         && (dup_path[2] == ':' || dup_path[2] == '|')
-        && dup_path[3] == '/')
+        && (dup_path[3] == '/' || dup_path[3] == '\0'))
       {
         /* Skip the leading slash. */
         ++dup_path;
@@ -114,6 +114,19 @@ svn_ra_local__split_URL(svn_repos_t **repos,
         ++path;
         if (dup_path[1] == '|')
           dup_path[1] = ':';
+
+        if (dup_path[3] == '\0')
+          {
+            /* A valid dirent for the driveroot must be like "C:/" instead of
+               just "C:" or svn_dirent_join() will use the current directory
+               on the drive instead */
+
+            char *new_path = apr_pcalloc(pool, 4);
+            new_path[0] = dup_path[0];
+            new_path[1] = ':';
+            new_path[2] = '/';
+            new_path[3] = '\0';
+          }
       }
     if (hostname)
       /* We still know that the path starts with a slash. */
