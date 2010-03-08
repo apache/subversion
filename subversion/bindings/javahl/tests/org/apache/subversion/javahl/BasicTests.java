@@ -3829,6 +3829,67 @@ public class BasicTests extends SVNTests
         return sb.toString().getBytes();
     }
 
+    protected class LogMessage
+    {
+        private String message;
+
+        private long timeMicros;
+
+        private Date date;
+
+        private long revision;
+
+        private String author;
+
+        private Set<ChangePath> changedPaths;
+
+        LogMessage(Set<ChangePath> cp, long r, String a, long t, String m)
+        {
+            changedPaths = cp;
+            revision = r;
+            author = a;
+            timeMicros = t;
+            date = null;
+            message = m;
+        }
+
+        public String getMessage()
+        {
+            return message;
+        }
+
+        public long getTimeMicros()
+        {
+            return timeMicros;
+        }
+
+        public long getTimeMillis()
+        {
+            return timeMicros / 1000;
+        }
+
+        public Date getDate()
+        {
+            if (date == null)
+               date = new Date(timeMicros / 1000);
+            return date;
+        }
+
+        public long getRevisionNumber()
+        {
+            return revision;
+        }
+
+        public String getAuthor()
+        {
+            return author;
+        }
+
+        public Set<ChangePath> getChangedPaths()
+        {
+            return changedPaths;
+        }
+    }
 
     /* A blame callback implementation. */
     protected class BlameCallbackImpl implements BlameCallback
