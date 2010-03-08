@@ -587,6 +587,9 @@ svn_uri_is_child(const char *uri1,
  * This function is similar as svn_uri_is_child(), except that it supports
  * Windows dirents and UNC paths on Windows.
  *
+ * ### @todo Makes no attempt to handle one absolute and one relative
+ * dirent, and will simply return NULL.
+ *
  * @since New in 1.6.
  */
 const char *
