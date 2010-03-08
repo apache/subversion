@@ -6086,41 +6086,38 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                        void *notify_baton,
                        apr_pool_t *pool)
 {
-  const char *new_URL;
+  svn_wc__db_t *db = wc_ctx->db;
   const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
   const char *tmp_text_base_path;
   svn_checksum_t *base_checksum;
   svn_stream_t *tmp_base_contents;
   const char *text_base_path;
-  const svn_wc_entry_t *ent;
-  const svn_wc_entry_t *dst_entry;
   const char *temp_dir_abspath;
   svn_stringbuf_t *pre_props_accum;
   svn_stringbuf_t *post_props_accum;
   struct last_change_info *last_change = NULL;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc__text_base_path(&text_base_path, wc_ctx->db, local_abspath,
+  SVN_ERR(svn_wc__text_base_path(&text_base_path, db, local_abspath,
                                  FALSE, pool));
-  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, wc_ctx->db,
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, db,
                                          local_abspath, pool, pool));
 
   /* Fabricate the anticipated new URL of the target and check the
      copyfrom URL to be in the same repository. */
   {
-    SVN_ERR(svn_wc__get_entry(&ent, wc_ctx->db, dir_abspath, FALSE,
-                              svn_node_dir, FALSE, pool, pool));
+    const char *repos_root;
 
-    new_URL = svn_path_url_add_component2(ent->url,
-                                          svn_dirent_basename(local_abspath,
-                                                              NULL),
-                                          pool);
+    /* Find the repository_root via the parent directory, which
+       is always versioned before this function is called */
+    SVN_ERR(svn_wc__node_get_repos_info(&repos_root, NULL, wc_ctx,
+                                        dir_abspath, TRUE, pool, pool));
 
-    if (copyfrom_url && ent->repos &&
-        ! svn_uri_is_ancestor(ent->repos, copyfrom_url))
+    if (copyfrom_url && !svn_uri_is_ancestor(repos_root, copyfrom_url))
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                _("Copyfrom-url '%s' has different repository"
                                  " root than '%s'"),
-                               copyfrom_url, ent->repos);
+                                 copyfrom_url, repos_root);
   }
 
   /* Accumulate log commands in this buffer until we're ready to close
@@ -6129,27 +6126,59 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* If we're replacing the file then we need to save the destination files
      text base and prop base before replacing it. This allows us to revert
-     the entire change. */
-  SVN_ERR(svn_wc__get_entry(&dst_entry, wc_ctx->db, local_abspath, TRUE,
-                           svn_node_unknown, FALSE, pool, pool));
-  if (dst_entry && dst_entry->schedule == svn_wc_schedule_delete)
-    {
-      const char *dst_rtext;
-      const char *dst_txtb;
+     the entire change. We don't do this when the file was already replaced
+     before.
+     ### This block can be removed once the new pristine store is in place */
+  {
+    svn_boolean_t replace = FALSE;
+    svn_wc__db_status_t status;
 
-      /* ### replace this block with: svn_wc__wq_prepare_revert_files()  */
+    err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, db, local_abspath, pool, pool);
 
-      SVN_ERR(svn_wc__text_revert_path(&dst_rtext, wc_ctx->db, local_abspath,
-                                       pool));
-      SVN_ERR(svn_wc__text_base_path(&dst_txtb, wc_ctx->db, local_abspath,
-                                     FALSE, pool));
+    if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      svn_error_clear(err);
+    else
+      SVN_ERR(err);
 
-      SVN_ERR(svn_wc__loggy_move(&pre_props_accum, dir_abspath,
-                                 dst_txtb, dst_rtext, pool, pool));
-      SVN_ERR(svn_wc__loggy_revert_props_create(&pre_props_accum, wc_ctx->db,
-                                                local_abspath, dir_abspath,
-                                                pool));
-    }
+    if (status == svn_wc__db_status_normal ||
+        status == svn_wc__db_status_incomplete)
+      {
+        svn_boolean_t was_replaced;
+        replace = TRUE;
+
+        err = svn_wc__internal_is_replaced(&was_replaced, db, local_abspath,
+                                           pool);
+
+        if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+          svn_error_clear(err);
+        else
+          SVN_ERR(err);
+
+        if (was_replaced)
+          replace = FALSE;
+      }
+
+    if (replace)
+      {
+        const char *dst_rtext;
+        const char *dst_txtb;
+
+        /* ### replace this block with: svn_wc__wq_prepare_revert_files()  */
+
+        SVN_ERR(svn_wc__text_revert_path(&dst_rtext, db, local_abspath,
+                                         pool));
+        SVN_ERR(svn_wc__text_base_path(&dst_txtb, db, local_abspath,
+                                       FALSE, pool));
+
+        SVN_ERR(svn_wc__loggy_move(&pre_props_accum, dir_abspath,
+                                   dst_txtb, dst_rtext, pool, pool));
+        SVN_ERR(svn_wc__loggy_revert_props_create(&pre_props_accum, db,
+                                                  local_abspath, dir_abspath,
+                                                  pool));
+      }
+  }
 
   /* Schedule this for addition first, before the entry exists.
    * Otherwise we'll get bounced out with an error about scheduling
@@ -6186,7 +6215,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* Install the props before the loggy translation, so that it has access to
      the properties for this file. */
-  SVN_ERR(install_added_props(&last_change, wc_ctx->db, dir_abspath,
+  SVN_ERR(install_added_props(&last_change, db, dir_abspath,
                               local_abspath, &new_base_props, new_props, pool));
 
   /* Copy the text base contents into a temporary file so our log
@@ -6260,23 +6289,23 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   }
 
   /* Write our accumulation of log entries into a log file */
-  SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath, pre_props_accum, pool));
-  SVN_ERR(svn_wc__install_props(wc_ctx->db, local_abspath, new_base_props,
+  SVN_ERR(svn_wc__wq_add_loggy(db, dir_abspath, pre_props_accum, pool));
+  SVN_ERR(svn_wc__install_props(db, local_abspath, new_base_props,
                                 new_props ? new_props : new_base_props,
                                 TRUE, FALSE, pool));
 
-  SVN_ERR(svn_wc__run_log2(wc_ctx->db, dir_abspath, pool));
+  SVN_ERR(svn_wc__run_log2(db, dir_abspath, pool));
 
   /* ### HACK: The following code should be performed in the same transaction as the install */
   if (last_change)
-    SVN_ERR(svn_wc__db_temp_op_set_working_last_change(wc_ctx->db, local_abspath,
+    SVN_ERR(svn_wc__db_temp_op_set_working_last_change(db, local_abspath,
                                                        last_change->cmt_rev,
                                                        last_change->cmt_date,
                                                        last_change->cmt_author,
                                                        pool));
   /* ### /HACK */
-  SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath, post_props_accum, pool));
+  SVN_ERR(svn_wc__wq_add_loggy(db, dir_abspath, post_props_accum, pool));
 
 
-  return svn_error_return(svn_wc__run_log2(wc_ctx->db, dir_abspath, pool));
+  return svn_error_return(svn_wc__run_log2(db, dir_abspath, pool));
 }
