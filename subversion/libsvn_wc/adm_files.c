@@ -303,6 +303,8 @@ svn_wc__get_revert_contents(svn_stream_t **contents,
 {
   const char *revert_base;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
   SVN_ERR(svn_wc__text_revert_path(&revert_base, db, local_abspath,
                                    scratch_pool));
 
@@ -393,6 +395,8 @@ open_adm_file(svn_stream_t **stream,
 {
   svn_error_t *err;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
+
   /* Extend with tmp name. */
   dir_abspath = extend_with_adm_name(dir_abspath, extension, TRUE, result_pool,
                                      subdir, fname, NULL);
@@ -434,6 +438,8 @@ svn_wc__open_adm_stream(svn_stream_t **stream,
 {
   const char *local_abspath;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
+
   local_abspath = svn_wc__adm_child(dir_abspath, fname, scratch_pool);
   return svn_error_return(svn_stream_open_readonly(stream, local_abspath,
                                                    result_pool, scratch_pool));
@@ -450,6 +456,8 @@ svn_wc__open_writable_base(svn_stream_t **stream,
 {
   const char *parent_abspath;
   const char *base_name;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   svn_dirent_split(local_abspath, &parent_abspath, &base_name, scratch_pool);
 
@@ -623,6 +631,8 @@ svn_wc__adm_destroy(svn_wc__db_t *db,
 {
   const char *adm_abspath;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
+
   SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
 
   /* Well, the coast is clear for blowing away the administrative
@@ -642,6 +652,8 @@ svn_wc__adm_cleanup_tmp_area(svn_wc__db_t *db,
                              apr_pool_t *scratch_pool)
 {
   const char *tmp_path;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(adm_abspath));
 
   SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
 
