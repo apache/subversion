@@ -1266,7 +1266,6 @@ struct file_mod_t
 /* A baton for use with the path-based editor driver */
 struct path_driver_cb_baton
 {
-  svn_wc_adm_access_t *adm_access;     /* top-level access baton */
   const svn_delta_editor_t *editor;    /* commit editor */
   void *edit_baton;                    /* commit editor's baton */
   apr_hash_t *file_mods;               /* hash: path->file_mod_t */
