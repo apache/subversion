@@ -42,7 +42,7 @@ public class ChangePath implements java.io.Serializable
      * @param action            action performed
      * @param nodeKind          the kind of the changed path
      */
-    ChangePath(String path, long copySrcRevision, String copySrcPath,
+    public ChangePath(String path, long copySrcRevision, String copySrcPath,
                char action, int nodeKind)
     {
         this.path = path;

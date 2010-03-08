@@ -124,7 +124,7 @@ public class NotifyInformation extends EventObject
      * @param mergeRange The range of the merge just beginning to occur.
      * @param pathPrefix A common path prefix.
      */
-    NotifyInformation(String path, int action, int kind, String mimeType,
+    public NotifyInformation(String path, int action, int kind, String mimeType,
                       Lock lock, String errMsg, int contentState,
                       int propState, int lockState, long revision,
                       String changelistName, RevisionRange mergeRange,

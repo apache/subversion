@@ -210,7 +210,7 @@ public class Info2 implements java.io.Serializable
      * @param depth
      * @param treeConflict
      */
-    Info2(String path, String url, long rev, int kind, String reposRootUrl,
+    public Info2(String path, String url, long rev, int kind, String reposRootUrl,
           String reposUUID, long lastChangedRev, long lastChangedDate,
           String lastChangedAuthor, Lock lock, boolean hasWcInfo, int schedule,
           String copyFromUrl, long copyFromRev, long textTime, long propTime,

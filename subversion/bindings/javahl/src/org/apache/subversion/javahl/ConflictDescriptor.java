@@ -92,7 +92,7 @@ public class ConflictDescriptor
     private ConflictVersion srcRightVersion;
 
     /** This constructor should only be called from JNI code. */
-    ConflictDescriptor(String path, int conflictKind, int nodeKind,
+    public ConflictDescriptor(String path, int conflictKind, int nodeKind,
                        String propertyName, boolean isBinary, String mimeType,
                        int action, int reason, int operation,
                        String basePath, String theirPath,

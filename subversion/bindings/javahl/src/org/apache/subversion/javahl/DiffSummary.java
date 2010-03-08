@@ -56,7 +56,7 @@ public class DiffSummary extends EventObject
      * @param nodeKind The type of node which changed (corresponds to
      * the {@link NodeKind} enumeration).
      */
-    DiffSummary(String path, int diffKind, boolean propsChanged,
+    public DiffSummary(String path, int diffKind, boolean propsChanged,
                 int nodeKind)
     {
         super(path);

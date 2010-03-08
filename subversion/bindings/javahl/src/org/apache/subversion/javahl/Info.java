@@ -113,7 +113,7 @@ public class Info implements java.io.Serializable
      * @param copyRev               copy source revision
      * @param copyUrl               copy source url
      */
-    Info(String name, String url, String uuid, String repository, int schedule,
+    public Info(String name, String url, String uuid, String repository, int schedule,
          int nodeKind, String author, long revision, long lastChangedRevision,
          Date lastChangedDate, Date lastDateTextUpdate,
          Date lastDatePropsUpdate, boolean copied,
