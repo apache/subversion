@@ -136,7 +136,7 @@ public interface ISVNClient
      * Retrieve the log messages for an item.
      * @param path          path or url to get the log message for.
      * @param pegRevision   revision to interpret path
-     * @param revisionRanges an array of revision ranges to show
+     * @param ranges        an array of revision ranges to show
      * @param stopOnCopy    do not continue on copy operations
      * @param discoverPath  returns the paths of the changed items in the
      *                      returned objects

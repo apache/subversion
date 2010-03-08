@@ -52,7 +52,7 @@ public class DiffSummary extends EventObject
      *
      * @param path The path we have a diff for.
      * @param diffKind The kind of diff this describes.
-     * @param propChanged Whether any properties have changed.
+     * @param propsChanged Whether any properties have changed.
      * @param nodeKind The type of node which changed (corresponds to
      * the {@link NodeKind} enumeration).
      */
