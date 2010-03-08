@@ -277,7 +277,6 @@ do_wc_to_wc_copies_with_write_lock(void *baton,
 
   for (i = 0; i < b->copy_pairs->nelts; i++)
     {
-      const char *dst_parent_abspath;
       const char *dst_abspath;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(b->copy_pairs, i,
                                                     svn_client__copy_pair_t *);
@@ -288,12 +287,9 @@ do_wc_to_wc_copies_with_write_lock(void *baton,
         SVN_ERR(b->ctx->cancel_func(b->ctx->cancel_baton));
 
       /* Perform the copy */
-      SVN_ERR(svn_dirent_get_absolute(&pair->src_abs, pair->src, scratch_pool));
-      SVN_ERR(svn_dirent_get_absolute(&dst_parent_abspath, pair->dst_parent,
-                                      scratch_pool));
-      dst_abspath = svn_dirent_join(dst_parent_abspath, pair->base_name,
+      dst_abspath = svn_dirent_join(pair->dst_parent_abspath, pair->base_name,
                                     iterpool);
-      err = svn_wc_copy3(b->ctx->wc_ctx, pair->src_abs, dst_abspath,
+      err = svn_wc_copy3(b->ctx->wc_ctx, pair->src, dst_abspath,
                          b->ctx->cancel_func, b->ctx->cancel_baton,
                          b->ctx->notify_func2, b->ctx->notify_baton2, iterpool);
       if (err)
@@ -352,12 +348,12 @@ do_wc_to_wc_moves_with_locks2(void *baton,
   dst_abspath = svn_dirent_join(b->dst_parent_abspath, b->pair->base_name,
                                 scratch_pool);
 
-  SVN_ERR(svn_wc_copy3(b->ctx->wc_ctx, b->pair->src_abs, dst_abspath,
+  SVN_ERR(svn_wc_copy3(b->ctx->wc_ctx, b->pair->src, dst_abspath,
                        b->ctx->cancel_func, b->ctx->cancel_baton,
                        b->ctx->notify_func2, b->ctx->notify_baton2,
                        scratch_pool));
 
-  SVN_ERR(svn_wc_delete4(b->ctx->wc_ctx, b->pair->src_abs, FALSE, FALSE,
+  SVN_ERR(svn_wc_delete4(b->ctx->wc_ctx, b->pair->src, FALSE, FALSE,
                          b->ctx->cancel_func, b->ctx->cancel_baton,
                          b->ctx->notify_func2, b->ctx->notify_baton2,
                          scratch_pool));
@@ -397,9 +393,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      const char *src_parent;
       const char *src_parent_abspath;
-      const char *dst_parent_abspath;
       struct do_wc_to_wc_moves_with_locks_baton baton;
 
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
@@ -410,13 +404,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      src_parent = svn_dirent_dirname(pair->src, iterpool);
-      SVN_ERR(svn_dirent_get_absolute(&src_parent_abspath, src_parent,
-                                      iterpool));
-      SVN_ERR(svn_dirent_get_absolute(&dst_parent_abspath, pair->dst_parent,
-                                      iterpool));
-
-      SVN_ERR(svn_dirent_get_absolute(&pair->src_abs, pair->src, pool));
+      src_parent_abspath = svn_dirent_dirname(pair->src, iterpool);
 
       /* We now need to lock the right combination of batons.
          Four cases:
@@ -425,14 +413,14 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
            3) dst_parent is parent of src_parent
            4) src_parent and dst_parent are disjoint
          We can handle 1) as either 2) or 3) */
-      if (strcmp(src_parent_abspath, dst_parent_abspath) == 0
-          || svn_dirent_is_child(src_parent_abspath, dst_parent_abspath,
+      if (strcmp(src_parent_abspath, pair->dst_parent_abspath) == 0
+          || svn_dirent_is_child(src_parent_abspath, pair->dst_parent_abspath,
                                  iterpool))
         {
           baton.lock_src = TRUE;
           baton.lock_dst = FALSE;
         }
-      else if (svn_dirent_is_child(dst_parent_abspath, src_parent_abspath,
+      else if (svn_dirent_is_child(pair->dst_parent_abspath, src_parent_abspath,
                                    iterpool))
         {
           baton.lock_src = FALSE;
@@ -447,7 +435,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
       /* Perform the copy and then the delete. */
       baton.ctx = ctx;
       baton.pair = pair;
-      baton.dst_parent_abspath = dst_parent_abspath;
+      baton.dst_parent_abspath = pair->dst_parent_abspath;
       if (baton.lock_src)
         SVN_ERR(svn_wc__call_with_write_lock(do_wc_to_wc_moves_with_locks1,
                                              &baton,
@@ -501,22 +489,24 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
                                  _("Path '%s' already exists"),
                                  svn_dirent_local_style(pair->dst, pool));
 
-      svn_dirent_split(pair->dst, &pair->dst_parent, &pair->base_name, pool);
+      svn_dirent_split(pair->dst, &pair->dst_parent_abspath, &pair->base_name,
+                       pool);
 
       /* Make sure the destination parent is a directory and produce a clear
          error message if it is not. */
-      SVN_ERR(svn_io_check_path(pair->dst_parent, &dst_parent_kind, iterpool));
+      SVN_ERR(svn_io_check_path(pair->dst_parent_abspath, &dst_parent_kind,
+                                iterpool));
       if (make_parents && dst_parent_kind == svn_node_none)
         {
-          SVN_ERR(svn_client__make_local_parents(pair->dst_parent, TRUE, ctx,
-                                                 iterpool));
+          SVN_ERR(svn_client__make_local_parents(pair->dst_parent_abspath,
+                                                 TRUE, ctx, iterpool));
         }
       else if (dst_parent_kind != svn_node_dir)
         {
           return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                    _("Path '%s' is not a directory"),
-                                   svn_dirent_local_style(pair->dst_parent,
-                                                        pool));
+                                   svn_dirent_local_style(
+                                     pair->dst_parent_abspath, pool));
         }
     }
 
@@ -1198,8 +1188,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                                     svn_client__copy_pair_t *);
       svn_pool_clear(iterpool);
       /* Sanity check if the source path is versioned. */
-      SVN_ERR(svn_dirent_get_absolute(&pair->src_abs, pair->src, pool));
-      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src_abs,
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src,
                                           svn_node_unknown, FALSE, FALSE,
                                           iterpool, iterpool));
     }
@@ -1248,7 +1237,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src_abs,
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src,
                                           svn_node_unknown, FALSE, FALSE,
                                           iterpool, iterpool));
       pair->src_revnum = entry->revision;
@@ -1370,7 +1359,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, adm_access,
                                          pair->src, pair->src_revnum,
                                          FALSE, ctx, iterpool));
-      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src_abs,
+      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src,
                                           svn_node_unknown, FALSE, FALSE,
                                           pool, pool));
       SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
@@ -1832,6 +1821,8 @@ try_copy(svn_commit_info_t **commit_info_p,
   srcs_are_urls = svn_path_is_url(APR_ARRAY_IDX(sources, 0,
                                   svn_client_copy_source_t *)->path);
   dst_is_url = svn_path_is_url(dst_path_in);
+  if (!dst_is_url)
+    SVN_ERR(svn_dirent_get_absolute(&dst_path_in, dst_path_in, pool));
 
   /* If we have multiple source paths, it implies the dst_path is a
      directory we are moving or copying into.  Populate the COPY_PAIRS
@@ -1850,7 +1841,10 @@ try_copy(svn_commit_info_t **commit_info_p,
 
           svn_pool_clear(iterpool);
 
-          pair->src = apr_pstrdup(pool, source->path);
+          if (src_is_url)
+            pair->src = apr_pstrdup(pool, source->path);
+          else
+            SVN_ERR(svn_dirent_get_absolute(&pair->src, source->path, pool));
           pair->src_op_revision = *source->revision;
           pair->src_peg_revision = *source->peg_revision;
 
@@ -1885,8 +1879,12 @@ try_copy(svn_commit_info_t **commit_info_p,
       svn_client__copy_pair_t *pair = apr_palloc(pool, sizeof(*pair));
       svn_client_copy_source_t *source =
         APR_ARRAY_IDX(sources, 0, svn_client_copy_source_t *);
+      svn_boolean_t src_is_url = svn_path_is_url(source->path);
 
-      pair->src = apr_pstrdup(pool, source->path);
+      if (src_is_url)
+        pair->src = apr_pstrdup(pool, source->path);
+      else
+        SVN_ERR(svn_dirent_get_absolute(&pair->src, source->path, pool));
       pair->src_op_revision = *source->revision;
       pair->src_peg_revision = *source->peg_revision;
 

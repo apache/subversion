@@ -1192,7 +1192,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   /* Crawl the working copy for commit items. */
   if ((cmt_err = svn_client__harvest_committables(&committables,
                                                   &lock_tokens,
-                                                  base_dir_access,
+                                                  base_dir,
                                                   rel_targets,
                                                   depth,
                                                   ! keep_locks,

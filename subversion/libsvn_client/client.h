@@ -730,11 +730,8 @@ svn_client__get_diff_summarize_editor(const char *target,
 */
 typedef struct
 {
-    /* The source path or url. */
+    /* The absolute source path or url. */
     const char *src;
-
-    /* The absolute path of the source. */
-    const char *src_abs;
 
     /* The base name of the object.  It should be the same for both src
        and dst. */
@@ -756,11 +753,11 @@ typedef struct
     /* The source revision number. */
     svn_revnum_t src_revnum;
 
-    /* The destination path or url */
+    /* The absolute destination path or url */
     const char *dst;
 
-    /* The destination's parent path */
-    const char *dst_parent;
+    /* The absolute destination's parent path */
+    const char *dst_parent_abspath;
 } svn_client__copy_pair_t;
 
 /* ---------------------------------------------------------------- */
@@ -871,7 +868,7 @@ typedef struct
 svn_error_t *
 svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_hash_t **lock_tokens,
-                                 svn_wc_adm_access_t *parent_dir,
+                                 const char *dir_abspath,
                                  apr_array_header_t *targets,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
@@ -880,8 +877,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_pool_t *pool);
 
 
-/* Recursively crawl each working copy path SRC in COPY_PAIRS, harvesting
-   commit_items into a COMMITABLES hash (see the docstring for
+/* Recursively crawl each absolute working copy path SRC in COPY_PAIRS,
+   harvesting commit_items into a COMMITABLES hash (see the docstring for
    svn_client__harvest_committables for what that really means, and
    for the relevance of LOCKED_DIRS) as if every entry at or below
    the SRC was to be committed as a set of adds (mostly with history)
