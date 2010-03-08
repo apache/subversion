@@ -99,7 +99,7 @@ public class SVNClient implements ISVNClient
      */
     public Version getVersion()
     {
-        return NativeResources.version;
+        return NativeResources.getVersion();
     }
 
     /**
