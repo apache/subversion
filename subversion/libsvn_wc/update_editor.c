@@ -417,7 +417,17 @@ struct handler_baton
 
 /* Get an empty file in the temporary area for WRI_ABSPATH.  The file will
    not be set for automatic deletion, and the name will be returned in
-   TMP_FILENAME. */
+   TMP_FILENAME.
+
+   This implementation creates a new empty file with a unique name.
+
+   ### This is inefficient for callers that just want an empty file to read
+   ### from.  There could be (and there used to be) a permanent, shared
+   ### empty file for this purpose.
+
+   ### This is inefficient for callers that just want to reserve a unique
+   ### file name to create later.  A better way may not be readily available.
+ */
 static svn_error_t *
 get_empty_tmp_file(const char **tmp_filename,
                    svn_wc__db_t *db,
