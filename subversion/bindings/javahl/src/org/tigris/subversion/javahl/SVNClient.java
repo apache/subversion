@@ -85,7 +85,7 @@ public class SVNClient implements SVNClientInterface
     public Version getVersion()
     {
         return new Version(
-                        org.apache.subversion.javahl.NativeResources.version);
+                        org.apache.subversion.javahl.NativeResources.getVersion());
     }
 
     /**

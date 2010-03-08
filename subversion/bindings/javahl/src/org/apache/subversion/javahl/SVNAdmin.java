@@ -83,7 +83,7 @@ public class SVNAdmin implements ISVNAdmin
      */
     public Version getVersion()
     {
-        return NativeResources.version;
+        return NativeResources.getVersion();
     }
 
     /**

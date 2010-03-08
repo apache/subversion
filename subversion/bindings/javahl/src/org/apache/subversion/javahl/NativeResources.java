@@ -33,9 +33,19 @@ package org.apache.subversion.javahl;
 public class NativeResources
 {
     /**
-     * Version information about the underlying native libraries.
+     * @return Version information about the underlying native libraries.
      */
-    static public Version version;
+    private static Version version;
+    
+    /**
+     * Returns version information about the underlying native libraries.
+     * 
+     * @return version
+     * 
+     */
+    public static Version getVersion() {
+        return version;
+    }
 
     /**
      * Load the required native library whose path is specified by the
