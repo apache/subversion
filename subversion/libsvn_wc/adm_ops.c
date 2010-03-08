@@ -807,7 +807,6 @@ mark_tree_deleted(svn_wc__db_t *db,
   apr_pool_t *iterpool = svn_pool_create(pool);
   const apr_array_header_t *children;
   svn_wc__db_status_t status;
-  svn_boolean_t base_shadowed;
   int i;
 
   /* Read the entries file for this directory. */
@@ -859,8 +858,8 @@ mark_tree_deleted(svn_wc__db_t *db,
   /* Handle directories now, after handling their kiddos. */
   SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               &base_shadowed, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
                                db, dir_abspath, iterpool, iterpool));
   SVN_ERR(svn_wc__db_temp_op_delete(db, dir_abspath, iterpool));
   if (keep_local)
