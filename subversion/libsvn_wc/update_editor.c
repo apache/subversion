@@ -6023,9 +6023,7 @@ install_added_props(struct last_change_info **last_change,
   SVN_ERR(accumulate_last_change(last_change, NULL, db, local_abspath,
                                  entry_props, pool, pool));
 
-  return svn_error_return(svn_wc__db_base_set_dav_cache(db, local_abspath,
-                                        prop_hash_from_array(wc_props, pool),
-                                        pool));
+  return SVN_NO_ERROR;
 }
 
 /* Append, to LOG_ACCUM, log commands to update the entry for LOCAL_ABSPATH
