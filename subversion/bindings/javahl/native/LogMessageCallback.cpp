@@ -99,7 +99,7 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
     {
       midCP = env->GetMethodID(clazzCP,
                                "<init>",
-                               "(Ljava/lang/String;JLjava/lang/String;CI)V");
+                               "(Ljava/lang/String;JLjava/lang/String;CIII)V");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
     }
@@ -131,8 +131,10 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
           jchar jaction = log_item->action;
 
           jobject cp = env->NewObject(clazzCP, midCP, jpath, jcopyFromRev,
-                                  jcopyFromPath, jaction,
-                                  EnumMapper::mapNodeKind(log_item->node_kind));
+                              jcopyFromPath, jaction,
+                              EnumMapper::mapNodeKind(log_item->node_kind),
+                              EnumMapper::mapTristate(log_item->text_modified),
+                              EnumMapper::mapTristate(log_item->props_modified));
           if (JNIUtil::isJavaExceptionThrown())
             return SVN_NO_ERROR;
 

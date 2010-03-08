@@ -41,6 +41,7 @@
 #include "../include/org_apache_subversion_javahl_ConflictDescriptor_Action.h"
 #include "../include/org_apache_subversion_javahl_ConflictDescriptor_Reason.h"
 #include "../include/org_apache_subversion_javahl_Depth.h"
+#include "../include/org_apache_subversion_javahl_Tristate.h"
 
 /**
  * Map a C commit state flag constant to the Java constant.
@@ -510,5 +511,19 @@ jint EnumMapper::mapOperation(svn_wc_operation_t operation)
       return org_apache_subversion_javahl_Operation_switched;
     case svn_wc_operation_merge:
       return org_apache_subversion_javahl_Operation_merge;
+    }
+}
+
+jint EnumMapper::mapTristate(svn_tristate_t tristate)
+{
+  switch (tristate)
+    {
+    case svn_tristate_unknown:
+    default:
+      return org_apache_subversion_javahl_Tristate_Unknown;
+    case svn_tristate_true:
+      return org_apache_subversion_javahl_Tristate_True;
+    case svn_tristate_false:
+      return org_apache_subversion_javahl_Tristate_False;
     }
 }
