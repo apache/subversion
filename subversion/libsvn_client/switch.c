@@ -55,7 +55,7 @@
 */
 
 
-svn_error_t *
+static svn_error_t *
 switch_internal(svn_revnum_t *result_rev,
                 const char *path,
                 const char *local_abspath,
