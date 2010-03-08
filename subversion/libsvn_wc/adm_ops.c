@@ -807,6 +807,7 @@ mark_tree_deleted(svn_wc__db_t *db,
   apr_pool_t *iterpool = svn_pool_create(pool);
   const apr_array_header_t *children;
   svn_wc__db_status_t status;
+  svn_boolean_t base_shadowed;
   int i;
 
   /* Read the entries file for this directory. */
@@ -832,7 +833,7 @@ mark_tree_deleted(svn_wc__db_t *db,
 
       SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, FALSE, iterpool));
 
-      /* If this is a directory, recurse. */
+      /* If this is a directory, recurse; otherwise, delete. */
       if (kind == svn_wc__db_kind_dir)
         {
           SVN_ERR(mark_tree_deleted(db, child_abspath,
@@ -841,8 +842,10 @@ mark_tree_deleted(svn_wc__db_t *db,
                                     notify_func, notify_baton,
                                     iterpool));
         }
-
-      SVN_ERR(svn_wc__db_temp_op_delete(db, child_abspath, pool));
+      else
+        {
+          SVN_ERR(svn_wc__db_temp_op_delete(db, child_abspath, pool));
+        }
 
       /* Tell someone what we've done. */
       if (notify_func != NULL)
@@ -853,25 +856,15 @@ mark_tree_deleted(svn_wc__db_t *db,
                     iterpool);
     }
 
-  /* Handle "this dir" for states that need it done post-recursion. */
+  /* Handle directories now, after handling their kiddos. */
   SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               &base_shadowed, NULL, NULL,
                                db, dir_abspath, iterpool, iterpool));
-  /* Uncommitted directories (schedule add) that are to be scheduled for
-     deletion are a special case, they don't need to be changed as they
-     will be removed from their parent's entry list.
-     The files and directories are left on the disk in this special
-     case, so KEEP_LOCAL doesn't need to be set either. */
-  if (!(status == svn_wc__db_status_added ||
-        status == svn_wc__db_status_obstructed_add))
-    {
-      SVN_ERR(svn_wc__db_temp_op_delete(db, dir_abspath, iterpool));
-
-      if (keep_local)
-        SVN_ERR(svn_wc__db_temp_set_keep_local(db, dir_abspath, TRUE, iterpool));
-    }
+  SVN_ERR(svn_wc__db_temp_op_delete(db, dir_abspath, iterpool));
+  if (keep_local)
+    SVN_ERR(svn_wc__db_temp_set_keep_local(db, dir_abspath, TRUE, iterpool));
 
   /* Destroy our per-iteration pool. */
   svn_pool_destroy(iterpool);
