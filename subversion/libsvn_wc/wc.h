@@ -400,14 +400,6 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     svn_wc__db_t *db,
                                     apr_pool_t *pool);
 
-/* Similar to svn_wc__path_switched(), but with a wc_db parameter instead of
- * a wc_context. */
-svn_error_t *
-svn_wc__internal_path_switched(svn_boolean_t *switched,
-                               svn_wc__db_t *wc_db,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool);
-
 
 /* Similar to svn_wc_conflicted_p3(), but with a wc_db parameter in place of
  * a wc_context. */

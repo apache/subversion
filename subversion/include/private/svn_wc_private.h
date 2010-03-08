@@ -77,9 +77,7 @@ svn_wc__maybe_get_entry(const svn_wc_entry_t **entry,
 
 /** Given a @a local_abspath with a @a wc_ctx, set @a *switched to
  * TRUE if @a local_abspath is switched, otherwise set @a *switched to FALSE.
- * If neither @a local_abspath or its parent have valid URLs, return
- * @c SVN_ERR_ENTRY_MISSING_URL.  All temporaryallocations are done in
- * @a scratch_pool.
+ * All temporary allocations are done in * @a scratch_pool.
  */
 svn_error_t *
 svn_wc__path_switched(svn_boolean_t *switched,
@@ -250,22 +248,6 @@ svn_wc__adm_probe_in_context(svn_wc_adm_access_t **adm_access,
                              void *cancel_baton,
                              apr_pool_t *pool);
 
-/** Like svn_wc_adm_open_anchor(), but with a svn_wc_context_t * to use
- * when opening the access batons.
- *
- * NOT FOR NEW DEVELOPMENT!  (See note to svn_wc__adm_open_in_context().)
- */
-svn_error_t *
-svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
-                                   svn_wc_adm_access_t **target_access,
-                                   const char **target,
-                                   svn_wc_context_t *wc_ctx,
-                                   const char *path,
-                                   svn_boolean_t write_lock,
-                                   int levels_to_lock,
-                                   svn_cancel_func_t cancel_func,
-                                   void *cancel_baton,
-                                   apr_pool_t *pool);
 
 
 /**
