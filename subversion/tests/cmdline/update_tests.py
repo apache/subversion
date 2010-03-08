@@ -2208,9 +2208,17 @@ def update_wc_on_windows_drive(sbox):
         if not drive + ':\\' in drives:
           return drive
     except ImportError:
-      return None
+      # In ActiveState python x64 win32api is not available
+      for d in range(ord('G'), ord('Z')+1):
+        drive = chr(d)
+        if not os.path.isdir(drive + ':\\'):
+          return drive
 
     return None
+
+  # Skip the test if not on Windows
+  if not svntest.main.windows:
+    raise svntest.Skip
 
   # just create an empty folder, we'll checkout later.
   sbox.build(create_wc = False)
