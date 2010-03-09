@@ -32,7 +32,6 @@
 
 struct apr_array_header_t;
 struct svn_error_t;
-class SVN::Pool;
 
 #include "Path.h"
 #include <vector>
@@ -49,6 +48,7 @@ class StringArray
   StringArray(jobject jstringCollection);
   ~StringArray();
   const apr_array_header_t *array(const SVN::Pool &pool);
+  const std::vector<std::string> &vector(void);
 };
 
 #endif // STRINGARRAY_H
