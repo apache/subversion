@@ -1045,6 +1045,25 @@ translated_stream_read(void *baton,
   apr_size_t off = 0;
   apr_pool_t *iterpool;
 
+  /* Optimization for a frequent special case. The configuration parser (and
+     a few others) reads the stream one byte at a time. All the memcpy, pool
+     clearing etc. imposes a huge overhead in that case. In most cases, we
+     can just take that single byte directly from the read buffer.
+
+     Since *len > 1 requires lots of code to be run anyways, we can afford
+     the extra overhead of checking for *len == 1.
+
+     See <http://mail-archives.apache.org/mod_mbox/subversion-dev/201003.mbox/%3C4B94011E.1070207@alice-dsl.de%3E>.
+  */
+  if (unsatisfied == 1 && b->readbuf_off < b->readbuf->len)
+    {
+      /* Just take it from the read buffer */
+      *buffer = b->readbuf->data[b->readbuf_off++];
+
+      return SVN_NO_ERROR;
+    }
+
+  /* Standard code path. */
   iterpool = b->iterpool;
   while (readlen == SVN__STREAM_CHUNK_SIZE && unsatisfied > 0)
     {
