@@ -1245,6 +1245,7 @@ accumulate_last_change(struct last_change_info **last_change,
          defunct, so remove it directly. */
       if (! strcmp(prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
         {
+          SVN_ERR_ASSERT(prop->value == NULL);
           SVN_ERR(svn_wc__db_lock_remove(db, local_abspath, scratch_pool));
 
           if (lock_state)
