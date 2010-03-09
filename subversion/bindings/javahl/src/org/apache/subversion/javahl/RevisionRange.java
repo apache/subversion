@@ -28,7 +28,7 @@ package org.apache.subversion.javahl;
  *
  * @since 1.5
  */
-public class RevisionRange implements Comparable, java.io.Serializable
+public class RevisionRange implements Comparable<RevisionRange>, java.io.Serializable
 {
     // Update the serialVersionUID when there is a incompatible change
     // made to this class.  See any of the following, depending upon
@@ -45,6 +45,7 @@ public class RevisionRange implements Comparable, java.io.Serializable
     /**
      * Creates a new instance.  Called by native library.
      */
+    @SuppressWarnings("unused")
     private RevisionRange(long from, long to)
     {
         this.from = Revision.getInstance(from);
@@ -184,12 +185,12 @@ public class RevisionRange implements Comparable, java.io.Serializable
     /**
      * @param range The RevisionRange to compare this object to.
      */
-    public int compareTo(Object range)
+    public int compareTo(RevisionRange range)
     {
         if (this == range)
             return 0;
 
-        Revision other = ((RevisionRange) range).getFromRevision();
+        Revision other = (range).getFromRevision();
         return RevisionRange.getRevisionAsLong(this.getFromRevision())
             .compareTo(RevisionRange.getRevisionAsLong(other));
     }
