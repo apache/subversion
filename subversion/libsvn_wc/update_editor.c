@@ -1207,12 +1207,21 @@ struct last_change_info
   const char *cmt_author;
 };
 
-/* Accumulate last change info in LAST_CHANGE to set on LOCAL_ABSPATH.
-   ENTRY_PROPS is an array of svn_prop_t* entry props.
-   If ENTRY_PROPS contains the removal of a lock token, the lock info is
-   directly removed from LOCAL_ABSPATH in DB and LOCK_STATE, if non-NULL, will
-   be set to svn_wc_notify_lock_state_unlocked.  Else, LOCK_STATE, if non-NULL
-   will be set to svn_wc_lock_state_unchanged. */
+/* Update the fields of *LAST_CHANGE to represent the last-change info found
+   in ENTRY_PROPS, an array of svn_prop_t* entry props.  Update each field
+   separately, ignoring any unexpected properties and any properties with
+   null values (except the lock token as described below).
+
+   If ENTRY_PROPS contains a lock token property with a null value, remove
+   the lock info directly from LOCAL_ABSPATH in DB and set *LOCK_STATE (if
+   LOCK_STATE is non-NULL) to svn_wc_notify_lock_state_unlocked, else set
+   *LOCK_STATE (if LOCK_STATE is non-NULL) to svn_wc_lock_state_unchanged.
+   ENTRY_PROPS must not contain a lock token with a non-null value.
+
+   If *LAST_CHANGE was NULL, first set it to a new structure allocated from
+   RESULT_POOL and initialize each field to its appropriate null or invalid
+   value.
+ */
 static svn_error_t *
 accumulate_last_change(struct last_change_info **last_change,
                        svn_wc_notify_lock_state_t *lock_state,
@@ -5979,7 +5988,42 @@ svn_wc_get_actual_target2(const char **anchor,
   return SVN_NO_ERROR;
 }
 
-/* Write, to DB, commands to install properties for an added LOCAL_ABSPATH
+/* ### WHAT IT ACTUALLY DOES
+
+   Accumulate last-change info in LAST_CHANGE, and possibly remove a lock
+   token from DB, according to any entry-props that are present in
+   UNMODIFIED_PROPS.
+
+   Filter *UNMODIFIED_PROPS so that just the regular props remain, deleting
+   the wc-props and entry-props from it.
+
+   Ignore NEW_PROPS.
+
+   ### WHAT BERT SAID ON IRC
+
+   [This] function used to do more.. but all the work it was originally
+   supposed to do will eventually a db with a few wq installs.
+
+   I think it should just be moved in the parent function. Makes more sense
+   than that separate function with one caller and handling different
+   features.
+   [...]
+
+   Callers of this function sometimes do a checkout in a subdir and then
+   start modifying entries to make everything work as if it is a copy.
+
+   (svn_wc_addX() case is worse though.. This is only for single file changes)
+
+   The parent is just installing a file in WORKING_NODE (new or replacing)
+   with all the details provided by the caller.
+
+   It's primary users are svn cp URL file and svn merge (incoming file
+   additions).
+   [...]
+
+   ### WHAT THIS DOC STRING SAID BEFORE
+
+   Write, to DB, commands to install properties for an added LOCAL_ABSPATH
    in DB. UNMODIFIED_PROPS and NEW_PROPS are the properties to be installed
    in WORKING_NODE and ACTUAL_NODE, respectively.
    UNMODIFIED_PROPS can contain entryprops and wcprops as well.
