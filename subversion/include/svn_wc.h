@@ -4376,13 +4376,13 @@ svn_wc_add(const char *path,
 
 /** Add a file to a working copy at @a local_abspath, obtaining the
  *text-base's contents from @a new_base_contents, the wc file's
- * content from @a new_contents, its base properties from @a
- * new_base_props and wc properties from @a new_props. Use @a wc_ctx
- * for accessing the working copy.
+ * content from @a new_contents, its unmodified properties from @a
+ * new_base_props and its actual properties from @a new_props. Use
+ * @a wc_ctx for accessing the working copy.
  *
- * The base text and props normally come from the repository file
- * represented by the copyfrom args, see below.  The new file will
- * be scheduled for addition with history.
+ * The unmodified text and props normally come from the repository
+ * file represented by the copyfrom args, see below.  The new file
+ * will be marked as copy.
  *
  * @a new_contents and @a new_props may be NULL, in which case
  * the working copy text and props are taken from the base files with
@@ -4391,8 +4391,7 @@ svn_wc_add(const char *path,
  * @a new_contents must be provided in Normal Form. This is required
  * in order to pass both special and non-special files through a stream.
  *
- * @a adm_access, or an access baton in its associated set, must
- * contain a write lock for the parent of @a dst_path.
+ * @a wc_ctx must contain a write lock for the parent of @a dst_path.
  *
  * If @a copyfrom_url is non-NULL, then @a copyfrom_rev must be a
  * valid revision number, and together they are the copyfrom history
@@ -4400,8 +4399,8 @@ svn_wc_add(const char *path,
  *
  * The @a cancel_func and @a cancel_baton are a standard cancellation
  * callback, or NULL if no callback is needed. @a notify_func and
- * @a notify_baton are a notification callback, and will be notified
- * of the addition of this file.
+ * @a notify_baton are a notification callback, and (if not NULL)
+ * will be notified of the addition of this file.
  *
  * Use @a scratch_pool for temporary allocations.
  *

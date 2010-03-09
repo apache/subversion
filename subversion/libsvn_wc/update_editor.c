@@ -5983,22 +5983,18 @@ svn_wc_get_actual_target2(const char **anchor,
   return SVN_NO_ERROR;
 }
 
-/* TODO ### Update to mention LOCAL_ABSPATH, DIR_ABSPATH; not DST_PATH,
-            ADM_ACCESS.
-
-   Write, to LOG_ACCUM, commands to install properties for an added DST_PATH.
-   NEW_BASE_PROPS and NEW_PROPS are base and working properties, respectively.
-   BASE_PROPS can contain entryprops and wcprops as well.  ADM_ACCESS must
-   be an access baton for DST_PATH.
-   Use @a POOL for temporary allocations. */
+/* Write, to DB, commands to install properties for an added LOCAL_ABSPATH
+   in DB. UNMODIFIED_PROPS and NEW_PROPS are the properties to be installed
+   in WORKING_NODE and ACTUAL_NODE, respectively.
+   UNMODIFIED_PROPS can contain entryprops and wcprops as well.
+   Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 install_added_props(struct last_change_info **last_change,
                     svn_wc__db_t *db,
-                    const char *dir_abspath,
                     const char *local_abspath,
-                    apr_hash_t **new_base_props,
+                    apr_hash_t **unmodified_props,
                     apr_hash_t *new_props,
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
@@ -6009,19 +6005,19 @@ install_added_props(struct last_change_info **last_change,
 
     /* Diff an empty prop has against the new base props gives us an array
        of all props. */
-    SVN_ERR(svn_prop_diffs(&prop_array, *new_base_props,
-                           apr_hash_make(pool), pool));
+    SVN_ERR(svn_prop_diffs(&prop_array, *unmodified_props,
+                           apr_hash_make(scratch_pool), scratch_pool));
     SVN_ERR(svn_categorize_props(prop_array,
                                  &entry_props, &wc_props, &regular_props,
-                                 pool));
+                                 scratch_pool));
 
     /* Put regular props back into a hash table. */
-    *new_base_props = prop_hash_from_array(regular_props, pool);
+    *unmodified_props = prop_hash_from_array(regular_props, scratch_pool);
   }
 
   /* Install the entry props. */
   SVN_ERR(accumulate_last_change(last_change, NULL, db, local_abspath,
-                                 entry_props, pool, pool));
+                                 entry_props, scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -6213,8 +6209,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* Install the props before the loggy translation, so that it has access to
      the properties for this file. */
-  SVN_ERR(install_added_props(&last_change, db, dir_abspath,
-                              local_abspath, &new_base_props, new_props, pool));
+  SVN_ERR(install_added_props(&last_change, db, local_abspath, &new_base_props,
+                              new_props, pool));
 
   /* Copy the text base contents into a temporary file so our log
      can refer to it. Compute its checksum as we copy. */
