@@ -34,10 +34,6 @@
 
 StringArray::~StringArray()
 {
-  if (m_stringArray != NULL)
-    JNIUtil::getEnv()->DeleteLocalRef(m_stringArray);
-  if (m_stringCollection != NULL)
-    JNIUtil::getEnv()->DeleteLocalRef(m_stringCollection);
 }
 
 const apr_array_header_t *StringArray::array(const SVN::Pool &pool)
@@ -61,79 +57,30 @@ const std::vector<std::string> &StringArray::vector(void)
   return m_strings;
 }
 
-StringArray::StringArray(jobjectArray jstrings)
+void
+StringArray::init(void)
 {
-  m_stringArray = jstrings;
-  m_stringCollection = NULL;
-
-  if (jstrings != NULL)
+  const std::vector<jobject> &jobjects = Array::vector();
+  
+  for (std::vector<jobject>::const_iterator it = jobjects.begin();
+        it < jobjects.end(); ++it)
     {
-      JNIEnv *env = JNIUtil::getEnv();
-      jint arraySize = env->GetArrayLength(jstrings);
+      JNIStringHolder str((jstring) *it);
       if (JNIUtil::isExceptionThrown())
         return;
 
-      for (int i = 0; i < arraySize; ++i)
-        {
-          jobject jstr = env->GetObjectArrayElement(jstrings, i);
-          if (JNIUtil::isExceptionThrown())
-            return;
-
-          JNIStringHolder str((jstring)jstr);
-          if (JNIUtil::isExceptionThrown())
-            return;
-
-          m_strings.push_back(std::string((const char *)str));
-        }
+      m_strings.push_back(std::string((const char *)str));
     }
 }
 
-StringArray::StringArray(jobject jstringCollection)
+StringArray::StringArray(jobjectArray jstrings)
+    : Array(jstrings), m_strings()
 {
-  m_stringArray = NULL;
-  m_stringCollection = jstringCollection;
+  init();
+}
 
-  if (jstringCollection != NULL)
-    {
-      JNIEnv *env = JNIUtil::getEnv();
-
-      jclass clazz = env->FindClass("java/util/Collection");
-
-      static jmethodID mid_toArray = 0;
-      if (mid_toArray == 0)
-        {
-          mid_toArray = env->GetMethodID(clazz, "toArray",
-                                         "()[Ljava/lang/Object;");
-          if (JNIUtil::isExceptionThrown())
-            return;
-        }
-
-      jobjectArray jstrings = (jobjectArray) env->CallObjectMethod(
-                                               jstringCollection, mid_toArray);
-
-      jint arraySize = env->GetArrayLength(jstrings);
-      if (JNIUtil::isExceptionThrown())
-        return;
-
-      for (int i = 0; i < arraySize; ++i)
-        {
-          jobject jstr = env->GetObjectArrayElement(jstrings, i);
-          if (JNIUtil::isExceptionThrown())
-            return;
-
-          JNIStringHolder str((jstring)jstr);
-          if (JNIUtil::isExceptionThrown())
-            return;
-
-          m_strings.push_back(std::string((const char *)str));
-        }
-
-      JNIUtil::getEnv()->DeleteLocalRef(clazz);
-      if (JNIUtil::isExceptionThrown())
-        return;
-
-      JNIUtil::getEnv()->DeleteLocalRef(jstrings);
-      if (JNIUtil::isExceptionThrown())
-        return;
-    }
+StringArray::StringArray(jobject jstringCollection)
+    : Array(jstringCollection), m_strings()
+{
+  init();
 }

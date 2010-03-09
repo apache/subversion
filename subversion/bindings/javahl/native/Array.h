@@ -20,33 +20,31 @@
  * ====================================================================
  * @endcopyright
  *
- * @file StringArray.h
- * @brief Interface of the class StringArray
+ * @file Array.h
+ * @brief Interface of the class Array
  */
 
-#ifndef STRINGARRAY_H
-#define STRINGARRAY_H
+#ifndef ARRAY_H
+#define ARRAY_H
 
 #include <jni.h>
 #include "Pool.h"
 
 struct apr_array_header_t;
 
-#include "Array.h"
 #include <vector>
-#include <string>
 
-class StringArray : Array
+class Array
 {
  private:
-  std::vector<std::string> m_strings;
-  void init(void);
+  jobjectArray m_objectArray;
+  std::vector<jobject> m_objects;
+  void init(jobjectArray jobjects);
  public:
-  StringArray(jobjectArray jstrings);
-  StringArray(jobject jstringCollection);
-  ~StringArray();
-  const apr_array_header_t *array(const SVN::Pool &pool);
-  const std::vector<std::string> &vector(void);
+  Array(jobjectArray jobjects);
+  Array(jobject jobjectsCollection);
+  virtual ~Array();
+  const std::vector<jobject> &vector(void);
 };
 
-#endif // STRINGARRAY_H
+#endif // ARRAY_H
