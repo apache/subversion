@@ -756,7 +756,7 @@ read_entries_new(apr_hash_t **result_entries,
 
               if (base_status == svn_wc__db_status_not_present)
                 {
-                  /* ### the underlying node is DELETED in this revision.  */
+                  /* The underlying node is DELETED in this revision.  */
                   entry->deleted = TRUE;
 
                   /* This is an add since there isn't a node to replace.  */
