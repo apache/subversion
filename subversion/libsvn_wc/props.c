@@ -153,6 +153,7 @@ load_props(apr_hash_t **hash,
 }
 
 
+/* */
 static svn_error_t *
 loggy_write_properties(svn_stringbuf_t **log_accum,
                        apr_hash_t *properties,
@@ -493,6 +494,7 @@ svn_wc__install_props(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* */
 static svn_error_t *
 immediate_install_props(svn_wc__db_t *db,
                         const char *local_abspath,
@@ -2055,6 +2057,7 @@ struct getter_baton {
 };
 
 
+/* */
 static svn_error_t *
 get_file_for_validation(const svn_string_t **mime_type,
                         svn_stream_t *stream,
@@ -2084,6 +2087,7 @@ get_file_for_validation(const svn_string_t **mime_type,
 }
 
 
+/* */
 static svn_error_t *
 validate_eol_prop_against_file(const char *path,
                                svn_wc_canonicalize_svn_prop_get_file_t getter,

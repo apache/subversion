@@ -341,6 +341,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 }
 
 
+/* */
 static svn_error_t *
 alloc_db(svn_wc__db_t **db,
          svn_config_t *config,
@@ -358,6 +359,7 @@ alloc_db(svn_wc__db_t **db,
 }
 
 
+/* */
 static svn_error_t *
 add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool)
 {
@@ -379,6 +381,7 @@ add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool)
 }
 
 
+/* */
 static svn_wc_adm_access_t *
 get_from_shared(const char *abspath,
                 svn_wc__db_t *db,
@@ -391,6 +394,7 @@ get_from_shared(const char *abspath,
 }
 
 
+/* */
 static svn_error_t *
 probe(svn_wc__db_t *db,
       const char **dir,
@@ -437,6 +441,7 @@ probe(svn_wc__db_t *db,
 }
 
 
+/* */
 static svn_error_t *
 open_single(svn_wc_adm_access_t **adm_access,
             const char *path,
@@ -487,6 +492,7 @@ open_single(svn_wc_adm_access_t **adm_access,
 }
 
 
+/* */
 static svn_error_t *
 close_single(svn_wc_adm_access_t *adm_access,
              svn_boolean_t preserve_lock,
@@ -679,6 +685,7 @@ do_open(svn_wc_adm_access_t **adm_access,
 }
 
 
+/* */
 static svn_error_t *
 open_all(svn_wc_adm_access_t **adm_access,
          const char *path,
@@ -1024,6 +1031,7 @@ svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
 }
 
 
+/* */
 static svn_error_t *
 child_is_disjoint(svn_boolean_t *disjoint,
                   svn_wc__db_t *db,
@@ -1125,6 +1133,7 @@ child_is_disjoint(svn_boolean_t *disjoint,
 }
 
 
+/* */
 static svn_error_t *
 open_anchor(svn_wc_adm_access_t **anchor_access,
             svn_wc_adm_access_t **target_access,

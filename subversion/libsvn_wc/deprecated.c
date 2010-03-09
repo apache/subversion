@@ -163,6 +163,7 @@ struct wrap_3to2_report_baton {
   void *baton;
 };
 
+/* */
 static svn_error_t *wrap_3to2_set_path(void *report_baton,
                                        const char *path,
                                        svn_revnum_t revision,
@@ -177,6 +178,7 @@ static svn_error_t *wrap_3to2_set_path(void *report_baton,
                                  lock_token, pool);
 }
 
+/* */
 static svn_error_t *wrap_3to2_delete_path(void *report_baton,
                                           const char *path,
                                           apr_pool_t *pool)
@@ -186,6 +188,7 @@ static svn_error_t *wrap_3to2_delete_path(void *report_baton,
   return wrb->reporter->delete_path(wrb->baton, path, pool);
 }
 
+/* */
 static svn_error_t *wrap_3to2_link_path(void *report_baton,
                                         const char *path,
                                         const char *url,
@@ -201,6 +204,7 @@ static svn_error_t *wrap_3to2_link_path(void *report_baton,
                                   start_empty, lock_token, pool);
 }
 
+/* */
 static svn_error_t *wrap_3to2_finish_report(void *report_baton,
                                             apr_pool_t *pool)
 {
@@ -209,6 +213,7 @@ static svn_error_t *wrap_3to2_finish_report(void *report_baton,
   return wrb->reporter->finish_report(wrb->baton, pool);
 }
 
+/* */
 static svn_error_t *wrap_3to2_abort_report(void *report_baton,
                                            apr_pool_t *pool)
 {
@@ -296,6 +301,7 @@ struct wrap_2to1_report_baton {
   void *baton;
 };
 
+/* */
 static svn_error_t *wrap_2to1_set_path(void *report_baton,
                                        const char *path,
                                        svn_revnum_t revision,
@@ -309,6 +315,7 @@ static svn_error_t *wrap_2to1_set_path(void *report_baton,
                                  pool);
 }
 
+/* */
 static svn_error_t *wrap_2to1_delete_path(void *report_baton,
                                           const char *path,
                                           apr_pool_t *pool)
@@ -318,6 +325,7 @@ static svn_error_t *wrap_2to1_delete_path(void *report_baton,
   return wrb->reporter->delete_path(wrb->baton, path, pool);
 }
 
+/* */
 static svn_error_t *wrap_2to1_link_path(void *report_baton,
                                         const char *path,
                                         const char *url,
@@ -332,6 +340,7 @@ static svn_error_t *wrap_2to1_link_path(void *report_baton,
                                   start_empty, pool);
 }
 
+/* */
 static svn_error_t *wrap_2to1_finish_report(void *report_baton,
                                             apr_pool_t *pool)
 {
@@ -340,6 +349,7 @@ static svn_error_t *wrap_2to1_finish_report(void *report_baton,
   return wrb->reporter->finish_report(wrb->baton, pool);
 }
 
+/* */
 static svn_error_t *wrap_2to1_abort_report(void *report_baton,
                                            apr_pool_t *pool)
 {
@@ -2171,6 +2181,7 @@ struct status4_wrapper_baton
   const char *anchor_relpath;
 };
 
+/* */
 static svn_error_t *
 status4_wrapper_func(void *baton,
                      const char *local_abspath,
@@ -2267,6 +2278,7 @@ struct status_editor3_compat_baton
   void *old_baton;
 };
 
+/* */
 static svn_error_t *
 status_editor3_compat_func(void *baton,
                            const char *path,
@@ -2356,6 +2368,7 @@ struct old_status_func_cb_baton
   void *original_baton;
 };
 
+/* */
 static void old_status_func_cb(void *baton,
                                const char *path,
                                svn_wc_status2_t *status)

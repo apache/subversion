@@ -284,6 +284,7 @@ get_versioned_subdirs(apr_array_header_t **children,
 }
 
 
+/* */
 static const char *
 build_lockfile_path(const char *local_dir_abspath,
                     apr_pool_t *result_pool)
@@ -320,6 +321,7 @@ create_physical_lock(const char *abspath, apr_pool_t *scratch_pool)
 }
 
 
+/* */
 static void
 wipe_wcprops(const char *wcroot_abspath, apr_pool_t *scratch_pool)
 {
@@ -537,6 +539,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
 }
 
 
+/* */
 static svn_error_t *
 bump_to_13(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
@@ -570,6 +573,7 @@ kind_to_word(svn_wc__db_kind_t kind)
 }
 
 
+/* */
 static const char *
 conflict_kind_to_word(svn_wc_conflict_kind_t conflict_kind)
 {
@@ -587,6 +591,7 @@ conflict_kind_to_word(svn_wc_conflict_kind_t conflict_kind)
 }
 
 
+/* */
 static const char *
 conflict_action_to_word(svn_wc_conflict_action_t action)
 {
@@ -594,6 +599,7 @@ conflict_action_to_word(svn_wc_conflict_action_t action)
 }
 
 
+/* */
 static const char *
 conflict_reason_to_word(svn_wc_conflict_reason_t reason)
 {
@@ -601,6 +607,7 @@ conflict_reason_to_word(svn_wc_conflict_reason_t reason)
 }
 
 
+/* */
 static const char *
 wc_operation_to_word(svn_wc_operation_t operation)
 {
@@ -608,6 +615,7 @@ wc_operation_to_word(svn_wc_operation_t operation)
 }
 
 
+/* */
 static svn_wc__db_kind_t
 db_kind_from_node_kind(svn_node_kind_t node_kind)
 {
@@ -626,6 +634,7 @@ db_kind_from_node_kind(svn_node_kind_t node_kind)
 }
 
 
+/* */
 static svn_error_t *
 migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
                                   const char *tree_conflict_data,
@@ -736,6 +745,7 @@ migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
 }
 
 
+/* */
 static svn_error_t *
 migrate_tree_conflicts(svn_sqlite__db_t *sdb,
                        apr_pool_t *scratch_pool)
@@ -789,6 +799,7 @@ migrate_tree_conflicts(svn_sqlite__db_t *sdb,
 #endif /* ### no tree conflict migration yet */
 
 
+/* */
 static svn_error_t *
 migrate_locks(const char *wcroot_abspath,
               svn_sqlite__db_t *sdb,
@@ -813,6 +824,7 @@ migrate_locks(const char *wcroot_abspath,
 }
 
 
+/* */
 static svn_error_t *
 bump_to_14(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
@@ -826,6 +838,7 @@ bump_to_14(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 }
 
 
+/* */
 static svn_error_t *
 bump_to_15(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
@@ -835,6 +848,7 @@ bump_to_15(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 }
 
 
+/* */
 static svn_error_t *
 bump_to_16(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
@@ -846,6 +860,7 @@ bump_to_16(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
 #if 0 /* ### no props migration yet */
 
+/* */
 static svn_error_t *
 migrate_props(const char *wcroot_abspath,
               svn_sqlite__db_t *sdb,
@@ -982,6 +997,7 @@ migrate_props(const char *wcroot_abspath,
 }
 
 
+/* */
 static svn_error_t *
 bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
@@ -1001,6 +1017,7 @@ bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
 #if 0 /* ### no tree conflict migration yet */
 
+/* */
 static svn_error_t *
 bump_to_XXX(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
@@ -1111,6 +1128,7 @@ svn_wc__upgrade_sdb(int *result_format,
 }
 
 
+/* */
 static svn_error_t *
 upgrade_working_copy(svn_wc__db_t *db,
                      const char *dir_abspath,

@@ -61,6 +61,7 @@
 #define ENTRIES_ATTR_LOCK_CREATION_DATE "lock-creation-date"
 
 
+/* */
 static svn_wc_entry_t *
 alloc_entry(apr_pool_t *pool)
 {
@@ -716,6 +717,7 @@ do_bool_attr(svn_boolean_t *entry_flag,
 }
 
 
+/* */
 static const char *
 extract_string(apr_uint64_t *result_flags,
                apr_hash_t *atts,

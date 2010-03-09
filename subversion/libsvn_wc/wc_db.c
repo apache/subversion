@@ -264,6 +264,7 @@ static const svn_token_map_t presence_map[] = {
 };
 
 
+/* */
 static svn_filesize_t
 get_translated_size(svn_sqlite__stmt_t *stmt, int slot)
 {
@@ -273,6 +274,7 @@ get_translated_size(svn_sqlite__stmt_t *stmt, int slot)
 }
 
 
+/* */
 static const char *
 escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
 {
@@ -311,6 +313,7 @@ escape_sqlite_like(const char * const str, apr_pool_t *result_pool)
 }
 
 
+/* */
 static svn_error_t *
 verify_no_work(svn_sqlite__db_t *sdb)
 {
@@ -329,6 +332,7 @@ verify_no_work(svn_sqlite__db_t *sdb)
 }
 
 
+/* */
 static apr_status_t
 close_wcroot(void *data)
 {
@@ -350,6 +354,7 @@ close_wcroot(void *data)
 }
 
 
+/* */
 static svn_error_t *
 close_many_wcroots(apr_hash_t *roots,
                    apr_pool_t *state_pool,
@@ -517,6 +522,7 @@ get_pristine_fname(const char **pristine_abspath,
 }
 
 
+/* */
 static svn_error_t *
 fetch_repos_info(const char **repos_root_url,
                  const char **repos_uuid,
@@ -694,6 +700,7 @@ get_old_version(int *version,
 }
 
 
+/* */
 static svn_wc__db_pdh_t *
 get_or_create_pdh(svn_wc__db_t *db,
                   const char *local_dir_abspath,
@@ -781,6 +788,7 @@ determine_obstructed_file(svn_boolean_t *obstructed_file,
 }
 
 
+/* */
 static svn_error_t *
 fetch_wc_id(apr_int64_t *wc_id,
             svn_sqlite__db_t *sdb,
@@ -804,6 +812,7 @@ fetch_wc_id(apr_int64_t *wc_id,
 }
 
 
+/* */
 static svn_error_t *
 open_db(svn_sqlite__db_t **sdb,
         const char *dir_abspath,
@@ -1256,6 +1265,7 @@ get_statement_for_path(svn_sqlite__stmt_t **stmt,
 }
 
 
+/* */
 static svn_error_t *
 navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
                    svn_wc__db_t *db,
@@ -1322,6 +1332,7 @@ create_repos_id(apr_int64_t *repos_id,
 }
 
 
+/* */
 static svn_error_t *
 insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
@@ -1402,6 +1413,7 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 }
 
 
+/* */
 static svn_error_t *
 gather_children(const apr_array_header_t **children,
                 svn_boolean_t base_only,
@@ -1453,6 +1465,7 @@ gather_children(const apr_array_header_t **children,
 }
 
 
+/* */
 static void
 flush_entries(const svn_wc__db_pdh_t *pdh)
 {
@@ -1461,6 +1474,7 @@ flush_entries(const svn_wc__db_pdh_t *pdh)
 }
 
 
+/* */
 static svn_error_t *
 create_db(svn_sqlite__db_t **sdb,
           apr_int64_t *repos_id,
@@ -2728,6 +2742,7 @@ struct set_changelist_baton
   const char *changelist;
 };
 
+/* */
 static svn_error_t *
 set_changelist_txn(void *baton,
                    svn_sqlite__db_t *sdb,
@@ -2881,6 +2896,7 @@ struct set_tc_baton
 };
 
 
+/* */
 static svn_error_t *
 set_tc_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
@@ -4067,6 +4083,7 @@ struct relocate_baton
 };
 
 
+/* */
 static svn_error_t *
 relocate_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
@@ -4248,6 +4265,7 @@ struct commit_baton {
 };
 
 
+/* */
 static svn_error_t *
 commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
@@ -4454,6 +4472,7 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 }
 
 
+/* */
 static svn_error_t *
 determine_repos_info(apr_int64_t *repos_id,
                      const char **repos_relpath,
@@ -6054,6 +6073,7 @@ svn_wc__db_wclock_set(svn_wc__db_t *db,
 }
 
 
+/* */
 static svn_error_t *
 is_wclocked(svn_boolean_t *locked,
             svn_wc__db_t *db,

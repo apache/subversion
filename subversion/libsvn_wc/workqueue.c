@@ -117,6 +117,7 @@ copy_and_translate(svn_wc__db_t *db,
 }
 
 
+/* */
 static svn_error_t *
 move_if_present(const char *source_abspath,
                 const char *dest_abspath,
@@ -167,6 +168,7 @@ maybe_remove_conflict(const char *parent_abspath,
 }
 
 
+/* */
 static svn_error_t *
 run_revert(svn_wc__db_t *db,
            const svn_skel_t *work_item,
@@ -614,6 +616,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
 /* OP_PREPARE_REVERT_FILES  */
 
 
+/* */
 static svn_error_t *
 run_prepare_revert_files(svn_wc__db_t *db,
                          const svn_skel_t *work_item,
@@ -704,6 +707,7 @@ svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
 /* OP_REMOVE_REVERT_FILES  */
 
 
+/* */
 static svn_error_t *
 run_remove_revert_files(svn_wc__db_t *db,
                         const svn_skel_t *work_item,
@@ -754,6 +758,7 @@ svn_wc__wq_remove_revert_files(svn_wc__db_t *db,
 
 /* OP_KILLME  */
 
+/* */
 static svn_error_t *
 run_killme(svn_wc__db_t *db,
            const svn_skel_t *work_item,
@@ -875,6 +880,7 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
 
 /* OP_LOGGY  */
 
+/* */
 static svn_error_t *
 run_loggy(svn_wc__db_t *db,
           const svn_skel_t *work_item,
@@ -919,6 +925,7 @@ svn_wc__wq_add_loggy(svn_wc__db_t *db,
 
 /* OP_DELETION_POSTCOMMIT  */
 
+/* */
 static svn_error_t *
 run_deletion_postcommit(svn_wc__db_t *db,
                         const svn_skel_t *work_item,
@@ -1187,6 +1194,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
 }
 
 
+/* */
 static svn_error_t *
 log_do_committed(svn_wc__db_t *db,
                  const char *local_abspath,
@@ -1484,6 +1492,7 @@ log_do_committed(svn_wc__db_t *db,
 }
 
 
+/* */
 static svn_error_t *
 run_postcommit(svn_wc__db_t *db,
                const svn_skel_t *work_item,
@@ -1582,6 +1591,7 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
 
 /* OP_INSTALL_PROPERTIES */
 
+/* */
 static svn_error_t *
 run_install_properties(svn_wc__db_t *db,
                        const svn_skel_t *work_item,
@@ -1721,6 +1731,7 @@ svn_wc__wq_add_install_properties(svn_wc__db_t *db,
 
 /* OP_DELETE */
 
+/* */
 static svn_error_t *
 run_delete(svn_wc__db_t *db,
            const svn_skel_t *work_item,

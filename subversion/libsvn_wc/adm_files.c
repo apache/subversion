@@ -476,6 +476,7 @@ svn_wc__open_writable_base(svn_stream_t **stream,
 /*** Checking for and creating administrative subdirs. ***/
 
 
+/* */
 static svn_error_t *
 init_adm_tmp_area(const char *path, apr_pool_t *pool)
 {

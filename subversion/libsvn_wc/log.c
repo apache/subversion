@@ -278,6 +278,7 @@ file_xfer_under_path(svn_wc__db_t *db,
 
 /*** Dispatch on the xml opening tag. ***/
 
+/* */
 static svn_error_t *
 log_do_file_xfer(struct log_runner *loggy,
                  const char *name,
@@ -399,6 +400,7 @@ log_do_rm(struct log_runner *loggy, const char *name)
 }
 
 
+/* */
 static svn_error_t *
 log_do_modify_entry(struct log_runner *loggy,
                     const char *name,
@@ -494,6 +496,7 @@ log_do_modify_entry(struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
+/* */
 static svn_error_t *
 log_do_delete_lock(struct log_runner *loggy,
                    const char *name)
@@ -599,6 +602,7 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
 }
 
 
+/* */
 static svn_error_t *
 log_do_add_tree_conflict(struct log_runner *loggy,
                          const char *victim_basename,
@@ -629,6 +633,7 @@ log_do_add_tree_conflict(struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
+/* */
 static void
 start_handler(void *userData, const char *eltname, const char **atts)
 {
@@ -1276,6 +1281,7 @@ svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
 
 /*** Recursively do log things. ***/
 
+/* */
 static svn_error_t *
 can_be_cleaned(int *wc_format,
                svn_wc__db_t *db,
@@ -1301,6 +1307,7 @@ can_be_cleaned(int *wc_format,
 }
 
 
+/* */
 static svn_error_t *
 cleanup_internal(svn_wc__db_t *db,
                  const char *adm_abspath,

@@ -115,6 +115,7 @@ const svn_token_map_t svn_wc__conflict_reason_map[] =
 };
 
 
+/* */
 static svn_boolean_t
 is_valid_version_info_skel(const svn_skel_t *skel)
 {
@@ -127,6 +128,7 @@ is_valid_version_info_skel(const svn_skel_t *skel)
 }
 
 
+/* */
 static svn_boolean_t
 is_valid_conflict_skel(const svn_skel_t *skel)
 {
