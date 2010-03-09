@@ -4729,14 +4729,14 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
 
 /**
  * Queue committed items to be processed later by
- * svn_wc_process_committed_queue().
+ * svn_wc_process_committed_queue2().
  *
- * All pointer data passed to this function (@a path, @a adm_access,
- * @a wcprop_changes and @a checksum) should remain valid until the queue
- * has been processed by svn_wc_process_committed_queue().
+ * All pointer data passed to this function (@a path, @a wcprop_changes
+ * and @a checksum) should remain valid until the queue
+ * has been processed by svn_wc_process_committed_queue2().
  *
  * Record in @a queue that @a path will need to be bumped after a commit
- * succeeds. @a adm_access must hold a write lock appropriate for @a path.
+ * succeeds.
  *
  * If non-NULL, @a wcprop_changes is an array of <tt>svn_prop_t *</tt>
  * changes to wc properties; if an #svn_prop_t->value is NULL, then
@@ -4763,7 +4763,25 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * it will bump ALL nodes under the directory, regardless of their
  * actual inclusion in the new revision.
  *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
+                        const char *path,
+                        svn_boolean_t recurse,
+                        const apr_array_header_t *wcprop_changes,
+                        svn_boolean_t remove_lock,
+                        svn_boolean_t remove_changelist,
+                        const svn_checksum_t *checksum,
+                        apr_pool_t *scratch_pool);
+
+/** @see svn_wc_queue_committed3()
+ *
+ * @a adm_access is unused.
+ *
  * @since New in 1.6.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
 svn_error_t *
 svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
@@ -4805,11 +4823,23 @@ svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
  * @a rev_date and @a rev_author are the (server-side) date and author
  * of the new revision; one or both may be @c NULL.
  *
- * @a adm_access must be associated with all affected directories, and
- * must hold a write lock in each one.
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
+				svn_wc_context_t *wc_ctx,
+				svn_revnum_t new_revnum,
+				const char *rev_date,
+				const char *rev_author,
+				apr_pool_t *pool);
+
+/** @see svn_wc_process_committed_queue2()
  *
  * @since New in 1.5.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
                                svn_wc_adm_access_t *adm_access,
