@@ -827,7 +827,7 @@ svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
    ### This is used for files where we don't know the checksum ahead of
    ### time, so we drop it into a temp area first, computing the checksum
    ### as we write it there.
-   
+
    ### the md5_checksum parameter is temporary. */
 svn_error_t *
 svn_wc__db_pristine_install(svn_wc__db_t *db,

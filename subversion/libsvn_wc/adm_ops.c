@@ -1182,7 +1182,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 
       /* ### The following two operations should be inside one SqLite
              transaction. For even better behavior the tree operation
-             before this block needs the same handling. 
+             before this block needs the same handling.
              Luckily most of this is for free once properties and pristine
              are handled in the WC-NG way. */
       SVN_ERR(svn_wc__db_temp_op_delete(wc_ctx->db, local_abspath, pool));

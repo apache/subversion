@@ -1060,7 +1060,7 @@ svn_wc__upgrade_sdb(int *result_format,
                                              (void *)wcroot_abspath,
                                              scratch_pool));
 
-        /* If the transaction succeeded, then we don't need the wcprops        
+        /* If the transaction succeeded, then we don't need the wcprops
            files. We stopped writing them partway through format 12, but
            we may be upgrading from an "early 12" and need to toss those
            files. We aren't going to migrate them because it is *also*

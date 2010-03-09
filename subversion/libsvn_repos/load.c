@@ -243,7 +243,7 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
       /* The svn:mergeinfo property syntax demands absolute repository
          paths, so prepend a leading slash if PARENT_DIR lacks one.  */
       if (*parent_dir != '/')
-        path = svn_path_join_many(pool, "/", parent_dir, 
+        path = svn_path_join_many(pool, "/", parent_dir,
                                   merge_source + 1, NULL);
       else
         path = svn_path_join(parent_dir, merge_source + 1, pool);

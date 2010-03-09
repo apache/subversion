@@ -400,7 +400,7 @@ switch_file_external(const char *path,
                                  anchor_abspath, subpool);
       if (err)
         goto cleanup;
-  
+
       if (text_conflicted || prop_conflicted || tree_conflicted)
         return svn_error_createf
           (SVN_ERR_WC_FOUND_CONFLICT, 0,
@@ -897,7 +897,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
 
       svn_error_t *err;
       const char *remove_target_abspath;
-      svn_boolean_t lock_existed; 
+      svn_boolean_t lock_existed;
 
       SVN_ERR(svn_dirent_get_absolute(&remove_target_abspath,
                                       path,
@@ -909,7 +909,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       if (! lock_existed)
         {
           SVN_ERR(svn_wc__acquire_write_lock(NULL, ib->ctx->wc_ctx,
-                                             remove_target_abspath, 
+                                             remove_target_abspath,
                                              ib->iter_pool,
                                              ib->iter_pool));
         }
@@ -941,7 +941,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       if (! lock_existed
           && (! err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
         {
-          svn_error_t *err2 = svn_wc__release_write_lock(ib->ctx->wc_ctx, 
+          svn_error_t *err2 = svn_wc__release_write_lock(ib->ctx->wc_ctx,
                                                          remove_target_abspath,
                                                          ib->iter_pool);
           if (err2)
@@ -1163,13 +1163,13 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   ib.pool              = cb->pool;
   ib.iter_pool         = svn_pool_create(cb->pool);
 
-  SVN_ERR(svn_dirent_get_absolute(&abs_parent_dir, ib.parent_dir, 
+  SVN_ERR(svn_dirent_get_absolute(&abs_parent_dir, ib.parent_dir,
                                   cb->pool));
 
-  err = svn_wc__node_get_url(&url, cb->ctx->wc_ctx, 
+  err = svn_wc__node_get_url(&url, cb->ctx->wc_ctx,
                              abs_parent_dir, cb->pool, cb->pool);
 
-  /* If we're doing an 'svn export' the current dir will not be a 
+  /* If we're doing an 'svn export' the current dir will not be a
      working copy. We can't get the parent_dir. */
   if (err)
     {
@@ -1190,7 +1190,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
                                                           cb->pool);
           svn_error_clear(err);
         }
-      else 
+      else
         return svn_error_return(err);
     }
   else

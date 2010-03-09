@@ -381,7 +381,7 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
 
    When DETAILED is set, and REPOS_LOCKS is set, treat missing repository locks
    as broken WC locks.
-   
+
    Increment *TEXT_CONFLICTS, *PROP_CONFLICTS, or *TREE_CONFLICTS if
    a conflict was encountered.
    */
@@ -725,8 +725,8 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
  * if BASE is an uri, dirent or relative.
  */
 const char *
-svn_cl__path_join(const char *base, 
-                  const char *component, 
+svn_cl__path_join(const char *base,
+                  const char *component,
                   apr_pool_t *pool);
 
 #ifdef __cplusplus

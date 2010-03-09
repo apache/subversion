@@ -36,12 +36,12 @@ public class NativeResources
      * @return Version information about the underlying native libraries.
      */
     private static Version version;
-    
+
     /**
      * Returns version information about the underlying native libraries.
-     * 
+     *
      * @return version
-     * 
+     *
      */
     public static Version getVersion() {
         return version;

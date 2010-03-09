@@ -216,12 +216,12 @@ switch_internal(svn_revnum_t *result_rev,
 
      We pass in an external_func for recording all externals. It
      shouldn't be needed for a switch if it wasn't for the relative
-     externals of type '../path'. All of those must be resolved to 
+     externals of type '../path'. All of those must be resolved to
      the new location.  */
   err = svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
                                 report_baton, TRUE, depth, (! depth_is_sticky),
                                 (! server_supports_depth),
-                                use_commit_times, 
+                                use_commit_times,
                                 svn_client__external_info_gatherer, &efb,
                                 ctx->notify_func2, ctx->notify_baton2, pool);
 

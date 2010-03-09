@@ -1090,7 +1090,7 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
    If the server is kind enough to tell us the current youngest
    revision of the target repository, set *YOUNGEST_REV to that value;
    set it to SVN_INVALID_REVNUM otherwise.
- 
+
   NOTE:  This function also expects the server to announce the
    activity collection.  */
 svn_error_t *

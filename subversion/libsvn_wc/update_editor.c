@@ -203,7 +203,7 @@ struct edit_baton
      that the edit was completed successfully. */
   svn_boolean_t close_edit_complete;
 
-  /* If this is a 'switch' operation, the new relpath of target_abspath, 
+  /* If this is a 'switch' operation, the new relpath of target_abspath,
      else NULL. */
   const char *switch_relpath;
 
@@ -1590,7 +1590,7 @@ tree_has_local_mods(svn_boolean_t *modified,
  *
  * THEIR_RELPATH is the involved node's repository relative path on the
  * source-right side, the side that the target should become after the
- * update. Simply put, that's the URL obtained from the node's 
+ * update. Simply put, that's the URL obtained from the node's
  * dir_baton->new_relpath or file_baton->new_relpath (but it's more
  * complex for a delete).
  *
@@ -1791,8 +1791,8 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
     svn_node_kind_t conflict_node_kind;
     svn_wc_conflict_version_t *src_left_version;
     svn_wc_conflict_version_t *src_right_version;
-    
-    /* Get the source-left information, i.e. the local state of the node 
+
+    /* Get the source-left information, i.e. the local state of the node
      * before any changes were made to the working copy, i.e. the state the
      * node would have if it was reverted. */
     if (reason == svn_wc_conflict_reason_added)
@@ -1919,7 +1919,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                                                         left_revision,
                                                         left_kind,
                                                         pool);
-    
+
     src_right_version = svn_wc_conflict_version_create(repos_root_url,
                                                        right_repos_relpath,
                                                        *eb->target_revision,
@@ -4623,7 +4623,7 @@ merge_props(svn_stringbuf_t *log_accum,
 /* Append to LOG_ACCUM, log commands to update the entry for LOCAL_ABSPATH
    with a NEW_REVISION and a NEW_RELPATH(if non-NULL), making sure
    the entry refers to a file and has no absent or deleted state.
-   Use POOL for temporary allocations. 
+   Use POOL for temporary allocations.
 
    ### REPOS_ROOT must be the current repository root while still using
        entries here */
@@ -5244,7 +5244,7 @@ close_file(void *file_baton,
                    be removed soon anyway.
 
          ### HACK: The loggy stuff checked the preconditions for us,
-                   we just make the property code happy here. 
+                   we just make the property code happy here.
 
          We can also clear entry.deleted here, as we are adding a new
          BASE_NODE anyway */

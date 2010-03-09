@@ -130,17 +130,17 @@ svn_client_upgrade(const char *path,
                          ctx->notify_func2, ctx->notify_baton2,
                          scratch_pool));
 
-  /* Now it's time to upgrade the externals too. We do it after the wc 
+  /* Now it's time to upgrade the externals too. We do it after the wc
      upgrade to avoid that errors in the externals causes the wc upgrade to
-     fail. Thanks to caching the performance penalty of walking the wc a 
+     fail. Thanks to caching the performance penalty of walking the wc a
      second time shouldn't be too severe */
-  SVN_ERR(svn_client_propget3(&externals, SVN_PROP_EXTERNALS, path, &rev, 
-                              &rev, NULL, svn_depth_infinity, NULL, ctx, 
+  SVN_ERR(svn_client_propget3(&externals, SVN_PROP_EXTERNALS, path, &rev,
+                              &rev, NULL, svn_depth_infinity, NULL, ctx,
                               scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
 
-  for (hi = apr_hash_first(scratch_pool, externals); hi; 
+  for (hi = apr_hash_first(scratch_pool, externals); hi;
        hi = apr_hash_next(hi))
     {
       const char *key;
@@ -148,7 +148,7 @@ svn_client_upgrade(const char *path,
       apr_ssize_t klen;
       svn_string_t *external_desc;
       apr_array_header_t *externals_p;
-      
+
       svn_pool_clear(iterpool);
       externals_p = apr_array_make(iterpool, 1,
                                    sizeof(svn_wc_external_item2_t*));
@@ -157,8 +157,8 @@ svn_client_upgrade(const char *path,
 
       external_desc = apr_hash_get(externals, key, klen);
 
-      SVN_ERR(svn_wc_parse_externals_description3(&externals_p, 
-                                            svn_dirent_dirname(path, 
+      SVN_ERR(svn_wc_parse_externals_description3(&externals_p,
+                                            svn_dirent_dirname(path,
                                                                iterpool),
                                                   external_desc->data, TRUE,
                                                   iterpool));

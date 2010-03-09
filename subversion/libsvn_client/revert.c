@@ -50,7 +50,7 @@ struct revert_with_write_lock_baton {
 };
 
 /* (Note: All arguments are in the baton above.)
-  
+
    Attempt to revert LOCAL_ABSPATH.
 
    If DEPTH is svn_depth_empty, revert just the properties on the

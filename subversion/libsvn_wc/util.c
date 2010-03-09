@@ -460,8 +460,8 @@ svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
 
       case svn_wc_conflict_kind_text:
         new_conflict->is_binary = conflict->is_binary;
-        new_conflict->mime_type = conflict->mime_type 
-                              ? apr_pstrdup(result_pool, conflict->mime_type) 
+        new_conflict->mime_type = conflict->mime_type
+                              ? apr_pstrdup(result_pool, conflict->mime_type)
                               : NULL;
         new_conflict->base_file = apr_pstrdup(result_pool,
                                               conflict->base_file);
@@ -469,9 +469,9 @@ svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
                                                conflict->their_file);
         new_conflict->my_file = apr_pstrdup(result_pool,
                                             conflict->my_file);
-        new_conflict->merged_file = conflict->merged_file 
+        new_conflict->merged_file = conflict->merged_file
                                     ? apr_pstrdup(result_pool,
-                                                  conflict->merged_file) 
+                                                  conflict->merged_file)
                                     : NULL;
         break;
 
@@ -521,8 +521,8 @@ svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
 
       case svn_wc_conflict_kind_text:
         new_conflict->is_binary = conflict->is_binary;
-        new_conflict->mime_type = conflict->mime_type 
-                              ? apr_pstrdup(result_pool, conflict->mime_type) 
+        new_conflict->mime_type = conflict->mime_type
+                              ? apr_pstrdup(result_pool, conflict->mime_type)
                               : NULL;
         new_conflict->base_file = apr_pstrdup(result_pool,
                                               conflict->base_file);
@@ -530,9 +530,9 @@ svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
                                                conflict->their_file);
         new_conflict->my_file = apr_pstrdup(result_pool,
                                             conflict->my_file);
-        new_conflict->merged_file = conflict->merged_file 
+        new_conflict->merged_file = conflict->merged_file
                                     ? apr_pstrdup(result_pool,
-                                                  conflict->merged_file) 
+                                                  conflict->merged_file)
                                     : NULL;
         break;
 

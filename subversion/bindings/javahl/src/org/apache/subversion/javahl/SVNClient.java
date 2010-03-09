@@ -500,7 +500,7 @@ public class SVNClient implements ISVNClient
                     changelists == null ? null :
                       changelists.toArray(new String[changelists.size()]),
                     ignoreAncestry, noDiffDeleted, force, copiesAsAdds);
-                
+
     }
 
     private native void diff(String target1, Revision revision1, String target2,
@@ -879,7 +879,7 @@ public class SVNClient implements ISVNClient
                       Collection<String> changelists, InfoCallback callback)
             throws ClientException
     {
-        this.info2(pathOrUrl, revision, pegRevision, depth, 
+        this.info2(pathOrUrl, revision, pegRevision, depth,
                    changelists == null ? null :
                      changelists.toArray(new String[changelists.size()]),
                    callback);

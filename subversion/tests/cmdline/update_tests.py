@@ -4332,37 +4332,37 @@ def tree_conflicts_on_update_1_1(sbox):
 
   expected_info = {
     'F/alpha' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming edit upon update'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .file.*/F/alpha@3$',
     },
     'DF/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming edit upon update'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .dir.*/DF/D1@3$',
     },
     'DDF/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming edit upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .dir.*/DDF/D1@3$',
     },
     'D/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming edit upon update'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .dir.*/D/D1@3$',
     },
     'DD/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming edit upon update'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .dir.*/DD/D1@3$',
     },
     'DDD/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming edit upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .dir.*/DDD/D1@3$',
@@ -4416,7 +4416,7 @@ def tree_conflicts_on_update_1_2(sbox):
                          'DDD/D1/D2/D3',
                          'DDF/D1/D2/gamma',
                          'DF/D1/beta')
-  
+
   ### Why does the deep trees state not include files?
   expected_disk.remove('D/D1',
                        'DD/D1/D2',
@@ -4424,37 +4424,37 @@ def tree_conflicts_on_update_1_2(sbox):
 
   expected_info = {
     'F/alpha' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*/F/alpha@3$',
     },
     'DF/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming edit upon update'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .dir.*/DF/D1@3$',
     },
     'DDF/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming edit upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .dir.*/DDF/D1@3$',
     },
     'D/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*/D/D1@3$',
     },
     'DD/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming edit upon update'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .dir.*/DD/D1@3$',
     },
     'DDD/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming edit upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .dir.*/DDD/D1@3$',
@@ -4507,37 +4507,37 @@ def tree_conflicts_on_update_2_1(sbox):
 
   expected_info = {
     'F/alpha' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local edit, incoming delete upon update'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*/F/alpha@3$',
     },
     'DF/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local edit, incoming delete upon update'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .none.*/DF/D1@3$',
     },
     'DDF/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local edit, incoming delete upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .none.*/DDF/D1@3$',
     },
     'D/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local edit, incoming delete upon update'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*/D/D1@3$',
     },
     'DD/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local edit, incoming delete upon update'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .none.*/DD/D1@3$',
     },
     'DDD/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local edit, incoming delete upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .none.*/DDD/D1@3$',
@@ -4610,37 +4610,37 @@ def tree_conflicts_on_update_2_2(sbox):
 
   expected_info = {
     'F/alpha' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*/F/alpha@3$',
     },
     'DF/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .none.*/DF/D1@3$',
     },
     'DDF/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .none.*/DDF/D1@3$',
     },
     'D/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*/D/D1@3$',
     },
     'DD/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .none.*/DD/D1@3$',
     },
     'DDD/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .none.*/DDD/D1@3$',
@@ -4771,37 +4771,37 @@ def tree_conflicts_on_update_3(sbox):
 
   expected_info = {
     'F/alpha' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .file.*/F/alpha@2'
         + ' Source right: .none.*/F/alpha@3$',
     },
     'DF/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .none.*/DF/D1@3$',
     },
     'DDF/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .none.*/DDF/D1@3$',
     },
     'D/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/D/D1@2'
         + ' Source right: .none.*/D/D1@3$',
     },
     'DD/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .none.*/DD/D1@3$',
     },
     'DDD/D1' : {
-      'Tree conflict' : 
+      'Tree conflict' :
         '^local delete, incoming delete upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .none.*/DDD/D1@3$',
@@ -5218,21 +5218,21 @@ def set_deep_depth_on_target_with_shallow_children(sbox):
     'A/D/H/omega' : Item(status='D '),
     'A/D/H/psi'   : Item(status='D '),
     })
-  
+
   expected_status.remove('A/D/G/pi',
                          'A/D/G/rho',
                          'A/D/G/tau',
                          'A/D/H/chi',
                          'A/D/H/omega',
                          'A/D/H/psi')
-  
+
   expected_disk.remove('A/D/G/pi',
                        'A/D/G/rho',
                        'A/D/G/tau',
                        'A/D/H/chi',
                        'A/D/H/omega',
                        'A/D/H/psi')
-  
+
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -5257,11 +5257,11 @@ def set_deep_depth_on_target_with_shallow_children(sbox):
     'A/D/H/omega' : Item(status='A '),
     'A/D/H/psi'   : Item(status='A '),
     })
-  
+
   expected_disk = svntest.main.greek_state.copy()
-  
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  
+
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -5311,7 +5311,7 @@ def update_deleted_locked_files(sbox):
   svntest.main.run_svn(None, 'delete', E)#iota, E)
 
   expected_output = svntest.wc.State(wc_dir, {})
-  
+
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('iota',
                        'A/B/E/alpha',
@@ -5392,7 +5392,7 @@ def update_empty_hides_entries(sbox):
                                         wc_dir)
 
   # Now update the rest back to head
-  
+
   # This operation is currently a NO-OP, because the WC-Crawler
   # tells the repository that it contains a full tree of the HEAD
   # revision.
@@ -5448,7 +5448,7 @@ def mergeinfo_updates_merge_with_local_mods(sbox):
                                      sbox.repo_url + '/A', A_COPY_path)
   svntest.actions.run_and_verify_svn(None, [A_COPY_path + " - /A:3\n"], [],
                                      'pg', SVN_PROP_MERGEINFO, '-R',
-                                     A_COPY_path) 
+                                     A_COPY_path)
 
   # Update the WC (to r8), the mergeinfo on A_COPY should now have both
   # the local mod from the uncommitted merge (/A:3* --> /A:3) and the change

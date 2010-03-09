@@ -1248,7 +1248,7 @@ typedef struct svn_wc_notify_t {
    * @since New in 1.7. */
   svn_linenum_t hunk_matched_line;
 
-  /* The fuzz factor the hunk was applied with. 
+  /* The fuzz factor the hunk was applied with.
    * @since New in 1.7 */
   int hunk_fuzz;
 

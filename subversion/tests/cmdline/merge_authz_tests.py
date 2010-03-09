@@ -388,7 +388,7 @@ def mergeinfo_and_skipped_paths(sbox):
   svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '4', '5',
                                        sbox.repo_url + '/A/D/H', None,
                                        expected_output,
-                                       None, # expected_mergeinfo_output, 
+                                       None, # expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_disk,
                                        expected_status,

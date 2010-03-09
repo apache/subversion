@@ -371,7 +371,7 @@ def mergeinfo_on_pegged_wc_path(sbox):
   psi_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
   omega_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
   beta_COPY_path  = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
- 
+
   # Do a couple merges
   #
   # r7 - Merge -c3,6 from A to A_COPY.
