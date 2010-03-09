@@ -23,10 +23,6 @@
 
 package org.tigris.subversion.javahl;
 
-import org.apache.subversion.javahl.*;
-
-import java.io.IOException;
-
 /**
  * Interface to send data to subversion used by SVNAdmin.load.
  */

@@ -23,8 +23,6 @@
 
 package org.tigris.subversion.javahl;
 
-import org.apache.subversion.javahl.callback.*;
-
 /**
  * This interface is used to receive every status item for
  * the SVNClientInterface.status call.
