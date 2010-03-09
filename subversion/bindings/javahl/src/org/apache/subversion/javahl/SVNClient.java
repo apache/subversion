@@ -170,9 +170,7 @@ public class SVNClient implements ISVNClient
                             : revisionRanges.toArray(new RevisionRange[
                                                         revisionRanges.size()]),
                          stopOnCopy, discoverPath, includeMergedRevisions,
-                         revProps == null ? null
-                            : revProps.toArray(new String[revProps.size()]),
-                         limit, callback);
+                         revProps, limit, callback);
     }
 
     private native void logMessages(String path,
@@ -181,7 +179,7 @@ public class SVNClient implements ISVNClient
                                     boolean stopOnCopy,
                                     boolean discoverPath,
                                     boolean includeMergedRevisions,
-                                    String[] revProps,
+                                    Set<String> revProps,
                                     long limit,
                                     LogMessageCallback callback)
             throws ClientException;
@@ -390,31 +388,13 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.7
      */
-    public void getMergeinfoLog(int kind, String pathOrUrl,
-                                Revision pegRevision,
-                                String mergeSourceUrl,
-                                Revision srcPegRevision,
-                                boolean discoverChangedPaths,
-                                int depth,
-                                Set<String> revProps,
-                                LogMessageCallback callback)
-        throws ClientException
-    {
-        this.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
-                             srcPegRevision, discoverChangedPaths, depth,
-                             revProps == null ? null
-                                : revProps.toArray(new String[revProps.size()]),
-                             callback);
-    }
-
-    private native void getMergeinfoLog(int kind, String pathOrUrl,
-                                        Revision pegRevision,
-                                        String mergeSourceUrl,
-                                        Revision srcPegRevision,
-                                        boolean discoverChangedPaths,
-                                        int depth,
-                                        String[] revProps,
-                                        LogMessageCallback callback)
+    public native void getMergeinfoLog(int kind, String pathOrUrl,
+                                       Revision pegRevision,
+                                       String mergeSourceUrl,
+                                       Revision srcPegRevision,
+                                       boolean discoverChangedPaths, int depth,
+                                       Set<String> revProps,
+                                       LogMessageCallback callback)
         throws ClientException;
 
     /**
