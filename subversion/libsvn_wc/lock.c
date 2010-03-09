@@ -1872,7 +1872,7 @@ svn_wc__path_switched(svn_boolean_t *switched,
                       apr_pool_t *scratch_pool)
 {
   return svn_error_return(child_is_disjoint(switched, wc_ctx->db,
-					    local_abspath, scratch_pool));
+                                            local_abspath, scratch_pool));
 }
 
 
