@@ -539,11 +539,7 @@ cleanup_dir_baton(void *dir_baton)
      associated with a pool distinct from the edit pool and so were
      removed separately. */
   if (!err && !eb->close_edit_complete)
-    {
-      svn_wc_context_t fake_ctx;
-      fake_ctx.db = eb->db;
-      err = svn_wc__release_write_lock(&fake_ctx, db->local_abspath, pool);
-    }
+    err = svn_wc__release_write_lock(eb->wc_ctx, db->local_abspath, pool);
 
   if (err)
     {
