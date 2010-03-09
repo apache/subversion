@@ -36,6 +36,8 @@ StringArray::~StringArray()
 {
   if (m_stringArray != NULL)
     JNIUtil::getEnv()->DeleteLocalRef(m_stringArray);
+  if (m_stringCollection != NULL)
+    JNIUtil::getEnv()->DeleteLocalRef(m_stringCollection);
 }
 
 const apr_array_header_t *StringArray::array(const SVN::Pool &pool)
@@ -57,6 +59,7 @@ const apr_array_header_t *StringArray::array(const SVN::Pool &pool)
 StringArray::StringArray(jobjectArray jstrings)
 {
   m_stringArray = jstrings;
+  m_stringCollection = NULL;
 
   if (jstrings != NULL)
     {
@@ -77,5 +80,55 @@ StringArray::StringArray(jobjectArray jstrings)
 
           m_strings.push_back(std::string((const char *)str));
         }
+    }
+}
+
+StringArray::StringArray(jobject jstringCollection)
+{
+  m_stringArray = NULL;
+  m_stringCollection = jstringCollection;
+
+  if (jstringCollection != NULL)
+    {
+      JNIEnv *env = JNIUtil::getEnv();
+
+      jclass clazz = env->FindClass("java/util/Collection");
+
+      static jmethodID mid_toArray = 0;
+      if (mid_toArray == 0)
+        {
+          mid_toArray = env->GetMethodID(clazz, "toArray",
+                                         "()[Ljava/lang/Object;");
+          if (JNIUtil::isExceptionThrown())
+            return;
+        }
+
+      jobjectArray jstrings = (jobjectArray) env->CallObjectMethod(
+                                               jstringCollection, mid_toArray);
+
+      jint arraySize = env->GetArrayLength(jstrings);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      for (int i = 0; i < arraySize; ++i)
+        {
+          jobject jstr = env->GetObjectArrayElement(jstrings, i);
+          if (JNIUtil::isExceptionThrown())
+            return;
+
+          JNIStringHolder str((jstring)jstr);
+          if (JNIUtil::isExceptionThrown())
+            return;
+
+          m_strings.push_back(std::string((const char *)str));
+        }
+
+      JNIUtil::getEnv()->DeleteLocalRef(clazz);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      JNIUtil::getEnv()->DeleteLocalRef(jstrings);
+      if (JNIUtil::isExceptionThrown())
+        return;
     }
 }

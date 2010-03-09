@@ -776,18 +776,9 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public void getChangelists(String rootPath, Collection<String> changelists,
-                               int depth, ChangelistCallback callback)
-            throws ClientException
-    {
-        this.getChangelists(rootPath,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]),
-                    depth, callback);
-    }
-
-    private native void getChangelists(String rootPath, String[] changelists,
-                                       int depth, ChangelistCallback callback)
+    public native void getChangelists(String rootPath,
+                                      Collection<String> changelists,
+                                      int depth, ChangelistCallback callback)
             throws ClientException;
 
     /**

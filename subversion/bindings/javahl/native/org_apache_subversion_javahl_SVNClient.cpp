@@ -1712,7 +1712,7 @@ Java_org_apache_subversion_javahl_SVNClient_removeFromChangelists
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_getChangelists
-(JNIEnv *env, jobject jthis, jstring jroot_path, jobjectArray jchangelists,
+(JNIEnv *env, jobject jthis, jstring jroot_path, jobject jchangelists,
  jint jdepth, jobject jchangelistCallback)
 {
   JNIEntry(SVNClient, getChangelist);
