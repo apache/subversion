@@ -436,9 +436,9 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
             want_custom_revprops = TRUE;
         }
       if (revprops->nelts == 0)
-	{
-	  svn_stringbuf_appendcstr(request_body, "<S:no-revprops/>");
-	}
+        {
+          svn_stringbuf_appendcstr(request_body, "<S:no-revprops/>");
+        }
     }
   else
     {

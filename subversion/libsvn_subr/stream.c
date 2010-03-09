@@ -456,7 +456,7 @@ svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
 
       err = svn_stream_read(from, buf, &len);
       if (err)
-      	 break;
+         break;
 
       if (len > 0)
         err = svn_stream_write(to, buf, &len);

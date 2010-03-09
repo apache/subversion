@@ -2228,8 +2228,8 @@ def excluded_path_misc_operation(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-					None,
-					wc_dir)
+                                        None,
+                                        wc_dir)
 
   # Relocate wc, with excluded items in it.
   repo_dir = sbox.repo_dir

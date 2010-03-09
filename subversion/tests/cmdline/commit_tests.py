@@ -2430,7 +2430,7 @@ def set_invalid_revprops(sbox):
   svntest.actions.run_and_verify_svn(None, [],
                                      'svn: Revision property pair is empty',
                                      'mkdir', '-m', 'msg',
-				     '--with-revprop', '',
+                                     '--with-revprop', '',
                                      remote_dir)
 
 #----------------------------------------------------------------------
