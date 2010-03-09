@@ -315,6 +315,7 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
 }
 
 
+/* */
 static svn_error_t *
 process_deletion_postcommit(svn_wc__db_t *db,
                             const char *adm_abspath,
@@ -333,6 +334,7 @@ process_deletion_postcommit(svn_wc__db_t *db,
 }
 
 
+/* */
 static svn_error_t *
 process_committed_leaf(svn_wc__db_t *db,
                        const char *adm_abspath,
@@ -445,6 +447,7 @@ process_committed_leaf(svn_wc__db_t *db,
 }
 
 
+/* */
 static svn_error_t *
 process_committed_internal(svn_wc__db_t *db,
                            const char *path,
@@ -575,6 +578,7 @@ process_committed_internal(svn_wc__db_t *db,
 }
 
 
+/* */
 static apr_hash_t *
 convert_to_hash(const apr_array_header_t *wcprop_changes,
                 apr_pool_t *result_pool)
@@ -1760,6 +1764,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 */
 
 
+/* */
 static svn_error_t *
 revert_admin_things(svn_boolean_t *reverted,
                     svn_wc__db_t *db,

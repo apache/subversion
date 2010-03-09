@@ -1067,6 +1067,7 @@ struct copying_stream_baton
 };
 
 
+/* */
 static svn_error_t *
 read_handler_copy(void *baton, char *buffer, apr_size_t *len)
 {
@@ -1077,6 +1078,7 @@ read_handler_copy(void *baton, char *buffer, apr_size_t *len)
   return svn_stream_write(btn->target, buffer, len);
 }
 
+/* */
 static svn_error_t *
 close_handler_copy(void *baton)
 {

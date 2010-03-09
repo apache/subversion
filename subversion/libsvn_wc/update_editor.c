@@ -1063,6 +1063,7 @@ make_file_baton(struct file_baton **f_p,
   return SVN_NO_ERROR;
 }
 
+/* */
 static svn_error_t *
 flush_file_log(struct file_baton *fb, apr_pool_t *pool)
 {
@@ -1081,6 +1082,7 @@ flush_file_log(struct file_baton *fb, apr_pool_t *pool)
 
 /*** Helpers for the editor callbacks. ***/
 
+/* */
 static svn_error_t *
 window_handler(svn_txdelta_window_t *window, void *baton)
 {
@@ -1500,6 +1502,7 @@ typedef struct modcheck_baton_t {
                                           then this field has no meaning. */
 } modcheck_baton_t;
 
+/* */
 static svn_error_t *
 modcheck_found_node(const char *local_abspath,
                     void *walk_baton,

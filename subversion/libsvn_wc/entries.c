@@ -114,6 +114,7 @@ typedef struct {
 /*** reading and writing the entries file ***/
 
 
+/* */
 static svn_wc_entry_t *
 alloc_entry(apr_pool_t *pool)
 {
@@ -179,6 +180,7 @@ take_from_entry(const svn_wc_entry_t *src,
     }
 }
 
+/* */
 static svn_error_t *
 fetch_wc_id(apr_int64_t *wc_id, svn_sqlite__db_t *sdb)
 {
@@ -1081,6 +1083,7 @@ read_entries_new(apr_hash_t **result_entries,
 }
 
 
+/* */
 static svn_error_t *
 read_entries(apr_hash_t **entries,
              svn_wc__db_t *db,
@@ -1607,6 +1610,7 @@ svn_wc__set_depth(svn_wc__db_t *db,
                                                            scratch_pool));
 }
 
+/* */
 static svn_error_t *
 insert_base_node(svn_sqlite__db_t *sdb,
                  const db_base_node_t *base_node,
@@ -1681,6 +1685,7 @@ insert_base_node(svn_sqlite__db_t *sdb,
   return svn_error_return(svn_sqlite__insert(NULL, stmt));
 }
 
+/* */
 static svn_error_t *
 insert_working_node(svn_sqlite__db_t *sdb,
                     const db_working_node_t *working_node,
@@ -1762,6 +1767,7 @@ insert_working_node(svn_sqlite__db_t *sdb,
   return svn_error_return(svn_sqlite__insert(NULL, stmt));
 }
 
+/* */
 static svn_error_t *
 insert_actual_node(svn_sqlite__db_t *sdb,
                    const db_actual_node_t *actual_node,
@@ -2459,6 +2465,7 @@ write_one_entry_cb(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* */
 static svn_error_t *
 write_one_entry(svn_wc__db_t *db,
                 const char *local_abspath,
