@@ -445,7 +445,7 @@ Java_org_apache_subversion_javahl_SVNClient_commitMessageHandler
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_remove
-(JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
+(JNIEnv *env, jobject jthis, jobject jtargets, jstring jmessage,
  jboolean jforce, jboolean keepLocal, jobject jrevpropTable)
 {
   JNIEntry(SVNClient, remove);
@@ -514,7 +514,7 @@ Java_org_apache_subversion_javahl_SVNClient_add
 
 JNIEXPORT jlongArray JNICALL
 Java_org_apache_subversion_javahl_SVNClient_update
-(JNIEnv *env, jobject jthis, jobjectArray jtargets, jobject jrevision,
+(JNIEnv *env, jobject jthis, jobject jtargets, jobject jrevision,
  jint jdepth, jboolean jdepthIsSticky, jboolean jignoreExternals,
  jboolean jallowUnverObstructions)
 {
@@ -542,9 +542,9 @@ Java_org_apache_subversion_javahl_SVNClient_update
 
 JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_SVNClient_commit
-(JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
- jint jdepth, jboolean jnoUnlock, jboolean jkeepChangelist,
- jobject jchangelists, jobject jrevpropTable)
+(JNIEnv *env, jobject jthis, jobject jtargets, jstring jmessage, jint jdepth,
+ jboolean jnoUnlock, jboolean jkeepChangelist, jobject jchangelists,
+ jobject jrevpropTable)
 {
   JNIEntry(SVNClient, commit);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -608,7 +608,7 @@ Java_org_apache_subversion_javahl_SVNClient_copy
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_move
-(JNIEnv *env, jobject jthis, jobjectArray jsrcPaths, jstring jdestPath,
+(JNIEnv *env, jobject jthis, jobject jsrcPaths, jstring jdestPath,
  jstring jmessage, jboolean jforce, jboolean jmoveAsChild,
  jboolean jmakeParents, jobject jrevpropTable)
 {
@@ -642,7 +642,7 @@ Java_org_apache_subversion_javahl_SVNClient_move
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_mkdir
-(JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
+(JNIEnv *env, jobject jthis, jobject jtargets, jstring jmessage,
  jboolean jmakeParents, jobject jrevpropTable)
 {
   JNIEntry(SVNClient, mkdir);
@@ -1665,7 +1665,7 @@ Java_org_apache_subversion_javahl_SVNClient_info
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_addToChangelist
-(JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jchangelist,
+(JNIEnv *env, jobject jthis, jobject jtargets, jstring jchangelist,
  jint jdepth, jobject jchangelists)
 {
   JNIEntry(SVNClient, addToChangelist);
@@ -1694,7 +1694,7 @@ Java_org_apache_subversion_javahl_SVNClient_addToChangelist
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_removeFromChangelists
-(JNIEnv *env, jobject jthis, jobjectArray jtargets, jint jdepth,
+(JNIEnv *env, jobject jthis, jobject jtargets, jint jdepth,
  jobject jchangelists)
 {
   JNIEntry(SVNClient, removeFromChangelist);
@@ -1743,7 +1743,7 @@ Java_org_apache_subversion_javahl_SVNClient_getChangelists
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_lock
-(JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jcomment,
+(JNIEnv *env, jobject jthis, jobject jtargets, jstring jcomment,
  jboolean jforce)
 {
   JNIEntry(SVNClient, lock);
@@ -1767,7 +1767,7 @@ Java_org_apache_subversion_javahl_SVNClient_lock
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_unlock
-(JNIEnv *env, jobject jthis, jobjectArray jtargets, jboolean jforce)
+(JNIEnv *env, jobject jthis, jobject jtargets, jboolean jforce)
 {
   JNIEntry(SVNClient, unlock);
   SVNClient *cl = SVNClient::getCppObject(jthis);
