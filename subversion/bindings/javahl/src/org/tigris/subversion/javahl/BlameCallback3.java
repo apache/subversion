@@ -23,7 +23,6 @@
 
 package org.tigris.subversion.javahl;
 
-import java.util.Date;
 import java.util.Map;
 
 /**
