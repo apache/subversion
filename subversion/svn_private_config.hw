@@ -30,9 +30,9 @@
 #define SVN_PRIVATE_CONFIG_HW
 
 /* The minimal version of Berkeley DB we want */
-#define SVN_FS_WANT_DB_MAJOR	4
-#define SVN_FS_WANT_DB_MINOR	0
-#define SVN_FS_WANT_DB_PATCH	14
+#define SVN_FS_WANT_DB_MAJOR    4
+#define SVN_FS_WANT_DB_MINOR    0
+#define SVN_FS_WANT_DB_PATCH    14
 
 
 /* Path separator for local filesystem */
