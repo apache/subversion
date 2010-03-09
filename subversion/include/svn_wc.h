@@ -4783,6 +4783,7 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
  *
  * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
                         const char *path,

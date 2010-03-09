@@ -645,23 +645,6 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
-                        const char *path,
-                        svn_wc_adm_access_t *adm_access,
-                        svn_boolean_t recurse,
-                        const apr_array_header_t *wcprop_changes,
-                        svn_boolean_t remove_lock,
-                        svn_boolean_t remove_changelist,
-                        const svn_checksum_t *checksum,
-                        apr_pool_t *scratch_pool)
-{
-  return svn_wc_queue_committed3(queue, path, recurse, wcprop_changes,
-                                 remove_lock, remove_changelist, checksum,
-                                 scratch_pool);
-}
-
-
 /* NOTE: this function doesn't move to deprecated.c because of its need
    for the internals of svn_wc_committed_queue_t.  */
 svn_error_t *
@@ -769,24 +752,6 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
 
   svn_pool_destroy(iterpool);
 
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
-                               svn_wc_adm_access_t *adm_access,
-                               svn_revnum_t new_revnum,
-                               const char *rev_date,
-                               const char *rev_author,
-                               apr_pool_t *pool)
-{
-  svn_wc_context_t *wc_ctx;
-
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
-                                         svn_wc__adm_get_db(adm_access),
-                                         pool));
-  SVN_ERR(svn_wc_process_committed_queue2(queue, wc_ctx, new_revnum,
-                                          rev_date, rev_author, pool));
   return SVN_NO_ERROR;
 }
 
