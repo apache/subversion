@@ -43,8 +43,10 @@ class StringArray
  private:
   std::vector<std::string> m_strings;
   jobjectArray m_stringArray;
+  jobject m_stringCollection;
  public:
   StringArray(jobjectArray jstrings);
+  StringArray(jobject jstringCollection);
   ~StringArray();
   const apr_array_header_t *array(const SVN::Pool &pool);
 };
