@@ -455,7 +455,8 @@ Java_org_apache_subversion_javahl_SVNClient_remove
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  Targets targets(jtargets);
+  StringArray targetsArr(jtargets);
+  Targets targets(targetsArr);
   JNIStringHolder message(jmessage);
   if (JNIUtil::isExceptionThrown())
     return;
@@ -513,7 +514,7 @@ Java_org_apache_subversion_javahl_SVNClient_add
 
 JNIEXPORT jlongArray JNICALL
 Java_org_apache_subversion_javahl_SVNClient_update
-(JNIEnv *env, jobject jthis, jobjectArray jpath, jobject jrevision,
+(JNIEnv *env, jobject jthis, jobjectArray jtargets, jobject jrevision,
  jint jdepth, jboolean jdepthIsSticky, jboolean jignoreExternals,
  jboolean jallowUnverObstructions)
 {
@@ -528,7 +529,8 @@ Java_org_apache_subversion_javahl_SVNClient_update
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
-  Targets targets(jpath);
+  StringArray targetsArr(jtargets);
+  Targets targets(targetsArr);
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
@@ -551,7 +553,8 @@ Java_org_apache_subversion_javahl_SVNClient_commit
       JNIUtil::throwError(_("bad C++ this"));
       return -1;
     }
-  Targets targets(jtargets);
+  StringArray targetsArr(jtargets);
+  Targets targets(targetsArr);
   JNIStringHolder message(jmessage);
   if (JNIUtil::isExceptionThrown())
     return -1;
@@ -617,7 +620,8 @@ Java_org_apache_subversion_javahl_SVNClient_move
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  Targets srcPaths(jsrcPaths);
+  StringArray srcPathArr(jsrcPaths);
+  Targets srcPaths(srcPathArr);
   if (JNIUtil::isExceptionThrown())
     return;
   JNIStringHolder destPath(jdestPath);
@@ -648,7 +652,8 @@ Java_org_apache_subversion_javahl_SVNClient_mkdir
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  Targets targets(jtargets);
+  StringArray targetsArr(jtargets);
+  Targets targets(targetsArr);
   JNIStringHolder message(jmessage);
   if (JNIUtil::isExceptionThrown())
     return;
@@ -1670,7 +1675,8 @@ Java_org_apache_subversion_javahl_SVNClient_addToChangelist
       JNIUtil::throwError("bad C++ this");
       return;
     }
-  Targets targets(jtargets);
+  StringArray targetsArr(jtargets);
+  Targets targets(targetsArr);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1698,7 +1704,8 @@ Java_org_apache_subversion_javahl_SVNClient_removeFromChangelists
       JNIUtil::throwError("bad C++ this");
       return;
     }
-  Targets targets(jtargets);
+  StringArray targetsArr(jtargets);
+  Targets targets(targetsArr);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1746,7 +1753,8 @@ Java_org_apache_subversion_javahl_SVNClient_lock
       JNIUtil::throwError("bad C++ this");
       return;
     }
-  Targets targets(jtargets);
+  StringArray targetsArr(jtargets);
+  Targets targets(targetsArr);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1769,7 +1777,8 @@ Java_org_apache_subversion_javahl_SVNClient_unlock
       return;
     }
 
-  Targets targets(jtargets);
+  StringArray targetsArr(jtargets);
+  Targets targets(targetsArr);
   if (JNIUtil::isExceptionThrown())
     return;
 

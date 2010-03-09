@@ -56,6 +56,11 @@ const apr_array_header_t *StringArray::array(const SVN::Pool &pool)
   return strings;
 }
 
+const std::vector<std::string> &StringArray::vector(void)
+{
+  return m_strings;
+}
+
 StringArray::StringArray(jobjectArray jstrings)
 {
   m_stringArray = jstrings;
