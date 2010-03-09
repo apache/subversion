@@ -990,7 +990,7 @@ post_process_commit_item(void *baton, void *this_item, apr_pool_t *pool)
 
   /* Allocate the queue in a longer-lived pool than (iter)pool:
      we want it to survive the next iteration. */
-  return svn_wc_queue_committed2(btn->queue, item->path, adm_access,
+  return svn_wc_queue_committed3(btn->queue, item->path,
                                  loop_recurse, item->incoming_prop_changes,
                                  remove_lock, !btn->keep_changelists,
                                  apr_hash_get(btn->checksums,
@@ -1298,7 +1298,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
       SVN_ERR_ASSERT(*commit_info_p);
       bump_err
-        = svn_wc_process_committed_queue(queue, base_dir_access,
+        = svn_wc_process_committed_queue2(queue, ctx->wc_ctx,
                                          (*commit_info_p)->revision,
                                          (*commit_info_p)->date,
                                          (*commit_info_p)->author,

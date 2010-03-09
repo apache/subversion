@@ -76,7 +76,6 @@ struct svn_wc_committed_queue_t
 typedef struct
 {
   const char *path;
-  const char *adm_abspath;
   svn_boolean_t recurse;
   svn_boolean_t no_unlock;
   svn_boolean_t keep_changelist;
@@ -448,7 +447,6 @@ process_committed_leaf(svn_wc__db_t *db,
 
 static svn_error_t *
 process_committed_internal(svn_wc__db_t *db,
-                           const char *adm_abspath,
                            const char *path,
                            svn_boolean_t recurse,
                            svn_revnum_t new_revnum,
@@ -462,13 +460,17 @@ process_committed_internal(svn_wc__db_t *db,
                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_kind_t kind;
-  const char *local_abspath;
+  const char *local_abspath, *adm_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
   if (kind == svn_wc__db_kind_unknown)
     return SVN_NO_ERROR;  /* deleted/absent. (?) ... nothing to do. */
+  else if (kind == svn_wc__db_kind_dir)
+    adm_abspath = local_abspath;
+  else
+    adm_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
   SVN_ERR(process_committed_leaf(db, adm_abspath, path,
                                  new_revnum, new_date, rev_author,
@@ -530,7 +532,7 @@ process_committed_internal(svn_wc__db_t *db,
              this one committed item. */
           if (kind == svn_wc__db_kind_dir)
             {
-              SVN_ERR(process_committed_internal(db, this_abspath, this_path,
+              SVN_ERR(process_committed_internal(db, this_path,
                                                  TRUE /* recurse */,
                                                  new_revnum, new_date,
                                                  rev_author,
@@ -612,9 +614,8 @@ svn_wc_committed_queue_create(apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
+svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
                         const char *path,
-                        svn_wc_adm_access_t *adm_access,
                         svn_boolean_t recurse,
                         const apr_array_header_t *wcprop_changes,
                         svn_boolean_t remove_lock,
@@ -633,7 +634,6 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
   /* Add to the array with paths and options */
   cqi = apr_palloc(queue->pool, sizeof(*cqi));
   cqi->path = path;
-  cqi->adm_abspath = svn_wc__adm_access_abspath(adm_access);
   cqi->recurse = recurse;
   cqi->no_unlock = !remove_lock;
   cqi->keep_changelist = !remove_changelist;
@@ -643,6 +643,22 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
   APR_ARRAY_PUSH(queue->queue, committed_queue_item_t *) = cqi;
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        svn_boolean_t recurse,
+                        const apr_array_header_t *wcprop_changes,
+                        svn_boolean_t remove_lock,
+                        svn_boolean_t remove_changelist,
+                        const svn_checksum_t *checksum,
+                        apr_pool_t *scratch_pool)
+{
+  return svn_wc_queue_committed3(queue, path, recurse, wcprop_changes,
+                                 remove_lock, remove_changelist, checksum,
+                                 scratch_pool);
 }
 
 
@@ -700,14 +716,13 @@ have_recursive_parent(apr_array_header_t *queue, int item)
 }
 
 svn_error_t *
-svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
-                               svn_wc_adm_access_t *adm_access,
-                               svn_revnum_t new_revnum,
-                               const char *rev_date,
-                               const char *rev_author,
-                               apr_pool_t *pool)
+svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
+                                svn_wc_context_t *wc_ctx,
+                                svn_revnum_t new_revnum,
+                                const char *rev_date,
+                                const char *rev_author,
+                                apr_pool_t *pool)
 {
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_time_t new_date;
@@ -719,17 +734,27 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
 
   for (i = 0; i < queue->queue->nelts; i++)
     {
+      const char *local_abspath, *adm_abspath;
+      svn_wc__db_kind_t kind;
       const committed_queue_item_t *cqi
         = APR_ARRAY_IDX(queue->queue, i, const committed_queue_item_t *);
 
       svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, cqi->path, iterpool));
+      SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
+                                   iterpool));
+      if (kind != svn_wc__db_kind_dir)
+        adm_abspath = svn_dirent_dirname(local_abspath, iterpool);
+      else
+        adm_abspath = local_abspath;
 
       /* If there are some recursive items, then see if this item is a
          child of one, and will (implicitly) be accounted for. */
       if (queue->have_recursive && have_recursive_parent(queue->queue, i))
         continue;
 
-      SVN_ERR(process_committed_internal(db, cqi->adm_abspath, cqi->path,
+      SVN_ERR(process_committed_internal(wc_ctx->db, cqi->path,
                                          cqi->recurse,
                                          new_revnum, new_date, rev_author,
                                          cqi->new_dav_cache,
@@ -737,13 +762,31 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
                                          cqi->keep_changelist,
                                          cqi->checksum, queue, iterpool));
 
-      SVN_ERR(svn_wc__wq_run(db, cqi->adm_abspath, NULL, NULL, iterpool));
+      SVN_ERR(svn_wc__wq_run(wc_ctx->db, adm_abspath, NULL, NULL, iterpool));
     }
 
   queue->queue->nelts = 0;
 
   svn_pool_destroy(iterpool);
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
+                               svn_wc_adm_access_t *adm_access,
+                               svn_revnum_t new_revnum,
+                               const char *rev_date,
+                               const char *rev_author,
+                               apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+  SVN_ERR(svn_wc_process_committed_queue2(queue, wc_ctx, new_revnum,
+                                          rev_date, rev_author, pool));
   return SVN_NO_ERROR;
 }
 
@@ -775,7 +818,7 @@ svn_wc_process_committed4(const char *path,
   else
     checksum = NULL;
 
-  SVN_ERR(process_committed_internal(db, adm_abspath,
+  SVN_ERR(process_committed_internal(db,
                                      path, recurse,
                                      new_revnum, new_date, rev_author,
                                      convert_to_hash(wcprop_changes, pool),
