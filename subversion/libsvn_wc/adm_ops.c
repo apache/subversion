@@ -1268,22 +1268,49 @@ svn_wc_get_ancestry2(const char **url,
                                   result_pool, scratch_pool));
 }
 
-/* Recursively mark a tree DIR_ABSPATH with a COPIED flag, skip items
-   scheduled for deletion. */
+/* Helper for mark_tree_copied(), handling the property juggling and
+   state changes for a single item LOCAL_ABSPATH (of kind LOCAL_KIND). */
+static svn_error_t *
+mark_item_copied(svn_wc__db_t *db,
+                 const char *local_abspath,
+                 svn_wc__db_kind_t local_kind,
+                 apr_pool_t *pool)
+{
+  apr_hash_t *props;
+  svn_wc_entry_t tmp_entry;
+  svn_node_kind_t kind = 
+    local_kind == svn_wc__db_kind_dir ? svn_node_dir : svn_node_unknown;
+
+  /* Squirrel away the pristine properties to install them on
+     working, because we might delete the base table */
+  SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
+                                         pool, pool));
+  tmp_entry.copied = TRUE;
+  SVN_ERR(svn_wc__entry_modify2(db, local_abspath, kind, FALSE, &tmp_entry,
+                                SVN_WC__ENTRY_MODIFY_COPIED, pool));
+
+  /* Reinstall the pristine properties on working */
+  SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath, props,
+                                                TRUE, pool));
+  
+  return SVN_NO_ERROR;
+}
+
+/* Recursively mark a tree DIR_ABSPATH (whose status is DIR_STATUS)
+   with a COPIED flag, skip items scheduled for deletion. */
 /* ### If the implementation looks familiar to mark_tree_deleted(), that
        is not strictly coincidence. The function was duplicated, to make it
        easier to replace these two specific cases for WC-NG. */
 static svn_error_t *
 mark_tree_copied(svn_wc__db_t *db,
                  const char *dir_abspath,
+                 svn_wc__db_status_t dir_status,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
   const apr_array_header_t *children;
-  const svn_wc_entry_t *entry;
-  svn_wc_entry_t tmp_entry;
   int i;
 
   /* Read the entries file for this directory. */
@@ -1294,7 +1321,8 @@ mark_tree_copied(svn_wc__db_t *db,
     {
       const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath;
-      apr_hash_t *props;
+      svn_wc__db_status_t child_status;
+      svn_wc__db_kind_t child_kind;
       svn_boolean_t hidden;
 
       /* Clear our per-iteration pool. */
@@ -1307,64 +1335,38 @@ mark_tree_copied(svn_wc__db_t *db,
       if (hidden)
         continue;
 
-      SVN_ERR(svn_wc__get_entry(&entry, db, child_abspath, FALSE,
-                                svn_node_unknown, FALSE, iterpool, iterpool));
+      SVN_ERR(svn_wc__db_read_info(&child_status, &child_kind, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   db, child_abspath, iterpool, iterpool));
 
       /* Skip deleted items. */
-      if (entry->schedule == svn_wc_schedule_delete)
+      if ((child_status == svn_wc__db_status_deleted) ||
+          (child_status == svn_wc__db_status_obstructed_delete))
         continue;
 
-      /* If this is a directory, recurse. */
-      if (entry->kind == svn_node_dir)
+      /* If this is a directory, recurse; otherwise, do real work. */
+      if (child_kind == svn_wc__db_kind_dir)
         {
-          SVN_ERR(mark_tree_copied(db, child_abspath,
-                            cancel_func, cancel_baton,
-                            iterpool));
+          SVN_ERR(mark_tree_copied(db, child_abspath, child_status, 
+                                   cancel_func, cancel_baton, iterpool));
         }
-
-      /* Store the pristine properties to install them on working, because
-         we might delete the base table */
-      if (entry->kind != svn_node_dir)
-        SVN_ERR(svn_wc__db_read_pristine_props(&props, db, child_abspath,
-                                               iterpool, iterpool));
-      tmp_entry.copied = TRUE;
-      SVN_ERR(svn_wc__entry_modify2(db, child_abspath, svn_node_unknown,
-                            TRUE, &tmp_entry,
-                            SVN_WC__ENTRY_MODIFY_COPIED,
-                            iterpool));
-
-      /* Reinstall the pristine properties on working */
-      if (entry->kind != svn_node_dir)
-        SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, child_abspath, props,
-                                                      TRUE, iterpool));
+      else
+        {
+          SVN_ERR(mark_item_copied(db, child_abspath, child_kind, iterpool));
+        }
 
       /* Remove now obsolete dav cache values.  */
       SVN_ERR(svn_wc__db_base_set_dav_cache(db, child_abspath, NULL,
                                             iterpool));
     }
 
-  /* Handle "this dir" for states that need it done post-recursion. */
-  SVN_ERR(svn_wc__get_entry(&entry, db, dir_abspath, FALSE,
-                            svn_node_dir, FALSE, iterpool, iterpool));
-
-  /* If setting the COPIED flag, skip deleted items. */
-  if (entry->schedule != svn_wc_schedule_delete)
+  /* Here's where we handle directories. */
+  if (!((dir_status == svn_wc__db_status_deleted) ||
+        (dir_status == svn_wc__db_status_obstructed_delete)))
     {
-      apr_hash_t *props;
-      tmp_entry.copied = TRUE;
-
-      /* Store the pristine properties to install them on working, because
-         we might delete the base table */
-      SVN_ERR(svn_wc__db_read_pristine_props(&props, db, dir_abspath,
-                                               iterpool, iterpool));
-
-      SVN_ERR(svn_wc__entry_modify2(db, dir_abspath, svn_node_dir, FALSE,
-                                  &tmp_entry, SVN_WC__ENTRY_MODIFY_COPIED,
-                                  iterpool));
-
-      /* Reinstall the pristine properties on working */
-      SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, dir_abspath, props,
-                                                    TRUE, iterpool));
+      SVN_ERR(mark_item_copied(db, dir_abspath, svn_wc__db_kind_dir, iterpool));
     }
 
   /* Destroy our per-iteration pool. */
@@ -1677,7 +1679,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                             pool));
 
           /* Recursively add the 'copied' existence flag as well!  */
-          SVN_ERR(mark_tree_copied(db, local_abspath,
+          SVN_ERR(mark_tree_copied(db, local_abspath, status,
                                    cancel_func, cancel_baton,
                                    pool));
 
