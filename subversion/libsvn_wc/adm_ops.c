@@ -789,7 +789,7 @@ svn_wc_process_committed4(const char *path,
 
 
 
-/* Recursively mark a tree LOCAL_ABSPATH with SCHEDULE svn_wc_schedule_delete
+/* Recursively mark a tree DIR_ABSPATH with schedule svn_wc_schedule_delete
    and a KEEP_LOCAL flag. */
 /* ### If the implementation looks familiar to mark_tree_copied(), that is not
        strictly coincidence. The function was duplicated, to make it easier to
@@ -1256,7 +1256,7 @@ svn_wc_get_ancestry2(const char **url,
                                   result_pool, scratch_pool));
 }
 
-/* Recursively mark a tree LOCAL_ABSPATH with a COPIED flag, skip items
+/* Recursively mark a tree DIR_ABSPATH with a COPIED flag, skip items
    scheduled for deletion. */
 /* ### If the implementation looks familiar to mark_tree_deleted(), that
        is not strictly coincidence. The function was duplicated, to make it
