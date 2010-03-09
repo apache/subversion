@@ -326,15 +326,15 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
 }
 
 
-/* Recursively search for commit candidates in (and under) PATH (with
-   entry ENTRY and ancestry URL), and add those candidates to
+/* Recursively search for commit candidates in (and under) LOCAL_ABSPATH
+   (with entry ENTRY and ancestry URL), and add those candidates to
    COMMITTABLES.  If in ADDS_ONLY modes, only new additions are
    recognized.  COPYFROM_URL is the default copyfrom-url for children
    of copied directories.
 
-   DEPTH indicates how to treat files and subdirectories of PATH when
-   PATH is itself a directory; see svn_client__harvest_committables()
-   for its behavior.
+   DEPTH indicates how to treat files and subdirectories of LOCAL_ABSPATH
+   when LOCAL_ABSPATH is itself a directory; see
+   svn_client__harvest_committables() for its behavior.
 
    Lock tokens of candidates will be added to LOCK_TOKENS, if
    non-NULL.  JUST_LOCKED indicates whether to treat non-modified items with

@@ -756,7 +756,7 @@ typedef struct
     /* The absolute destination path or url */
     const char *dst;
 
-    /* The absolute destination's parent path */
+    /* The absolute source path or url of the destination's parent. */
     const char *dst_parent_abspath;
 } svn_client__copy_pair_t;
 
@@ -818,7 +818,7 @@ typedef struct
 #define SVN_CLIENT__SINGLE_REPOS_NAME "svn:single-repos"
 
 
-/* Recursively crawl a set of working copy paths (PARENT_DIR + each
+/* Recursively crawl a set of working copy paths (DIR_ABSPATH + each
    item in the TARGETS array) looking for commit candidates, locking
    working copy directories as the crawl progresses.  For each
    candidate found:
