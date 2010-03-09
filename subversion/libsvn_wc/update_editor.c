@@ -6162,59 +6162,66 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
      and run the log.  */
   pre_props_accum = svn_stringbuf_create("", pool);
 
-  /* If we're replacing the file then we need to save the destination files
-     text base and prop base before replacing it. This allows us to revert
-     the entire change. We don't do this when the file was already replaced
-     before.
+  /* If we're replacing the file then we need to save the destination file's
+     original text base and prop base before replacing it. This allows us to
+     revert the entire change.
+
+     Note: We don't do this when the file was already replaced before because
+     the revert-base is already present and has the original text base.
+
      ### This block can be removed once the new pristine store is in place */
   {
-    svn_boolean_t replace = FALSE;
     svn_wc__db_status_t status;
 
     err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, db, local_abspath, pool, pool);
-
     if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-      svn_error_clear(err);
-    else
-      SVN_ERR(err);
-
-    if (status == svn_wc__db_status_normal ||
-        status == svn_wc__db_status_incomplete)
       {
-        svn_boolean_t was_replaced;
-        replace = TRUE;
-
-        err = svn_wc__internal_is_replaced(&was_replaced, db, local_abspath,
-                                           pool);
-
-        if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-          svn_error_clear(err);
-        else
-          SVN_ERR(err);
-
-        if (was_replaced)
-          replace = FALSE;
+        /* There is no BASE node. Thus, we'll have nothing to save.  */
+        svn_error_clear(err);
       }
-
-    if (replace)
+    else if (err)
+      return svn_error_return(err);
+    else if (status == svn_wc__db_status_normal ||
+             status == svn_wc__db_status_incomplete)
       {
-        const char *dst_rtext;
-        const char *dst_txtb;
+        svn_boolean_t base_shadowed;
 
-        /* ### replace this block with: svn_wc__wq_prepare_revert_files()  */
+        SVN_ERR(svn_wc__db_read_info(
+                  &status, NULL, NULL,
+                  NULL, NULL, NULL, NULL, NULL, NULL,
+                  NULL, NULL, NULL, NULL, NULL, NULL,
+                  NULL, NULL, NULL, NULL,
+                  NULL, NULL, &base_shadowed,
+                  NULL, NULL,
+                  db, local_abspath,
+                  pool, pool));
 
-        SVN_ERR(svn_wc__text_revert_path(&dst_rtext, db, local_abspath,
-                                         pool));
-        SVN_ERR(svn_wc__text_base_path(&dst_txtb, db, local_abspath,
-                                       FALSE, pool));
+        /* If there is a WORKING node present AND it is not an "add",
+           then we need to move the base/props. If an add is present,
+           that would imply we've done this move before.  */
+        if (base_shadowed
+            && status != svn_wc__db_status_added
+            && status != svn_wc__db_status_obstructed_add)
+          {
+            const char *dst_rtext;
+            const char *dst_txtb;
 
-        SVN_ERR(svn_wc__loggy_move(&pre_props_accum, dir_abspath,
-                                   dst_txtb, dst_rtext, pool, pool));
-        SVN_ERR(svn_wc__loggy_revert_props_create(&pre_props_accum, db,
-                                                  local_abspath, dir_abspath,
-                                                  pool));
+            /* ### replace this with: svn_wc__wq_prepare_revert_files()  */
+
+            SVN_ERR(svn_wc__text_revert_path(&dst_rtext, db, local_abspath,
+                                             pool));
+            SVN_ERR(svn_wc__text_base_path(&dst_txtb, db, local_abspath,
+                                           FALSE, pool));
+
+            SVN_ERR(svn_wc__loggy_move(&pre_props_accum, dir_abspath,
+                                       dst_txtb, dst_rtext, pool, pool));
+            SVN_ERR(svn_wc__loggy_revert_props_create(&pre_props_accum, db,
+                                                      local_abspath,
+                                                      dir_abspath,
+                                                      pool));
+          }
       }
   }
 
