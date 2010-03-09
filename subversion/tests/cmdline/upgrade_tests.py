@@ -143,7 +143,7 @@ def basic_upgrade(sbox):
 
 def upgrade_with_externals(sbox):
   "upgrade with externals"
-  
+
   # Create wc from tarfile, uses the same structure of the wc as the tests
   # in externals_tests.py.
   replace_sbox_with_tarfile(sbox, 'upgrade_with_externals.tar.bz2')
@@ -279,8 +279,8 @@ def basic_upgrade_1_0(sbox):
   # Now check the contents of the working copy
   # #### This working copy is not just a basic tree,
   #      fix with the right data once we get here
-  expected_status = svntest.wc.State(sbox.wc_dir, 
-    { 
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
       '' : Item(status='  ', wc_rev=7),
       'B'                 : Item(status='  ', wc_rev='7'),
       'B/mu'              : Item(status='  ', wc_rev='7'),

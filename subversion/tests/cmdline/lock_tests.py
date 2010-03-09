@@ -1451,7 +1451,7 @@ def lock_path_not_in_head(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'delete', lambda_path, D_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
-                                     '-m', 'Some deletions', wc_dir)  
+                                     '-m', 'Some deletions', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
   expected_lock_fail_err_re = "svn: warning:.*" \
   "((Path .* doesn't exist in HEAD revision)" \

@@ -419,7 +419,7 @@ CreateJ::StringSet(apr_array_header_t *strings)
       jstring jstr = JNIUtil::makeJString(str);
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
-      
+
       jstrs.push_back(jstr);
     }
 

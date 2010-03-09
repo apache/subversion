@@ -124,7 +124,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
           /* Fetch any existing (explicit) mergeinfo.  We'll temporarily
              reparent to the target URL here, just to keep the code simple.
              We could, as an alternative, first see if the target URL was a
-             child of the session URL and use the relative "remainder", 
+             child of the session URL and use the relative "remainder",
              falling back to this reparenting as necessary.  */
           const char *old_session_url = NULL;
           SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
@@ -689,9 +689,9 @@ find_absent_parents1(svn_ra_session_t *ra_session,
    found. Push each nonexistent URL onto the array NEW_DIRS,
    allocating in POOL.  Raise an error if the existing node is not a
    directory.
- 
+
    Set *TOP_DST_URL and the RA session's root to the existing node's URL.
-  
+
    ### Multiple requests for HEAD (SVN_INVALID_REVNUM) make this
    ### implementation susceptible to race conditions.  */
 static svn_error_t *
@@ -803,7 +803,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                                           pair->src, &pair->src_peg_revision,
                                           &pair->src_op_revision,
                                           &dead_end_rev, ctx, pool));
-     
+
       /* Go ahead and grab mergeinfo from the source, too. */
       SVN_ERR(svn_client__ensure_ra_session_url(&ignored_url, ra_session,
                                                 pair->src, pool));

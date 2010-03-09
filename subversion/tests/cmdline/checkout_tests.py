@@ -864,7 +864,7 @@ def checkout_wc_from_drive(sbox):
   drive = find_the_next_available_drive_letter()
   if drive is None:
     raise svntest.Skip
-    
+
   subprocess.call(['subst', drive +':', sbox.repo_dir])
   repo_url = 'file:///' + drive + ':/'
   wc_dir = sbox.wc_dir

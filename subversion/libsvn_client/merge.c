@@ -8647,7 +8647,7 @@ mergeinfo_in_catalog(svn_boolean_t *in_catalog,
                                            scratch_pool, scratch_pool));
           SVN_ERR(svn_mergeinfo__equals(in_catalog, mergeinfo_in_cat,
                                         mergeinfo, TRUE, scratch_pool));
-        }    
+        }
     }
 
   return SVN_NO_ERROR;
@@ -8699,7 +8699,7 @@ log_find_operative_revs(void *baton,
       /* Easy out: The path is not within the tree of interest. */
       if (!svn_uri_is_ancestor(log_baton->target_abspath, path))
         continue;
-  
+
       rel_path = svn_uri_skip_ancestor(log_baton->target_abspath, path);
       source_rel_path = svn_relpath_join(log_baton->source_repos_rel_path,
                                          rel_path, pool);
@@ -8751,7 +8751,7 @@ log_find_operative_revs(void *baton,
             {
               SVN_ERR(svn_mergeinfo_merge(unmerged_for_key,
                                           log_entry_as_mergeinfo,
-                                          log_baton->result_pool)); 
+                                          log_baton->result_pool));
             }
           else
             {
@@ -8781,7 +8781,7 @@ log_find_operative_revs(void *baton,
    Using RA_SESSION, which is pointed at the repository root, check that all
    of the unmerged revisions in UNMERGED_CATALOG's mergeinfos are "phantoms",
    that is, one of the following conditions holds:
-   
+
      1) The revision effects no corresponding paths in SOURCE_REPOS_REL_PATH.
 
      2) The revision effects corresponding paths in SOURCE_REPOS_REL_PATH,
@@ -8828,11 +8828,11 @@ find_unsynced_ranges(const char *source_repos_rel_path,
             {
               apr_array_header_t *rangelist =
                 svn_apr_hash_index_val(hi_mergeinfo);
-              
+
               SVN_ERR(svn_rangelist_merge(&potentially_unmerged_ranges,
                                           rangelist, scratch_pool));
-            }  
-        }  
+            }
+        }
     }
 
   /* Find any unmerged revisions which both effect the source and

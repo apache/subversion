@@ -1689,7 +1689,7 @@ def log_of_local_copy(sbox):
                                      C_path, C_moved_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      psi_path, psi_moved_path)
-  
+
   # Get the logs for the move destinations.
   #
   # This was failing with:

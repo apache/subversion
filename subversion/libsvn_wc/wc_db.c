@@ -553,7 +553,7 @@ fetch_repos_info(const char **repos_root_url,
 
 /* Scan from LOCAL_RELPATH upwards through parent nodes until we find a parent
    that has values in the 'repos_id' and 'repos_relpath' columns.  Return
-   that information in REPOS_ID and REPOS_RELPATH (either may be NULL). 
+   that information in REPOS_ID and REPOS_RELPATH (either may be NULL).
    Use LOCAL_ABSPATH for diagnostics */
 static svn_error_t *
 scan_upwards_for_repos(apr_int64_t *repos_id,

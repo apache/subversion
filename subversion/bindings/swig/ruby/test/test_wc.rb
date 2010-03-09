@@ -1091,7 +1091,7 @@ EOE
 
   def test_context_create
     assert_nothing_raised do
-      result = Svn::Wc::Context.create do |context| 
+      result = Svn::Wc::Context.create do |context|
         assert_not_nil context
         assert_kind_of Svn::Wc::Context, context
       end

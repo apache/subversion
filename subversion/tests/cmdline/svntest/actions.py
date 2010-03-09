@@ -2172,13 +2172,13 @@ class DeepTreesTestCase:
     expected_info = {
       'F/alpha' : {
         'Revision' : '3',
-        'Tree conflict' : 
+        'Tree conflict' :
           '^local delete, incoming edit upon update'
           + ' Source  left: .file.*/F/alpha@2'
           + ' Source right: .file.*/F/alpha@3$',
       },
       'DF/D1' : {
-        'Tree conflict' : 
+        'Tree conflict' :
           '^local delete, incoming edit upon update'
           + ' Source  left: .dir.*/DF/D1@2'
           + ' Source right: .dir.*/DF/D1@3$',

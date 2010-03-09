@@ -159,7 +159,7 @@ static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
     "/patch-common::netasq-bpf.c",
     "/patch-common_netasq-bpf.c:",
     "/:patch:common:netasq:bpf.c",
-    
+
     "/trunk",
     "/trunk",
     "/trunk",
@@ -1098,7 +1098,7 @@ test_mergeinfo_to_string(apr_pool_t *pool)
                APR_HASH_KEY_STRING,
                apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING));
   SVN_ERR(svn_mergeinfo_to_string(&output, info2, pool));
-  
+
   if (svn_string_compare(expected, output) != TRUE)
     return fail(pool, "Mergeinfo string not what we expected");
 

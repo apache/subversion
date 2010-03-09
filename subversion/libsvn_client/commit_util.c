@@ -197,7 +197,7 @@ add_lock_token(const char *local_abspath,
   apr_pool_t *token_pool = apr_hash_pool_get(altb->lock_tokens);
   const char* lock_token;
   const char* url;
-  
+
   /* I want every lock-token I can get my dirty hands on!
      If this entry is switched, so what.  We will send an irrelevant lock
      token. */
@@ -206,7 +206,7 @@ add_lock_token(const char *local_abspath,
   if (!lock_token)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__node_get_url(&url, altb->wc_ctx, local_abspath, 
+  SVN_ERR(svn_wc__node_get_url(&url, altb->wc_ctx, local_abspath,
                                token_pool, scratch_pool));
   if (url)
     apr_hash_set(altb->lock_tokens, url,

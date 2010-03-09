@@ -222,7 +222,7 @@ update_internal(svn_revnum_t *result_rev,
      the RA driver will call editor->set_target_revision later on. */
   SVN_ERR(svn_wc_get_update_editor4(&update_editor, &update_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
-                                    target, use_commit_times, depth, 
+                                    target, use_commit_times, depth,
                                     depth_is_sticky, allow_unver_obstructions,
                                     diff3_cmd, preserved_exts,
                                     file_fetcher, ffb,
@@ -248,7 +248,7 @@ update_internal(svn_revnum_t *result_rev,
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      update_editor will be driven by svn_repos_dir_delta2. */
-  err = svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter, 
+  err = svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
                                 report_baton, TRUE, depth, (! depth_is_sticky),
                                 (! server_supports_depth),
                                 use_commit_times,
@@ -271,7 +271,7 @@ update_internal(svn_revnum_t *result_rev,
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     {
       SVN_ERR(svn_client__handle_externals(efb.externals_old,
-                                           efb.externals_new, 
+                                           efb.externals_new,
                                            efb.ambient_depths,
                                            anchor_url, anchor,
                                            repos_root,

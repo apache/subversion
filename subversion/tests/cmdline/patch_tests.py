@@ -838,13 +838,13 @@ def patch_strip1(sbox):
 
 def patch_add_new_dir(sbox):
   "patch with missing dirs"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
 
-  # The first diff is adding 'new' with two missing dirs. The second is 
+  # The first diff is adding 'new' with two missing dirs. The second is
   # adding 'new' with one missing dir to a 'A' that is locally deleted
   # (should be skipped). The third is adding 'new' with a directory that
   # is unversioned (should be skipped as well).
@@ -902,7 +902,7 @@ def patch_add_new_dir(sbox):
   expected_skip = wc.State('', {A_C_Y_new_path : Item(),
                                 A_Z_new_path : Item() })
 
-  svntest.actions.run_and_verify_patch(wc_dir, 
+  svntest.actions.run_and_verify_patch(wc_dir,
                                        os.path.abspath(patch_file_path),
                                        expected_output,
                                        expected_disk,

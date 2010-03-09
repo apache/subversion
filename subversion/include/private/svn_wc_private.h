@@ -502,7 +502,7 @@ svn_wc__node_get_lock_token(const char **lock_token,
  * @a anchor_abspath is NULL.  If @a anchor_abspath is not NULL then
  * recursively acquire write locks for the anchor of @a local_abspath
  * and return the anchor path in @a *anchor_abspath.  Use @a wc_ctx
- * for working copy access. 
+ * for working copy access.
  *
  * Returns @c SVN_ERR_WC_LOCKED an existing lock is encountered, but
  * may have set locks of it's own; it's not clear how the caller is
@@ -551,7 +551,7 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
                              const char *local_abspath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
-                      
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

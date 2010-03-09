@@ -1008,7 +1008,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
                                              result_pool, scratch_pool));
         }
 
-      
+
       if (peg_rev.kind == svn_opt_revision_date
           || peg_rev.kind == svn_opt_revision_head
           || peg_rev.kind == svn_opt_revision_previous
@@ -1311,7 +1311,7 @@ filter_log_entry_with_rangelist(void *baton,
   this_rangelist = svn_rangelist__initialize(log_entry->revision - 1,
                                              log_entry->revision,
                                              TRUE, pool);
-  
+
   /* Don't consider inheritance yet, see if LOG_ENTRY->REVISION is
      fully or partially represented in BATON->RANGELIST. */
   SVN_ERR(svn_rangelist_intersect(&intersection, fleb->rangelist,
