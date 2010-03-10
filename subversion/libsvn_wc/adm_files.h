@@ -68,7 +68,9 @@ svn_wc__text_base_path(const char **result_path,
                        svn_boolean_t tmp,
                        apr_pool_t *pool);
 
-/* Set *CONTENTS to a readonly stream on the LOCAL_ABSPATH's base file. */
+/* Set *CONTENTS to a readonly stream on the LOCAL_ABSPATH's base file.
+ * For more detail, please see the description of
+ * svn_wc_get_pristine_contents2().*/
 svn_error_t *
 svn_wc__get_pristine_contents(svn_stream_t **contents,
                               svn_wc__db_t *db,
