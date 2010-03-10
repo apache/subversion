@@ -459,19 +459,19 @@ process_committed_leaf(svn_wc__db_t *db,
 
 
 /* Sets *ADM_ABSPATH to the path of the work queue. */
-static svn_error_t *
-process_committed_internal(svn_wc__db_t *db,
-                           const char *local_abspath,
-                           svn_boolean_t recurse,
-                           svn_revnum_t new_revnum,
-                           apr_time_t new_date,
-                           const char *rev_author,
-                           apr_hash_t *new_dav_cache,
-                           svn_boolean_t no_unlock,
-                           svn_boolean_t keep_changelist,
-                           const svn_checksum_t *checksum,
-                           const svn_wc_committed_queue_t *queue,
-                           apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__process_committed_internal(svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   svn_boolean_t recurse,
+                                   svn_revnum_t new_revnum,
+                                   apr_time_t new_date,
+                                   const char *rev_author,
+                                   apr_hash_t *new_dav_cache,
+                                   svn_boolean_t no_unlock,
+                                   svn_boolean_t keep_changelist,
+                                   const svn_checksum_t *checksum,
+                                   const svn_wc_committed_queue_t *queue,
+                                   apr_pool_t *scratch_pool)
 {
   svn_wc__db_kind_t kind;
 
@@ -533,13 +533,14 @@ process_committed_internal(svn_wc__db_t *db,
              this one committed item. */
           if (kind == svn_wc__db_kind_dir)
             {
-              SVN_ERR(process_committed_internal(db, this_abspath,
-                                                 TRUE /* recurse */,
-                                                 new_revnum, new_date,
-                                                 rev_author,
-                                                 NULL, TRUE /* no_unlock */,
-                                                 keep_changelist, NULL,
-                                                 queue, iterpool));
+              SVN_ERR(svn_wc__process_committed_internal(db, this_abspath,
+                                                         TRUE /* recurse */,
+                                                         new_revnum, new_date,
+                                                         rev_author,
+                                                         NULL,
+                                                         TRUE /* no_unlock */,
+                                                         keep_changelist, NULL,
+                                                         queue, iterpool));
               SVN_ERR(svn_wc__wq_run(db, this_abspath, NULL, NULL, iterpool));
             }
           else
@@ -576,10 +577,9 @@ process_committed_internal(svn_wc__db_t *db,
 }
 
 
-/* */
-static apr_hash_t *
-convert_to_hash(const apr_array_header_t *wcprop_changes,
-                apr_pool_t *result_pool)
+apr_hash_t *
+svn_wc__prop_array_to_hash(const apr_array_header_t *wcprop_changes,
+                           apr_pool_t *result_pool)
 {
   int i;
   apr_hash_t *dav_cache;
@@ -642,7 +642,7 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
   cqi->no_unlock = !remove_lock;
   cqi->keep_changelist = !remove_changelist;
   cqi->checksum = checksum;
-  cqi->new_dav_cache = convert_to_hash(wcprop_changes, queue->pool);
+  cqi->new_dav_cache = svn_wc__prop_array_to_hash(wcprop_changes, queue->pool);
 
   APR_ARRAY_PUSH(queue->queue, committed_queue_item_t *) = cqi;
 
@@ -704,13 +704,14 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
       if (queue->have_recursive && have_recursive_parent(queue->queue, i))
         continue;
 
-      SVN_ERR(process_committed_internal(wc_ctx->db, cqi->local_abspath,
-                                         cqi->recurse,
-                                         new_revnum, new_date, rev_author,
-                                         cqi->new_dav_cache,
-                                         cqi->no_unlock,
-                                         cqi->keep_changelist,
-                                         cqi->checksum, queue, iterpool));
+      SVN_ERR(svn_wc__process_committed_internal(wc_ctx->db, cqi->local_abspath,
+                                                 cqi->recurse, new_revnum,
+                                                 new_date, rev_author,
+                                                 cqi->new_dav_cache,
+                                                 cqi->no_unlock,
+                                                 cqi->keep_changelist,
+                                                 cqi->checksum, queue,
+                                                 iterpool));
 
       SVN_ERR(svn_wc__wq_run(wc_ctx->db, cqi->local_abspath, NULL, NULL,
                              iterpool));
@@ -722,48 +723,6 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
 
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_wc_process_committed4(const char *path,
-                          svn_wc_adm_access_t *adm_access,
-                          svn_boolean_t recurse,
-                          svn_revnum_t new_revnum,
-                          const char *rev_date,
-                          const char *rev_author,
-                          const apr_array_header_t *wcprop_changes,
-                          svn_boolean_t remove_lock,
-                          svn_boolean_t remove_changelist,
-                          const unsigned char *digest,
-                          apr_pool_t *pool)
-{
-  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *local_abspath;
-  const svn_checksum_t *checksum;
-  apr_time_t new_date;
-
-  if (rev_date)
-    SVN_ERR(svn_time_from_cstring(&new_date, rev_date, pool));
-  else
-    new_date = 0;
-
-  if (digest)
-    checksum = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
-  else
-    checksum = NULL;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  SVN_ERR(process_committed_internal(db, local_abspath, recurse,
-                                     new_revnum, new_date, rev_author,
-                                     convert_to_hash(wcprop_changes, pool),
-                                     !remove_lock,!remove_changelist,
-                                     checksum, NULL,
-                                     pool));
-
-  /* Run the log file(s) we just created. */
-  return svn_error_return(svn_wc__wq_run(db, local_abspath, NULL, NULL, pool));
-}
-
 
 
 /* Recursively mark a tree DIR_ABSPATH with schedule svn_wc_schedule_delete

@@ -30,6 +30,7 @@
 #include "svn_subst.h"
 #include "svn_pools.h"
 #include "svn_props.h"
+#include "svn_time.h"
 #include "svn_dirent_uri.h"
 
 #include "private/svn_wc_private.h"
@@ -37,6 +38,7 @@
 #include "wc.h"
 #include "lock.h"
 #include "props.h"
+#include "workqueue.h"
 
 #include "svn_private_config.h"
 
@@ -543,6 +545,49 @@ svn_wc_get_pristine_contents(svn_stream_t **contents,
                                         scratch_pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
+
+svn_error_t *
+svn_wc_process_committed4(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t recurse,
+                          svn_revnum_t new_revnum,
+                          const char *rev_date,
+                          const char *rev_author,
+                          const apr_array_header_t *wcprop_changes,
+                          svn_boolean_t remove_lock,
+                          svn_boolean_t remove_changelist,
+                          const unsigned char *digest,
+                          apr_pool_t *pool)
+{
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+  const svn_checksum_t *checksum;
+  apr_time_t new_date;
+  apr_hash_t *wcprop_changes_hash;
+
+  if (rev_date)
+    SVN_ERR(svn_time_from_cstring(&new_date, rev_date, pool));
+  else
+    new_date = 0;
+
+  if (digest)
+    checksum = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
+  else
+    checksum = NULL;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  wcprop_changes_hash = svn_wc__prop_array_to_hash(wcprop_changes, pool);
+  SVN_ERR(svn_wc__process_committed_internal(db, local_abspath, recurse,
+                                             new_revnum, new_date, rev_author,
+                                             wcprop_changes_hash,
+                                             !remove_lock, !remove_changelist,
+                                             checksum, NULL, pool));
+
+  /* Run the log file(s) we just created. */
+  return svn_error_return(svn_wc__wq_run(db, local_abspath, NULL, NULL, pool));
 }
 
 
