@@ -84,6 +84,13 @@ typedef struct
 } committed_queue_item_t;
 
 
+apr_pool_t *
+svn_wc__get_committed_queue_pool(struct svn_wc_committed_queue_t *queue)
+{
+  return queue->pool;
+}
+
+
 
 /*** Finishing updates and commits. ***/
 
@@ -641,34 +648,6 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
 
   return SVN_NO_ERROR;
 }
-
-/* NOTE: this function doesn't move to deprecated.c because of its need
-   for the internals of svn_wc_committed_queue_t.  */
-svn_error_t *
-svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
-                       const char *path,
-                       svn_wc_adm_access_t *adm_access,
-                       svn_boolean_t recurse,
-                       const apr_array_header_t *wcprop_changes,
-                       svn_boolean_t remove_lock,
-                       svn_boolean_t remove_changelist,
-                       const unsigned char *digest,
-                       apr_pool_t *pool)
-{
-  const svn_checksum_t *checksum;
-
-  if (digest)
-    checksum = svn_checksum__from_digest(digest, svn_checksum_md5,
-                                         (*queue)->pool);
-  else
-    checksum = NULL;
-
-  return svn_wc_queue_committed2(*queue, path, adm_access, recurse,
-                                 wcprop_changes, remove_lock,
-                                 remove_changelist,
-                                 checksum, pool);
-}
-
 
 /* Return TRUE if any item of QUEUE is a parent of ITEM and will be
    processed recursively, return FALSE otherwise.

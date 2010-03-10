@@ -180,6 +180,18 @@ svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
                                apr_pool_t *result_pool);
 
 
+/*** Committed Queue ***/
+
+/**
+ * Return the pool associated with QUEUE.  (This so we can keep some
+ * deprecated functions that need to peek inside the QUEUE struct in
+ * deprecated.c).
+ */
+apr_pool_t *
+svn_wc__get_committed_queue_pool(struct svn_wc_committed_queue_t *queue);
+
+
+
 /*** Update traversals. ***/
 
 struct svn_wc_traversal_info_t
