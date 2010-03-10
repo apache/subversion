@@ -1172,8 +1172,7 @@ prep_directory(struct dir_baton *db,
 
   /* Use the repository root of the anchor, but only if it actually is an
      ancestor of the URL of this directory. */
-  if (db->edit_baton->repos
-      && svn_uri_is_ancestor(db->edit_baton->repos, ancestor_url))
+  if (svn_uri_is_ancestor(db->edit_baton->repos, ancestor_url))
     repos = db->edit_baton->repos;
   else
     repos = NULL;
