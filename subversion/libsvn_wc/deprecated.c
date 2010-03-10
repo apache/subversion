@@ -3676,6 +3676,30 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
                                  scratch_pool);
 }
 
+svn_error_t *
+svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
+                       const char *path,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_boolean_t recurse,
+                       const apr_array_header_t *wcprop_changes,
+                       svn_boolean_t remove_lock,
+                       svn_boolean_t remove_changelist,
+                       const unsigned char *digest,
+                       apr_pool_t *pool)
+{
+  const svn_checksum_t *checksum;
+
+  if (digest)
+    checksum = svn_checksum__from_digest(
+                   digest, svn_checksum_md5,
+                   svn_wc__get_committed_queue_pool(*queue));
+  else
+    checksum = NULL;
+
+  return svn_wc_queue_committed2(*queue, path, adm_access, recurse,
+                                 wcprop_changes, remove_lock,
+                                 remove_changelist, checksum, pool);
+}
 
 svn_error_t *
 svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
