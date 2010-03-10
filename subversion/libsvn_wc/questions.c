@@ -369,6 +369,12 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
 
   SVN_ERR(err);
 
+  if (pristine_stream == NULL)
+    {
+      *modified_p = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   /* Check all bytes, and verify checksum if requested. */
   err = compare_and_verify(modified_p, db, local_abspath, pristine_stream,
                            compare_textbases, force_comparison,

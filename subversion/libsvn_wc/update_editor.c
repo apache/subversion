@@ -3834,6 +3834,11 @@ add_file_with_history(const char *path,
           SVN_ERR(svn_wc__get_pristine_contents(&source_text_base, db,
                                                 src_local_abspath,
                                                 subpool, subpool));
+
+          /* If this has no base, should we use an empty stream?
+           * This assert wants to verify that there are no such callers. */
+          SVN_ERR_ASSERT(source_text_base != NULL);
+          
           SVN_ERR(svn_wc__load_props(&base_props, &working_props, db,
                                      src_local_abspath, pool, subpool));
         }
@@ -4421,9 +4426,13 @@ apply_textdelta(void *file_baton,
                                             fb->local_abspath,
                                             handler_pool, handler_pool));
       else
-        SVN_ERR(svn_wc__get_pristine_contents(&source, fb->edit_baton->db,
-                                             fb->local_abspath,
-                                             handler_pool, handler_pool));
+        {
+          SVN_ERR(svn_wc__get_pristine_contents(&source, fb->edit_baton->db,
+                                                fb->local_abspath,
+                                                handler_pool, handler_pool));
+          if (source == NULL)
+            source = svn_stream_empty(handler_pool);
+        }
     }
   else
     {
