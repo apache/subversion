@@ -812,22 +812,25 @@ def reflect_dropped_renumbered_revs(sbox):
                              '/toplevel')
 
   # Verify the svn:mergeinfo properties
-  svntest.actions.run_and_verify_svn(None, ["/trunk:1-4\n"],
+  # Currently this test is set as XFail because the original fix for
+  # issue #3020 didn't have the correct expecations, see
+  # http://svn.haxx.se/dev/archive-2010-03/0244.shtml.
+  svntest.actions.run_and_verify_svn(None, ["/trunk:2-4\n"],
                                      [], 'propget', 'svn:mergeinfo',
                                      sbox.repo_url + '/branch2')
   svntest.actions.run_and_verify_svn(None, ["/branch1:5-9\n"],
                                      [], 'propget', 'svn:mergeinfo',
                                      sbox.repo_url + '/trunk')
-  svntest.actions.run_and_verify_svn(None, ["/toplevel/trunk:1-13\n"],
+  svntest.actions.run_and_verify_svn(None, ["/toplevel/trunk:11-13\n"],
                                      [], 'propget', 'svn:mergeinfo',
                                      sbox.repo_url + '/toplevel/branch2')
   svntest.actions.run_and_verify_svn(None, ["/toplevel/branch1:14-18\n"],
                                      [], 'propget', 'svn:mergeinfo',
                                      sbox.repo_url + '/toplevel/trunk')
-  svntest.actions.run_and_verify_svn(None, ["/toplevel/trunk:1-12\n"],
+  svntest.actions.run_and_verify_svn(None, ["/toplevel/trunk:11-12\n"],
                                      [], 'propget', 'svn:mergeinfo',
                                      sbox.repo_url + '/toplevel/branch1')
-  svntest.actions.run_and_verify_svn(None, ["/trunk:1-3\n"],
+  svntest.actions.run_and_verify_svn(None, ["/trunk:2-3\n"],
                                      [], 'propget', 'svn:mergeinfo',
                                      sbox.repo_url + '/branch1')
 
@@ -980,7 +983,7 @@ test_list = [ None,
               SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
               load_with_parent_dir,
               set_uuid,
-              reflect_dropped_renumbered_revs,
+              XFail(reflect_dropped_renumbered_revs),
               SkipUnless(fsfs_recover_handle_missing_revs_or_revprops_file,
                          svntest.main.is_fs_type_fsfs),
               create_in_repo_subdir,
