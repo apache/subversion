@@ -261,9 +261,9 @@ Java_org_apache_subversion_javahl_SVNClient_setPrompt
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_logMessages
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
- jobjectArray jranges, jboolean jstopOnCopy,
- jboolean jdisoverPaths, jboolean jincludeMergedRevisions,
- jobject jrevProps, jlong jlimit, jobject jlogMessageCallback)
+ jobject jranges, jboolean jstopOnCopy, jboolean jdisoverPaths,
+ jboolean jincludeMergedRevisions, jobject jrevProps, jlong jlimit,
+ jobject jlogMessageCallback)
 {
   JNIEntry(SVNClient, logMessages);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -287,22 +287,17 @@ Java_org_apache_subversion_javahl_SVNClient_logMessages
     return;
 
   // Build the revision range vector from the Java array.
+  Array ranges(jranges);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   std::vector<RevisionRange> revisionRanges;
+  std::vector<jobject> rangeVec = ranges.vector();
 
-  jint arraySize = env->GetArrayLength(jranges);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  for (int i = 0; i < arraySize; ++i)
+  for (std::vector<jobject>::const_iterator it = rangeVec.begin();
+        it < rangeVec.end(); ++it)
     {
-      jobject elem = env->GetObjectArrayElement(jranges, i);
-      if (JNIUtil::isExceptionThrown())
-        return;
-
-      RevisionRange revisionRange(elem);
+      RevisionRange revisionRange(*it);
       if (JNIUtil::isExceptionThrown())
         return;
 
@@ -871,10 +866,10 @@ Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apach
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2_3Lorg_apache_subversion_javahl_RevisionRange_2Ljava_lang_String_2ZIZZZ
+Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Ljava_util_List_2Ljava_lang_String_2ZIZZZ
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
- jobjectArray jranges, jstring jlocalPath, jboolean jforce,
- jint jdepth, jboolean jignoreAncestry, jboolean jdryRun, jboolean jrecordOnly)
+ jobject jranges, jstring jlocalPath, jboolean jforce, jint jdepth,
+ jboolean jignoreAncestry, jboolean jdryRun, jboolean jrecordOnly)
 {
   JNIEntry(SVNClient, merge);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -897,22 +892,17 @@ Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apach
     return;
 
   // Build the revision range vector from the Java array.
+  Array ranges(jranges);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   std::vector<RevisionRange> revisionRanges;
+  std::vector<jobject> rangeVec = ranges.vector();
 
-  jint arraySize = env->GetArrayLength(jranges);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  for (int i = 0; i < arraySize; ++i)
+  for (std::vector<jobject>::const_iterator it = rangeVec.begin();
+        it < rangeVec.end(); ++it)
     {
-      jobject elem = env->GetObjectArrayElement(jranges, i);
-      if (JNIUtil::isExceptionThrown())
-        return;
-
-      RevisionRange revisionRange(elem);
+      RevisionRange revisionRange(*it);
       if (JNIUtil::isExceptionThrown())
         return;
 

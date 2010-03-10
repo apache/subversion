@@ -154,35 +154,14 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.6
      */
-    public void logMessages(String path,
-                            Revision pegRevision,
-                            List<RevisionRange> revisionRanges,
-                            boolean stopOnCopy,
-                            boolean discoverPath,
-                            boolean includeMergedRevisions,
-                            Set<String> revProps,
-                            long limit,
-                            LogMessageCallback callback)
-            throws ClientException
-    {
-        this.logMessages(path, pegRevision,
-                         revisionRanges == null ? null
-                            : revisionRanges.toArray(new RevisionRange[
-                                                        revisionRanges.size()]),
-                         stopOnCopy, discoverPath, includeMergedRevisions,
-                         revProps, limit, callback);
-    }
-
-    private native void logMessages(String path,
-                                    Revision pegRevision,
-                                    RevisionRange[] revisionRanges,
-                                    boolean stopOnCopy,
-                                    boolean discoverPath,
-                                    boolean includeMergedRevisions,
-                                    Set<String> revProps,
-                                    long limit,
-                                    LogMessageCallback callback)
+    public native void logMessages(String path, Revision pegRevision,
+                                   List<RevisionRange> revisionRanges,
+                                   boolean stopOnCopy, boolean discoverPath,
+                                   boolean includeMergedRevisions,
+                                   Set<String> revProps, long limit,
+                                   LogMessageCallback callback)
             throws ClientException;
+
     /**
      * @since 1.5
      */
@@ -354,22 +333,10 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public void merge(String path, Revision pegRevision,
-                      List<RevisionRange> revisions, String localPath,
-                      boolean force, int depth, boolean ignoreAncestry,
-                      boolean dryRun, boolean recordOnly)
-            throws ClientException
-    {
-        this.merge(path, pegRevision,
-                   revisions == null ? null
-                    : revisions.toArray(new RevisionRange[revisions.size()]),
-                   localPath, force, depth, ignoreAncestry, dryRun, recordOnly);
-    }
-
-    private native void merge(String path, Revision pegRevision,
-                              RevisionRange[] revisions, String localPath,
-                              boolean force, int depth, boolean ignoreAncestry,
-                              boolean dryRun, boolean recordOnly)
+    public native void merge(String path, Revision pegRevision,
+                             List<RevisionRange> revisions, String localPath,
+                             boolean force, int depth, boolean ignoreAncestry,
+                             boolean dryRun, boolean recordOnly)
             throws ClientException;
 
     /**
