@@ -552,6 +552,18 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+
+/** Mark missing, deleted directory @a local_abspath as 'not-present'
+ * in its parent's list of entries.
+ *
+ * Return #SVN_ERR_WC_PATH_FOUND if @a local_abspath isn't actually a
+ * missing, deleted directory.
+ */
+svn_error_t *
+svn_wc__temp_mark_missing_not_present(const char *local_abspath,
+                                      svn_wc_context_t *wc_ctx,
+                                      apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

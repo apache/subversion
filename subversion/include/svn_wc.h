@@ -3312,7 +3312,10 @@ svn_wc_walk_entries(const char *path,
 /** Mark missing @a path as 'deleted' in its @a parent's list of entries.
  *
  * Return #SVN_ERR_WC_PATH_FOUND if @a path isn't actually missing.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_mark_missing_deleted(const char *path,
                             svn_wc_adm_access_t *parent,

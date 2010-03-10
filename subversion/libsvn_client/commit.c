@@ -935,7 +935,7 @@ struct post_commit_baton
 {
   svn_wc_committed_queue_t *queue;
   apr_pool_t *qpool;
-  svn_wc_adm_access_t *base_dir_access;
+  svn_wc_context_t *wc_ctx;
   svn_boolean_t keep_changelists;
   svn_boolean_t keep_locks;
   apr_hash_t *checksums;
@@ -950,35 +950,23 @@ post_process_commit_item(void *baton, void *this_item, apr_pool_t *pool)
   svn_client_commit_item3_t *item =
     *(svn_client_commit_item3_t **)this_item;
   svn_boolean_t loop_recurse = FALSE;
-  const char *adm_access_path;
-  svn_wc_adm_access_t *adm_access;
   svn_boolean_t remove_lock;
-  svn_error_t *bump_err;
 
-  if (item->kind == svn_node_dir)
-    adm_access_path = item->path;
-  else
-    adm_access_path = svn_dirent_dirname(item->path, pool);
-
-  bump_err = svn_wc_adm_retrieve(&adm_access, btn->base_dir_access,
-                                 adm_access_path, pool);
-  if (bump_err
-      && bump_err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+  /* Is it a missing, deleted directory?
+ 
+     ### Temporary: once we centralise this sort of node is just a
+     normal delete and will get handled by the post-commit queue. */
+  if (item->kind == svn_node_dir
+      && item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
     {
-      /* Is it a directory that was deleted in the commit?
-         Then we probably committed a missing directory. */
-      if (item->kind == svn_node_dir
-          && item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-        {
-          /* Mark it as deleted in the parent. */
-          svn_error_clear(bump_err);
-          return svn_wc_mark_missing_deleted(item->path,
-                                             btn->base_dir_access, pool);
-        }
-    }
-  if (bump_err)
-    return bump_err;
+      svn_boolean_t obstructed;
 
+      SVN_ERR(svn_wc__node_is_status_obstructed(&obstructed,
+                                                btn->wc_ctx, item->path, pool));
+      if (obstructed)
+        return svn_wc__temp_mark_missing_not_present(item->path,
+                                                     btn->wc_ctx, pool);
+    }
 
   if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
       && (item->kind == svn_node_dir)
@@ -1282,7 +1270,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
       btn.queue = queue;
       btn.qpool = pool;
-      btn.base_dir_access = base_dir_access;
+      btn.wc_ctx = ctx->wc_ctx;
       btn.keep_changelists = keep_changelists;
       btn.keep_locks = keep_locks;
       btn.checksums = checksums;
