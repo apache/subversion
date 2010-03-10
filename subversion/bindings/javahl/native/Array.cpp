@@ -47,7 +47,7 @@ Array::~Array()
     }
 }
 
-const std::vector<jobject> &Array::vector(void)
+const std::vector<jobject> &Array::vector(void) const
 {
   return m_objects;
 }

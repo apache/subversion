@@ -44,7 +44,7 @@ class Array
   Array(jobjectArray jobjects);
   Array(jobject jobjectsCollection);
   virtual ~Array();
-  const std::vector<jobject> &vector(void);
+  const std::vector<jobject> &vector(void) const;
 };
 
 #endif // ARRAY_H
