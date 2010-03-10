@@ -3389,7 +3389,7 @@ svn_wc__temp_mark_missing_not_present(const char *local_abspath,
       tmp_entry.schedule = svn_wc_schedule_normal;
 
       SVN_ERR(svn_wc__entry_modify2(wc_ctx->db, local_abspath,
-                                    svn_node_unknown, FALSE, &tmp_entry,
+                                    svn_node_dir, TRUE, &tmp_entry,
                                     (SVN_WC__ENTRY_MODIFY_DELETED
                                      | SVN_WC__ENTRY_MODIFY_SCHEDULE
                                      | SVN_WC__ENTRY_MODIFY_FORCE),
