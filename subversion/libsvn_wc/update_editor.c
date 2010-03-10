@@ -2164,9 +2164,10 @@ set_copied_callback(const char *local_abspath,
  * contents of the re-added tree, even if they are locally modified relative
  * to it.
  *
- * THEIR_URL is the deleted node's URL on the source-right side, the
- * side that the target should become after the update. In other words,
- * that's the new URL the node would have if it were not deleted.
+ * THEIR_REPOS_RELPATH is the deleted node's repos-relpath on the source-
+ * right side, the side that the target should become after the update. In
+ * other words, that's the new repos-relpath the node would have if it were
+ * not deleted.
  *
  * Make changes to entries immediately, not loggily, because that is easier
  * to keep track of when multiple directories are involved.
@@ -2175,7 +2176,7 @@ static svn_error_t *
 schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
                                   struct edit_baton *eb,
                                   const char *local_abspath,
-                                  const char *their_url,
+                                  const char *their_repos_relpath,
                                   svn_boolean_t modify_copyfrom,
                                   apr_pool_t *pool)
 {
@@ -2189,7 +2190,8 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
   /* Update the details of the base rev/url to reflect the incoming
    * delete, while leaving the working version as it is, scheduling it
    * for re-addition unless it was already non-existent. */
-  tmp_entry.url = their_url;
+  tmp_entry.url = svn_path_url_add_component2(eb->repos, their_repos_relpath,
+                                              pool);
   flags |= SVN_WC__ENTRY_MODIFY_URL;
 
   /* Schedule the working version to be re-added. */
@@ -2369,13 +2371,9 @@ do_entry_deletion(struct edit_baton *eb,
           SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
           SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
 
-          SVN_ERR(schedule_existing_item_for_re_add(
-                                    entry, eb,
-                                    local_abspath,
-                                    svn_path_url_add_component2(eb->repos,
-                                                                their_relpath,
-                                                                pool),
-                                    TRUE, pool));
+          SVN_ERR(schedule_existing_item_for_re_add(entry, eb, local_abspath,
+                                                    their_relpath, TRUE,
+                                                    pool));
           return SVN_NO_ERROR;
         }
       else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
@@ -2402,13 +2400,9 @@ do_entry_deletion(struct edit_baton *eb,
           SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
           SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
 
-          SVN_ERR(schedule_existing_item_for_re_add(
-                                    entry, eb,
-                                    local_abspath,
-                                    svn_path_url_add_component2(eb->repos,
-                                                                their_relpath,
-                                                                pool),
-                                    FALSE, pool));
+          SVN_ERR(schedule_existing_item_for_re_add(entry, eb, local_abspath,
+                                                    their_relpath, FALSE,
+                                                    pool));
           return SVN_NO_ERROR;
         }
       else
