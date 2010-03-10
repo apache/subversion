@@ -52,7 +52,7 @@ const apr_array_header_t *StringArray::array(const SVN::Pool &pool)
   return strings;
 }
 
-const std::vector<std::string> &StringArray::vector(void)
+const std::vector<std::string> &StringArray::vector(void) const
 {
   return m_strings;
 }

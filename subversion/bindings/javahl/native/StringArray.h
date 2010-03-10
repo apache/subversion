@@ -46,7 +46,7 @@ class StringArray : Array
   StringArray(jobject jstringCollection);
   ~StringArray();
   const apr_array_header_t *array(const SVN::Pool &pool);
-  const std::vector<std::string> &vector(void);
+  const std::vector<std::string> &vector(void) const;
 };
 
 #endif // STRINGARRAY_H
