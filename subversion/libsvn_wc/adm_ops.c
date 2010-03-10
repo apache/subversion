@@ -75,7 +75,7 @@ struct svn_wc_committed_queue_t
 
 typedef struct
 {
-  const char *path;
+  const char *local_abspath;
   svn_boolean_t recurse;
   svn_boolean_t no_unlock;
   svn_boolean_t keep_changelist;
@@ -337,8 +337,7 @@ process_deletion_postcommit(svn_wc__db_t *db,
 /* */
 static svn_error_t *
 process_committed_leaf(svn_wc__db_t *db,
-                       const char *adm_abspath,
-                       const char *path,
+                       const char *local_abspath,
                        svn_revnum_t new_revnum,
                        apr_time_t new_date,
                        const char *rev_author,
@@ -349,13 +348,12 @@ process_committed_leaf(svn_wc__db_t *db,
                        const svn_wc_committed_queue_t *queue,
                        apr_pool_t *scratch_pool)
 {
-  const char *local_abspath;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   const svn_checksum_t *copied_checksum;
+  const char *adm_abspath;
 
-  SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL,
                                NULL, NULL, NULL,
@@ -366,6 +364,12 @@ process_committed_leaf(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
+
+  if (kind == svn_wc__db_kind_dir)
+    adm_abspath = local_abspath;
+  else
+    adm_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+  SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
 
   if (status == svn_wc__db_status_deleted
       || status == svn_wc__db_status_obstructed_delete)
@@ -403,7 +407,7 @@ process_committed_leaf(svn_wc__db_t *db,
                 const committed_queue_item_t *cqi
                   = APR_ARRAY_IDX(queue->queue, i,
                                   const committed_queue_item_t *);
-                if (strcmp(path, cqi->path) == 0)
+                if (strcmp(local_abspath, cqi->local_abspath) == 0)
                   {
                     checksum = cqi->checksum;
                     break;
@@ -436,7 +440,7 @@ process_committed_leaf(svn_wc__db_t *db,
 
   if (!no_unlock)
     SVN_ERR(svn_wc__loggy_delete_lock(db, adm_abspath,
-                                      path, scratch_pool));
+                                      local_abspath, scratch_pool));
 
   SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, new_revnum,
                                     new_date, rev_author, checksum,
@@ -447,10 +451,10 @@ process_committed_leaf(svn_wc__db_t *db,
 }
 
 
-/* */
+/* Sets *ADM_ABSPATH to the path of the work queue. */
 static svn_error_t *
 process_committed_internal(svn_wc__db_t *db,
-                           const char *path,
+                           const char *local_abspath,
                            svn_boolean_t recurse,
                            svn_revnum_t new_revnum,
                            apr_time_t new_date,
@@ -463,19 +467,10 @@ process_committed_internal(svn_wc__db_t *db,
                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_kind_t kind;
-  const char *local_abspath, *adm_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
-  if (kind == svn_wc__db_kind_unknown)
-    return SVN_NO_ERROR;  /* deleted/absent. (?) ... nothing to do. */
-  else if (kind == svn_wc__db_kind_dir)
-    adm_abspath = local_abspath;
-  else
-    adm_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  SVN_ERR(process_committed_leaf(db, adm_abspath, path,
+  SVN_ERR(process_committed_leaf(db, local_abspath,
                                  new_revnum, new_date, rev_author,
                                  new_dav_cache,
                                  no_unlock, keep_changelist,
@@ -504,7 +499,6 @@ process_committed_internal(svn_wc__db_t *db,
           const char *name = APR_ARRAY_IDX(children, i, const char *);
           const char *this_abspath;
           svn_wc__db_status_t status;
-          const char *this_path;
 
           svn_pool_clear(iterpool);
 
@@ -526,16 +520,13 @@ process_committed_internal(svn_wc__db_t *db,
           if (status == svn_wc__db_status_excluded)
             continue;
 
-          /* Create child path by telescoping the main path. */
-          this_path = svn_dirent_join(path, name, iterpool);
-
           /* Recurse, but only allow further recursion if the child is
              a directory.  Pass NULL for NEW_DAV_CACHE, because the
              ones present in the current call are only applicable to
              this one committed item. */
           if (kind == svn_wc__db_kind_dir)
             {
-              SVN_ERR(process_committed_internal(db, this_path,
+              SVN_ERR(process_committed_internal(db, this_abspath,
                                                  TRUE /* recurse */,
                                                  new_revnum, new_date,
                                                  rev_author,
@@ -562,7 +553,7 @@ process_committed_internal(svn_wc__db_t *db,
                   if (replaced)
                     continue;
                 }
-              SVN_ERR(process_committed_leaf(db, adm_abspath, this_path,
+              SVN_ERR(process_committed_leaf(db, this_abspath,
                                              new_revnum,
                                              new_date, rev_author, NULL,
                                              TRUE /* no_unlock */,
@@ -619,7 +610,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool)
 
 svn_error_t *
 svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
-                        const char *path,
+                        const char *local_abspath,
                         svn_boolean_t recurse,
                         const apr_array_header_t *wcprop_changes,
                         svn_boolean_t remove_lock,
@@ -629,6 +620,8 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
 {
   committed_queue_item_t *cqi;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
   queue->have_recursive |= recurse;
 
   /* Use the same pool as the one QUEUE was allocated in,
@@ -637,7 +630,7 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
 
   /* Add to the array with paths and options */
   cqi = apr_palloc(queue->pool, sizeof(*cqi));
-  cqi->path = path;
+  cqi->local_abspath = local_abspath;
   cqi->recurse = recurse;
   cqi->no_unlock = !remove_lock;
   cqi->keep_changelist = !remove_changelist;
@@ -684,8 +677,8 @@ static svn_boolean_t
 have_recursive_parent(apr_array_header_t *queue, int item)
 {
   int i;
-  const char *path
-    = APR_ARRAY_IDX(queue, item, committed_queue_item_t *)->path;
+  const char *local_abspath
+    = APR_ARRAY_IDX(queue, item, committed_queue_item_t *)->local_abspath;
 
   for (i = 0; i < queue->nelts; i++)
     {
@@ -695,7 +688,8 @@ have_recursive_parent(apr_array_header_t *queue, int item)
         continue;
 
       qi = APR_ARRAY_IDX(queue, i, const committed_queue_item_t *);
-      if (qi->recurse && svn_dirent_is_child(qi->path, path, NULL))
+      if (qi->recurse && svn_dirent_is_child(qi->local_abspath, local_abspath,
+                                             NULL))
         return TRUE;
     }
 
@@ -721,27 +715,17 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
 
   for (i = 0; i < queue->queue->nelts; i++)
     {
-      const char *local_abspath, *adm_abspath;
-      svn_wc__db_kind_t kind;
       const committed_queue_item_t *cqi
         = APR_ARRAY_IDX(queue->queue, i, const committed_queue_item_t *);
 
       svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, cqi->path, iterpool));
-      SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
-                                   iterpool));
-      if (kind != svn_wc__db_kind_dir)
-        adm_abspath = svn_dirent_dirname(local_abspath, iterpool);
-      else
-        adm_abspath = local_abspath;
 
       /* If there are some recursive items, then see if this item is a
          child of one, and will (implicitly) be accounted for. */
       if (queue->have_recursive && have_recursive_parent(queue->queue, i))
         continue;
 
-      SVN_ERR(process_committed_internal(wc_ctx->db, cqi->path,
+      SVN_ERR(process_committed_internal(wc_ctx->db, cqi->local_abspath,
                                          cqi->recurse,
                                          new_revnum, new_date, rev_author,
                                          cqi->new_dav_cache,
@@ -749,7 +733,8 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                          cqi->keep_changelist,
                                          cqi->checksum, queue, iterpool));
 
-      SVN_ERR(svn_wc__wq_run(wc_ctx->db, adm_abspath, NULL, NULL, iterpool));
+      SVN_ERR(svn_wc__wq_run(wc_ctx->db, cqi->local_abspath, NULL, NULL,
+                             iterpool));
     }
 
   queue->queue->nelts = 0;
@@ -773,7 +758,7 @@ svn_wc_process_committed4(const char *path,
                           apr_pool_t *pool)
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
-  const char *adm_abspath = svn_wc__adm_access_abspath(adm_access);
+  const char *local_abspath;
   const svn_checksum_t *checksum;
   apr_time_t new_date;
 
@@ -787,8 +772,9 @@ svn_wc_process_committed4(const char *path,
   else
     checksum = NULL;
 
-  SVN_ERR(process_committed_internal(db,
-                                     path, recurse,
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(process_committed_internal(db, local_abspath, recurse,
                                      new_revnum, new_date, rev_author,
                                      convert_to_hash(wcprop_changes, pool),
                                      !remove_lock,!remove_changelist,
@@ -796,7 +782,7 @@ svn_wc_process_committed4(const char *path,
                                      pool));
 
   /* Run the log file(s) we just created. */
-  return svn_error_return(svn_wc__wq_run(db, adm_abspath, NULL, NULL, pool));
+  return svn_error_return(svn_wc__wq_run(db, local_abspath, NULL, NULL, pool));
 }
 
 
