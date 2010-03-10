@@ -4832,7 +4832,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
 				svn_revnum_t new_revnum,
 				const char *rev_date,
 				const char *rev_author,
-				apr_pool_t *pool);
+				apr_pool_t *scratch_pool);
 
 /** @see svn_wc_process_committed_queue2()
  *

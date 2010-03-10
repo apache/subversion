@@ -3689,6 +3689,8 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
                                          pool));
   SVN_ERR(svn_wc_process_committed_queue2(queue, wc_ctx, new_revnum,
                                           rev_date, rev_author, pool));
+  SVN_ERR(svn_wc_context_destroy(wc_ctx));
+
   return SVN_NO_ERROR;
 }
 

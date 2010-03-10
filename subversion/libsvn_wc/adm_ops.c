@@ -708,14 +708,14 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                 svn_revnum_t new_revnum,
                                 const char *rev_date,
                                 const char *rev_author,
-                                apr_pool_t *pool)
+                                apr_pool_t *scratch_pool)
 {
   int i;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_time_t new_date;
 
   if (rev_date)
-    SVN_ERR(svn_time_from_cstring(&new_date, rev_date, pool));
+    SVN_ERR(svn_time_from_cstring(&new_date, rev_date, scratch_pool));
   else
     new_date = 0;
 
