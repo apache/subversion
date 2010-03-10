@@ -4731,12 +4731,12 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * Queue committed items to be processed later by
  * svn_wc_process_committed_queue2().
  *
- * All pointer data passed to this function (@a path, @a wcprop_changes
- * and @a checksum) should remain valid until the queue
- * has been processed by svn_wc_process_committed_queue2().
+ * All pointer data passed to this function (@a local_abspath,
+ * @a wcprop_changes * and @a checksum) should remain valid until the
+ * queue has been processed by svn_wc_process_committed_queue2().
  *
- * Record in @a queue that @a path will need to be bumped after a commit
- * succeeds.
+ * Record in @a queue that @a local_abspath will need to be bumped
+ * after a commit succeeds.
  *
  * If non-NULL, @a wcprop_changes is an array of <tt>svn_prop_t *</tt>
  * changes to wc properties; if an #svn_prop_t->value is NULL, then
@@ -4748,11 +4748,11 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * If @a remove_changelist is @c TRUE, any association with a
  * changelist will be removed.
  *
- * If @a path is a file and @a checksum is non-NULL, use @a checksum as
- * the checksum for the new text base. Otherwise, calculate the checksum
+ * If @a local_abspath is a file and @a checksum is non-NULL, use @a checksum
+ * as the checksum for the new text base. Otherwise, calculate the checksum
  * if needed.
  *
- * If @a recurse is TRUE and @a path is a directory, then bump every
+ * If @a recurse is TRUE and @a local_abspath is a directory, then bump every
  * versioned object at or under @a path.  This is usually done for
  * copied trees.
  *
@@ -4767,7 +4767,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  */
 svn_error_t *
 svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
-                        const char *path,
+                        const char *local_abspath,
                         svn_boolean_t recurse,
                         const apr_array_header_t *wcprop_changes,
                         svn_boolean_t remove_lock,

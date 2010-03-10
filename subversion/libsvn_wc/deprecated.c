@@ -3668,7 +3668,10 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
                         const svn_checksum_t *checksum,
                         apr_pool_t *scratch_pool)
 {
-  return svn_wc_queue_committed3(queue, path, recurse, wcprop_changes,
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+  return svn_wc_queue_committed3(queue, local_abspath, recurse, wcprop_changes,
                                  remove_lock, remove_changelist, checksum,
                                  scratch_pool);
 }
