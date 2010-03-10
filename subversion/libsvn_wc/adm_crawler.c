@@ -74,6 +74,9 @@ restore_file(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__get_pristine_contents(&src_stream, db, local_abspath, pool,
                                         pool));
+  if (src_stream == NULL)
+    /* Nothing to restore. */
+    return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__get_special(&special, db, local_abspath, pool));
   if (special)
@@ -1175,6 +1178,8 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
       /* Compute delta against the pristine contents */
       SVN_ERR(svn_wc__get_pristine_contents(&base_stream, db, local_abspath,
                                             scratch_pool, scratch_pool));
+      if (base_stream == NULL)
+        base_stream = svn_stream_empty(scratch_pool);
 
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                    NULL, NULL, NULL,
@@ -1206,6 +1211,9 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
           /* ### we should ALREADY have the checksum for pristine. */
           SVN_ERR(svn_wc__get_pristine_contents(&p_stream, db, local_abspath,
                                                scratch_pool, scratch_pool));
+          if (p_stream == NULL)
+            p_stream = svn_stream_empty(scratch_pool);
+
           p_stream = svn_stream_checksummed2(p_stream, &p_checksum,
                                              NULL, svn_checksum_md5, TRUE,
                                              scratch_pool);

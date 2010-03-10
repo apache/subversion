@@ -1501,6 +1501,8 @@ apply_textdelta(void *file_baton,
       /* The current text-base is the starting point if replacing */
       SVN_ERR(svn_wc__get_pristine_contents(&source, eb->db, fb->local_abspath,
                                             fb->pool, fb->pool));
+      if (source == NULL)
+        source = svn_stream_empty(fb->pool);
     }
 
   /* This is the file that will contain the pristine repository version. It
