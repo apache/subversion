@@ -191,6 +191,44 @@ apr_pool_t *
 svn_wc__get_committed_queue_pool(struct svn_wc_committed_queue_t *queue);
 
 
+/** Internal helper for svn_wc_process_committed_queue2().
+ *
+ * Bump an item from @a queue (the one associated with @a
+ * local_abspath) to @a new_revnum after a commit succeeds, recursing
+ * if @a recurse is set.
+ *
+ * @a new_date is the (server-side) date of the new revision, or 0.
+ *
+ * @a rev_author is the (server-side) author of the new
+ * revision; it may be @c NULL.
+ *
+ * @a new_dav_cache is a hash of dav property changes to be made to
+ * the @a local_abspath.
+ *
+ * If @a no_unlock is set, don't release any user locks on @a
+ * local_abspath; otherwise release them as part of this processing.
+ *
+ * If @keep_changelist is set, don't remove any changeset assignments
+ * from @a local_abspath; otherwise, clear it of such assignments.
+ *
+ * If @a local_abspath is a file and @a checksum is non-NULL, use @a checksum
+ * as the checksum for the new text base. Otherwise, calculate the checksum
+ * if needed.
+ */
+svn_error_t *
+svn_wc__process_committed_internal(svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   svn_boolean_t recurse,
+                                   svn_revnum_t new_revnum,
+                                   apr_time_t new_date,
+                                   const char *rev_author,
+                                   apr_hash_t *new_dav_cache,
+                                   svn_boolean_t no_unlock,
+                                   svn_boolean_t keep_changelist,
+                                   const svn_checksum_t *checksum,
+                                   const svn_wc_committed_queue_t *queue,
+                                   apr_pool_t *scratch_pool);
+
 
 /*** Update traversals. ***/
 
@@ -273,6 +311,27 @@ struct svn_wc_traversal_info_t
 /* Ensure that DIR exists. */
 svn_error_t *svn_wc__ensure_directory(const char *path, apr_pool_t *pool);
 
+
+/* Return a hash keyed by 'const char *' property names and with
+   'svn_string_t *' values built from PROPS (which is an array of
+   pointers to svn_prop_t's) or to NULL if PROPS is NULL or empty.
+   PROPS items which lack a value will be ignored.  If PROPS contains
+   multiple properties with the same name, each successive such item
+   reached in a walk from the beginning to the end of the array will
+   overwrite the previous in the returned hash.
+
+   NOTE: While the returned hash will be allocated in RESULT_POOL, the
+   items it holds will share storage with those in PROPS.
+
+   ### This is rather the reverse of svn_prop_hash_to_array(), except
+   ### that function's arrays contains svn_prop_t's, whereas this
+   ### one's contains *pointers* to svn_prop_t's.  So much for
+   ### consistency.  */
+apr_hash_t *
+svn_wc__prop_array_to_hash(const apr_array_header_t *wcprop_changes,
+                           apr_pool_t *result_pool);
+
+
 /* Baton for svn_wc__compat_call_notify_func below. */
 typedef struct svn_wc__compat_notify_baton_t {
   /* Wrapped func/baton. */
