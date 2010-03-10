@@ -31,6 +31,7 @@
 #include <apr_tables.h>
 
 #include "Pool.h"
+#include "Array.h"
 
 /**
  * A container for our copy sources, which can convert them into an
@@ -43,7 +44,7 @@ class CopySources
    * Create a CopySources object.
    * @param jobjectArray An array of CopySource Java objects.
    */
-  CopySources(jobjectArray copySources);
+  CopySources(Array &copySources);
 
   /**
    * Destroy a CopySources object
@@ -69,7 +70,7 @@ class CopySources
   /**
    * A local reference to the Java CopySources peer.
    */
-  jobjectArray m_copySources;
+  Array &m_copySources;
 };
 
 #endif  /* COPY_SOURCES_H */

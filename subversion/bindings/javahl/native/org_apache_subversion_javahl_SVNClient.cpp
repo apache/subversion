@@ -570,7 +570,7 @@ Java_org_apache_subversion_javahl_SVNClient_commit
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_copy
-(JNIEnv *env, jobject jthis, jobjectArray jcopySources, jstring jdestPath,
+(JNIEnv *env, jobject jthis, jobject jcopySources, jstring jdestPath,
  jstring jmessage, jboolean jcopyAsChild, jboolean jmakeParents,
  jboolean jignoreExternals, jobject jrevpropTable)
 {
@@ -582,13 +582,19 @@ Java_org_apache_subversion_javahl_SVNClient_copy
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  CopySources copySources(jcopySources);
+  Array copySrcArray(jcopySources);
   if (JNIUtil::isExceptionThrown())
     return;
+
+  CopySources copySources(copySrcArray);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   JNIStringHolder destPath(jdestPath);
   if (JNIUtil::isExceptionThrown())
     return;
-  JNIStringHolder message(jmessage);
+
+JNIStringHolder message(jmessage);
   if (JNIUtil::isExceptionThrown())
     return;
 
