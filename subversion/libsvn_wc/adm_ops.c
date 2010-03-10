@@ -458,7 +458,7 @@ process_committed_leaf(svn_wc__db_t *db,
 }
 
 
-/* Sets *ADM_ABSPATH to the path of the work queue. */
+/* */
 svn_error_t *
 svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    const char *local_abspath,
