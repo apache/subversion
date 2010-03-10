@@ -6424,10 +6424,24 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
                         apr_pool_t *pool);
 
 
-/** Given a @a path to a wc file, return a stream to the @a contents of
- * the pristine copy of the file.  Use @a wc_ctx to access the working
- * copy.This is needed so clients can do diffs.  If the WC has no
- * text-base, return a @c NULL instead of a stream.
+/** Given a @a path to a wc file, return in @a *contents a readonly stream to
+ * the pristine contents of the file that would serve as base content for the
+ * next commit. That means:
+ *
+ * When there is no change in node history scheduled, i.e. when there are only
+ * local text-mods, prop-mods or a delete, return the last checked-out or
+ * updated-/switched-to contents of the file.
+ *
+ * If the file is simply added or replaced (no copy-/move-here involved),
+ * set @a *contents to @c NULL.
+ *
+ * When the file has been locally copied-/moved-here, return the contents of
+ * the copy/move source (even if the copy-/move-here replaces a locally
+ * deleted file).
+ *
+ * If @local_abspath refers to an unversioned or non-existing path, return
+ * @c SVN_ERR_WC_PATH_NOT_FOUND. Use @a wc_ctx to access the working copy.
+ * @a contents may not be @c NULL (unlike @a *contents).
  *
  * @since New in 1.7. */
 svn_error_t *

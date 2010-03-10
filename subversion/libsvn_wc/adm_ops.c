@@ -2208,16 +2208,38 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
+  svn_wc__db_status_t status;
   const char *text_base;
+
+  SVN_ERR(svn_wc__db_read_info(&status,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
+  if (status == svn_wc__db_status_added)
+    {
+      /* For an added node, we return an empty stream. Make sure this is not
+       * copied-here or moved-here, in which case we return the copy/move
+       * source's contents. */
+      SVN_ERR(svn_wc__db_scan_addition(&status,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+      if (status == svn_wc__db_status_added)
+        {
+          /* Simply added. The pristine base does not exist. */
+          *contents = NULL;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  /* ### TODO: use pristine store. */
+  /* ### TODO: check for non-file node. */
 
   SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
                                  scratch_pool));
-
-  if (text_base == NULL)
-    {
-      *contents = NULL;
-      return SVN_NO_ERROR;
-    }
+  SVN_ERR_ASSERT(text_base != NULL);
 
   return svn_stream_open_readonly(contents, text_base, result_pool,
                                   scratch_pool);
