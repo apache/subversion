@@ -3365,36 +3365,60 @@ svn_wc_walk_entries3(const char *path,
 }
 
 svn_error_t *
-svn_wc_mark_missing_deleted(const char *path,
-                            svn_wc_adm_access_t *parent,
-                            apr_pool_t *pool)
+svn_wc__temp_mark_missing_not_present(const char *local_abspath,
+                                      svn_wc_context_t *wc_ctx,
+                                      apr_pool_t *scratch_pool)
 {
-  svn_node_kind_t pkind;
-  const char *local_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(parent);
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  SVN_ERR(svn_io_check_path(path, &pkind, pool));
-
-  if (pkind == svn_node_none)
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR(svn_wc__db_read_info(&status, &kind,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+  if (kind == svn_wc__db_kind_dir
+      && status == svn_wc__db_status_obstructed_delete)
     {
       svn_wc_entry_t tmp_entry;
 
       tmp_entry.deleted = TRUE;
       tmp_entry.schedule = svn_wc_schedule_normal;
 
-      return svn_error_return(
-        svn_wc__entry_modify2(db, local_abspath, svn_node_unknown, FALSE,
-                              &tmp_entry,
-                              (SVN_WC__ENTRY_MODIFY_DELETED
-                               | SVN_WC__ENTRY_MODIFY_SCHEDULE
-                               | SVN_WC__ENTRY_MODIFY_FORCE),
-                              pool));
+      SVN_ERR(svn_wc__entry_modify2(wc_ctx->db, local_abspath,
+                                    svn_node_unknown, FALSE, &tmp_entry,
+                                    (SVN_WC__ENTRY_MODIFY_DELETED
+                                     | SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                     | SVN_WC__ENTRY_MODIFY_FORCE),
+                                    scratch_pool));
+      return SVN_NO_ERROR;
     }
 
   return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
                            _("Unexpectedly found '%s': "
                              "path is marked 'missing'"),
-                           svn_dirent_local_style(path, pool));
+                           svn_dirent_local_style(local_abspath, scratch_pool));
+}
+
+svn_error_t *
+svn_wc_mark_missing_deleted(const char *path,
+                            svn_wc_adm_access_t *parent,
+                            apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(parent), pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__temp_mark_missing_not_present(local_abspath, wc_ctx, pool));
+
+  SVN_ERR(svn_wc_context_destroy(wc_ctx));
+
+  return SVN_NO_ERROR;
 }
