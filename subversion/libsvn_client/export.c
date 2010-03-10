@@ -128,42 +128,42 @@ copy_one_versioned_file(const char *from_abspath,
   else if (err)
     return svn_error_return(err);
 
-  /* Only export 'added' and 'replaced' files when the revision is WORKING, or
-     when they are part of a copy-/move-here and thus have a pristine base.
-     Otherwise, skip the 'added' files, since they didn't exist in the BASE
-     revision and don't have an associated text-base.
-
-     Don't export 'deleted' files and directories unless it's a
+  /* Don't export 'deleted' files and directories unless it's a
      revision other than WORKING.  These files and directories
      don't really exist in WORKING. */
-  if ((revision->kind != svn_opt_revision_working
-       && (entry->schedule == svn_wc_schedule_add
-           || entry->schedule == svn_wc_schedule_replace)
-       && !entry->copied)
-      || (revision->kind == svn_opt_revision_working &&
-          entry->schedule == svn_wc_schedule_delete))
+  if (revision->kind == svn_opt_revision_working
+      && entry->schedule == svn_wc_schedule_delete)
     return SVN_NO_ERROR;
-
-  /* ### TODO: Handle replaced nodes properly.
-     ###       svn_opt_revision_base refers to the "new" 
-     ###       base of the node. That means, if a node is locally
-     ###       replaced, export skips this node, as if it was locally
-     ###       added, because svn_opt_revision_base refers to the base
-     ###       of the added node, not to the node that was deleted.
-     ###       In contrast, when the node is copied-here or moved-here,
-     ###       the copy/move source's content will be exported.
-     ###       It is currently not possible to export the revert-base
-     ###       when a node is locally replaced. We need a new
-     ###       svn_opt_revision_ enum value for proper distinction
-     ###       between revert-base and commit-base. */
 
   if (revision->kind != svn_opt_revision_working)
     {
+      /* Only export 'added' files when the revision is WORKING. This is not
+         WORKING, so skip the 'added' files, since they didn't exist
+         in the BASE revision and don't have an associated text-base.
+         
+         'replaced' files are technically the same as 'added' files.
+         ### TODO: Handle replaced nodes properly.
+         ###       svn_opt_revision_base refers to the "new" 
+         ###       base of the node. That means, if a node is locally
+         ###       replaced, export skips this node, as if it was locally
+         ###       added, because svn_opt_revision_base refers to the base
+         ###       of the added node, not to the node that was deleted.
+         ###       In contrast, when the node is copied-here or moved-here,
+         ###       the copy/move source's content will be exported.
+         ###       It is currently not possible to export the revert-base
+         ###       when a node is locally replaced. We need a new
+         ###       svn_opt_revision_ enum value for proper distinction
+         ###       between revert-base and commit-base.
+
+         Copied-/moved-here nodes have a base, so export both added and replaced
+         files when they involve a copy-/move-here.
+
+         We get all this for free from evaluating SOURCE == NULL:
+       */
       SVN_ERR(svn_wc_get_pristine_contents2(&source, wc_ctx, from_abspath,
                                             scratch_pool, scratch_pool));
-
-      /* Should have been caught by above add/replace condition. */
-      SVN_ERR_ASSERT(source != NULL);
+      if (source == NULL)
+        return SVN_NO_ERROR;
 
       SVN_ERR(svn_wc_get_prop_diffs2(NULL, &props, wc_ctx, from_abspath,
                                      scratch_pool, scratch_pool));
