@@ -676,7 +676,9 @@ svn_cl__check_boolean_prop_val(const char *propname,
 
 /* De-streamifying wrapper around svn_client_get_changelists(), which
    is called for each target in TARGETS to populate *PATHS (a list of
-   paths assigned to one of the CHANGELISTS. */
+   paths assigned to one of the CHANGELISTS.
+   If all targets are to be included, may set *PATHS to TARGETS without
+   reallocating. */
 svn_error_t *
 svn_cl__changelist_paths(apr_array_header_t **paths,
                          const apr_array_header_t *changelists,
