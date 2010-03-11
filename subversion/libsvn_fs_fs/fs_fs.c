@@ -1852,6 +1852,7 @@ get_packed_offset(apr_off_t *rev_offset,
       if (eof)
         break;
 
+      errno = 0; /* apr_atoi64() in APR-0.9 does not always set errno */
       APR_ARRAY_PUSH(manifest, apr_off_t) =
                 apr_atoi64(svn_string_create_from_buf(sb, iterpool)->data);
       if (errno == ERANGE)
