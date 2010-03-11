@@ -727,15 +727,10 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
 
 /* Recursively mark a tree DIR_ABSPATH with schedule svn_wc_schedule_delete
    and a KEEP_LOCAL flag. */
-/* ### If the implementation looks familiar to mark_tree_copied(), that is not
-       strictly coincidence. The function was duplicated, to make it easier to
-       replace these two specific cases for WC-NG. */
 static svn_error_t *
 mark_tree_deleted(svn_wc__db_t *db,
                  const char *dir_abspath,
                  svn_boolean_t keep_local,
-                 svn_cancel_func_t cancel_func,
-                 void *cancel_baton,
                  svn_wc_notify_func2_t notify_func,
                  void *notify_baton,
                  apr_pool_t *pool)
@@ -772,7 +767,6 @@ mark_tree_deleted(svn_wc__db_t *db,
         {
           SVN_ERR(mark_tree_deleted(db, child_abspath,
                                     keep_local,
-                                    cancel_func, cancel_baton,
                                     notify_func, notify_baton,
                                     iterpool));
         }
@@ -1087,7 +1081,6 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
               SVN_ERR(mark_tree_deleted(wc_ctx->db,
                                         local_abspath,
                                         keep_local,
-                                        cancel_func, cancel_baton,
                                         notify_func, notify_baton,
                                         pool));
             }
@@ -1222,15 +1215,10 @@ mark_item_copied(svn_wc__db_t *db,
 
 /* Recursively mark a tree DIR_ABSPATH (whose status is DIR_STATUS)
    with a COPIED flag, skip items scheduled for deletion. */
-/* ### If the implementation looks familiar to mark_tree_deleted(), that
-       is not strictly coincidence. The function was duplicated, to make it
-       easier to replace these two specific cases for WC-NG. */
 static svn_error_t *
 mark_tree_copied(svn_wc__db_t *db,
                  const char *dir_abspath,
                  svn_wc__db_status_t dir_status,
-                 svn_cancel_func_t cancel_func,
-                 void *cancel_baton,
                  apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -1273,8 +1261,7 @@ mark_tree_copied(svn_wc__db_t *db,
       /* If this is a directory, recurse; otherwise, do real work. */
       if (child_kind == svn_wc__db_kind_dir)
         {
-          SVN_ERR(mark_tree_copied(db, child_abspath, child_status, 
-                                   cancel_func, cancel_baton, iterpool));
+          SVN_ERR(mark_tree_copied(db, child_abspath, child_status, iterpool));
         }
       else
         {
@@ -1290,7 +1277,8 @@ mark_tree_copied(svn_wc__db_t *db,
   if (!((dir_status == svn_wc__db_status_deleted) ||
         (dir_status == svn_wc__db_status_obstructed_delete)))
     {
-      SVN_ERR(mark_item_copied(db, dir_abspath, svn_wc__db_kind_dir, iterpool));
+      SVN_ERR(mark_item_copied(db, dir_abspath, svn_wc__db_kind_dir,
+                               iterpool));
     }
 
   /* Destroy our per-iteration pool. */
@@ -1603,9 +1591,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                             pool));
 
           /* Recursively add the 'copied' existence flag as well!  */
-          SVN_ERR(mark_tree_copied(db, local_abspath, status,
-                                   cancel_func, cancel_baton,
-                                   pool));
+          SVN_ERR(mark_tree_copied(db, local_abspath, status, pool));
 
           /* Clean out the now-obsolete dav cache values.  */
           SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
