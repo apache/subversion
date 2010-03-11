@@ -279,8 +279,8 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
       void *val;
 
       apr_hash_this(hi, &key, NULL, &val);
-      merge_source = (const char *) key;
-      rangelist = (apr_array_header_t *) val;
+      merge_source = key;
+      rangelist = val;
 
       /* Possibly renumber revisions in merge source's rangelist. */
       for (i = 0; i < rangelist->nelts; i++)

@@ -180,7 +180,7 @@ print_status(void *baton,
       scache->path = apr_pstrdup(sb->cl_pool, path);
       scache->status = svn_wc_dup_status2(status, sb->cl_pool);
 
-      path_array = (apr_array_header_t *)
+      path_array =
         apr_hash_get(sb->cached_changelists, cl_key, APR_HASH_KEY_STRING);
       if (path_array == NULL)
         {
