@@ -1384,8 +1384,8 @@ do_close(svn_wc_adm_access_t *adm_access,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *abspath = svn_apr_hash_index_key(hi);
-          svn_wc_adm_access_t *child = svn_apr_hash_index_val(hi);
+          const char *abspath = svn__apr_hash_index_key(hi);
+          svn_wc_adm_access_t *child = svn__apr_hash_index_val(hi);
           const char *path = child->path;
 
           if (IS_MISSING(child))

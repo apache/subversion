@@ -221,8 +221,8 @@ import_file(const svn_delta_editor_t *editor,
     {
       for (hi = apr_hash_first(pool, properties); hi; hi = apr_hash_next(hi))
         {
-          const char *pname = svn_apr_hash_index_key(hi);
-          const svn_string_t *pval = svn_apr_hash_index_val(hi);
+          const char *pname = svn__apr_hash_index_key(hi);
+          const svn_string_t *pval = svn__apr_hash_index_val(hi);
 
           SVN_ERR(editor->change_file_prop(file_baton, pname, pval, pool));
         }
@@ -315,8 +315,8 @@ import_dir(const svn_delta_editor_t *editor,
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
       const char *this_path, *this_edit_path, *abs_path;
-      const char *filename = svn_apr_hash_index_key(hi);
-      const svn_io_dirent_t *dirent = svn_apr_hash_index_val(hi);
+      const char *filename = svn__apr_hash_index_key(hi);
+      const svn_io_dirent_t *dirent = svn__apr_hash_index_val(hi);
 
       svn_pool_clear(subpool);
 
@@ -818,7 +818,7 @@ remove_tmpfiles(apr_hash_t *tempfiles,
   /* Clean up any tempfiles. */
   for (hi = apr_hash_first(pool, tempfiles); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn_apr_hash_index_key(hi);
+      const char *path = svn__apr_hash_index_key(hi);
 
       svn_pool_clear(subpool);
 
@@ -914,8 +914,8 @@ collect_lock_tokens(apr_hash_t **result,
 
   for (hi = apr_hash_first(pool, all_tokens); hi; hi = apr_hash_next(hi))
     {
-      const char *url = svn_apr_hash_index_key(hi);
-      const char *token = svn_apr_hash_index_val(hi);
+      const char *url = svn__apr_hash_index_key(hi);
+      const char *token = svn__apr_hash_index_val(hi);
 
       if (strncmp(base_url, url, base_len) == 0
           && (url[base_len] == '\0' || url[base_len] == '/'))

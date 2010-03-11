@@ -1380,9 +1380,9 @@ merge(svn_stringbuf_t *conflict_p,
 
       svn_pool_clear(iterpool);
 
-      name = svn_apr_hash_index_key(hi);
-      klen = svn_apr_hash_index_klen(hi);
-      a_entry = svn_apr_hash_index_val(hi);
+      name = svn__apr_hash_index_key(hi);
+      klen = svn__apr_hash_index_klen(hi);
+      a_entry = svn__apr_hash_index_val(hi);
 
       s_entry = apr_hash_get(s_entries, name, klen);
       t_entry = apr_hash_get(t_entries, name, klen);
@@ -1510,13 +1510,13 @@ merge(svn_stringbuf_t *conflict_p,
        hi = apr_hash_next(hi))
     {
       svn_fs_dirent_t *s_entry, *t_entry;
-      const char *name = svn_apr_hash_index_key(hi);
-      apr_ssize_t klen = svn_apr_hash_index_klen(hi);
+      const char *name = svn__apr_hash_index_key(hi);
+      apr_ssize_t klen = svn__apr_hash_index_klen(hi);
       dag_node_t *s_ent_node;
 
       svn_pool_clear(iterpool);
 
-      s_entry = svn_apr_hash_index_val(hi);
+      s_entry = svn__apr_hash_index_val(hi);
       t_entry = apr_hash_get(t_entries, name, klen);
 
       /* If NAME exists in TARGET, declare a conflict. */
@@ -3410,7 +3410,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
        hi;
        hi = apr_hash_next(hi))
     {
-      svn_fs_dirent_t *dirent = svn_apr_hash_index_val(hi);
+      svn_fs_dirent_t *dirent = svn__apr_hash_index_val(hi);
       const char *kid_path;
       dag_node_t *kid_dag;
       svn_boolean_t has_mergeinfo, go_down;
@@ -3482,8 +3482,8 @@ append_to_merged_froms(svn_mergeinfo_t *output,
 
   for (hi = apr_hash_first(pool, input); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn_apr_hash_index_key(hi);
-      apr_array_header_t *rangelist = svn_apr_hash_index_val(hi);
+      const char *path = svn__apr_hash_index_key(hi);
+      apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
       char *newpath;
 
       newpath = svn_uri_join(path, path_piece, pool);

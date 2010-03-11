@@ -1321,8 +1321,8 @@ svn_client__do_external_status(apr_hash_t *externals_new,
        hi = apr_hash_next(hi))
     {
       apr_array_header_t *exts;
-      const char *path = svn_apr_hash_index_key(hi);
-      const char *propval = svn_apr_hash_index_val(hi);
+      const char *path = svn__apr_hash_index_key(hi);
+      const char *propval = svn__apr_hash_index_val(hi);
       apr_pool_t *iterpool;
       int i;
 

@@ -3554,7 +3554,7 @@ unparse_dir_entries(apr_hash_t **str_entries_p,
     {
       const void *key;
       apr_ssize_t klen;
-      svn_fs_dirent_t *dirent = svn_apr_hash_index_val(hi);
+      svn_fs_dirent_t *dirent = svn__apr_hash_index_val(hi);
       const char *new_val;
 
       apr_hash_this(hi, &key, &klen, NULL);
@@ -3602,8 +3602,8 @@ parse_dir_entries(apr_hash_t **entries_p,
   /* Translate the string dir entries into real entries. */
   for (hi = apr_hash_first(pool, str_entries); hi; hi = apr_hash_next(hi))
     {
-      const char *name = svn_apr_hash_index_key(hi);
-      svn_string_t *str_val = svn_apr_hash_index_val(hi);
+      const char *name = svn__apr_hash_index_key(hi);
+      svn_string_t *str_val = svn__apr_hash_index_val(hi);
       char *str, *last_str;
       svn_fs_dirent_t *dirent = apr_pcalloc(pool, sizeof(*dirent));
 
@@ -4199,8 +4199,8 @@ fetch_all_changes(apr_hash_t *changed_paths,
                hi = apr_hash_next(hi))
             {
               /* KEY is the path. */
-              const char *path = svn_apr_hash_index_key(hi);
-              apr_ssize_t klen = svn_apr_hash_index_klen(hi);
+              const char *path = svn__apr_hash_index_key(hi);
+              apr_ssize_t klen = svn__apr_hash_index_klen(hi);
 
               /* If we come across our own path, ignore it. */
               if (strcmp(change->path, path) == 0)
@@ -5513,7 +5513,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
-          svn_fs_dirent_t *dirent = svn_apr_hash_index_val(hi);
+          svn_fs_dirent_t *dirent = svn__apr_hash_index_val(hi);
 
           svn_pool_clear(subpool);
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
@@ -5663,8 +5663,8 @@ write_final_changed_path_info(apr_off_t *offset_p,
 
       svn_pool_clear(iterpool);
 
-      change = svn_apr_hash_index_val(hi);
-      path = svn_apr_hash_index_key(hi);
+      change = svn__apr_hash_index_val(hi);
+      path = svn__apr_hash_index_key(hi);
 
       id = change->node_rev_id;
 
@@ -5799,7 +5799,7 @@ verify_locks(svn_fs_t *fs,
   changed_paths = apr_array_make(pool, apr_hash_count(changes) + 1,
                                  sizeof(const char *));
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
-    APR_ARRAY_PUSH(changed_paths, const char *) = svn_apr_hash_index_key(hi);
+    APR_ARRAY_PUSH(changed_paths, const char *) = svn__apr_hash_index_key(hi);
   qsort(changed_paths->elts, changed_paths->nelts,
         changed_paths->elt_size, svn_sort_compare_paths);
 
@@ -6606,7 +6606,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
       svn_fs_id_t *id;
       const char *node_id, *copy_id;
       apr_off_t child_dir_offset;
-      const svn_string_t *path = svn_apr_hash_index_val(hi);
+      const svn_string_t *path = svn__apr_hash_index_val(hi);
 
       svn_pool_clear(iterpool);
 
@@ -7033,8 +7033,8 @@ svn_fs_fs__list_transactions(apr_array_header_t **names_p,
   /* Loop through all the entries and return anything that ends with '.txn'. */
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
-      const char *name = svn_apr_hash_index_key(hi);
-      apr_ssize_t klen = svn_apr_hash_index_klen(hi);
+      const char *name = svn__apr_hash_index_key(hi);
+      apr_ssize_t klen = svn__apr_hash_index_klen(hi);
       const char *id;
 
       /* The name must end with ".txn" to be considered a transaction. */

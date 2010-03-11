@@ -364,7 +364,7 @@ close_many_wcroots(apr_hash_t *roots,
 
   for (hi = apr_hash_first(scratch_pool, roots); hi; hi = apr_hash_next(hi))
     {
-      wcroot_t *wcroot = svn_apr_hash_index_val(hi);
+      wcroot_t *wcroot = svn__apr_hash_index_val(hi);
       apr_status_t result;
 
       result = apr_pool_cleanup_run(state_pool, wcroot, close_wcroot);
@@ -5158,8 +5158,8 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *local_relpath = svn_apr_hash_index_key(hi);
-      apr_hash_t *props = svn_apr_hash_index_val(hi);
+      const char *local_relpath = svn__apr_hash_index_key(hi);
+      apr_hash_t *props = svn__apr_hash_index_val(hi);
 
       svn_pool_clear(iterpool);
 
@@ -5610,8 +5610,8 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key = svn_apr_hash_index_key(hi);
-      const svn_wc__db_pdh_t *pdh = svn_apr_hash_index_val(hi);
+      const void *key = svn__apr_hash_index_key(hi);
+      const svn_wc__db_pdh_t *pdh = svn__apr_hash_index_val(hi);
 
       if (pdh->adm_access != NULL)
         apr_hash_set(result, key, APR_HASH_KEY_STRING, pdh->adm_access);
@@ -5819,7 +5819,7 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
           hi = apr_hash_next(hi))
         {
           const char *child_name =
-              svn_dirent_basename(svn_apr_hash_index_key(hi), result_pool);
+              svn_dirent_basename(svn__apr_hash_index_key(hi), result_pool);
 
           /* Using a hash avoids duplicates */
           apr_hash_set(found, child_name, APR_HASH_KEY_STRING, child_name);

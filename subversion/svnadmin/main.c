@@ -1248,8 +1248,8 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
       const char *cr_date, *exp_date = "";
-      const char *path = svn_apr_hash_index_key(hi);
-      svn_lock_t *lock = svn_apr_hash_index_val(hi);
+      const char *path = svn__apr_hash_index_key(hi);
+      svn_lock_t *lock = svn__apr_hash_index_val(hi);
       int comment_lines = 0;
 
       cr_date = svn_time_to_human_cstring(lock->creation_date, pool);

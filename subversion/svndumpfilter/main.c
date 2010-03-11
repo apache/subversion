@@ -285,8 +285,8 @@ new_revision_record(void **revision_baton,
 
   for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
     {
-      const char *key = svn_apr_hash_index_key(hi);
-      const char *val = svn_apr_hash_index_val(hi);
+      const char *key = svn__apr_hash_index_key(hi);
+      const char *val = svn__apr_hash_index_val(hi);
 
       if ((!strcmp(key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH))
           || (!strcmp(key, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH))
@@ -351,8 +351,8 @@ output_revision(struct revision_baton_t *rb)
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *pname = svn_apr_hash_index_key(hi);
-          const svn_string_t *pval = svn_apr_hash_index_val(hi);
+          const char *pname = svn__apr_hash_index_key(hi);
+          const svn_string_t *pval = svn__apr_hash_index_val(hi);
 
           write_prop_to_stringbuf(&props, pname, pval);
         }
@@ -550,8 +550,8 @@ new_node_record(void **node_baton,
 
       for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
         {
-          const char *key = svn_apr_hash_index_key(hi);
-          const char *val = svn_apr_hash_index_val(hi);
+          const char *key = svn__apr_hash_index_key(hi);
+          const char *val = svn__apr_hash_index_val(hi);
 
           if ((!strcmp(key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH))
               || (!strcmp(key, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH))
@@ -672,8 +672,8 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, initial_val->data, subpool));
   for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const char *merge_source = svn_apr_hash_index_key(hi);
-      apr_array_header_t *rangelist = svn_apr_hash_index_val(hi);
+      const char *merge_source = svn__apr_hash_index_key(hi);
+      apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
       struct parse_baton_t *pb = rb->pb;
       int i;
 
@@ -1132,7 +1132,7 @@ do_filter(apr_getopt_t *os,
            hi;
            hi = apr_hash_next(hi))
         {
-          const svn_revnum_t *revnum = svn_apr_hash_index_key(hi);
+          const svn_revnum_t *revnum = svn__apr_hash_index_key(hi);
 
           APR_ARRAY_PUSH(keys, svn_revnum_t) = *revnum;
         }
@@ -1176,7 +1176,7 @@ do_filter(apr_getopt_t *os,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *path = svn_apr_hash_index_key(hi);
+          const char *path = svn__apr_hash_index_key(hi);
 
           APR_ARRAY_PUSH(keys, const char *) = path;
         }

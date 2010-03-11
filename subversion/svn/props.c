@@ -90,8 +90,8 @@ svn_cl__print_prop_hash(apr_hash_t *prop_hash,
 
   for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi))
     {
-      const char *pname = svn_apr_hash_index_key(hi);
-      svn_string_t *propval = svn_apr_hash_index_val(hi);
+      const char *pname = svn__apr_hash_index_key(hi);
+      svn_string_t *propval = svn__apr_hash_index_val(hi);
       const char *pname_stdout;
 
       if (svn_prop_needs_translation(pname))
@@ -131,8 +131,8 @@ svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
 
   for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi))
     {
-      const char *pname = svn_apr_hash_index_key(hi);
-      svn_string_t *propval = svn_apr_hash_index_val(hi);
+      const char *pname = svn__apr_hash_index_key(hi);
+      svn_string_t *propval = svn__apr_hash_index_val(hi);
 
       if (names_only)
         {

@@ -132,7 +132,7 @@ svn_iter__break(void)
  * So these functions all take const hash indices, and we cast the const
  * away when passing them down to APR to avoid compiler warnings. */
 
-const void *svn_apr_hash_index_key(const apr_hash_index_t *hi)
+const void *svn__apr_hash_index_key(const apr_hash_index_t *hi)
 {
   const void *key;
 
@@ -140,7 +140,7 @@ const void *svn_apr_hash_index_key(const apr_hash_index_t *hi)
   return key;
 }
 
-apr_ssize_t svn_apr_hash_index_klen(const apr_hash_index_t *hi)
+apr_ssize_t svn__apr_hash_index_klen(const apr_hash_index_t *hi)
 {
   apr_ssize_t klen;
 
@@ -148,7 +148,7 @@ apr_ssize_t svn_apr_hash_index_klen(const apr_hash_index_t *hi)
   return klen;
 }
 
-void *svn_apr_hash_index_val(const apr_hash_index_t *hi)
+void *svn__apr_hash_index_val(const apr_hash_index_t *hi)
 {
   void *val;
 

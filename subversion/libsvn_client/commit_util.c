@@ -163,7 +163,7 @@ look_up_committable(apr_hash_t *committables,
 
   for (hi = apr_hash_first(pool, committables); hi; hi = apr_hash_next(hi))
     {
-      apr_array_header_t *these_committables = svn_apr_hash_index_val(hi);
+      apr_array_header_t *these_committables = svn__apr_hash_index_val(hi);
       int i;
 
       for (i = 0; i < these_committables->nelts; i++)
@@ -257,7 +257,7 @@ bail_on_tree_conflicted_children(svn_wc_context_t *wc_ctx,
   for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
     {
       const svn_wc_conflict_description_t *conflict =
-          svn_apr_hash_index_val(hi);
+          svn__apr_hash_index_val(hi);
 
       if ((conflict->node_kind == svn_node_dir) &&
           (depth == svn_depth_files))
@@ -1636,7 +1636,7 @@ svn_client__do_commit(const char *base_url,
   /* Transmit outstanding text deltas. */
   for (hi = apr_hash_first(pool, file_mods); hi; hi = apr_hash_next(hi))
     {
-      struct file_mod_t *mod = svn_apr_hash_index_val(hi);
+      struct file_mod_t *mod = svn__apr_hash_index_val(hi);
       svn_client_commit_item3_t *item;
       void *file_baton;
       const char *tempfile;
