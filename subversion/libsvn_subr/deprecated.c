@@ -38,6 +38,7 @@
 #include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_dso.h"
+#include "svn_mergeinfo.h"
 
 #include "opt.h"
 #include "private/svn_opt_private.h"
@@ -886,3 +887,30 @@ svn_path_is_canonical(const char *path, apr_pool_t *pool)
       svn_dirent_is_canonical(path, pool) ||
       svn_relpath_is_canonical(path, pool);
 }
+
+
+/*** From mergeinfo.c ***/
+
+svn_error_t *
+svn_mergeinfo_inheritable(svn_mergeinfo_t *output,
+                          svn_mergeinfo_t mergeinfo,
+                          const char *path,
+                          svn_revnum_t start,
+                          svn_revnum_t end,
+                          apr_pool_t *pool)
+{
+  return svn_mergeinfo_inheritable2(output, mergeinfo, path, start, end,
+                                    TRUE, pool, pool);
+}
+
+svn_error_t *
+svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
+                          apr_array_header_t *rangelist,
+                          svn_revnum_t start,
+                          svn_revnum_t end,
+                          apr_pool_t *pool)
+{
+  return svn_rangelist_inheritable2(inheritable_rangelist, rangelist,
+                                    start, end, TRUE, pool, pool);
+}
+
