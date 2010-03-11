@@ -1293,7 +1293,7 @@ svn_error_t *
 svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
                          svn_mergeinfo_t mergeinfo1,
                          svn_mergeinfo_t mergeinfo2,
-                         svn_boolean_t consider_ineheritance,
+                         svn_boolean_t consider_inheritance,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -1317,7 +1317,7 @@ svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
       if (rangelist2)
         {
           SVN_ERR(svn_rangelist_intersect(&rangelist2, rangelist1, rangelist2,
-                                          consider_ineheritance, scratch_pool));
+                                          consider_inheritance, scratch_pool));
           if (rangelist2->nelts > 0)
             apr_hash_set(*mergeinfo,
                          apr_pstrdup(result_pool, path),
@@ -1340,13 +1340,13 @@ svn_error_t *
 svn_mergeinfo_remove2(svn_mergeinfo_t *mergeinfo,
                       svn_mergeinfo_t eraser,
                       svn_mergeinfo_t whiteboard,
-                      svn_boolean_t consider_ineritance,
+                      svn_boolean_t consider_inheritance,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
   *mergeinfo = apr_hash_make(result_pool);
   return walk_mergeinfo_hash_for_diff(whiteboard, eraser, *mergeinfo, NULL,
-                                      consider_ineritance, result_pool,
+                                      consider_inheritance, result_pool,
                                       scratch_pool);
 }
 
