@@ -1552,33 +1552,8 @@ svn_mergeinfo_inheritable(svn_mergeinfo_t *output,
                           svn_revnum_t end,
                           apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
-  const void *key;
-  apr_ssize_t keylen;
-  void *rangelist;
-
-  svn_mergeinfo_t inheritable_mergeinfo = apr_hash_make(pool);
-  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
-    {
-      apr_array_header_t *inheritable_rangelist;
-      apr_hash_this(hi, &key, &keylen, &rangelist);
-      if (!path || svn_path_compare_paths(path, (const char *)key) == 0)
-        SVN_ERR(svn_rangelist_inheritable(&inheritable_rangelist,
-                                          (apr_array_header_t *) rangelist,
-                                          start, end, pool));
-      else
-        inheritable_rangelist =
-          svn_rangelist_dup((apr_array_header_t *)rangelist, pool);
-
-      /* Only add this rangelist if some ranges remain.  A rangelist with
-         a path mapped to an empty rangelist is not syntactically valid */
-      if (inheritable_rangelist->nelts)
-        apr_hash_set(inheritable_mergeinfo,
-                     apr_pstrmemdup(pool, key, keylen), keylen,
-                     inheritable_rangelist);
-    }
-  *output = inheritable_mergeinfo;
-  return SVN_NO_ERROR;
+  return svn_mergeinfo_inheritable2(output, mergeinfo, path, start, end,
+                                    TRUE, pool, pool);
 }
 
 
@@ -1988,13 +1963,9 @@ svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
             {
               apr_array_header_t *new_rangelist;
 
-              if (include_range)
-                SVN_ERR(svn_rangelist_intersect(&new_rangelist, rangelist,
-                                                filter_rangelist, FALSE,
-                                                result_pool));
-              else
-                SVN_ERR(svn_rangelist_remove(&new_rangelist, filter_rangelist,
-                                             rangelist, FALSE, result_pool));
+              SVN_ERR(rangelist_intersect_or_remove(
+                        &new_rangelist, filter_rangelist, rangelist,
+                        ! include_range, FALSE, result_pool));
 
               if (new_rangelist->nelts)
                 apr_hash_set(*filtered_mergeinfo,
