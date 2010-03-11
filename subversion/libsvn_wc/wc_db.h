@@ -1579,8 +1579,11 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
  *     position in the subtree under the ancestor unshadowed BASE node.
  *     ORIGINAL_* will indicate the source of the move.
  *
- * All OUT parameters may be set to NULL to indicate a lack of interest in
+ * All OUT parameters may be NULL to indicate a lack of interest in
  * that piece of information.
+ *
+ * STATUS, OP_ROOT_ABSPATH, and REPOS_* will always be assigned a value
+ * if that information is requested (and assuming a successful return).
  *
  * ORIGINAL_REPOS_RELPATH will refer to the *root* of the operation. It
  * does *not* correspond to the node given by LOCAL_ABSPATH. The caller
