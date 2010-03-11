@@ -60,6 +60,45 @@
 #define ADM_EMPTY_FILE "empty-file"
 
 
+/* Read the properties from the file at PROPFILE_ABSPATH, returning them
+   as a hash in *PROPS. If the propfile is NOT present, then NULL will
+   be returned in *PROPS.  */
+static svn_error_t *
+read_propfile(apr_hash_t **props,
+              const char *propfile_abspath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_stream_t *stream;
+
+  err = svn_stream_open_readonly(&stream, propfile_abspath,
+                                 scratch_pool, scratch_pool);
+  if (err)
+    {
+      if (!APR_STATUS_IS_ENOENT(err->apr_err))
+        return svn_error_return(err);
+
+      /* The propfile was not there. Signal with a NULL.  */
+      *props = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* ### does this function need to be smarter? will we see zero-length
+     ### files? see props.c::load_props(). there may be more work here.
+     ### need a historic analysis of 1.x property storage. what will we
+     ### actually run into?  */
+
+  /* ### should we be forgiving in here? I say "no". if we can't be sure,
+     ### then we could effectively corrupt the local working copy.  */
+
+  *props = apr_hash_make(result_pool);
+  SVN_ERR(svn_hash_read2(*props, stream, SVN_HASH_TERMINATOR, result_pool));
+
+  return svn_error_return(svn_stream_close(stream));
+}
+
+
 /* Read one proplist (allocated from RESULT_POOL) from STREAM, and place it
    into ALL_WCPROPS at NAME.  */
 static svn_error_t *
@@ -88,9 +127,9 @@ read_many_wcprops(apr_hash_t **all_wcprops,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  svn_stream_t *stream;
+  const char *propfile_abspath;
+  apr_hash_t *wcprops;
   apr_hash_t *dirents;
-  svn_error_t *err;
   const char *props_dir_abspath;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
@@ -98,22 +137,12 @@ read_many_wcprops(apr_hash_t **all_wcprops,
   *all_wcprops = apr_hash_make(result_pool);
 
   /* First, look at dir-wcprops. */
-  err = svn_wc__open_adm_stream(&stream, dir_abspath, WCPROPS_FNAME_FOR_DIR,
-                                iterpool, iterpool);
-  if (err)
-    {
-      /* If the file doesn't exist, it means no wcprops. */
-      if (APR_STATUS_IS_ENOENT(err->apr_err))
-        svn_error_clear(err);
-      else
-        return svn_error_return(err);
-    }
-  else
-    {
-      SVN_ERR(read_one_proplist(*all_wcprops, SVN_WC_ENTRY_THIS_DIR, stream,
-                                result_pool, iterpool));
-      SVN_ERR(svn_stream_close(stream));
-    }
+  propfile_abspath = svn_wc__adm_child(dir_abspath, WCPROPS_FNAME_FOR_DIR,
+                                       scratch_pool);
+  SVN_ERR(read_propfile(&wcprops, propfile_abspath, result_pool, iterpool));
+  if (wcprops != NULL)
+    apr_hash_set(*all_wcprops, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING,
+                 wcprops);
 
   props_dir_abspath = svn_wc__adm_child(dir_abspath, WCPROPS_SUBDIR_FOR_FILES,
                                         scratch_pool);
@@ -126,17 +155,17 @@ read_many_wcprops(apr_hash_t **all_wcprops,
        hi = apr_hash_next(hi))
     {
       const char *name = svn_apr_hash_index_key(hi);
-      const char *prop_path;
 
       svn_pool_clear(iterpool);
 
-      prop_path = svn_dirent_join(props_dir_abspath, name, iterpool);
+      propfile_abspath = svn_dirent_join(props_dir_abspath, name, iterpool);
 
-      SVN_ERR(svn_stream_open_readonly(&stream, prop_path,
-                                       iterpool, iterpool));
-      SVN_ERR(read_one_proplist(*all_wcprops, name, stream,
-                                result_pool, iterpool));
-      SVN_ERR(svn_stream_close(stream));
+      SVN_ERR(read_propfile(&wcprops, propfile_abspath,
+                            result_pool, iterpool));
+      SVN_ERR_ASSERT(wcprops != NULL);
+      apr_hash_set(*all_wcprops,
+                   apr_pstrdup(result_pool, name), APR_HASH_KEY_STRING,
+                   wcprops);
     }
 
   svn_pool_destroy(iterpool);
@@ -872,14 +901,17 @@ migrate_props(const char *wcroot_abspath,
 
      if (node is replaced):
        revert  -> BASE
-       working -> ACTUAL
        base    -> WORKING
+       working -> ACTUAL
      else if (prop pristine is working [as defined in props.c] ):
        base    -> WORKING
        working -> ACTUAL
      else:
        base    -> BASE
        working -> ACTUAL
+
+     Note that it is legal for "working" props to be missing. That implies
+     no local changes to the properties.
   */
   const apr_array_header_t *children;
   apr_pool_t *iterpool;
@@ -887,6 +919,8 @@ migrate_props(const char *wcroot_abspath,
   const char *props_base_dirpath;
   svn_wc__db_t *db;
   int i;
+
+  /* ### the use of DB within this function must go away.  */
 
   /* *sigh*  We actually want to use wc_db APIs to read data, but we aren't
      provided a wc_db, so open one. */
@@ -913,42 +947,43 @@ migrate_props(const char *wcroot_abspath,
       svn_boolean_t replaced;
       apr_hash_t *working_props;
       apr_hash_t *base_props;
-      svn_stream_t *stream;
 
       svn_pool_clear(iterpool);
 
       /* Several useful paths. */
       child_abspath = svn_dirent_join(wcroot_abspath, child_relpath, iterpool);
       prop_base_path = svn_dirent_join(props_base_dirpath,
-                            apr_psprintf(iterpool, "%s" SVN_WC__BASE_EXT,
-                                         child_relpath),
-                            iterpool);
+                                       apr_pstrcat(iterpool,
+                                                   child_relpath,
+                                                   SVN_WC__BASE_EXT,
+                                                   NULL),
+                                       iterpool);
       prop_working_path = svn_dirent_join(props_dirpath,
-                            apr_psprintf(iterpool, "%s" SVN_WC__WORK_EXT,
-                                         child_relpath),
-                            iterpool);
+                                          apr_pstrcat(iterpool,
+                                                      child_relpath,
+                                                      SVN_WC__WORK_EXT,
+                                                      NULL),
+                                          iterpool);
       prop_revert_path = svn_dirent_join(props_base_dirpath,
-                            apr_psprintf(iterpool, "%s" SVN_WC__REVERT_EXT,
-                                         child_relpath),
-                            iterpool);
+                                         apr_pstrcat(iterpool,
+                                                     child_relpath,
+                                                     SVN_WC__REVERT_EXT,
+                                                     NULL),
+                                         iterpool);
 
-      base_props = apr_hash_make(iterpool);
-      SVN_ERR(svn_stream_open_readonly(&stream, prop_base_path, iterpool,
-                                       iterpool));
-      SVN_ERR(svn_hash_read2(base_props, stream, SVN_HASH_TERMINATOR,
-                             iterpool));
+      SVN_ERR(read_propfile(&base_props, prop_base_path, iterpool, iterpool));
+      SVN_ERR_ASSERT(base_props != NULL);
 
       /* if node is replaced ... */
       SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, child_abspath,
                                            iterpool));
       if (replaced)
         {
-          apr_hash_t *revert_props = apr_hash_make(iterpool);
+          apr_hash_t *revert_props;
 
-          SVN_ERR(svn_stream_open_readonly(&stream, prop_revert_path, iterpool,
-                                           iterpool));
-          SVN_ERR(svn_hash_read2(revert_props, stream, SVN_HASH_TERMINATOR,
-                                 iterpool));
+          SVN_ERR(read_propfile(&revert_props, prop_revert_path,
+                                iterpool, iterpool));
+          SVN_ERR_ASSERT(revert_props != NULL);
 
           SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, child_abspath,
                                                         revert_props, FALSE,
@@ -967,28 +1002,26 @@ migrate_props(const char *wcroot_abspath,
                                                         iterpool));
         }
 
-      working_props = apr_hash_make(iterpool);
-      SVN_ERR(svn_stream_open_readonly(&stream, prop_working_path, iterpool,
-                                       iterpool));
-      SVN_ERR(svn_hash_read2(working_props, stream, SVN_HASH_TERMINATOR,
-                             iterpool));
-
-      SVN_ERR(svn_wc__db_op_set_props(db, child_abspath, working_props,
-                                      iterpool));
+      /* If the properties file does not exist, then that simply means
+         there were no changes made. Avoid setting new props in that case.  */
+      SVN_ERR(read_propfile(&working_props, prop_working_path,
+                            iterpool, iterpool));
+      if (working_props != NULL)
+        {
+          SVN_ERR(svn_wc__db_op_set_props(db, child_abspath, working_props,
+                                          iterpool));
+        }
     }
 
   /* Now delete the old directories. */
   SVN_ERR(svn_io_remove_dir2(props_dirpath, TRUE, NULL, NULL, iterpool));
   SVN_ERR(svn_io_remove_dir2(props_base_dirpath, TRUE, NULL, NULL,
                              iterpool));
-  SVN_ERR(svn_io_remove_dir2(svn_dirent_join(wcroot_abspath,
-                                      ".svn/" TEMP_DIR "/" PROPS_SUBDIR,
-                                      iterpool),
-                             TRUE, NULL, NULL, iterpool));
-  SVN_ERR(svn_io_remove_dir2(svn_dirent_join(wcroot_abspath,
-                                      ".svn/"  TEMP_DIR "/" PROP_BASE_SUBDIR,
-                                      iterpool),
-                             TRUE, NULL, NULL, iterpool));
+
+#if 0
+  /* ### we are not (yet) taking out a write lock  */
+  SVN_ERR(svn_wc__adm_cleanup_tmp_area(db, wcroot_abspath, iterpool));
+#endif
 
   SVN_ERR(svn_wc__db_close(db));
   svn_pool_destroy(iterpool);
