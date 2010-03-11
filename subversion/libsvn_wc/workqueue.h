@@ -19,7 +19,23 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- */
+ *
+ *
+ * Greg says:
+ *
+ * I think the current items are misdirected
+ * work items should NOT touch the DB
+ * the work items should be inserted into WORK_QUEUE by wc_db,
+ * meaning: workqueue.[ch] should return work items for passing to the wc_db API,
+ * which installs them during a transaction with the other work,
+ * and those items should *only* make the on-disk state match what is in the database
+ * before you rejoined the chan, I was discussing with Bert that I might rejigger the postcommit work,
+ * in order to do the prop file handling as work items,
+ * and pass those to db_global_commit for insertion as part of its transaction
+ * so that once we switch to in-db props, those work items just get deleted,
+ * (where they're simple things like: move this file to there, or delete that file)
+ * i.e. workqueue should be seriously dumb
+ * */
 
 #ifndef SVN_WC_WORKQUEUE_H
 #define SVN_WC_WORKQUEUE_H
