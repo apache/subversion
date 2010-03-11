@@ -912,7 +912,7 @@ make_node_baton(apr_hash_t *headers,
   if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
                           APR_HASH_KEY_STRING)))
     {
-      nb->copyfrom_rev = (svn_revnum_t) atoi(val);
+      nb->copyfrom_rev = SVN_STR_TO_REV(val);
     }
   if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
                           APR_HASH_KEY_STRING)))

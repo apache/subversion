@@ -2188,7 +2188,7 @@ fs_copied_from(svn_revnum_t *rev_p,
           /* Parse the copyfrom string for our cached entry. */
           buf = apr_pstrdup(pool, copyfrom_str);
           str = apr_strtok(buf, " ", &last_str);
-          copyfrom_rev = atol(str);
+          copyfrom_rev = SVN_STR_TO_REV(str);
           copyfrom_path = last_str;
         }
     }

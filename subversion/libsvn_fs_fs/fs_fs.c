@@ -2163,7 +2163,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Malformed copyroot line in node-rev"));
 
-      noderev->copyroot_rev = atoi(str);
+      noderev->copyroot_rev = SVN_STR_TO_REV(str);
 
       if (last_str == NULL)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -2187,7 +2187,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Malformed copyfrom line in node-rev"));
 
-      noderev->copyfrom_rev = atoi(str);
+      noderev->copyfrom_rev = SVN_STR_TO_REV(str);
 
       if (last_str == NULL)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -2419,7 +2419,7 @@ read_rep_line(struct rep_args **rep_args_p,
 
   str = apr_strtok(NULL, " ", &last_str);
   if (! str) goto err;
-  rep_args->base_revision = atol(str);
+  rep_args->base_revision = SVN_STR_TO_REV(str);
 
   str = apr_strtok(NULL, " ", &last_str);
   if (! str) goto err;
@@ -4138,7 +4138,7 @@ read_change(change_t **change_p,
       if (! str)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Invalid changes line in rev-file"));
-      change->copyfrom_rev = atol(str);
+      change->copyfrom_rev = SVN_STR_TO_REV(str);
 
       if (! last_str)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
