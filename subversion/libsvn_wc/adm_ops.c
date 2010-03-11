@@ -2196,7 +2196,6 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 {
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
-  const char *text_base;
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -2255,14 +2254,16 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                    && status != svn_wc__db_status_obstructed_delete
                    && status != svn_wc__db_status_base_deleted);
 
-  /* ### TODO: use pristine store. */
+  /* ### TODO 1.7: use pristine store instead of this block: */
+  {
+    const char *text_base;
+    SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
+                                   scratch_pool));
+    SVN_ERR_ASSERT(text_base != NULL);
 
-  SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
-                                 scratch_pool));
-  SVN_ERR_ASSERT(text_base != NULL);
-
-  return svn_stream_open_readonly(contents, text_base, result_pool,
-                                  scratch_pool);
+    return svn_stream_open_readonly(contents, text_base, result_pool,
+                                    scratch_pool);
+  }
 }
 
 
