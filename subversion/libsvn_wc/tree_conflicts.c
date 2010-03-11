@@ -470,7 +470,7 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
     {
       svn_skel_t *c_skel;
 
-      SVN_ERR(svn_wc__serialize_conflict(&c_skel, svn_apr_hash_index_val(hi),
+      SVN_ERR(svn_wc__serialize_conflict(&c_skel, svn__apr_hash_index_val(hi),
                                          pool, pool));
       svn_skel__prepend(c_skel, skel);
     }

@@ -3723,8 +3723,8 @@ copy_regular_props(apr_hash_t *props_in,
 
   for (hi = apr_hash_first(pool, props_in); hi; hi = apr_hash_next(hi))
     {
-      const char *propname = svn_apr_hash_index_key(hi);
-      svn_string_t *propval = svn_apr_hash_index_val(hi);
+      const char *propname = svn__apr_hash_index_key(hi);
+      svn_string_t *propval = svn__apr_hash_index_val(hi);
 
       if (svn_property_kind(NULL, propname) == svn_prop_regular_kind)
         apr_hash_set(props_out, propname, APR_HASH_KEY_STRING, propval);

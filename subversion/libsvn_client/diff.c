@@ -126,8 +126,8 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   for (hi = apr_hash_first(pool, deleted);
        hi; hi = apr_hash_next(hi))
     {
-      const char *from_path = svn_apr_hash_index_key(hi);
-      apr_array_header_t *merge_revarray = svn_apr_hash_index_val(hi);
+      const char *from_path = svn__apr_hash_index_key(hi);
+      apr_array_header_t *merge_revarray = svn__apr_hash_index_val(hi);
       svn_string_t *merge_revstr;
 
       SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
@@ -141,8 +141,8 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   for (hi = apr_hash_first(pool, added);
        hi; hi = apr_hash_next(hi))
     {
-      const char *from_path = svn_apr_hash_index_key(hi);
-      apr_array_header_t *merge_revarray = svn_apr_hash_index_val(hi);
+      const char *from_path = svn__apr_hash_index_key(hi);
+      apr_array_header_t *merge_revarray = svn__apr_hash_index_val(hi);
       svn_string_t *merge_revstr;
 
       SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));

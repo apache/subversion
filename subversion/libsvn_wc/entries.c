@@ -1490,7 +1490,7 @@ prune_deleted(apr_hash_t **entries_pruned,
       svn_boolean_t hidden;
 
       SVN_ERR(svn_wc__entry_is_hidden(&hidden,
-                                      svn_apr_hash_index_val(hi)));
+                                      svn__apr_hash_index_val(hi)));
       if (hidden)
         break;
     }
@@ -1508,8 +1508,8 @@ prune_deleted(apr_hash_t **entries_pruned,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key = svn_apr_hash_index_key(hi);
-      const svn_wc_entry_t *entry = svn_apr_hash_index_val(hi);
+      const void *key = svn__apr_hash_index_key(hi);
+      const svn_wc_entry_t *entry = svn__apr_hash_index_val(hi);
       svn_boolean_t hidden;
 
       SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
@@ -2260,8 +2260,8 @@ entries_write_new_cb(void *baton,
   for (hi = apr_hash_first(scratch_pool, ewb->entries); hi;
        hi = apr_hash_next(hi))
     {
-      const char *name = svn_apr_hash_index_key(hi);
-      const svn_wc_entry_t *this_entry = svn_apr_hash_index_val(hi);
+      const char *name = svn__apr_hash_index_key(hi);
+      const svn_wc_entry_t *this_entry = svn__apr_hash_index_val(hi);
       const char *child_abspath;
 
       svn_pool_clear(iterpool);
@@ -3197,8 +3197,8 @@ walker_helper(const char *dirpath,
   /* Loop over each of the other entries. */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      const char *name = svn_apr_hash_index_key(hi);
-      const svn_wc_entry_t *current_entry = svn_apr_hash_index_val(hi);
+      const char *name = svn__apr_hash_index_key(hi);
+      const svn_wc_entry_t *current_entry = svn__apr_hash_index_val(hi);
       const char *entrypath;
       const char *entry_abspath;
       svn_boolean_t hidden;

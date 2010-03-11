@@ -60,8 +60,8 @@ copy_props(svn_wc__db_t *db,
                              scratch_pool, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *propname = svn_apr_hash_index_key(hi);
-      svn_string_t *propval = svn_apr_hash_index_val(hi);
+      const char *propname = svn__apr_hash_index_key(hi);
+      svn_string_t *propval = svn__apr_hash_index_val(hi);
 
       SVN_ERR(svn_wc__internal_propset(db, dst_abspath, propname, propval,
                                        FALSE /* skip_checks */,
@@ -188,8 +188,8 @@ copy_added_dir_administratively(svn_wc_context_t *wc_ctx,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *name = svn_apr_hash_index_key(hi);
-          svn_io_dirent_t *dirent = svn_apr_hash_index_val(hi);
+          const char *name = svn__apr_hash_index_key(hi);
+          svn_io_dirent_t *dirent = svn__apr_hash_index_val(hi);
           const char *node_abspath;
           svn_wc__db_kind_t kind;
 

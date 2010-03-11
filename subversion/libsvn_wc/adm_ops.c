@@ -950,7 +950,7 @@ erase_from_wc(svn_wc__db_t *db,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *name = svn_apr_hash_index_key(hi);
+          const char *name = svn__apr_hash_index_key(hi);
 
           svn_pool_clear(iterpool);
 

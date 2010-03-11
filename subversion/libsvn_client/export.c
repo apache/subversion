@@ -988,8 +988,8 @@ svn_client_export5(svn_revnum_t *result_rev,
            * with information. */
           for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
             {
-              const char *propname = svn_apr_hash_index_key(hi);
-              const svn_string_t *propval = svn_apr_hash_index_val(hi);
+              const char *propname = svn__apr_hash_index_key(hi);
+              const svn_string_t *propval = svn__apr_hash_index_val(hi);
 
               SVN_ERR(change_file_prop(fb, propname, propval, pool));
             }

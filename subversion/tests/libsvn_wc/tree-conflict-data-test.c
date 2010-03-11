@@ -74,7 +74,7 @@ test_read_tree_conflict(apr_pool_t *pool)
                                       pool));
 
   hi = apr_hash_first(pool, conflicts);
-  conflict = svn_apr_hash_index_val(hi);
+  conflict = svn__apr_hash_index_val(hi);
 
   if ((conflict->node_kind != exp_conflict->node_kind) ||
       (conflict->action    != exp_conflict->action) ||
@@ -120,7 +120,7 @@ test_read_2_tree_conflicts(apr_pool_t *pool)
                                       pool));
 
   hi = apr_hash_first(pool, conflicts);
-  conflict1 = svn_apr_hash_index_val(hi);
+  conflict1 = svn__apr_hash_index_val(hi);
   if ((conflict1->node_kind != exp_conflict1->node_kind) ||
       (conflict1->action    != exp_conflict1->action) ||
       (conflict1->reason    != exp_conflict1->reason) ||
@@ -129,7 +129,7 @@ test_read_2_tree_conflicts(apr_pool_t *pool)
     return fail(pool, "Tree conflict struct #1 has bad data");
 
   hi = apr_hash_next(hi);
-  conflict2 = svn_apr_hash_index_val(hi);
+  conflict2 = svn__apr_hash_index_val(hi);
   if ((conflict2->node_kind != exp_conflict2->node_kind) ||
       (conflict2->action    != exp_conflict2->action) ||
       (conflict2->reason    != exp_conflict2->reason) ||
