@@ -85,7 +85,7 @@ typedef struct
 
 
 apr_pool_t *
-svn_wc__get_committed_queue_pool(struct svn_wc_committed_queue_t *queue)
+svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue)
 {
   return queue->pool;
 }

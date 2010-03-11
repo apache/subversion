@@ -188,7 +188,7 @@ svn_wc__context_create_with_db(svn_wc_context_t **wc_ctx,
  * deprecated.c).
  */
 apr_pool_t *
-svn_wc__get_committed_queue_pool(struct svn_wc_committed_queue_t *queue);
+svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue);
 
 
 /** Internal helper for svn_wc_process_committed_queue2().
