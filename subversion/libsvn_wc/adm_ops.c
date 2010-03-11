@@ -1191,7 +1191,7 @@ static svn_error_t *
 mark_item_copied(svn_wc__db_t *db,
                  const char *local_abspath,
                  svn_wc__db_kind_t local_kind,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   apr_hash_t *props;
   svn_wc_entry_t tmp_entry;
@@ -1201,14 +1201,14 @@ mark_item_copied(svn_wc__db_t *db,
   /* Squirrel away the pristine properties to install them on
      working, because we might delete the base table */
   SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
-                                         pool, pool));
+                                         scratch_pool, scratch_pool));
   tmp_entry.copied = TRUE;
   SVN_ERR(svn_wc__entry_modify2(db, local_abspath, kind, FALSE, &tmp_entry,
-                                SVN_WC__ENTRY_MODIFY_COPIED, pool));
+                                SVN_WC__ENTRY_MODIFY_COPIED, scratch_pool));
 
   /* Reinstall the pristine properties on working */
   SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath, props,
-                                                TRUE, pool));
+                                                TRUE, scratch_pool));
   
   return SVN_NO_ERROR;
 }
