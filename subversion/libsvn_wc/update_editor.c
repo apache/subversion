@@ -208,10 +208,10 @@ struct edit_baton
   const char *switch_relpath;
 
   /* The URL to the root of the repository. */
-  const char *repos;
+  const char *repos_root;
 
   /* The UUID of the repos, or NULL. */
-  const char *uuid;
+  const char *repos_uuid;
 
   /* External diff3 to use for merges (can be null, in which case
      internal merge code is used). */
@@ -1161,7 +1161,7 @@ prep_directory(struct dir_baton *db,
                svn_revnum_t ancestor_revision,
                apr_pool_t *pool)
 {
-  const char *repos;
+  const char *repos_root;
   const char *dir_abspath;
   svn_boolean_t locked_here;
 
@@ -1172,16 +1172,17 @@ prep_directory(struct dir_baton *db,
 
   /* Use the repository root of the anchor, but only if it actually is an
      ancestor of the URL of this directory. */
-  if (svn_uri_is_ancestor(db->edit_baton->repos, ancestor_url))
-    repos = db->edit_baton->repos;
+  if (svn_uri_is_ancestor(db->edit_baton->repos_root, ancestor_url))
+    repos_root = db->edit_baton->repos_root;
   else
-    repos = NULL;
+    repos_root = NULL;
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
   SVN_ERR(svn_wc__internal_ensure_adm(db->edit_baton->db, dir_abspath,
-                                      ancestor_url, repos,
-                                      db->edit_baton->uuid, ancestor_revision,
+                                      ancestor_url, repos_root,
+                                      db->edit_baton->repos_uuid,
+                                      ancestor_revision,
                                       db->ambient_depth, pool));
 
   SVN_ERR(svn_wc_locked2(&locked_here, NULL, db->edit_baton->wc_ctx,
@@ -1411,8 +1412,8 @@ open_root(void *edit_baton,
 
       /* Mark directory as being at target_revision, but incomplete. */
       tmp_entry.revision = *(eb->target_revision);
-      tmp_entry.url = svn_path_url_add_component2(eb->repos, db->new_relpath,
-                                                  pool);
+      tmp_entry.url = svn_path_url_add_component2(eb->repos_root,
+                                                  db->new_relpath, pool);
       SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath, svn_node_dir,
                                     FALSE,
                                     &tmp_entry, flags,
@@ -2190,8 +2191,8 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
   /* Update the details of the base rev/url to reflect the incoming
    * delete, while leaving the working version as it is, scheduling it
    * for re-addition unless it was already non-existent. */
-  tmp_entry.url = svn_path_url_add_component2(eb->repos, their_repos_relpath,
-                                              pool);
+  tmp_entry.url = svn_path_url_add_component2(eb->repos_root,
+                                              their_repos_relpath, pool);
   flags |= SVN_WC__ENTRY_MODIFY_URL;
 
   /* Schedule the working version to be re-added. */
@@ -2723,8 +2724,8 @@ add_directory(const char *path,
                          _("Switched directory '%s' does not match "
                            "expected URL '%s'"),
                          svn_dirent_local_style(db->local_abspath, pool),
-                         svn_path_url_add_component2(eb->repos,
-                                                    db->new_relpath, pool));
+                         svn_path_url_add_component2(eb->repos_root,
+                                                     db->new_relpath, pool));
             }
         }
 
@@ -2906,7 +2907,7 @@ add_directory(const char *path,
 
           if (eb->switch_relpath)
             {
-              tmp_entry.url = svn_path_url_add_component2(eb->repos,
+              tmp_entry.url = svn_path_url_add_component2(eb->repos_root,
                                                           db->new_relpath,
                                                           pool);
               modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
@@ -2919,8 +2920,8 @@ add_directory(const char *path,
     }
 
   SVN_ERR(prep_directory(db,
-                         svn_path_url_add_component2(eb->repos, db->new_relpath,
-                                                     pool),
+                         svn_path_url_add_component2(eb->repos_root,
+                                                     db->new_relpath, pool),
                          *(eb->target_revision),
                          db->pool));
 
@@ -3103,7 +3104,7 @@ open_directory(const char *path,
 
   /* Mark directory as being at target_revision and URL, but incomplete. */
   tmp_entry.revision = *(eb->target_revision);
-  tmp_entry.url = svn_path_url_add_component2(eb->repos, db->new_relpath,
+  tmp_entry.url = svn_path_url_add_component2(eb->repos_root, db->new_relpath,
                                               pool);
 
   SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath,
@@ -4077,7 +4078,7 @@ add_file(const char *path,
                          _("Switched file '%s' does not match "
                            "expected URL '%s'"),
                          svn_dirent_local_style(fb->local_abspath, pool),
-                         svn_path_url_add_component2(eb->repos,
+                         svn_path_url_add_component2(eb->repos_root,
                                                      fb->new_relpath, pool));
             }
 
@@ -4802,7 +4803,7 @@ merge_file(svn_wc_notify_state_t *content_state,
      same name (needed before attempting to install props).  */
   SVN_ERR(loggy_tweak_base_node(log_accum, fb->local_abspath,
                                 *eb->target_revision,
-                                eb->repos, fb->new_relpath, pool));
+                                eb->repos_root, fb->new_relpath, pool));
 
   /* Install all kinds of properties.  It is important to do this before
      any file content merging, since that process might expand keywords, in
@@ -5401,14 +5402,14 @@ close_edit(void *edit_baton,
       const char *switch_url = NULL;
 
       if (eb->switch_relpath)
-        switch_url = svn_path_url_add_component2(eb->repos,
+        switch_url = svn_path_url_add_component2(eb->repos_root,
                                                  eb->switch_relpath, eb->pool);
 
 
       SVN_ERR(svn_wc__do_update_cleanup(eb->db, eb->target_abspath,
                                         eb->requested_depth,
                                         switch_url,
-                                        eb->repos,
+                                        eb->repos_root,
                                         *(eb->target_revision),
                                         eb->notify_func,
                                         eb->notify_baton,
@@ -5497,8 +5498,8 @@ make_editor(svn_revnum_t *target_revision,
   eb->pool                     = edit_pool;
   eb->use_commit_times         = use_commit_times;
   eb->target_revision          = target_revision;
-  eb->repos                    = repos_root;
-  eb->uuid                     = repos_uuid;
+  eb->repos_root               = repos_root;
+  eb->repos_uuid               = repos_uuid;
   eb->db                       = wc_ctx->db;
   eb->wc_ctx                   = wc_ctx;
   eb->target_basename          = target_basename;
