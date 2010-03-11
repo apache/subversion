@@ -79,6 +79,8 @@ read_propfile(apr_hash_t **props,
       if (!APR_STATUS_IS_ENOENT(err->apr_err))
         return svn_error_return(err);
 
+      svn_error_clear(err);
+
       /* The propfile was not there. Signal with a NULL.  */
       *props = NULL;
       return SVN_NO_ERROR;
