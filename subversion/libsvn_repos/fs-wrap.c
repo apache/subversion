@@ -586,6 +586,8 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
                            void *authz_read_baton,
                            apr_pool_t *pool)
 {
+  /* Here we cast away 'const', but won't try to write through this pointer
+   * without first allocating a new array. */
   apr_array_header_t *readable_paths = (apr_array_header_t *) paths;
   svn_fs_root_t *root;
   apr_pool_t *iterpool = svn_pool_create(pool);
