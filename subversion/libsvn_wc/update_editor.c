@@ -6068,40 +6068,6 @@ install_added_props(struct last_change_info **last_change,
   return SVN_NO_ERROR;
 }
 
-/* Append, to LOG_ACCUM, log commands to update the entry for LOCAL_ABSPATH
-   with a NEW_REVISION and a NEW_URL (if non-NULL), making sure
-   the entry refers to a file and has no absent or deleted state.
-   Use POOL for temporary allocations. */
-static svn_error_t *
-loggy_tweak_working_node(svn_stringbuf_t *log_accum,
-                         const char *local_abspath,
-                         apr_pool_t *pool)
-{
-  /* Write log entry which will bump the revision number.  Also, just
-     in case we're overwriting an existing phantom 'deleted' or
-     'absent' entry, be sure to remove the hiddenness. */
-  svn_wc_entry_t tmp_entry;
-  apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND
-    | SVN_WC__ENTRY_MODIFY_TEXT_TIME
-    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE;
-
-  tmp_entry.kind = svn_node_file;
-  /* Indicate the file was locally modified and we didn't get to
-     calculate the true value, but we can't set it to UNKNOWN (-1),
-     because that would indicate absense of this value.
-     If it isn't locally modified,
-     we'll overwrite with the actual value later. */
-  tmp_entry.working_size = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN;
-  /* The same is true for the TEXT_TIME field, except that that doesn't
-     have an explicid 'changed' value, so we set the value to 'undefined'. */
-  tmp_entry.text_time = 0;
-
-  return svn_error_return(
-    svn_wc__loggy_entry_modify(&log_accum,
-                               svn_dirent_dirname(local_abspath, pool),
-                               local_abspath,  &tmp_entry, modify_flags,
-                               pool, pool));
-}
 
 /* ### Note that this function is completely different from the rest of the
        update editor in what it updates. The update editor changes only BASE
@@ -6256,7 +6222,28 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   }
 
   /* ### Clear working node status in preparation for writing a new node. */
-  SVN_ERR(loggy_tweak_working_node(pre_props_accum, local_abspath, pool));
+  {
+    svn_wc_entry_t tmp_entry;
+
+    tmp_entry.kind = svn_node_file;
+    /* Indicate the file was locally modified and we didn't get to
+       calculate the true value, but we can't set it to UNKNOWN (-1),
+       because that would indicate absense of this value.
+       If it isn't locally modified,
+       we'll overwrite with the actual value later. */
+    tmp_entry.working_size = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN;
+    /* The same is true for the TEXT_TIME field, except that that doesn't
+       have an explicid 'changed' value, so we set the value to 'undefined'. */
+    tmp_entry.text_time = 0;
+
+    SVN_ERR(svn_wc__loggy_entry_modify(&pre_props_accum, dir_abspath,
+                                       local_abspath,  &tmp_entry,
+                                       SVN_WC__ENTRY_MODIFY_KIND
+                                         | SVN_WC__ENTRY_MODIFY_TEXT_TIME
+                                         | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
+                                       pool, pool));
+
+  }
 
   post_props_accum = svn_stringbuf_create("", pool);
 
@@ -6318,7 +6305,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   {
     const char *tmp_text_base_abspath;
     svn_wc_entry_t tmp_entry;
-    apr_uint64_t flags = 0;
 
     SVN_ERR(svn_dirent_get_absolute(&tmp_text_base_abspath, tmp_text_base_path,
                                     pool));
@@ -6328,11 +6314,11 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                               tmp_text_base_abspath, text_base_path,
                               pool, pool));
     tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
-    flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
 
     SVN_ERR(svn_wc__loggy_entry_modify(&post_props_accum, dir_abspath,
                                        local_abspath, &tmp_entry,
-                                       flags, pool, pool));
+                                       SVN_WC__ENTRY_MODIFY_CHECKSUM,
+                                       pool, pool));
   }
 
   /* Write our accumulation of log entries into a log file */
@@ -6352,7 +6338,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                                        pool));
   /* ### /HACK */
   SVN_ERR(svn_wc__wq_add_loggy(db, dir_abspath, post_props_accum, pool));
-
 
   return svn_error_return(svn_wc__run_log2(db, dir_abspath, pool));
 }
