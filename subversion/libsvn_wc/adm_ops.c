@@ -2195,13 +2195,23 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                               apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
   const char *text_base;
 
-  SVN_ERR(svn_wc__db_read_info(&status,
+  SVN_ERR(svn_wc__db_read_info(&status, &kind,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
+
+  /* Sanity */
+  if (kind != svn_wc__db_kind_file)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("Can only get the pristine contents of files; "
+                               "'%s' is not a file"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
   if (status == svn_wc__db_status_added)
     {
       /* For an added node, we return an empty stream. Make sure this is not
@@ -2219,9 +2229,32 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
           return SVN_NO_ERROR;
         }
     }
+  else
+  if (status == svn_wc__db_status_base_deleted)
+    /* We know that the delete of this node has been committed.
+       This should be the same as if called on an unknown path. */
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("Cannot get the pristine contents of '%s' "
+                               "because its delete is already committed"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+  else 
+  if (status == svn_wc__db_status_absent
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_not_present
+      || status == svn_wc__db_status_incomplete)
+    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                             _("Cannot get the pristine contents of '%s' "
+                               "because it has an unexpected status"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+  else
+    /* We know that it is a file, so we can't hit the _obstructed stati. */
+    SVN_ERR_ASSERT(status != svn_wc__db_status_obstructed
+                   && status != svn_wc__db_status_obstructed_add
+                   && status != svn_wc__db_status_obstructed_delete);
 
   /* ### TODO: use pristine store. */
-  /* ### TODO: check for non-file node. */
 
   SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
                                  scratch_pool));
