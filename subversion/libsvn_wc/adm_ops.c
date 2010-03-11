@@ -2230,7 +2230,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
         }
     }
   else
-  if (status == svn_wc__db_status_base_deleted)
+  if (status == svn_wc__db_status_not_present)
     /* We know that the delete of this node has been committed.
        This should be the same as if called on an unknown path. */
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
@@ -2241,7 +2241,6 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
   else 
   if (status == svn_wc__db_status_absent
       || status == svn_wc__db_status_excluded
-      || status == svn_wc__db_status_not_present
       || status == svn_wc__db_status_incomplete)
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                              _("Cannot get the pristine contents of '%s' "
@@ -2249,10 +2248,12 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
   else
-    /* We know that it is a file, so we can't hit the _obstructed stati. */
+    /* We know that it is a file, so we can't hit the _obstructed stati.
+       Also, we should never see _base_deleted here. */
     SVN_ERR_ASSERT(status != svn_wc__db_status_obstructed
                    && status != svn_wc__db_status_obstructed_add
-                   && status != svn_wc__db_status_obstructed_delete);
+                   && status != svn_wc__db_status_obstructed_delete
+                   && status != svn_wc__db_status_base_deleted);
 
   /* ### TODO: use pristine store. */
 
