@@ -91,6 +91,10 @@ read_propfile(apr_hash_t **props,
      ### need a historic analysis of 1.x property storage. what will we
      ### actually run into?  */
 
+  /* ### loggy_write_properties() and immediate_install_props() write
+     ### zero-length files for "no props", so we should be a bit smarter
+     ### in here.  */
+
   /* ### should we be forgiving in here? I say "no". if we can't be sure,
      ### then we could effectively corrupt the local working copy.  */
 
