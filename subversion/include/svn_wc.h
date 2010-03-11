@@ -3309,7 +3309,11 @@ svn_wc_walk_entries(const char *path,
                     apr_pool_t *pool);
 
 
-/** Mark missing @a path as 'deleted' in its @a parent's list of entries.
+/** Mark missing @a path as 'deleted' in its @a parent's list of
+ * entries.  @ path should be a directory that is both deleted (via
+ * svn_wc_delete4) and removed (via a system call).  This function
+ * should only be called during post-commit processing following a
+ * successful commit editor drive.
  *
  * Return #SVN_ERR_WC_PATH_FOUND if @a path isn't actually missing.
  *
