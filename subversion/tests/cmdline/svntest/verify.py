@@ -267,8 +267,8 @@ class UnorderedRegexOutput(UnorderedOutput, RegexOutput):
     for i in range(0, len(expected)):
       if RegexOutput.is_equivalent_line(self, expected[i], actual):
         return i
-      else:
-        raise ValueError("'%s' not found" % actual)
+    else:
+      raise ValueError("'%s' not found" % actual)
 
   def display_differences(self, message, label, actual):
     display_lines(message, label, self.output, actual, True, True)
