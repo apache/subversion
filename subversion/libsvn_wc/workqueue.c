@@ -117,7 +117,9 @@ copy_and_translate(svn_wc__db_t *db,
 }
 
 
-/* */
+/* If SOURCE_ABSPATH is present, then move it to DEST_ABSPATH. Ignore any
+   ENOENT message for a missing source, which may indicate the move has
+   already been performed.  */
 static svn_error_t *
 move_if_present(const char *source_abspath,
                 const char *dest_abspath,
@@ -1757,16 +1759,12 @@ run_delete(svn_wc__db_t *db,
   if (was_replaced && was_copied)
     {
       const char *props_base, *props_revert;
-      svn_error_t *err;
 
       SVN_ERR(svn_wc__prop_path(&props_base, local_abspath, kind,
                                 svn_wc__props_base, scratch_pool));
       SVN_ERR(svn_wc__prop_path(&props_revert, local_abspath, kind,
                                 svn_wc__props_revert, scratch_pool));
-      err = svn_io_file_rename(props_base, props_revert, scratch_pool);
-      if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_quick_wrap(err, _("Can't move source to dest"));
-      svn_error_clear(err);
+      SVN_ERR(move_if_present(props_revert, props_base, scratch_pool));
 
       if (kind != svn_wc__db_kind_dir)
         {
@@ -1774,33 +1772,22 @@ run_delete(svn_wc__db_t *db,
 
           SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath,
                                          FALSE, scratch_pool));
-
           SVN_ERR(svn_wc__text_revert_path(&text_revert, db,
                                            local_abspath, scratch_pool));
-          err = svn_io_file_rename(text_revert, text_base, scratch_pool);
-          if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
-            return svn_error_quick_wrap(err, _("Can't move source to dest"));
-          svn_error_clear(err);
+          SVN_ERR(move_if_present(text_revert, text_base, scratch_pool));
         }
     }
   if (was_added)
     {
       const char *props_base, *props_working;
-      svn_error_t *err;
 
       SVN_ERR(svn_wc__prop_path(&props_base, local_abspath, kind,
                                 svn_wc__props_base, scratch_pool));
       SVN_ERR(svn_wc__prop_path(&props_working, local_abspath, kind,
                                 svn_wc__props_working, scratch_pool));
 
-      err = svn_io_remove_file2(props_base, TRUE, scratch_pool);
-      if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_quick_wrap(err, _("Can't move source to dest"));
-      svn_error_clear(err);
-      err = svn_io_remove_file2(props_working, TRUE, scratch_pool);
-      if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_quick_wrap(err, _("Can't move source to dest"));
-      svn_error_clear(err);
+      SVN_ERR(svn_io_remove_file2(props_base, TRUE, scratch_pool));
+      SVN_ERR(svn_io_remove_file2(props_working, TRUE, scratch_pool));
     }
 
   return SVN_NO_ERROR;
