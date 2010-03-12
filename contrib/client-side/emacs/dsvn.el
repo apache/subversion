@@ -1,10 +1,11 @@
 ;;; dsvn.el --- Subversion interface
 
-;; Copyright 2006-2009 Virtutech AB
+;; Copyright 2006-2010 Virtutech AB
+;; Copyright 2010 Intel
 
-;; Author: David Kågedal <david@virtutech.com>
-;;	Mattias Engdegård <mattias@virtutech.com>
-;; Maintainer: Mattias Engdegård <mattias@virtutech.com>
+;; Author: David KÃ¥gedal <davidk@lysator.liu.se>
+;;	   Mattias EngdegÃ¥rd <mattiase@acm.org>
+;; Maintainer: Mattias EngdegÃ¥rd <mattiase@acm.org>
 ;; Created: 27 Jan 2006
 ;; Keywords: docs
 
