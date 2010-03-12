@@ -134,43 +134,43 @@ class ExpectedOutput:
         # The EXPECTED lines must match the ACTUAL lines, one-to-one, in
         # the same order.
         return expected == actual
-      else:
-        # The EXPECTED lines must match a subset of the ACTUAL lines,
-        # one-to-one, in the same order, with zero or more other ACTUAL
-        # lines interspersed among the matching ACTUAL lines.
-        i_expected = 0
-        for actual_line in actual:
-          if expected[i_expected] == actual_line:
-            i_expected += 1
-            if i_expected == len(expected):
-              return True
-        return False
-    else:
-      expected_re = expected[0]
-      # If we want to check that every line matches the regexp
-      # assume they all match and look for any that don't.  If
-      # only one line matching the regexp is enough, assume none
-      # match and look for even one that does.
-      if self.match_all:
-        all_lines_match_re = True
-      else:
-        all_lines_match_re = False
 
-      # If a regex was provided assume that we actually require
-      # some output. Fail if we don't have any.
-      if len(actual) == 0:
-        return False
-
+      # The EXPECTED lines must match a subset of the ACTUAL lines,
+      # one-to-one, in the same order, with zero or more other ACTUAL
+      # lines interspersed among the matching ACTUAL lines.
+      i_expected = 0
       for actual_line in actual:
-        if self.match_all:
-          if not re.match(expected_re, actual_line):
-            return False
-        else:
-          # As soon an actual_line matches something, then we're good.
-          if re.match(expected_re, actual_line):
+        if expected[i_expected] == actual_line:
+          i_expected += 1
+          if i_expected == len(expected):
             return True
+      return False
 
-      return all_lines_match_re
+    expected_re = expected[0]
+    # If we want to check that every line matches the regexp
+    # assume they all match and look for any that don't.  If
+    # only one line matching the regexp is enough, assume none
+    # match and look for even one that does.
+    if self.match_all:
+      all_lines_match_re = True
+    else:
+      all_lines_match_re = False
+
+    # If a regex was provided assume that we actually require
+    # some output. Fail if we don't have any.
+    if len(actual) == 0:
+      return False
+
+    for actual_line in actual:
+      if self.match_all:
+        if not re.match(expected_re, actual_line):
+          return False
+      else:
+        # As soon an actual_line matches something, then we're good.
+        if re.match(expected_re, actual_line):
+          return True
+
+    return all_lines_match_re
 
   def display_differences(self, message, label, actual):
     """Delegate to the display_lines() routine with the appropriate
@@ -232,18 +232,20 @@ class UnorderedOutput(ExpectedOutput):
             # One of the regexes was not found
             return False
         return True
+
       # All expected lines must be in the output.
       return e_set == a_set
-    elif self.is_regex:
+
+    if self.is_regex:
       # If any of the expected regexes are in the output, then we match.
       for expect_re in e_set:
         for actual_line in a_set:
           if re.match(expect_re, actual_line):
             return True
       return False
-    else:
-      # If any of the expected lines are in the output, then we match.
-      return len(e_set.intersection(a_set)) > 0
+
+    # If any of the expected lines are in the output, then we match.
+    return len(e_set.intersection(a_set)) > 0
 
 
 class UnorderedRegexOutput(UnorderedOutput, RegexOutput):
