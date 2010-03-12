@@ -34,7 +34,6 @@
 #include "svn_dirent_uri.h"
 #include "svn_pools.h"
 #include "client.h"
-#include "svn_pools.h"
 #include "svn_props.h"
 
 #include "svn_private_config.h"
@@ -143,19 +142,14 @@ svn_client_upgrade(const char *path,
   for (hi = apr_hash_first(scratch_pool, externals); hi;
        hi = apr_hash_next(hi))
     {
-      const char *key;
       int i;
-      apr_ssize_t klen;
-      svn_string_t *external_desc;
+      const char *externals_parent = svn__apr_hash_index_key(hi);
+      svn_string_t *external_desc = svn__apr_hash_index_val(hi);
       apr_array_header_t *externals_p;
 
       svn_pool_clear(iterpool);
       externals_p = apr_array_make(iterpool, 1,
                                    sizeof(svn_wc_external_item2_t*));
-
-      apr_hash_this(hi, (void*)&key, &klen, NULL);
-
-      external_desc = apr_hash_get(externals, key, klen);
 
       SVN_ERR(svn_wc_parse_externals_description3(&externals_p,
                                             svn_dirent_dirname(path,
@@ -172,8 +166,8 @@ svn_client_upgrade(const char *path,
 
           item = APR_ARRAY_IDX(externals_p, i, svn_wc_external_item2_t*);
 
-          /* The key is the path to the dir the svn:externals was set on */
-          external_path = svn_dirent_join(key, item->target_dir, iterpool);
+          external_path = svn_dirent_join(externals_parent, item->target_dir, 
+                                          iterpool);
 
           SVN_ERR(svn_dirent_get_absolute(&external_abspath, external_path,
                                           iterpool));
