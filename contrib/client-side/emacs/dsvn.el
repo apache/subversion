@@ -316,7 +316,7 @@ during the run."
         (setq svn-todo-queue (cdr svn-todo-queue))
 	(let ((command (car cmd-info))
 	      (args (cadr cmd-info))
-	      (file-filter (caddr cmd-info)))
+	      (file-filter (car (cddr cmd-info))))
 	  (set (make-local-variable 'svn-file-filter) file-filter)
 	  (svn-run command args))))))
 
