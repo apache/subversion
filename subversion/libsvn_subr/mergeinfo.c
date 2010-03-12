@@ -115,10 +115,10 @@ parse_pathname(const char **input,
   return SVN_NO_ERROR;
 }
 
-/* Ways in which two svn_merge_range_t can intersect, if at all. */
+/* Ways in which two svn_merge_range_t can intersect or adjoin, if at all. */
 typedef enum
 {
-  /* Ranges don't intersect. */
+  /* Ranges don't intersect and don't adjoin. */
   svn__no_intersection,
 
   /* Ranges are equal. */
@@ -127,7 +127,7 @@ typedef enum
   /* Ranges adjoin but don't overlap. */
   svn__adjoining_intersection,
 
-  /* Ranges overalp but neither is a subset of the other. */
+  /* Ranges overlap but neither is a subset of the other. */
   svn__overlapping_intersection,
 
   /* One range is a proper subset of the other. */
