@@ -23,65 +23,100 @@
 
 #include "svn_wc.h"
 #include "svn_dirent_uri.h"
+#include "wc_db.h"
+#include "wc.h"
+#include "props.h"
 
 #include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
 
 /* A baton for analyze_status(). */
-struct status_baton
+struct walk_baton
 {
   svn_wc_revision_status_t *result;           /* where to put the result */
   svn_boolean_t committed;           /* examine last committed revisions */
   const char *local_abspath;         /* path whose URL we're looking for */
-  const char *wc_url;    /* URL for the path whose URL we're looking for */
-  apr_pool_t *pool;         /* pool in which to store alloc-needy things */
+  svn_wc__db_t *db;
 };
 
-/* An svn_wc_status_func4_t callback function for analyzing status
-   structures. */
+/* An svn_wc__node_found_func_t callback function for analyzing the status
+ * of nodes */
 static svn_error_t *
-analyze_status(void *baton,
-               const char *local_abspath,
-               const svn_wc_status2_t *status,
-               apr_pool_t *pool)
+analyze_status(const char *local_abspath,
+               void *baton,
+               apr_pool_t *scratch_pool)
 {
-  struct status_baton *sb = baton;
+  struct walk_baton *wb = baton;
+  svn_revnum_t changed_rev;
+  svn_revnum_t revision;
+  svn_depth_t depth;
+  svn_wc__db_status_t status;
+  svn_boolean_t wc_root;
+  svn_boolean_t switched;
 
-  if (! status->entry)
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, 
+                               NULL, NULL, &changed_rev, 
+                               NULL, NULL, NULL, &depth, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, wb->db,
+                               local_abspath, scratch_pool, scratch_pool));
+
+  /* We need the excluded and absent paths when checking for sparse
+   * checkouts. But only for that. To collect those we're walking all the
+   * hidden nodes. */
+  if (status == svn_wc__db_status_excluded 
+      || status == svn_wc__db_status_absent)
+    {
+      wb->result->sparse_checkout = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  if (status == svn_wc__db_status_not_present)
     return SVN_NO_ERROR;
 
+  if (! wb->result->switched)
+    {
+      SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, &switched, wb->db,
+                                    local_abspath, scratch_pool));
+
+      wb->result->switched |= switched;
+    }
+
   /* Added files have a revision of no interest */
-  if (status->text_status != svn_wc_status_added)
+  if (revision != SVN_INVALID_REVNUM)
     {
-      svn_revnum_t item_rev = (sb->committed
-                               ? status->entry->cmt_rev
-                               : status->entry->revision);
+      svn_revnum_t item_rev = (wb->committed
+                               ? changed_rev
+                               : revision);
 
-      if (sb->result->min_rev == SVN_INVALID_REVNUM
-          || item_rev < sb->result->min_rev)
-        sb->result->min_rev = item_rev;
+      if (wb->result->min_rev == SVN_INVALID_REVNUM
+          || item_rev < wb->result->min_rev)
+        wb->result->min_rev = item_rev;
 
-      if (sb->result->max_rev == SVN_INVALID_REVNUM
-          || item_rev > sb->result->max_rev)
-        sb->result->max_rev = item_rev;
+      if (wb->result->max_rev == SVN_INVALID_REVNUM
+          || item_rev > wb->result->max_rev)
+        wb->result->max_rev = item_rev;
     }
 
-  if (status->entry->depth != svn_depth_exclude)
+  if (! wb->result->modified)
     {
-      sb->result->switched |= status->switched;
-      sb->result->modified |= (status->text_status != svn_wc_status_normal);
-      sb->result->modified |= (status->prop_status != svn_wc_status_normal
-                               && status->prop_status != svn_wc_status_none);
+      svn_boolean_t text_mod;
+      svn_boolean_t props_mod;
+
+      SVN_ERR(svn_wc__props_modified(&props_mod, wb->db, local_abspath,
+                                     scratch_pool));
+
+      SVN_ERR(svn_wc__internal_text_modified_p(&text_mod, wb->db,
+                                               local_abspath,
+                                               FALSE,
+                                               TRUE,
+                                               scratch_pool));
+      wb->result->modified |= (text_mod || props_mod);
     }
-  sb->result->sparse_checkout |= (status->entry->depth != svn_depth_infinity);
 
-  if (sb->local_abspath
-      && (! sb->wc_url)
-      && (strcmp(local_abspath, sb->local_abspath) == 0)
-      && (status->entry))
-    sb->wc_url = apr_pstrdup(sb->pool, status->entry->url);
-
+  wb->result->sparse_checkout |= ((depth != svn_depth_infinity 
+                                  && depth != svn_depth_unknown));
   return SVN_NO_ERROR;
 }
 
@@ -96,7 +131,8 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  struct status_baton sb;
+  struct walk_baton wb;
+  const char *url;
   svn_wc_revision_status_t *result = apr_palloc(result_pool, sizeof(*result));
   *result_p = result;
 
@@ -110,50 +146,39 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
   result->sparse_checkout = FALSE;
 
   /* initialize walking baton */
-  sb.result = result;
-  sb.committed = committed;
-  sb.local_abspath = local_abspath;
-  sb.wc_url = NULL;
-  sb.pool = scratch_pool;
+  wb.result = result;
+  wb.committed = committed;
+  wb.local_abspath = local_abspath;
+  wb.db = wc_ctx->db;
 
-  SVN_ERR(svn_wc_walk_status(wc_ctx,
-                             local_abspath,
-                             svn_depth_infinity,
-                             TRUE  /* get_all */,
-                             FALSE /* no_ignore */,
-                             TRUE, /* get_excluded */
-                             NULL  /* ignore_patterns */,
-                             analyze_status, &sb,
-                             NULL, NULL,
-                             cancel_func, cancel_baton,
-                             scratch_pool));
+  SVN_ERR(svn_wc__internal_node_get_url(&url, wc_ctx->db, local_abspath,
+                                        result_pool, scratch_pool));
 
-
-  if ((! result->switched) && (trail_url != NULL))
+  if (trail_url != NULL)
     {
       /* If the trailing part of the URL of the working copy directory
          does not match the given trailing URL then the whole working
          copy is switched. */
-      if (! sb.wc_url)
+      if (! url)
         {
           result->switched = TRUE;
         }
       else
         {
           apr_size_t len1 = strlen(trail_url);
-          apr_size_t len2 = strlen(sb.wc_url);
-          if ((len1 > len2) || strcmp(sb.wc_url + len2 - len1, trail_url))
+          apr_size_t len2 = strlen(url);
+          if ((len1 > len2) || strcmp(url + len2 - len1, trail_url))
             result->switched = TRUE;
         }
     }
 
-  /* ### 1.6+: If result->sparse_checkout is FALSE the answer is not final
-         We can still have excluded nodes!
-
-     ### TODO: Check every node below local_abspath for excluded
-
-     ### BH: What about absent? You don't know if you have a complete tree
-             without checking for absent too */
+  SVN_ERR(svn_wc__node_walk_children(wc_ctx,
+                                     local_abspath,
+                                     TRUE /* show_hidden */,
+                                     analyze_status, &wb,
+                                     svn_depth_infinity,
+                                     cancel_func, cancel_baton,
+                                     scratch_pool));
 
   return SVN_NO_ERROR;
 }
