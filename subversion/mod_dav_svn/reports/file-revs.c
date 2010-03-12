@@ -139,7 +139,7 @@ file_rev_handler(void *baton,
                  svn_boolean_t merged_revision,
                  svn_txdelta_window_handler_t *window_handler,
                  void **window_baton,
-                 apr_array_header_t *props,
+                 const apr_array_header_t *props,
                  apr_pool_t *pool)
 {
   struct file_rev_baton *frb = baton;

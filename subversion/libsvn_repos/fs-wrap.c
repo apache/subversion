@@ -230,7 +230,7 @@ svn_repos_fs_change_node_prop(svn_fs_root_t *root,
 
 svn_error_t *
 svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
-                              apr_array_header_t *txnprops,
+                              const apr_array_header_t *txnprops,
                               apr_pool_t *pool)
 {
   int i;

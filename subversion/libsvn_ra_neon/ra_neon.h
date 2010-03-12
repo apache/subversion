@@ -567,7 +567,7 @@ svn_error_t *svn_ra_neon__get_vcc(const char **vcc,
 svn_error_t *svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
                                        const char *url,
                                        apr_hash_t *prop_changes,
-                                       apr_array_header_t *prop_deletes,
+                                       const apr_array_header_t *prop_deletes,
                                        apr_hash_t *extra_headers,
                                        apr_pool_t *pool);
 
@@ -989,7 +989,7 @@ svn_ra_neon__get_locations(svn_ra_session_t *session,
                            apr_hash_t **locations,
                            const char *path,
                            svn_revnum_t peg_revision,
-                           apr_array_header_t *location_revisions,
+                           const apr_array_header_t *location_revisions,
                            apr_pool_t *pool);
 
 

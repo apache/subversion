@@ -461,7 +461,7 @@ static svn_error_t *lookup_token(ra_svn_driver_state_t *ds, const char *token,
 
 static svn_error_t *ra_svn_handle_target_rev(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool,
-                                             apr_array_header_t *params,
+                                             const apr_array_header_t *params,
                                              ra_svn_driver_state_t *ds)
 {
   svn_revnum_t rev;
@@ -473,7 +473,7 @@ static svn_error_t *ra_svn_handle_target_rev(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_open_root(svn_ra_svn_conn_t *conn,
                                             apr_pool_t *pool,
-                                            apr_array_header_t *params,
+                                            const apr_array_header_t *params,
                                             ra_svn_driver_state_t *ds)
 {
   svn_revnum_t rev;
@@ -491,7 +491,7 @@ static svn_error_t *ra_svn_handle_open_root(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_delete_entry(svn_ra_svn_conn_t *conn,
                                                apr_pool_t *pool,
-                                               apr_array_header_t *params,
+                                               const apr_array_header_t *params,
                                                ra_svn_driver_state_t *ds)
 {
   const char *path, *token;
@@ -507,7 +507,7 @@ static svn_error_t *ra_svn_handle_delete_entry(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool,
-                                          apr_array_header_t *params,
+                                          const apr_array_header_t *params,
                                           ra_svn_driver_state_t *ds)
 {
   const char *path, *token, *child_token, *copy_path;
@@ -531,7 +531,7 @@ static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_open_dir(svn_ra_svn_conn_t *conn,
                                            apr_pool_t *pool,
-                                           apr_array_header_t *params,
+                                           const apr_array_header_t *params,
                                            ra_svn_driver_state_t *ds)
 {
   const char *path, *token, *child_token;
@@ -553,7 +553,7 @@ static svn_error_t *ra_svn_handle_open_dir(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_change_dir_prop(svn_ra_svn_conn_t *conn,
                                                   apr_pool_t *pool,
-                                                  apr_array_header_t *params,
+                                                  const apr_array_header_t *params,
                                                   ra_svn_driver_state_t *ds)
 {
   const char *token, *name;
@@ -570,7 +570,7 @@ static svn_error_t *ra_svn_handle_change_dir_prop(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_close_dir(svn_ra_svn_conn_t *conn,
                                             apr_pool_t *pool,
-                                            apr_array_header_t *params,
+                                            const apr_array_header_t *params,
                                             ra_svn_driver_state_t *ds)
 {
   const char *token;
@@ -589,7 +589,7 @@ static svn_error_t *ra_svn_handle_close_dir(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_absent_dir(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool,
-                                             apr_array_header_t *params,
+                                             const apr_array_header_t *params,
                                              ra_svn_driver_state_t *ds)
 {
   const char *path;
@@ -607,7 +607,7 @@ static svn_error_t *ra_svn_handle_absent_dir(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
                                            apr_pool_t *pool,
-                                           apr_array_header_t *params,
+                                           const apr_array_header_t *params,
                                            ra_svn_driver_state_t *ds)
 {
   const char *path, *token, *file_token, *copy_path;
@@ -629,7 +629,7 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
                                             apr_pool_t *pool,
-                                            apr_array_header_t *params,
+                                            const apr_array_header_t *params,
                                             ra_svn_driver_state_t *ds)
 {
   const char *path, *token, *file_token;
@@ -649,7 +649,7 @@ static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
                                                   apr_pool_t *pool,
-                                                  apr_array_header_t *params,
+                                                  const apr_array_header_t *params,
                                                   ra_svn_driver_state_t *ds)
 {
   const char *token;
@@ -674,7 +674,7 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_textdelta_chunk(svn_ra_svn_conn_t *conn,
                                                   apr_pool_t *pool,
-                                                  apr_array_header_t *params,
+                                                  const apr_array_header_t *params,
                                                   ra_svn_driver_state_t *ds)
 {
   const char *token;
@@ -693,7 +693,7 @@ static svn_error_t *ra_svn_handle_textdelta_chunk(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_textdelta_end(svn_ra_svn_conn_t *conn,
                                                 apr_pool_t *pool,
-                                                apr_array_header_t *params,
+                                                const apr_array_header_t *params,
                                                 ra_svn_driver_state_t *ds)
 {
   const char *token;
@@ -713,7 +713,7 @@ static svn_error_t *ra_svn_handle_textdelta_end(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_change_file_prop(svn_ra_svn_conn_t *conn,
                                                    apr_pool_t *pool,
-                                                   apr_array_header_t *params,
+                                                   const apr_array_header_t *params,
                                                    ra_svn_driver_state_t *ds)
 {
   const char *token, *name;
@@ -729,7 +729,7 @@ static svn_error_t *ra_svn_handle_change_file_prop(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_close_file(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool,
-                                             apr_array_header_t *params,
+                                             const apr_array_header_t *params,
                                              ra_svn_driver_state_t *ds)
 {
   const char *token;
@@ -751,7 +751,7 @@ static svn_error_t *ra_svn_handle_close_file(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_absent_file(svn_ra_svn_conn_t *conn,
                                               apr_pool_t *pool,
-                                              apr_array_header_t *params,
+                                              const apr_array_header_t *params,
                                               ra_svn_driver_state_t *ds)
 {
   const char *path;
@@ -769,7 +769,7 @@ static svn_error_t *ra_svn_handle_absent_file(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_close_edit(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool,
-                                             apr_array_header_t *params,
+                                             const apr_array_header_t *params,
                                              ra_svn_driver_state_t *ds)
 {
   SVN_CMD_ERR(ds->editor->close_edit(ds->edit_baton, pool));
@@ -781,7 +781,7 @@ static svn_error_t *ra_svn_handle_close_edit(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_abort_edit(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool,
-                                             apr_array_header_t *params,
+                                             const apr_array_header_t *params,
                                              ra_svn_driver_state_t *ds)
 {
   ds->done = TRUE;
@@ -793,7 +793,7 @@ static svn_error_t *ra_svn_handle_abort_edit(svn_ra_svn_conn_t *conn,
 
 static svn_error_t *ra_svn_handle_finish_replay(svn_ra_svn_conn_t *conn,
                                                 apr_pool_t *pool,
-                                                apr_array_header_t *params,
+                                                const apr_array_header_t *params,
                                                 ra_svn_driver_state_t *ds)
 {
   if (!ds->for_replay)
@@ -809,7 +809,7 @@ static svn_error_t *ra_svn_handle_finish_replay(svn_ra_svn_conn_t *conn,
 static const struct {
   const char *cmd;
   svn_error_t *(*handler)(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                          apr_array_header_t *params,
+                          const apr_array_header_t *params,
                           ra_svn_driver_state_t *ds);
 } ra_svn_edit_cmds[] = {
   { "target-rev",       ra_svn_handle_target_rev },

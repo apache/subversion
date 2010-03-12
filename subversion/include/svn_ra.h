@@ -161,7 +161,7 @@ typedef svn_error_t *(*svn_ra_file_rev_handler_t)(
   apr_hash_t *rev_props,
   svn_txdelta_window_handler_t *delta_handler,
   void **delta_baton,
-  apr_array_header_t *prop_diffs,
+  const apr_array_header_t *prop_diffs,
   apr_pool_t *pool);
 
 /**
@@ -1513,7 +1513,7 @@ svn_ra_get_locations(svn_ra_session_t *session,
                      apr_hash_t **locations,
                      const char *path,
                      svn_revnum_t peg_revision,
-                     apr_array_header_t *location_revisions,
+                     const apr_array_header_t *location_revisions,
                      apr_pool_t *pool);
 
 
@@ -2103,7 +2103,7 @@ typedef struct svn_ra_plugin_t
                                 apr_hash_t **locations,
                                 const char *path,
                                 svn_revnum_t peg_revision,
-                                apr_array_header_t *location_revisions,
+                                const apr_array_header_t *location_revisions,
                                 apr_pool_t *pool);
 
   /**

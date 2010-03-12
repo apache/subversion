@@ -42,7 +42,7 @@ file_rev_handler_wrapper(void *baton,
                          svn_boolean_t result_of_merge,
                          svn_txdelta_window_handler_t *delta_handler,
                          void **delta_baton,
-                         apr_array_header_t *prop_diffs,
+                         const apr_array_header_t *prop_diffs,
                          apr_pool_t *pool)
 {
   struct file_rev_handler_wrapper_baton *fwb = baton;

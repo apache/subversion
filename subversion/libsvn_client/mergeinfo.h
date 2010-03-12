@@ -258,7 +258,7 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
    *MERGEINFO_P, allocated in POOL. */
 svn_error_t *
 svn_client__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
-                                    apr_array_header_t *segments,
+                                    const apr_array_header_t *segments,
                                     apr_pool_t *pool);
 
 /* Parse any explicit mergeinfo on LOCAL_ABSPATH and store it in

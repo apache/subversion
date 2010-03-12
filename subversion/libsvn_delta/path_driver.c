@@ -133,7 +133,7 @@ svn_error_t *
 svn_delta_path_driver(const svn_delta_editor_t *editor,
                       void *edit_baton,
                       svn_revnum_t revision,
-                      apr_array_header_t *paths,
+                      const apr_array_header_t *paths,
                       svn_delta_path_driver_cb_func_t callback_func,
                       void *callback_baton,
                       apr_pool_t *pool)

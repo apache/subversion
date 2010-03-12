@@ -181,7 +181,7 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
 
 /* Set *DIFFS to an array of svn_prop_t, allocated in POOL, based on the
    property diffs in LIST, received from the server. */
-static svn_error_t *parse_prop_diffs(apr_array_header_t *list,
+static svn_error_t *parse_prop_diffs(const apr_array_header_t *list,
                                      apr_pool_t *pool,
                                      apr_array_header_t **diffs)
 {
@@ -206,7 +206,7 @@ static svn_error_t *parse_prop_diffs(apr_array_header_t *list,
 
 /* Parse a lockdesc, provided in LIST as specified by the protocol into
    LOCK, allocated in POOL. */
-static svn_error_t *parse_lock(apr_array_header_t *list, apr_pool_t *pool,
+static svn_error_t *parse_lock(const apr_array_header_t *list, apr_pool_t *pool,
                                svn_lock_t **lock)
 {
   const char *cdate, *edate;
@@ -1558,7 +1558,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
                                          apr_hash_t **locations,
                                          const char *path,
                                          svn_revnum_t peg_revision,
-                                         apr_array_header_t *location_revisions,
+                                         const apr_array_header_t *location_revisions,
                                          apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;

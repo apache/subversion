@@ -653,7 +653,7 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
    processed recursively, return FALSE otherwise.
 */
 static svn_boolean_t
-have_recursive_parent(apr_array_header_t *queue, int item)
+have_recursive_parent(const apr_array_header_t *queue, int item)
 {
   int i;
   const char *local_abspath

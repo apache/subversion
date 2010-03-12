@@ -536,7 +536,7 @@ svn_cstring_split(const char *input,
 
 
 svn_boolean_t svn_cstring_match_glob_list(const char *str,
-                                          apr_array_header_t *list)
+                                          const apr_array_header_t *list)
 {
   int i;
 

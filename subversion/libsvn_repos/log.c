@@ -490,7 +490,7 @@ check_history(svn_boolean_t *changed,
 
 /* Return the next interesting revision in our list of HISTORIES. */
 static svn_revnum_t
-next_history_rev(apr_array_header_t *histories)
+next_history_rev(const apr_array_header_t *histories)
 {
   svn_revnum_t next_rev = SVN_INVALID_REVNUM;
   int i;

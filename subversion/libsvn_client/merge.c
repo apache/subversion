@@ -2561,7 +2561,7 @@ typedef struct
    order of path. Nearest ancestor's index from
    CHILDREN_WITH_MERGEINFO is returned. */
 static int
-find_nearest_ancestor(apr_array_header_t *children_with_mergeinfo,
+find_nearest_ancestor(const apr_array_header_t *children_with_mergeinfo,
                       svn_boolean_t path_is_own_ancestor,
                       const char *path)
 {
@@ -3723,7 +3723,7 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
                            const char *url2,
                            svn_revnum_t revision2,
                            svn_mergeinfo_t target_mergeinfo,
-                           apr_array_header_t *implicit_src_gap,
+                           const apr_array_header_t *implicit_src_gap,
                            svn_boolean_t child_inherits_implicit,
                            svn_ra_session_t *ra_session,
                            svn_client_ctx_t *ctx,
@@ -4410,7 +4410,7 @@ update_wc_mergeinfo(const char *target_abspath,
    MERGEINFO_PATH to MERGE_B->TARGET_ABSPATH. */
 static svn_error_t *
 record_skips(const char *mergeinfo_path,
-             apr_array_header_t *rangelist,
+             const apr_array_header_t *rangelist,
              svn_boolean_t is_rollback,
              notification_receiver_baton_t *notify_b,
              merge_cmd_baton_t *merge_b,
@@ -4647,7 +4647,7 @@ drive_merge_report_editor(const char *target_abspath,
                           svn_revnum_t revision1,
                           const char *url2,
                           svn_revnum_t revision2,
-                          apr_array_header_t *children_with_mergeinfo,
+                          const apr_array_header_t *children_with_mergeinfo,
                           svn_depth_t depth,
                           notification_receiver_baton_t *notify_b,
                           const svn_wc_diff_callbacks4_t *callbacks,
@@ -4866,7 +4866,7 @@ drive_merge_report_editor(const char *target_abspath,
    If none of CHILDREN_WITH_MERGEINFO's elements have any remaining ranges
    return SVN_INVALID_REVNUM. */
 static svn_revnum_t
-get_most_inclusive_start_rev(apr_array_header_t *children_with_mergeinfo,
+get_most_inclusive_start_rev(const apr_array_header_t *children_with_mergeinfo,
                              svn_boolean_t is_rollback)
 {
   int i;
@@ -4903,7 +4903,7 @@ get_most_inclusive_start_rev(apr_array_header_t *children_with_mergeinfo,
    If none of CHILDREN_WITH_MERGEINFO's elements have any remaining ranges
    return SVN_INVALID_REVNUM. */
 static svn_revnum_t
-get_most_inclusive_end_rev(apr_array_header_t *children_with_mergeinfo,
+get_most_inclusive_end_rev(const apr_array_header_t *children_with_mergeinfo,
                            svn_boolean_t is_rollback)
 {
   int i;
@@ -5676,7 +5676,7 @@ log_changed_revs(void *baton,
 static svn_error_t *
 remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
                          svn_ra_session_t *ra_session,
-                         apr_array_header_t *ranges,
+                         const apr_array_header_t *ranges,
                          apr_pool_t *pool)
 {
   int i;
@@ -5787,7 +5787,7 @@ compare_merge_source_ts(const void *a,
 static svn_error_t *
 combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
                             svn_merge_range_t *range,
-                            apr_array_header_t *segments,
+                            const apr_array_header_t *segments,
                             const char *source_root_url,
                             apr_pool_t *pool)
 {
@@ -7916,7 +7916,7 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
 */
 static svn_error_t *
 do_merge(apr_hash_t **modified_subtrees,
-         apr_array_header_t *merge_sources,
+         const apr_array_header_t *merge_sources,
          const char *target_abspath,
          svn_boolean_t sources_ancestral,
          svn_boolean_t sources_related,

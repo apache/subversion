@@ -110,7 +110,7 @@ write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
 
 /* Prefix matching function to compare node-path with set of prefixes. */
 static svn_boolean_t
-ary_prefix_match(apr_array_header_t *pfxlist, const char *path)
+ary_prefix_match(const apr_array_header_t *pfxlist, const char *path)
 {
   int i, pfx_len, path_len = strlen(path);
   const char *pfx;
@@ -133,7 +133,7 @@ ary_prefix_match(apr_array_header_t *pfxlist, const char *path)
 /* Check whether we need to skip this PATH based on its presence in
    the PREFIXES list, and the DO_EXCLUDE option. */
 static APR_INLINE svn_boolean_t
-skip_path(const char *path, apr_array_header_t *prefixes,
+skip_path(const char *path, const apr_array_header_t *prefixes,
           svn_boolean_t do_exclude, svn_boolean_t glob)
 {
   const svn_boolean_t matches =

@@ -236,7 +236,7 @@ void svn_wc__compat_call_notify_func(void *baton,
 }
 
 svn_boolean_t
-svn_wc_match_ignore_list(const char *str, apr_array_header_t *list,
+svn_wc_match_ignore_list(const char *str, const apr_array_header_t *list,
                          apr_pool_t *pool)
 {
   /* For now, we simply forward to svn_cstring_match_glob_list. In the

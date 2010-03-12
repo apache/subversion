@@ -1160,7 +1160,7 @@ svn_ra_local__get_locations(svn_ra_session_t *session,
                             apr_hash_t **locations,
                             const char *path,
                             svn_revnum_t peg_revision,
-                            apr_array_header_t *location_revisions,
+                            const apr_array_header_t *location_revisions,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;

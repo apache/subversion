@@ -4596,7 +4596,7 @@ svn_fs_fs__change_txn_prop(svn_fs_txn_t *txn,
 
 svn_error_t *
 svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
-                            apr_array_header_t *props,
+                            const apr_array_header_t *props,
                             apr_pool_t *pool)
 {
   const char *txn_prop_filename;
@@ -6145,7 +6145,7 @@ commit_obliteration_body(void *baton, apr_pool_t *pool)
  * to the rep-cache database of FS. */
 static svn_error_t *
 write_reps_to_cache(svn_fs_t *fs,
-                    apr_array_header_t *reps_to_cache,
+                    const apr_array_header_t *reps_to_cache,
                     apr_pool_t *scratch_pool)
 {
   int i;

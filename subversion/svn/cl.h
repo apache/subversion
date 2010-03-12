@@ -445,7 +445,7 @@ svn_cl__print_xml_commit(svn_stringbuf_t **outstr,
  */
 svn_error_t *
 svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
-                        apr_array_header_t *targets,
+                        const apr_array_header_t *targets,
                         const char **URL,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
@@ -694,7 +694,7 @@ svn_cl__changelist_paths(apr_array_header_t **paths,
 svn_error_t *
 svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             apr_getopt_t *os,
-                                            apr_array_header_t *known_targets,
+                                            const apr_array_header_t *known_targets,
                                             svn_client_ctx_t *ctx,
                                             apr_pool_t *pool);
 

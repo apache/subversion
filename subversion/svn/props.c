@@ -47,7 +47,7 @@
 
 svn_error_t *
 svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
-                        apr_array_header_t *targets,
+                        const apr_array_header_t *targets,
                         const char **URL,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)

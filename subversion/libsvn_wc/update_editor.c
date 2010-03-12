@@ -170,7 +170,7 @@ struct edit_baton
 
   /* Array of file extension patterns to preserve as extensions in
      generated conflict files. */
-  apr_array_header_t *ext_patterns;
+  const apr_array_header_t *ext_patterns;
 
   /* The revision we're targeting...or something like that.  This
      starts off as a pointer to the revision to which we are updating,
@@ -1229,7 +1229,7 @@ accumulate_last_change(struct last_change_info **last_change,
                        svn_wc_notify_lock_state_t *lock_state,
                        svn_wc__db_t *db,
                        const char *local_abspath,
-                       apr_array_header_t *entry_props,
+                       const apr_array_header_t *entry_props,
                        apr_pool_t *scratch_pool,
                        apr_pool_t *result_pool)
 {
@@ -3144,7 +3144,7 @@ change_dir_prop(void *dir_baton,
    null.  If PROPCHANGES contains more than one such change, return
    the first. */
 static const svn_prop_t *
-externals_prop_changed(apr_array_header_t *propchanges)
+externals_prop_changed(const apr_array_header_t *propchanges)
 {
   int i;
 
@@ -5455,7 +5455,7 @@ make_editor(svn_revnum_t *target_revision,
             svn_wc_get_file_t fetch_func,
             void *fetch_baton,
             const char *diff3_cmd,
-            apr_array_header_t *preserved_exts,
+            const apr_array_header_t *preserved_exts,
             const svn_delta_editor_t **editor,
             void **edit_baton,
             apr_pool_t *result_pool,
@@ -5600,7 +5600,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t depth_is_sticky,
                           svn_boolean_t allow_unver_obstructions,
                           const char *diff3_cmd,
-                          apr_array_header_t *preserved_exts,
+                          const apr_array_header_t *preserved_exts,
                           svn_wc_get_file_t fetch_func,
                           void *fetch_baton,
                           svn_wc_conflict_resolver_func_t conflict_func,
@@ -5639,7 +5639,7 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t depth_is_sticky,
                           svn_boolean_t allow_unver_obstructions,
                           const char *diff3_cmd,
-                          apr_array_header_t *preserved_exts,
+                          const apr_array_header_t *preserved_exts,
                           svn_wc_get_file_t fetch_func,
                           void *fetch_baton,
                           svn_wc_conflict_resolver_func_t conflict_func,
