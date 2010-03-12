@@ -213,8 +213,12 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
   be 0 if no output is expected on stderr, and 1 otherwise."""
 
   expected_exit = 0
-  if expected_stderr is not None and expected_stderr != []:
-    expected_exit = 1
+  if expected_stderr is not None:
+    if isinstance(expected_stderr, verify.ExpectedOutput):
+      if not expected_stderr.matches([]):
+        expected_exit = 1
+    elif expected_stderr != []:
+      expected_exit = 1
   return run_and_verify_svn2(message, expected_stdout, expected_stderr,
                              expected_exit, *varargs)
 
@@ -248,7 +252,10 @@ def run_and_verify_svn2(message, expected_stdout, expected_stderr,
     raise verify.SVNIncorrectDatatype("expected_stderr must not be None")
 
   want_err = None
-  if expected_stderr != []:
+  if isinstance(expected_stderr, verify.ExpectedOutput):
+    if not expected_stderr.matches([]):
+      want_err = True
+  elif expected_stderr != []:
     want_err = True
 
   exit_code, out, err = main.run_svn(want_err, *varargs)

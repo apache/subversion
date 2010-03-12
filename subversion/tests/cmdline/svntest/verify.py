@@ -79,7 +79,7 @@ def createExpectedOutput(expected, output_type, match_all=True):
     expected = ExpectedOutput(expected)
   elif isinstance(expected, str):
     expected = RegexOutput(expected, match_all)
-  elif expected == AnyOutput:
+  elif expected is AnyOutput:
     expected = AnyOutput()
   elif expected is not None and not isinstance(expected, ExpectedOutput):
     raise SVNIncorrectDatatype("Unexpected type for '%s' data" % output_type)
@@ -87,6 +87,10 @@ def createExpectedOutput(expected, output_type, match_all=True):
 
 class ExpectedOutput:
   """Contains expected output, and performs comparisons."""
+
+  is_regex = False
+  is_unordered = False
+
   def __init__(self, output, match_all=True):
     """Initialize the expected output to OUTPUT which is a string, or a list
     of strings, or None meaning an empty list. If MATCH_ALL is True, the
@@ -96,12 +100,14 @@ class ExpectedOutput:
     strings among the matching ones."""
     self.output = output
     self.match_all = match_all
-    self.is_reg_exp = False
 
   def __str__(self):
     return str(self.output)
 
   def __cmp__(self, other):
+    raise 'badness'
+
+  def matches(self, other):
     """Return whether SELF.output matches OTHER (which may be a list
     of newline-terminated lines, or a single string).  Either value
     may be None."""
@@ -114,39 +120,27 @@ class ExpectedOutput:
     else:
       actual = other
 
-    if isinstance(actual, list):
-      if isinstance(expected, str):
-        expected = [expected]
-      is_match = self.is_equivalent_list(expected, actual)
-    elif isinstance(actual, str):
-      is_match = self.is_equivalent_line(expected, actual)
-    else: # unhandled type
-      is_match = False
+    if not isinstance(actual, list):
+      actual = [actual]
+    if not isinstance(expected, list):
+      expected = [expected]
 
-    if is_match:
-      return 0
-    else:
-      return 1
+    return self.is_equivalent_list(expected, actual)
 
   def is_equivalent_list(self, expected, actual):
     "Return whether EXPECTED and ACTUAL are equivalent."
-    if not self.is_reg_exp:
+    if not self.is_regex:
       if self.match_all:
         # The EXPECTED lines must match the ACTUAL lines, one-to-one, in
         # the same order.
-        if len(expected) != len(actual):
-          return False
-        for i in range(0, len(actual)):
-          if not self.is_equivalent_line(expected[i], actual[i]):
-            return False
-        return True
+        return expected == actual
       else:
         # The EXPECTED lines must match a subset of the ACTUAL lines,
         # one-to-one, in the same order, with zero or more other ACTUAL
         # lines interspersed among the matching ACTUAL lines.
         i_expected = 0
         for actual_line in actual:
-          if self.is_equivalent_line(expected[i_expected], actual_line):
+          if expected[i_expected] == actual_line:
             i_expected += 1
             if i_expected == len(expected):
               return True
@@ -167,24 +161,23 @@ class ExpectedOutput:
       if len(actual) == 0:
         return False
 
-      for i in range(0, len(actual)):
+      for actual_line in actual:
         if self.match_all:
-          if not self.is_equivalent_line(expected_re, actual[i]):
-            all_lines_match_re = False
-            break
+          if not re.match(expected_re, actual_line):
+            return False
         else:
-          if self.is_equivalent_line(expected_re, actual[i]):
+          # As soon an actual_line matches something, then we're good.
+          if re.match(expected_re, actual_line):
             return True
-      return all_lines_match_re
 
-  def is_equivalent_line(self, expected, actual):
-    "Return whether EXPECTED and ACTUAL are equal."
-    return expected == actual
+      return all_lines_match_re
 
   def display_differences(self, message, label, actual):
     """Delegate to the display_lines() routine with the appropriate
     args.  MESSAGE is ignored if None."""
-    display_lines(message, label, self.output, actual, False, False)
+    display_lines(message, label, self.output, actual,
+                  self.is_regex, self.is_unordered)
+
 
 class AnyOutput(ExpectedOutput):
   def __init__(self):
@@ -192,86 +185,70 @@ class AnyOutput(ExpectedOutput):
 
   def is_equivalent_list(self, ignored, actual):
     if len(actual) == 0:
-      # Empty text or empty list -- either way, no output!
+      # No actual output. No match.
       return False
-    elif isinstance(actual, list):
-      for line in actual:
-        if self.is_equivalent_line(None, line):
-          return True
-      return False
-    else:
-      return True
 
-  def is_equivalent_line(self, ignored, actual):
-    return len(actual) > 0
+    for line in actual:
+      # If any line has some text, then there is output, so we match.
+      if line:
+        return True
+
+    # We did not find a line with text. No match.
+    return False
 
   def display_differences(self, message, label, actual):
     if message:
       print(message)
 
+
 class RegexOutput(ExpectedOutput):
-  def __init__(self, output, match_all=True, is_reg_exp=True):
-    self.output = output
-    self.match_all = match_all
-    self.is_reg_exp = is_reg_exp
+  is_regex = True
 
-  def is_equivalent_line(self, expected, actual):
-    "Return whether the regex EXPECTED matches the ACTUAL text."
-    return re.match(expected, actual) is not None
-
-  def display_differences(self, message, label, actual):
-    display_lines(message, label, self.output, actual, True, False)
 
 class UnorderedOutput(ExpectedOutput):
   """Marks unordered output, and performs comparisons."""
 
+  is_unordered = True
+
   def __cmp__(self, other):
-    "Handle ValueError."
-    try:
-      return ExpectedOutput.__cmp__(self, other)
-    except ValueError:
-      return 1
+    raise 'badness'
 
   def is_equivalent_list(self, expected, actual):
     "Disregard the order of ACTUAL lines during comparison."
+
+    e_set = set(expected)
+    a_set = set(actual)
+
     if self.match_all:
-      if len(expected) != len(actual):
+      if len(e_set) != len(a_set):
         return False
-      expected = list(expected)
-      for actual_line in actual:
-        try:
-          i = self.is_equivalent_line(expected, actual_line)
-          expected.pop(i)
-        except ValueError:
-          return False
-      return True
-    else:
-      for actual_line in actual:
-        try:
-          self.is_equivalent_line(expected, actual_line)
-          return True
-        except ValueError:
-          pass
+      if self.is_regex:
+        for expect_re in e_set:
+          for actual_line in a_set:
+            if re.match(expect_re, actual_line):
+              a_set.remove(actual_line)
+              break
+          else:
+            # One of the regexes was not found
+            return False
+        return True
+      # All expected lines must be in the output.
+      return e_set == a_set
+    elif self.is_regex:
+      # If any of the expected regexes are in the output, then we match.
+      for expect_re in e_set:
+        for actual_line in a_set:
+          if re.match(expect_re, actual_line):
+            return True
       return False
+    else:
+      # If any of the expected lines are in the output, then we match.
+      return len(e_set.intersection(a_set)) > 0
 
-  def is_equivalent_line(self, expected, actual):
-    """Return the index into the EXPECTED lines of the line ACTUAL.
-    Raise ValueError if not found."""
-    return expected.index(actual)
-
-  def display_differences(self, message, label, actual):
-    display_lines(message, label, self.output, actual, False, True)
 
 class UnorderedRegexOutput(UnorderedOutput, RegexOutput):
-  def is_equivalent_line(self, expected, actual):
-    for i in range(0, len(expected)):
-      if RegexOutput.is_equivalent_line(self, expected[i], actual):
-        return i
-    else:
-      raise ValueError("'%s' not found" % actual)
-
-  def display_differences(self, message, label, actual):
-    display_lines(message, label, self.output, actual, True, True)
+  is_regex = True
+  is_unordered = True
 
 
 ######################################################################
@@ -331,7 +308,7 @@ def compare_and_display_lines(message, label, expected, actual,
     actual = [actual]
   actual = [line for line in actual if not line.startswith('DBG:')]
 
-  if expected != actual:
+  if not expected.matches(actual):
     expected.display_differences(message, label, actual)
     raise raisable
 
