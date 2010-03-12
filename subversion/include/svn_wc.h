@@ -7192,7 +7192,8 @@ typedef struct svn_wc_revision_status_t
 /** Set @a *result_p to point to a new #svn_wc_revision_status_t structure
  * containing a summary of the revision range and status of the working copy
  * at @a local_abspath (not including "externals").  @a local_abspath must
- * be absolute.
+ * be absolute. Return SVN_ERR_WC_PATH_NOT_FOUND if @a local_abspath is not
+ * a working copy path.
  *
  * Set @a (*result_p)->min_rev and @a (*result_p)->max_rev respectively to the
  * lowest and highest revision numbers in the working copy.  If @a committed
