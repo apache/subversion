@@ -57,7 +57,7 @@ typedef struct
 
   /* An array of svn_client_commit_item3_t * structures, present only
      during working copy commits. */
-  apr_array_header_t *commit_items;
+  const apr_array_header_t *commit_items;
 
   /* A client context. */
   svn_client_ctx_t *ctx;
@@ -290,7 +290,7 @@ svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
                                      const char *base_dir,
-                                     apr_array_header_t *commit_items,
+                                     const apr_array_header_t *commit_items,
                                      svn_boolean_t use_admin,
                                      svn_boolean_t read_only_wc,
                                      svn_client_ctx_t *ctx,

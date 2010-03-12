@@ -514,7 +514,7 @@ get_working_mimetype(const char **mimetype,
  */
 static apr_hash_t *
 apply_propchanges(apr_hash_t *props,
-                  apr_array_header_t *propchanges)
+                  const apr_array_header_t *propchanges)
 {
   apr_hash_t *newprops = apr_hash_copy(apr_hash_pool_get(props), props);
   int i;

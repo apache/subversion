@@ -407,7 +407,7 @@ static svn_error_t *compat_get_locations(void *session_baton,
                                          apr_hash_t **locations,
                                          const char *path,
                                          svn_revnum_t peg_revision,
-                                         apr_array_header_t *location_revs,
+                                         const apr_array_header_t *location_revs,
                                          apr_pool_t *pool)
 {
   return VTBL.get_locations(session_baton, locations, path, peg_revision,

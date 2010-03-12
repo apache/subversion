@@ -116,7 +116,7 @@ svn_opt__arg_canonicalize_path(const char **path_out,
 svn_error_t *
 svn_opt__args_to_target_array(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
+                              const apr_array_header_t *known_targets,
                               apr_pool_t *pool);
 
 /**

@@ -180,7 +180,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
                            apr_hash_t **locations,
                            const char *path,
                            svn_revnum_t peg_revision,
-                           apr_array_header_t *location_revisions,
+                           const apr_array_header_t *location_revisions,
                            apr_pool_t *pool)
 {
   loc_context_t *loc_ctx;

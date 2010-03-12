@@ -160,7 +160,7 @@ typedef svn_error_t *(*svn_repos_file_rev_handler_t)
    apr_hash_t *rev_props,
    svn_txdelta_window_handler_t *delta_handler,
    void **delta_baton,
-   apr_array_header_t *prop_diffs,
+   const apr_array_header_t *prop_diffs,
    apr_pool_t *pool);
 
 
@@ -1311,7 +1311,7 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
                                apr_hash_t **locations,
                                const char *fs_path,
                                svn_revnum_t peg_revision,
-                               apr_array_header_t *location_revisions,
+                               const apr_array_header_t *location_revisions,
                                svn_repos_authz_func_t authz_read_func,
                                void *authz_read_baton,
                                apr_pool_t *pool);
@@ -1943,7 +1943,7 @@ svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
  */
 svn_error_t *
 svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
-                              apr_array_header_t *props,
+                              const apr_array_header_t *props,
                               apr_pool_t *pool);
 
 /** @} */
@@ -2656,7 +2656,7 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
  */
 svn_error_t *
 svn_repos_remember_client_capabilities(svn_repos_t *repos,
-                                       apr_array_header_t *capabilities);
+                                       const apr_array_header_t *capabilities);
 
 
 

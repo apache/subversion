@@ -122,7 +122,7 @@ svn_ra_neon__get_locations(svn_ra_session_t *session,
                            apr_hash_t **locations,
                            const char *relative_path,
                            svn_revnum_t peg_revision,
-                           apr_array_header_t *location_revisions,
+                           const apr_array_header_t *location_revisions,
                            apr_pool_t *pool)
 {
   svn_ra_neon__session_t *ras = session->priv;

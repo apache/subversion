@@ -382,7 +382,7 @@ range_to_string(svn_merge_range_t *range,
    verified (e.g. "svn_rangelist_intersect"), while TYPE is a word
    describing what the ranges being examined represent. */
 static svn_error_t *
-verify_ranges_match(apr_array_header_t *actual_rangelist,
+verify_ranges_match(const apr_array_header_t *actual_rangelist,
                     svn_merge_range_t *expected_ranges, int nbr_expected,
                     const char *func_verified, const char *type,
                     apr_pool_t *pool)

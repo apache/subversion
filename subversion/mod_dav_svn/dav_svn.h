@@ -761,7 +761,7 @@ dav_svn__simple_parse_uri(dav_svn__uri_info *info,
                           apr_pool_t *pool);
 
 
-int dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri);
+int dav_svn__find_ns(const apr_array_header_t *namespaces, const char *uri);
 
 
 

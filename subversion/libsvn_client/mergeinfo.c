@@ -654,7 +654,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
 
 svn_error_t *
 svn_client__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
-                                    apr_array_header_t *segments,
+                                    const apr_array_header_t *segments,
                                     apr_pool_t *pool)
 {
   svn_mergeinfo_t mergeinfo = apr_hash_make(pool);
@@ -1236,7 +1236,7 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
    If DEPTH_FIRST_CATALOG_INDEX is NULL, empty, or no ancestor is found, then
    return NULL. */
 static svn_mergeinfo_t
-find_nearest_ancestor(apr_array_header_t *depth_first_catalog_index,
+find_nearest_ancestor(const apr_array_header_t *depth_first_catalog_index,
                       const char *abs_repos_path)
 {
   int i;
@@ -1270,7 +1270,7 @@ struct filter_log_entry_baton_t
 
   /* Unsorted array of repository relative paths representing the merge
      sources.  There will be more than one source  */
-  apr_array_header_t *merge_source_paths;
+  const apr_array_header_t *merge_source_paths;
 
   /* The repository-absolute path we are calling svn_client_log5() on. */
   const char *abs_repos_target_path;
@@ -1285,7 +1285,7 @@ struct filter_log_entry_baton_t
 
   /* A rangelist describing all the ranges merged to ABS_REPOS_TARGET_PATH
      from the */
-  apr_array_header_t *rangelist;
+  const apr_array_header_t *rangelist;
 
   /* The wrapped svn_log_entry_receiver_t callback and baton which
      filter_log_entry_with_rangelist() is acting as a filter for. */
@@ -1442,9 +1442,9 @@ filter_log_entry_with_rangelist(void *baton,
 
 static svn_error_t *
 logs_for_mergeinfo_rangelist(const char *source_url,
-                             apr_array_header_t *merge_source_paths,
+                             const apr_array_header_t *merge_source_paths,
                              svn_boolean_t filtering_merged,
-                             apr_array_header_t *rangelist,
+                             const apr_array_header_t *rangelist,
                              svn_mergeinfo_t target_mergeinfo_catalog,
                              const char *abs_repos_target_path,
                              svn_boolean_t discover_changed_paths,

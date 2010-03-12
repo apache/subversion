@@ -533,7 +533,7 @@ typedef svn_error_t *(*svn_auth_plaintext_passphrase_prompt_func_t)(
  */
 void
 svn_auth_open(svn_auth_baton_t **auth_baton,
-              apr_array_header_t *providers,
+              const apr_array_header_t *providers,
               apr_pool_t *pool);
 
 /** Set an authentication run-time parameter.

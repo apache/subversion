@@ -1138,7 +1138,7 @@ svn_error_t *
 svn_delta_path_driver(const svn_delta_editor_t *editor,
                       void *edit_baton,
                       svn_revnum_t revision,
-                      apr_array_header_t *paths,
+                      const apr_array_header_t *paths,
                       svn_delta_path_driver_cb_func_t callback_func,
                       void *callback_baton,
                       apr_pool_t *pool);
@@ -1181,7 +1181,7 @@ typedef svn_error_t *(*svn_file_rev_handler_t)(
   svn_boolean_t result_of_merge,
   svn_txdelta_window_handler_t *delta_handler,
   void **delta_baton,
-  apr_array_header_t *prop_diffs,
+  const apr_array_header_t *prop_diffs,
   apr_pool_t *pool);
 
 /**
@@ -1202,7 +1202,7 @@ typedef svn_error_t *(*svn_file_rev_handler_old_t)(
   apr_hash_t *rev_props,
   svn_txdelta_window_handler_t *delta_handler,
   void **delta_baton,
-  apr_array_header_t *prop_diffs,
+  const apr_array_header_t *prop_diffs,
   apr_pool_t *pool);
 
 /** Return, in @a *handler2 and @a *handler2_baton a function/baton that

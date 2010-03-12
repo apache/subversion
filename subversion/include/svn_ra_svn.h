@@ -114,7 +114,7 @@ typedef struct svn_ra_svn_conn_st svn_ra_svn_conn_t;
 /** Command handler, used by svn_ra_svn_handle_commands(). */
 typedef svn_error_t *(*svn_ra_svn_command_handler)(svn_ra_svn_conn_t *conn,
                                                    apr_pool_t *pool,
-                                                   apr_array_header_t *params,
+                                                   const apr_array_header_t *params,
                                                    void *baton);
 
 /** Command table, used by svn_ra_svn_handle_commands().
@@ -175,7 +175,7 @@ svn_ra_svn_create_conn(apr_socket_t *sock,
  */
 svn_error_t *
 svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
-                            apr_array_header_t *list);
+                            const apr_array_header_t *list);
 
 /** Return @c TRUE if @a conn has the capability @a capability, or
  * @c FALSE if it does not. */
@@ -347,7 +347,7 @@ svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
  * tuple specification; use 'B' instead.
  */
 svn_error_t *
-svn_ra_svn_parse_tuple(apr_array_header_t *list,
+svn_ra_svn_parse_tuple(const apr_array_header_t *list,
                        apr_pool_t *pool,
                        const char *fmt, ...);
 
@@ -365,7 +365,7 @@ svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_ra_svn_parse_proplist(apr_array_header_t *list,
+svn_ra_svn_parse_proplist(const apr_array_header_t *list,
                           apr_pool_t *pool,
                           apr_hash_t **props);
 

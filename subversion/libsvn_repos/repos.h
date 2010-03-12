@@ -134,7 +134,7 @@ struct svn_repos_t
      object.  You'd think the capabilities here would represent the
      *repository's* capabilities, but no, they represent the
      client's -- we just don't have any other place to persist them. */
-  apr_array_header_t *client_capabilities;
+  const apr_array_header_t *client_capabilities;
 
   /* Maps SVN_REPOS_CAPABILITY_foo keys to "yes" or "no" values.
      If a capability is not yet discovered, it is absent from the table.

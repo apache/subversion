@@ -412,7 +412,7 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
 
 svn_error_t *
 svn_client_copy4(svn_commit_info_t **commit_info_p,
-                 apr_array_header_t *sources,
+                 const apr_array_header_t *sources,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,

@@ -415,7 +415,7 @@ svn_opt_subcommand_help(const char *subcommand,
 svn_error_t *
 svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
+                              const apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
   return svn_opt__args_to_target_array(targets_p, os,known_targets, pool);
@@ -424,7 +424,7 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
 svn_error_t *
 svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
+                              const apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
   svn_error_t *err = svn_opt_args_to_target_array3(targets_p, os,
@@ -442,7 +442,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
 svn_error_t *
 svn_opt_args_to_target_array(apr_array_header_t **targets_p,
                              apr_getopt_t *os,
-                             apr_array_header_t *known_targets,
+                             const apr_array_header_t *known_targets,
                              svn_opt_revision_t *start_revision,
                              svn_opt_revision_t *end_revision,
                              svn_boolean_t extract_revisions,
@@ -905,7 +905,7 @@ svn_mergeinfo_inheritable(svn_mergeinfo_t *output,
 
 svn_error_t *
 svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
-                          apr_array_header_t *rangelist,
+                          const apr_array_header_t *rangelist,
                           svn_revnum_t start,
                           svn_revnum_t end,
                           apr_pool_t *pool)

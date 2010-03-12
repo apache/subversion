@@ -332,7 +332,7 @@ init_patch_target(patch_target_t **patch_target,
                   const svn_patch_t *patch,
                   const char *base_dir,
                   svn_wc_context_t *wc_ctx, int strip_count,
-                  apr_array_header_t *filter_globs,
+                  const apr_array_header_t *filter_globs,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *target;
@@ -1060,7 +1060,7 @@ send_patch_notification(const patch_target_t *target,
 static svn_error_t *
 apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                 const char *abs_wc_path, svn_wc_context_t *wc_ctx,
-                int strip_count, apr_array_header_t *filter_globs,
+                int strip_count, const apr_array_header_t *filter_globs,
                 apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *target;
@@ -1379,7 +1379,7 @@ typedef struct {
   svn_boolean_t reverse;
 
   /* Glob patterns. Files matching any of these patterns won't be patched. */
-  apr_array_header_t *filter_globs;
+  const apr_array_header_t *filter_globs;
 
   /* The client context. */
   svn_client_ctx_t *ctx;
@@ -1473,7 +1473,7 @@ svn_client_patch(const char *abs_patch_path,
                  svn_boolean_t dry_run,
                  int strip_count,
                  svn_boolean_t reverse,
-                 apr_array_header_t *filter_globs,
+                 const apr_array_header_t *filter_globs,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {

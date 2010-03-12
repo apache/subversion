@@ -250,7 +250,7 @@ svn_mergeinfo_remove2(svn_mergeinfo_t *mergeinfo,
  */
 svn_error_t *
 svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
-                   apr_array_header_t *from, apr_array_header_t *to,
+                   const apr_array_header_t *from, const apr_array_header_t *to,
                    svn_boolean_t consider_inheritance,
                    apr_pool_t *pool);
 
@@ -271,7 +271,7 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
  */
 svn_error_t *
 svn_rangelist_merge(apr_array_header_t **rangelist,
-                    apr_array_header_t *changes,
+                    const apr_array_header_t *changes,
                     apr_pool_t *pool);
 
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
@@ -288,8 +288,8 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
-                     apr_array_header_t *whiteboard,
+svn_rangelist_remove(apr_array_header_t **output, const apr_array_header_t *eraser,
+                     const apr_array_header_t *whiteboard,
                      svn_boolean_t consider_inheritance,
                      apr_pool_t *pool);
 
@@ -340,8 +340,8 @@ svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
  */
 svn_error_t *
 svn_rangelist_intersect(apr_array_header_t **rangelist,
-                        apr_array_header_t *rangelist1,
-                        apr_array_header_t *rangelist2,
+                        const apr_array_header_t *rangelist1,
+                        const apr_array_header_t *rangelist2,
                         svn_boolean_t consider_inheritance,
                         apr_pool_t *pool);
 
@@ -382,7 +382,7 @@ svn_rangelist_to_string(svn_string_t **output,
  */
 svn_error_t *
 svn_rangelist_inheritable2(apr_array_header_t **inheritable_rangelist,
-                           apr_array_header_t *rangelist,
+                           const apr_array_header_t *rangelist,
                            svn_revnum_t start,
                            svn_revnum_t end,
                            svn_boolean_t inheritable,
@@ -395,7 +395,7 @@ svn_rangelist_inheritable2(apr_array_header_t **inheritable_rangelist,
  */
 svn_error_t *
 svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
-                          apr_array_header_t *rangelist,
+                          const apr_array_header_t *rangelist,
                           svn_revnum_t start,
                           svn_revnum_t end,
                           apr_pool_t *pool);
@@ -481,7 +481,7 @@ svn_mergeinfo_dup(svn_mergeinfo_t mergeinfo, apr_pool_t *pool);
  * @since New in 1.5.
  */
 apr_array_header_t *
-svn_rangelist_dup(apr_array_header_t *rangelist, apr_pool_t *pool);
+svn_rangelist_dup(const apr_array_header_t *rangelist, apr_pool_t *pool);
 
 
 /**

@@ -381,7 +381,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 /* Throw an SVN_ERR_CLIENT_IS_BINARY_FILE error if PROP_DIFFS indicates a
    binary MIME type.  Else, return SVN_NO_ERROR. */
 static svn_error_t *
-check_mimetype(apr_array_header_t *prop_diffs, const char *target,
+check_mimetype(const apr_array_header_t *prop_diffs, const char *target,
                apr_pool_t *pool)
 {
   int i;
@@ -407,7 +407,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
                  svn_boolean_t merged_revision,
                  svn_txdelta_window_handler_t *content_delta_handler,
                  void **content_delta_baton,
-                 apr_array_header_t *prop_diffs,
+                 const apr_array_header_t *prop_diffs,
                  apr_pool_t *pool)
 {
   struct file_rev_baton *frb = baton;

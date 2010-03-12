@@ -2102,7 +2102,7 @@ try_copy(svn_commit_info_t **commit_info_p,
 /* Public Interfaces */
 svn_error_t *
 svn_client_copy5(svn_commit_info_t **commit_info_p,
-                 apr_array_header_t *sources,
+                 const apr_array_header_t *sources,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
@@ -2178,7 +2178,7 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
 
 svn_error_t *
 svn_client_move5(svn_commit_info_t **commit_info_p,
-                 apr_array_header_t *src_paths,
+                 const apr_array_header_t *src_paths,
                  const char *dst_path,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,

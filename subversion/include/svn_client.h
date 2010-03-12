@@ -662,7 +662,7 @@ typedef svn_error_t *(*svn_client_get_commit_log2_t)(
 typedef svn_error_t *(*svn_client_get_commit_log_t)(
   const char **log_msg,
   const char **tmp_file,
-  apr_array_header_t *commit_items,
+  const apr_array_header_t *commit_items,
   void *baton,
   apr_pool_t *pool);
 
@@ -3373,7 +3373,7 @@ typedef struct svn_client_copy_source_t
  */
 svn_error_t *
 svn_client_copy5(svn_commit_info_t **commit_info_p,
-                 apr_array_header_t *sources,
+                 const apr_array_header_t *sources,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
@@ -3392,7 +3392,7 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
 SVN_DEPRECATED
 svn_error_t *
 svn_client_copy4(svn_commit_info_t **commit_info_p,
-                 apr_array_header_t *sources,
+                 const apr_array_header_t *sources,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
@@ -3541,7 +3541,7 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  */
 svn_error_t *
 svn_client_move5(svn_commit_info_t **commit_info_p,
-                 apr_array_header_t *src_paths,
+                 const apr_array_header_t *src_paths,
                  const char *dst_path,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,
@@ -4868,7 +4868,7 @@ svn_client_patch(const char *abs_patch_path,
                  svn_boolean_t dry_run,
                  int strip_count,
                  svn_boolean_t reverse,
-                 apr_array_header_t *filter_globs,
+                 const apr_array_header_t *filter_globs,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 

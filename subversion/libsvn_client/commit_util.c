@@ -923,7 +923,7 @@ svn_error_t *
 svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_hash_t **lock_tokens,
                                  const char *dir_abspath,
-                                 apr_array_header_t *targets,
+                                 const apr_array_header_t *targets,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
@@ -1574,7 +1574,7 @@ static svn_error_t *get_test_editor(const svn_delta_editor_t **editor,
 
 svn_error_t *
 svn_client__do_commit(const char *base_url,
-                      apr_array_header_t *commit_items,
+                      const apr_array_header_t *commit_items,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
