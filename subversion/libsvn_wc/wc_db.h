@@ -1545,18 +1545,11 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
                            apr_pool_t *scratch_pool);
 
 
-/** Scan upwards for information about an addition to the WORKING tree.
+/** Scan upwards for information about a known addition to the WORKING tree.
  *
- * A WORKING node's status, as returned from svn_wc__db_read_info() can be
- * one of three states:
- *   svn_wc__db_status_added
- *   svn_wc__db_status_deleted
- *   svn_wc__db_status_incomplete
- *
- * (the "normal" and absent statuses only refer to unshadowed BASE nodes)
- *
- * If the node is in the "added" state, then this function can refine that
- * status into one of three possible states:
+ * Iff a node's status as returned by svn_wc__db_read_info() is
+ * svn_wc__db_status_added, then this function returns a refined status in
+ * *STATUS, which is one of:
  *
  *   svn_wc__db_status_added -- this NODE is a simple add without history.
  *     OP_ROOT_ABSPATH will be set to the topmost node in the added subtree
