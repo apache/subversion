@@ -31,6 +31,7 @@
 ENABLE_PYTHON_BINDINGS ?= yes
 ENABLE_RUBY_BINDINGS ?= yes
 ENABLE_PERL_BINDINGS ?= yes
+ENABLE_JAVA_BINDINGS ?= no # they don't build with thread-less APR...
 
 PWD		= $(shell pwd)
 
@@ -614,8 +615,21 @@ else
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 endif
 
+ifeq ($(ENABLE_JAVA_BINDINGS),yes)
+	JAVAHL_FLAG=--enable-javahl=yes --with-jdk --with-jikes=no \
+		--with-junit=$(PWD)/junit.jar
+else
+	JAVAHL_FLAG=--enable-javahl=no
+endif
+
 # configure svn
 $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
+	@if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
+		if [ ! -e $(PWD)/junit.jar ]; then \
+			echo "Please provide $(PWD)/junit.jar"; \
+			exit 1; \
+		fi; \
+	fi
 	cd $(SVN_SRCDIR) && ./autogen.sh
 	cd $(svn_builddir) && \
 		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib" \
@@ -634,7 +648,8 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 			--with-berkeley-db="$(BDB_FLAG)" \
 			--with-sasl="no" \
 			--with-ruby-sitedir="$(SVN_PREFIX)/lib/ruby/site_ruby" \
-			--disable-mod-activation
+			--disable-mod-activation \
+			$(JAVAHL_FLAG)
 	touch $@
 
 # compile svn
@@ -662,6 +677,10 @@ $(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed
 		cd $(svn_builddir) \
 			&& make swig-pl; \
 	fi
+	if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
+		cd $(svn_builddir) \
+			&& make javahl; \
+	fi
 	touch $@
 
 $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
@@ -679,6 +698,10 @@ $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
 	  cd subversion/bindings/swig/perl/native \
 		  && perl Makefile.PL PREFIX="$(SVN_PREFIX)" \
 		  && make install; \
+	fi
+	if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
+		cd $(svn_builddir) \
+			&& make install-javahl; \
 	fi
 	touch $@
 
@@ -786,8 +809,9 @@ svn-check-svn:
 	cd $(svn_builddir) && make check FS_TYPE=bdb BASE_URL=svn://127.0.0.1
 	$(SVNSERVE_STOP_CMD)
 
-.PHONY: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb
-svn-check-swig: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb
+.PHONY: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb svn-check-javahl
+svn-check-bindings: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb \
+	svn-check-javahl
 
 RUBYLIB=$(SVN_PREFIX)/lib/ruby/site_ruby$(shell grep \
 	^svn_cv_ruby_sitedir_archsuffix $(svn_builddir)/config.log | \
@@ -803,5 +827,9 @@ svn-check-swig-rb:
 		env RUBYLIB=$(RUBYLIB) \
 		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 		ruby run-test.rb --verbose=verbose
+svn-check-javahl:
+	cd $(svn_builddir) && \
+		env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+		make check-javahl
 
-svn-check: svn-check-local svn-check-svn svn-check-neon svn-check-serf svn-check-swig
+svn-check: svn-check-local svn-check-svn svn-check-neon svn-check-serf svn-check-bindings
