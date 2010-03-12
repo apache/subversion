@@ -848,10 +848,7 @@ svn_mergeinfo__set_inheritance(svn_mergeinfo_t mergeinfo,
            hi;
            hi = apr_hash_next(hi))
         {
-          apr_array_header_t *rangelist;
-          const char *path = svn__apr_hash_index_key(hi);
-
-          rangelist = apr_hash_get(mergeinfo, path, APR_HASH_KEY_STRING);
+          apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
 
           if (rangelist)
             svn_rangelist__set_inheritance(rangelist, inheritable);
@@ -1627,7 +1624,7 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
     {
       const char *original_path = svn__apr_hash_index_key(hi);
       apr_ssize_t klen = svn__apr_hash_index_klen(hi);
-      svn_mergeinfo_t *value = svn__apr_hash_index_val(hi);
+      svn_mergeinfo_t value = svn__apr_hash_index_val(hi);
 
       SVN_ERR_ASSERT(klen >= prefix_len);
       SVN_ERR_ASSERT(strncmp(original_path, prefix, prefix_len) == 0);
