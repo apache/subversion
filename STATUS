@@ -283,7 +283,7 @@ Candidate changes:
      +1: cmpilato (r917640 only)
      +1: lgo
 
- * r922516
+ * r922516, r922533
    Tell svn+ssh:// users how to get error messages from ssh when there
    is a connection problem.
    Justification:
