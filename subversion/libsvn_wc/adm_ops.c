@@ -2228,8 +2228,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
           return SVN_NO_ERROR;
         }
     }
-  else
-  if (status == svn_wc__db_status_not_present)
+  else if (status == svn_wc__db_status_not_present)
     /* We know that the delete of this node has been committed.
        This should be the same as if called on an unknown path. */
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
@@ -2237,8 +2236,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                                "because its delete is already committed"),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
-  else 
-  if (status == svn_wc__db_status_absent
+  else if (status == svn_wc__db_status_absent
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_incomplete)
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,

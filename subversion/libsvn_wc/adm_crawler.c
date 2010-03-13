@@ -1210,7 +1210,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 
           /* ### we should ALREADY have the checksum for pristine. */
           SVN_ERR(svn_wc__get_pristine_contents(&p_stream, db, local_abspath,
-                                               scratch_pool, scratch_pool));
+                                                scratch_pool, scratch_pool));
           if (p_stream == NULL)
             p_stream = svn_stream_empty(scratch_pool);
 
