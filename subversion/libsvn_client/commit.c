@@ -1001,7 +1001,6 @@ commit_item_is_changed(void *baton, void *this_item, apr_pool_t *pool)
 
 struct check_dir_delete_baton
 {
-  svn_wc_adm_access_t *base_dir_access;
   svn_wc_context_t *wc_ctx;
   svn_depth_t depth;
 };
@@ -1010,17 +1009,24 @@ static svn_error_t *
 check_nonrecursive_dir_delete(void *baton, void *this_item, apr_pool_t *pool)
 {
   struct check_dir_delete_baton *btn = baton;
-  const char *target_abspath;
+  const char *target_abspath, *lock_abspath;
+  svn_boolean_t locked_here;
+  svn_node_kind_t kind;
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, *(const char **)this_item,
                                   pool));
 
-  {
-    svn_wc_adm_access_t *adm_access;
-    SVN_ERR_W(svn_wc_adm_probe_retrieve(&adm_access, btn->base_dir_access,
-                                        target_abspath, pool),
-              _("Are all the targets part of the same working copy?"));
-  }
+  SVN_ERR(svn_wc__node_get_kind(&kind, btn->wc_ctx, target_abspath, FALSE,
+                                pool));
+  if (kind == svn_node_dir)
+    lock_abspath = target_abspath;
+  else
+    lock_abspath = svn_dirent_dirname(target_abspath, pool);
+
+  SVN_ERR(svn_wc_locked2(&locked_here, NULL, btn->wc_ctx, lock_abspath, pool));
+  if (!locked_here)
+    return svn_error_create(SVN_ERR_WC_LOCKED, NULL,
+                           _("Are all targets part of the same working copy?"));
 
   /* ### TODO(sd): This check is slightly too strict.  It should be
      ### possible to:
@@ -1040,13 +1046,10 @@ check_nonrecursive_dir_delete(void *baton, void *this_item, apr_pool_t *pool)
   */
   if (btn->depth != svn_depth_infinity)
     {
-      svn_wc_status2_t *status;
-      svn_node_kind_t kind;
-
-      SVN_ERR(svn_io_check_path(target_abspath, &kind, pool));
-
       if (kind == svn_node_dir)
         {
+          svn_wc_status2_t *status;
+
           /* ### Looking at schedule is probably enough, no need for
                  pristine compare etc. */
           SVN_ERR(svn_wc_status3(&status, btn->wc_ctx, target_abspath, pool,
@@ -1094,8 +1097,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   apr_hash_t *lock_tokens;
   apr_hash_t *tempfiles = NULL;
   apr_hash_t *checksums;
-  svn_wc_adm_access_t *base_dir_access;
   apr_array_header_t *commit_items;
+  svn_error_t *lock_err;
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
   svn_error_t *bump_err = SVN_NO_ERROR, *cleanup_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
@@ -1152,13 +1155,10 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
         }
     }
 
-  SVN_ERR(svn_wc__adm_open_in_context(&base_dir_access,
-                                      ctx->wc_ctx,
-                                      base_dir,
-                                      TRUE,  /* Write lock */
-                                      -1, /* recursive lock */
-                                      ctx->cancel_func, ctx->cancel_baton,
-                                      pool));
+  if ((lock_err = svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, base_dir,
+                                             pool, pool)))
+    return svn_error_return(svn_error_compose_create(lock_err,
+                     svn_wc__release_write_lock(ctx->wc_ctx, base_dir, pool)));
 
   /* One day we might support committing from multiple working copies, but
      we don't yet.  This check ensures that we don't silently commit a
@@ -1169,7 +1169,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   {
     struct check_dir_delete_baton btn;
 
-    btn.base_dir_access = base_dir_access;
     btn.wc_ctx = ctx->wc_ctx;
     btn.depth = depth;
     SVN_ERR(svn_iter_apr_array(NULL, targets,
@@ -1308,7 +1307,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
      clean-up. */
   if (! bump_err)
     {
-      unlock_err = svn_wc_adm_close2(base_dir_access, pool);
+      unlock_err = svn_wc__release_write_lock(ctx->wc_ctx, base_dir, pool);
 
       if (! unlock_err)
         cleanup_err = remove_tmpfiles(tempfiles, pool);
