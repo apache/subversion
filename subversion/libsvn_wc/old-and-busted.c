@@ -194,11 +194,10 @@ read_url(const char **result,
     {
       if (wc_format < SVN_WC__CHANGED_CANONICAL_URLS)
         *result = svn_uri_canonicalize(*result, pool);
-      else
-        if (! svn_uri_is_canonical(*result, pool))
-          return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                                   _("Entry contains non-canonical path '%s'"),
-                                   *result);
+      else if (! svn_uri_is_canonical(*result, pool))
+        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                 _("Entry contains non-canonical path '%s'"),
+                                 *result);
     }
   return SVN_NO_ERROR;
 }

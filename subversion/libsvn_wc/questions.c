@@ -353,7 +353,7 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
     }
 
  compare_them:
- /* If there's no text-base file, we have to assume the working file
+  /* If there's no text-base file, we have to assume the working file
      is modified.  For example, a file scheduled for addition but not
      yet committed. */
   /* We used to stat for the working base here, but we just give

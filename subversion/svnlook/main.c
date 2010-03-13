@@ -1752,12 +1752,11 @@ do_plist(svnlook_ctxt_t *c,
           else
             printf("  %s : %s\n", pname_stdout, propval->data);
         }
+      else if (xml)
+        svn_xml_make_open_tag(&sb, pool, svn_xml_self_closing, "property",
+                              "name", pname, NULL);
       else
-        if (xml)
-          svn_xml_make_open_tag(&sb, pool, svn_xml_self_closing, "property",
-                                "name", pname, NULL);
-        else
-          printf("  %s\n", pname);
+        printf("  %s\n", pname);
     }
   if (xml)
     {

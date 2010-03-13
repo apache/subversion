@@ -155,8 +155,8 @@ copy_one_versioned_file(const char *from_abspath,
          ###       svn_opt_revision_ enum value for proper distinction
          ###       between revert-base and commit-base.
 
-         Copied-/moved-here nodes have a base, so export both added and replaced
-         files when they involve a copy-/move-here.
+         Copied-/moved-here nodes have a base, so export both added and
+         replaced files when they involve a copy-/move-here.
 
          We get all this for free from evaluating SOURCE == NULL:
        */

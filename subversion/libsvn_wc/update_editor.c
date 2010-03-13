@@ -1772,8 +1772,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
     SVN_ERR_ASSERT(action == svn_wc_conflict_action_edit
                    || action == svn_wc_conflict_action_delete
                    || action == svn_wc_conflict_action_replace);
-  else
-  if (reason == svn_wc_conflict_reason_added)
+  else if (reason == svn_wc_conflict_reason_added)
     /* When the node did not exist before (it was locally added), then 'update'
      * cannot want to modify it in any way. It can only send _action_add. */
     SVN_ERR_ASSERT(action == svn_wc_conflict_action_add);
@@ -1858,8 +1857,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
         if (base_kind == svn_wc__db_kind_file
             || base_kind == svn_wc__db_kind_symlink)
           left_kind = svn_node_file;
-        else
-        if (base_kind == svn_wc__db_kind_dir)
+        else if (base_kind == svn_wc__db_kind_dir)
           left_kind = svn_node_dir;
         else
           SVN_ERR_MALFUNCTION();
