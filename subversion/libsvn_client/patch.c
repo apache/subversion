@@ -325,14 +325,14 @@ resolve_target_path(patch_target_t *target,
  * which should be stripped from target paths in the patch.
  * Upon success, allocate the patch target structure in RESULT_POOL.
  * Else, set *target to NULL.
- * If a target matches a glob in FILTER_GLOBS, mark it as filtered.
+ * If a target matches a glob in EXCLUDE_PATTERNS, mark it as filtered.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
 init_patch_target(patch_target_t **patch_target,
                   const svn_patch_t *patch,
                   const char *base_dir,
                   svn_wc_context_t *wc_ctx, int strip_count,
-                  const apr_array_header_t *filter_globs,
+                  const apr_array_header_t *exclude_patterns,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *target;
@@ -345,13 +345,13 @@ init_patch_target(patch_target_t **patch_target,
                               result_pool, scratch_pool));
 
   target->filtered = FALSE;
-  if (filter_globs)
+  if (exclude_patterns)
     {
-      for (i = 0; i < filter_globs->nelts; i++)
+      for (i = 0; i < exclude_patterns->nelts; i++)
         {
           const char *glob;
 
-          glob = APR_ARRAY_IDX(filter_globs, i, const char *);
+          glob = APR_ARRAY_IDX(exclude_patterns, i, const char *);
           target->filtered = (apr_fnmatch(glob,
                                           target->canon_path_from_patchfile,
                                           APR_FNM_CASE_BLIND) == APR_SUCCESS);
@@ -1055,12 +1055,12 @@ send_patch_notification(const patch_target_t *target,
  * in RESULT_POOL. Use WC_CTX as the working copy context.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
- * If a target matches a glob in FILTER_GLOBS, mark it as filtered.
+ * If a target matches a glob in EXCLUDE_PATTERNS, mark it as filtered.
  * Do temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
 apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                 const char *abs_wc_path, svn_wc_context_t *wc_ctx,
-                int strip_count, const apr_array_header_t *filter_globs,
+                int strip_count, const apr_array_header_t *exclude_patterns,
                 apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *target;
@@ -1069,7 +1069,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   static const int MAX_FUZZ = 2;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
-                            filter_globs, result_pool, scratch_pool));
+                            exclude_patterns, result_pool, scratch_pool));
 
   if (target->skipped || target->filtered)
     {
@@ -1379,7 +1379,7 @@ typedef struct {
   svn_boolean_t reverse;
 
   /* Glob patterns. Files matching any of these patterns won't be patched. */
-  const apr_array_header_t *filter_globs;
+  const apr_array_header_t *exclude_patterns;
 
   /* The client context. */
   svn_client_ctx_t *ctx;
@@ -1433,7 +1433,7 @@ apply_patches(void *baton,
 
           SVN_ERR(apply_one_patch(&target, patch, btn->abs_wc_path,
                                   btn->ctx->wc_ctx, btn->strip_count,
-                                  btn->filter_globs, scratch_pool, iterpool));
+                                  btn->exclude_patterns, scratch_pool, iterpool));
           if (target->filtered)
             SVN_ERR(svn_diff__close_patch(patch));
           else
@@ -1473,7 +1473,7 @@ svn_client_patch(const char *abs_patch_path,
                  svn_boolean_t dry_run,
                  int strip_count,
                  svn_boolean_t reverse,
-                 const apr_array_header_t *filter_globs,
+                 const apr_array_header_t *exclude_patterns,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -1489,7 +1489,7 @@ svn_client_patch(const char *abs_patch_path,
   baton.ctx = ctx;
   baton.strip_count = strip_count;
   baton.reverse = reverse;
-  baton.filter_globs = filter_globs;
+  baton.exclude_patterns = exclude_patterns;
 
   SVN_ERR(svn_wc__call_with_write_lock(apply_patches, &baton,
                                        ctx->wc_ctx, local_abspath,
