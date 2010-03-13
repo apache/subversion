@@ -519,12 +519,28 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   *conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
   err = svn_ra_svn_skip_leading_garbage(*conn, pool);
   if (err)
-    return svn_error_quick_wrap(
-             err,
-             _("To better debug SSH connection problems, remove the -q "
-               "option from 'ssh' in the [tunnels] section of your "
-               "Subversion configuration file."));
+    {
+      svn_error_t *err2;
+      const char *config_path;
 
+      err2 = svn_config_get_user_config_path(&config_path, NULL,
+                                             SVN_CONFIG_CATEGORY_CONFIG, pool);
+      if (err2)
+        return svn_error_compose_create(err, err2);
+      else
+        {
+          const char *msg;
+          msg = apr_psprintf(
+                  pool,
+                  _("Subversion runs SSH with the -q option by default. "
+                    "This may suppress some SSH error messages. "
+                    "To better debug SSH connection problems, set "
+                    "'ssh = $SVN_SSH ssh' (without a -q option) "
+                    "in the [tunnels] section of %s"),
+                  config_path);
+          return svn_error_quick_wrap(err, msg);
+        }
+    }
   return SVN_NO_ERROR;
 }
 
