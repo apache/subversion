@@ -1819,6 +1819,7 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
   const apr_array_header_t *children;
   apr_uint64_t id;
   svn_skel_t *work_item;
+  svn_boolean_t locked_here;
   int i;
 
   SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
@@ -1851,7 +1852,10 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
         SVN_ERR(svn_wc__release_write_lock(wc_ctx, child_abspath, iterpool));
     }
 
-  SVN_ERR(svn_wc__db_wclock_remove(wc_ctx->db, local_abspath, iterpool));
+  SVN_ERR(svn_wc__db_temp_own_lock(&locked_here, wc_ctx->db, local_abspath,
+                                   iterpool));
+  if (locked_here)
+    SVN_ERR(svn_wc__db_wclock_remove(wc_ctx->db, local_abspath, iterpool));
 
   svn_pool_destroy(iterpool);
 

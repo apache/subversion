@@ -524,8 +524,8 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
 
 /**
  * Recursively release write locks for @a local_abspath, using @a wc_ctx
- * for working copy access.  Locks are not removed if work queue items are
- * present.  Only the @c db member of @c wc_ctx is used.
+ * for working copy access.  Only locks held by @a wc_ctx are released.
+ * Locks are not removed if work queue items are present.
  */
 svn_error_t *
 svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
