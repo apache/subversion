@@ -283,13 +283,13 @@ Candidate changes:
      +1: cmpilato (r917640 only)
      +1: lgo
 
- * r922516, r922533
+ * r922516
    Tell svn+ssh:// users how to get error messages from ssh when there
    is a connection problem.
    Justification:
      Not everyone realises that svn passes the -q option to ssh by default.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
