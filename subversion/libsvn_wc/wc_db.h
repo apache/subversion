@@ -2048,6 +2048,15 @@ svn_wc__db_temp_op_set_working_last_change(svn_wc__db_t *db,
                                            const char *changed_author,
                                            apr_pool_t *scratch_pool);
 
+/* Update the BASE_NODE of directory LOCAL_ABSPATH to be NEW_REPOS_RELPATH
+   at revision NEW_REV with status incomplete. */
+svn_error_t *
+svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
+                                          const char *local_abspath,
+                                          const char* new_repos_relpath,
+                                          svn_revnum_t new_rev,
+                                          apr_pool_t *scratch_pool);
+
 /** @} */
 
 

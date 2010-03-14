@@ -6350,3 +6350,91 @@ svn_wc__db_temp_op_set_working_last_change(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+
+struct start_directory_update_baton
+{
+  svn_wc__db_t *db;
+  const char *local_abspath;
+  apr_int64_t wc_id;
+  const char *local_relpath;
+  svn_revnum_t new_rev;
+  const char *new_repos_relpath;
+};
+
+static svn_error_t *
+start_directory_update_txn(void *baton,
+                           svn_sqlite__db_t *db,
+                           apr_pool_t *scratch_pool)
+{
+  struct start_directory_update_baton *du = baton;
+  const char *repos_relpath;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, NULL, NULL,
+                                     du->db, du->local_abspath,
+                                     scratch_pool, scratch_pool));
+
+  if (strcmp(du->new_repos_relpath, repos_relpath) == 0)
+    {
+      /* Just update revision and status */
+      SVN_ERR(svn_sqlite__get_statement(
+                        &stmt, db,
+                        STMT_UPDATE_BASE_PRESENCE_AND_REVNUM));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "isti",
+                                du->wc_id,
+                                du->local_relpath,
+                                presence_map, svn_wc__db_status_incomplete,
+                                (apr_int64_t)du->new_rev));
+    }
+  else
+    {
+      /* ### TODO: Maybe check if we can make repos_relpath NULL. */
+      SVN_ERR(svn_sqlite__get_statement(
+                        &stmt, db,
+                        STMT_UPDATE_BASE_PRESENCE_REVNUM_AND_REPOS_RELPATH));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "istis",
+                                du->wc_id,
+                                du->local_relpath,
+                                presence_map, svn_wc__db_status_incomplete,
+                                (apr_int64_t)du->new_rev,
+                                du->new_repos_relpath));
+    }
+
+  return svn_error_return(svn_sqlite__step_done(stmt));
+}
+
+svn_error_t *
+svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
+                                          const char *local_abspath,
+                                          const char* new_repos_relpath,
+                                          svn_revnum_t new_rev,
+                                          apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  struct start_directory_update_baton du;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(new_rev));
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(new_repos_relpath, scratch_pool));
+
+  SVN_ERR(parse_local_abspath(&pdh, &du.local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  du.db = db;
+  du.wc_id = pdh->wcroot->wc_id;
+  du.local_abspath = local_abspath;
+  du.new_rev = new_rev;
+  du.new_repos_relpath = new_repos_relpath;
+
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                       start_directory_update_txn, &du,
+                                       scratch_pool));
+
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
+}
