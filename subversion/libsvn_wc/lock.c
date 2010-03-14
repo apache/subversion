@@ -1789,8 +1789,19 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
       SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, child_abspath, FALSE,
                                    iterpool));
       if (kind == svn_wc__db_kind_dir)
-        SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, child_abspath,
-                                           NULL, iterpool));
+        {
+          err = svn_wc__acquire_write_lock(NULL, wc_ctx, child_abspath, NULL,
+                                           iterpool);
+          if (err && err->apr_err == SVN_ERR_WC_LOCKED)
+            {
+              svn_error_t *err2 = svn_wc__release_write_lock(wc_ctx,
+                                                             child_abspath,
+                                                             iterpool);
+              if (err2)
+                svn_error_compose(err, err2);
+              return svn_error_return(err);
+            }
+        }
     }
 
   /* We don't want to try and lock an unversioned directory that
