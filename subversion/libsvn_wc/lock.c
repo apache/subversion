@@ -1794,11 +1794,19 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
                                            iterpool);
           if (err && err->apr_err == SVN_ERR_WC_LOCKED)
             {
-              svn_error_t *err2 = svn_wc__release_write_lock(wc_ctx,
-                                                             child_abspath,
-                                                             iterpool);
-              if (err2)
-                svn_error_compose(err, err2);
+              while(i >= 0)
+                {
+                  svn_error_t *err2;
+                  svn_pool_clear(iterpool);
+                  child_relpath = APR_ARRAY_IDX(children, i, const char *);
+                  child_abspath = svn_dirent_join(local_abspath, child_relpath,
+                                                  iterpool);
+                   err2 = svn_wc__release_write_lock(wc_ctx, child_abspath,
+                                                     iterpool);
+                   if (err2)
+                     svn_error_compose(err, err2);
+                   --i;
+                }
               return svn_error_return(err);
             }
         }
