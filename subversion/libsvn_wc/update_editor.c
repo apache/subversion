@@ -2924,25 +2924,7 @@ add_directory(const char *path,
      entries. */
   if (pb->in_deleted_and_tree_conflicted_subtree)
     {
-      svn_wc_entry_t tmp_entry;
-      apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE;
-
-      tmp_entry.schedule = svn_wc_schedule_delete;
-
-      /* Mark PATH as scheduled for deletion in its parent. */
-      SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath,
-                                    svn_node_dir, TRUE,
-                                    &tmp_entry, modify_flags, pool));
-
-      /* ### HACK: Remove the incomplete status or the next entry_modify2
-                    will move the incomplete status to WORKING_NODE */
-      SVN_ERR(svn_wc__db_temp_op_set_base_incomplete(eb->db, db->local_abspath,
-                                                     FALSE, pool));
-
-      /* Mark PATH's 'this dir' entry as scheduled for deletion. */
-      SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath,
-                                    svn_node_dir, FALSE,
-                                    &tmp_entry, modify_flags, pool));
+      SVN_ERR(svn_wc__db_temp_op_delete(eb->db, db->local_abspath, pool));
     }
 
   /* If this add was obstructed by dir scheduled for addition without
