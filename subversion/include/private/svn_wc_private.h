@@ -504,11 +504,10 @@ svn_wc__node_get_lock_token(const char **lock_token,
  * and return the anchor path in @a *anchor_abspath.  Use @a wc_ctx
  * for working copy access.
  *
- * Returns @c SVN_ERR_WC_LOCKED an existing lock is encountered, but
- * may have set locks of it's own; it's not clear how the caller is
- * expected to handle this.
+ * Returns @c SVN_ERR_WC_LOCKED if an existing lock is encountered, in
+ * which case any locks acquired will have been released.
  *
- * If @a *anchor_abspath is not NULL it will be set evenwhen
+ * If @a *anchor_abspath is not NULL it will be set even when
  * SVN_ERR_WC_LOCKED is returned.
  *
  * ### @a anchor_abspath should be removed when we move to centralised

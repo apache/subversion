@@ -1098,7 +1098,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   apr_hash_t *tempfiles = NULL;
   apr_hash_t *checksums;
   apr_array_header_t *commit_items;
-  svn_error_t *lock_err;
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
   svn_error_t *bump_err = SVN_NO_ERROR, *cleanup_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
@@ -1155,10 +1154,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
         }
     }
 
-  if ((lock_err = svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, base_dir,
-                                             pool, pool)))
-    return svn_error_return(svn_error_compose_create(lock_err,
-                     svn_wc__release_write_lock(ctx->wc_ctx, base_dir, pool)));
+  SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, base_dir, pool, pool));
 
   /* One day we might support committing from multiple working copies, but
      we don't yet.  This check ensures that we don't silently commit a
