@@ -336,7 +336,11 @@ struct dir_baton
   svn_depth_t ambient_depth;
 
   /* Was the directory marked as incomplete before the update?
-     (In other words, are we resuming an interrupted update?) */
+     (In other words, are we resuming an interrupted update?)
+
+     If WAS_INCOMPLETE is set to TRUE we expect to receive all child nodes
+     and properties for/of the directory. If WAS_INCOMPLETE is FALSE then
+     we only receive the changes in/for children and properties.*/
   svn_boolean_t was_incomplete;
 
   /* The pool in which this baton itself is allocated. */
@@ -1334,6 +1338,37 @@ set_target_revision(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
+/* Mark directory as being NEW_RELPATH at NEW_REV, but incomplete. */
+static svn_error_t *
+start_directory_update(svn_wc__db_t *db,
+                       const char *local_dir_abspath,
+                       const char *new_relpath,
+                       svn_revnum_t new_rev,
+                       apr_pool_t *scratch_pool)
+{
+  svn_wc_entry_t tmp_entry;
+  const char *repos_root;
+
+  SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root, NULL, db,
+                                     local_dir_abspath, scratch_pool,
+                                     scratch_pool));
+
+  tmp_entry.revision = new_rev;
+  tmp_entry.url = svn_path_url_add_component2(repos_root, new_relpath,
+                                              scratch_pool);
+
+  SVN_ERR(svn_wc__entry_modify2(db, local_dir_abspath, svn_node_dir,
+                                FALSE, &tmp_entry,
+                                SVN_WC__ENTRY_MODIFY_REVISION
+                                | SVN_WC__ENTRY_MODIFY_URL,
+                                scratch_pool));
+
+  SVN_ERR(svn_wc__db_temp_op_set_base_incomplete(db, local_dir_abspath,
+                                                 TRUE, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* An svn_delta_editor_t function. */
 static svn_error_t *
@@ -1395,11 +1430,8 @@ open_root(void *edit_baton,
   if (! *eb->target_basename)
     {
       /* For an update with a NULL target, this is equivalent to open_dir(): */
-      svn_wc_entry_t tmp_entry;
       svn_depth_t depth;
       svn_wc__db_status_t status;
-      apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
-        SVN_WC__ENTRY_MODIFY_URL;
 
       /* Read the depth from the entry. */
       SVN_ERR(svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1410,17 +1442,9 @@ open_root(void *edit_baton,
 
       /* ### TODO: Skip if inside a conflicted tree. */
 
-      /* Mark directory as being at target_revision, but incomplete. */
-      tmp_entry.revision = *(eb->target_revision);
-      tmp_entry.url = svn_path_url_add_component2(eb->repos_root,
-                                                  db->new_relpath, pool);
-      SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath, svn_node_dir,
-                                    FALSE,
-                                    &tmp_entry, flags,
-                                    pool));
-
-      SVN_ERR(svn_wc__db_temp_op_set_base_incomplete(eb->db, db->local_abspath,
-                                                     TRUE, pool));
+      SVN_ERR(start_directory_update(eb->db, db->local_abspath,
+                                     db->new_relpath, *eb->target_revision,
+                                     pool));
     }
 
   return SVN_NO_ERROR;
@@ -2987,9 +3011,6 @@ open_directory(const char *path,
 {
   struct dir_baton *db, *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  svn_wc_entry_t tmp_entry;
-  apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
-    SVN_WC__ENTRY_MODIFY_URL;
   svn_boolean_t base_shadowed;
   svn_boolean_t already_conflicted;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
@@ -3101,17 +3122,8 @@ open_directory(const char *path,
     }
 
   /* Mark directory as being at target_revision and URL, but incomplete. */
-  tmp_entry.revision = *(eb->target_revision);
-  tmp_entry.url = svn_path_url_add_component2(eb->repos_root, db->new_relpath,
-                                              pool);
-
-  SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath,
-                                svn_node_dir, FALSE,
-                                &tmp_entry, flags,
-                                pool));
-
-  SVN_ERR(svn_wc__db_temp_op_set_base_incomplete(eb->db, db->local_abspath,
-                                                 TRUE, pool));
+  SVN_ERR(start_directory_update(eb->db, db->local_abspath, db->new_relpath,
+                                 *eb->target_revision, pool));
 
   return SVN_NO_ERROR;
 }
