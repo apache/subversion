@@ -2057,10 +2057,10 @@ node_already_conflicted(svn_boolean_t *conflicted,
 
 
 /* A walk baton for schedule_existing_item_for_re_add()'s call
-   to svn_wc_walk_entries3(). */
+   to svn_wc__internal_walk_children(). */
 struct set_copied_baton_t
 {
-  struct edit_baton *eb;
+  svn_wc__db_t *db;
 
   /* The PATH arg to schedule_existing_item_for_re_add(). */
   const char *added_subtree_root_path;
@@ -2086,7 +2086,7 @@ set_copied_callback(const char *local_abspath,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               b->eb->db, local_abspath,
+                               b->db, local_abspath,
                                scratch_pool, scratch_pool));
 
   if (kind == svn_wc__db_kind_dir)
@@ -2102,7 +2102,7 @@ set_copied_callback(const char *local_abspath,
 
           /* Set the 'copied' flag and write the entry out to disk. */
           tmp_entry.copied = TRUE;
-          SVN_ERR(svn_wc__entry_modify2(b->eb->db,
+          SVN_ERR(svn_wc__entry_modify2(b->db,
                                         local_abspath,
                                         svn_node_dir,
                                         TRUE,
@@ -2124,12 +2124,12 @@ set_copied_callback(const char *local_abspath,
 
       /* We switch the node from BASE to WORKING.. We have to move the
          properties with it */
-      SVN_ERR(svn_wc__db_read_pristine_props(&props, b->eb->db, local_abspath,
+      SVN_ERR(svn_wc__db_read_pristine_props(&props, b->db, local_abspath,
                                              scratch_pool, scratch_pool));
 
       /* Set the 'copied' flag and write the entry out to disk. */
       tmp_entry.copied = TRUE;
-      SVN_ERR(svn_wc__entry_modify2(b->eb->db,
+      SVN_ERR(svn_wc__entry_modify2(b->db,
                                     local_abspath,
                                     kind == svn_wc__db_kind_dir
                                       ? svn_node_dir
@@ -2139,15 +2139,17 @@ set_copied_callback(const char *local_abspath,
                                     SVN_WC__ENTRY_MODIFY_COPIED,
                                     scratch_pool));
 
-      SVN_ERR(svn_wc__db_temp_op_set_pristine_props(b->eb->db, local_abspath, props,
+      SVN_ERR(svn_wc__db_temp_op_set_pristine_props(b->db, local_abspath, props,
                                                     TRUE, scratch_pool));
     }
   return SVN_NO_ERROR;
 }
 
-/* Schedule the WC item LOCAL_ABSPATH, whose entry is ENTRY, for re-addition.
+/* Schedule the WC item LOCAL_ABSPATH for re-addition by copying its BASE_NODE
+ * information to WORKING_NODE where necessary.
+ *.
  * If MODIFY_COPYFROM is TRUE, re-add the item as a copy with history
- * of (ENTRY->url)@(ENTRY->rev).
+ * of node-url@node-rev.
  * Assume that the item exists locally and is scheduled as still existing with
  * some local modifications relative to its (old) base, but does not exist in
  * the repository at the target revision.
@@ -2162,12 +2164,10 @@ set_copied_callback(const char *local_abspath,
  * other words, that's the new repos-relpath the node would have if it were
  * not deleted.
  *
- * Make changes to entries immediately, not loggily, because that is easier
- * to keep track of when multiple directories are involved.
- *  */
+ * Make changes immediately, not loggily, because that is easier to keep
+ * track of when multiple directories are involved. */
 static svn_error_t *
-schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
-                                  struct edit_baton *eb,
+schedule_existing_item_for_re_add(svn_wc__db_t *db,
                                   const char *local_abspath,
                                   const char *their_repos_relpath,
                                   svn_boolean_t modify_copyfrom,
@@ -2176,14 +2176,33 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = 0;
   apr_hash_t *props;
+  const svn_wc_entry_t *entry;
+  const char *repos_root;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc__db_read_pristine_props(&props, eb->db, local_abspath,
+  SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root, NULL, db, local_abspath,
+                                     pool, pool));
+
+  err = svn_wc__get_entry(&entry, db, local_abspath,
+                          FALSE /* allow_unversioned */, svn_node_unknown,
+                          TRUE /* need_parent_stub */, pool, pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
+        return svn_error_return(err);
+
+      /* The node was a file, and we got the "real" entry, not the stub.
+         That is just what we'd like.  */
+      svn_error_clear(err);
+    }
+
+  SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
                                          pool, pool));
 
   /* Update the details of the base rev/url to reflect the incoming
    * delete, while leaving the working version as it is, scheduling it
    * for re-addition unless it was already non-existent. */
-  tmp_entry.url = svn_path_url_add_component2(eb->repos_root,
+  tmp_entry.url = svn_path_url_add_component2(repos_root,
                                               their_repos_relpath, pool);
   flags |= SVN_WC__ENTRY_MODIFY_URL;
 
@@ -2205,14 +2224,14 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
   /* ### Need to change the "base" into a "revert-base" ? */
 
   /* Determine which adm dir holds this node's entry */
-  SVN_ERR(svn_wc__entry_modify2(eb->db,
+  SVN_ERR(svn_wc__entry_modify2(db,
                                 local_abspath,
                                 entry->kind,
                                 FALSE,
                                 &tmp_entry,
                                 flags, pool));
 
-  SVN_ERR(svn_wc__db_temp_op_set_pristine_props(eb->db, local_abspath, props,
+  SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath, props,
                                                 TRUE, pool));
 
   /* If it's a directory, set the 'copied' flag recursively. The rest of the
@@ -2226,9 +2245,9 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
 
       /* Set the 'copied' flag recursively, to support the
        * cases where this is a directory. */
-      set_copied_baton.eb = eb;
+      set_copied_baton.db = db;
       set_copied_baton.added_subtree_root_path = local_abspath;
-      SVN_ERR(svn_wc__internal_walk_children(eb->db, local_abspath, FALSE,
+      SVN_ERR(svn_wc__internal_walk_children(db, local_abspath, FALSE,
                                              set_copied_callback,
                                              &set_copied_baton,
                                              svn_depth_infinity,
@@ -2237,7 +2256,7 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
       /* If PATH is a directory then we must also record in PARENT_PATH's
          entry that we are re-adding PATH. */
       flags &= ~SVN_WC__ENTRY_MODIFY_URL;
-      SVN_ERR(svn_wc__entry_modify2(eb->db, local_abspath, svn_node_dir, TRUE,
+      SVN_ERR(svn_wc__entry_modify2(db, local_abspath, svn_node_dir, TRUE,
                                    &tmp_entry, flags, pool));
 
       /* ### Need to do something more, such as change 'base' into
@@ -2265,29 +2284,14 @@ do_entry_deletion(struct edit_baton *eb,
                   svn_boolean_t in_deleted_and_tree_conflicted_subtree,
                   apr_pool_t *pool)
 {
-  svn_error_t *err;
-  const svn_wc_entry_t *entry;
+  svn_wc__db_kind_t kind;
   svn_boolean_t already_conflicted;
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
   svn_wc_conflict_description2_t *tree_conflict = NULL;
   const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
   svn_boolean_t hidden;
 
-  /* ### hmm. in case we need to re-add the node, we use some fields from
-     ### this entry. I believe the required fields are filled in, but getting
-     ### just the stub might be a problem.  */
-  err = svn_wc__get_entry(&entry, eb->db, local_abspath,
-                          FALSE /* allow_unversioned */, svn_node_unknown,
-                          TRUE /* need_parent_stub */, pool, pool);
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
-        return svn_error_return(err);
-
-      /* The node was a file, and we got the "real" entry, not the stub.
-         That is just what we'd like.  */
-      svn_error_clear(err);
-    }
+  SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, local_abspath, FALSE, pool));
 
   /* Is this path a conflict victim? */
   SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
@@ -2364,7 +2368,7 @@ do_entry_deletion(struct edit_baton *eb,
           SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
           SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
 
-          SVN_ERR(schedule_existing_item_for_re_add(entry, eb, local_abspath,
+          SVN_ERR(schedule_existing_item_for_re_add(eb->db, local_abspath,
                                                     their_relpath, TRUE,
                                                     pool));
           return SVN_NO_ERROR;
@@ -2393,7 +2397,7 @@ do_entry_deletion(struct edit_baton *eb,
           SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
           SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
 
-          SVN_ERR(schedule_existing_item_for_re_add(entry, eb, local_abspath,
+          SVN_ERR(schedule_existing_item_for_re_add(eb->db, local_abspath,
                                                     their_relpath, FALSE,
                                                     pool));
           return SVN_NO_ERROR;
@@ -2419,7 +2423,11 @@ do_entry_deletion(struct edit_baton *eb,
       tmp_entry.revision = *(eb->target_revision);
       /* ### Why not URL as well? This might be a switch. ... */
       /* tmp_entry.url = *(eb->target_url) or db->new_URL ? */
-      tmp_entry.kind = entry->kind;
+      if (kind == svn_wc__db_kind_dir)
+        tmp_entry.kind = svn_node_dir;
+      else /* kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink*/
+        tmp_entry.kind = svn_node_file;
+
       tmp_entry.deleted = TRUE;
 
       SVN_ERR(svn_wc__loggy_entry_modify(&log_item,
@@ -2452,7 +2460,7 @@ do_entry_deletion(struct edit_baton *eb,
        * the log item is to remove the entry in the parent directory.
        */
 
-      if (entry->kind == svn_node_dir)
+      if (kind == svn_wc__db_kind_dir)
         {
           SVN_ERR(leftmod_error_chain(
                     svn_wc__internal_remove_from_revision_control(
