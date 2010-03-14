@@ -243,6 +243,14 @@ where wc_id = ?1 and local_relpath = ?2;
 update working_node set presence = ?3
 where wc_id = ?1 and local_relpath =?2;
 
+-- STMT_UPDATE_BASE_PRESENCE_AND_REVNUM
+update base_node set presence = ?3, revnum = ?4
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_BASE_PRESENCE_REVNUM_AND_REPOS_RELPATH
+update base_node set presence = ?3, revnum = ?4, repos_relpath = ?5
+where wc_id = ?1 and local_relpath = ?2;
+
 -- STMT_LOOK_FOR_WORK
 SELECT id FROM WORK_QUEUE LIMIT 1;
 
