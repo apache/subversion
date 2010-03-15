@@ -1057,7 +1057,8 @@ svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
 /* OP_POSTCOMMIT  */
 
 
-/* If new text was committed, then replace the text base for
+/* If new text was committed (which is determined by the existence of
+ * a new post-commit text base), then replace the text base for
  * newly-committed file FILE_ABSPATH with the new
  * post-commit text base, which is waiting in the adm tmp area in
  * detranslated form.
@@ -1068,10 +1069,15 @@ svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
  * current working file -- if they are the same, do nothing, to avoid
  * clobbering timestamps unnecessarily).
  *
- * If the executable property is set, the set working file's
- * executable.
+ * Set the working file's executability according to its svn:executable
+ * property, or, if REMOVE_EXECUTABLE is TRUE, set it to not executable.
  *
- * If the working file was re-translated or had executability set,
+ * Set the working file's read-only attribute according to its properties
+ * and lock status (see svn_wc__maybe_set_read_only()), or, if
+ * REMOVE_READ_ONLY is TRUE, set it to writable.
+ *
+ * If the working file was re-translated or had its executability or
+ * read-only state changed,
  * then set OVERWROTE_WORKING to TRUE.  If the working file isn't
  * touched at all, then set to FALSE.
  *
@@ -1098,7 +1104,8 @@ install_committed_file(svn_boolean_t *overwrote_working,
    * canonicalized and/or contracted... Or they may not have
    * been.  It's kind of hard to know.  Here's how we find out:
    *
-   *    1. Make a translated tmp copy of the committed text base.
+   *    1. Make a translated tmp copy of the committed text base,
+   *       translated according to the versioned file's properties.
    *       Or, if no committed text base exists (the commit must have
    *       been a propchange only), make a translated tmp copy of the
    *       working file.
@@ -1153,6 +1160,8 @@ install_committed_file(svn_boolean_t *overwrote_working,
         SVN_ERR(svn_io_set_file_executable(file_abspath,
                                            FALSE, /* chmod -x */
                                            FALSE, scratch_pool));
+      /* ### We should avoid setting 'overwrote_working' here if we didn't
+       * change the executability. */
       *overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
     }
   else
@@ -1172,6 +1181,8 @@ install_committed_file(svn_boolean_t *overwrote_working,
       if (same)
         SVN_ERR(svn_io_set_file_read_write(file_abspath, FALSE,
                                            scratch_pool));
+      /* ### We should avoid setting 'overwrote_working' here if we didn't
+       * change the read-only-ness. */
       *overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
     }
   else
