@@ -93,27 +93,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r880552
-   Try to enable TCP keep-alives in svnserve.
-   Justification:
-     ra_svn clients do this, too. It should not do any harm.
-     Is likely to fix hanging svnserve processes which still linger
-     blocking on reads from sockets after days of inactivity on the
-     connection, a problem seen and reported by MPlayer developers in #svn.
-   Votes:
-     +1: stsp, rhuijben
-
- * r892050, 892085
-   Fix a reintegrate bug which can occur when the merge source has mergeinfo
-   that explicitly describes common history with the reintegrate target.
-   Justification:
-     Reintegrate merges may not work if the reintegrate source has self-
-     referential mergeinfo that is also self-referential to the reintegrate
-     target.  This occured in our own repository, see
-     http://svn.haxx.se/dev/archive-2009-12/0338.shtml.
-   Votes:
-     +1: pburba, rhuijben
-
  * r891672
    Fix issue #3552 - File external from URL cannot overwrite the existing
    versioned item
@@ -126,7 +105,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-r891672
    Votes:
-     +1: stylesen
+     +1: stylesen, cmpilato
 
  * r896915
    On Windows, stop retrying a move operation without looking to the
@@ -135,7 +114,7 @@ Candidate changes:
      Without this patch the initial move error is lost, which makes it
      impossible to diagnose the real error.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, cmpilato
 
  * r898048
    Extend the Windows only, crypto api verification of server certificates
@@ -156,7 +135,7 @@ Candidate changes:
    Justification:
      APIs should do what they say they do.
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato
  
  * r904301, r904394
    Update every occurence of the Subversion repository URL to apache.org,
@@ -164,33 +143,16 @@ Candidate changes:
    Justification:
      Tools and doc references should point at the new locations.
    Votes:
-     +1: neels
-
- * r904594
-   Update 'svnadmin verify' to recognize malformed/missing revprops files
-   Justification:
-     It's misleading for 'svnadmin verify' to say a repository is fine
-     when in reality it isn't.
-   Votes:
-     +1: jwhitlock, danielsh
+     +1: neels, cmpilato
 
  * r905303
    Make 'svnadmin hotcopy' copy fsfs.conf for FSFS repositories.
    Justification:
      svnadmin hotcopy is supposed to copy all files.
    Votes:
-     +1: stsp
+     +1: stsp, cmpilato
 
- * r905326
-   Issue #3561: Teach ra_serf the same out-of-date fix we taught ra_neon.
-   Justification:
-     Feature parity with ra_neon is goodness and fixes real-world issue.
-   Branch:
-     ^/subversion/branches/1.6.x-r905326
-   Votes:
-     +1: jerenkrantz, kameshj
-
- * r906256, 906305
+ * r906256, r906305
    Fix issue #3573 'local non-inheritable mergeinfo changes not properly
    merged with updated mergeinfo'
    Notes:
@@ -202,7 +164,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-issue3573
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato
 
  * r877016, r902093
    Fix issue #3390 'relative externals not updated during switch'.
@@ -223,7 +185,7 @@ Candidate changes:
      managed by an svn client from trunk. This is for developer convenience,
      it does not make a difference for users.
    Votes:
-     +1: stsp
+     +1: stsp, cmpilato
 
  * ^/subversion/branches/1.6.x-issue-3242-partial
    Merge a portion of the issue 3242 work, specifically the bit that
@@ -280,16 +242,7 @@ Candidate changes:
      Users are assuming that this works (and trying to employ the
      functionality in pre-commit hooks), but it clearly doesn't.
    Votes:
-     +1: cmpilato (r917640 only)
-     +1: lgo
-
- * r922516
-   Tell svn+ssh:// users how to get error messages from ssh when there
-   is a connection problem.
-   Justification:
-     Not everyone realises that svn passes the -q option to ssh by default.
-   Votes:
-     +1: stsp, rhuijben
+     +1: cmpilato, lgo
 
 Veto-blocked changes:
 =====================
@@ -338,3 +291,50 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r880552
+   Try to enable TCP keep-alives in svnserve.
+   Justification:
+     ra_svn clients do this, too. It should not do any harm.
+     Is likely to fix hanging svnserve processes which still linger
+     blocking on reads from sockets after days of inactivity on the
+     connection, a problem seen and reported by MPlayer developers in #svn.
+   Votes:
+     +1: stsp, rhuijben, cmpilato
+
+ * r892050, 892085
+   Fix a reintegrate bug which can occur when the merge source has mergeinfo
+   that explicitly describes common history with the reintegrate target.
+   Justification:
+     Reintegrate merges may not work if the reintegrate source has self-
+     referential mergeinfo that is also self-referential to the reintegrate
+     target.  This occured in our own repository, see
+     http://svn.haxx.se/dev/archive-2009-12/0338.shtml.
+   Votes:
+     +1: pburba, rhuijben, cmpilato
+
+ * r904594
+   Update 'svnadmin verify' to recognize malformed/missing revprops files
+   Justification:
+     It's misleading for 'svnadmin verify' to say a repository is fine
+     when in reality it isn't.
+   Votes:
+     +1: jwhitlock, danielsh, cmpilato
+
+ * r905326
+   Issue #3561: Teach ra_serf the same out-of-date fix we taught ra_neon.
+   Justification:
+     Feature parity with ra_neon is goodness and fixes real-world issue.
+   Branch:
+     ^/subversion/branches/1.6.x-r905326
+   Votes:
+     +1: jerenkrantz, kameshj, cmpilato
+
+ * r922516
+   Tell svn+ssh:// users how to get error messages from ssh when there
+   is a connection problem.
+   Justification:
+     Not everyone realises that svn passes the -q option to ssh by default.
+   Votes:
+     +1: stsp, rhuijben, cmpilato
+
