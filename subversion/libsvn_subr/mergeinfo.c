@@ -992,7 +992,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                 {
                   /* Partial overlap. */
                   svn_merge_range_t tmp_range;
-                  tmp_range.start = MAX(elt1->start, elt2->start;)
+                  tmp_range.start = MAX(elt1->start, elt2->start);
                   tmp_range.end = elt2->end;
                   /* The intersection of two ranges is non-inheritable only
                      if both ranges are non-inheritable. */
