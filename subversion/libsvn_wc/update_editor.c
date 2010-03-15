@@ -2055,217 +2055,6 @@ node_already_conflicted(svn_boolean_t *conflicted,
   return SVN_NO_ERROR;
 }
 
-
-/* A walk baton for schedule_existing_item_for_re_add()'s call
-   to svn_wc__internal_walk_children(). */
-struct set_copied_baton_t
-{
-  svn_wc__db_t *db;
-
-  /* The PATH arg to schedule_existing_item_for_re_add(). */
-  const char *added_subtree_root_path;
-};
-
-/* An svn_wc__node_found_func_t callback function.
- * Set the 'copied' flag on the given ENTRY for every PATH
- * under ((set_copied_baton_t *)WALK_BATON)->ADDED_SUBTREE_ROOT_PATH
- * which has a normal schedule. */
-static svn_error_t *
-set_copied_callback(const char *local_abspath,
-                    void *walk_baton,
-                    apr_pool_t *scratch_pool)
-{
-  struct set_copied_baton_t *b = walk_baton;
-  svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
-
-  if (strcmp(local_abspath, b->added_subtree_root_path) == 0)
-    return SVN_NO_ERROR; /* Don't touch the root */
-
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               b->db, local_abspath,
-                               scratch_pool, scratch_pool));
-
-  if (kind == svn_wc__db_kind_dir)
-    {
-      /* We don't want to mark a deleted PATH as copied.  If PATH
-         is added without history we don't want to make it look like
-         it has history.  If PATH is replaced we don't want to make
-         it look like it has history if it doesn't.  Only if PATH is
-         schedule normal do we need to mark it as copied. */
-      if (status == svn_wc__db_status_normal)
-        {
-          svn_wc_entry_t tmp_entry;
-
-          /* Set the 'copied' flag and write the entry out to disk. */
-          tmp_entry.copied = TRUE;
-          SVN_ERR(svn_wc__entry_modify2(b->db,
-                                        local_abspath,
-                                        svn_node_dir,
-                                        TRUE,
-                                        &tmp_entry,
-                                        SVN_WC__ENTRY_MODIFY_COPIED,
-                                        scratch_pool));
-        }
-    }
-
-  /* We don't want to mark a deleted PATH as copied.  If PATH
-     is added without history we don't want to make it look like
-     it has history.  If PATH is replaced we don't want to make
-     it look like it has history if it doesn't.  Only if PATH is
-     schedule normal do we need to mark it as copied. */
-  if (status == svn_wc__db_status_normal)
-    {
-      svn_wc_entry_t tmp_entry;
-      apr_hash_t *props;
-
-      /* We switch the node from BASE to WORKING.. We have to move the
-         properties with it */
-      SVN_ERR(svn_wc__db_read_pristine_props(&props, b->db, local_abspath,
-                                             scratch_pool, scratch_pool));
-
-      /* Set the 'copied' flag and write the entry out to disk. */
-      tmp_entry.copied = TRUE;
-      SVN_ERR(svn_wc__entry_modify2(b->db,
-                                    local_abspath,
-                                    kind == svn_wc__db_kind_dir
-                                      ? svn_node_dir
-                                      : svn_node_file,
-                                    FALSE,
-                                    &tmp_entry,
-                                    SVN_WC__ENTRY_MODIFY_COPIED,
-                                    scratch_pool));
-
-      SVN_ERR(svn_wc__db_temp_op_set_pristine_props(b->db, local_abspath, props,
-                                                    TRUE, scratch_pool));
-    }
-  return SVN_NO_ERROR;
-}
-
-/* Schedule the WC item LOCAL_ABSPATH for re-addition by copying its BASE_NODE
- * information to WORKING_NODE where necessary.
- *.
- * If MODIFY_COPYFROM is TRUE, re-add the item as a copy with history
- * of node-url@node-rev.
- * Assume that the item exists locally and is scheduled as still existing with
- * some local modifications relative to its (old) base, but does not exist in
- * the repository at the target revision.
- *
- * Use the local content of the item, even if it
- * If the item is a directory, recursively schedule its contents to be the
- * contents of the re-added tree, even if they are locally modified relative
- * to it.
- *
- * THEIR_REPOS_RELPATH is the deleted node's repos-relpath on the source-
- * right side, the side that the target should become after the update. In
- * other words, that's the new repos-relpath the node would have if it were
- * not deleted.
- *
- * Make changes immediately, not loggily, because that is easier to keep
- * track of when multiple directories are involved. */
-static svn_error_t *
-schedule_existing_item_for_re_add(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  const char *their_repos_relpath,
-                                  svn_boolean_t modify_copyfrom,
-                                  apr_pool_t *pool)
-{
-  svn_wc_entry_t tmp_entry;
-  apr_uint64_t flags = 0;
-  apr_hash_t *props;
-  const svn_wc_entry_t *entry;
-  const char *repos_root;
-  svn_error_t *err;
-
-  SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root, NULL, db, local_abspath,
-                                     pool, pool));
-
-  err = svn_wc__get_entry(&entry, db, local_abspath,
-                          FALSE /* allow_unversioned */, svn_node_unknown,
-                          TRUE /* need_parent_stub */, pool, pool);
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
-        return svn_error_return(err);
-
-      /* The node was a file, and we got the "real" entry, not the stub.
-         That is just what we'd like.  */
-      svn_error_clear(err);
-    }
-
-  SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
-                                         pool, pool));
-
-  /* Update the details of the base rev/url to reflect the incoming
-   * delete, while leaving the working version as it is, scheduling it
-   * for re-addition unless it was already non-existent. */
-  tmp_entry.url = svn_path_url_add_component2(repos_root,
-                                              their_repos_relpath, pool);
-  flags |= SVN_WC__ENTRY_MODIFY_URL;
-
-  /* Schedule the working version to be re-added. */
-  tmp_entry.schedule = svn_wc_schedule_add;
-  flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
-  flags |= SVN_WC__ENTRY_MODIFY_FORCE;
-
-  if (modify_copyfrom)
-    {
-      tmp_entry.copyfrom_url = entry->url;
-      flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
-      tmp_entry.copyfrom_rev = entry->revision;
-      flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
-      tmp_entry.copied = TRUE;
-      flags |= SVN_WC__ENTRY_MODIFY_COPIED;
-    }
-
-  /* ### Need to change the "base" into a "revert-base" ? */
-
-  /* Determine which adm dir holds this node's entry */
-  SVN_ERR(svn_wc__entry_modify2(db,
-                                local_abspath,
-                                entry->kind,
-                                FALSE,
-                                &tmp_entry,
-                                flags, pool));
-
-  SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath, props,
-                                                TRUE, pool));
-
-  /* If it's a directory, set the 'copied' flag recursively. The rest of the
-   * directory tree's state can stay exactly as it was before being
-   * scheduled for re-add. */
-  /* ### BH: I don't think this code handles switched subpaths, excluded
-         and absent items in any usefull way. Needs carefull redesign */
-  if (entry->kind == svn_node_dir)
-    {
-      struct set_copied_baton_t set_copied_baton;
-
-      /* Set the 'copied' flag recursively, to support the
-       * cases where this is a directory. */
-      set_copied_baton.db = db;
-      set_copied_baton.added_subtree_root_path = local_abspath;
-      SVN_ERR(svn_wc__internal_walk_children(db, local_abspath, FALSE,
-                                             set_copied_callback,
-                                             &set_copied_baton,
-                                             svn_depth_infinity,
-                                             NULL, NULL, pool));
-
-      /* If PATH is a directory then we must also record in PARENT_PATH's
-         entry that we are re-adding PATH. */
-      flags &= ~SVN_WC__ENTRY_MODIFY_URL;
-      SVN_ERR(svn_wc__entry_modify2(db, local_abspath, svn_node_dir, TRUE,
-                                   &tmp_entry, flags, pool));
-
-      /* ### Need to do something more, such as change 'base' into
-         ### 'revert-base'? */
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Delete PATH from its immediate parent PARENT_PATH, in the edit
  * represented by EB. PATH is relative to EB->anchor.
  * PARENT_PATH is relative to the current working directory.
@@ -2368,9 +2157,9 @@ do_entry_deletion(struct edit_baton *eb,
           SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
           SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
 
-          SVN_ERR(schedule_existing_item_for_re_add(eb->db, local_abspath,
-                                                    their_relpath, TRUE,
-                                                    pool));
+          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, TRUE,
+                                               pool));
+
           return SVN_NO_ERROR;
         }
       else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
@@ -2397,9 +2186,9 @@ do_entry_deletion(struct edit_baton *eb,
           SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
           SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
 
-          SVN_ERR(schedule_existing_item_for_re_add(eb->db, local_abspath,
-                                                    their_relpath, FALSE,
-                                                    pool));
+          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, TRUE,
+                                               pool));
+
           return SVN_NO_ERROR;
         }
       else
