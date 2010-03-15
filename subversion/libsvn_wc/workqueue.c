@@ -1058,7 +1058,7 @@ svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
 
 
 /* If new text was committed, then replace the text base for
- * newly-committed file NAME in directory PATH with the new
+ * newly-committed file FILE_ABSPATH with the new
  * post-commit text base, which is waiting in the adm tmp area in
  * detranslated form.
  *
@@ -1080,8 +1080,7 @@ svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
 static svn_error_t *
 install_committed_file(svn_boolean_t *overwrote_working,
                        svn_wc__db_t *db,
-                       const char *adm_abspath,
-                       const char *name,
+                       const char *file_abspath,
                        svn_boolean_t remove_executable,
                        svn_boolean_t remove_read_only,
                        apr_pool_t *scratch_pool)
@@ -1091,12 +1090,9 @@ install_committed_file(svn_boolean_t *overwrote_working,
   svn_boolean_t same, did_set;
   const char *tmp_wfile;
   svn_boolean_t special;
-  const char *file_abspath;
 
   /* start off assuming that the working file isn't touched. */
   *overwrote_working = FALSE;
-
-  file_abspath = svn_dirent_join(adm_abspath, name, scratch_pool);
 
   /* In the commit, newlines and keywords may have been
    * canonicalized and/or contracted... Or they may not have
@@ -1336,7 +1332,6 @@ log_do_committed(svn_wc__db_t *db,
     {
       svn_boolean_t overwrote_working;
       apr_finfo_t finfo;
-      const char *name = svn_dirent_basename(local_abspath, scratch_pool);
 
       SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
                                        new_revision, new_date, new_author,
@@ -1357,14 +1352,13 @@ log_do_committed(svn_wc__db_t *db,
          by then will have moved to `text-base'. */
 
       if ((err = install_committed_file(&overwrote_working, db,
-                                        svn_dirent_dirname(local_abspath,
-                                                           pool),
-                                        name,
+                                        local_abspath,
                                         remove_executable, set_read_write,
                                         pool)))
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, err,
-           _("Error replacing text-base of '%s'"), name);
+           _("Error replacing text-base of '%s'"),
+           svn_dirent_local_style(local_abspath, pool));
 
       if ((err = svn_io_stat(&finfo, local_abspath,
                              APR_FINFO_MIN | APR_FINFO_LINK, pool)))
