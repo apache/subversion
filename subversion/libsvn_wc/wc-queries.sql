@@ -329,6 +329,32 @@ SELECT wc_id, local_relpath, parent_relpath, ?3 AS presence, kind, checksum,
     symlink_target, last_mod_time FROM BASE_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_INSERT_WORKING_NODE_NORMAL_FROM_BASE_NODE
+INSERT INTO WORKING_NODE (
+    wc_id, local_relpath, parent_relpath, presence, kind, checksum,
+    translated_size, changed_rev, changed_date, changed_author, depth,
+    symlink_target, last_mod_time, properties, copyfrom_repos_id,
+    copyfrom_repos_path, copyfrom_revnum )
+SELECT wc_id, local_relpath, parent_relpath, 'normal', kind, checksum,
+    translated_size, changed_rev, changed_date, changed_author, depth,
+    symlink_target, last_mod_time, properties, repos_id,
+    repos_relpath, revnum FROM BASE_NODE
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_INSERT_WORKING_NODE_NOT_PRESENT_FROM_BASE_NODE
+INSERT INTO WORKING_NODE (
+    wc_id, local_relpath, parent_relpath, presence, kind, changed_rev,
+    changed_date, changed_author, copyfrom_repos_id,
+    copyfrom_repos_path, copyfrom_revnum )
+SELECT wc_id, local_relpath, parent_relpath, 'not-present', kind, changed_rev,
+    changed_date, changed_author, repos_id,
+    repos_relpath, revnum FROM BASE_NODE
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_COPYFROM (
+UPDATE WORKING_NODE set copyfrom_repos_id = ?3, copyfrom_repos_path = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */
