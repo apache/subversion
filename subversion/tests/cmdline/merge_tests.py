@@ -16121,6 +16121,129 @@ def merge_replace_causes_tree_conflict(sbox):
 
   actions.run_and_verify_status(wc_dir, expected_status)
 
+# Test for a reintegrate bug which can occur when the merge source
+# has mergeinfo that explicitly describes common history with the reintegrate
+# target, see http://mail-archives.apache.org/mod_mbox/subversion-dev/
+# 200912.mbox/%3C6cfe18eb0912161438wfb5234bj118aacdff7ffb25f@mail.gmail.com%3E
+def reintegrate_with_self_referential_mergeinfo(sbox):
+  "source has target's history as explicit mergeinfo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make some changes under 'A' in r2-5.
+  wc_disk, wc_status = set_up_branch(sbox, nbr_of_branches=0)
+
+  # Some paths we'll care about
+  A_path       = os.path.join(wc_dir, "A")
+  A2_path      = os.path.join(wc_dir, "A2")
+  A2_B_path    = os.path.join(wc_dir, "A2", "B")
+  A2_1_path    = os.path.join(wc_dir, "A2.1")
+  A2_1_mu_path = os.path.join(wc_dir, "A2.1", "mu")
+  
+  # r6 Copy A to A2 and then manually set some self-referential mergeinfo on
+  # A2/B and A2.
+  svntest.actions.run_and_verify_svn(None, ["At revision 5.\n"], [],
+                                     'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', A_path, A2_path)
+  # /A:3 describes A2's natural history, a.k.a. it's implicit mergeinfo, so
+  # it is self-referential.  Same for /A/B:4 and A2/B.  Normally this is
+  # redundant but not harmful.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', 'svn:mergeinfo', '/A:3', A2_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', 'svn:mergeinfo', '/A/B:4', A2_B_path)
+  svntest.actions.run_and_verify_svn(
+    None, None, [], 'ci', '-m',
+    'copy A to A2 and set some self-referential mergeinfo on the latter.',
+    wc_dir)
+
+  # r7 Copy A2 to A2.1
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', A2_path, A2_1_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'copy A2to A2.1.', wc_dir)
+
+  # r8 Make a change on A2.1/mu
+  svntest.main.file_write(A2_1_mu_path, 'New A2.1 stuff')
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Work done on the A2.1 branch.',
+                                     wc_dir)
+  
+  # Update to uniform revision and reintegrated A2.1 back to A2.
+  svntest.actions.run_and_verify_svn(None, ["At revision 8.\n"], [],
+                                     'up', wc_dir)
+
+  # Now merge all available revisions from A to A_COPY:
+  expected_output = wc.State(A2_path, {
+    'mu' : Item(status='U '),
+    })
+  expected_status = wc.State(A2_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status=' M'),
+    'mu'        : Item(status='M '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=8)
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:3\n/A2.1:7-8'}),
+    'B'         : Item(props={SVN_PROP_MERGEINFO : '/A/B:4\n/A2.1/B:7-8'}),
+    'mu'        : Item("New A2.1 stuff"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State(A2_path, { })
+  # Previously failed with this error:
+  #
+  #   svn merge ^/A2.1" A2 --reintegrate
+  #  ..\..\..\subversion\svn\merge-cmd.c:349: (apr_err=160013)
+  #  ..\..\..\subversion\libsvn_client\merge.c:9219: (apr_err=160013)
+  #  ..\..\..\subversion\libsvn_client\ra.c:728: (apr_err=160013)
+  #  ..\..\..\subversion\libsvn_client\mergeinfo.c:733: (apr_err=160013)
+  #  ..\..\..\subversion\libsvn_client\ra.c:526: (apr_err=160013)
+  #  ..\..\..\subversion\libsvn_repos\rev_hunt.c:908: (apr_err=160013)
+  #  ..\..\..\subversion\libsvn_repos\rev_hunt.c:607: (apr_err=160013)
+  #  ..\..\..\subversion\libsvn_fs_fs\tree.c:2886: (apr_err=160013)
+  #  ..\..\..\subversion\libsvn_fs_fs\tree.c:669: (apr_err=160013)
+  #  svn: File not found: revision 4, path '/A2'
+  svntest.actions.run_and_verify_merge(A2_path, None, None,
+                                       sbox.repo_url + '/A2.1',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 0, '--reintegrate')
 
 ########################################################################
 # Run the tests
@@ -16342,6 +16465,7 @@ test_list = [ None,
               # ra_serf causes duplicate notifications with this test:
               Skip(merge_replace_causes_tree_conflict,
                    svntest.main.is_ra_type_dav_serf),
+              reintegrate_with_self_referential_mergeinfo,
              ]
 
 if __name__ == '__main__':
