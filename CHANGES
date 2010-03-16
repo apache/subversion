@@ -1,3 +1,25 @@
+Version 1.6.10
+(?? ??? 2010, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.10
+
+ User-visible changes:
+  * fixes for NFS-based clients (issue #3501)
+  * enable TCP keep-alives in svnserve (r880552)
+  * tighten restrictions on revprops for 'svnadmin verify) (r904594)
+  * make ra_serf give better out-of-date information (issue #3561)
+  * marshal ssh error messages through svn+ssh:// (r922516)
+  * allow 'svn log' on an uncommitted copy/move destination (r901752)
+  * make 'svnadmin hotcopy' copy the fsfs config file (r905303)
+  * mergeinfo improvements with non-inheritable mergeinfo (issue #3573)
+  * make mergeinfo queries not require access to the repo root (issue #3242)
+  * update URLs to refer the the new apache.org repository (r904301, -94)
+  * fixed: 'svnlook plist --revprop' with '-t TXN_NAME' (r917640, -8211)
+  * fixed: file external from URL cannot overwright existing item (r891672)
+
+ Developer-visible changes:
+  * disable checks for wc-ng working copies when running the test suite
+
+
 Version 1.6.9
 (25 Jan 2010, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.9
