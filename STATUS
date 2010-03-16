@@ -237,17 +237,3 @@ Approved changes:
      resolve, I recommend a backport branch because of the volume.
    Votes:
      +1: neels, cmpilato, rhuijben
-
- * ^/subversion/branches/1.6.x-issue-3242-partial
-   Merge a portion of the issue 3242 work, specifically the bit that
-   makes mergeinfo queries in the client layer happen against the
-   current RA session URL instead of forcibly against the repository
-   root URL (which might not be readable by the user per authz
-   policy).  While this is not a full solution to issue #3242, it
-   should get us back to Subversion 1.4-level behavior which has
-   pretty consistently been deemed acceptable (enough) by our user
-   base.
-   Justification:
-     Issue #3242 is a hot issue.  Hot topic, hot tempers, etc.
-   Votes:
-     +1: cmpilato, ivan, rhuijben
