@@ -238,16 +238,6 @@ Approved changes:
    Votes:
      +1: neels, cmpilato, rhuijben
 
- * r917640, r918211
-   Correctly handle invocations of 'svnlook plist --revprop' when
-   used with '-t TXN_NAME' instead of '-r REV'.
-   r918211 adds a regression test.
-   Justification:
-     Users are assuming that this works (and trying to employ the
-     functionality in pre-commit hooks), but it clearly doesn't.
-   Votes:
-     +1: cmpilato, lgo, rhuijben
-
  * ^/subversion/branches/1.6.x-wc-ng-check-override
    Disable checks for WC-NG working copies while running the test suite.
    Justification:
