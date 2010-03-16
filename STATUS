@@ -238,13 +238,6 @@ Approved changes:
    Votes:
      +1: neels, cmpilato, rhuijben
 
- * r905303
-   Make 'svnadmin hotcopy' copy fsfs.conf for FSFS repositories.
-   Justification:
-     svnadmin hotcopy is supposed to copy all files.
-   Votes:
-     +1: stsp, cmpilato, rhuijben
-
  * r906256, r906305
    Fix issue #3573 'local non-inheritable mergeinfo changes not properly
    merged with updated mergeinfo'
