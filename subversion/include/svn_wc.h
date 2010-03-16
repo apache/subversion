@@ -6118,8 +6118,7 @@ svn_wc_diff(svn_wc_adm_access_t *anchor,
  * If @a original_props is non-@c NULL, then set @a *original_props to
  * hashtable (<tt>const char *name</tt> -> <tt>const svn_string_t *value</tt>)
  * that represents the 'pristine' property list of @a path.  This hashtable is
- * allocated in @a result_pool, and can be used to compare old and new values
- * of properties.
+ * allocated in @a result_pool.
  *
  * Use @a scratch_pool for temporary allocations.
  */

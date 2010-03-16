@@ -52,7 +52,7 @@ svn_error_t *svn_wc__has_props(svn_boolean_t *has_props,
                                apr_pool_t *pool);
 
 
-/* Internal function for diffing props. */
+/* Internal function for diffing props. See svn_wc_get_prop_diffs2(). */
 svn_error_t *
 svn_wc__internal_propdiff(apr_array_header_t **propchanges,
                           apr_hash_t **original_props,
@@ -62,7 +62,7 @@ svn_wc__internal_propdiff(apr_array_header_t **propchanges,
                           apr_pool_t *scratch_pool);
 
 
-/* Internal function for fetching a property.  */
+/* Internal function for fetching a property. See svn_wc_prop_get2(). */
 svn_error_t *
 svn_wc__internal_propget(const svn_string_t **value,
                          svn_wc__db_t *db,
@@ -72,7 +72,7 @@ svn_wc__internal_propget(const svn_string_t **value,
                          apr_pool_t *scratch_pool);
 
 
-/* Internal function for setting a property.  */
+/* Internal function for setting a property. See svn_wc_prop_set4(). */
 svn_error_t *
 svn_wc__internal_propset(svn_wc__db_t *db,
                          const char *local_abspath,
@@ -221,6 +221,9 @@ svn_wc__load_revert_props(apr_hash_t **revert_props_p,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
+/* Set *MARKED to indicate whether the versioned file at LOCAL_ABSPATH in DB
+ * has a "binary" file type, as indicated by its working svn:mime-type
+ * property. See svn_mime_type_is_binary() for the interpretation. */
 svn_error_t *
 svn_wc__marked_as_binary(svn_boolean_t *marked,
                          const char *local_abspath,
