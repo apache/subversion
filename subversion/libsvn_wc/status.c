@@ -884,6 +884,7 @@ get_dir_status(struct edit_baton *eb,
       if (prop_val)
         {
           apr_array_header_t *ext_items;
+          apr_pool_t *hash_pool = apr_hash_pool_get(eb->externals);
           int i;
 
           if (eb->traversal_info)
@@ -916,8 +917,8 @@ get_dir_status(struct edit_baton *eb,
               item = APR_ARRAY_IDX(ext_items, i, svn_wc_external_item2_t *);
               apr_hash_set(eb->externals, svn_path_join(path,
                                                         item->target_dir,
-                                                        pool),
-                           APR_HASH_KEY_STRING, item);
+                                                        hash_pool),
+                           APR_HASH_KEY_STRING, "");
             }
         }
     }
