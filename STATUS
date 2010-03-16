@@ -179,29 +179,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r878216, r878341, r878343, r876862, r877203, r877595, r877665, r877597, r878269,
-   r878321, r878399, r878423, r878426
-   Fix issue #3432 'Merge can record mergeinfo from natural history gaps'
-   Justification:
-     Gaps in merge sources can lead to the creation of invalid mergeinfo
-     or the removal of valid mergeinfo.
-   Notes:     
-     The fix itself in r878399 is relatively simple, but recent refactoring
-     of the merge code on trunk makes it look a lot worse than it is.
-     Unless otherwise noted, all of the following are nominated simply to
-     avoid a conflict nightmare:
-     r878216, r878341, r878343 - New test and test tweaks for the issue.
-     r876862 - Comment changes only.
-     r877203 - Scope reduction of a pool.
-     r877595 - Minor bug fix and some refactoring.
-     r877665 - Comment changes only.
-     r877597 - Merge code refactoring.
-     r878269 - Pool use cleanup, no functional change.
-     r878321 - More merge code refactoring.
-     r878423 - Variable rename to avoid shadowing a previous local.
-     r878426 - Remove an unused variable.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3432
-   Votes:
-     +1: pburba, stsp, rhuijben
