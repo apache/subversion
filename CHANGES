@@ -14,7 +14,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.10
   * make mergeinfo queries not require access to the repo root (issue #3242)
   * update URLs to refer the the new apache.org repository (r904301, -94)
   * fixed: 'svnlook plist --revprop' with '-t TXN_NAME' (r917640, -8211)
-  * fixed: file external from URL cannot overwright existing item (issue #3552)
+  * fixed: file external from URL cannot overwrite existing item (issue #3552)
 
  Developer-visible changes:
   * disable checks for wc-ng working copies when running the test suite
