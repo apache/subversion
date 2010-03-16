@@ -289,6 +289,15 @@ Veto-blocked changes:
      -1: stsp ("/proc/%ld/stat" is ugly and Linux-specific -
                would just getenv("WINDOWID") work instead?)
 
+ * branches/1.6.x-issue3605 (r923674 and r923679)
+   Fix pool lifetime issue in the status walker.
+   Justification:
+     Without this patch externals information is kept in a per directory pool,
+     which is cleared when the status walker goes back to the parent
+     directory. The is_external_path() function then uses freed memory.
+   Votes:
+     +1: rhuijben
+
 Approved changes:
 =================
 
