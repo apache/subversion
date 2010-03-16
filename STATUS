@@ -305,14 +305,6 @@ Approved changes:
    Votes:
      +1: pburba, rhuijben, cmpilato
 
- * r904594
-   Update 'svnadmin verify' to recognize malformed/missing revprops files
-   Justification:
-     It's misleading for 'svnadmin verify' to say a repository is fine
-     when in reality it isn't.
-   Votes:
-     +1: jwhitlock, danielsh, cmpilato
-
  * r905326
    Issue #3561: Teach ra_serf the same out-of-date fix we taught ra_neon.
    Justification:
