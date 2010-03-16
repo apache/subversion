@@ -142,7 +142,7 @@ Candidate changes:
      +1: kameshj
 
  * r916286, r917512
-   This backport depends on the above group only for the conflict free port.
+   This backport depends on the r878590 group only for the conflict free port.
    Justification:
      Vague commit error when server has been configured with <Location /svn/>
      and write through proxy.
@@ -150,7 +150,8 @@ Candidate changes:
      +1: kameshj
 
  * r917523
-   This backport depends on the above 2 groups only for the conflict free port.
+   This backport depends on the r878590 and r916286 groups only for the
+   conflict free port.
    Justification:
      If the configured slave url has the *encodable* characters *write through*
      is not happening rather commit happens in slave itself.
