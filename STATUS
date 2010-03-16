@@ -93,20 +93,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r891672
-   Fix issue #3552 - File external from URL cannot overwrite the existing
-   versioned item
-   Justification:
-     This defect affects 'subversive' client users in 1.6.x.
-   Notes:
-     The backport branch exists in order to make the patch compatible with
-     1.6.x tests. r876917 introduces 'switched' to wc status which is not 
-     available in 1.6.x.
-   Branch:
-     ^/subversion/branches/1.6.x-r891672
-   Votes:
-     +1: stylesen, cmpilato
-
  * r896915
    On Windows, stop retrying a move operation without looking to the
    initial error code. 
@@ -125,32 +111,6 @@ Candidate changes:
      It's better to be safe, when we are talking about SSL.
    Votes:
      +1: rhuijben
-
- * r901752
-   Allow 'svn log' on an uncommitted copy/move destination.
-   Notes:
-     svn_client_log5 API promises that unspecified peg revisions default
-     to svn_opt_revision_working for WC paths; prior to r901752 we were
-     not keeping this promise.
-   Justification:
-     APIs should do what they say they do.
-   Votes:
-     +1: pburba, cmpilato
- 
- * r904301, r904394
-   Update every occurence of the Subversion repository URL to apache.org,
-   except in CHANGES (for sentimental reasons, I guess).
-   Justification:
-     Tools and doc references should point at the new locations.
-   Votes:
-     +1: neels, cmpilato
-
- * r905303
-   Make 'svnadmin hotcopy' copy fsfs.conf for FSFS repositories.
-   Justification:
-     svnadmin hotcopy is supposed to copy all files.
-   Votes:
-     +1: stsp, cmpilato
 
  * r906256, r906305
    Fix issue #3573 'local non-inheritable mergeinfo changes not properly
@@ -177,15 +137,6 @@ Candidate changes:
      ^/subversion/branches/1.6.x-issue3390
    Votes:
      +1: cmpilato, stsp
-
- * ^/subversion/branches/1.6.x-wc-ng-check-override
-   Disable checks for WC-NG working copies while running the test suite.
-   Justification:
-     Allows 'make check' to succeed in working copies of the 1.6.x branch
-     managed by an svn client from trunk. This is for developer convenience,
-     it does not make a difference for users.
-   Votes:
-     +1: stsp, cmpilato
 
  * ^/subversion/branches/1.6.x-issue-3242-partial
    Merge a portion of the issue 3242 work, specifically the bit that
@@ -234,15 +185,14 @@ Candidate changes:
    Votes:
      +1: kameshj
 
- * r917640, r918211
-   Correctly handle invocations of 'svnlook plist --revprop' when
-   used with '-t TXN_NAME' instead of '-r REV'.
-   r918211 adds a regression test.
+ * branches/1.6.x-issue3605 (r923674 and r923679)
+   Fix pool lifetime issue in the status walker.
    Justification:
-     Users are assuming that this works (and trying to employ the
-     functionality in pre-commit hooks), but it clearly doesn't.
+     Without this patch externals information is kept in a per directory pool,
+     which is cleared when the status walker goes back to the parent
+     directory. The is_external_path() function then uses freed memory.
    Votes:
-     +1: cmpilato, lgo
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -286,20 +236,25 @@ Veto-blocked changes:
    Votes:
      +1: arfrever
      -0: peters
-     -1: stsp ("/proc/%ld/stat" is ugly and Linux-specific -
-               would just getenv("WINDOWID") work instead?)
-
- * branches/1.6.x-issue3605 (r923674 and r923679)
-   Fix pool lifetime issue in the status walker.
-   Justification:
-     Without this patch externals information is kept in a per directory pool,
-     which is cleared when the status walker goes back to the parent
-     directory. The is_external_path() function then uses freed memory.
-   Votes:
-     +1: rhuijben
+     -1: stsp, rhuijben ("/proc/%ld/stat" is ugly and Linux-specific -
+                         would just getenv("WINDOWID") work instead?)
 
 Approved changes:
 =================
+
+* r891672
+   Fix issue #3552 - File external from URL cannot overwrite the existing
+   versioned item
+   Justification:
+     This defect affects 'subversive' client users in 1.6.x.
+   Notes:
+     The backport branch exists in order to make the patch compatible with
+     1.6.x tests. r876917 introduces 'switched' to wc status which is not 
+     available in 1.6.x.
+   Branch:
+     ^/subversion/branches/1.6.x-r891672
+   Votes:
+     +1: stylesen, cmpilato, rhuijben
 
  * r892050, 892085
    Fix a reintegrate bug which can occur when the merge source has mergeinfo
@@ -313,3 +268,48 @@ Approved changes:
      hwright sez: Danger!  Danger!  This has merge conflicts.
    Votes:
      +1: pburba, rhuijben, cmpilato
+
+ * r901752
+   Allow 'svn log' on an uncommitted copy/move destination.
+   Notes:
+     svn_client_log5 API promises that unspecified peg revisions default
+     to svn_opt_revision_working for WC paths; prior to r901752 we were
+     not keeping this promise.
+   Justification:
+     APIs should do what they say they do.
+   Votes:
+     +1: pburba, cmpilato, rhuijben
+
+* r904301, r904394
+   Update every occurence of the Subversion repository URL to apache.org,
+   except in CHANGES (for sentimental reasons, I guess).
+   Justification:
+     Tools and doc references should point at the new locations.
+   Votes:
+     +1: neels, cmpilato, rhuijben
+
+ * r905303
+   Make 'svnadmin hotcopy' copy fsfs.conf for FSFS repositories.
+   Justification:
+     svnadmin hotcopy is supposed to copy all files.
+   Votes:
+     +1: stsp, cmpilato, rhuijben
+
+ * r917640, r918211
+   Correctly handle invocations of 'svnlook plist --revprop' when
+   used with '-t TXN_NAME' instead of '-r REV'.
+   r918211 adds a regression test.
+   Justification:
+     Users are assuming that this works (and trying to employ the
+     functionality in pre-commit hooks), but it clearly doesn't.
+   Votes:
+     +1: cmpilato, lgo, rhuijben
+
+ * ^/subversion/branches/1.6.x-wc-ng-check-override
+   Disable checks for WC-NG working copies while running the test suite.
+   Justification:
+     Allows 'make check' to succeed in working copies of the 1.6.x branch
+     managed by an svn client from trunk. This is for developer convenience,
+     it does not make a difference for users.
+   Votes:
+     +1: stsp, cmpilato, rhuijben
