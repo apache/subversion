@@ -1247,9 +1247,11 @@ log_do_committed(svn_wc__db_t *db,
 
   /*** Mark the committed item committed-to-date ***/
 
-  /* If "this dir" has been replaced (delete + add), all its
-     immmediate children *must* be either scheduled for deletion (they
-     were children of "this dir" during the "delete" phase of its
+  /* If "this dir" has been replaced (delete + add), remove those of
+     its children that are marked for deletion.
+
+     All its immmediate children *must* be either scheduled for deletion
+     (they were children of "this dir" during the "delete" phase of its
      replacement), added (they are new children of the replaced dir),
      or replaced (they are new children of the replace dir that have
      the same names as children that were present during the "delete"
@@ -1306,19 +1308,20 @@ log_do_committed(svn_wc__db_t *db,
         }
     }
 
+  /* Install the node's current working props as its new base props.
+   * Remember some details about the prop changes, for later use. */
   SVN_ERR(svn_wc__props_modified(&prop_mods, db, local_abspath, pool));
   if (prop_mods)
     {
       if (orig_entry->kind == svn_node_file)
         {
           /* Examine propchanges here before installing the new
-             propbase.  If the executable prop was -deleted-, then
-             tell install_committed_file() so.
-
-             The same applies to the needs-lock property. */
+             propbase.  If the executable prop was -deleted-, remember
+             this by setting REMOVE_EXECUTABLE so that we can later
+             tell install_committed_file() so.  The same applies to the
+             needs-lock property, remembered by setting SET_READ_WRITE. */
           int i;
           apr_array_header_t *propchanges;
-
 
           SVN_ERR(svn_wc__internal_propdiff(&propchanges, NULL, db,
                                             local_abspath, pool, pool));
@@ -1336,9 +1339,11 @@ log_do_committed(svn_wc__db_t *db,
             }
         }
 
+      /* Install LOCAL_ABSPATHs working props as base props. */
       SVN_ERR(svn_wc__working_props_committed(db, local_abspath, pool));
-  }
+    }
 
+  /* If it's a file, install the tree changes and the file's text. */
   if (orig_entry->kind == svn_node_file)
     {
       svn_boolean_t overwrote_working;
@@ -1445,6 +1450,8 @@ log_do_committed(svn_wc__db_t *db,
                                 | SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                                 pool));
     }
+
+  /* It's not a file, so it's a directory. */
 
   SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
                                    new_revision, new_date, new_author,
