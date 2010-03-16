@@ -1554,6 +1554,114 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t*
+repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
+                        const char *top_dst_path,
+                        svn_boolean_t ignore_externals,
+                        svn_ra_session_t *ra_session,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *scratch_pool)
+{
+  int i;
+  const char *src_uuid = NULL, *dst_uuid = NULL;
+  svn_boolean_t same_repositories;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  /* We've already checked for physical obstruction by a working file.
+     But there could also be logical obstruction by an entry whose
+     working file happens to be missing.*/
+  for (i = 0; i < copy_pairs->nelts; i++)
+    {
+      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
+                                                    svn_client__copy_pair_t *);
+      const svn_wc_entry_t *ent;
+      const char *dst_abspath;
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_dirent_get_absolute(&dst_abspath, pair->dst, iterpool));
+
+      SVN_ERR(svn_wc__maybe_get_entry(&ent, ctx->wc_ctx, dst_abspath,
+                                      svn_node_unknown, TRUE, FALSE,
+                                      iterpool, iterpool));
+      if (ent)
+        {
+          /* TODO(#2843): Rework the error report. Maybe we can simplify the
+             condition. Currently, the first is about hidden items and the
+             second is for missing items. */
+          if (ent->depth == svn_depth_exclude
+              || ent->absent)
+            {
+              return svn_error_createf
+                (SVN_ERR_ENTRY_EXISTS,
+                 NULL, _("'%s' is already under version control"),
+                 svn_dirent_local_style(pair->dst, iterpool));
+            }
+          else if ((ent->kind != svn_node_dir) &&
+                   (ent->schedule != svn_wc_schedule_delete)
+                   && ! ent->deleted)
+            return svn_error_createf
+              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+               _("Entry for '%s' exists (though the working file is missing)"),
+               svn_dirent_local_style(pair->dst, iterpool));
+        }
+    }
+
+  /* Decide whether the two repositories are the same or not. */
+  {
+    svn_error_t *src_err, *dst_err;
+    const char *parent;
+    const char *parent_abspath;
+
+    /* Get the repository uuid of SRC_URL */
+    src_err = svn_ra_get_uuid2(ra_session, &src_uuid, scratch_pool);
+    if (src_err && src_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
+      return svn_error_return(src_err);
+
+    /* Get repository uuid of dst's parent directory, since dst may
+       not exist.  ### TODO:  we should probably walk up the wc here,
+       in case the parent dir has an imaginary URL.  */
+    if (copy_pairs->nelts == 1)
+      parent = svn_dirent_dirname(top_dst_path, scratch_pool);
+    else
+      parent = top_dst_path;
+
+    SVN_ERR(svn_dirent_get_absolute(&parent_abspath, parent, scratch_pool));
+    dst_err = svn_client_uuid_from_path2(&dst_uuid, parent_abspath, ctx,
+                                         scratch_pool, scratch_pool);
+    if (dst_err && dst_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
+      return dst_err;
+
+    /* If either of the UUIDs are nonexistent, then at least one of
+       the repositories must be very old.  Rather than punish the
+       user, just assume the repositories are different, so no
+       copy-history is attempted. */
+    if (src_err || dst_err || (! src_uuid) || (! dst_uuid))
+      same_repositories = FALSE;
+
+    else
+      same_repositories = (strcmp(src_uuid, dst_uuid) == 0);
+  }
+
+  /* Perform the move for each of the copy_pairs. */
+  for (i = 0; i < copy_pairs->nelts; i++)
+    {
+      /* Check for cancellation */
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(repos_to_wc_copy_single(APR_ARRAY_IDX(copy_pairs, i,
+                                                    svn_client__copy_pair_t *),
+                                      same_repositories,
+                                      ignore_externals,
+                                      ra_session, ctx, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 repos_to_wc_copy(const apr_array_header_t *copy_pairs,
                  svn_boolean_t make_parents,
@@ -1562,11 +1670,10 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
                  apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
-  svn_wc_adm_access_t *adm_access;
   const char *top_src_url, *top_dst_path;
-  const char *src_uuid = NULL, *dst_uuid = NULL;
-  svn_boolean_t same_repositories;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_error_t *err1, *err2;
+  const char *anchor_abspath;
   int i;
 
   /* Get the real path for the source, based upon its peg revision. */
@@ -1670,105 +1777,15 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
                                    svn_dirent_local_style(dst_parent, pool));
         }
     }
-
-  /* Probe the wc at the longest common dst ancestor. */
-  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, top_dst_path,
-                                       TRUE, -1, ctx->cancel_func,
-                                       ctx->cancel_baton, pool));
-
-  /* We've already checked for physical obstruction by a working file.
-     But there could also be logical obstruction by an entry whose
-     working file happens to be missing.*/
-  for (i = 0; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                                    svn_client__copy_pair_t *);
-      const svn_wc_entry_t *ent;
-      const char *dst_abspath;
-
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_dirent_get_absolute(&dst_abspath, pair->dst, iterpool));
-
-      SVN_ERR(svn_wc__maybe_get_entry(&ent, ctx->wc_ctx, dst_abspath,
-                                      svn_node_unknown, TRUE, FALSE,
-                                      iterpool, iterpool));
-      if (ent)
-        {
-          /* TODO(#2843): Rework the error report. Maybe we can simplify the
-             condition. Currently, the first is about hidden items and the
-             second is for missing items. */
-          if (ent->depth == svn_depth_exclude
-              || ent->absent)
-            {
-              return svn_error_createf
-                (SVN_ERR_ENTRY_EXISTS,
-                 NULL, _("'%s' is already under version control"),
-                 svn_dirent_local_style(pair->dst, pool));
-            }
-          else if ((ent->kind != svn_node_dir) &&
-                   (ent->schedule != svn_wc_schedule_delete)
-                   && ! ent->deleted)
-            return svn_error_createf
-              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-               _("Entry for '%s' exists (though the working file is missing)"),
-               svn_dirent_local_style(pair->dst, pool));
-        }
-    }
-
-  /* Decide whether the two repositories are the same or not. */
-  {
-    svn_error_t *src_err, *dst_err;
-    const char *parent;
-    const char *parent_abspath;
-
-    /* Get the repository uuid of SRC_URL */
-    src_err = svn_ra_get_uuid2(ra_session, &src_uuid, pool);
-    if (src_err && src_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
-      return svn_error_return(src_err);
-
-    /* Get repository uuid of dst's parent directory, since dst may
-       not exist.  ### TODO:  we should probably walk up the wc here,
-       in case the parent dir has an imaginary URL.  */
-    if (copy_pairs->nelts == 1)
-      parent = svn_dirent_dirname(top_dst_path, pool);
-    else
-      parent = top_dst_path;
-
-    SVN_ERR(svn_dirent_get_absolute(&parent_abspath, parent, pool));
-    dst_err = svn_client_uuid_from_path2(&dst_uuid, parent_abspath, ctx, pool,
-                                         pool);
-    if (dst_err && dst_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
-      return dst_err;
-
-    /* If either of the UUIDs are nonexistent, then at least one of
-       the repositories must be very old.  Rather than punish the
-       user, just assume the repositories are different, so no
-       copy-history is attempted. */
-    if (src_err || dst_err || (! src_uuid) || (! dst_uuid))
-      same_repositories = FALSE;
-
-    else
-      same_repositories = (strcmp(src_uuid, dst_uuid) == 0);
-  }
-
-  /* Perform the move for each of the copy_pairs. */
-  for (i = 0; i < copy_pairs->nelts; i++)
-    {
-      /* Check for cancellation */
-      if (ctx->cancel_func)
-        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
-
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(repos_to_wc_copy_single(APR_ARRAY_IDX(copy_pairs, i,
-                                                    svn_client__copy_pair_t *),
-                                      same_repositories,
-                                      ignore_externals,
-                                      ra_session, ctx, iterpool));
-    }
-
   svn_pool_destroy(iterpool);
-  return svn_error_return(svn_wc_adm_close2(adm_access, pool));
+
+  SVN_ERR(svn_wc__acquire_write_lock(&anchor_abspath, ctx->wc_ctx, top_dst_path,
+                                     pool, pool));
+  err1 = repos_to_wc_copy_locked(copy_pairs, top_dst_path, ignore_externals,
+                                 ra_session, ctx, pool);
+  err2 = svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool);
+
+  return svn_error_compose_create(err1, err2);
 }
 
 #define NEED_REPOS_REVNUM(revision) \
