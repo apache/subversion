@@ -305,15 +305,6 @@ Approved changes:
    Votes:
      +1: pburba, rhuijben, cmpilato
 
- * r905326
-   Issue #3561: Teach ra_serf the same out-of-date fix we taught ra_neon.
-   Justification:
-     Feature parity with ra_neon is goodness and fixes real-world issue.
-   Branch:
-     ^/subversion/branches/1.6.x-r905326
-   Votes:
-     +1: jerenkrantz, kameshj, cmpilato
-
  * r922516
    Tell svn+ssh:// users how to get error messages from ssh when there
    is a connection problem.

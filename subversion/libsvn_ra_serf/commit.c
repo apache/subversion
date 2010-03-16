@@ -82,8 +82,8 @@ typedef struct {
   /* The checked-in root to base CHECKOUTs from */
   const char *checked_in_url;
 
-  /* The root baseline collection */
-  const char *baseline_url;
+  /* vcc url */
+  const char *vcc_url;  
 
   /* Deleted files - so we can detect delete+add (replace) ops. */
   apr_hash_t *deleted_entries;
@@ -248,6 +248,7 @@ create_checkout_body(void *baton,
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:href");
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:activity-set");
+  svn_ra_serf__add_tag_buckets(body_bkt, "D:apply-to-version", NULL, alloc);
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:checkout");
 
   return body_bkt;
@@ -376,7 +377,7 @@ checkout_dir(dir_context_t *dir)
    */
   if (!dir->parent_dir && !dir->commit->baseline)
     {
-      checkout_ctx->checkout_url = dir->commit->baseline_url;
+      checkout_ctx->checkout_url = dir->commit->vcc_url;
       dir->commit->baseline = checkout_ctx;
     }
   else
@@ -986,14 +987,11 @@ open_root(void *edit_baton,
 {
   commit_context_t *ctx = edit_baton;
   svn_ra_serf__options_context_t *opt_ctx;
-  svn_ra_serf__propfind_context_t *propfind_ctx;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__simple_request_context_t *mkact_ctx;
   proppatch_context_t *proppatch_ctx;
   dir_context_t *dir;
   const char *activity_str;
-  const char *vcc_url;
-  apr_hash_t *props;
   apr_hash_index_t *hi;
   svn_error_t *err;
 
@@ -1056,30 +1054,10 @@ open_root(void *edit_baton,
                                ctx->session->repos_url.hostinfo);
     }
 
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+  SVN_ERR(svn_ra_serf__discover_root(&(ctx->vcc_url), NULL,
                                      ctx->session, ctx->conn,
                                      ctx->session->repos_url.path,
                                      ctx->pool));
-
-  /* Now go fetch our VCC and baseline so we can do a CHECKOUT. */
-  props = apr_hash_make(ctx->pool);
-  propfind_ctx = NULL;
-  svn_ra_serf__deliver_props(&propfind_ctx, props, ctx->session,
-                             ctx->conn, vcc_url, SVN_INVALID_REVNUM, "0",
-                             checked_in_props, FALSE, NULL, ctx->pool);
-
-  SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, ctx->session, ctx->pool));
-
-  ctx->baseline_url = svn_ra_serf__get_ver_prop(props, vcc_url,
-                                                SVN_INVALID_REVNUM,
-                                                "DAV:", "checked-in");
-
-  if (!ctx->baseline_url)
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                              _("The OPTIONS response did not include the "
-                                "requested checked-in value"));
-    }
 
   dir = apr_pcalloc(dir_pool, sizeof(*dir));
 
