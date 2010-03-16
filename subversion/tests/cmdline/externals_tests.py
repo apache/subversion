@@ -1199,6 +1199,105 @@ def binary_file_externals(sbox):
                                         True)
 
 
+#----------------------------------------------------------------------
+
+# Issue #3552
+def wc_repos_file_externals(sbox):
+  "tag directory with file externals from wc to url"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # Add a file A/theta.
+  theta_path = os.path.join(wc_dir, 'A', 'theta')
+  svntest.main.file_write(theta_path, 'theta', 'w')
+  svntest.main.run_svn(None, 'add', theta_path)
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=2),
+    })
+
+  # Commit the new file, creating revision 2.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+
+  # Create a file external on the file A/theta
+  C = os.path.join(wc_dir, 'A', 'C')
+  external = os.path.join(C, 'theta')
+  externals_prop = "^/A/theta theta\n"
+
+  # Set and commit the property.
+  change_external(C, externals_prop)
+
+
+  # Now, /A/C/theta is designated as a file external pointing to
+  # the file /A/theta, but the external file is not there yet.
+  # Try to actually insert the external file via a verified update:
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/C/theta'      : Item(status='E '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/theta'      : Item('theta'),
+    'A/C'          : Item(props={'svn:externals':externals_prop}),
+    'A/C/theta'    : Item('theta'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'A/theta'   : Item(status='  ', wc_rev=3),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
+
+  # Copy A/C to a new tag in the repos
+  tag_url = repo_url + '/A/I'
+  svntest.main.run_svn(None, 'cp', C, tag_url, '-m', 'create tag')
+
+  # Try to actually insert the external file (A/I/theta) via a verified update:
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/I'            : Item(status='A '),
+      'A/I/theta'      : Item(status='E '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/theta'      : Item('theta'),
+    'A/C'          : Item(props={'svn:externals':externals_prop}),
+    'A/C/theta'    : Item('theta'),
+    'A/I'          : Item(props={'svn:externals':externals_prop}),
+    'A/I/theta'    : Item('theta'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
+  expected_status.add({
+    'A/theta'   : Item(status='  ', wc_rev=4),
+    'A/I'       : Item(status='  ', wc_rev=4),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        True)
+
+
 ########################################################################
 # Run the tests
 
@@ -1223,6 +1322,7 @@ test_list = [ None,
               can_place_file_external_into_dir_external,
               external_into_path_with_spaces,
               binary_file_externals,
+              wc_repos_file_externals,
              ]
 
 if __name__ == '__main__':

@@ -214,20 +214,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
-* r891672
-   Fix issue #3552 - File external from URL cannot overwrite the existing
-   versioned item
-   Justification:
-     This defect affects 'subversive' client users in 1.6.x.
-   Notes:
-     The backport branch exists in order to make the patch compatible with
-     1.6.x tests. r876917 introduces 'switched' to wc status which is not 
-     available in 1.6.x.
-   Branch:
-     ^/subversion/branches/1.6.x-r891672
-   Votes:
-     +1: stylesen, cmpilato, rhuijben
-
  * r892050, 892085
    Fix a reintegrate bug which can occur when the merge source has mergeinfo
    that explicitly describes common history with the reintegrate target.

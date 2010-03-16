@@ -461,6 +461,9 @@ harvest_committables(apr_hash_t *committables,
          svn_path_local_style(path, scratch_pool));
     }
 
+  if (entry->file_external_path && copy_mode)
+    return SVN_NO_ERROR;
+
   if (entry->kind == svn_node_dir)
     {
       /* Read the dir's own entries for use when recursing. */
