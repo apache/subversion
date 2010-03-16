@@ -225,8 +225,8 @@ Approved changes:
      referential mergeinfo that is also self-referential to the reintegrate
      target.  This occured in our own repository, see
      http://svn.haxx.se/dev/archive-2009-12/0338.shtml.
-   Notes:
-     hwright sez: Danger!  Danger!  This has merge conflicts.
+   Branch:
+     ^/subversion/branches/1.6.x-r892050
    Votes:
      +1: pburba, rhuijben, cmpilato
 
