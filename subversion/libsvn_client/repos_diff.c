@@ -51,7 +51,7 @@ struct edit_baton {
   const char *target;
 
   /* ADM_ACCESS is an access baton that includes the TARGET directory */
-  svn_wc_adm_access_t *adm_access;
+  svn_wc_context_t *wc_ctx;
 
   /* The callback and calback argument that implement the file comparison
      function */
@@ -321,56 +321,65 @@ get_dirprops_from_ra(struct dir_baton *b, svn_revnum_t base_revision)
 }
 
 
-/* Return in *LOCAL_DIR_ABSPATH the absolute path for the directory PATH by
-   searching the access baton set of ADM_ACCESS.  If ADM_ACCESS is NULL then
-   *LOCAL_DIR_ABSPATH will be NULL.  If LENIENT is TRUE then failure to find
-   an access baton will not return an error but will set *LOCAL_DIR_ABSPATH to
-   NULL instead. */
+/* Return in *LOCAL_DIR_ABSPATH the absolute path for the directory
+   PATH if PATH is a versioned directory.  If PATH is not a versioned
+   directory and LENIENT is FALSE then return an error
+   SVN_ERR_WC_NOT_WORKING_COPY.  If LENIENT is TRUE then failure to
+   find an access baton will not return an error but will set
+   *LOCAL_DIR_ABSPATH to NULL instead.
+
+   This rather odd interface was originally designed around searching
+   an access baton set. */
 static svn_error_t *
 get_dir_abspath(const char **local_dir_abspath,
-                svn_wc_adm_access_t *adm_access,
+                svn_wc_context_t *wc_ctx,
                 const char *path,
                 svn_boolean_t lenient,
                 apr_pool_t *pool)
 {
   *local_dir_abspath = NULL;
 
-  if (adm_access)
+  if (wc_ctx)
     {
-      svn_wc_adm_access_t *path_access;
-      svn_error_t *err = svn_wc_adm_retrieve(&path_access, adm_access, path,
-                                             pool);
+      svn_node_kind_t kind;
+      svn_error_t *err;
+      const char *local_abspath;
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+      err = svn_wc__node_get_kind(&kind, wc_ctx, local_abspath, FALSE, pool);
       if (err)
         {
-          if (! lenient)
+          if (lenient)
+            kind = svn_node_none;
+          else
             return svn_error_return(err);
-          svn_error_clear(err);
         }
-      else if (path_access != NULL)
-        SVN_ERR(svn_dirent_get_absolute(local_dir_abspath,
-                                        svn_wc_adm_access_path(path_access),
-                                        pool));
-
+      svn_error_clear(err);
+      if (kind == svn_node_dir)
+        *local_dir_abspath = local_abspath;
+      else if (!lenient)
+        return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                                 "'%s' is not a versioned directory",
+                                 svn_dirent_local_style(local_abspath, pool));
     }
 
   return SVN_NO_ERROR;
 }
 
-/* Like get_path_access except the returned access baton, in
-   *PARENT_ACCESS, is for the parent of PATH rather than for PATH
-   itself. */
+/* Like get_path_access except the returned path, in
+   *LOCAL_PARENT_DIR_ABSPATH, is for the parent of PATH rather than
+   for PATH itself. */
 static svn_error_t *
 get_parent_dir_abspath(const char **local_parent_dir_abspath,
-                       svn_wc_adm_access_t *adm_access,
+                       svn_wc_context_t *wc_ctx,
                        const char *path,
                        svn_boolean_t lenient,
-                      apr_pool_t *pool)
+                       apr_pool_t *pool)
 {
-  if (! adm_access)
+  if (!wc_ctx)
     *local_parent_dir_abspath = NULL;  /* Avoid messing around with paths */
   else
     {
-      SVN_ERR(get_dir_abspath(local_parent_dir_abspath, adm_access,
+      SVN_ERR(get_dir_abspath(local_parent_dir_abspath, wc_ctx,
                               svn_dirent_dirname(path, pool),
                               lenient, pool));
     }
@@ -450,9 +459,9 @@ delete_entry(const char *path,
 
   /* We need to know if this is a directory or a file */
   SVN_ERR(svn_ra_check_path(eb->ra_session, path, eb->revision, &kind, pool));
-  SVN_ERR(get_dir_abspath(&local_dir_abspath, eb->adm_access, pb->wcpath,
+  SVN_ERR(get_dir_abspath(&local_dir_abspath, eb->wc_ctx, pb->wcpath,
                           TRUE, pool));
-  if ((! eb->adm_access) || local_dir_abspath)
+  if ((! eb->wc_ctx) || local_dir_abspath)
     {
       switch (kind)
         {
@@ -554,7 +563,7 @@ add_directory(const char *path,
     }
 
 
-  SVN_ERR(get_dir_abspath(&local_dir_abspath, eb->adm_access, pb->wcpath, TRUE,
+  SVN_ERR(get_dir_abspath(&local_dir_abspath, eb->wc_ctx, pb->wcpath, TRUE,
                           pool));
 
   SVN_ERR(eb->diff_callbacks->dir_added
@@ -642,7 +651,7 @@ open_directory(const char *path,
 
   SVN_ERR(get_dirprops_from_ra(b, base_revision));
 
-  SVN_ERR(get_dir_abspath(&local_dir_abspath, eb->adm_access, pb->wcpath, TRUE,
+  SVN_ERR(get_dir_abspath(&local_dir_abspath, eb->wc_ctx, pb->wcpath, TRUE,
                           pool));
 
   SVN_ERR(eb->diff_callbacks->dir_opened
@@ -799,10 +808,10 @@ close_file(void *file_baton,
   if (b->skip)
     return SVN_NO_ERROR;
 
-  err = get_parent_dir_abspath(&local_dir_abspath, eb->adm_access,
+  err = get_parent_dir_abspath(&local_dir_abspath, eb->wc_ctx,
                                b->wcpath, eb->dry_run, b->pool);
 
-  if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
     {
       /* ### maybe try to stat the local b->wcpath? */
       /* If the file path doesn't exist, then send a 'skipped' notification. */
@@ -934,10 +943,10 @@ close_directory(void *dir_baton,
   if (eb->dry_run)
     svn_hash__clear(svn_client__dry_run_deletions(eb->diff_cmd_baton), pool);
 
-  err = get_dir_abspath(&local_dir_abspath, eb->adm_access, b->wcpath,
+  err = get_dir_abspath(&local_dir_abspath, eb->wc_ctx, b->wcpath,
                         eb->dry_run, b->pool);
 
-  if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
     {
       /* ### maybe try to stat the local b->wcpath? */
       /* If the path doesn't exist, then send a 'skipped' notification.
@@ -1161,8 +1170,7 @@ svn_client__get_diff_editor(const char *target,
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
   eb->target = target;
-  SVN_ERR(svn_wc__adm_retrieve_from_context(&(eb->adm_access), wc_ctx,
-                                            target_abspath, pool));
+  eb->wc_ctx = wc_ctx;
   eb->diff_callbacks = diff_callbacks;
   eb->diff_cmd_baton = diff_cmd_baton;
   eb->dry_run = dry_run;
