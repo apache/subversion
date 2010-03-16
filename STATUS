@@ -304,12 +304,3 @@ Approved changes:
      hwright sez: Danger!  Danger!  This has merge conflicts.
    Votes:
      +1: pburba, rhuijben, cmpilato
-
- * r922516
-   Tell svn+ssh:// users how to get error messages from ssh when there
-   is a connection problem.
-   Justification:
-     Not everyone realises that svn passes the -q option to ssh by default.
-   Votes:
-     +1: stsp, rhuijben, cmpilato
-
