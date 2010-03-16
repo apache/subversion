@@ -761,7 +761,6 @@ svn_ra_neon__open(svn_ra_session_t *session,
   svn_boolean_t compression;
   svn_config_t *cfg, *cfg_client;
   const char *server_group;
-  char *itr;
   unsigned int neon_auth_types = 0;
   const char *pkcs11_provider;
   neonprogress_baton_t *neonprogress_baton =
@@ -769,6 +768,8 @@ svn_ra_neon__open(svn_ra_session_t *session,
   const char *useragent = NULL;
   const char *client_string = NULL;
   svn_revnum_t ignored_revnum;
+
+  SVN_ERR_ASSERT(svn_uri_is_canonical(repos_URL, pool));
 
   if (callbacks->get_client_string)
     callbacks->get_client_string(callback_baton, &client_string, pool);
@@ -791,16 +792,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
   /* we want to know if the repository is actually somewhere else */
   /* ### not yet: http_redirect_register(sess, ... ); */
 
-  /* HACK!  Neon uses strcmp when checking for https, but RFC 2396 says
-   * we should be using case-insensitive comparisons when checking for
-   * URI schemes.  To allow our users to use WeIrd CasE HttPS we force
-   * the scheme to lower case before we pass it on to Neon, otherwise we
-   * would crash later on when we assume Neon has set up its https stuff
-   * but it really didn't. */
-  for (itr = uri->scheme; *itr; ++itr)
-    *itr = tolower(*itr);
-
-  is_ssl_session = (svn_cstring_casecmp(uri->scheme, "https") == 0);
+  is_ssl_session = (strcmp(uri->scheme, "https") == 0);
   if (is_ssl_session)
     {
       if (ne_has_support(NE_FEATURE_SSL) == 0)
@@ -975,10 +967,10 @@ svn_ra_neon__open(svn_ra_session_t *session,
               ca_cert = ne_ssl_cert_read(file);
               if (ca_cert == NULL)
                 {
-                  return svn_error_createf
-                    (SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                     _("Invalid config: unable to load certificate file '%s'"),
-                     svn_path_local_style(file, pool));
+                  return svn_error_createf(
+                    SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                    _("Invalid config: unable to load certificate file '%s'"),
+                    svn_dirent_local_style(file, pool));
                 }
               ne_ssl_trust_cert(sess, ca_cert);
               ne_ssl_trust_cert(sess2, ca_cert);
