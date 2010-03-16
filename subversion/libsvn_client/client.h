@@ -655,7 +655,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    TARGET is a working-copy path, the base of the hierarchy to be
    compared.  It corresponds to the URL opened in RA_SESSION below.
 
-   WC_CTX is a context for the working copy.
+   WC_CTX is a context for the working copy and should be NULL for
+   operations that do not involve a working copy.
 
    DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
    implement the file comparison function
