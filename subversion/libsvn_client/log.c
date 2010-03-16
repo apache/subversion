@@ -317,6 +317,7 @@ svn_client_log5(const apr_array_header_t *targets,
   pre_15_receiver_baton_t rb = {0};
   apr_pool_t *iterpool;
   int i;
+  svn_opt_revision_t peg_rev;
 
   if (revision_ranges->nelts == 0)
     {
@@ -324,6 +325,11 @@ svn_client_log5(const apr_array_header_t *targets,
         (SVN_ERR_CLIENT_BAD_REVISION, NULL,
          _("Missing required revision specification"));
     }
+
+  /* Make a copy of PEG_REVISION, we may need to change it to a
+     default value. */
+  peg_rev.kind = peg_revision->kind;
+  peg_rev.value = peg_revision->value;
 
   /* Use the passed URL, if there is one.  */
   url_or_path = APR_ARRAY_IDX(targets, 0, const char *);
@@ -362,7 +368,7 @@ svn_client_log5(const apr_array_header_t *targets,
           /* Default to any specified peg revision.  Otherwise, if the
            * first target is an URL, then we default to HEAD:0.  Lastly,
            * the default is BASE:0 since WC@HEAD may not exist. */
-          if (peg_revision->kind == svn_opt_revision_unspecified)
+          if (peg_rev.kind == svn_opt_revision_unspecified)
             {
               if (svn_path_is_url(url_or_path))
                 range->start.kind = svn_opt_revision_head;
@@ -370,7 +376,7 @@ svn_client_log5(const apr_array_header_t *targets,
                 range->start.kind = svn_opt_revision_base;
             }
           else
-            range->start = *peg_revision;
+            range->start = peg_rev;
 
           if (range->end.kind == svn_opt_revision_unspecified)
             {
@@ -453,6 +459,11 @@ svn_client_log5(const apr_array_header_t *targets,
                                 _("When specifying working copy paths, only "
                                   "one target may be given"));
 
+      /* An unspecified PEG_REVISION for a working copy path defautls
+         to svn_opt_revision_working. */
+      if (peg_rev.kind == svn_opt_revision_unspecified)
+          peg_rev.kind = svn_opt_revision_working;
+
       /* Get URLs for each target */
       target_urls = apr_array_make(pool, 1, sizeof(const char *));
       real_targets = apr_array_make(pool, 1, sizeof(const char *));
@@ -504,14 +515,14 @@ svn_client_log5(const apr_array_header_t *targets,
     /* If this is a revision type that requires access to the working copy,
      * we use our initial target path to figure out where to root the RA
      * session, otherwise we use our URL. */
-    if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_revision->kind))
+    if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_rev.kind))
       SVN_ERR(svn_path_condense_targets(&ra_target, NULL, targets, TRUE, pool));
     else
       ra_target = url_or_path;
 
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &ignored_revnum,
                                              &actual_url, ra_target, NULL,
-                                             peg_revision, &session_opt_rev,
+                                             &peg_rev, &session_opt_rev,
                                              ctx, pool));
 
     SVN_ERR(svn_ra_has_capability(ra_session, &has_log_revprops,
