@@ -22,6 +22,7 @@ import sys, re, os, subprocess
 # Our testing module
 import svntest
 from svntest import wc
+from merge_tests import set_up_branch
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -4750,6 +4751,62 @@ def update_wc_of_dir_to_rev_not_containing_this_dir(sbox):
                                      "svn: Target path '/A' does not exist",
                                      "up", other_wc_dir)
 
+#----------------------------------------------------------------------
+# Test for issue #3573 'local non-inheritable mergeinfo changes not
+# properly merged with updated mergeinfo'
+def mergeinfo_updates_merge_with_local_mods(sbox):
+  "local mergeinfo changes are merged with updates"
+
+  # Copy A to A_COPY in r2, and make some changes to A_COPY in r3-r6.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Some paths we'll care about
+  A_path      = os.path.join(wc_dir, "A")
+  A_COPY_path = os.path.join(wc_dir, "A_COPY")
+
+  # Merge -c3 from A to A_COPY at --depth empty, commit as r7.
+  ###
+  ### No, we are not checking the merge output for these simple
+  ### merges.  This is already covered *TO DEATH* in merge_tests.py.
+  ###
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-c3', '--depth', 'empty',
+                                     sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Merge r3 from A to A_COPY at depth empty',
+                                     wc_dir)
+  # Merge -c5 from A to A_COPY (at default --depth infinity), commit as r8.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-c5',
+                                     sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Merge r5 from A to A_COPY', wc_dir)
+
+  # Update WC to r7, repeat merge of -c3 from A to A_COPY but this
+  # time do it at --depth infinity.  Confirm that the mergeinfo
+  # on A_COPY is no longer inheritable.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r7', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-c3', '--depth', 'infinity',
+                                     sbox.repo_url + '/A', A_COPY_path)
+  svntest.actions.run_and_verify_svn(None, [A_COPY_path + " - /A:3\n"], [],
+                                     'pg', SVN_PROP_MERGEINFO, '-R',
+                                     A_COPY_path) 
+
+  # Update the WC (to r8), the mergeinfo on A_COPY should now have both
+  # the local mod from the uncommitted merge (/A:3* --> /A:3) and the change
+  # brought down by the update (/A:3* --> /A:3*,5) leaving us with /A:3,5.
+  ### This was failing because of issue #3573.  The local mergeinfo change
+  ### is reverted, leaving '/A:3*,5' on A_COPY.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [A_COPY_path + " - /A:3,5\n"], [],
+                                     'pg', SVN_PROP_MERGEINFO, '-R',
+                                     A_COPY_path)
+
 #######################################################################
 # Run the tests
 
@@ -4815,6 +4872,7 @@ test_list = [ None,
               tree_conflict_uc2_schedule_re_add,
               set_deep_depth_on_target_with_shallow_children,
               update_wc_of_dir_to_rev_not_containing_this_dir,
+              mergeinfo_updates_merge_with_local_mods,
              ]
 
 if __name__ == '__main__':
