@@ -1660,14 +1660,14 @@ def basic_peg_revision(sbox):
   wc_dir = sbox.wc_dir
   repos_dir = sbox.repo_url
   filename = 'abc@abc'
-
-  wc_file = wc_dir + '/' + filename
+  wc_file = os.path.join(wc_dir,  filename)
   url = repos_dir + '/' + filename
 
   svntest.main.file_append(wc_file, 'xyz\n')
-  svntest.main.run_svn(None, 'add', wc_file)
+  # We need to escape the @ in the middle of abc@abc by appending another @
+  svntest.main.run_svn(None, 'add', wc_file + '@')
   svntest.main.run_svn(None,
-                       'ci', '-m', 'secret log msg', wc_file)
+                       'ci', '-m', 'secret log msg', wc_file + '@')
 
   # Without the trailing "@", expect failure.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
@@ -1677,10 +1677,34 @@ def basic_peg_revision(sbox):
 
   # With the trailing "@", expect success.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, ["xyz\n"], [], 'cat', wc_file+'@')
+    None, ["xyz\n"], [], 'cat', wc_file + '@')
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, ["xyz\n"], [], 'cat', url+'@')
+    None, ["xyz\n"], [], 'cat', url + '@')
 
+  # Test with leading @ character in filename.
+  filename = '@abc'
+  wc_file = os.path.join(wc_dir,  filename)
+  url = repos_dir + '/' + filename
+
+  svntest.main.file_append(wc_file, 'xyz\n')
+  exit_code, output, errlines = svntest.actions.run_and_verify_svn(
+    None, None, [], 'add', wc_file + '@')
+  exit_code, output, errlines = svntest.actions.run_and_verify_svn(
+    None, None, [], 'ci', '-m', 'secret log msg',  wc_file + '@')
+
+  # With a leading "@" which isn't escaped, expect failure.
+  # Note that we just test with filename starting with '@', because
+  # wc_file + '@' + filename is a different situation where svn
+  # will try to parse filename as a peg revision.
+  exit_code, output, errlines = svntest.actions.run_and_verify_svn(
+    None, None, ".*'%s' is just a peg revision.*" % filename,
+    'cat', filename)
+
+  # With a leading "@" which is escaped, expect success.
+  exit_code, output, errlines = svntest.actions.run_and_verify_svn(
+    None, ["xyz\n"], [], 'cat', wc_file + '@')
+  exit_code, output, errlines = svntest.actions.run_and_verify_svn(
+    None, ["xyz\n"], [], 'cat', repos_dir + '/' + filename + '@')
 
 def info_nonhead(sbox):
   "info on file not existing in HEAD"

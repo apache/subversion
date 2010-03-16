@@ -129,9 +129,12 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
     }
 
   /* Final check -- if our caller provided a youngest revision, and
-  the number we wound up with is younger than that revision, we need
-  to stick to our caller's idea of "youngest". */
+     the number we wound up with (after talking to the server) is younger
+     than that revision, we need to stick to our caller's idea of "youngest".
+   */
   if (youngest_rev
+      && (revision->kind == svn_opt_revision_head
+          || revision->kind == svn_opt_revision_date)
       && SVN_IS_VALID_REVNUM(*youngest_rev)
       && SVN_IS_VALID_REVNUM(*revnum)
       && (*revnum > *youngest_rev))

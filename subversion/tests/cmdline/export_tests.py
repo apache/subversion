@@ -389,6 +389,15 @@ def export_creates_intermediate_folders(sbox):
                                         expected_output,
                                         svntest.main.greek_state.copy())
 
+def export_HEADplus1_fails(sbox):
+  "export -r {HEAD+1} fails"
+
+  sbox.build(create_wc = False, read_only = True)
+  
+  svntest.actions.run_and_verify_svn(None, None, '.*No such revision.*',
+                                     'export', sbox.repo_url, sbox.wc_dir,
+                                     '-r', 38956)
+
 ########################################################################
 # Run the tests
 
@@ -411,6 +420,7 @@ test_list = [ None,
               export_unversioned_file,
               export_with_state_deleted,
               export_creates_intermediate_folders,
+              export_HEADplus1_fails,
              ]
 
 if __name__ == '__main__':

@@ -24,10 +24,10 @@ revision that was merged, and the diff from the previous revision.
 
 Examples:
 
-  %s http://svn.collab.net/repos/svn/trunk svn-1.2.x-branch \
+  %s http://svn.apache.org/repos/asf/subversion/trunk svn-1.2.x-branch \
     r14041, r14149, r14186, r14194, r14238, r14273
 
-  %s http://svn.collab.net/repos/svn/trunk svn-1.2.x-branch \
+  %s http://svn.apache.org/repos/asf/subversion/trunk svn-1.2.x-branch \
     14041 14149 14186 14194 14238 14273""" % (progname, progname)
   print(val)
 

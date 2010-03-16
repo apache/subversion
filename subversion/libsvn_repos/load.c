@@ -229,10 +229,20 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
   prefixed_mergeinfo = apr_hash_make(pool);
   for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const char *path;
-      const void *merge_source;
-      apr_hash_this(hi, &merge_source, NULL, &rangelist);
-      path = svn_path_join(parent_dir, (const char*)merge_source+1, pool);
+      const void *key;
+      const char *path, *merge_source;
+
+      apr_hash_this(hi, &key, NULL, &rangelist);
+      merge_source = key;
+
+      /* The svn:mergeinfo property syntax demands absolute repository
+         paths, so prepend a leading slash if PARENT_DIR lacks one.  */
+      if (*parent_dir != '/')
+        path = svn_path_join_many(pool, "/", parent_dir, 
+                                  merge_source + 1, NULL);
+      else
+        path = svn_path_join(parent_dir, merge_source + 1, pool);
+
       apr_hash_set(prefixed_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
     }
   return svn_mergeinfo_to_string(mergeinfo_val, prefixed_mergeinfo, pool);

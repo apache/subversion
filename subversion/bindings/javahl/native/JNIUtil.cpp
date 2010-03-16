@@ -234,7 +234,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   g_pool = svn_pool_create(NULL);
 
 #if defined(WIN32) || defined(__CYGWIN__)
-  /* See http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt */
+  /* See http://svn.apache.org/repos/asf/subversion/trunk/notes/asp-dot-net-hack.txt */
   /* ### This code really only needs to be invoked by consumers of
      ### the libsvn_wc library, which basically means SVNClient. */
   if (getenv ("SVN_ASP_DOT_NET_HACK"))

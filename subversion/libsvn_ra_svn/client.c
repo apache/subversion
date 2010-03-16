@@ -373,7 +373,16 @@ static svn_error_t *find_tunnel_agent(const char *tunnel,
 
   /* We have one predefined tunnel scheme, if it isn't overridden by config. */
   if (!val && strcmp(tunnel, "ssh") == 0)
-    val = "$SVN_SSH ssh";
+    {
+      /* Killing the tunnel agent with SIGTERM leads to unsightly
+       * stderr output from ssh, unless we pass -q.
+       * The "-q" option to ssh is widely supported: all versions of
+       * OpenSSH have it, the old ssh-1.x and the 2.x, 3.x ssh.com
+       * versions have it too. If the user is using some other ssh
+       * implementation that doesn't accept it, they can override it
+       * in the [tunnels] section of the config. */
+      val = "$SVN_SSH ssh -q";
+    }
 
   if (!val || !*val)
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
@@ -448,6 +457,7 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   apr_status_t status;
   apr_proc_t *proc;
   apr_procattr_t *attr;
+  svn_error_t *err;
 
   status = apr_procattr_create(&attr, pool);
   if (status == APR_SUCCESS)
@@ -462,6 +472,37 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   if (status != APR_SUCCESS)
     return svn_error_wrap_apr(status, _("Can't create tunnel"));
 
+  /* Arrange for the tunnel agent to get a SIGTERM on pool
+   * cleanup.  This is a little extreme, but the alternatives
+   * weren't working out.
+   *
+   * Closing the pipes and waiting for the process to die
+   * was prone to mysterious hangs which are difficult to
+   * diagnose (e.g. svnserve dumps core due to unrelated bug;
+   * sshd goes into zombie state; ssh connection is never
+   * closed; ssh never terminates).
+   * See also the long dicussion in issue #2580 if you really
+   * want to know various reasons for these problems and
+   * the different opinions on this issue.
+   *
+   * On Win32, APR does not support KILL_ONLY_ONCE. It only has
+   * KILL_ALWAYS and KILL_NEVER. Other modes are converted to 
+   * KILL_ALWAYS, which immediately calls TerminateProcess().
+   * This instantly kills the tunnel, leaving sshd and svnserve
+   * on a remote machine running indefinitely. These processes
+   * accumulate. The problem is most often seen with a fast client
+   * machine and a modest internet connection, as the tunnel
+   * is killed before being able to gracefully complete the 
+   * session. In that case, svn is unusable 100% of the time on
+   * the windows machine. Thus, on Win32, we use KILL_NEVER and
+   * take the lesser of two evils.
+   */
+#ifdef WIN32
+  apr_pool_note_subprocess(pool, proc, APR_KILL_NEVER);
+#else
+  apr_pool_note_subprocess(pool, proc, APR_KILL_ONLY_ONCE);
+#endif
+
   /* APR pipe objects inherit by default.  But we don't want the
    * tunnel agent's pipes held open by future child processes
    * (such as other ra_svn sessions), so turn that off. */
@@ -470,7 +511,14 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
 
   /* Guard against dotfile output to stdout on the server. */
   *conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
-  SVN_ERR(svn_ra_svn_skip_leading_garbage(*conn, pool));
+  err = svn_ra_svn_skip_leading_garbage(*conn, pool);
+  if (err)
+    return svn_error_quick_wrap(
+             err,
+             _("To better debug SSH connection problems, remove the -q "
+               "option from 'ssh' in the [tunnels] section of your "
+               "Subversion configuration file."));
+
   return SVN_NO_ERROR;
 }
 
@@ -2202,6 +2250,7 @@ ra_svn_replay_range(svn_ra_session_t *session,
   svn_ra_svn__session_baton_t *sess = session->priv;
   apr_pool_t *iterpool;
   svn_revnum_t rev;
+  svn_boolean_t drive_aborted = FALSE;
 
   SVN_ERR(svn_ra_svn_write_cmd(sess->conn, pool, "replay-range", "rrrb",
                                start_revision, end_revision,
@@ -2237,7 +2286,14 @@ ra_svn_replay_range(svn_ra_session_t *session,
                             iterpool));
       SVN_ERR(svn_ra_svn_drive_editor2(sess->conn, iterpool,
                                        editor, edit_baton,
-                                       NULL, TRUE));
+                                       &drive_aborted, TRUE));
+      /* If drive_editor2() aborted the commit, do NOT try to call
+         revfinish_func and commit the transaction! */
+      if (drive_aborted) {
+        svn_pool_destroy(iterpool);
+        return svn_error_create(SVN_ERR_RA_SVN_IO_ERROR, NULL,
+                                _("Error while replaying commit"));
+      }
       SVN_ERR(revfinish_func(rev, replay_baton,
                              editor, edit_baton,
                              rev_props,

@@ -997,17 +997,24 @@ svn_error_t *svn_ra_svn_write_cmd_response(svn_ra_svn_conn_t *conn,
 svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool, svn_error_t *err)
 {
+  char buffer[128];
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
   SVN_ERR(svn_ra_svn_write_word(conn, pool, "failure"));
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
   for (; err; err = err->child)
     {
+      const char *msg = err->message;
+
+      if (msg == NULL)
+        msg = svn_strerror(err->apr_err, buffer, sizeof(buffer));
+
       /* The message string should have been optional, but we can't
          easily change that, so marshal nonexistent messages as "". */
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "nccn",
                                      (apr_uint64_t) err->apr_err,
-                                     err->message ? err->message : "",
-                                     err->file, (apr_uint64_t) err->line));
+                                     msg ? msg : "",
+                                     err->file ? err->file : "",
+                                     (apr_uint64_t) err->line));
     }
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));

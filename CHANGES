@@ -1,5 +1,112 @@
+Version 1.6.9
+(25 Jan 2010, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.9
+
+ User-visible changes:
+  * allow multiple external updates over ra_svn (issue #3487)
+  * fix a segmentation fault when using FSFS (r881905)
+  * support Berkeley DB 4.8 (r879688)
+  * various autoprop improvements (r880274, -5)
+  * improve usage of svn+ssh:// on Windows (issue #2580)
+  * teach 1.6.x to recognize 1.7 working copies (1.6.x-future-proof branch)
+  * update help text for 'svn update' and 'svn switch' (r886164, -97)
+  * make 'svnadmin load --parent-dir' create valid mergeinfo (r888979, -9081)
+  * tolerate relative merge source paths in mergeinfo (r889840)
+  * teach mod_dav_svn to support the Label header (issue #3519)
+  * fixed: svnsync leaves stale sync-locks on mirrors (r884842)
+  * fix applicability of 'svn resolve --accept=theirs-conflict' (r880525, -6)
+  * fixed: segfault in 'svn resolve' (r896522, -47)
+  * fix commit failure against an out-of-date mirror (r900797)
+
+ Developer-visible changes:
+  * update ruby bindings test expectation (r880162)
+  * don't allow rangelist and mergeinfo API to modify input args (r879093)
+
+
+Version 1.6.8
+(Not released, see changes for 1.6.9.)
+
+
+Version 1.6.7
+(Not released, see changes for 1.6.9.)
+
+
+[ Note: All revision numbers for versions prior to 1.6.7 reference the
+  original repository on svn.collab.net.  For more information see:
+  http://svn.apache.org/repos/asf/subversion/README ]
+
+
+Version 1.6.6
+(22 Oct 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.6
+
+ User-visible changes:
+  * fix crash during 'svn update' (r39673)
+  * respect Apache's ServerSignature directive (r40008, -21, -31)
+  * don't add a file with mixed line endings, and then abort (issue #2713)
+  * support Neon 0.29.
+  * fix a crash in 'svn rm --force' (r37953)
+  * handle tree conflicts involving replacements (issue #3486)
+  * allow non-threadsafe sqlite if APR has no threads (r39301)
+  * print newline before plaintext SSL cert / password prompts (r38982, r39302)
+  * improve merge performance with implicit subtree mergeinfo (issue #3443)
+  * fix "libsvn_ra_svn/marshal.c assertion failed (opt || cstr)" (issue #3485)
+  * make file externals work for binary files (issue #3368)
+  * perform MIME type matching case-insensitively (issue #3479)
+  * do not treat non-existent revisions as HEAD in 'svn export' (issue #3400)
+  * revert r36720's default MIME type change back to "text/plain" (issue #3508)
+  * improve "tree conflict already exists" error message (r38872)
+  * fix failure to commit replacement of a directory (issue #3281)
+  * fix mod_dav_svn parent dir links to preserve peg revisions (issue #3425)
+
+ Developer-visible changes:
+  * fix 2 failing tests in ruby bindings (r38886)
+  * do not require GNU grep for build (issue #3453)
+  * use '$SED' instead of 'sed' in build scripts (issue #3458)
+  * add svn.client.{log5,merge_peg3} to python bindings (r39635, -6, -7)
+  * include the time of a test run in tests.log (r39887)
+
+
+Version 1.6.5
+(22 Aug 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.5
+
+ User-visible changes:
+  * fix mod_dav_svn directory view links to preserve peg revisions (r38021)
+  * do not error on Windows when ALLUSERPROFILE dir nonexistent (r38053, -5, -7)
+  * properly escape lock comments over ra_neon (r38101, -2)
+  * allow syncing copies of '/' over ra_neon and ra_serf (issue #3438)
+  * make 'svnlook diff' show empty added or deleted files (r38458)
+  * fix building with Apache 2.4 (r36720)
+  * fix possible data loss on ext4 and GPFS filesystems (issue #3442)
+  * resolve symlinks when checking for ~/.subversion (r36023)
+  * don't let svn+ssh SIGKILL ssh processes (issue #2580)
+  * allow PLAIN and LOGIN mechanisms with SASL in svnserve (r38205)
+  * fix peg revision parsing in filenames like 'dir/@file.txt' (issue #3416)
+  * fix detection of Apache <2.0.56 (r38290, -3, -4)
+  * don't pretend to do tree conflict resolution (r38799, -801, -805)
+  * fix data corruption when syncing from svnserve to mod_dav_svn (r38686, -7)
+  * fix GNOME Keyring with '--non-interactive' option (r38222, -3, -61, -410)
+  * fixed: false "File '...' already exists" error during commit (issue #3119)
+
+ Developer-visible changes:
+  * avoid referencing uninitialized variables (r38388)
+  * plug a couple of error leaks (r38572)
+  * improve windows test output (r38616, -7, -9, -49)
+
+
+Version 1.6.4
+(06 Aug 2009, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.4
+
+ User-visible changes:
+  * fixed: heap overflow vulnerability on server and client
+           See CVE-2009-2411, and descriptive advisory at
+           http://subversion.tigris.org/security/CVE-2009-2411-advisory.txt
+
+
 Version 1.6.3
-(19 Jun 2009, from /branches/1.6.x)
+(22 Jun 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.3
 
  User-visible changes:
@@ -11,7 +118,6 @@ http://svn.collab.net/repos/svn/tags/1.6.3
   * update dsvn.el for 1.6 (r37774)
   * don't allow setting of props on out-of-date dirs under neon (r37745)
   * improve BASH completion (r36450, -52, -70, -79, -538)
-  * improve some DAV-based error messages (issue #3414)
   * always show tree conflicts with 'svn st' (issue #3382)
   * improve correctness of 'svn mergeinfo' (issue #3126)
   * decrease the amount of memory needed for large commits (r37894, -6)
@@ -20,12 +126,14 @@ http://svn.collab.net/repos/svn/tags/1.6.3
   * improve 'svn merge' perf by reducing server contact (r37491, -593, -618)
   * stop propagating self-referential mergeinfo in reintegrate merges (r37931)
   * fix NLS detection where -liconv is required for bindtextdomain() (r37827)
-  * don't delete unversioned files with 'rm --keel-local' (r38015, -17, -19)
+  * don't delete unversioned files with 'rm --keep-local' (r38015, -17, -19)
   * bump apr and apr-util versions included in deps to latest. (r37941)
   * avoid temp file name collisions with ra_serf, ra_neon (r37972)
   * fixed: potential segfault with noop file merges (r37779)
   * fixed: incorrect output with 'svn blame -g' (r37719, -23, -41)
   * fixed: bindings don't load FS libs when module search enabled (issue #3413)
+  * fixed: DAV RA layers not properly handling update/switch working copy
+    directory to revision/place in which it doesn't exist (issue #3414)
   * fixed: potential abort() in the working copy library (r37857)
   * fixed: memory leak in hash reading functions (r37868, -979)
 
@@ -35,7 +143,7 @@ http://svn.collab.net/repos/svn/tags/1.6.3
 
 
 Version 1.6.2
-(09 May 2009, from /branches/1.6.x)
+(11 May 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.2
 
  User-visible changes:
@@ -65,7 +173,7 @@ http://svn.collab.net/repos/svn/tags/1.6.2
 
 
 Version 1.6.1
-(10 Apr 2009, from /branches/1.6.x)
+(9 Apr 2009, from /branches/1.6.x)
 http://svn.collab.net/repos/svn/tags/1.6.1
 
  User-visible changes:
@@ -210,8 +318,18 @@ http://svn.collab.net/repos/svn/tags/1.6.0
     * fix building Ruby bindings with Ruby 1.9 (r35852, r35883)
 
 
+Version 1.5.7
+(06 Aug 2009, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.7
+
+ User-visible changes:
+  * fixed: heap overflow vulnerability on server and client
+           See CVE-2009-2411, and descriptive advisory at
+           http://subversion.tigris.org/security/CVE-2009-2411-advisory.txt
+
+
 Version 1.5.6
-(27 Feb 2009, from /branches/1.5.x)
+(26 Feb 2009, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.6
 
  User-visible changes:

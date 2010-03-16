@@ -628,8 +628,8 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
   const char *relative_url, *basecoll_url;
   svn_ra_serf__session_t *session = ra_session->priv;
 
-  return svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                        session, session->repos_url.path,
+  return svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
+                                        NULL, session->repos_url.path,
                                         SVN_INVALID_REVNUM, latest_revnum,
                                         pool);
 }
@@ -717,7 +717,7 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
       const char *relative_url, *basecoll_url;
 
       SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                             session, path,
+                                             session, NULL, path,
                                              revision, NULL, pool));
 
       /* We will try again with our new path; however, we're now
@@ -988,7 +988,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       const char *relative_url, *basecoll_url;
 
       SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                             session, path, revision,
+                                             session, NULL, path, revision,
                                              fetched_rev, pool));
 
       path = svn_path_url_add_component(basecoll_url, relative_url, pool);

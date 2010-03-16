@@ -107,10 +107,10 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
                                        False, None, None)
     expected_mergeinfo = \
       { '/trunk' :
-          { 'branches/a' : [RevRange(2, 11)],
-            'branches/b' : [RevRange(9, 13)],
-            'branches/c' : [RevRange(2, 16)],
-            'trunk'      : [RevRange(1, 9)],  },
+          { '/branches/a' : [RevRange(2, 11)],
+            '/branches/b' : [RevRange(9, 13)],
+            '/branches/c' : [RevRange(2, 16)],
+            '/trunk'      : [RevRange(1, 9)],  },
       }
     self.compare_mergeinfo_catalogs(mergeinfo, expected_mergeinfo)
 

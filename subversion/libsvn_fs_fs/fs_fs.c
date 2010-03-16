@@ -790,7 +790,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
   if (!err)
     {
       apr_off_t offset = 0;
-      err = svn_io_file_seek(*file, APR_END, &offset, 0);
+      err = svn_io_file_seek(*file, APR_END, &offset, pool);
     }
 
   if (err)
@@ -1418,6 +1418,9 @@ svn_fs_fs__hotcopy(const char *src_path,
 
   /* Copy the uuid. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_UUID, pool));
+
+  /* Copy the config. */
+  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_CONFIG, pool));
 
   /* Copy the min unpacked rev, and read its value. */
   if (format >= SVN_FS_FS__MIN_PACKED_FORMAT)
@@ -4375,7 +4378,8 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
                             apr_array_header_t *props,
                             apr_pool_t *pool)
 {
-  apr_file_t *txn_prop_file;
+  const char *txn_prop_filename;
+  svn_stringbuf_t *buf;
   svn_stream_t *stream;
   apr_hash_t *txn_prop = apr_hash_make(pool);
   int i;
@@ -4400,15 +4404,19 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
 
   /* Create a new version of the file and write out the new props. */
   /* Open the transaction properties file. */
-  SVN_ERR(svn_io_file_open(&txn_prop_file,
-                           path_txn_props(txn->fs, txn->id, pool),
-                           APR_WRITE | APR_CREATE | APR_TRUNCATE
-                           | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  stream = svn_stream_from_aprfile2(txn_prop_file, FALSE, pool);
+  buf = svn_stringbuf_create_ensure(1024, pool);
+  stream = svn_stream_from_stringbuf(buf, pool);
   SVN_ERR(svn_hash_write2(txn_prop, stream, SVN_HASH_TERMINATOR, pool));
-
-  return svn_stream_close(stream);
+  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_io_write_unique(&txn_prop_filename,
+                              path_txn_dir(txn->fs, txn->id, pool),
+                              buf->data,
+                              buf->len,
+                              svn_io_file_del_none,
+                              pool));
+  return svn_io_file_rename(txn_prop_filename,
+                            path_txn_props(txn->fs, txn->id, pool),
+                            pool);
 }
 
 svn_error_t *

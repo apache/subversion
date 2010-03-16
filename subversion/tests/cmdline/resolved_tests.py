@@ -318,6 +318,27 @@ def resolved_on_deleted_item(sbox):
 
 
 
+def theirs_conflict_in_subdir(sbox):
+  "resolve to 'theirs-conflict' in sub-directory"
+
+  sbox.build()
+  wc = sbox.wc_dir
+  wc2 = sbox.add_wc_path('wc2')
+  svntest.actions.duplicate_dir(sbox.wc_dir, wc2)
+
+  alpha_path = os.path.join(wc, 'A', 'B', 'E', 'alpha')
+  alpha_path2 = os.path.join(wc2, 'A', 'B', 'E', 'alpha')
+
+  svntest.main.file_append(alpha_path, "Modified alpha.\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'logmsg', wc)
+
+  svntest.main.file_append(alpha_path2, "Modified alpha, too.\n")
+  svntest.main.run_svn(None, 'up', wc2)
+
+  svntest.actions.run_and_verify_resolve([alpha_path2],
+                                         '--accept=theirs-conflict',
+                                         alpha_path2)
+
 #######################################################################
 # Run the tests
 
@@ -326,6 +347,7 @@ def resolved_on_deleted_item(sbox):
 test_list = [ None,
               resolved_on_wc_root,
               resolved_on_deleted_item,
+              theirs_conflict_in_subdir,
              ]
 
 if __name__ == '__main__':

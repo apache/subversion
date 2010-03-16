@@ -543,7 +543,7 @@ svn_txdelta_target_push(svn_txdelta_window_handler_t handler,
 /* Functions for applying deltas.  */
 
 /* Ensure that BUF has enough space for VIEW_LEN bytes.  */
-static APR_INLINE void
+static APR_INLINE svn_error_t *
 size_buffer(char **buf, apr_size_t *buf_size,
             apr_size_t view_len, apr_pool_t *pool)
 {
@@ -552,8 +552,11 @@ size_buffer(char **buf, apr_size_t *buf_size,
       *buf_size *= 2;
       if (*buf_size < view_len)
         *buf_size = view_len;
+      SVN_ERR_ASSERT(APR_ALIGN_DEFAULT(*buf_size) >= *buf_size);
       *buf = apr_palloc(pool, *buf_size);
     }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -654,7 +657,7 @@ apply_window(svn_txdelta_window_t *window, void *baton)
                          >= ab->sbuf_offset + ab->sbuf_len)));
 
   /* Make sure there's enough room in the target buffer.  */
-  size_buffer(&ab->tbuf, &ab->tbuf_size, window->tview_len, ab->pool);
+  SVN_ERR(size_buffer(&ab->tbuf, &ab->tbuf_size, window->tview_len, ab->pool));
 
   /* Prepare the source buffer for reading from the input stream.  */
   if (window->sview_offset != ab->sbuf_offset
@@ -663,7 +666,8 @@ apply_window(svn_txdelta_window_t *window, void *baton)
       char *old_sbuf = ab->sbuf;
 
       /* Make sure there's enough room.  */
-      size_buffer(&ab->sbuf, &ab->sbuf_size, window->sview_len, ab->pool);
+      SVN_ERR(size_buffer(&ab->sbuf, &ab->sbuf_size, window->sview_len,
+              ab->pool));
 
       /* If the existing view overlaps with the new view, copy the
        * overlap to the beginning of the new buffer.  */

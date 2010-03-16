@@ -502,7 +502,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
   if (! path)
     return SVN_NO_ERROR;
 
-  err = svn_io_check_path(path, &kind, pool);
+  err = svn_io_check_resolved_path(path, &kind, pool);
   if (err)
     {
       /* Don't throw an error, but don't continue. */
@@ -1009,7 +1009,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### passed to the tunnel agent as <user>@<hostname>.)  If the"      NL
         "### built-in ssh scheme were not predefined, it could be defined"   NL
         "### as:"                                                            NL
-        "# ssh = $SVN_SSH ssh"                                               NL
+        "# ssh = $SVN_SSH ssh -q"                                            NL
         "### If you wanted to define a new 'rsh' scheme, to be used with"    NL
         "### 'svn+rsh:' URLs, you could do so as follows:"                   NL
         "# rsh = rsh"                                                        NL
@@ -1064,11 +1064,11 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### 'enable-auto-props' option."                                    NL
         "# *.c = svn:eol-style=native"                                       NL
         "# *.cpp = svn:eol-style=native"                                     NL
-        "# *.h = svn:eol-style=native"                                       NL
+        "# *.h = svn:keywords=Author Date Id Rev URL;svn:eol-style=native"   NL
         "# *.dsp = svn:eol-style=CRLF"                                       NL
         "# *.dsw = svn:eol-style=CRLF"                                       NL
         "# *.sh = svn:eol-style=native;svn:executable"                       NL
-        "# *.txt = svn:eol-style=native"                                     NL
+        "# *.txt = svn:eol-style=native;svn:keywords=Author Date Id Rev URL;"NL
         "# *.png = svn:mime-type=image/png"                                  NL
         "# *.jpg = svn:mime-type=image/jpeg"                                 NL
         "# Makefile = svn:eol-style=native"                                  NL

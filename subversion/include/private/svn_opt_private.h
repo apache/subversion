@@ -32,15 +32,23 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Extract the peg revision, if any, from UTF8_TARGET. Return the peg
- * revision in *PEG_REVISION and the true target portion in *TRUE_TARGET.
+/* Extract the peg revision, if any, from UTF8_TARGET.
+ *
+ * If PEG_REVISION is not NULL, return the peg revision in *PEG_REVISION.
  * *PEG_REVISION will be an empty string if no peg revision is found.
+ * Return the true target portion in *TRUE_TARGET.
  *
  * UTF8_TARGET need not be canonical. *TRUE_TARGET will not be canonical
  * unless UTF8_TARGET is.
  *
+ * It is an error if *TRUE_TARGET results in the empty string after the
+ * split, which happens in case UTF8_TARGET has a leading '@' character
+ * with no additional '@' characters to escape the first '@'.
+ *
  * Note that *PEG_REVISION will still contain the '@' symbol as the first
- * character if a peg revision was found.
+ * character if a peg revision was found. If a trailing '@' symbol was
+ * used to escape other '@' characters in UTF8_TARGET, *PEG_REVISION will
+ * point to the string "@", containing only a single character.
  *
  * All allocations are done in POOL.
  */
@@ -105,6 +113,27 @@ svn_opt__args_to_target_array(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
                               apr_array_header_t *known_targets,
                               apr_pool_t *pool);
+
+/* Return, in @a *true_targets_p, a copy of @a targets with peg revision
+ * specifiers snipped off the end of each element.
+ *
+ * This function is useful for subcommands for which peg revisions
+ * do not make any sense. Such subcommands still need to allow peg
+ * revisions to be specified on the command line so that users of
+ * the command line client can consistently escape '@' characters
+ * in filenames by appending an '@' character, regardless of the
+ * subcommand being used.
+ *
+ * If a peg revision is present but cannot be parsed, an error is thrown.
+ * The user has likely forgotten to escape an '@' character in a filename.
+ *
+ * It is safe to pass the address of @a targets as @a true_targets_p.
+ *
+ * Do all allocations in @a pool. */
+svn_error_t *
+svn_opt__eat_peg_revisions(apr_array_header_t **true_targets_p,
+                           apr_array_header_t *targets,
+                           apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -41,8 +41,10 @@ AC_DEFUN(SVN_LIB_KWALLET,
                   old_CXXFLAGS="$CXXFLAGS"
                   old_LDFLAGS="$LDFLAGS"
                   old_LIBS="$LIBS"
-                  for d in [`$PKG_CONFIG --cflags QtCore QtDBus QtGui | $GREP -o -- -D[^[:space:]]*`]; do
-                    CPPFLAGS="$CPPFLAGS $d"
+                  for d in [`$PKG_CONFIG --cflags QtCore QtDBus QtGui`]; do
+                    if test -n ["`echo "$d" | $GREP -- '^-D[^[:space:]]*'`"]; then
+                      CPPFLAGS="$CPPFLAGS $d"
+                    fi
                   done
                   qt_include_dirs="`$PKG_CONFIG --cflags-only-I QtCore QtDBus QtGui`"
                   kde_dir="`$kde4_config --prefix`"

@@ -872,13 +872,22 @@ svn_opt__split_arg_at_peg_revision(const char **true_target,
 
   if (peg_start)
     {
+      /* Error out if target is the empty string. */
+      if (j == 0)
+        return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
+                                 _("'%s' is just a peg revision. "
+                                   "Maybe try '%s@' instead?"),
+                                 utf8_target, utf8_target);
+
       *true_target = apr_pstrmemdup(pool, utf8_target, j);
-      *peg_revision = apr_pstrdup(pool, peg_start);
+      if (peg_revision)
+        *peg_revision = apr_pstrdup(pool, peg_start);
     }
   else
     {
       *true_target = utf8_target;
-      *peg_revision = "";
+      if (peg_revision)
+        *peg_revision = "";
     }
 
   return SVN_NO_ERROR;
@@ -1014,6 +1023,32 @@ svn_opt_print_help3(apr_getopt_t *os,
   else                                       /* unknown option or cmd */
     SVN_ERR(svn_cmdline_fprintf(stderr, pool,
                                 _("Type '%s help' for usage.\n"), pgm_name));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_opt__eat_peg_revisions(apr_array_header_t **true_targets_p,
+                           apr_array_header_t *targets,
+                           apr_pool_t *pool)
+{
+  unsigned int i;
+  apr_array_header_t *true_targets;
+
+  true_targets = apr_array_make(pool, DEFAULT_ARRAY_SIZE, sizeof(const char *));
+
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      const char *true_target;
+
+      SVN_ERR(svn_opt__split_arg_at_peg_revision(&true_target, NULL,
+                                                 target, pool));
+      APR_ARRAY_PUSH(true_targets, const char *) = true_target;
+    }
+
+  SVN_ERR_ASSERT(true_targets_p);
+  *true_targets_p = true_targets;
 
   return SVN_NO_ERROR;
 }

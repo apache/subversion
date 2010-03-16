@@ -55,10 +55,23 @@ struct encoder_baton {
   apr_pool_t *pool;
 };
 
+/* This is at least as big as the largest size of an integer that
+   encode_int can generate; it is sufficient for creating buffers for
+   it to write into.  This assumes that integers are at most 64 bits,
+   and so 10 bytes (with 7 bits of information each) are sufficient to
+   represent them. */
+#define MAX_ENCODED_INT_LEN 10
+/* This is at least as big as the largest size for a single instruction. */
+#define MAX_INSTRUCTION_LEN (2*MAX_ENCODED_INT_LEN+1)
+/* This is at least as big as the largest possible instructions
+   section: in theory, the instructions could be SVN_DELTA_WINDOW_SIZE
+   1-byte copy-from-source instructions (though this is very unlikely). */
+#define MAX_INSTRUCTION_SECTION_LEN (SVN_DELTA_WINDOW_SIZE*MAX_INSTRUCTION_LEN)
 
 /* Encode VAL into the buffer P using the variable-length svndiff
    integer format.  Return the incremented value of P after the
-   encoded bytes have been written.
+   encoded bytes have been written.  P must point to a buffer of size
+   at least MAX_ENCODED_INT_LEN.
 
    This encoding uses the high bit of each byte as a continuation bit
    and the other seven bits as data bits.  High-order data bits are
@@ -80,7 +93,7 @@ encode_int(char *p, svn_filesize_t val)
   svn_filesize_t v;
   unsigned char cont;
 
-  assert(val >= 0);
+  SVN_ERR_ASSERT_NO_RETURN(val >= 0);
 
   /* Figure out how many bytes we'll need.  */
   v = val >> 7;
@@ -90,6 +103,8 @@ encode_int(char *p, svn_filesize_t val)
       v = v >> 7;
       n++;
     }
+
+  SVN_ERR_ASSERT_NO_RETURN(n <= MAX_ENCODED_INT_LEN);
 
   /* Encode the remaining bytes; n is always the number of bytes
      coming after the one we're encoding.  */
@@ -107,7 +122,7 @@ encode_int(char *p, svn_filesize_t val)
 static void
 append_encoded_int(svn_stringbuf_t *header, svn_filesize_t val)
 {
-  char buf[128], *p;
+  char buf[MAX_ENCODED_INT_LEN], *p;
 
   p = encode_int(buf, val);
   svn_stringbuf_appendbytes(header, buf, p - buf);
@@ -163,7 +178,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   svn_stringbuf_t *i1 = svn_stringbuf_create("", pool);
   svn_stringbuf_t *header = svn_stringbuf_create("", pool);
   const svn_string_t *newdata;
-  char ibuf[128], *ip;
+  char ibuf[MAX_INSTRUCTION_LEN], *ip;
   const svn_txdelta_op_t *op;
   apr_size_t len;
 
@@ -341,6 +356,8 @@ decode_file_offset(svn_filesize_t *val,
                    const unsigned char *p,
                    const unsigned char *end)
 {
+  if (p + MAX_ENCODED_INT_LEN < end)
+    end = p + MAX_ENCODED_INT_LEN;
   /* Decode bytes until we're done.  */
   *val = 0;
   while (p < end)
@@ -360,6 +377,8 @@ decode_size(apr_size_t *val,
             const unsigned char *p,
             const unsigned char *end)
 {
+  if (p + MAX_ENCODED_INT_LEN < end)
+    end = p + MAX_ENCODED_INT_LEN;
   /* Decode bytes until we're done.  */
   *val = 0;
   while (p < end)
@@ -377,7 +396,7 @@ decode_size(apr_size_t *val,
    data is not compressed.  */
 
 static svn_error_t *
-zlib_decode(svn_stringbuf_t *in, svn_stringbuf_t *out)
+zlib_decode(svn_stringbuf_t *in, svn_stringbuf_t *out, apr_size_t limit)
 {
   apr_size_t len;
   char *oldplace = in->data;
@@ -385,6 +404,13 @@ zlib_decode(svn_stringbuf_t *in, svn_stringbuf_t *out)
   /* First thing in the string is the original length.  */
   in->data = (char *)decode_size(&len, (unsigned char *)in->data,
                                  (unsigned char *)in->data+in->len);
+  if (in->data == NULL)
+    return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA, NULL,
+                            _("Decompression of svndiff data failed: no size"));
+  if (len > limit)
+    return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA, NULL,
+                            _("Decompression of svndiff data failed: "
+                              "size too large"));
   /* We need to subtract the size of the encoded original length off the
    *      still remaining input length.  */
   in->len -= (in->data - oldplace);
@@ -482,10 +508,10 @@ count_and_verify_instructions(int *ninst,
         return svn_error_createf
           (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
            _("Invalid diff stream: insn %d cannot be decoded"), n);
-      else if (op.length <= 0)
+      else if (op.length == 0)
         return svn_error_createf
           (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
-           _("Invalid diff stream: insn %d has non-positive length"), n);
+           _("Invalid diff stream: insn %d has length zero"), n);
       else if (op.length > tview_len - tpos)
         return svn_error_createf
           (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
@@ -494,7 +520,8 @@ count_and_verify_instructions(int *ninst,
       switch (op.action_code)
         {
         case svn_txdelta_source:
-          if (op.length > sview_len - op.offset)
+          if (op.length > sview_len - op.offset ||
+              op.offset > sview_len)
             return svn_error_createf
               (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
                _("Invalid diff stream: "
@@ -560,11 +587,11 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
 
       instin = svn_stringbuf_ncreate((const char *)data, insend - data, pool);
       instout = svn_stringbuf_create("", pool);
-      SVN_ERR(zlib_decode(instin, instout));
+      SVN_ERR(zlib_decode(instin, instout, MAX_INSTRUCTION_SECTION_LEN));
 
       ndin = svn_stringbuf_ncreate((const char *)insend, newlen, pool);
       ndout = svn_stringbuf_create("", pool);
-      SVN_ERR(zlib_decode(ndin, ndout));
+      SVN_ERR(zlib_decode(ndin, ndout, SVN_DELTA_WINDOW_SIZE));
 
       newlen = ndout->len;
       data = (unsigned char *)instout->data;
@@ -679,6 +706,14 @@ write_handler(void *baton,
       p = decode_size(&newlen, p, end);
       if (p == NULL)
         return SVN_NO_ERROR;
+
+      if (tview_len > SVN_DELTA_WINDOW_SIZE ||
+          sview_len > SVN_DELTA_WINDOW_SIZE ||
+          /* for svndiff1, newlen includes the original length */
+          newlen > SVN_DELTA_WINDOW_SIZE + MAX_ENCODED_INT_LEN ||
+          inslen > MAX_INSTRUCTION_SECTION_LEN)
+        return svn_error_create(SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL,
+                                _("Svndiff contains a too-large window"));
 
       /* Check for integer overflow.  */
       if (sview_offset < 0 || inslen + newlen < inslen
@@ -835,6 +870,14 @@ read_window_header(svn_stream_t *stream, svn_filesize_t *sview_offset,
   SVN_ERR(read_one_size(tview_len, stream));
   SVN_ERR(read_one_size(inslen, stream));
   SVN_ERR(read_one_size(newlen, stream));
+
+  if (*tview_len > SVN_DELTA_WINDOW_SIZE ||
+      *sview_len > SVN_DELTA_WINDOW_SIZE ||
+      /* for svndiff1, newlen includes the original length */
+      *newlen > SVN_DELTA_WINDOW_SIZE + MAX_ENCODED_INT_LEN ||
+      *inslen > MAX_INSTRUCTION_SECTION_LEN)
+    return svn_error_create(SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL,
+                            _("Svndiff contains a too-large window"));
 
   /* Check for integer overflow.  */
   if (*sview_offset < 0 || *inslen + *newlen < *inslen

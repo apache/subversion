@@ -246,7 +246,8 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
 
   subpool = svn_pool_create(pool);
 
-  for (i = 0; i < 10; ++i)
+#define SVNSYNC_LOCK_RETRIES 10
+  for (i = 0; i < SVNSYNC_LOCK_RETRIES; ++i)
     {
       svn_pool_clear(subpool);
       SVN_ERR(check_cancel(NULL));
@@ -269,8 +270,9 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
               apr_sleep(apr_time_from_sec(1));
             }
         }
-      else
+      else if (i < SVNSYNC_LOCK_RETRIES - 1)
         {
+          /* Except in the very last iteration, try to set the lock. */
           SVN_ERR(svn_ra_change_rev_prop(session, 0, SVNSYNC_PROP_LOCK,
                                          mylocktoken, subpool));
         }
@@ -1271,6 +1273,16 @@ close_edit(void *edit_baton,
   return eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool);
 }
 
+static svn_error_t *
+abort_edit(void *edit_baton,
+           apr_pool_t *pool)
+{
+  edit_baton_t *eb = edit_baton;
+  return eb->wrapped_editor->abort_edit(eb->wrapped_edit_baton, pool);
+}
+
+
+
 /*** Editor factory function ***/
 
 /* Set WRAPPED_EDITOR and WRAPPED_EDIT_BATON to an editor/baton pair
@@ -1312,6 +1324,7 @@ get_sync_editor(const svn_delta_editor_t *wrapped_editor,
   tree_editor->close_file = close_file;
   tree_editor->absent_file = absent_file;
   tree_editor->close_edit = close_edit;
+  tree_editor->abort_edit = abort_edit;
 
   eb->wrapped_editor = wrapped_editor;
   eb->wrapped_edit_baton = wrapped_edit_baton;

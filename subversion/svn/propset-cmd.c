@@ -33,6 +33,10 @@
 #include "svn_props.h"
 #include "cl.h"
 
+/* We shouldn't be including a private header here, but it is
+ * necessary for fixing issue #3416 */
+#include "private/svn_opt_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -103,6 +107,8 @@ svn_cl__propset(apr_getopt_t *os,
      us find the right repository. */
   if (opt_state->revprop)
     svn_opt_push_implicit_dot_target(targets, pool);
+
+  SVN_ERR(svn_opt__eat_peg_revisions(&targets, targets, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {

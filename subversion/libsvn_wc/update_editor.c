@@ -1851,8 +1851,9 @@ set_copied_handle_error(const char *path,
   return err;
 }
 
-/* Schedule the WC item PATH, whose entry is ENTRY, for re-addition as a copy
- * with history of (ENTRY->url)@(ENTRY->rev). PATH's parent is PARENT_PATH.
+/* Schedule the WC item PATH, whose entry is ENTRY, for re-addition.
+ * If MODIFY_COPYFROM is TRUE, re-add the item as a copy with history
+ * of (ENTRY->url)@(ENTRY->rev). PATH's parent is PARENT_PATH.
  * PATH and PARENT_PATH are relative to the current working directory.
  * Assume that the item exists locally and is scheduled as still existing with
  * some local modifications relative to its (old) base, but does not exist in
@@ -1876,6 +1877,7 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
                                   const char *parent_path,
                                   const char *path,
                                   const char *their_url,
+                                  svn_boolean_t modify_copyfrom,
                                   apr_pool_t *pool)
 {
   const char *base_name = svn_path_basename(path, pool);
@@ -1894,12 +1896,15 @@ schedule_existing_item_for_re_add(const svn_wc_entry_t *entry,
   flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
   flags |= SVN_WC__ENTRY_MODIFY_FORCE;
 
-  tmp_entry.copyfrom_url = entry->url;
-  flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
-  tmp_entry.copyfrom_rev = entry->revision;
-  flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
-  tmp_entry.copied = TRUE;
-  flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+  if (modify_copyfrom)
+    {
+      tmp_entry.copyfrom_url = entry->url;
+      flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
+      tmp_entry.copyfrom_rev = entry->revision;
+      flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
+      tmp_entry.copied = TRUE;
+      flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+    }
 
   /* ### Need to change the "base" into a "revert-base" ? */
 
@@ -2062,17 +2067,42 @@ do_entry_deletion(struct edit_baton *eb,
 
           SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
                                                     full_path, their_url,
-                                                    pool));
+                                                    TRUE, pool));
           return SVN_NO_ERROR;
         }
       else if (tree_conflict->reason == svn_wc_conflict_reason_deleted)
         {
-          /* The item does not exist locally (except perhaps as a skeleton
-           * directory tree) because it was already scheduled for delete.
-           * We must complete the deletion, leaving the tree conflict info
-           * as the only difference from a normal deletion. */
+          if (entry->schedule == svn_wc_schedule_replace)
+            {
+              /* The item was locally replaced with something else. We should
+               * keep the existing item schedule-replace, but we also need to
+               * update the BASE rev of the item to the revision we are
+               * updating to. Otherwise, the replace cannot be committed
+               * because the item is considered out-of-date, and it cannot
+               * be updated either because we're here to do just that. */
 
-          /* Fall through to the normal "delete" code path. */
+              /* Run the log in the parent dir, to record the tree conflict.
+               * Do this before schedule_existing_item_for_re_add(), in case
+               * that needs to modify the same entries. */
+              SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number,
+                                        log_item, pool));
+              SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
+              *log_number = 0;
+
+              SVN_ERR(schedule_existing_item_for_re_add(entry, eb, parent_path,
+                                                        full_path, their_url,
+                                                        FALSE, pool));
+              return SVN_NO_ERROR;
+            }
+          else
+            {
+              /* The item does not exist locally (except perhaps as a skeleton
+               * directory tree) because it was already scheduled for delete.
+               * We must complete the deletion, leaving the tree conflict info
+               * as the only difference from a normal deletion. */
+
+              /* Fall through to the normal "delete" code path. */
+            }
         }
       else
         SVN_ERR_MALFUNCTION();  /* other reasons are not expected here */
@@ -3518,7 +3548,7 @@ add_file(const char *path,
              "from a different repository"),
            svn_path_local_style(full_path, pool));
 
-      if (!eb->switch_url
+      if (!eb->switch_url && fb->new_URL && entry->url
           && strcmp(fb->new_URL, entry->url) != 0)
         return svn_error_createf(
            SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -4130,9 +4160,17 @@ merge_file(svn_wc_notify_state_t *content_state,
      different from fb->old_text_base_path if we have a replaced-with-history
      file.  However, in the case we had an obstruction, we check against the
      new text base. (And if we're doing an add-with-history and we've already
-     saved a copy of a locally-modified file, then there certainly are mods.) */
+     saved a copy of a locally-modified file, then there certainly are mods.)
+
+     Special case: The working file is referring to a file external? If so
+                   then we must mark it as unmodified in order to avoid bogus
+                   conflicts, since this file was added as a place holder to
+                   merge externals item from the repository. */
   if (fb->copied_working_text)
     is_locally_modified = TRUE;
+  else if (entry && entry->file_external_path
+           && entry->schedule == svn_wc_schedule_add)
+    is_locally_modified = FALSE;
   else if (! fb->existed)
     SVN_ERR(svn_wc__text_modified_internal_p(&is_locally_modified, fb->path,
                                              FALSE, adm_access, FALSE, pool));

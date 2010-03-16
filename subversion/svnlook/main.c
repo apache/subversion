@@ -1027,6 +1027,15 @@ print_diff_tree(svn_fs_root_t *root,
               SVN_ERR(svn_stream_close(ostream));
               SVN_ERR(svn_cmdline_printf(pool, "\n"));
             }
+          else if (! node->prop_mod &&
+                  ((! c->no_diff_added && node->action == 'A') ||
+                   (! c->no_diff_deleted && node->action == 'D')))
+            {
+              /* There was an empty file added or deleted in this revision.
+               * We can't print a diff, but we can at least print
+               * a diff header since we know what happened to this file. */
+              SVN_ERR(svn_cmdline_printf(pool, "%s", header->data));
+            }
         }
       SVN_ERR(svn_cmdline_fflush(stdout));
     }
@@ -1604,9 +1613,14 @@ do_plist(svnlook_ctxt_t *c,
       SVN_ERR(verify_path(&kind, root, path, pool));
       SVN_ERR(svn_fs_node_proplist(&props, root, path, pool));
     }
-  else
+  else if (c->is_revision)
     {
       SVN_ERR(svn_fs_revision_proplist(&props, c->fs, c->rev_id, pool));
+      revprop = TRUE;
+    }
+  else
+    {
+      SVN_ERR(svn_fs_txn_proplist(&props, c->txn, pool));
       revprop = TRUE;
     }
 
@@ -1622,8 +1636,16 @@ do_plist(svnlook_ctxt_t *c,
       if (revprop)
         {
           /* "<revprops ...>" */
-          svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops",
-                                "rev", revstr, NULL);
+          if (c->is_revision)
+            {
+              svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops",
+                                    "rev", revstr, NULL);
+            }
+          else
+            {
+              svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops",
+                                    "txn", c->txn_name, NULL);
+            }
         }
       else
         {

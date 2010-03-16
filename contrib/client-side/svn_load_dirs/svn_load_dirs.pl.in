@@ -1,5 +1,11 @@
 #!/usr/bin/perl -w
 
+# Copyright (c) 2002,2003,2004,2005,2006,2007,2009 Dolby.  All rights reserved.
+#
+# Licensed under the Academic Free License version 3.0.  See LICENSE_AFL3.txt
+# or http://www.opensource.org/licenses/academic.php for a copy of the license
+# text.
+
 # $HeadURL$
 # $LastChangedDate$
 # $LastChangedBy$

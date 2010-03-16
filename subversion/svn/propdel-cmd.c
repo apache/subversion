@@ -31,6 +31,10 @@
 #include "svn_path.h"
 #include "cl.h"
 
+/* We shouldn't be including a private header here, but it is
+ * necessary for fixing issue #3416 */
+#include "private/svn_opt_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -91,6 +95,8 @@ svn_cl__propdel(apr_getopt_t *os,
       ctx->notify_func2 = notify_wrapper;
       ctx->notify_baton2 = &nwb;
     }
+
+  SVN_ERR(svn_opt__eat_peg_revisions(&targets, targets, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {

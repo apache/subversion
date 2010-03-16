@@ -928,6 +928,7 @@ svn_error_t *
 svn_ra_serf__get_baseline_info(const char **bc_url,
                                const char **bc_relative,
                                svn_ra_serf__session_t *session,
+                               svn_ra_serf__connection_t *conn,
                                const char *url,
                                svn_revnum_t revision,
                                svn_revnum_t *latest_revnum,
@@ -940,12 +941,17 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
   if (! url)
     url = session->repos_url.path;
 
+  /* If the caller didn't provide a specific connection for us to use,
+     we'll use the default one.  */
+  if (! conn)
+    conn = session->conns[0];
+
   SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
-                                     session, session->conns[0], url, pool));
+                                     session, conn, url, pool));
 
   if (revision != SVN_INVALID_REVNUM)
     {
-      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
                                           vcc_url, revision, "0",
                                           baseline_props, pool));
       basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
@@ -953,7 +959,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
     }
   else
     {
-      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
                                           vcc_url, revision, "0",
                                           checked_in_props, pool));
       baseline_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
@@ -965,7 +971,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                     "requested checked-in value"));
         }
 
-      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
                                           baseline_url, revision, "0",
                                           baseline_props, pool));
       basecoll_url = svn_ra_serf__get_ver_prop(props, baseline_url, revision,
@@ -978,6 +984,8 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                               _("The OPTIONS response did not include the "
                                 "requested baseline-collection value"));
     }
+
+  basecoll_url = svn_path_canonicalize(basecoll_url, pool);
 
   if (latest_revnum)
     {

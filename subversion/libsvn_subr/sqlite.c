@@ -492,6 +492,7 @@ init_sqlite(apr_pool_t *pool)
                              SQLITE_VERSION, sqlite3_libversion());
   }
 
+#if APR_HAS_THREADS
 #if SQLITE_VERSION_AT_LEAST(3,5,0)
   /* SQLite 3.5 allows verification of its thread-safety at runtime.
      Older versions are simply expected to have been configured with
@@ -513,6 +514,7 @@ init_sqlite(apr_pool_t *pool)
   }
   SQLITE_ERR_MSG(sqlite3_initialize(), "Could not initialize SQLite");
 #endif
+#endif /* APR_HAS_THRADS */
 
   return SVN_NO_ERROR;
 }

@@ -314,10 +314,10 @@ bail_on_tree_conflicted_ancestor(svn_wc_adm_access_t *first_ancestor,
   while(1)
     {
       /* Here, ADM_ACCESS refers to PATH. */
-      svn_wc__strictly_is_wc_root(&wc_root,
-                                  path,
-                                  adm_access,
-                                  scratch_pool);
+      SVN_ERR(svn_wc__strictly_is_wc_root(&wc_root,
+                                          path,
+                                          adm_access,
+                                          scratch_pool));
 
       if (adm_access != first_ancestor)
         svn_wc_adm_close2(adm_access, scratch_pool);
@@ -335,8 +335,8 @@ bail_on_tree_conflicted_ancestor(svn_wc_adm_access_t *first_ancestor,
                                scratch_pool));
       /* Now, ADM_ACCESS refers to PARENT_PATH. */
 
-      svn_wc_conflicted_p2(NULL, NULL, &tree_conflicted,
-                           path, adm_access, scratch_pool);
+      SVN_ERR(svn_wc_conflicted_p2(NULL, NULL, &tree_conflicted,
+                                   path, adm_access, scratch_pool));
 
       if (tree_conflicted)
         return svn_error_createf(
@@ -460,6 +460,9 @@ harvest_committables(apr_hash_t *committables,
          _("Entry '%s' has unexpectedly changed special status"),
          svn_path_local_style(path, scratch_pool));
     }
+
+  if (entry->file_external_path && copy_mode)
+    return SVN_NO_ERROR;
 
   if (entry->kind == svn_node_dir)
     {
@@ -721,6 +724,14 @@ harvest_committables(apr_hash_t *committables,
 
           /* Skip the excluded item. */
           if (this_entry->depth == svn_depth_exclude)
+            continue;
+
+          /* Skip schedule-delete children inside of schedule-replace
+           * directories which were deleted pre-replace.
+           * Attempting to commit such nodes causes an out-of-date error.
+           * See issue #3281. */
+          if (entry->schedule == svn_wc_schedule_replace &&
+              this_entry->schedule == svn_wc_schedule_delete)
             continue;
 
           name_uri = svn_path_uri_encode(name, iterpool);

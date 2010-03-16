@@ -59,7 +59,7 @@ Change the format of a Subversion working copy to that of SVN_VERSION.
 def get_adm_dir():
   """Return the name of Subversion's administrative directory,
   adjusted for the SVN_ASP_DOT_NET_HACK environment variable.  See
-  <http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt>
+  <http://svn.apache.org/repos/asf/subversion/trunk/notes/asp-dot-net-hack.txt>
   for details."""
   return "SVN_ASP_DOT_NET_HACK" in os.environ and "_svn" or ".svn"
 

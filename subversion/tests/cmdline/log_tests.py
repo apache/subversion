@@ -1640,6 +1640,57 @@ def merge_sensitive_log_propmod_merge_inheriting_path(sbox):
   run_log_g_r8(A_COPY_path)
   run_log_g_r8(A_COPY_psi_path)
 
+#----------------------------------------------------------------------
+# Should be able to run 'svn log' against an uncommitted copy or move
+# destination.  See http://svn.haxx.se/dev/archive-2010-01/0492.shtml.
+def log_of_local_copy(sbox):
+  "svn log on an uncommitted copy"
+
+  guarantee_repos_and_wc(sbox)
+
+  C_path         = os.path.join(sbox.wc_dir, "A", "C")
+  C_moved_path   = os.path.join(sbox.wc_dir, "A", "C_MOVED")
+  psi_path       = os.path.join(sbox.wc_dir, "A", "D", "H", "psi")
+  psi_moved_path = os.path.join(sbox.wc_dir, "A", "D", "H", "psi_moved")
+
+  # Get the logs for a directory and a file.
+  exit_code, C_log_out, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-v', C_path)
+  exit_code, psi_log_out, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-v', psi_path)
+
+  # Move that directory and file.
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     C_path, C_moved_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     psi_path, psi_moved_path)
+  
+  # Get the logs for the move destinations.
+  #
+  # This was failing with:
+  #
+  #   svn log -v log_tests-29\A\C_MOVED
+  #    ..\..\..\subversion\svn\log-cmd.c:600: (apr_err=160013)
+  #    ..\..\..\subversion\libsvn_client\log.c:627: (apr_err=160013)
+  #    ..\..\..\subversion\libsvn_repos\log.c:1449: (apr_err=160013)
+  #    ..\..\..\subversion\libsvn_repos\log.c:1092: (apr_err=160013)
+  #    ..\..\..\subversion\libsvn_fs_fs\tree.c:2818: (apr_err=160013)
+  #    svn: File not found: revision 9, path '/A/C_MOVED'
+  #
+  exit_code, C_moved_log_out, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-v', C_moved_path)
+  exit_code, psi_moved_log_out, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-v', psi_moved_path)
+
+  # The logs of the move source and destinations should be the same.
+  if C_log_out != C_moved_log_out:
+    raise svntest.Failure("Log on uncommitted move destination '%s' " \
+                          "differs from that on move source '%s'"
+                          % (C_moved_path, C_path))
+  if psi_log_out != psi_moved_log_out:
+    raise svntest.Failure("Log on uncommitted move destination '%s' " \
+                          "differs from that on move source '%s'"
+                          % (psi_moved_path, psi_path))
 
 ########################################################################
 # Run the tests
@@ -1681,6 +1732,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_sensitive_log_propmod_merge_inheriting_path,
                          server_has_mergeinfo),
+              log_of_local_copy,
              ]
 
 if __name__ == '__main__':

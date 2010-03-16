@@ -693,14 +693,12 @@ def load_with_parent_dir(sbox):
                                    'mergeinfo_included.dump')
   dumpfile = svntest.main.file_read(dumpfile_location)
 
-  # Create 'sample' dir in sbox.repo_url
+  # Create 'sample' dir in sbox.repo_url, and load the dump stream there.
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 1.\n'],
                                      [], "mkdir", sbox.repo_url + "/sample",
                                      "-m", "Create sample dir")
-
-  # Load the dump stream
-  load_and_verify_dumpstream(sbox,[],[], None, dumpfile, '--parent-dir',
+  load_and_verify_dumpstream(sbox, [], [], None, dumpfile, '--parent-dir',
                              '/sample')
 
   # Verify the svn:mergeinfo properties for '--parent-dir'
@@ -715,6 +713,30 @@ def load_with_parent_dir(sbox):
                                       "/sample/branch:6-9\n"],
                                      [], 'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url + '/sample/branch1')
+
+  # Create 'sample-2' dir in sbox.repo_url, and load the dump stream again.
+  # This time, don't include a leading slash on the --parent-dir argument.
+  # See issue #3547.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 11.\n'],
+                                     [], "mkdir", sbox.repo_url + "/sample-2",
+                                     "-m", "Create sample-2 dir")
+  load_and_verify_dumpstream(sbox, [], [], None, dumpfile, '--parent-dir',
+                             'sample-2')
+
+  # Verify the svn:mergeinfo properties for '--parent-dir'.
+  svntest.actions.run_and_verify_svn(None,
+                                     [sbox.repo_url +
+                                      "/sample-2/branch - " +
+                                      "/sample-2/trunk:15-17\n"],
+                                     [], 'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url + '/sample-2/branch')
+  svntest.actions.run_and_verify_svn(None,
+                                     [sbox.repo_url +
+                                      "/sample-2/branch1 - " +
+                                      "/sample-2/branch:16-19\n"],
+                                     [], 'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url + '/sample-2/branch1')
 
 #----------------------------------------------------------------------
 
@@ -895,6 +917,39 @@ def create_in_repo_subdir(sbox):
   # No SVNRepositoryCreateFailure raised?
   raise svntest.Failure
 
+def verify_with_invalid_revprops(sbox):
+  "svnadmin verify detects invalid revprops file"
+
+  repo_dir = sbox.repo_dir
+
+  svntest.main.safe_rmtree(repo_dir, 1)
+
+  # This should succeed
+  svntest.main.create_repos(repo_dir)
+
+  # Run a test verify
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        sbox.repo_dir)
+
+  if svntest.verify.verify_outputs(
+    "Output of 'svnadmin verify' is unexpected.", None, errput, None,
+    ".*Verified revision 0*"):
+    raise svntest.Failure
+
+  # Empty the revprops file
+  rp_file = open(os.path.join(repo_dir, 'db', 'revprops', '0', '0'), 'w')
+
+  rp_file.write('')
+  rp_file.close()
+
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        sbox.repo_dir)
+
+  if svntest.verify.verify_outputs(
+    "Output of 'svnadmin verify' is unexpected.", None, errput, None,
+    ".*Malformed file"):
+    raise svntest.Failure
+
 
 ########################################################################
 # Run the tests
@@ -921,6 +976,7 @@ test_list = [ None,
               SkipUnless(fsfs_recover_handle_missing_revs_or_revprops_file,
                          svntest.main.is_fs_type_fsfs),
               create_in_repo_subdir,
+              verify_with_invalid_revprops,
              ]
 
 if __name__ == '__main__':

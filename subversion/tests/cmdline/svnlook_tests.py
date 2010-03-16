@@ -533,6 +533,96 @@ def diff_binary(sbox):
     raise svntest.Failure("No 'Binary files differ' indication in "
                           "'svnlook diff' output.")
 
+#----------------------------------------------------------------------
+def verify_logfile(logfilename, expected_data):
+  if os.path.exists(logfilename):
+    fp = open(logfilename)
+  else:
+    raise svntest.verify.SVNUnexpectedOutput("hook logfile %s not found"\
+                                             % logfilename)
+
+  actual_data = fp.readlines()
+  fp.close()
+  os.unlink(logfilename)
+  svntest.verify.compare_and_display_lines('wrong hook logfile content',
+                                           'STDOUT',
+                                           expected_data, actual_data)
+
+def test_txn_flag(sbox):
+  "test 'svnlook * -t'"
+
+  sbox.build()
+  repo_dir = sbox.repo_dir
+  wc_dir = sbox.wc_dir
+  logfilepath = os.path.join(repo_dir, 'hooks.log')
+
+  # List changed dirs and files in this transaction
+  hook_template = """import sys,os,subprocess
+svnlook_bin=%s
+
+fp = open(os.path.join(sys.argv[1], 'hooks.log'), 'wb')
+def output_command(fp, cmd, opt):
+  command = [svnlook_bin, cmd, '-t', sys.argv[2], sys.argv[1]] + opt
+  process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+  (output, errors) = process.communicate()
+  status = process.returncode
+  fp.write(output)
+  fp.write(errors)
+  return status
+
+for (svnlook_cmd, svnlook_opt) in %s:
+  output_command(fp, svnlook_cmd, svnlook_opt.split(' '))
+fp.close()"""
+  pre_commit_hook = svntest.main.get_pre_commit_hook_path(repo_dir)
+
+  # 1. svnlook 'changed' -t and 'dirs-changed' -t
+  hook_instance = hook_template % (repr(svntest.main.svnlook_binary),
+                                   repr([('changed', ''),
+                                         ('dirs-changed', '')]))
+  svntest.main.create_python_hook_script(pre_commit_hook,
+                                         hook_instance)
+
+  # Change files mu and rho
+  A_path = os.path.join(wc_dir, 'A')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append(mu_path, 'appended mu text')
+  svntest.main.file_append(rho_path, 'new appended text for rho')
+
+  # commit, and check the hook's logfile
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', wc_dir)
+
+  expected_data = [ 'U   A/D/G/rho\n', 'U   A/mu\n', 'A/\n', 'A/D/G/\n' ]
+  verify_logfile(logfilepath, expected_data)
+
+  # 2. svnlook 'propget' -t, 'proplist' -t
+  # 2. Change a dir and revision property
+  hook_instance = hook_template % (repr(svntest.main.svnlook_binary),
+                                   repr([('propget', 'bogus_prop /A'),
+                                         ('propget', '--revprop bogus_rev_prop'),
+                                         ('proplist', '/A'),
+                                         ('proplist', '--revprop')]))
+  svntest.main.create_python_hook_script(pre_commit_hook,
+                                         hook_instance)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'bogus_prop', 'bogus_val\n', A_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg', wc_dir,
+                                     '--with-revprop', 'bogus_rev_prop=bogus_rev_val\n')
+  # Now check the logfile
+  expected_data = [ 'bogus_val\n',
+                    'bogus_rev_val\n',
+                    '  bogus_prop\n',
+                    '  svn:log\n', '  svn:author\n',
+                    #  internal property, not really expected
+                    '  svn:check-locks\n',
+                    '  bogus_rev_prop\n', '  svn:date\n']
+  verify_logfile(logfilepath, expected_data)
+
 ########################################################################
 # Run the tests
 
@@ -549,6 +639,7 @@ test_list = [ None,
               diff_ignore_whitespace,
               diff_ignore_eolstyle,
               diff_binary,
+              test_txn_flag,
              ]
 
 if __name__ == '__main__':

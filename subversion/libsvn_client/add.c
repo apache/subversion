@@ -82,6 +82,23 @@ trim_string(char **pstr)
   str[i] = '\0';
 }
 
+/* Remove leading and trailing single- or double quotes from a C string,
+ * in place. */
+static void
+unquote_string(char **pstr)
+{
+  char *str = *pstr;
+  size_t i = strlen(str);
+
+  if (i > 0 && ((*str == '"' && str[i - 1] == '"') ||
+                (*str == '\'' && str[i - 1] == '\'')))
+    {
+      str[i - 1] = '\0';
+      str++;
+    }
+  *pstr = str;
+}
+
 /* Split PROPERTY and store each individual value in PROPS.
    Allocates from POOL. */
 static void
@@ -163,6 +180,7 @@ auto_props_enumerator(const char *name,
           *equal_sign = '\0';
           equal_sign++;
           trim_string(&equal_sign);
+          unquote_string(&equal_sign);
           this_value = equal_sign;
         }
       else
@@ -291,13 +309,26 @@ add_file(const char *path,
         {
           const void *pname;
           void *pval;
+          svn_error_t *err;
 
           apr_hash_this(hi, &pname, NULL, &pval);
           /* It's probably best to pass 0 for force, so that if
              the autoprops say to set some weird combination,
              we just error and let the user sort it out. */
-          SVN_ERR(svn_wc_prop_set3(pname, pval, path, adm_access, FALSE,
-                                   NULL, NULL, pool));
+          err = svn_wc_prop_set3(pname, pval, path, adm_access, FALSE,
+                                 NULL, NULL, pool);
+          if (err)
+            {
+              /* Don't leave the job half-done. If we fail to set a property,
+               * (try to) un-add the file. */
+              svn_error_clear(svn_wc_revert3(path, adm_access,
+                                             svn_depth_empty,
+                                             FALSE /* use_commit_times */,
+                                             NULL /* changelists */,
+                                             NULL, NULL, NULL, NULL,
+                                             pool));
+              return err;
+            }
         }
     }
 

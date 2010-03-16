@@ -2721,20 +2721,31 @@ set_headers(request_rec *r, const dav_resource *resource)
       else if ((! resource->info->repos->is_svn_client)
                && r->content_type)
         mimetype = r->content_type;
-      else
-        mimetype = ap_default_type(r);
 
-      serr = svn_mime_type_validate(mimetype, resource->pool);
-      if (serr)
+      /* If we found a MIME type, we'll make sure it's Subversion-friendly. */
+      if (mimetype)
         {
-          /* Probably serr->apr == SVN_ERR_BAD_MIME_TYPE, but
-             there's no point even checking.  No matter what the
-             error is, we can't derive the mime type from the
-             svn:mime-type property.  So we resort to the infamous
-             "mime type of last resort." */
-          svn_error_clear(serr);
-          mimetype = "application/octet-stream";
+          if ((serr = svn_mime_type_validate(mimetype, resource->pool)))
+            {
+              /* Probably serr->apr == SVN_ERR_BAD_MIME_TYPE, but there's
+                 no point even checking.  No matter what the error is, we
+                 can't use this MIME type.  */
+              svn_error_clear(serr);
+              mimetype = NULL;
+            }
         }
+
+      /* We've found/calculated/validated no usable MIME type.  We
+         could fall back to "application/octet-stream" (aka "bag o'
+         bytes"), but many browsers have grown to expect "text/plain"
+         to mean "*shrug*", and kick off their own MIME type detection
+         routines when they see it.  So we'll use "text/plain".
+      
+         ### Why not just avoid sending a Content-type at all?  Is
+         ### that just bad form for HTTP?  */
+      if (! mimetype)
+        mimetype = "text/plain";
+
 
       /* if we aren't sending a diff, then we know the length of the file,
          so set up the Content-Length header */
@@ -2978,9 +2989,23 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           && (resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION))
         {
           if (gen_html)
-            ap_fprintf(output, bb, "  <li><a href=\"../\">..</a></li>\n");
+            {
+              if (resource->info->pegged)
+                {
+                  ap_fprintf(output, bb,
+                             "  <li><a href=\"../?p=%ld\">..</a></li>\n",
+                             resource->info->root.rev);
+                }
+              else
+                {
+                  ap_fprintf(output, bb,
+                             "  <li><a href=\"../\">..</a></li>\n");
+                }
+            }
           else
-            ap_fprintf(output, bb, "    <updir />\n");
+            {
+              ap_fprintf(output, bb, "    <updir />\n");
+            }
         }
 
       /* get a sorted list of the entries */
@@ -3069,11 +3094,27 @@ deliver(const dav_resource *resource, ap_filter_t *output)
       svn_pool_destroy(entry_pool);
 
       if (gen_html)
-        ap_fputs(output, bb,
-                 " </ul>\n <hr noshade><em>Powered by "
-                 "<a href=\"http://subversion.tigris.org/\">Subversion</a> "
-                 "version " SVN_VERSION "."
-                 "</em>\n</body></html>");
+        {
+          if (strcmp(ap_psignature("FOO", resource->info->r), "") != 0)
+            {
+              /* Apache's signature generation code didn't eat our prefix.
+                 ServerSignature must be enabled.  Print our version info.
+
+                 WARNING: This is a kludge!! ap_psignature() doesn't promise
+                 to return the empty string when ServerSignature is off.  We
+                 know it does by code inspection, but this behavior is subject
+                 to change. (Perhaps we should try to get the Apache folks to
+                 make this promise, though.  Seems harmless/useful enough...)
+              */
+              ap_fputs(output, bb,
+                       " </ul>\n <hr noshade><em>Powered by "
+                       "<a href=\"http://subversion.tigris.org/\">Subversion"
+                       "</a> version " SVN_VERSION "."
+                       "</em>\n</body></html>");
+            }
+          else
+            ap_fputs(output, bb, " </ul>\n</body></html>");
+        }
       else
         ap_fputs(output, bb, "  </index>\n</svn>\n");
 
