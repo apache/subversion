@@ -103,7 +103,7 @@ def main(argv):
                  'A backup copy of lang.po is saved as lang.po.bak.\n'
                  '\n'
                  'Example:\n'
-                 '    svn cat http://svn.collab.net/repos/svn/trunk/subversion/po/sv.po | \\\n'
+                 '    svn cat http://svn.apache.org/repos/asf/subversion/trunk/subversion/po/sv.po | \\\n'
                  '        %s sv.po' % (argv0, argv0))
 
     # Read the source po file into a hash

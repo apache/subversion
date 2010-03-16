@@ -14646,8 +14646,8 @@ def merge_range_prior_to_rename_source_existence(sbox):
   "merge prior to rename src existence still dels src"
 
   # Replicate a merge bug found while synching up a feature branch on the
-  # Subversion repository with trunk.  See r34047 of
-  # http://svn.collab.net/repos/svn/branches/ignore-mergeinfo, in which
+  # Subversion repository with trunk.  See r874121 of
+  # http://svn.apache.org/repos/asf/subversion/branches/ignore-mergeinfo, in which
   # a move was merged to the target, but the delete half of the move
   # didn't occur.
 

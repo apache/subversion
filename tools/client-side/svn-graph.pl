@@ -42,7 +42,7 @@ require SVN::Ra;
 require SVN::Client;
 
 # The URL of the Subversion repository we wish to graph
-# (e.g. "http://svn.collab.net/repos/svn").
+# (e.g. "http://svn.apache.org/repos/asf/subversion").
 my $repos_url;
 
 # The revision range we operate on, from $startrev -> $youngest.

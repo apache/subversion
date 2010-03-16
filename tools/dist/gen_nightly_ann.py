@@ -15,7 +15,7 @@ webpagetext = '''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 nightly release of Subversion 1.5.x (r%d).</p>
 
 <p>This distribution is automatically generated from the latest sources on the
-<a href="http://svn.collab.net/repos/svn/branches/1.5.x">1.5.x branch</a>.  It
+<a href="http://svn.apache.org/repos/asf/subversion/branches/1.5.x">1.5.x branch</a>.  It
 may not even compile, and is certainly <i>not</i> suitable for any sort of
 production use.  This distribution has not been tested, and may cause any
 number of problems, up to and including death and bodily injury.  Only use this

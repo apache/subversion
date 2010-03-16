@@ -251,7 +251,7 @@ def do_rsync_backup():
     ### Use rsync to make a copy.
     # We need to copy the 'current' file first.
     # Don't copy the transactions/ directory.
-    # See http://svn.collab.net/repos/svn/trunk/notes/fsfs
+    # See http://svn.apache.org/repos/asf/subversion/trunk/notes/fsfs
 
     rsync_dest = os.path.join(backup_tmpdir,'')
 

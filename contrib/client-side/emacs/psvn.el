@@ -136,7 +136,7 @@
 ;; The latest version of psvn.el can be found at:
 ;;   http://www.xsteve.at/prg/emacs/psvn.el
 ;; Or you can check it out from the subversion repository:
-;;   svn co http://svn.collab.net/repos/svn/trunk/contrib/client-side/emacs emacs-svn
+;;   svn co http://svn.apache.org/repos/asf/subversion/trunk/contrib/client-side/emacs emacs-svn
 
 ;; TODO:
 ;; * shortcut for svn propset svn:keywords "Date" psvn.el
@@ -1701,7 +1701,7 @@ The results are used to build the `svn-status-info' variable."
           ;; (message "Going to skip %s" skip-double-external-dir-entry-name)
           nil)
          ((looking-at "--- Changelist") ; skip svn changelist header lines
-          ;; See: http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt
+          ;; See: http://svn.apache.org/repos/asf/subversion/trunk/notes/changelist-design.txt
           nil)
          (t
           (setq svn-marks (buffer-substring (point) (+ (point) svn-marks-length))

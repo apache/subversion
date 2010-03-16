@@ -267,8 +267,8 @@ create_locks(svn_repos_t *repos, apr_pool_t *pool)
 #define PREWRITTEN_HOOKS_TEXT                                                 \
   "# For more examples and pre-written hooks, see those in"                NL \
   "# the Subversion repository at"                                         NL \
-  "# http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/ and"        NL \
-  "# http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/"          NL
+  "# http://svn.apache.org/repos/asf/subversion/trunk/tools/hook-scripts/ and"        NL \
+  "# http://svn.apache.org/repos/asf/subversion/trunk/contrib/hook-scripts/"          NL
 
 
 static svn_error_t *
