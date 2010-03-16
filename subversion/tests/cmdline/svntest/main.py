@@ -1218,6 +1218,7 @@ class TestRunner:
                                       str(self.index)
 
     actions.no_sleep_for_timestamps()
+    actions.no_check_for_wc_ng()
 
     saved_dir = os.getcwd()
     try:

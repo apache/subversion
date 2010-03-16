@@ -238,15 +238,6 @@ Approved changes:
    Votes:
      +1: neels, cmpilato, rhuijben
 
- * ^/subversion/branches/1.6.x-wc-ng-check-override
-   Disable checks for WC-NG working copies while running the test suite.
-   Justification:
-     Allows 'make check' to succeed in working copies of the 1.6.x branch
-     managed by an svn client from trunk. This is for developer convenience,
-     it does not make a difference for users.
-   Votes:
-     +1: stsp, cmpilato, rhuijben
-
  * ^/subversion/branches/1.6.x-issue-3242-partial
    Merge a portion of the issue 3242 work, specifically the bit that
    makes mergeinfo queries in the client layer happen against the
