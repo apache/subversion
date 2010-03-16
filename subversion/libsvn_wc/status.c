@@ -884,7 +884,7 @@ get_dir_status(struct edit_baton *eb,
       if (prop_val)
         {
           apr_array_header_t *ext_items;
-          apr_pool_t *hash_pool = apr_hash_pool_get(wb->externals);
+          apr_pool_t *hash_pool = apr_hash_pool_get(eb->externals);
           int i;
 
           if (eb->traversal_info)
