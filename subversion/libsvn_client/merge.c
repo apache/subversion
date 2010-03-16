@@ -7663,6 +7663,9 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
    path@TARGET_REV.  Effectively this is the mergeinfo catalog on the
    reintegrate target.
 
+   YC_ANCESTOR_REV is the revision of the youngest common ancestor of the
+   reintegrate source and the reintegrate target.
+
    SOURCE_REPOS_REL_PATH is the path of the reintegrate source relative to
    the root of the repository.  TARGET_REPOS_REL_PATH is the path of the
    reintegrate target relative to the root of the repository.
@@ -7696,6 +7699,7 @@ static svn_error_t *
 find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                         svn_boolean_t *never_synched,
                         svn_revnum_t *youngest_merged_rev,
+                        svn_revnum_t yc_ancestor_rev,
                         svn_mergeinfo_catalog_t source_catalog,
                         apr_hash_t *target_segments_hash,
                         const char *source_repos_rel_path,
@@ -7744,6 +7748,16 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
       SVN_ERR(svn_client__mergeinfo_from_segments(&target_history_as_mergeinfo,
                                                   segments,
                                                   iterpool));
+
+      /* Remove any target history that is also part of the source's history,
+         i.e. their common ancestry.  By definition this has already been
+         "merged" from the target to the source.  If the source has explict
+         self referential mergeinfo it would intersect with the target's
+         history below, making it appear that some merges had been done from
+         the target to the source, when this might not actually be the case. */
+      SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
+        &target_history_as_mergeinfo, target_history_as_mergeinfo,
+        source_rev, yc_ancestor_rev, iterpool));
 
       /* Look for any explicit mergeinfo on the source path corresponding to
          the target path.  If we find any remove that from SOURCE_CATALOG.
@@ -8034,6 +8048,9 @@ calculate_left_hand_side(const char **url_left,
   apr_hash_t *segments_hash = apr_hash_make(pool);
   svn_boolean_t never_synced;
   svn_revnum_t youngest_merged_rev;
+  const char *yc_ancestor_path;
+  const char *source_url;
+  const char *target_url;
 
   /* Get the history (segments) for the target and any of its subtrees
      with explicit mergeinfo. */
@@ -8058,6 +8075,26 @@ calculate_left_hand_side(const char **url_left,
                    APR_HASH_KEY_STRING, segments);
     }
 
+  /* Check that SOURCE_URL@SOURCE_REV and TARGET_URL@TARGET_REV are
+     actually related, we can't reintegrate if they are not.  Also
+     get an initial value for *REV_LEFT. */
+  source_url = svn_path_url_add_component2(source_repos_root,
+                                           source_repos_rel_path,
+                                           subpool),
+  target_url = svn_path_url_add_component2(source_repos_root,
+                                           target_repos_rel_path,
+                                           subpool);
+  SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
+                                                   rev_left,
+                                                   source_url, source_rev,
+                                                   target_url, target_rev,
+                                                   ctx, subpool));
+  if (!(yc_ancestor_path && SVN_IS_VALID_REVNUM(*rev_left)))
+    return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                             _("'%s@%ld' must be ancestrally related to "
+                               "'%s@%ld'"), source_url, source_rev,
+                             target_url, target_rev);
+
   /* Get the mergeinfo from the source, including its descendants
      with differing explicit mergeinfo. */
   APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *)
@@ -8075,6 +8112,7 @@ calculate_left_hand_side(const char **url_left,
   SVN_ERR(find_unmerged_mergeinfo(&unmerged_catalog,
                                   &never_synced,
                                   &youngest_merged_rev,
+                                  *rev_left,
                                   mergeinfo_catalog,
                                   segments_hash,
                                   source_repos_rel_path,
@@ -8094,24 +8132,6 @@ calculate_left_hand_side(const char **url_left,
   if (never_synced)
     {
       /* We never merged to the source.  Just return the branch point. */
-      const char *yc_ancestor_path,
-        *source_url = svn_path_url_add_component2(source_repos_root,
-                                                  source_repos_rel_path,
-                                                  subpool),
-        *target_url = svn_path_url_add_component2(source_repos_root,
-                                                  target_repos_rel_path,
-                                                  subpool);
-
-      SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
-                                                       rev_left,
-                                                       source_url, source_rev,
-                                                       target_url, target_rev,
-                                                       ctx, subpool));
-      if (!(yc_ancestor_path && SVN_IS_VALID_REVNUM(*rev_left)))
-        return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                                 _("'%s@%ld' must be ancestrally related to "
-                                   "'%s@%ld'"), source_url, source_rev,
-                                 target_url, target_rev);
       *url_left = svn_path_url_add_component2(source_repos_root,
                                               yc_ancestor_path, pool);
     }
