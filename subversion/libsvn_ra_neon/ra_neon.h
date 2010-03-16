@@ -82,7 +82,7 @@ typedef struct {
 
 
 
-typedef struct {
+typedef struct svn_ra_neon__session_t {
   apr_pool_t *pool;
   svn_stringbuf_t *url;                 /* original, unparsed session url */
   ne_uri root;                          /* parsed version of above */
@@ -112,6 +112,9 @@ typedef struct {
 
   svn_ra_progress_notify_func_t progress_func;
   void *progress_baton;
+
+  apr_off_t total_progress;             /* Total number of bytes sent in this
+                                           session with a -1 total marker */
 
   /* Maps SVN_RA_CAPABILITY_foo keys to "yes" or "no" values.
      If a capability is not yet discovered, it is absent from the table.
