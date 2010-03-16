@@ -50,7 +50,8 @@ struct edit_baton {
      URL open in RA_SESSION below. */
   const char *target;
 
-  /* ADM_ACCESS is an access baton that includes the TARGET directory */
+  /* A working copy context for TARGET, NULL if this is purely a
+     repository operation. */
   svn_wc_context_t *wc_ctx;
 
   /* The callback and calback argument that implement the file comparison
@@ -321,12 +322,12 @@ get_dirprops_from_ra(struct dir_baton *b, svn_revnum_t base_revision)
 }
 
 
-/* Return in *LOCAL_DIR_ABSPATH the absolute path for the directory
-   PATH if PATH is a versioned directory.  If PATH is not a versioned
+/* If WC_CTX is NULL then set *LOCAL_DIR_ABSPATH to NULL otherwise
+   return in *LOCAL_DIR_ABSPATH the absolute path for the directory
+   PATH if PATH is a versioned directory. If PATH is not a versioned
    directory and LENIENT is FALSE then return an error
-   SVN_ERR_WC_NOT_WORKING_COPY.  If LENIENT is TRUE then failure to
-   find an access baton will not return an error but will set
-   *LOCAL_DIR_ABSPATH to NULL instead.
+   SVN_ERR_WC_NOT_WORKING_COPY.  If LENIENT is TRUE then no error will
+   be returned but instead *LOCAL_DIR_ABSPATH will be set to NULL.
 
    This rather odd interface was originally designed around searching
    an access baton set. */
@@ -367,7 +368,7 @@ get_dir_abspath(const char **local_dir_abspath,
 
 /* Like get_path_access except the returned path, in
    *LOCAL_PARENT_DIR_ABSPATH, is for the parent of PATH rather than
-   for PATH itself. */
+   for PATH itself.  As for get_path_access WC_CTX may be NULL. */
 static svn_error_t *
 get_parent_dir_abspath(const char **local_parent_dir_abspath,
                        svn_wc_context_t *wc_ctx,
