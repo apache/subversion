@@ -1142,7 +1142,6 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   void *edit_baton;
   void *commit_baton;
   apr_hash_t *committables;
-  svn_wc_adm_access_t *adm_access;
   apr_array_header_t *commit_items;
   const svn_wc_entry_t *entry;
   apr_pool_t *iterpool;
@@ -1150,15 +1149,13 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   apr_hash_t *commit_revprops;
   int i;
 
-  /* Find the common root of all the source paths, and probe the wc. */
+  /* Find the common root of all the source paths */
   get_copy_pair_ancestors(copy_pairs, &top_src_path, NULL, NULL, pool);
-  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx, top_src_path,
-                                       FALSE, -1, ctx->cancel_func,
-                                       ctx->cancel_baton, pool));
 
-  /* The commit process uses absolute paths, so we need to open the access
-     baton using absolute paths, and so we really need to use absolute
-     paths everywhere. */
+  /* Do we need to lock the working copy?  1.6 didn't take a write
+     lock, but what happens if the working copy changes during the copy
+     operation? */
+
   iterpool = svn_pool_create(pool);
 
   for (i = 0; i < copy_pairs->nelts; i++)
@@ -1193,8 +1190,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
     }
 
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, top_dst_url,
-                                               svn_wc_adm_access_path(
-                                                                 adm_access),
+                                               top_src_path,
                                                NULL, TRUE, TRUE, ctx, pool));
 
   /* If requested, determine the nearest existing parent of the destination,
@@ -1272,7 +1268,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       if (! message)
         {
           svn_pool_destroy(iterpool);
-          return svn_error_return(svn_wc_adm_close2(adm_access, pool));
+          return SVN_NO_ERROR;
         }
     }
   else
@@ -1295,7 +1291,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                      SVN_CLIENT__SINGLE_REPOS_NAME,
                                      APR_HASH_KEY_STRING)))
     {
-      return svn_error_return(svn_wc_adm_close2(adm_access, pool));
+      return SVN_NO_ERROR;
     }
 
   /* If we are creating intermediate directories, tack them onto the list
@@ -1397,8 +1393,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
   svn_pool_destroy(iterpool);
 
-  /* It's only a read lock, so unlocking is harmless. */
-  return svn_error_return(svn_wc_adm_close2(adm_access, pool));
+  return SVN_NO_ERROR;
 }
 
 /* Peform each individual copy operation for a repos -> wc copy.  A
