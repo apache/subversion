@@ -70,33 +70,30 @@
 
 /* Obtain the implied mergeinfo and the existing mergeinfo of the
    source path, combine them and return the result in
-   *TARGET_MERGEINFO.  ADM_ACCESS may be NULL, if SRC_PATH_OR_URL is an
-   URL.  If NO_REPOS_ACCESS is set, this function is disallowed from
-   consulting the repository about anything.  RA_SESSION may be NULL but
-   only if NO_REPOS_ACCESS is true.  */
+   *TARGET_MERGEINFO.  One of LOCAL_ABSPATH and SRC_URL must be valid,
+   the other must be NULL. */
 static svn_error_t *
 calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                            apr_hash_t **target_mergeinfo,
-                           svn_wc_adm_access_t *adm_access,
-                           const char *src_path_or_url,
+                           const char *local_abspath,
+                           const char *src_url,
                            svn_revnum_t src_revnum,
-                           svn_boolean_t no_repos_access,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry = NULL;
   svn_boolean_t locally_added = FALSE;
-  const char *src_url;
   apr_hash_t *src_mergeinfo = NULL;
+
+  SVN_ERR_ASSERT((local_abspath && !src_url) || (!local_abspath && src_url));
 
   /* If we have a schedule-add WC path (which was not copied from
      elsewhere), it doesn't have any repository mergeinfo, so don't
      bother checking. */
-  if (adm_access)
+  if (local_abspath)
     {
-      const char *local_abspath;
+      SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, src_path_or_url, pool));
       SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, local_abspath,
                                           svn_node_unknown, FALSE, FALSE,
                                           pool, pool));
@@ -112,42 +109,23 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                                              pool, pool));
         }
     }
-  else
-    {
-      src_url = src_path_or_url;
-    }
 
   if (! locally_added)
     {
-      if (! no_repos_access)
-        {
-          /* Fetch any existing (explicit) mergeinfo.  We'll temporarily
-             reparent to the target URL here, just to keep the code simple.
-             We could, as an alternative, first see if the target URL was a
-             child of the session URL and use the relative "remainder",
-             falling back to this reparenting as necessary.  */
-          const char *old_session_url = NULL;
-          SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
-                                                    ra_session, src_url, pool));
-          SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
-                                                  "", src_revnum,
-                                                  svn_mergeinfo_inherited,
-                                                  TRUE, pool));
-          if (old_session_url)
-            SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
-        }
-      else
-        {
-          svn_boolean_t inherited;
-          const char *local_abspath;
-
-          SVN_ERR(svn_dirent_get_absolute(&local_abspath, src_path_or_url,
-                                          pool));
-          SVN_ERR(svn_client__get_wc_mergeinfo(&src_mergeinfo, &inherited,
-                                               svn_mergeinfo_inherited,
-                                               local_abspath, NULL,
-                                               NULL, ctx, pool, pool));
-        }
+      /* Fetch any existing (explicit) mergeinfo.  We'll temporarily
+         reparent to the target URL here, just to keep the code simple.
+         We could, as an alternative, first see if the target URL was a
+         child of the session URL and use the relative "remainder",
+         falling back to this reparenting as necessary.  */
+      const char *old_session_url = NULL;
+      SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
+                                                ra_session, src_url, pool));
+      SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
+                                              "", src_revnum,
+                                              svn_mergeinfo_inherited,
+                                              TRUE, pool));
+      if (old_session_url)
+        SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
     }
 
   *target_mergeinfo = src_mergeinfo;
@@ -807,8 +785,9 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       /* Go ahead and grab mergeinfo from the source, too. */
       SVN_ERR(svn_client__ensure_ra_session_url(&ignored_url, ra_session,
                                                 pair->src, pool));
-      SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, NULL, pair->src,
-                                         pair->src_revnum, FALSE, ctx, pool));
+      SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, NULL,
+                                         pair->src,
+                                         pair->src_revnum, ctx, pool));
       if (mergeinfo)
         SVN_ERR(svn_mergeinfo_to_string(&info->mergeinfo, mergeinfo, pool));
 
@@ -1356,9 +1335,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
          info known to the WC and the repository. */
       item->outgoing_prop_changes = apr_array_make(pool, 1,
                                                    sizeof(svn_prop_t *));
-      SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, adm_access,
-                                         pair->src, pair->src_revnum,
-                                         FALSE, ctx, iterpool));
+      SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, pair->src,
+                                         NULL, SVN_INVALID_REVNUM,
+                                         ctx, iterpool));
       SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src,
                                           svn_node_unknown, FALSE, FALSE,
                                           pool, pool));
@@ -1495,7 +1474,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
              ### source path. */
           SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo, NULL,
                                              pair->src, src_revnum,
-                                             FALSE, ctx, pool));
+                                             ctx, pool));
           SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
         }
       else  /* different repositories */
@@ -1553,7 +1532,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
       SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo,
                                          NULL, pair->src, src_revnum,
-                                         FALSE, ctx, pool));
+                                         ctx, pool));
       SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
 
       /* Ideally, svn_wc_add_repos_file3() would take a notify function
