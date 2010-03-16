@@ -1203,7 +1203,15 @@ install_committed_file(svn_boolean_t *overwrote_working,
 }
 
 
-/* */
+/* Set the base version of the node LOCAL_ABSPATH to be the same as its
+ * working version currently is:
+ *
+ * - Remove children that are marked deleted (if it's a dir)
+ * - Install the new base props
+ * - Install the new tree state
+ * - Install the new text (if it's a file)
+ * - Adjust the parent (if it's a dir)
+ * */
 static svn_error_t *
 log_do_committed(svn_wc__db_t *db,
                  const char *local_abspath,
