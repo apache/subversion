@@ -845,11 +845,7 @@ typedef struct
    apr_hash_t * hash of apr_array_header_t * arrays (of
    svn_client_commit_item_t * structures), keyed on const char *
    canonical repository URLs.  LOCK_TOKENS will point to a hash table
-   with const char * lock tokens, keyed on const char * URLs.  Also,
-   LOCKED_DIRS will be an apr_hash_t * hash of svn_wc_adm_access_t *
-   keyed on const char * working copy path directory names which were
-   locked in the process of this crawl.  These will need to be
-   unlocked again post-commit.
+   with const char * lock tokens, keyed on const char * URLs.
 
    If DEPTH is specified, descend (or not) into each target in TARGETS
    as specified by DEPTH; the behavior is the same as that described
@@ -880,10 +876,9 @@ svn_client__harvest_committables(apr_hash_t **committables,
 
 /* Recursively crawl each absolute working copy path SRC in COPY_PAIRS,
    harvesting commit_items into a COMMITABLES hash (see the docstring for
-   svn_client__harvest_committables for what that really means, and
-   for the relevance of LOCKED_DIRS) as if every entry at or below
-   the SRC was to be committed as a set of adds (mostly with history)
-   to a new repository URL (DST in COPY_PAIRS).
+   svn_client__harvest_committables for what that really means) as if
+   every entry at or below the SRC was to be committed as a set of adds
+   (mostly with history) to a new repository URL (DST in COPY_PAIRS).
 
    If CTX->CANCEL_FUNC is non-null, it will be called with
    CTX->CANCEL_BATON while harvesting to determine if the client has
