@@ -292,16 +292,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r880552
-   Try to enable TCP keep-alives in svnserve.
-   Justification:
-     ra_svn clients do this, too. It should not do any harm.
-     Is likely to fix hanging svnserve processes which still linger
-     blocking on reads from sockets after days of inactivity on the
-     connection, a problem seen and reported by MPlayer developers in #svn.
-   Votes:
-     +1: stsp, rhuijben, cmpilato
-
  * r892050, 892085
    Fix a reintegrate bug which can occur when the merge source has mergeinfo
    that explicitly describes common history with the reintegrate target.
