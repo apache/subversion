@@ -232,6 +232,9 @@ Approved changes:
    except in CHANGES (for sentimental reasons, I guess).
    Justification:
      Tools and doc references should point at the new locations.
+   Notes:
+     Merge has a number of conflicts.  Although singly they may be easy to
+     resolve, I recommend a backport branch because of the volume.
    Votes:
      +1: neels, cmpilato, rhuijben
 
