@@ -187,8 +187,8 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.status(path, depth, onServer, getAll, noIgnore,
-                              ignoreExternals,
+            aSVNClient.status(path, Depth.toADepth(depth), onServer, getAll,
+                              noIgnore, ignoreExternals,
                               changelists == null ? null
                                 : Arrays.asList(changelists),
         new org.apache.subversion.javahl.callback.StatusCallback () {
@@ -281,7 +281,7 @@ public class SVNClient implements SVNClientInterface
             aSVNClient.list(url,
                          revision == null ? null : revision.toApache(),
                          pegRevision == null ? null : pegRevision.toApache(),
-                         depth, direntFields, fetchLocks,
+                         Depth.toADepth(depth), direntFields, fetchLocks,
         new org.apache.subversion.javahl.callback.ListCallback () {
             public void doEntry(org.apache.subversion.javahl.DirEntry dirent,
                                 org.apache.subversion.javahl.Lock lock)
@@ -570,7 +570,8 @@ public class SVNClient implements SVNClientInterface
             return aSVNClient.checkout(moduleName, destPath,
                           revision == null ? null : revision.toApache(),
                           pegRevision == null ? null : pegRevision.toApache(),
-                          depth, ignoreExternals, allowUnverObstructions);
+                          Depth.toADepth(depth), ignoreExternals,
+                          allowUnverObstructions);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -723,8 +724,8 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.revert(path, depth, changelists == null ? null
-                                : Arrays.asList(changelists));
+            aSVNClient.revert(path, Depth.toADepth(depth),
+                     changelists == null ? null : Arrays.asList(changelists));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -763,7 +764,8 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.add(path, depth, force, noIgnores, addParents);
+            aSVNClient.add(path, Depth.toADepth(depth), force, noIgnores,
+                   addParents);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -819,8 +821,8 @@ public class SVNClient implements SVNClientInterface
         {
             return aSVNClient.update(new HashSet<String>(Arrays.asList(paths)),
                                 revision == null ? null : revision.toApache(),
-                                depth, depthIsSticky, ignoreExternals,
-                                allowUnverObstructions);
+                                Depth.toADepth(depth), depthIsSticky,
+                                ignoreExternals, allowUnverObstructions);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -863,7 +865,7 @@ public class SVNClient implements SVNClientInterface
         try
         {
             return aSVNClient.commit(new HashSet<String>(Arrays.asList(paths)),
-                                     message, depth, noUnlock,
+                                     message, Depth.toADepth(depth), noUnlock,
                                      keepChangelist,
                                      changelists == null ? null
                                        : Arrays.asList(changelists),
@@ -1047,7 +1049,7 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.resolve(path, depth, conflictResult);
+            aSVNClient.resolve(path, Depth.toADepth(depth), conflictResult);
         }
         catch (org.apache.subversion.javahl.SubversionException ex)
         {
@@ -1097,7 +1099,8 @@ public class SVNClient implements SVNClientInterface
             return aSVNClient.doExport(srcPath, destPath,
                           revision == null ? null : revision.toApache(),
                           pegRevision == null ? null : pegRevision.toApache(),
-                          force, ignoreExternals, depth, nativeEOL);
+                          force, ignoreExternals, Depth.toADepth(depth),
+                          nativeEOL);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1132,7 +1135,7 @@ public class SVNClient implements SVNClientInterface
             return aSVNClient.doSwitch(path, url,
                           revision == null ? null : revision.toApache(),
                           pegRevision == null ? null : pegRevision.toApache(),
-                          depth, depthIsSticky, ignoreExternals,
+                          Depth.toADepth(depth), depthIsSticky, ignoreExternals,
                           allowUnverObstructions);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
@@ -1164,8 +1167,8 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.doImport(path, url, message, depth, noIgnore,
-                                ignoreUnknownNodeTypes, revpropTable);
+            aSVNClient.doImport(path, url, message, Depth.toADepth(depth),
+                                noIgnore, ignoreUnknownNodeTypes, revpropTable);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1236,8 +1239,8 @@ public class SVNClient implements SVNClientInterface
                              revision1 == null ? null : revision1.toApache(),
                              path2,
                              revision2 == null ? null : revision2.toApache(),
-                             localPath, force, depth, ignoreAncestry,
-                             dryRun, recordOnly);
+                             localPath, force, Depth.toADepth(depth),
+                             ignoreAncestry, dryRun, recordOnly);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1282,7 +1285,7 @@ public class SVNClient implements SVNClientInterface
 
             aSVNClient.merge(path,
                          pegRevision == null ? null : pegRevision.toApache(),
-                         aRevisions, localPath, force, depth,
+                         aRevisions, localPath, force, Depth.toADepth(depth),
                          ignoreAncestry, dryRun, recordOnly);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
@@ -1383,7 +1386,7 @@ public class SVNClient implements SVNClientInterface
                         mergeSourceUrl,
                         srcPegRevision == null ? null :
                                                     srcPegRevision.toApache(),
-                        discoverChangedPaths, depth,
+                        discoverChangedPaths, Depth.toADepth(depth),
                         revprops == null ? null
                           : new HashSet<String>(Arrays.asList(revprops)),
                         new aLogMessageCallback());
@@ -1479,7 +1482,7 @@ public class SVNClient implements SVNClientInterface
                         revision1 == null ? null : revision1.toApache(),
                         target2,
                         revision2 == null ? null : revision2.toApache(),
-                        relativeToDir, outFileName, depth,
+                        relativeToDir, outFileName, Depth.toADepth(depth),
                         changelists == null ? null
                             : Arrays.asList(changelists),
                         ignoreAncestry, noDiffDeleted, force,
@@ -1544,7 +1547,7 @@ public class SVNClient implements SVNClientInterface
                      pegRevision == null ? null : pegRevision.toApache(),
                      startRevision == null ? null : startRevision.toApache(),
                      endRevision == null ? null : endRevision.toApache(),
-                     relativeToDir, outFileName, depth,
+                     relativeToDir, outFileName, Depth.toADepth(depth),
                      changelists == null ? null : Arrays.asList(changelists),
                      ignoreAncestry, noDiffDeleted, force, copiesAsAdds);
         }
@@ -1572,7 +1575,7 @@ public class SVNClient implements SVNClientInterface
                             revision1 == null ? null : revision1.toApache(),
                             target2,
                             revision2 == null ? null : revision2.toApache(),
-                            depth,
+                            Depth.toADepth(depth),
                             changelists == null ? null
                               : Arrays.asList(changelists),
                             ignoreAncestry, aReceiver);
@@ -1601,7 +1604,7 @@ public class SVNClient implements SVNClientInterface
                        pegRevision == null ? null : pegRevision.toApache(),
                        startRevision == null ? null : startRevision.toApache(),
                        endRevision == null ? null : endRevision.toApache(),
-                       depth, changelists == null ? null
+                       Depth.toADepth(depth), changelists == null ? null
                             : Arrays.asList(changelists),
                        ignoreAncestry, aReceiver);
         }
@@ -1675,7 +1678,7 @@ public class SVNClient implements SVNClientInterface
             aSVNClient.properties(path,
                           revision == null ? null : revision.toApache(),
                           pegRevision == null ? null : pegRevision.toApache(),
-                          depth, changelists == null ? null
+                          Depth.toADepth(depth), changelists == null ? null
                                 : Arrays.asList(changelists), callback);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
@@ -1743,7 +1746,7 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.propertySet(path, name, value, depth,
+            aSVNClient.propertySet(path, name, value, Depth.toADepth(depth),
                                    changelists == null ? null
                                     : Arrays.asList(changelists),
                                    force, revpropTable);
@@ -2252,7 +2255,8 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.addToChangelist(
-                  new HashSet<String>(Arrays.asList(paths)), changelist, depth,
+                  new HashSet<String>(Arrays.asList(paths)), changelist,
+                  Depth.toADepth(depth),
                   changelists == null ? null : Arrays.asList(changelists));
         }
         catch (org.apache.subversion.javahl.ClientException ex)
@@ -2271,7 +2275,8 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.removeFromChangelists(
-                        new HashSet<String>(Arrays.asList(paths)), depth,
+                        new HashSet<String>(Arrays.asList(paths)),
+                        Depth.toADepth(depth),
                         changelists == null ? null
                            : Arrays.asList(changelists));
         }
@@ -2292,7 +2297,7 @@ public class SVNClient implements SVNClientInterface
         {
             aSVNClient.getChangelists(rootPath, changelists == null ? null
                                         : Arrays.asList(changelists),
-                                      depth, callback);
+                                      Depth.toADepth(depth), callback);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -2460,7 +2465,7 @@ public class SVNClient implements SVNClientInterface
             aSVNClient.info2(pathOrUrl,
                           revision == null ? null : revision.toApache(),
                           pegRevision == null ? null : pegRevision.toApache(),
-                          depth, changelists == null ? null
+                          Depth.toADepth(depth), changelists == null ? null
                             : Arrays.asList(changelists),
         new org.apache.subversion.javahl.callback.InfoCallback () {
             public void singleInfo(org.apache.subversion.javahl.Info2 aInfo)

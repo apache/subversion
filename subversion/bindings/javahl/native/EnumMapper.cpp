@@ -28,6 +28,8 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "EnumMapper.h"
+#include "JNIUtil.h"
+#include "JNIStringHolder.h"
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
 #include "../include/org_apache_subversion_javahl_NotifyAction.h"
 #include "../include/org_apache_subversion_javahl_NotifyStatus.h"
@@ -40,7 +42,6 @@
 #include "../include/org_apache_subversion_javahl_ConflictDescriptor_Kind.h"
 #include "../include/org_apache_subversion_javahl_ConflictDescriptor_Action.h"
 #include "../include/org_apache_subversion_javahl_ConflictDescriptor_Reason.h"
-#include "../include/org_apache_subversion_javahl_Depth.h"
 #include "../include/org_apache_subversion_javahl_Tristate.h"
 
 /**
@@ -473,28 +474,53 @@ jint EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
     }
 }
 
-jint EnumMapper::mapDepth(svn_depth_t depth)
+svn_depth_t EnumMapper::toDepth(jobject jdepth)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  jstring jname = getName(JAVA_PACKAGE"/Depth", jdepth);
+  if (JNIUtil::isJavaExceptionThrown())
+    return (svn_depth_t)0;
+
+  JNIStringHolder str(jname);
+  std::string name((const char *)str);
+
+  if (name == "infinity")
+    return svn_depth_infinity;
+  else if (name == "immediates")
+    return svn_depth_immediates;
+  else if (name == "files")
+    return svn_depth_files;
+  else if (name == "empty")
+    return svn_depth_empty;
+  else if (name == "exclude")
+    return svn_depth_exclude;
+  else
+    return svn_depth_unknown;
+}
+
+jobject EnumMapper::mapDepth(svn_depth_t depth)
 {
   switch (depth)
     {
     case svn_depth_unknown:
     default:
-      return org_apache_subversion_javahl_Depth_unknown;
+      return mapEnum(JAVA_PACKAGE"/Depth", "unknown");
 
     case svn_depth_exclude:
-      return org_apache_subversion_javahl_Depth_exclude;
+      return mapEnum(JAVA_PACKAGE"/Depth", "exclude");
 
     case svn_depth_empty:
-      return org_apache_subversion_javahl_Depth_empty;
+      return mapEnum(JAVA_PACKAGE"/Depth", "empty");
 
     case svn_depth_files:
-      return org_apache_subversion_javahl_Depth_files;
+      return mapEnum(JAVA_PACKAGE"/Depth", "files");
 
     case svn_depth_immediates:
-      return org_apache_subversion_javahl_Depth_immediates;
+      return mapEnum(JAVA_PACKAGE"/Depth", "immediates");
 
     case svn_depth_infinity:
-      return org_apache_subversion_javahl_Depth_infinity;
+      return mapEnum(JAVA_PACKAGE"/Depth", "infinity");
     }
 }
 
@@ -526,4 +552,58 @@ jint EnumMapper::mapTristate(svn_tristate_t tristate)
     case svn_tristate_false:
       return org_apache_subversion_javahl_Tristate_False;
     }
+}
+
+jobject EnumMapper::mapEnum(const char *clazzName, const char *name)
+{
+  std::string methodSig("(Ljava/lang/String;)L");
+  methodSig.append(clazzName);
+  methodSig.append(";");
+
+  JNIEnv *env = JNIUtil::getEnv();
+  jclass clazz = env->FindClass(clazzName);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jmethodID mid = env->GetStaticMethodID(clazz, "valueOf", methodSig.c_str());
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jstring jname = JNIUtil::makeJString(name);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jobject jdepth = env->CallStaticObjectMethod(clazz, mid, jname);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  env->DeleteLocalRef(jname);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return jdepth;
+}
+
+jstring EnumMapper::getName(const char *clazzName, jobject jenum)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+  jclass clazz = env->FindClass(clazzName);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jmethodID mid = env->GetMethodID(clazz, "name", "()Ljava/lang/String;");
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jstring jname = (jstring) env->CallObjectMethod(jenum, mid);
+
+  env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return jname;
 }

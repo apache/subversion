@@ -123,7 +123,8 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
                              "ZILjava/lang/String;JJJ"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
-                             "Ljava/lang/String;Ljava/lang/String;JJI"
+                             "Ljava/lang/String;Ljava/lang/String;JJ"
+                             "L"JAVA_PACKAGE"/Depth;"
                              "L"JAVA_PACKAGE"/ConflictDescriptor;)V");
       if (mid == 0 || JNIUtil::isJavaExceptionThrown())
         return NULL;

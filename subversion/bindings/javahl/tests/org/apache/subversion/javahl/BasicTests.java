@@ -3648,7 +3648,7 @@ public class BasicTests extends SVNTests
 
     private Map<String, byte[]> collectProperties(String path,
                                              Revision revision,
-                                             Revision pegRevision, int depth,
+                                             Revision pegRevision, Depth depth,
                                              Collection<String> changelists)
         throws ClientException
     {
@@ -3676,7 +3676,7 @@ public class BasicTests extends SVNTests
     }
 
     private DirEntry[] collectDirEntries(String url, Revision revision,
-                                         Revision pegRevision, int depth,
+                                         Revision pegRevision, Depth depth,
                                          int direntFields, boolean fetchLocks)
         throws ClientException
     {
@@ -3725,7 +3725,7 @@ public class BasicTests extends SVNTests
     }
 
     private Info2[] collectInfos(String pathOrUrl, Revision revision,
-                                 Revision pegRevision, int depth,
+                                 Revision pegRevision, Depth depth,
                                  Collection<String> changelists)
         throws ClientException
     {

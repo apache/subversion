@@ -175,7 +175,7 @@ public class Info2 implements java.io.Serializable
      * The depth of the item.
      * @since 1.6
      */
-    private int depth;
+    private Depth depth;
 
     /**
      * Info on any tree conflict of which this node is a victim.
@@ -216,7 +216,7 @@ public class Info2 implements java.io.Serializable
           String copyFromUrl, long copyFromRev, long textTime, long propTime,
           String checksum, String conflictOld, String conflictNew,
           String conflictWrk, String prejfile, String changelistName,
-          long workingSize, long reposSize, int depth,
+          long workingSize, long reposSize, Depth depth,
           ConflictDescriptor treeConflict)
     {
         this.path = path;
@@ -463,7 +463,7 @@ public class Info2 implements java.io.Serializable
      * item is a file.
      * @since New in 1.5.
      */
-    public int getDepth()
+    public Depth getDepth()
     {
         return depth;
     }
