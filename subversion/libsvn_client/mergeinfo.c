@@ -1296,7 +1296,12 @@ struct filter_log_entry_baton_t
 };
 
 /* Implements the svn_log_entry_receiver_t interface.  BATON is a
-   `struct filter_log_entry_baton_t *' */
+   `struct filter_log_entry_baton_t *'.
+
+   Call the wrapped log receiver BATON->log_receiver (with
+   BATON->log_receiver_baton), only if the log entry falls within the
+   ranges in BATON->rangelist.
+ */
 static svn_error_t *
 filter_log_entry_with_rangelist(void *baton,
                                 svn_log_entry_t *log_entry,
@@ -1307,6 +1312,10 @@ filter_log_entry_with_rangelist(void *baton,
 
   if (fleb->ctx->cancel_func)
     SVN_ERR(fleb->ctx->cancel_func(fleb->ctx->cancel_baton));
+
+  /* Ignore r0 because there can be no "change 0" in a merge range. */
+  if (log_entry->revision == 0)
+    return SVN_NO_ERROR;
 
   this_rangelist = svn_rangelist__initialize(log_entry->revision - 1,
                                              log_entry->revision,
@@ -1436,7 +1445,7 @@ filter_log_entry_with_rangelist(void *baton,
         }
     }
 
-  /* Call the wrapped log reveiver which this function is filtering for. */
+  /* Call the wrapped log receiver which this function is filtering for. */
   return fleb->log_receiver(fleb->log_receiver_baton, log_entry, pool);
 }
 
