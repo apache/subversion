@@ -1665,6 +1665,7 @@ struct repos_to_wc_copy_baton {
   svn_client_ctx_t *ctx;
 };
 
+/* Implements svn_wc__with_write_lock_func_t. */
 static svn_error_t *
 repos_to_wc_copy_cb(void *baton,
                     apr_pool_t *result_pool,
