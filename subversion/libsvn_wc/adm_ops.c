@@ -582,22 +582,21 @@ svn_wc__prop_array_to_hash(const apr_array_header_t *props,
                            apr_pool_t *result_pool)
 {
   int i;
-  apr_hash_t *dav_cache;
+  apr_hash_t *prophash;
 
   if (props == NULL || props->nelts == 0)
     return NULL;
 
-  dav_cache = apr_hash_make(result_pool);
+  prophash = apr_hash_make(result_pool);
 
   for (i = 0; i < props->nelts; i++)
     {
       const svn_prop_t *prop = APR_ARRAY_IDX(props, i, const svn_prop_t *);
-
       if (prop->value != NULL)
-        apr_hash_set(dav_cache, prop->name, APR_HASH_KEY_STRING, prop->value);
+        apr_hash_set(prophash, prop->name, APR_HASH_KEY_STRING, prop->value);
     }
 
-  return dav_cache;
+  return prophash;
 }
 
 
