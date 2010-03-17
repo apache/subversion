@@ -535,6 +535,25 @@ svn_opt_revision_kind EnumMapper::toRevisionKind(jobject jkind)
     return svn_opt_revision_unspecified;
 }
 
+jobject EnumMapper::mapSummarizeKind(svn_client_diff_summarize_kind_t sKind)
+{
+  switch (sKind)
+    {
+    default:
+    case svn_client_diff_summarize_kind_normal:
+      return mapEnum(JAVA_PACKAGE"/DiffSummary$DiffKind", "normal");
+
+    case svn_client_diff_summarize_kind_added:
+      return mapEnum(JAVA_PACKAGE"/DiffSummary$DiffKind", "added");
+
+    case svn_client_diff_summarize_kind_modified:
+      return mapEnum(JAVA_PACKAGE"/DiffSummary$DiffKind", "modified");
+
+    case svn_client_diff_summarize_kind_deleted:
+      return mapEnum(JAVA_PACKAGE"/DiffSummary$DiffKind", "deleted");
+    }
+}
+
 jobject EnumMapper::mapEnum(const char *clazzName, const char *name)
 {
   std::string methodSig("(Ljava/lang/String;)L");
