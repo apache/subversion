@@ -45,7 +45,7 @@ public class NotifyInformation extends EventObject
     /**
      * The {@link NotifyAction} which triggered this event.
      */
-    private int action;
+    private Action action;
 
     /**
      * The {@link NodeKind} of the item.
@@ -124,11 +124,11 @@ public class NotifyInformation extends EventObject
      * @param mergeRange The range of the merge just beginning to occur.
      * @param pathPrefix A common path prefix.
      */
-    public NotifyInformation(String path, int action, int kind, String mimeType,
-                      Lock lock, String errMsg, int contentState,
-                      int propState, int lockState, long revision,
-                      String changelistName, RevisionRange mergeRange,
-                      String pathPrefix)
+    public NotifyInformation(String path, Action action, int kind,
+                             String mimeType, Lock lock, String errMsg,
+                             int contentState, int propState, int lockState,
+                             long revision, String changelistName,
+                             RevisionRange mergeRange, String pathPrefix)
     {
         super(path == null ? "" : path);
         this.action = action;
@@ -156,7 +156,7 @@ public class NotifyInformation extends EventObject
     /**
      * @return The {@link NotifyAction} which triggered this event.
      */
-    public int getAction()
+    public Action getAction()
     {
         return action;
     }
@@ -251,4 +251,203 @@ public class NotifyInformation extends EventObject
     {
         return pathPrefix;
     }
+
+    /**
+     * The type of action triggering the notification
+     */
+    public enum Action
+    {
+        /** Adding a path to revision control. */
+        add             ("add"),
+
+        /** Copying a versioned path. */
+        copy            ("copy"),
+
+        /** Deleting a versioned path. */
+        delete          ("delete"),
+
+        /** Restoring a missing path from the pristine text-base. */
+        restore         ("restore"),
+
+        /** Reverting a modified path. */
+        revert          ("revert"),
+
+        /** A revert operation has failed. */
+        failed_revert   ("failed revert"),
+
+        /** Resolving a conflict. */
+        resolved        ("resolved"),
+
+        /** Skipping a path. */
+        skip            ("skip"),
+
+        /* The update actions are also used for checkouts, switches, and
+           merges. */
+
+        /** Got a delete in an update. */
+        update_delete   ("update delete"),
+
+        /** Got an add in an update. */
+        update_add      ("update add"),
+
+        /** Got any other action in an update. */
+        update_update   ("update modified"),
+
+        /** The last notification in an update */
+        update_completed ("update completed"),
+
+        /** About to update an external module, use for checkouts and switches
+         *  too, end with @c svn_wc_update_completed.
+         */
+        update_external ("update external"),
+
+        /** The last notification in a status (including status on externals).
+         */
+        status_completed ("status completed"),
+
+        /** Running status on an external module. */
+        status_external ("status external"),
+
+        /** Committing a modification. */
+        commit_modified ("sending modified"),
+
+        /** Committing an addition. */
+        commit_added    ("sending added"),
+
+        /** Committing a deletion. */
+        commit_deleted  ("sending deleted"),
+
+        /** Committing a replacement. */
+        commit_replaced ("sending replaced"),
+
+        /** Transmitting post-fix text-delta data for a file. */
+        commit_postfix_txdelta ("transfer"),
+
+        /** Processed a single revision's blame. */
+        blame_revision  ("blame revision processed"),
+
+        /**
+         * @since 1.2
+         * Locking a path
+         */
+        locked          ("locked"),
+
+        /**
+         * @since 1.2
+         * Unlocking a path
+         */
+        unlocked        ("unlocked"),
+
+        /**
+         * @since 1.2
+         * Failed to lock a path
+         */
+        failed_lock     ("locking failed"),
+
+        /**
+         * @since 1.2
+         * Failed to unlock a path
+         */
+        failed_unlock   ("unlocking failed"),
+
+        /**
+         * @since 1.5
+         * Tried adding a path that already exists.
+         */
+        exists          ("path exists"),
+
+        /**
+         * @since 1.5
+         * Set the changelist for a path.
+         */
+        changelist_set  ("changelist set"),
+
+        /**
+         * @since 1.5
+         * Clear the changelist for a path.
+         */
+        changelist_clear ("changelist cleared"),
+
+        /**
+         * @since 1.5
+         * A merge operation has begun.
+         */
+        merge_begin     ("merge begin"),
+
+        /**
+         * @since 1.5
+         * A merge operation from a foreign repository has begun.
+         */
+        foreign_merge_begin ("foreign merge begin"),
+
+        /**
+         * @since 1.5
+         * Got a replaced in an update.
+         */
+        update_replaced ("replaced"),
+
+        /**
+         * @since 1.6
+         * Property added.
+         */
+        property_added  ("property added"),
+
+        /**
+         * @since 1.6
+         * Property modified.
+         */
+        property_modified ("property modified"),
+
+        /**
+         * @since 1.6
+         * Property deleted.
+         */
+        property_deleted ("property deleted"),
+
+        /**
+         * @since 1.6
+         * Property delete nonexistent.
+         */
+        property_deleted_nonexistent ("nonexistent property deleted"),
+
+        /**
+         * @since 1.6
+         * Revision property set.
+         */
+        revprop_set     ("revprop set"),
+
+        /**
+         * @since 1.6
+         * Revision property deleted.
+         */
+        revprop_deleted ("revprop deleted"),
+
+        /**
+         * @since 1.6
+         * The last notification in a merge
+         */
+        merge_completed ("merge completed"),
+
+        /**
+         * @since 1.6
+         * The path is a tree-conflict victim of the intended action
+         */
+        tree_conflict   ("tree conflict");
+
+        /**
+         * The description of the action.
+         */
+        private String description;
+
+        Action(String description)
+        {
+            this.description = description;
+        }
+
+        public String toString()
+        {
+            return description;
+        }
+    }
+
 }

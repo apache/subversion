@@ -2452,7 +2452,7 @@ public class BasicTests extends SVNTests
         {
             public void onNotify(NotifyInformation info)
             {
-                if (info.getAction() == NotifyAction.merge_begin)
+                if (info.getAction() == NotifyInformation.Action.merge_begin)
                 {
                     RevisionRange r = info.getMergeRange();
                     actualRange[0] = r.getFromRevision();

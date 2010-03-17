@@ -31,7 +31,6 @@
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
-#include "../include/org_apache_subversion_javahl_NotifyAction.h"
 #include "../include/org_apache_subversion_javahl_NotifyStatus.h"
 #include "../include/org_apache_subversion_javahl_NodeKind.h"
 #include "../include/org_apache_subversion_javahl_Operation.h"
@@ -42,7 +41,6 @@
 #include "../include/org_apache_subversion_javahl_ConflictDescriptor_Kind.h"
 #include "../include/org_apache_subversion_javahl_ConflictDescriptor_Action.h"
 #include "../include/org_apache_subversion_javahl_ConflictDescriptor_Reason.h"
-#include "../include/org_apache_subversion_javahl_Tristate.h"
 
 /**
  * Map a C commit state flag constant to the Java constant.
@@ -109,175 +107,130 @@ jint EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
 
 /**
  * Map a C notify action constant to the Java constant.
- * @param state     the C notify action constant
- * @returns the Java constant
  */
-jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
+jobject EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
 {
-  // This is a switch to make the Java constants independent from
-  // the C constants.
   switch(action)
     {
     case svn_wc_notify_add:
-      /* Adding a path to revision control. */
-      return org_apache_subversion_javahl_NotifyAction_add;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "add");
 
     case svn_wc_notify_copy:
-      /* Copying a versioned path. */
-      return org_apache_subversion_javahl_NotifyAction_copy;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "copy");
 
     case svn_wc_notify_delete:
-      /* Deleting a versioned path. */
-      return org_apache_subversion_javahl_NotifyAction_delete;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "delete");
 
     case svn_wc_notify_restore:
-      /* Restoring a missing path from the pristine text-base. */
-      return org_apache_subversion_javahl_NotifyAction_restore;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "restore");
 
     case svn_wc_notify_revert:
-      /* Reverting a modified path. */
-      return org_apache_subversion_javahl_NotifyAction_revert;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "revert");
 
     case svn_wc_notify_failed_revert:
-      /* A revert operation has failed. */
-      return org_apache_subversion_javahl_NotifyAction_failed_revert;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "failed_revert");
 
     case svn_wc_notify_resolved:
-      /* Resolving a conflict. */
-      return org_apache_subversion_javahl_NotifyAction_resolved;
-
-    case svn_wc_notify_status_completed:
-      /* The last notification in a status (including status on
-       * externals). */
-      return org_apache_subversion_javahl_NotifyAction_status_completed;
-
-    case svn_wc_notify_status_external:
-      /* Running status on an external module. */
-      return org_apache_subversion_javahl_NotifyAction_status_external;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "resolved");
 
     case svn_wc_notify_skip:
-      /* Skipping a path. */
-      return org_apache_subversion_javahl_NotifyAction_skip;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "skip");
+
+    case svn_wc_notify_status_completed:
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "status_completed");
+
+    case svn_wc_notify_status_external:
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "status_external");
 
     case svn_wc_notify_update_delete:
-      /* Got a delete in an update. */
-      return org_apache_subversion_javahl_NotifyAction_update_delete;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "update_delete");
 
     case svn_wc_notify_update_add:
-      /* Got an add in an update. */
-      return org_apache_subversion_javahl_NotifyAction_update_add;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "update_add");
 
     case svn_wc_notify_update_replace:
-      /* Got a replaced in an update. */
-      return org_apache_subversion_javahl_NotifyAction_update_replaced;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "update_replace");
 
     case svn_wc_notify_update_update:
-      /* Got any other action in an update. */
-      return org_apache_subversion_javahl_NotifyAction_update_update;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "update_update");
 
     case svn_wc_notify_update_completed:
-      /* The last notification in an update (including updates of
-       * externals). */
-      return org_apache_subversion_javahl_NotifyAction_update_completed;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "update_completed");
 
     case svn_wc_notify_update_external:
-      /* Updating an external module. */
-      return org_apache_subversion_javahl_NotifyAction_update_external;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "update_external");
 
     case svn_wc_notify_commit_modified:
-      /* Committing a modification. */
-      return org_apache_subversion_javahl_NotifyAction_commit_modified;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "commit_modified");
 
     case svn_wc_notify_commit_added:
-      /* Committing an addition. */
-      return org_apache_subversion_javahl_NotifyAction_commit_added;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "commit_added");
 
     case svn_wc_notify_commit_deleted:
-      /* Committing a deletion. */
-      return org_apache_subversion_javahl_NotifyAction_commit_deleted;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "commit_deleted");
 
     case svn_wc_notify_commit_replaced:
-      /* Committing a replacement. */
-      return org_apache_subversion_javahl_NotifyAction_commit_replaced;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "commit_replaced");
 
     case svn_wc_notify_commit_postfix_txdelta:
-      /* Transmitting post-fix text-delta data for a file. */
-      return org_apache_subversion_javahl_NotifyAction_commit_postfix_txdelta;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "commit_postfix_txdelta");
 
     case svn_wc_notify_blame_revision:
-      /* Processed a single revision's blame. */
-      return org_apache_subversion_javahl_NotifyAction_blame_revision;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "blame_revision");
 
     case svn_wc_notify_locked:
-      /* Lock a path */
-      return org_apache_subversion_javahl_NotifyAction_locked;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "locked");
 
     case svn_wc_notify_unlocked:
-      /* Unlock a path */
-      return org_apache_subversion_javahl_NotifyAction_unlocked;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "unlocked");
 
     case svn_wc_notify_failed_lock:
-      /* Lock failed */
-      return org_apache_subversion_javahl_NotifyAction_failed_lock;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "failed_lock");
 
     case svn_wc_notify_failed_unlock:
-      /* Unlock failed */
-      return org_apache_subversion_javahl_NotifyAction_failed_unlock;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "failed_unlock");
 
     case svn_wc_notify_exists:
-      /* Tried adding a path that already exists. */
-      return org_apache_subversion_javahl_NotifyAction_exists;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "exists");
 
     case svn_wc_notify_changelist_set:
-      /* Changelist name set. */
-      return org_apache_subversion_javahl_NotifyAction_changelist_set;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "changelist_set");
 
     case svn_wc_notify_changelist_clear:
-      /* Changelist name cleared. */
-      return org_apache_subversion_javahl_NotifyAction_changelist_clear;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "changelist_clear");
 
     case svn_wc_notify_merge_begin:
-      /* A merge operation has begun. */
-      return org_apache_subversion_javahl_NotifyAction_merge_begin;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "merge_begin");
 
     case svn_wc_notify_foreign_merge_begin:
-      /* A merge operation from a foreign repository has begun. */
-      return org_apache_subversion_javahl_NotifyAction_foreign_merge_begin;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "foreign_merge_begin");
 
     case svn_wc_notify_property_added:
-      /* Property added */
-      return org_apache_subversion_javahl_NotifyAction_property_added;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "property_added");
 
     case svn_wc_notify_property_modified:
-      /* Property modified */
-      return org_apache_subversion_javahl_NotifyAction_property_modified;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "property_modified");
 
     case svn_wc_notify_property_deleted:
-      /* Property deleted */
-      return org_apache_subversion_javahl_NotifyAction_property_deleted;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "property_deleted");
 
     case svn_wc_notify_property_deleted_nonexistent:
-      /* Property deleted nonexistent */
-      return org_apache_subversion_javahl_NotifyAction_property_deleted_nonexistent;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "property_deleted_nonexistent");
 
     case svn_wc_notify_revprop_set:
-      /* Revision property set */
-      return org_apache_subversion_javahl_NotifyAction_revprop_set;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "revprop_set");
 
     case svn_wc_notify_revprop_deleted:
-      /* Revision property deleted */
-      return org_apache_subversion_javahl_NotifyAction_revprop_deleted;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "revprop_deleted");
 
     case svn_wc_notify_merge_completed:
-      /* Final notification in a merge */
-      return org_apache_subversion_javahl_NotifyAction_merge_completed;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "merge_completed");
 
     case svn_wc_notify_tree_conflict:
-      /* The path is a tree-conflict victim of the intended action */
-      return org_apache_subversion_javahl_NotifyAction_tree_conflict;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "tree_conflict");
 
     default:
-      return -1;
+      return NULL;
     }
 }
 
