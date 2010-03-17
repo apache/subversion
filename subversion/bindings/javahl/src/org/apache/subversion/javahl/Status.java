@@ -81,12 +81,12 @@ public class Status implements java.io.Serializable
     /**
      * the file or directory status (See StatusKind)
      */
-    private int textStatus;
+    private Kind textStatus;
 
     /**
      * the status of the properties (See StatusKind)
      */
-    private int propStatus;
+    private Kind propStatus;
 
     /**
      * flag is this item is locked locally by subversion
@@ -124,12 +124,12 @@ public class Status implements java.io.Serializable
     /**
      * the file or directory status of base (See StatusKind)
      */
-    private int repositoryTextStatus;
+    private Kind repositoryTextStatus;
 
     /**
      * the status of the properties base (See StatusKind)
      */
-    private int repositoryPropStatus;
+    private Kind repositoryPropStatus;
 
     /**
      * if there is a conflict, the filename of the new version
@@ -271,8 +271,8 @@ public class Status implements java.io.Serializable
      */
     public Status(String path, String url, int nodeKind, long revision,
                   long lastChangedRevision, long lastChangedDate,
-                  String lastCommitAuthor, int textStatus, int propStatus,
-                  int repositoryTextStatus, int repositoryPropStatus,
+                  String lastCommitAuthor, Kind textStatus, Kind propStatus,
+                  Kind repositoryTextStatus, Kind repositoryPropStatus,
                   boolean locked, boolean copied, boolean treeConflicted,
                   ConflictDescriptor conflictDescriptor, String conflictOld,
                   String conflictNew, String conflictWorking,
@@ -378,7 +378,7 @@ public class Status implements java.io.Serializable
      * Returns the status of the item (See StatusKind)
      * @return file status property enum of the "textual" component.
      */
-    public int getTextStatus()
+    public Kind getTextStatus()
     {
         return textStatus;
     }
@@ -389,14 +389,14 @@ public class Status implements java.io.Serializable
      */
     public String getTextStatusDescription()
     {
-        return Kind.getDescription(textStatus);
+        return textStatus.toString();
     }
 
     /**
      * Returns the status of the properties (See Status Kind)
      * @return file status property enum of the "property" component.
      */
-    public int getPropStatus()
+    public Kind getPropStatus()
     {
         return propStatus;
     }
@@ -407,7 +407,7 @@ public class Status implements java.io.Serializable
      */
     public String getPropStatusDescription()
     {
-        return Kind.getDescription(propStatus);
+        return propStatus.toString();
     }
 
     /**
@@ -415,7 +415,7 @@ public class Status implements java.io.Serializable
      * @return file status property enum of the "textual" component in the
      * repository.
      */
-    public int getRepositoryTextStatus()
+    public Kind getRepositoryTextStatus()
     {
         return repositoryTextStatus;
     }
@@ -425,7 +425,7 @@ public class Status implements java.io.Serializable
      * @return file status property enum of the "property" component im the
      * repository.
      */
-    public int getRepositoryPropStatus()
+    public Kind getRepositoryPropStatus()
     {
         return repositoryPropStatus;
     }
@@ -570,7 +570,7 @@ public class Status implements java.io.Serializable
      */
     public boolean isManaged()
     {
-        int status = getTextStatus();
+        Kind status = getTextStatus();
         return (status != Status.Kind.unversioned &&
                 status != Status.Kind.none &&
                 status != Status.Kind.ignored);
@@ -781,53 +781,6 @@ public class Status implements java.io.Serializable
     }
 
     /**
-     * class for kind status of the item or its properties
-     * the constants are defined in the interface StatusKind for building
-     * reasons
-     */
-    public static final class Kind implements StatusKind
-    {
-        /**
-         * Returns the textual representation of the status
-         * @param kind of status
-         * @return english status
-         */
-        public static final String getDescription(int kind)
-        {
-            switch (kind)
-            {
-            case StatusKind.none:
-                return "non-svn";
-            case StatusKind.normal:
-                return "normal";
-            case StatusKind.added:
-                return "added";
-            case StatusKind.missing:
-                return "missing";
-            case StatusKind.deleted:
-                return "deleted";
-            case StatusKind.replaced:
-                return "replaced";
-            case StatusKind.modified:
-                return "modified";
-            case StatusKind.merged:
-                return "merged";
-            case StatusKind.conflicted:
-                return "conflicted";
-            case StatusKind.ignored:
-                return "ignored";
-            case StatusKind.incomplete:
-                return "incomplete";
-            case StatusKind.external:
-                return "external";
-            case StatusKind.unversioned:
-            default:
-                return "unversioned";
-            }
-        }
-    }
-
-    /**
      * Converts microseconds since the epoch to a Date object.
      *
      * @param micros Microseconds since the epoch.
@@ -837,5 +790,70 @@ public class Status implements java.io.Serializable
     private static Date microsecondsToDate(long micros)
     {
         return (micros == 0 ? null : new Date(micros / 1000));
+    }
+
+    /**
+     * class for kind status of the item or its properties
+     * the constants are defined in the interface StatusKind for building
+     * reasons
+     */
+    public enum Kind
+    {
+        /** does not exist */
+        none        ("non-svn"),
+
+        /** exists, but uninteresting */
+        normal      ("normal"),
+
+        /** text or props have been modified */
+        modified    ("modified"),
+
+        /** is scheduled for additon */
+        added       ("added"),
+
+        /** scheduled for deletion */
+        deleted     ("deleted"),
+
+        /** is not a versioned thing in this wc */
+        unversioned ("unversioned"),
+
+        /** under v.c., but is missing */
+        missing     ("missing"),
+
+        /** was deleted and then re-added */
+        replaced    ("replaced"),
+
+        /** local mods received repos mods */
+        merged      ("merged"),
+
+        /** local mods received conflicting repos mods */
+        conflicted  ("conflicted"),
+
+        /** an unversioned resource is in the way of the versioned resource */
+        obstructed  ("obstructed"),
+
+        /** a resource marked as ignored */
+        ignored     ("ignored"),
+
+        /** a directory doesn't contain a complete entries list */
+        incomplete  ("incomplete"),
+
+        /** an unversioned path populated by an svn:externals property */
+        external    ("external");
+
+        /**
+         * The description of the action.
+         */
+        private String description;
+
+        Kind(String description)
+        {
+            this.description = description;
+        }
+
+        public String toString()
+        {
+            return description;
+        }
     }
 }

@@ -31,7 +31,6 @@
 #include "svn_time.h"
 #include "../include/org_apache_subversion_javahl_NodeKind.h"
 #include "../include/org_apache_subversion_javahl_Revision.h"
-#include "../include/org_apache_subversion_javahl_StatusKind.h"
 
 /**
  * Create a StatusCallback object
@@ -119,8 +118,12 @@ StatusCallback::createJavaStatus(const char *local_abspath,
     {
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
-                             "IJJJLjava/lang/String;IIIIZZZ"
-                             "L"JAVA_PACKAGE"/ConflictDescriptor;"
+                             "IJJJLjava/lang/String;"
+                             "L"JAVA_PACKAGE"/Status$Kind;"
+                             "L"JAVA_PACKAGE"/Status$Kind;"
+                             "L"JAVA_PACKAGE"/Status$Kind;"
+                             "L"JAVA_PACKAGE"/Status$Kind;"
+                             "ZZZL"JAVA_PACKAGE"/ConflictDescriptor;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "JZZLjava/lang/String;Ljava/lang/String;"
@@ -141,10 +144,10 @@ StatusCallback::createJavaStatus(const char *local_abspath,
     org_apache_subversion_javahl_Revision_SVN_INVALID_REVNUM;
   jlong jLastChangedDate = 0;
   jstring jLastCommitAuthor = NULL;
-  jint jTextType = org_apache_subversion_javahl_StatusKind_none;
-  jint jPropType = org_apache_subversion_javahl_StatusKind_none;
-  jint jRepositoryTextType = org_apache_subversion_javahl_StatusKind_none;
-  jint jRepositoryPropType = org_apache_subversion_javahl_StatusKind_none;
+  jobject jTextType = NULL;
+  jobject jPropType = NULL;
+  jobject jRepositoryTextType = NULL;
+  jobject jRepositoryPropType = NULL;
   jboolean jIsLocked = JNI_FALSE;
   jboolean jIsCopied = JNI_FALSE;
   jboolean jIsSwitched = JNI_FALSE;
@@ -279,6 +282,34 @@ StatusCallback::createJavaStatus(const char *local_abspath,
   env->DeleteLocalRef(jLastCommitAuthor);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
+
+  if (jTextType != NULL)
+    {
+      env->DeleteLocalRef(jTextType);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  if (jPropType != NULL)
+    {
+      env->DeleteLocalRef(jPropType);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  if (jRepositoryTextType != NULL)
+    {
+      env->DeleteLocalRef(jRepositoryTextType);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  if (jRepositoryPropType != NULL)
+    {
+      env->DeleteLocalRef(jRepositoryPropType);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
 
   env->DeleteLocalRef(jConflictNew);
   if (JNIUtil::isJavaExceptionThrown())

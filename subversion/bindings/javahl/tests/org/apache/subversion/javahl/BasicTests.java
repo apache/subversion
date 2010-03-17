@@ -3228,8 +3228,8 @@ public class BasicTests extends SVNTests
         // we expect the tree conflict to turn the existing item into
         // a scheduled-add with history.  We expect the modifications in
         // the local file to have been copied to the new file.
-        tcTest.getWc().setItemTextStatus("A/B/E/alpha", StatusKind.added);
-        tcTest.getWc().setItemTextStatus("A/B/F/alpha", StatusKind.modified);
+        tcTest.getWc().setItemTextStatus("A/B/E/alpha", Status.Kind.added);
+        tcTest.getWc().setItemTextStatus("A/B/F/alpha", Status.Kind.modified);
 
         // check the status of the working copy of the tc test
         tcTest.checkStatus();
@@ -3310,8 +3310,8 @@ public class BasicTests extends SVNTests
         Status[] secondWCStatus = statusCallback.getStatusArray();
         if (!(secondWCStatus.length == 1 &&
             secondWCStatus[0].getPath().endsWith("A/B/lambda") &&
-            secondWCStatus[0].getTextStatus() == StatusKind.modified &&
-            secondWCStatus[0].getPropStatus() == StatusKind.none))
+            secondWCStatus[0].getTextStatus() == Status.Kind.modified &&
+            secondWCStatus[0].getPropStatus() == Status.Kind.none))
         {
             fail("Unexpected WC status after co with " +
                  "unversioned obstructions");

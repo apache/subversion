@@ -326,9 +326,14 @@ public class Status implements java.io.Serializable
              aStatus.getRevisionNumber(),
              aStatus.getLastChangedRevisionNumber(),
              aStatus.getLastChangedDateMicros(), aStatus.getLastCommitAuthor(),
-             aStatus.getTextStatus(), aStatus.getPropStatus(),
-             aStatus.getRepositoryTextStatus(),
-             aStatus.getRepositoryPropStatus(),
+             aStatus.getTextStatus() == null ? StatusKind.none
+                : aStatus.getTextStatus().ordinal(),
+             aStatus.getPropStatus() == null ? StatusKind.none
+                : aStatus.getPropStatus().ordinal(),
+             aStatus.getRepositoryTextStatus() == null ? StatusKind.none
+                : aStatus.getRepositoryTextStatus().ordinal(),
+             aStatus.getRepositoryPropStatus() == null ? StatusKind.none
+                : aStatus.getRepositoryPropStatus().ordinal(),
              aStatus.isLocked(), aStatus.isCopied(), aStatus.hasTreeConflict(),
              aStatus.getConflictDescriptor() == null ? null
                 : new ConflictDescriptor(aStatus.getConflictDescriptor()),
