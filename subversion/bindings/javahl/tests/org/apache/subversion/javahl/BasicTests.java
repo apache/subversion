@@ -2540,7 +2540,7 @@ public class BasicTests extends SVNTests
 
         String branchPath = thisTest.getWCPath() + "/branches/A";
         String modUrl = thisTest.getUrl() + "/A";
-        Revision unspec = new Revision(RevisionKind.unspecified);
+        Revision unspec = new Revision(Revision.Kind.unspecified);
         List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
         ranges.add(new RevisionRange(unspec, unspec));
         client.merge(modUrl, Revision.HEAD, ranges,
@@ -2594,7 +2594,7 @@ public class BasicTests extends SVNTests
 
         String branchPath = thisTest.getWCPath() + "/branches/A";
         String modUrl = thisTest.getUrl() + "/A";
-        Revision unspec = new Revision(RevisionKind.unspecified);
+        Revision unspec = new Revision(Revision.Kind.unspecified);
         List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
         ranges.add(new RevisionRange(unspec, unspec));
         client.merge(modUrl, Revision.HEAD, ranges,

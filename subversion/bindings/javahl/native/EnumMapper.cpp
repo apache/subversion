@@ -554,6 +554,35 @@ jobject EnumMapper::mapTristate(svn_tristate_t tristate)
     }
 }
 
+svn_opt_revision_kind EnumMapper::toRevisionKind(jobject jkind)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  jstring jname = getName(JAVA_PACKAGE"/Revision$Kind", jkind);
+  if (JNIUtil::isJavaExceptionThrown())
+    return svn_opt_revision_unspecified;
+
+  JNIStringHolder str(jname);
+  std::string name((const char *)str);
+
+  if (name == "number")
+    return svn_opt_revision_number;
+  else if (name == "date")
+    return svn_opt_revision_date;
+  else if (name == "committed")
+    return svn_opt_revision_committed;
+  else if (name == "previous")
+    return svn_opt_revision_previous;
+  else if (name == "base")
+    return svn_opt_revision_base;
+  else if (name == "working")
+    return svn_opt_revision_working;
+  else if (name == "head")
+    return svn_opt_revision_head;
+  else
+    return svn_opt_revision_unspecified;
+}
+
 jobject EnumMapper::mapEnum(const char *clazzName, const char *name)
 {
   std::string methodSig("(Ljava/lang/String;)L");

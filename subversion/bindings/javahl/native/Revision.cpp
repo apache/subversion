@@ -25,8 +25,8 @@
  */
 
 #include "Revision.h"
-#include "../include/org_apache_subversion_javahl_RevisionKind.h"
 #include "JNIUtil.h"
+#include "EnumMapper.h"
 
 const svn_opt_revision_kind Revision::START = svn_opt_revision_unspecified;
 const svn_opt_revision_kind Revision::HEAD = svn_opt_revision_head;
@@ -55,7 +55,8 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
           if (JNIUtil::isJavaExceptionThrown())
             return;
 
-          fid = env->GetFieldID(clazz, "revKind", "I");
+          fid = env->GetFieldID(clazz, "revKind",
+                                "L"JAVA_PACKAGE"/Revision$Kind;");
           if (JNIUtil::isJavaExceptionThrown())
             return;
 
@@ -63,19 +64,16 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
           if (JNIUtil::isJavaExceptionThrown())
             return;
         }
-      jint jKind = env->GetIntField(jthis, fid);
+      jobject jKind = env->GetObjectField(jthis, fid);
       if (JNIUtil::isJavaExceptionThrown())
         return;
 
       m_revision.value.number = 0;
+      m_revision.kind = EnumMapper::toRevisionKind(jKind);
 
-      switch(jKind)
+      switch(m_revision.kind)
         {
-        case org_apache_subversion_javahl_RevisionKind_unspecified:
-          m_revision.kind = svn_opt_revision_unspecified;
-          break;
-        case org_apache_subversion_javahl_RevisionKind_number:
-          m_revision.kind = svn_opt_revision_number;
+        case svn_opt_revision_number:
           {
             static jfieldID fidNum = 0;
             if (fidNum == 0)
@@ -97,8 +95,7 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
             m_revision.value.number = (svn_revnum_t) jNumber;
           }
           break;
-        case org_apache_subversion_javahl_RevisionKind_date:
-          m_revision.kind = svn_opt_revision_date;
+        case svn_opt_revision_date:
           {
             static jfieldID fidDate = 0;
             if (fidDate == 0)
@@ -147,20 +144,8 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
             m_revision.value.date = jMillSec * 1000;
           }
           break;
-        case org_apache_subversion_javahl_RevisionKind_committed:
-          m_revision.kind = svn_opt_revision_committed;
-          break;
-        case org_apache_subversion_javahl_RevisionKind_previous:
-          m_revision.kind = svn_opt_revision_previous;
-          break;
-        case org_apache_subversion_javahl_RevisionKind_base:
-          m_revision.kind = svn_opt_revision_base;
-          break;
-        case org_apache_subversion_javahl_RevisionKind_working:
-          m_revision.kind = svn_opt_revision_working;
-          break;
-        case org_apache_subversion_javahl_RevisionKind_head:
-          m_revision.kind = svn_opt_revision_head;
+        default:
+          /* None of the other revision kinds need special handling. */
           break;
         }
     }
