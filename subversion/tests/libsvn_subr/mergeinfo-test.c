@@ -927,7 +927,8 @@ test_remove_rangelist(apr_pool_t *pool)
 /* Random number seed. */
 static apr_uint32_t random_rev_array_seed;
 
-/* Fill 3/4 of the array with 1s. */
+/* Set a random 3/4-ish of the elements of array REVS[RANDOM_REV_ARRAY_LENGTH]
+ * to TRUE and the rest to FALSE. */
 static void
 randomly_fill_rev_array(svn_boolean_t *revs)
 {
@@ -939,6 +940,8 @@ randomly_fill_rev_array(svn_boolean_t *revs)
     }
 }
 
+/* Set *RANGELIST to a rangelist representing the revisions that are marked
+ * with TRUE in the array REVS[RANDOM_REV_ARRAY_LENGTH]. */
 static svn_error_t *
 rev_array_to_rangelist(apr_array_header_t **rangelist,
                        svn_boolean_t *revs,
@@ -993,6 +996,9 @@ test_rangelist_remove_randomly(apr_pool_t *pool)
 
       randomly_fill_rev_array(first_revs);
       randomly_fill_rev_array(second_revs);
+      /* There is no change numbered "r0" */
+      first_revs[0] = FALSE;
+      second_revs[0] = FALSE;
       for (j = 0; j < RANDOM_REV_ARRAY_LENGTH; j++)
         expected_revs[j] = second_revs[j] && !first_revs[j];
 
@@ -1048,6 +1054,9 @@ test_rangelist_intersect_randomly(apr_pool_t *pool)
 
       randomly_fill_rev_array(first_revs);
       randomly_fill_rev_array(second_revs);
+      /* There is no change numbered "r0" */
+      first_revs[0] = FALSE;
+      second_revs[0] = FALSE;
       for (j = 0; j < RANDOM_REV_ARRAY_LENGTH; j++)
         expected_revs[j] = second_revs[j] && first_revs[j];
 

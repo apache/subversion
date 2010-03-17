@@ -115,6 +115,16 @@ parse_pathname(const char **input,
   return SVN_NO_ERROR;
 }
 
+/* Return TRUE iff (svn_merge_range_t *) RANGE describes a valid, forward
+ * revision range.
+ *
+ * Note: The smallest valid value of RANGE->start is 0 because it is an
+ * exclusive endpoint, being one less than the revision number of the first
+ * change described by the range, and the oldest possible change is "r1" as
+ * there cannot be a change "r0". */
+#define IS_VALID_FORWARD_RANGE(range) \
+  (SVN_IS_VALID_REVNUM((range)->start) && ((range)->start < (range)->end))
+
 /* Ways in which two svn_merge_range_t can intersect or adjoin, if at all. */
 typedef enum
 {
@@ -144,16 +154,8 @@ get_type_of_intersection(const svn_merge_range_t *r1,
 {
   SVN_ERR_ASSERT(r1);
   SVN_ERR_ASSERT(r2);
-
-  /* Why not use SVN_IS_VALID_REVNUM here?  Because revision 0
-     is described START = -1, END = 0.  See svn_merge_range_t. */
-  SVN_ERR_ASSERT(r1->start >= -1);
-  SVN_ERR_ASSERT(r2->start >= -1);
-
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(r1->end));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(r2->end));
-  SVN_ERR_ASSERT(r1->start < r1->end);
-  SVN_ERR_ASSERT(r2->start < r2->end);
+  SVN_ERR_ASSERT(IS_VALID_FORWARD_RANGE(r1));
+  SVN_ERR_ASSERT(IS_VALID_FORWARD_RANGE(r2));
 
   if (!(r1->start <= r2->end && r2->start <= r1->end))
     *intersection_type = svn__no_intersection;
@@ -763,20 +765,31 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
   return SVN_NO_ERROR;
 }
 
+/* Return TRUE iff the forward revision ranges FIRST and SECOND overlap and
+ * (if CONSIDER_INHERITANCE is TRUE) have the same inheritability. */
 static svn_boolean_t
 range_intersect(const svn_merge_range_t *first, const svn_merge_range_t *second,
                 svn_boolean_t consider_inheritance)
 {
+  SVN_ERR_ASSERT_NO_RETURN(IS_VALID_FORWARD_RANGE(first));
+  SVN_ERR_ASSERT_NO_RETURN(IS_VALID_FORWARD_RANGE(second));
+
   return (first->start + 1 <= second->end)
     && (second->start + 1 <= first->end)
     && (!consider_inheritance
         || (!(first->inheritable) == !(second->inheritable)));
 }
 
+/* Return TRUE iff the forward revision range FIRST wholly contains the
+ * forward revision range SECOND and (if CONSIDER_INHERITANCE is TRUE) has
+ * the same inheritability. */
 static svn_boolean_t
 range_contains(const svn_merge_range_t *first, const svn_merge_range_t *second,
                svn_boolean_t consider_inheritance)
 {
+  SVN_ERR_ASSERT_NO_RETURN(IS_VALID_FORWARD_RANGE(first));
+  SVN_ERR_ASSERT_NO_RETURN(IS_VALID_FORWARD_RANGE(second));
+
   return (first->start <= second->start) && (second->end <= first->end)
     && (!consider_inheritance
         || (!(first->inheritable) == !(second->inheritable)));
