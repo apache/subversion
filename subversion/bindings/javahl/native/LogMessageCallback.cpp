@@ -99,7 +99,9 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
     {
       midCP = env->GetMethodID(clazzCP,
                                "<init>",
-                               "(Ljava/lang/String;JLjava/lang/String;CIII)V");
+                               "(Ljava/lang/String;JLjava/lang/String;CI"
+                               "L"JAVA_PACKAGE"/Tristate;"
+                               "L"JAVA_PACKAGE"/Tristate;)V");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
     }
