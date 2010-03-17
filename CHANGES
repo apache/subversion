@@ -3,11 +3,11 @@ Version 1.6.10
 http://svn.apache.org/repos/asf/subversion/tags/1.6.10
 
  User-visible changes:
-  * fixes for NFS-based clients (issue #3501)
+  * fix for repositories mounted via NFS (issue #3501)
   * enable TCP keep-alives in svnserve (r880552)
-  * tighten restrictions on revprops for 'svnadmin verify) (r904594)
+  * tighten restrictions on revprops for 'svnadmin verify' (r904594)
   * make ra_serf give better out-of-date information (issue #3561)
-  * marshal ssh error messages through svn+ssh:// (r922516)
+  * improve error message upon connection failure with svn+ssh:// (r922516)
   * allow 'svn log' on an uncommitted copy/move destination (r901752)
   * make 'svnadmin hotcopy' copy the fsfs config file (r905303)
   * mergeinfo improvements with non-inheritable mergeinfo (issue #3573)
