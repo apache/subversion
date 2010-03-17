@@ -583,9 +583,18 @@ public class SVNClient implements SVNClientInterface
      * @deprecated Use {@link #notification2(Notify2)} instead.
      * @since 1.0
      */
-    public void notification(Notify notify)
+    public void notification(final Notify notify)
     {
-        aSVNClient.notification(notify);
+        notification2(
+          new Notify2 () {
+            public void onNotify(NotifyInformation info)
+            {
+                notify.onNotify(info.getPath(), info.getAction(),
+                                info.getKind(), info.getMimeType(),
+                                info.getContentState(), info.getPropState(),
+                                info.getRevision());
+            }
+          });
     }
 
     /**

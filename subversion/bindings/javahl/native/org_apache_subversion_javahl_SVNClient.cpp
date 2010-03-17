@@ -347,24 +347,6 @@ Java_org_apache_subversion_javahl_SVNClient_checkout
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_notification
-(JNIEnv *env, jobject jthis, jobject jnotify)
-{
-  JNIEntry(SVNClient, notification);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError(_("bad C++ this"));
-      return;
-    }
-  Notify *notify = Notify::makeCNotify(jnotify);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  cl->notification(notify);
-}
-
-JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_notification2
 (JNIEnv *env, jobject jthis, jobject jnotify2)
 {

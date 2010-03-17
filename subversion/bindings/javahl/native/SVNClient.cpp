@@ -296,12 +296,6 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
     return rev;
 }
 
-void SVNClient::notification(Notify *notify)
-{
-    delete m_notify;
-    m_notify = notify;
-}
-
 void SVNClient::notification2(NotifyCallback *notify2)
 {
     delete m_notify2;
