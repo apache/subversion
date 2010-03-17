@@ -797,19 +797,6 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
                          apr_pool_t *scratch_pool);
 
 
-/* ### caller pushes contents into storage, keyed by @a checksum.
-   ### note: if caller has a source stream, then it should use
-   ###   svn_stream_copy3 to pull/push the content into storage. */
-/* ### @a contents may NOT be NULL. */
-svn_error_t *
-svn_wc__db_pristine_write(svn_stream_t **contents,
-                          svn_wc__db_t *db,
-                          const char *wri_abspath,
-                          const svn_checksum_t *checksum,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
-
-
 /* ### get a tempdir to drop files for later installation. */
 /* ### dlr: Why is a less specific temp dir insufficient?
    ###  bh: See svn_wc__db_pristine_install() */
