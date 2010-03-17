@@ -57,7 +57,7 @@ class EnumMapper
   static jint mapConflictReason(svn_wc_conflict_reason_t reason);
   static jobject mapDepth(svn_depth_t depth);
   static jint mapOperation(svn_wc_operation_t);
-  static jint mapTristate(svn_tristate_t);
+  static jobject mapTristate(svn_tristate_t);
  private:
   static jobject mapEnum(const char *clazzName, const char *name);
   static jstring getName(const char *clazzName, jobject jenum);

@@ -540,17 +540,17 @@ jint EnumMapper::mapOperation(svn_wc_operation_t operation)
     }
 }
 
-jint EnumMapper::mapTristate(svn_tristate_t tristate)
+jobject EnumMapper::mapTristate(svn_tristate_t tristate)
 {
   switch (tristate)
     {
     case svn_tristate_unknown:
     default:
-      return org_apache_subversion_javahl_Tristate_Unknown;
+      return mapEnum(JAVA_PACKAGE"/Tristate", "Unknown");
     case svn_tristate_true:
-      return org_apache_subversion_javahl_Tristate_True;
+      return mapEnum(JAVA_PACKAGE"/Tristate", "True");
     case svn_tristate_false:
-      return org_apache_subversion_javahl_Tristate_False;
+      return mapEnum(JAVA_PACKAGE"/Tristate", "False");
     }
 }
 

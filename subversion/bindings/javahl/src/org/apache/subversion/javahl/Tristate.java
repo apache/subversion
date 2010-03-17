@@ -23,14 +23,14 @@
 
 package org.apache.subversion.javahl;
 
-public final class Tristate
+public enum Tristate
 {
     /** The state of the thing is not known. */
-    public static final int Unknown = 0;
+    Unknown,
 
     /** The state of the thing is false. */
-    public static final int False = 1;
+    False,
 
     /** The state of the thing is true. */
-    public static final int True = 2;
+    True;
 }
