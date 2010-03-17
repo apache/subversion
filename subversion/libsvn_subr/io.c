@@ -3525,13 +3525,13 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
 
 /* Wrapper for apr_file_mktemp(). */
 svn_error_t *
-svn_io_file_mktemp(apr_file_t **new_file, char *templ,
+svn_io_file_mktemp(apr_file_t **new_file, const char *templ,
                   apr_int32_t flags, apr_pool_t *pool)
 {
   const char *templ_apr;
   apr_status_t status;
 
-  SVN_ERR(cstring_from_utf8(&templ_apr, templ, pool));
+  SVN_ERR(svn_path_cstring_from_utf8(&templ_apr, templ, pool));
 
   /* ### I don't want to copy the template string again just to
    * make it writable... so cast away const.

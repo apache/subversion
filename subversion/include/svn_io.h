@@ -1904,7 +1904,7 @@ svn_io_write_version_file(const char *path,
  * @since New in 1.7. */
 svn_error_t *
 svn_io_file_mktemp(apr_file_t **new_file,
-                   char *templ,
+                   const char *templ,
                    apr_int32_t flags,
                    apr_pool_t *pool);
 
