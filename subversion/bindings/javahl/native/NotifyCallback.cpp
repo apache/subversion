@@ -143,7 +143,9 @@ NotifyCallback::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
   if (midCT == 0)
     {
       midCT = env->GetMethodID(clazz, "<init>",
-                               "(Ljava/lang/String;IILjava/lang/String;"
+                               "(Ljava/lang/String;"
+                               "L"JAVA_PACKAGE"/NotifyInformation$Action;"
+                               "ILjava/lang/String;"
                                "L"JAVA_PACKAGE"/Lock;"
                                "Ljava/lang/String;IIIJLjava/lang/String;"
                                "L"JAVA_PACKAGE"/RevisionRange;"
@@ -157,7 +159,7 @@ NotifyCallback::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
-  jint jAction = EnumMapper::mapNotifyAction(wcNotify->action);
+  jobject jAction = EnumMapper::mapNotifyAction(wcNotify->action);
   jint jKind = EnumMapper::mapNodeKind(wcNotify->kind);
   jstring jMimeType = JNIUtil::makeJString(wcNotify->mime_type);
   if (JNIUtil::isJavaExceptionThrown())
@@ -206,6 +208,10 @@ NotifyCallback::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
 
   // release all the temporary Java objects
   env->DeleteLocalRef(jPath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  env->DeleteLocalRef(jAction);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 

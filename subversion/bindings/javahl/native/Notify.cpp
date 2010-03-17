@@ -162,7 +162,7 @@ void Notify::onNotify(const char *path,
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
-  jint jAction = EnumMapper::mapNotifyAction(action);
+  jobject jAction = EnumMapper::mapNotifyAction(action);
   jint jKind = EnumMapper::mapNodeKind(kind);
   jstring jMimeType = JNIUtil::makeJString(mime_type);
   if (JNIUtil::isJavaExceptionThrown())
@@ -179,6 +179,10 @@ void Notify::onNotify(const char *path,
 
   // Release all the temporary Java objects.
   env->DeleteLocalRef(jPath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  env->DeleteLocalRef(jAction);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 

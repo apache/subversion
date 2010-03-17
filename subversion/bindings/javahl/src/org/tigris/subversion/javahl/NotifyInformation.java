@@ -151,8 +151,9 @@ public class NotifyInformation extends EventObject
     public NotifyInformation(
                         org.apache.subversion.javahl.NotifyInformation aInfo)
     {
-        this(aInfo.getPath(), aInfo.getAction(), aInfo.getKind(),
-             aInfo.getMimeType(),
+        this(aInfo.getPath(),
+             aInfo.getAction() == null ? -1 : aInfo.getAction().ordinal(),
+             aInfo.getKind(), aInfo.getMimeType(),
              aInfo.getLock() == null ? null : new Lock(aInfo.getLock()),
              aInfo.getErrMsg(), aInfo.getContentState(), aInfo.getPropState(),
              aInfo.getLockState(), aInfo.getRevision(),
