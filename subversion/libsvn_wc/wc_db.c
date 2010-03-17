@@ -2362,43 +2362,6 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
 
 
 svn_error_t *
-svn_wc__db_pristine_write(svn_stream_t **contents,
-                          svn_wc__db_t *db,
-                          const char *wri_abspath,
-                          const svn_checksum_t *checksum,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
-{
-  SVN_ERR_ASSERT(contents != NULL);
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-  SVN_ERR_ASSERT(checksum != NULL);
-
-  VERIFY_CHECKSUM_KIND(checksum);
-
-  NOT_IMPLEMENTED();
-
-#if 0
-  const char *path;
-
-  SVN_ERR(get_pristine_fname(&path, pdh, checksum,
-#ifndef SVN__SKIP_SUBDIR
-                             TRUE /* create_subdir */,
-#endif
-                             scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_stream_open_writable(contents, path, result_pool, scratch_pool));
-
-  /* ### we should wrap the stream. count the bytes. at close, then we
-     ### should write the count into the sqlite database. */
-  /* ### euh... no. stream closure could happen after an error, so there
-     ### isn't enough information here.  */
-
-  return SVN_NO_ERROR;
-#endif
-}
-
-
-svn_error_t *
 svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
                                 svn_wc__db_t *db,
                                 const char *wri_abspath,
