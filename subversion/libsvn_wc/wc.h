@@ -328,7 +328,7 @@ svn_error_t *svn_wc__ensure_directory(const char *path, apr_pool_t *pool);
    ### one's contains *pointers* to svn_prop_t's.  So much for
    ### consistency.  */
 apr_hash_t *
-svn_wc__prop_array_to_hash(const apr_array_header_t *wcprop_changes,
+svn_wc__prop_array_to_hash(const apr_array_header_t *props,
                            apr_pool_t *result_pool);
 
 
