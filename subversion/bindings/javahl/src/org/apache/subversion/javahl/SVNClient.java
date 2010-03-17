@@ -172,12 +172,6 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     /**
-     * @since 1.0
-     * @deprecated
-     */
-    public native void notification(Notify notify);
-
-    /**
      * @since 1.2
      */
     public native void notification2(NotifyCallback notify);
