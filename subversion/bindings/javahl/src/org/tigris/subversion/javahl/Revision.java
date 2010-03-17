@@ -157,22 +157,22 @@ public class Revision implements java.io.Serializable
 
     public org.apache.subversion.javahl.Revision toApache()
     {
-        return new org.apache.subversion.javahl.Revision(revKind);
+        return new org.apache.subversion.javahl.Revision(Kind.toAKind(revKind));
     }
 
     public static Revision createFromApache(
                                     org.apache.subversion.javahl.Revision aRev)
     {
-        int kind = aRev.getKind();
+        org.apache.subversion.javahl.Revision.Kind kind = aRev.getKind();
 
         switch (kind)
         {
-            case org.apache.subversion.javahl.Revision.Kind.number:
+            case number:
                 return getInstance(((org.apache.subversion.javahl.Revision.Number) aRev).getNumber());
-            case org.apache.subversion.javahl.Revision.Kind.date:
+            case date:
                 return getInstance(((org.apache.subversion.javahl.Revision.DateSpec) aRev).getDate());
             default:
-                return getInstance(kind);
+                return getInstance(Kind.fromAKind(kind));
         }
     }
 
@@ -368,5 +368,52 @@ public class Revision implements java.io.Serializable
      */
     public static final class Kind implements RevisionKind
     {
+       public static int fromAKind(org.apache.subversion.javahl.Revision.Kind aKind)
+       {
+           switch (aKind)
+           {
+           default:
+           case unspecified:
+               return RevisionKind.unspecified;
+           case number:
+               return RevisionKind.number;
+           case date:
+               return RevisionKind.date;
+           case committed:
+               return RevisionKind.committed;
+           case previous:
+               return RevisionKind.previous;
+           case base:
+               return RevisionKind.base;
+           case head:
+               return RevisionKind.head;
+           case working:
+               return RevisionKind.working;
+           }
+       }
+       
+       public static org.apache.subversion.javahl.Revision.Kind toAKind(int kind)
+       {
+           switch (kind)
+           {
+           default:
+           case RevisionKind.unspecified:
+               return org.apache.subversion.javahl.Revision.Kind.unspecified;
+           case RevisionKind.number:
+               return org.apache.subversion.javahl.Revision.Kind.number;
+           case RevisionKind.date:
+               return org.apache.subversion.javahl.Revision.Kind.date;
+           case RevisionKind.committed:
+               return org.apache.subversion.javahl.Revision.Kind.committed;
+           case RevisionKind.previous:
+               return org.apache.subversion.javahl.Revision.Kind.previous;
+           case RevisionKind.base:
+               return org.apache.subversion.javahl.Revision.Kind.base;
+           case RevisionKind.head:
+               return org.apache.subversion.javahl.Revision.Kind.head;
+           case RevisionKind.working:
+               return org.apache.subversion.javahl.Revision.Kind.working;
+           }
+       }
     }
 }
