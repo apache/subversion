@@ -88,7 +88,8 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
   if (ctor == 0)
     {
       ctor = env->GetMethodID(clazz, "<init>",
-                              "(Ljava/lang/String;IZI)V");
+                              "(Ljava/lang/String;"
+                              "L"JAVA_PACKAGE"/DiffSummary$DiffKind;ZI)V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         return SVN_NO_ERROR;
     }
@@ -97,13 +98,20 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
+  jobject jSummarizeKind = EnumMapper::mapSummarizeKind(diff->summarize_kind);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
   jint jNodeKind = EnumMapper::mapNodeKind(diff->node_kind);
   // Actually tranform the DIFF parameter into a Java equivalent.
-  jobject jDiffSummary = env->NewObject(clazz, ctor, jPath,
-                                        (jint) diff->summarize_kind,
+  jobject jDiffSummary = env->NewObject(clazz, ctor, jPath, jSummarizeKind,
                                         (jboolean) diff->prop_changed,
                                         jNodeKind);
   if (JNIUtil::isJavaExceptionThrown() || jDiffSummary == NULL)
+    return SVN_NO_ERROR;
+
+  env->DeleteLocalRef(jSummarizeKind);
+  if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
   env->DeleteLocalRef(jPath);
