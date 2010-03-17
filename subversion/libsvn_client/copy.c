@@ -1657,6 +1657,28 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
   return SVN_NO_ERROR;
 }
 
+struct repos_to_wc_copy_baton {
+  const apr_array_header_t *copy_pairs;
+  const char *top_dst_path;
+  svn_boolean_t ignore_externals;
+  svn_ra_session_t *ra_session;
+  svn_client_ctx_t *ctx;
+};
+
+static svn_error_t *
+repos_to_wc_copy_cb(void *baton,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  struct repos_to_wc_copy_baton *b = baton;
+
+  SVN_ERR(repos_to_wc_copy_locked(b->copy_pairs, b->top_dst_path,
+                                  b->ignore_externals, b->ra_session,
+                                  b->ctx, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 repos_to_wc_copy(const apr_array_header_t *copy_pairs,
                  svn_boolean_t make_parents,
@@ -1667,8 +1689,8 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   svn_ra_session_t *ra_session;
   const char *top_src_url, *top_dst_path;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_error_t *err1, *err2;
-  const char *anchor_abspath;
+  const char *lock_abspath;
+  struct repos_to_wc_copy_baton baton;
   int i;
 
   /* Get the real path for the source, based upon its peg revision. */
@@ -1696,8 +1718,16 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
     }
 
   get_copy_pair_ancestors(copy_pairs, &top_src_url, &top_dst_path, NULL, pool);
+  lock_abspath = top_dst_path;
   if (copy_pairs->nelts == 1)
-    top_src_url = svn_uri_dirname(top_src_url, pool);
+    {
+      svn_node_kind_t kind;
+      top_src_url = svn_uri_dirname(top_src_url, pool);
+      SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx, top_dst_path, FALSE,
+                                    pool));
+      if (kind != svn_node_dir)
+        lock_abspath = svn_dirent_dirname(top_dst_path, pool);
+    }
 
   /* Open a repository session to the longest common src ancestor.  We do not
      (yet) have a working copy, so we don't have a corresponding path and
@@ -1774,13 +1804,16 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
     }
   svn_pool_destroy(iterpool);
 
-  SVN_ERR(svn_wc__acquire_write_lock(&anchor_abspath, ctx->wc_ctx, top_dst_path,
-                                     pool, pool));
-  err1 = repos_to_wc_copy_locked(copy_pairs, top_dst_path, ignore_externals,
-                                 ra_session, ctx, pool);
-  err2 = svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool);
+  baton.copy_pairs = copy_pairs;
+  baton.top_dst_path = top_dst_path;
+  baton.ignore_externals = ignore_externals;
+  baton.ra_session = ra_session;
+  baton.ctx = ctx;
 
-  return svn_error_compose_create(err1, err2);
+  SVN_ERR(svn_wc__call_with_write_lock(repos_to_wc_copy_cb, &baton,
+                                       ctx->wc_ctx, lock_abspath,
+                                       pool, pool));
+  return SVN_NO_ERROR;
 }
 
 #define NEED_REPOS_REVNUM(revision) \
