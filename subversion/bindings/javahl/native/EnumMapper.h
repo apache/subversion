@@ -32,13 +32,19 @@
 #include "svn_wc.h"
 #include "svn_types.h"
 
+class JNIStringHolder;
+
 /**
  * This class contains all the mappers between the C enum's and the
- * matching Java int's.
+ * matching Java enums's.
  */
 class EnumMapper
 {
  public:
+  /* Converting to C enum's */
+  static svn_depth_t toDepth(jobject jdepth);
+
+  /* Converting from C enum's */
   static jint mapCommitMessageStateFlags(apr_byte_t flags);
   static jint mapNotifyState(svn_wc_notify_state_t state);
   static jint mapNotifyAction(svn_wc_notify_action_t action);
@@ -49,9 +55,12 @@ class EnumMapper
   static jint mapConflictKind(svn_wc_conflict_kind_t kind);
   static jint mapConflictAction(svn_wc_conflict_action_t action);
   static jint mapConflictReason(svn_wc_conflict_reason_t reason);
-  static jint mapDepth(svn_depth_t depth);
+  static jobject mapDepth(svn_depth_t depth);
   static jint mapOperation(svn_wc_operation_t);
   static jint mapTristate(svn_tristate_t);
+ private:
+  static jobject mapEnum(const char *clazzName, const char *name);
+  static jstring getName(const char *clazzName, jobject jenum);
 };
 
 #endif  // ENUM_MAPPER_H

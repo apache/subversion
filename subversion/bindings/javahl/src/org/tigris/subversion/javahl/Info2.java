@@ -268,7 +268,7 @@ public class Info2 implements java.io.Serializable
              aInfo.getConflictOld(), aInfo.getConflictNew(),
              aInfo.getConflictWrk(), aInfo.getPrejfile(),
              aInfo.getChangelistName(), aInfo.getWorkingSize(),
-             aInfo.getReposSize(), aInfo.getDepth(),
+             aInfo.getReposSize(), Depth.fromADepth(aInfo.getDepth()),
              aInfo.getConflictDescriptor() == null ? null
                 : new ConflictDescriptor(aInfo.getConflictDescriptor()));
     }
