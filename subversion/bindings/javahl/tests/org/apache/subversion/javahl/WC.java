@@ -109,9 +109,9 @@ public class WC
      * @param path      the path, where the status is set
      * @param status    the new text status
      */
-    public void setItemTextStatus(String path, int status)
+    public void setItemTextStatus(String path, Status.Kind status)
     {
-        ((Item) items.get(path)).textStatus = status;
+        items.get(path).textStatus = status;
     }
 
     /**
@@ -119,9 +119,9 @@ public class WC
      * @param path      the path, where the status is set
      * @param status    the new property status
      */
-    public void setItemPropStatus(String path, int status)
+    public void setItemPropStatus(String path, Status.Kind status)
     {
-        ((Item) items.get(path)).propStatus = status;
+        items.get(path).propStatus = status;
     }
 
     /**
@@ -553,12 +553,12 @@ public class WC
         /**
          * the text (content) status of the item
          */
-        int textStatus = Status.Kind.normal;
+        Status.Kind textStatus = Status.Kind.normal;
 
         /**
          * the property status of the item.
          */
-        int propStatus = Status.Kind.none;
+        Status.Kind propStatus = Status.Kind.none;
 
         /**
          * the expected revision number. -1 means do not check.

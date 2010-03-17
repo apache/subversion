@@ -64,7 +64,6 @@
 #include "svn_private_config.h"
 #include "../include/org_apache_subversion_javahl_Revision.h"
 #include "../include/org_apache_subversion_javahl_NodeKind.h"
-#include "../include/org_apache_subversion_javahl_StatusKind.h"
 #include "JNIStringHolder.h"
 #include <vector>
 #include <iostream>

@@ -35,7 +35,6 @@
 #include "../include/org_apache_subversion_javahl_NodeKind.h"
 #include "../include/org_apache_subversion_javahl_Operation.h"
 #include "../include/org_apache_subversion_javahl_LockStatus.h"
-#include "../include/org_apache_subversion_javahl_StatusKind.h"
 #include "../include/org_apache_subversion_javahl_Revision.h"
 #include "../include/org_apache_subversion_javahl_ScheduleKind.h"
 #include "../include/org_apache_subversion_javahl_ConflictDescriptor_Kind.h"
@@ -324,52 +323,52 @@ jint EnumMapper::mapScheduleKind(svn_wc_schedule_t schedule)
  * @param state     the C wc state constant
  * @returns the Java constant
  */
-jint EnumMapper::mapStatusKind(svn_wc_status_kind svnKind)
+jobject EnumMapper::mapStatusKind(svn_wc_status_kind svnKind)
 {
   switch(svnKind)
     {
     case svn_wc_status_none:
     default:
-      return org_apache_subversion_javahl_StatusKind_none;
+      return mapEnum(JAVA_PACKAGE"/Status$Kind", "none");
 
     case svn_wc_status_unversioned:
-      return org_apache_subversion_javahl_StatusKind_unversioned;
+      return mapEnum(JAVA_PACKAGE"/Status$Kind", "unversioned");
 
     case svn_wc_status_normal:
-      return org_apache_subversion_javahl_StatusKind_normal;
+      return mapEnum(JAVA_PACKAGE"/Status$Kind", "normal");
 
     case svn_wc_status_added:
-      return org_apache_subversion_javahl_StatusKind_added;
+      return mapEnum(JAVA_PACKAGE"/Status$Kind", "added");
 
     case svn_wc_status_missing:
-      return org_apache_subversion_javahl_StatusKind_missing;
+      return mapEnum(JAVA_PACKAGE"/Status$Kind", "missing");
 
     case svn_wc_status_deleted:
-      return org_apache_subversion_javahl_StatusKind_deleted;
+      return mapEnum(JAVA_PACKAGE"/Status$Kind", "deleted");
 
     case svn_wc_status_replaced:
-      return org_apache_subversion_javahl_StatusKind_replaced;
+      return mapEnum(JAVA_PACKAGE"/Status$Kind", "replaced");
 
     case svn_wc_status_modified:
-      return org_apache_subversion_javahl_StatusKind_modified;
+      return mapEnum(JAVA_PACKAGE"/Status$Kind", "modified");
 
     case svn_wc_status_merged:
-      return org_apache_subversion_javahl_StatusKind_merged;
+      return mapEnum(JAVA_PACKAGE"/Status$Kind", "merged");
 
     case svn_wc_status_conflicted:
-      return org_apache_subversion_javahl_StatusKind_conflicted;
+      return mapEnum(JAVA_PACKAGE"/Status$Kind", "conflicted");
 
     case svn_wc_status_ignored:
-      return org_apache_subversion_javahl_StatusKind_ignored;
+      return mapEnum(JAVA_PACKAGE"/Status$Kind", "ignored");
 
     case svn_wc_status_obstructed:
-      return org_apache_subversion_javahl_StatusKind_obstructed;
+      return mapEnum(JAVA_PACKAGE"/Status$Kind", "obstructed");
 
     case svn_wc_status_external:
-      return org_apache_subversion_javahl_StatusKind_external;
+      return mapEnum(JAVA_PACKAGE"/Status$Kind", "external");
 
     case svn_wc_status_incomplete:
-      return org_apache_subversion_javahl_StatusKind_incomplete;
+      return mapEnum(JAVA_PACKAGE"/Status$Kind", "incomplete");
     }
 }
 
