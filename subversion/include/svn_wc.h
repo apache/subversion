@@ -5259,7 +5259,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_revnum_t *target_revision,
                           svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
+                          const char *anchor_abspath,
                           const char *target_basename,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
@@ -5382,14 +5382,11 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * @a target_basename is the entry in @a anchor_abspath that will actually be
  * updated, or the empty string if all of @a anchor_abspath should be updated.
  *
- * @a target is the entry in @a anchor that will actually be updated, or
- * empty if all of @a anchor should be updated.
- *
  * The editor invokes @a notify_func with @a notify_baton as the switch
  * progresses, if @a notify_func is non-NULL.
  *
- * If @a cancel_func is non-NULL, it will be called with @a cancel_baton as
- * the switch progresses to determine if it should continue.
+ * If @a cancel_func is non-NULL, the editor will invoke @a cancel_func with
+ * @a cancel_baton as the switch progresses to see if it should continue.
  *
  * If @a conflict_func is non-NULL, then invoke it with @a
  * conflict_baton whenever a conflict is encountered, giving the
