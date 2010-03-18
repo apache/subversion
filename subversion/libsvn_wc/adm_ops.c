@@ -1514,7 +1514,11 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
           /* When we are called with the copyfrom arguments set and with
              the admin directory already in existence, then the dir will
              contain the copyfrom settings.  So we need to pass the
-             copyfrom arguments to the ensure call. */
+             copyfrom arguments to the ensure call.
+
+             This creates a BASE_NODE for an added directory, really
+             it should create a WORKING_NODE.  It gets removed by the
+             next modify2 call. */
           SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
                                               copyfrom_url,
                                               parent_entry->repos,
@@ -1552,7 +1556,10 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       /* We're making the same mods we made above, but this time we'll
          force the scheduling.  Also make sure to undo the
          'incomplete' flag which svn_wc__internal_ensure_adm() sets by
-         default. */
+         default.
+
+         This deletes the erroneous BASE_NODE for added directories and
+         adds a WORKING_NODE. */
       modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
       modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
       tmp_entry.schedule = is_replace
@@ -1589,7 +1596,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                             pool));
 
           /* Recursively add the 'copied' existence flag as well!  */
-          SVN_ERR(mark_tree_copied(db, local_abspath, status, pool));
+          SVN_ERR(mark_tree_copied(db, local_abspath,
+                                   exists ? status : svn_wc__db_status_added,
+                                   pool));
 
           /* Clean out the now-obsolete dav cache values.  */
           SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
