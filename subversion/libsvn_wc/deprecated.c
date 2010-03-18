@@ -2751,8 +2751,8 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
     }
 
   SVN_ERR(svn_wc_get_update_editor4(editor, edit_baton,
-                                    target_revision,
                                     wc_ctx,
+                                    target_revision,
                                     svn_wc__adm_access_abspath(anchor),
                                     target,
                                     use_commit_times,
@@ -2868,8 +2868,8 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
     }
 
   SVN_ERR(svn_wc_get_switch_editor4(editor, edit_baton,
-                                    target_revision,
                                     wc_ctx,
+                                    target_revision,
                                     svn_wc__adm_access_abspath(anchor),
                                     target, switch_url,
                                     use_commit_times,
