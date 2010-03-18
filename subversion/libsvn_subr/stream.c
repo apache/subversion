@@ -817,6 +817,8 @@ svn_stream_from_aprfile2(apr_file_t *file,
   return stream;
 }
 
+/* A read handler (#svn_read_fn_t) that forwards to read_handler_apr()
+   but only allows reading between BATON->start and BATON->end. */
 static svn_error_t *
 read_range_handler_apr(void *baton, char *buffer, apr_size_t *len)
 {
