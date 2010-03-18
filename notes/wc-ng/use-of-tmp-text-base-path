@@ -13,54 +13,63 @@ This call graph shows all the routes by which the WC-1 temporary text base
 path is obtained, and the extent to which it is propagated.
 
 
-                           svn_client_commit4()
-                                |       |^[T]        wc_to_repos_copy()
-                    +-----------+       +--------+         |
-                    |                           ^|         |
-                    |                       svn_client__do_commit()
-  LIBSVN_CLIENT     |                                ^|
+                          svn_client_commit4()
+                                |^[T]  |
+      wc_to_repos_copy()        |^     |
+                |               |^     |
+              svn_client__do_commit()  |
+                        |^             |
+  LIBSVN_CLIENT         |^             |
   ..........................................................................
-  LIBSVN_WC         |                                ^|
-                    |                                ^|
-  { svn_wc_process_committed_queue2() }              ^|
-  { svn_wc_process_committed4()       }              ^|
-           |                                         ^|
-    svn_wc__process_committed_internal()             ^|
-           |                                         ^|
-    process_committed_leaf()                         ^|
-           |                              svn_wc_transmit_text_deltas3()
-    svn_wc__wq_add_post_commit()                     ^|
-           |                         svn_wc__internal_transmit_text_deltas()
-    WQ:OP_POSTCOMMIT                                 ^|
-                                                     ^|
-    run_postcommit()                                 ^|
-           |                                         ^|
-    log_do_committed()                               ^|
-           |                                         ^|
-    install_committed_file()                         ^|
-      |         [T]^|                                ^|
-      |            ^|        +------------------------+
-      |            ^|        |^
-      |            ^|        |^
-      |            ^|        |^         { svn_wc_get_update_editor4() }
-      |            ^|        |^         { svn_wc_get_switch_editor4() }
-      |            ^|        |^               |  [1]
-      |            ^|        |^           make_editor()
-      |            ^|        |^                  *  [1]
-      |            ^|        |^                   *         EDITOR
-      |            ^|        |^                    *           |
-      |            ^|        |^                   apply_textdelta()  >>>>v
-      |            ^|        |^                      ^|  [2]             v
-      |            ^|        |^                      ^|                  v
-      |            ^|        |^                      ^|     HB->work_abspath
-      |    { svn_wc__text_base_path(tmp=TRUE) }      ^|           [3]
-      |    { svn_wc__open_writable_base()     } ------+
-      |    {   +--- open_adm_file()           }
-      +--- { svn_wc__sync_text_base()         }
-           { make_adm_subdir()                } --- initialization only
-                      |^
-                      |^
-             extend_with_adm_name(tmp=TRUE)
+  LIBSVN_WC             |^             |
+                        |^             |    { svn_wc_get_update_editor4() }
+                        |^             |    { svn_wc_get_switch_editor4() }
+                        |^             |        |  [1]
+                        |^             |      make_editor()
+                        |^             |        *  [1]
+                        |^             |          *           EDITOR
+                        |^             +---+        *           |
+                        |^                 |       apply_textdelta()  >>>v
+  svn_wc_transmit_text_deltas3()           |          |^ [2]             v
+                |^                         |          |^                 v
+  svn_wc__internal_transmit_text_deltas()  |          |^    HB->work_abspath
+        |^                                 |          |^
+        |^                                 |          |^
+        |^  { svn_wc_process_committed_queue2() }     |^
+        |^  { svn_wc_process_committed4()       }     |^
+        |^            |                               |^
+        |^    svn_wc__process_committed_internal()    |^
+        |^            |                               |^
+        |^    process_committed_leaf()                |^
+        |^            |                               |^
+        |^    svn_wc__wq_add_post_commit()            |^
+        |^            |                               |^
+        |^    WQ:OP_POSTCOMMIT                        |^
+        |^             *                              |^
+        |^              *                             |^
+        |^               *                            |^
+        |^      run_postcommit()                      |^
+        |^                |                           |^
+        |^      log_do_committed()                    |^
+        |^                |                           |^
+        |^      install_committed_file()              |^
+        |^          |^[T]      |                      |^
+        |^          |^         +----+                 |^
+        |^          |^              |                 |^
+        |^          |^              |                 |^
+  svn_wc__text_base_path(tmp=TRUE)  |                 |^
+            |^                      |       +---------+
+            |^  svn_wc__sync_text_base()    |^
+            |^      |^                      |^
+            |^      |^          svn_wc__open_writable_base()
+            |^      |^                      |^
+            |^      |^                open_adm_file()     [initialization]
+            |^      |^                      |^                  |
+            |^      |^      +---------------+             make_adm_subdir()
+            |^      |^      |^                                  |^
+            |^      |^      |^      +---------------------------+
+            |^      |^      |^      |^
+          extend_with_adm_name(tmp=TRUE)
 
 
 UPDATE EDITOR
@@ -70,34 +79,37 @@ This call graph shows all the uses of the WC-1 temporary text base path
 within the update editor.
 
 
-                         [2]
-                       v<<<<<       apply_textdelta()
-                       v
-              HB->work_abspath
-                       v
-                       v [3]        window_handler()
-                       v
-          FB->new_text_base_abspath
-                       v
-                       v>>>>>         close_file()
-                         [4]              |v
-                                      merge_file()
-                      --------------------------------------
-                        |v              |v      |v      |v
-    svn_wc__internal_\  |v              |v      |v      |v
-      versioned_file_modcheck()         |v      |v      |v
-          |v                 |          |v      |v      |v
-  svn_stream_open_readonly() |          |v      |v      |v
-                             |          |v      |v      |v
-              compare_and_verify()      |v      |v      |v
-                                        |v      |v      |v
-                        svn_wc__loggy_copy()    |v      |v
-                                                |v      |v
+                       [2]
+                     v<<<<<       apply_textdelta()
+                     v
+            HB->work_abspath
+                     v
+                     v [3]        window_handler()
+                     v
+        FB->new_text_base_abspath
+                     v
+                     v>>>>>         close_file()
+                       [4]              |v
+                                        |v
+                                    merge_file()
+                                   |v  |v  |v  |v
+                          +--------+   |v  |v  +--------+
+                          |v        +--+   +--+         |v
+                          |v        |v        |v        |v
+    svn_wc__internal_\    |v        |v        |v        |v
+       versioned_file_modcheck()    |v        |v        |v
+          |v                 |      |v        |v        |v
+  svn_stream_open_readonly() |      |v        |v        |v
+                             |      |v        |v        |v
+              compare_and_verify()  |v        |v        |v
+                                    |v        |v        |v
+                        svn_wc__loggy_copy()  |v        |v
+                                              |v        |v
                               svn_wc__internal_merge()  |v
                                                         |v
-                                            install_text_base()
-                                                    |v
-                                            svn_wc__loggy_move()
+                                                install_text_base()
+                                                        |v
+                                                svn_wc__loggy_move()
 
 
 NOTES
