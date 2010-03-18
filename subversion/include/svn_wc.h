@@ -3923,6 +3923,9 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
  * state in it.  (Caller should obtain @a traversal_info from
  * svn_wc_init_traversal_info().)
  *
+ * ### Since r879231 it's not traversal_info, it's external_func/
+ *     external_baton which is ...?
+ *
  * Allocate the editor itself in @a pool, but the editor does temporary
  * allocations in a subpool of @a pool.
  *
@@ -3942,7 +3945,7 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           const apr_array_header_t *ignore_patterns,
                           svn_wc_status_func4_t status_func,
                           void *status_baton,
-                          svn_wc_external_update_t external_update,
+                          svn_wc_external_update_t external_func,
                           void *external_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
@@ -4997,6 +5000,9 @@ svn_wc_process_committed(const char *path,
  * state in it.  (Caller should obtain @a traversal_info from
  * svn_wc_init_traversal_info().)
  *
+ * ### Since r879231 it's not traversal_info, it's external_func/
+ *     external_baton which is ...?
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -5257,8 +5263,8 @@ svn_wc_get_actual_target(const char *path,
 svn_error_t *
 svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           void **edit_baton,
-                          svn_revnum_t *target_revision,
                           svn_wc_context_t *wc_ctx,
+                          svn_revnum_t *target_revision,
                           const char *anchor_abspath,
                           const char *target_basename,
                           svn_boolean_t use_commit_times,
@@ -5369,70 +5375,22 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
                          apr_pool_t *pool);
 
 /**
- * A variant of svn_wc_get_update_editor().
+ * A variant of svn_wc_get_update_editor4().
  *
  * Set @a *editor and @a *edit_baton to an editor and baton for "switching"
  * a working copy to a new @a switch_url.  (Right now, this URL must be
  * within the same repository that the working copy already comes
  * from.)  @a switch_url must not be @c NULL.
  *
- * @a anchor_abspath is a local working copy directory, with a fully recursive
- * write lock in @a wc_ctx, which will be used as the root of our editor.
- *
- * @a target_basename is the entry in @a anchor_abspath that will actually be
- * updated, or the empty string if all of @a anchor_abspath should be updated.
- *
- * The editor invokes @a notify_func with @a notify_baton as the switch
- * progresses, if @a notify_func is non-NULL.
- *
- * If @a cancel_func is non-NULL, the editor will invoke @a cancel_func with
- * @a cancel_baton as the switch progresses to see if it should continue.
- *
- * If @a conflict_func is non-NULL, then invoke it with @a
- * conflict_baton whenever a conflict is encountered, giving the
- * callback a chance to resolve the conflict before the editor takes
- * more drastic measures (such as marking a file conflicted, or
- * bailing out of the switch).
- *
- * If @a external_func is non-NULL, then invoke it with @a external_baton
- * whenever external changes are encountered, giving the callback a chance
- * to store the external information for processing.
- *
- * If @a fetch_func is non-NULL, then use it (with @a fetch_baton) as
- * a fallback for retrieving repository files whenever 'copyfrom' args
- * are sent into editor->add_file().
- *
- * If @a diff3_cmd is non-NULL, then use it as the diff3 command for
- * any merging; otherwise, use the built-in merge code.
- *
- * @a preserved_exts is an array of filename patterns which, when
- * matched against the extensions of versioned files, determine for
- * which such files any related generated conflict files will preserve
- * the original file's extension as their own.  If a file's extension
- * does not match any of the patterns in @a preserved_exts (which is
- * certainly the case if @a preserved_exts is @c NULL or empty),
- * generated conflict files will carry Subversion's custom extensions.
- *
- * @a target_revision is a pointer to a revision location which, after
- * successful completion of the drive of this editor, will be
- * populated with the revision to which the working copy was updated.
- *
- * If @a use_commit_times is TRUE, then all edited/added files will
- * have their working timestamp set to the last-committed-time.  If
- * FALSE, the working files will be touched with the 'now' time.
- *
- * @a depth and @a depth_is_sticky behave as for svn_wc_get_update_editor3().
- *
- * If @a allow_unver_obstructions is TRUE, then allow unversioned
- * obstructions when adding a path.
+ * All other parameters behave as for svn_wc_get_update_editor4().
  *
  * @since New in 1.7.
  */
 svn_error_t *
 svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           void **edit_baton,
-                          svn_revnum_t *target_revision,
                           svn_wc_context_t *wc_ctx,
+                          svn_revnum_t *target_revision,
                           const char *anchor_abspath,
                           const char *target_basename,
                           const char *switch_url,
