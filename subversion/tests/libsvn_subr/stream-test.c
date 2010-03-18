@@ -266,20 +266,20 @@ test_stream_range(apr_pool_t *pool)
 
     /* Even when requesting more data than contained in the range,
      * we should only receive data from the range. */
-    len = strlen(now) + strlen(after);
-
     for (i = 0; i < 2; i++)
       {
-        /* Read the range. */
+        /* Try to read from "Now", up to and past the end of the range. */
+        len = strlen(now) + 1;
         SVN_ERR(svn_stream_read(stream, buf, &len));
-        if (len > strlen(now))
+        if (len != strlen(now))
           return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                   "Read past range");
+                                   "Read past (or not all of) range");
         if (strcmp(buf, now))
           return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                    "Unexpected data");
 
-        /* Reading past the end of the range should be impossible. */
+        /* Try to read from the end of the range - should be impossible. */
+        len = 1;
         SVN_ERR(svn_stream_read(stream, buf, &len));
         if (len != 0)
           return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
