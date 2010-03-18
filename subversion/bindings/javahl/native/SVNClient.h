@@ -34,7 +34,6 @@
 
 class Revision;
 class RevisionRange;
-class Notify;
 class NotifyCallback;
 class ConflictResolverCallback;
 class ProgressListener;
@@ -226,7 +225,6 @@ class SVNClient :public SVNBase
             bool ignoreAncestry, bool noDiffDelete, bool force,
             bool showCopiesAsAdds);
 
-  Notify *m_notify;
   NotifyCallback *m_notify2;
   ConflictResolverCallback *m_conflictResolver;
   ProgressListener *m_progressListener;
