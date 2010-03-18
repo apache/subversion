@@ -25,7 +25,6 @@
 #include "../svn_test.h"
 
 #include "svn_diff.h"
-#include "private/svn_diff_private.h"
 #include "svn_pools.h"
 #include "svn_utf.h"
 
@@ -101,8 +100,8 @@ test_parse_unidiff(apr_pool_t *pool)
 
       /* We have two patches with one hunk each.
        * Parse the first patch. */
-      SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, reverse,
-                                         iterpool, iterpool));
+      SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, reverse,
+                                        iterpool, iterpool));
       SVN_ERR_ASSERT(patch);
       SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/C/gamma"));
       SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/C/gamma"));
@@ -144,7 +143,7 @@ test_parse_unidiff(apr_pool_t *pool)
       SVN_ERR_ASSERT(buf->len == 0);
 
       /* Parse the second patch. */
-      SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file, reverse, pool, pool));
+      SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, reverse, pool, pool));
       SVN_ERR_ASSERT(patch);
       if (reverse)
         {

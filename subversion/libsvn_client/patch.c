@@ -31,6 +31,7 @@
 #include <apr_fnmatch.h>
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
+#include "svn_diff.h"
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_pools.h"
@@ -40,7 +41,6 @@
 #include "client.h"
 
 #include "svn_private_config.h"
-#include "private/svn_diff_private.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_wc_private.h"
 
@@ -1457,8 +1457,8 @@ apply_patches(void *baton,
       if (btn->ctx->cancel_func)
         SVN_ERR(btn->ctx->cancel_func(btn->ctx->cancel_baton));
 
-      SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file,
-                                         btn->reverse, scratch_pool, iterpool));
+      SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
+                                        btn->reverse, scratch_pool, iterpool));
       if (patch)
         {
           patch_target_t *target;
@@ -1468,7 +1468,7 @@ apply_patches(void *baton,
                                   btn->include_patterns, btn->exclude_patterns,
                                   scratch_pool, iterpool));
           if (target->filtered)
-            SVN_ERR(svn_diff__close_patch(patch));
+            SVN_ERR(svn_diff_close_patch(patch));
           else
             APR_ARRAY_PUSH(targets, patch_target_t *) = target;
         }
@@ -1490,7 +1490,7 @@ apply_patches(void *baton,
         SVN_ERR(install_patched_target(target, btn->abs_wc_path,
                                        btn->ctx, btn->dry_run, iterpool));
       SVN_ERR(send_patch_notification(target, btn->ctx, iterpool));
-      SVN_ERR(svn_diff__close_patch(target->patch));
+      SVN_ERR(svn_diff_close_patch(target->patch));
     }
 
   SVN_ERR(svn_io_file_close(patch_file, iterpool));
