@@ -71,7 +71,8 @@ public class DiffSummary extends EventObject
     DiffSummary(org.apache.subversion.javahl.DiffSummary aSummary)
     {
         this(aSummary.getPath(), aSummary.getDiffKind().ordinal(),
-             aSummary.propsChanged(), aSummary.getNodeKind());
+             aSummary.propsChanged(),
+             NodeKind.fromApache(aSummary.getNodeKind()));
     }
 
     /**

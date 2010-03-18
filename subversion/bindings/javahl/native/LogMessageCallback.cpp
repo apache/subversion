@@ -99,7 +99,8 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
     {
       midCP = env->GetMethodID(clazzCP,
                                "<init>",
-                               "(Ljava/lang/String;JLjava/lang/String;CI"
+                               "(Ljava/lang/String;JLjava/lang/String;C"
+                               "L"JAVA_PACKAGE"/NodeKind;"
                                "L"JAVA_PACKAGE"/Tristate;"
                                "L"JAVA_PACKAGE"/Tristate;)V");
       if (JNIUtil::isJavaExceptionThrown())
@@ -124,8 +125,11 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
           if (JNIUtil::isJavaExceptionThrown())
             return SVN_NO_ERROR;
 
-          jstring jcopyFromPath =
-            JNIUtil::makeJString(log_item->copyfrom_path);
+          jstring jcopyFromPath = JNIUtil::makeJString(log_item->copyfrom_path);
+          if (JNIUtil::isJavaExceptionThrown())
+            return SVN_NO_ERROR;
+
+          jobject jnodeKind = EnumMapper::mapNodeKind(log_item->node_kind);
           if (JNIUtil::isJavaExceptionThrown())
             return SVN_NO_ERROR;
 
@@ -133,14 +137,17 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
           jchar jaction = log_item->action;
 
           jobject cp = env->NewObject(clazzCP, midCP, jpath, jcopyFromRev,
-                              jcopyFromPath, jaction,
-                              EnumMapper::mapNodeKind(log_item->node_kind),
+                              jcopyFromPath, jaction, jnodeKind,
                               EnumMapper::mapTristate(log_item->text_modified),
                               EnumMapper::mapTristate(log_item->props_modified));
           if (JNIUtil::isJavaExceptionThrown())
             return SVN_NO_ERROR;
 
           jcps.push_back(cp);
+
+          env->DeleteLocalRef(jnodeKind);
+          if (JNIUtil::isJavaExceptionThrown())
+            return SVN_NO_ERROR;
 
           env->DeleteLocalRef(jpath);
           if (JNIUtil::isJavaExceptionThrown())

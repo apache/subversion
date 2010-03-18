@@ -379,7 +379,7 @@ class SVNTests extends TestCase
     protected void addExpectedCommitItem(String workingCopyPath,
                                          String baseUrl,
                                          String itemPath,
-                                         int nodeKind,
+                                         NodeKind nodeKind,
                                          int stateFlags)
     {
         //determine the full working copy path and the full url of the item.
@@ -882,7 +882,7 @@ class SVNTests extends TestCase
         /**
          * the kind of node (file, directory or none, see NodeKind)
          */
-        int myNodeKind;
+        NodeKind myNodeKind;
         /**
          * the reason why this item is commited (see CommitItemStateFlag)
          */
@@ -898,7 +898,7 @@ class SVNTests extends TestCase
          * @param stateFlags    the expected state flags
          * @param url           the expected url
          */
-        private MyCommitItem(String path, int nodeKind, int stateFlags,
+        private MyCommitItem(String path, NodeKind nodeKind, int stateFlags,
                              String url)
         {
             myPath = path;

@@ -153,7 +153,7 @@ public class NotifyInformation extends EventObject
     {
         this(aInfo.getPath(),
              aInfo.getAction() == null ? -1 : aInfo.getAction().ordinal(),
-             aInfo.getKind(), aInfo.getMimeType(),
+             NodeKind.fromApache(aInfo.getKind()), aInfo.getMimeType(),
              aInfo.getLock() == null ? null : new Lock(aInfo.getLock()),
              aInfo.getErrMsg(), aInfo.getContentState(), aInfo.getPropState(),
              aInfo.getLockState(), aInfo.getRevision(),

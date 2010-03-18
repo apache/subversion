@@ -50,7 +50,7 @@ public class NotifyInformation extends EventObject
     /**
      * The {@link NodeKind} of the item.
      */
-    private int kind;
+    private NodeKind kind;
 
     /**
      * The MIME type of the item.
@@ -124,7 +124,7 @@ public class NotifyInformation extends EventObject
      * @param mergeRange The range of the merge just beginning to occur.
      * @param pathPrefix A common path prefix.
      */
-    public NotifyInformation(String path, Action action, int kind,
+    public NotifyInformation(String path, Action action, NodeKind kind,
                              String mimeType, Lock lock, String errMsg,
                              int contentState, int propState, int lockState,
                              long revision, String changelistName,
@@ -164,7 +164,7 @@ public class NotifyInformation extends EventObject
     /**
      * @return The {@link NodeKind} of the item.
      */
-    public int getKind()
+    public NodeKind getKind()
     {
         return kind;
     }

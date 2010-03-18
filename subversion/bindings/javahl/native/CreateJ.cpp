@@ -48,7 +48,8 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
 
   if (ctor == 0)
     {
-      ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;II"
+      ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;I"
+                              "L"JAVA_PACKAGE"/NodeKind;"
                               "Ljava/lang/String;ZLjava/lang/String;III"
                               "Ljava/lang/String;Ljava/lang/String;"
                               "Ljava/lang/String;Ljava/lang/String;"
@@ -85,12 +86,14 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
   jobject jsrcRight = ConflictVersion(desc->src_right_version);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
+  jobject jnodeKind = EnumMapper::mapNodeKind(desc->node_kind);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
   // Instantiate the conflict descriptor.
   jobject jdesc = env->NewObject(clazz, ctor, jpath,
                                  EnumMapper::mapConflictKind(desc->kind),
-                                 EnumMapper::mapNodeKind(desc->node_kind),
-                                 jpropertyName,
+                                 jnodeKind, jpropertyName,
                                  (jboolean) desc->is_binary, jmimeType,
                                  EnumMapper::mapConflictAction(desc->action),
                                  EnumMapper::mapConflictReason(desc->reason),
@@ -104,6 +107,9 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
+  env->DeleteLocalRef(jnodeKind);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
   env->DeleteLocalRef(jpath);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
@@ -152,7 +158,8 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
   if (ctor == 0)
     {
       ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;J"
-                                               "Ljava/lang/String;I)V");
+                                               "Ljava/lang/String;"
+                                               "L"JAVA_PACKAGE"/NodeKind;)V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         return NULL;
     }
@@ -163,10 +170,13 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
   jstring jpathInRepos = JNIUtil::makeJString(version->path_in_repos);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
+  jobject jnodeKind = EnumMapper::mapNodeKind(version->node_kind);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
   jobject jversion = env->NewObject(clazz, ctor, jreposURL,
-                                 (jlong)version->peg_rev, jpathInRepos,
-                                 EnumMapper::mapNodeKind(version->node_kind));
+                                    (jlong)version->peg_rev, jpathInRepos,
+                                    jnodeKind);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
@@ -174,6 +184,9 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
+  env->DeleteLocalRef(jnodeKind);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
   env->DeleteLocalRef(jreposURL);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
@@ -201,8 +214,9 @@ CreateJ::Info(const svn_wc_entry_t *entry)
     {
         mid = env->GetMethodID(clazz, "<init>",
                                "(Ljava/lang/String;Ljava/lang/String;"
-                               "Ljava/lang/String;Ljava/lang/String;"
-                               "IILjava/lang/String;JJLjava/util/Date;"
+                               "Ljava/lang/String;Ljava/lang/String;I"
+                               "L"JAVA_PACKAGE"/NodeKind;"
+                               "Ljava/lang/String;JJLjava/util/Date;"
                                "Ljava/util/Date;Ljava/util/Date;"
                                "ZZZZJLjava/lang/String;)V");
         if (JNIUtil::isJavaExceptionThrown())
@@ -222,7 +236,9 @@ CreateJ::Info(const svn_wc_entry_t *entry)
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     jint jSchedule = EnumMapper::mapScheduleKind(entry->schedule);
-    jint jNodeKind = EnumMapper::mapNodeKind(entry->kind);
+    jobject jNodeKind = EnumMapper::mapNodeKind(entry->kind);
+    if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
     jstring jAuthor = JNIUtil::makeJString(entry->cmt_author);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
@@ -259,6 +275,9 @@ CreateJ::Info(const svn_wc_entry_t *entry)
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
+    env->DeleteLocalRef(jNodeKind);
+    if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
     env->DeleteLocalRef(jName);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;

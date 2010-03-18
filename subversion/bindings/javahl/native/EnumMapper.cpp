@@ -32,7 +32,6 @@
 #include "JNIStringHolder.h"
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
 #include "../include/org_apache_subversion_javahl_NotifyStatus.h"
-#include "../include/org_apache_subversion_javahl_NodeKind.h"
 #include "../include/org_apache_subversion_javahl_Operation.h"
 #include "../include/org_apache_subversion_javahl_LockStatus.h"
 #include "../include/org_apache_subversion_javahl_Revision.h"
@@ -238,24 +237,22 @@ jobject EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
  * @param state     the C node kind constant
  * @returns the Java constant
  */
-jint EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
+jobject EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
 {
   switch(nodeKind)
     {
     case svn_node_none:
-      return org_apache_subversion_javahl_NodeKind_none;
+      return mapEnum(JAVA_PACKAGE"/NodeKind", "none");
 
     case svn_node_file:
-      return org_apache_subversion_javahl_NodeKind_file;
+      return mapEnum(JAVA_PACKAGE"/NodeKind", "file");
 
     case svn_node_dir:
-      return org_apache_subversion_javahl_NodeKind_dir;
-
-    case svn_node_unknown:
-      return org_apache_subversion_javahl_NodeKind_unknown;
+      return mapEnum(JAVA_PACKAGE"/NodeKind", "dir");
 
     default:
-      return org_apache_subversion_javahl_NodeKind_unknown;
+    case svn_node_unknown:
+      return mapEnum(JAVA_PACKAGE"/NodeKind", "unknown");
     }
 }
 

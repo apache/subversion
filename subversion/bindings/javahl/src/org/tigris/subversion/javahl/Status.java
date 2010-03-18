@@ -322,7 +322,8 @@ public class Status implements java.io.Serializable
      */
     public Status(org.apache.subversion.javahl.Status aStatus)
     {
-        this(aStatus.getPath(), aStatus.getUrl(), aStatus.getNodeKind(),
+        this(aStatus.getPath(), aStatus.getUrl(),
+             NodeKind.fromApache(aStatus.getNodeKind()),
              aStatus.getRevisionNumber(),
              aStatus.getLastChangedRevisionNumber(),
              aStatus.getLastChangedDateMicros(), aStatus.getLastCommitAuthor(),
@@ -346,7 +347,8 @@ public class Status implements java.io.Serializable
              aStatus.getReposLock() == null ? null
                 : new Lock(aStatus.getReposLock()),
              aStatus.getReposLastCmtRevisionNumber(),
-             aStatus.getReposLastCmtDateMicros(), aStatus.getReposKind(),
+             aStatus.getReposLastCmtDateMicros(),
+             NodeKind.fromApache(aStatus.getReposKind()),
              aStatus.getReposLastCmtAuthor(), aStatus.getChangelist());
     }
 

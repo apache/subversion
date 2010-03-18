@@ -118,7 +118,8 @@ StatusCallback::createJavaStatus(const char *local_abspath,
     {
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
-                             "IJJJLjava/lang/String;"
+                             "L"JAVA_PACKAGE"/NodeKind;"
+                             "JJJLjava/lang/String;"
                              "L"JAVA_PACKAGE"/Status$Kind;"
                              "L"JAVA_PACKAGE"/Status$Kind;"
                              "L"JAVA_PACKAGE"/Status$Kind;"
@@ -129,7 +130,8 @@ StatusCallback::createJavaStatus(const char *local_abspath,
                              "JZZLjava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;"
                              "JL"JAVA_PACKAGE"/Lock;"
-                             "JJILjava/lang/String;Ljava/lang/String;)V");
+                             "JJL"JAVA_PACKAGE"/NodeKind;"
+                             "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     }
@@ -138,7 +140,7 @@ StatusCallback::createJavaStatus(const char *local_abspath,
     return NULL;
 
   jstring jUrl = NULL;
-  jint jNodeKind = org_apache_subversion_javahl_NodeKind_unknown;
+  jobject jNodeKind = NULL;
   jlong jRevision = org_apache_subversion_javahl_Revision_SVN_INVALID_REVNUM;
   jlong jLastChangedRevision =
     org_apache_subversion_javahl_Revision_SVN_INVALID_REVNUM;
@@ -168,7 +170,7 @@ StatusCallback::createJavaStatus(const char *local_abspath,
   jlong jOODLastCmtRevision =
     org_apache_subversion_javahl_Revision_SVN_INVALID_REVNUM;
   jlong jOODLastCmtDate = 0;
-  jint jOODKind = org_apache_subversion_javahl_NodeKind_none;
+  jobject jOODKind = NULL;
   jstring jOODLastCmtAuthor = NULL;
   jstring jChangelist = NULL;
   if (status != NULL)
@@ -283,33 +285,21 @@ StatusCallback::createJavaStatus(const char *local_abspath,
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  if (jTextType != NULL)
-    {
-      env->DeleteLocalRef(jTextType);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
+  env->DeleteLocalRef(jTextType);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
-  if (jPropType != NULL)
-    {
-      env->DeleteLocalRef(jPropType);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
+  env->DeleteLocalRef(jPropType);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
-  if (jRepositoryTextType != NULL)
-    {
-      env->DeleteLocalRef(jRepositoryTextType);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
+  env->DeleteLocalRef(jRepositoryTextType);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
-  if (jRepositoryPropType != NULL)
-    {
-      env->DeleteLocalRef(jRepositoryPropType);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
+  env->DeleteLocalRef(jRepositoryPropType);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
   env->DeleteLocalRef(jConflictNew);
   if (JNIUtil::isJavaExceptionThrown())

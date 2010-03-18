@@ -146,7 +146,8 @@ public class Info implements java.io.Serializable
     public Info(org.apache.subversion.javahl.Info aInfo)
     {
         this(aInfo.getName(), aInfo.getUrl(), aInfo.getUuid(),
-             aInfo.getRepository(), aInfo.getSchedule(), aInfo.getNodeKind(),
+             aInfo.getRepository(), aInfo.getSchedule(),
+             NodeKind.fromApache(aInfo.getNodeKind()),
              aInfo.getAuthor(), aInfo.getRevision(),
              aInfo.getLastChangedRevision(), aInfo.getLastChangedDate(),
              aInfo.getLastDateTextUpdate(), aInfo.getLastDatePropsUpdate(),
