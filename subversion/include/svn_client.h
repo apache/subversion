@@ -4849,10 +4849,17 @@ svn_client_info(const char *path_or_url,
  * original and modified files swapped due to human error.
  *
  * Excluding patch targets from the patching process is possible by passing
- * an @a exclude_patterns array containing elements of type const char *.
+ * @a include_patterns and/or @a exclude_patterns arrays containing
+ * elements of type const char *.
+ * If @a include_patterns is not NULL, patch targets not matching any glob
+ * pattern in @a include_patterns will not be patched.
  * If @a exclude_patterns is not NULL, patch targets matching any glob pattern
- * in @a exclude_patterns will not be patched. The match is performed on the
- * target path as parsed from the patch file, after canonicalization.
+ * in @a exclude_patterns will not be patched
+ * The match is performed on the target path as parsed from the patch file,
+ * after canonicalization.
+ * If both @a include_patterns and @a exclude_patterns are specified,
+ * the @a include_patterns are applied first, i.e. the @a exclude_patterns
+ * are applied to all targets which matched one of the @a include_patterns.
  *
  * If @a ctx->notify_func2 is non-NULL, invoke @a ctx->notify_func2 with
  * @a ctx->notify_baton2 as patching progresses.
@@ -4868,6 +4875,7 @@ svn_client_patch(const char *abs_patch_path,
                  svn_boolean_t dry_run,
                  int strip_count,
                  svn_boolean_t reverse,
+                 const apr_array_header_t *include_patterns,
                  const apr_array_header_t *exclude_patterns,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
