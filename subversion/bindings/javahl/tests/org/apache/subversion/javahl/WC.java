@@ -189,10 +189,9 @@ public class WC
      * @param path      the path, where the node kind is set
      * @param nodeKind  the expected node kind
      */
-    public void setItemNodeKind(String path, int nodeKind)
+    public void setItemNodeKind(String path, NodeKind nodeKind)
     {
-        Item i = (Item) items.get(path);
-        i.nodeKind = nodeKind;
+        items.get(path).nodeKind = nodeKind;
     }
 
     /**
@@ -260,9 +259,9 @@ public class WC
      * @param revision The last node kind for <code>path</code> known
      * to the repository.
      */
-    public void setItemReposKind(String path, int nodeKind)
+    public void setItemReposKind(String path, NodeKind nodeKind)
     {
-        ((Item) items.get(path)).reposKind = nodeKind;
+        items.get(path).reposKind = nodeKind;
     }
 
     /**
@@ -276,7 +275,7 @@ public class WC
      * @param nodeKind The last node kind.
      */
     public void setItemOODInfo(String path, long revision, String author,
-                               long date, int nodeKind)
+                               long date, NodeKind nodeKind)
     {
         this.setItemReposLastCmtRevision(path, revision);
         this.setItemReposLastCmtAuthor(path, author);
@@ -312,7 +311,7 @@ public class WC
         Assert.assertNotNull("not a file", item.myContent);
         Assert.assertEquals("state says file, working copy not",
                 tested[0].getNodeKind(),
-                item.nodeKind == -1 ? NodeKind.file : item.nodeKind);
+                item.nodeKind == null ? NodeKind.file : item.nodeKind);
     }
 
     /**
@@ -350,13 +349,13 @@ public class WC
             {
                 Assert.assertEquals("Expected '" + entry + "' to be file",
                         entry.getNodeKind(),
-                        item.nodeKind == -1 ? NodeKind.file : item.nodeKind);
+                        item.nodeKind == null ? NodeKind.file : item.nodeKind);
             }
             else
             {
                 Assert.assertEquals("Expected '" + entry + "' to be dir",
                         entry.getNodeKind(),
-                        item.nodeKind == -1 ? NodeKind.dir : item.nodeKind);
+                        item.nodeKind == null ? NodeKind.dir : item.nodeKind);
             }
             item.touched = true;
         }
@@ -471,7 +470,7 @@ public class WC
             {
                 Assert.assertEquals("state says file, working copy not: " + path,
                         status.getNodeKind(),
-                        item.nodeKind == -1 ? NodeKind.file : item.nodeKind);
+                        item.nodeKind == null ? NodeKind.file : item.nodeKind);
                 if (status.getTextStatus() == Status.Kind.normal ||
                         item.checkContent)
                 {
@@ -493,7 +492,7 @@ public class WC
             {
                 Assert.assertEquals("state says dir, working copy not: " + path,
                         status.getNodeKind(),
-                        item.nodeKind == -1 ? NodeKind.dir : item.nodeKind);
+                        item.nodeKind == null ? NodeKind.dir : item.nodeKind);
             }
 
             if (checkRepos)
@@ -576,9 +575,9 @@ public class WC
         boolean checkContent;
 
         /**
-         * expected node kind. -1 means do not check.
+         * expected node kind. null means do not check.
          */
-        int nodeKind = -1;
+        NodeKind nodeKind = null;
 
         /**
          * expected locked status
@@ -603,7 +602,7 @@ public class WC
         /**
          * node kind of the youngest commit if out of date
          */
-        int reposKind = NodeKind.none;
+        NodeKind reposKind = NodeKind.none;
 
         /**
          * author of the youngest commit if out of date.

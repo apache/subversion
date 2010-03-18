@@ -45,7 +45,7 @@ public class DiffSummary extends EventObject
 
     private DiffKind diffKind;
     private boolean propsChanged;
-    private int nodeKind;
+    private NodeKind nodeKind;
 
     /**
      * This constructor is to be used by the native code.
@@ -57,7 +57,7 @@ public class DiffSummary extends EventObject
      * the {@link NodeKind} enumeration).
      */
     public DiffSummary(String path, DiffKind diffKind, boolean propsChanged,
-                int nodeKind)
+                NodeKind nodeKind)
     {
         super(path);
         this.diffKind = diffKind;
@@ -93,7 +93,7 @@ public class DiffSummary extends EventObject
      * @return The type of node which changed (corresponds to the
      * {@link NodeKind} enumeration).
      */
-    public int getNodeKind()
+    public NodeKind getNodeKind()
     {
         return this.nodeKind;
     }

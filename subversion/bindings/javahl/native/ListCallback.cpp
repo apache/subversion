@@ -141,7 +141,8 @@ ListCallback::createJavaDirEntry(const char *path, const char *absPath,
     {
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
-                             "IJZJJLjava/lang/String;)V");
+                             "L"JAVA_PACKAGE"/NodeKind;"
+                             "JZJJLjava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     }
@@ -154,7 +155,10 @@ ListCallback::createJavaDirEntry(const char *path, const char *absPath,
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jint jNodeKind = EnumMapper::mapNodeKind(dirent->kind);
+  jobject jNodeKind = EnumMapper::mapNodeKind(dirent->kind);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
   jlong jSize = dirent->size;
   jboolean jHasProps = (dirent->has_props? JNI_TRUE : JNI_FALSE);
   jlong jLastChangedRevision = dirent->created_rev;
@@ -170,6 +174,10 @@ ListCallback::createJavaDirEntry(const char *path, const char *absPath,
     return NULL;
 
   env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  env->DeleteLocalRef(jNodeKind);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 

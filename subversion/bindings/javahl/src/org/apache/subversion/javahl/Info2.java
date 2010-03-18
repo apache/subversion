@@ -57,9 +57,9 @@ public class Info2 implements java.io.Serializable
     private long rev;
 
     /**
-     * the item kinds (see NodeKind)
+     * the item kinds
      */
-    private int kind;
+    private NodeKind kind;
 
     /**
      * the root URL of the repository
@@ -210,13 +210,13 @@ public class Info2 implements java.io.Serializable
      * @param depth
      * @param treeConflict
      */
-    public Info2(String path, String url, long rev, int kind, String reposRootUrl,
-          String reposUUID, long lastChangedRev, long lastChangedDate,
-          String lastChangedAuthor, Lock lock, boolean hasWcInfo, int schedule,
-          String copyFromUrl, long copyFromRev, long textTime, long propTime,
-          String checksum, String conflictOld, String conflictNew,
-          String conflictWrk, String prejfile, String changelistName,
-          long workingSize, long reposSize, Depth depth,
+    public Info2(String path, String url, long rev, NodeKind kind,
+          String reposRootUrl, String reposUUID, long lastChangedRev,
+          long lastChangedDate, String lastChangedAuthor, Lock lock,
+          boolean hasWcInfo, int schedule, String copyFromUrl, long copyFromRev,
+          long textTime, long propTime, String checksum, String conflictOld,
+          String conflictNew, String conflictWrk, String prejfile,
+          String changelistName, long workingSize, long reposSize, Depth depth,
           ConflictDescriptor treeConflict)
     {
         this.path = path;
@@ -274,7 +274,7 @@ public class Info2 implements java.io.Serializable
     /**
      * return the item kinds (see NodeKind)
      */
-    public int getKind()
+    public NodeKind getKind()
     {
         return kind;
     }

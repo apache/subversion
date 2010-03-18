@@ -104,7 +104,7 @@ public class DirEntry implements java.io.Serializable
     /**
      * the kind of the node (directory or file)
      */
-    private int nodeKind;
+    private NodeKind nodeKind;
 
     /**
      * the size of the file
@@ -133,7 +133,7 @@ public class DirEntry implements java.io.Serializable
      * @param lastChanged           the date of the last change
      * @param lastAuthor            the author of the last change
      */
-    public DirEntry(String path, String absPath, int nodeKind, long size,
+    public DirEntry(String path, String absPath, NodeKind nodeKind, long size,
              boolean hasProps, long lastChangedRevision, long lastChanged,
              String lastAuthor)
     {
@@ -214,7 +214,7 @@ public class DirEntry implements java.io.Serializable
      * Return the kind of entry (file or directory)
      * @return the kind of the entry (file or directory) see NodeKind class
      */
-    public int getNodeKind()
+    public NodeKind getNodeKind()
     {
         return nodeKind;
     }

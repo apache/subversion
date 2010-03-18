@@ -38,10 +38,7 @@ public class ConflictDescriptor
      */
     private int conflictKind;
 
-    /**
-     * @see NodeKind
-     */
-    private int nodeKind;
+    private NodeKind nodeKind;
 
     private String propertyName;
 
@@ -92,7 +89,7 @@ public class ConflictDescriptor
     private ConflictVersion srcRightVersion;
 
     /** This constructor should only be called from JNI code. */
-    public ConflictDescriptor(String path, int conflictKind, int nodeKind,
+    public ConflictDescriptor(String path, int conflictKind, NodeKind nodeKind,
                        String propertyName, boolean isBinary, String mimeType,
                        int action, int reason, int operation,
                        String basePath, String theirPath,
@@ -132,7 +129,7 @@ public class ConflictDescriptor
     /**
      * @see NodeKind
      */
-    public int getNodeKind()
+    public NodeKind getNodeKind()
     {
         return nodeKind;
     }

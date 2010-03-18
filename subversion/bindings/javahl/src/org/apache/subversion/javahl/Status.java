@@ -55,7 +55,7 @@ public class Status implements java.io.Serializable
     /**
      * kind of the item (file, directory or unknonw)
      */
-    private int nodeKind;
+    private NodeKind nodeKind;
 
     /**
      * the base revision of the working copy
@@ -208,7 +208,7 @@ public class Status implements java.io.Serializable
      * Set to the node kind of the youngest commit, or {@link
      * NodeKind#none} if not out of date.
      */
-    private int reposKind = NodeKind.none;
+    private NodeKind reposKind = NodeKind.none;
 
     /**
      * @since 1.3
@@ -269,7 +269,7 @@ public class Status implements java.io.Serializable
      *                              date
      * @param changelist            the changelist the item is a member of
      */
-    public Status(String path, String url, int nodeKind, long revision,
+    public Status(String path, String url, NodeKind nodeKind, long revision,
                   long lastChangedRevision, long lastChangedDate,
                   String lastCommitAuthor, Kind textStatus, Kind propStatus,
                   Kind repositoryTextStatus, Kind repositoryPropStatus,
@@ -280,12 +280,12 @@ public class Status implements java.io.Serializable
                   boolean switched, boolean fileExternal, String lockToken,
                   String lockOwner, String lockComment, long lockCreationDate,
                   Lock reposLock, long reposLastCmtRevision,
-                  long reposLastCmtDate, int reposKind,
+                  long reposLastCmtDate, NodeKind reposKind,
                   String reposLastCmtAuthor, String changelist)
     {
         this.path = path;
         this.url = url;
-        this.nodeKind = nodeKind;
+        this.nodeKind = (nodeKind != null ? nodeKind : NodeKind.unknown);
         this.revision = revision;
         this.lastChangedRevision = lastChangedRevision;
         this.lastChangedDate = lastChangedDate;
@@ -514,7 +514,7 @@ public class Status implements java.io.Serializable
      * Returns the kind of the node (file, directory or unknown, see NodeKind)
      * @return the node kind
      */
-    public int getNodeKind()
+    public NodeKind getNodeKind()
     {
         return nodeKind;
     }
@@ -738,7 +738,7 @@ public class Status implements java.io.Serializable
      * <code>null</code> if up to date.
      * @since 1.3
      */
-    public int getReposKind()
+    public NodeKind getReposKind()
     {
         return reposKind;
     }

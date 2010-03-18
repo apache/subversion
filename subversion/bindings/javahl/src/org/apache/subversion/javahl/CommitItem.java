@@ -45,7 +45,7 @@ public class CommitItem implements java.io.Serializable
     /**
      * the kind node (file or directory)
      */
-    int nodeKind;
+    NodeKind nodeKind;
 
     /**
      * the kind of change to be commited (See CommitItemStateFlages)
@@ -76,7 +76,7 @@ public class CommitItem implements java.io.Serializable
      * @param cu    copy source url
      * @param r     revision number
      */
-    public CommitItem(String p, int nk, int sf, String u, String cu, long r)
+    public CommitItem(String p, NodeKind nk, int sf, String u, String cu, long r)
     {
         path = p;
         nodeKind = nk;
@@ -99,7 +99,7 @@ public class CommitItem implements java.io.Serializable
      * return the node kind of the commit item
      * @return the node kind. Look at the NodeKind class.
      */
-    public int getNodeKind()
+    public NodeKind getNodeKind()
     {
         return nodeKind;
     }

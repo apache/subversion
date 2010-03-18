@@ -35,14 +35,11 @@ public class ConflictVersion
     private long pegRevision;
     private String pathInRepos;
 
-    /**
-     * @see NodeKind
-     */
-    private int nodeKind;
+    private NodeKind nodeKind;
 
     /** This constructor should only be called from JNI code. */
     public ConflictVersion(String reposURL, long pegRevision, String pathInRepos,
-                    int nodeKind)
+                    NodeKind nodeKind)
     {
         this.reposURL = reposURL;
         this.pegRevision = pegRevision;
@@ -68,13 +65,13 @@ public class ConflictVersion
     /**
      * @see NodeKind
      */
-    public int getNodeKind()
+    public NodeKind getNodeKind()
     {
         return nodeKind;
     }
 
     public String toString() {
-        return "(" + NodeKind.getNodeKindName(nodeKind) + ") " + reposURL +
+        return "(" + nodeKind + ") " + reposURL +
         "/" + pathInRepos + "@" + pegRevision;
     }
 }

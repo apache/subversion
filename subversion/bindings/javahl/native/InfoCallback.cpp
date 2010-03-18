@@ -116,8 +116,9 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
   if (mid == 0)
     {
       mid = env->GetMethodID(clazz, "<init>",
-                             "(Ljava/lang/String;Ljava/lang/String;"
-                             "JILjava/lang/String;Ljava/lang/String;"
+                             "(Ljava/lang/String;Ljava/lang/String;J"
+                             "L"JAVA_PACKAGE"/NodeKind;"
+                             "Ljava/lang/String;Ljava/lang/String;"
                              "JJLjava/lang/String;"
                              "L"JAVA_PACKAGE"/Lock;"
                              "ZILjava/lang/String;JJJ"
@@ -187,14 +188,17 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
+  jobject jnodeKind = EnumMapper::mapNodeKind(info->kind);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
   jlong jworkingSize = info->working_size == SVN_INFO_SIZE_UNKNOWN
     ? -1 : (jlong) info->working_size;
   jlong jreposSize = info->size == SVN_INFO_SIZE_UNKNOWN
     ? -1 : (jlong) info->size;
 
   jobject jinfo2 = env->NewObject(clazz, mid, jpath, jurl, (jlong) info->rev,
-                                  EnumMapper::mapNodeKind(info->kind),
-                                  jreposRootUrl, jreportUUID,
+                                  jnodeKind, jreposRootUrl, jreportUUID,
                                   (jlong) info->last_changed_rev,
                                   (jlong) info->last_changed_date,
                                   jlastChangedAuthor, jlock,
@@ -211,6 +215,10 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
     return NULL;
 
   env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  env->DeleteLocalRef(jnodeKind);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 

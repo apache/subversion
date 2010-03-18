@@ -3072,7 +3072,7 @@ public class BasicTests extends SVNTests
                    betaDiff.getDiffKind() == DiffSummary.DiffKind.added);
         assertEquals("Incorrect props changed notice for " + BETA_PATH,
                      false, betaDiff.propsChanged());
-        assertEquals("Incorrect node kind for " + BETA_PATH, 1,
+        assertEquals("Incorrect node kind for " + BETA_PATH, NodeKind.file,
                      betaDiff.getNodeKind());
     }
 
