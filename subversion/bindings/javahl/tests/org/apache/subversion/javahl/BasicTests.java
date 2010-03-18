@@ -3652,27 +3652,16 @@ public class BasicTests extends SVNTests
                                              Collection<String> changelists)
         throws ClientException
     {
-        class MyProplistCallback implements ProplistCallback
-        {
-            Map<String, Map<String, byte[]>> propMap =
-                                new HashMap<String, Map<String, byte[]>>();
-
-            public void singlePath(String path, Map<String, byte[]> props)
-            {
-                propMap.put(path, props);
-            }
-
-            public Map<String, byte[]> getProperties(String path)
-            {
-                return propMap.get(path);
-            }
-        }
-
-        MyProplistCallback callback = new MyProplistCallback();
+       final Map<String, Map<String, byte[]>> propMap = 
+            new HashMap<String, Map<String, byte[]>>();
+       
         client.properties(path, revision, revision, depth, changelists,
-                callback);
+                new ProplistCallback () {
+            public void singlePath(String path, Map<String, byte[]> props)
+            { propMap.put(path, props); }          
+        });
 
-        return callback.getProperties(path);
+        return propMap.get(path);
     }
 
     private DirEntry[] collectDirEntries(String url, Revision revision,
@@ -3729,25 +3718,14 @@ public class BasicTests extends SVNTests
                                  Collection<String> changelists)
         throws ClientException
     {
-        class MyInfoCallback implements InfoCallback
-        {
-            private List<Info2> infos = new ArrayList<Info2>();
-
-            public void singleInfo(Info2 info)
-            {
-                infos.add(info);
-            }
-
-            public Info2[] getInfoArray()
-            {
-                return infos.toArray(new Info2[infos.size()]);
-            }
-        }
-
-        MyInfoCallback callback = new MyInfoCallback();
+       final List<Info2> infos = new ArrayList<Info2>();
+       
         client.info2(pathOrUrl, revision, pegRevision, depth, changelists,
-                     callback);
-        return callback.getInfoArray();
+                     new InfoCallback () {
+            public void singleInfo(Info2 info)
+            { infos.add(info); }           
+        });
+        return infos.toArray(new Info2[infos.size()]);
     }
 
     private LogMessage[] collectLogMessages(String path, Revision pegRevision,
