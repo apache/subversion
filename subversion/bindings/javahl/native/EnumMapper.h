@@ -47,7 +47,7 @@ class EnumMapper
 
   /* Converting from C enum's */
   static jint mapCommitMessageStateFlags(apr_byte_t flags);
-  static jint mapNotifyState(svn_wc_notify_state_t state);
+  static jobject mapNotifyState(svn_wc_notify_state_t state);
   static jobject mapNotifyAction(svn_wc_notify_action_t action);
   static jobject mapNodeKind(svn_node_kind_t nodeKind);
   static jint mapNotifyLockState(svn_wc_notify_lock_state_t state);

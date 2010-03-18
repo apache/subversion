@@ -31,7 +31,6 @@
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
-#include "../include/org_apache_subversion_javahl_NotifyStatus.h"
 #include "../include/org_apache_subversion_javahl_Operation.h"
 #include "../include/org_apache_subversion_javahl_LockStatus.h"
 #include "../include/org_apache_subversion_javahl_Revision.h"
@@ -71,34 +70,34 @@ jint EnumMapper::mapCommitMessageStateFlags(apr_byte_t flags)
  * @param state     the C notify state constant
  * @returns the Java constant
  */
-jint EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
+jobject EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
 {
   switch(state)
     {
     default:
     case svn_wc_notify_state_inapplicable:
-      return org_apache_subversion_javahl_NotifyStatus_inapplicable;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "inapplicable");
 
     case svn_wc_notify_state_unknown:
-      return org_apache_subversion_javahl_NotifyStatus_unknown;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "unknown");
 
     case svn_wc_notify_state_unchanged:
-      return org_apache_subversion_javahl_NotifyStatus_unchanged;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "unchanged");
 
     case svn_wc_notify_state_missing:
-      return org_apache_subversion_javahl_NotifyStatus_missing;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "missing");
 
     case svn_wc_notify_state_obstructed:
-      return org_apache_subversion_javahl_NotifyStatus_obstructed;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "obstructed");
 
     case svn_wc_notify_state_changed:
-      return org_apache_subversion_javahl_NotifyStatus_changed;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "changed");
 
     case svn_wc_notify_state_merged:
-      return org_apache_subversion_javahl_NotifyStatus_merged;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "merged");
 
     case svn_wc_notify_state_conflicted:
-      return org_apache_subversion_javahl_NotifyStatus_conflicted;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "conflicted");
     }
 
 }

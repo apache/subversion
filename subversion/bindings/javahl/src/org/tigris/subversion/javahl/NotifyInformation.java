@@ -155,7 +155,8 @@ public class NotifyInformation extends EventObject
              aInfo.getAction() == null ? -1 : aInfo.getAction().ordinal(),
              NodeKind.fromApache(aInfo.getKind()), aInfo.getMimeType(),
              aInfo.getLock() == null ? null : new Lock(aInfo.getLock()),
-             aInfo.getErrMsg(), aInfo.getContentState(), aInfo.getPropState(),
+             aInfo.getErrMsg(), fromAStatus(aInfo.getContentState()),
+             fromAStatus(aInfo.getPropState()),
              aInfo.getLockState(), aInfo.getRevision(),
              aInfo.getChangelistName(),
              aInfo.getMergeRange() == null ? null
@@ -268,5 +269,30 @@ public class NotifyInformation extends EventObject
     public String getPathPrefix()
     {
         return pathPrefix;
+    }
+
+    private static int
+    fromAStatus(org.apache.subversion.javahl.NotifyInformation.Status aStatus)
+    {
+        switch(aStatus)
+        {
+        default:
+        case inapplicable:
+            return NotifyStatus.inapplicable;
+        case unknown:
+            return NotifyStatus.unknown;
+        case unchanged:
+            return NotifyStatus.unchanged;
+        case missing:
+            return NotifyStatus.missing;
+        case obstructed:
+            return NotifyStatus.obstructed;
+        case changed:
+            return NotifyStatus.changed;
+        case merged:
+            return NotifyStatus.merged;
+        case conflicted:
+            return NotifyStatus.conflicted;
+        }
     }
 }

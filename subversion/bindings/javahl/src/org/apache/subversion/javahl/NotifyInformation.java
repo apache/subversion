@@ -70,12 +70,12 @@ public class NotifyInformation extends EventObject
     /**
      * The {@link NotifyStatus} of the content of the item.
      */
-    private int contentState;
+    private Status contentState;
 
     /**
      * The {@link NotifyStatus} of the properties of the item.
      */
-    private int propState;
+    private Status propState;
 
     /**
      * The {@link LockStatus} of the lock of the item.
@@ -126,9 +126,10 @@ public class NotifyInformation extends EventObject
      */
     public NotifyInformation(String path, Action action, NodeKind kind,
                              String mimeType, Lock lock, String errMsg,
-                             int contentState, int propState, int lockState,
-                             long revision, String changelistName,
-                             RevisionRange mergeRange, String pathPrefix)
+                             Status contentState, Status propState,
+                             int lockState, long revision,
+                             String changelistName, RevisionRange mergeRange,
+                             String pathPrefix)
     {
         super(path == null ? "" : path);
         this.action = action;
@@ -196,7 +197,7 @@ public class NotifyInformation extends EventObject
     /**
      * @return The {@link NotifyStatus} of the content of the item.
      */
-    public int getContentState()
+    public Status getContentState()
     {
         return contentState;
     }
@@ -204,7 +205,7 @@ public class NotifyInformation extends EventObject
     /**
      * @return The {@link NotifyStatus} of the properties of the item.
      */
-    public int getPropState()
+    public Status getPropState()
     {
         return propState;
     }
@@ -450,4 +451,45 @@ public class NotifyInformation extends EventObject
         }
     }
 
+    public enum Status
+    {
+        /** It not applicable*/
+        inapplicable    ("inapplicable"),
+
+        /** Notifier doesn't know or isn't saying. */
+        unknown         ("unknown"),
+
+        /** The state did not change. */
+        unchanged       ("unchanged"),
+
+        /** The item wasn't present. */
+        missing         ("missing"),
+
+        /** An unversioned item obstructed work. */
+        obstructed      ("obstructed"),
+
+        /** Pristine state was modified. */
+        changed         ("changed"),
+
+        /** Modified state had mods merged in. */
+        merged          ("merged"),
+
+        /** Modified state got conflicting mods. */
+        conflicted      ("conflicted");
+
+        /**
+         * The description of the action.
+         */
+        private String description;
+
+        Status(String description)
+        {
+            this.description = description;
+        }
+
+        public String toString()
+        {
+            return description;
+        }
+    }
 }
