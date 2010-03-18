@@ -33,7 +33,6 @@
 #include "SVNClient.h"
 #include "Revision.h"
 #include "RevisionRange.h"
-#include "Notify.h"
 #include "EnumMapper.h"
 #include "NotifyCallback.h"
 #include "ConflictResolverCallback.h"

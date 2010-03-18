@@ -26,7 +26,6 @@
 
 #include "SVNClient.h"
 #include "JNIUtil.h"
-#include "Notify.h"
 #include "NotifyCallback.h"
 #include "CopySources.h"
 #include "DiffSummaryReceiver.h"
@@ -77,7 +76,6 @@ struct log_msg_baton
 
 SVNClient::SVNClient()
 {
-    m_notify = NULL;
     m_notify2 = NULL;
     m_progressListener = NULL;
     m_prompter = NULL;
@@ -87,7 +85,6 @@ SVNClient::SVNClient()
 
 SVNClient::~SVNClient()
 {
-    delete m_notify;
     delete m_notify2;
     delete m_progressListener;
     delete m_prompter;
@@ -1233,8 +1230,8 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
                                m_passWord.c_str());
 
     ctx->auth_baton = ab;
-    ctx->notify_func = Notify::notify;
-    ctx->notify_baton = m_notify;
+    ctx->notify_func = NULL;
+    ctx->notify_baton = NULL;
     ctx->log_msg_func3 = getCommitMessage;
     ctx->log_msg_baton3 = getCommitMessageBaton(message);
     ctx->cancel_func = checkCancel;
