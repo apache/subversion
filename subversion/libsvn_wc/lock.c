@@ -1504,7 +1504,14 @@ svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
 apr_hash_t *
 svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access)
 {
+  /* Compile with -DSVN_DISABLE_ENTRY_CACHE to disable the in-memory
+     entry caching. As of 2010-03-18 (r924708) merge_tests 34 and 134
+     fail during "make check".  */
+#ifdef SVN_DISABLE_ENTRY_CACHE
+  return NULL;
+#else
   return adm_access->entries_all;
+#endif
 }
 
 
