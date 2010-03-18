@@ -850,6 +850,12 @@ svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
                           NULL, NULL, scratch_pool);
 }
 
+svn_stream_t *
+svn_stream_from_aprfile(apr_file_t *file, apr_pool_t *pool)
+{
+  return svn_stream_from_aprfile2(file, TRUE, pool);
+}
+
 /*** From path.c ***/
 
 const char *
