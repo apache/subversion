@@ -293,29 +293,26 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 #ifdef TEST_DB_PROPS
       {
         apr_hash_t *db_base_props;
+
         SVN_ERR(svn_wc__db_read_pristine_props(&db_base_props, db,
                                                local_abspath,
                                                scratch_pool, scratch_pool));
+        SVN_ERR_ASSERT(db_base_props != NULL);
 
         if (base_props != NULL)
           {
-            if (apr_hash_count(base_props) > 0)
-              {
-                apr_array_header_t *diffs;
+            apr_array_header_t *diffs;
 
-                SVN_ERR_ASSERT(db_base_props != NULL);
-
-                SVN_ERR(svn_prop_diffs(&diffs, base_props, db_base_props,
-                                       scratch_pool));
-
-                SVN_ERR_ASSERT(diffs->nelts == 0);
-              }
-            else
-              SVN_ERR_ASSERT(db_base_props == NULL ||
-                             (apr_hash_count(db_base_props) == 0));
+            SVN_ERR(svn_prop_diffs(&diffs, base_props, db_base_props,
+                                   scratch_pool));
+            SVN_ERR_ASSERT(diffs->nelts == 0);
           }
         else
-          SVN_ERR_ASSERT(db_base_props == NULL);
+          {
+            /* If the propfile is missing, then we should see empty props
+               in the database.  */
+            SVN_ERR_ASSERT(apr_hash_count(db_base_props) == 0);
+          }
       }
 #endif
     }
@@ -336,28 +333,16 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 #ifdef TEST_DB_PROPS
       {
         apr_hash_t *db_props;
+        apr_array_header_t *diffs;
+
+        SVN_ERR_ASSERT(*props_p != NULL);
+
         SVN_ERR(svn_wc__db_read_props(&db_props, db, local_abspath,
                                       scratch_pool, scratch_pool));
+        SVN_ERR_ASSERT(db_props != NULL);
 
-        if (*props_p != NULL)
-          {
-            if (apr_hash_count(*props_p) > 0)
-              {
-                apr_array_header_t *diffs;
-
-                SVN_ERR_ASSERT(db_props != NULL);
-
-                SVN_ERR(svn_prop_diffs(&diffs, *props_p, db_props,
-                                       scratch_pool));
-
-                SVN_ERR_ASSERT(diffs->nelts == 0);
-              }
-            else
-              SVN_ERR_ASSERT(db_props == NULL ||
-                             (apr_hash_count(db_props) == 0));
-          }
-        else
-          SVN_ERR_ASSERT(db_props == NULL);
+        SVN_ERR(svn_prop_diffs(&diffs, *props_p, db_props, scratch_pool));
+        SVN_ERR_ASSERT(diffs->nelts == 0);
       }
 #endif
     }
@@ -385,25 +370,18 @@ svn_wc__load_revert_props(apr_hash_t **revert_props_p,
         *revert_props_p = apr_hash_make(result_pool);
     }
 
-  #ifdef TEST_DB_PROPS
+#ifdef TEST_DB_PROPS
   {
     apr_hash_t *db_props;
+    apr_array_header_t *diffs;
+
     SVN_ERR(svn_wc__db_base_get_props(&db_props, db, local_abspath,
                                       scratch_pool, scratch_pool));
+    SVN_ERR_ASSERT(db_props != NULL);
 
-    if (apr_hash_count(*revert_props_p) > 0)
-      {
-        apr_array_header_t *diffs;
-        SVN_ERR_ASSERT(db_props != NULL);
-
-        SVN_ERR(svn_prop_diffs(&diffs, *revert_props_p, db_props,
-                               scratch_pool));
-
-        SVN_ERR_ASSERT(diffs->nelts == 0);
-      }
-    else
-      SVN_ERR_ASSERT(db_props == NULL ||
-                     (apr_hash_count(db_props) == 0));
+    SVN_ERR(svn_prop_diffs(&diffs, *revert_props_p, db_props,
+                           scratch_pool));
+    SVN_ERR_ASSERT(diffs->nelts == 0);
   }
 #endif
 
