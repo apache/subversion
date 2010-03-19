@@ -48,9 +48,12 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
 
   if (ctor == 0)
     {
-      ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;I"
+      ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;"
+                              "L"JAVA_PACKAGE"/ConflictDescriptor$Kind;"
                               "L"JAVA_PACKAGE"/NodeKind;"
-                              "Ljava/lang/String;ZLjava/lang/String;III"
+                              "Ljava/lang/String;ZLjava/lang/String;"
+                              "L"JAVA_PACKAGE"/ConflictDescriptor$Action;"
+                              "L"JAVA_PACKAGE"/ConflictDescriptor$Reason;I"
                               "Ljava/lang/String;Ljava/lang/String;"
                               "Ljava/lang/String;Ljava/lang/String;"
                               "L"JAVA_PACKAGE"/ConflictVersion;"
@@ -89,14 +92,21 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
   jobject jnodeKind = EnumMapper::mapNodeKind(desc->node_kind);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
+  jobject jconflictKind = EnumMapper::mapConflictKind(desc->kind);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  jobject jconflictAction = EnumMapper::mapConflictAction(desc->action);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  jobject jconflictReason = EnumMapper::mapConflictReason(desc->reason);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
   // Instantiate the conflict descriptor.
-  jobject jdesc = env->NewObject(clazz, ctor, jpath,
-                                 EnumMapper::mapConflictKind(desc->kind),
+  jobject jdesc = env->NewObject(clazz, ctor, jpath, jconflictKind,
                                  jnodeKind, jpropertyName,
                                  (jboolean) desc->is_binary, jmimeType,
-                                 EnumMapper::mapConflictAction(desc->action),
-                                 EnumMapper::mapConflictReason(desc->reason),
+                                 jconflictAction, jconflictReason,
                                  EnumMapper::mapOperation(desc->operation),
                                  jbasePath, jreposPath, juserPath,
                                  jmergedPath, jsrcLeft, jsrcRight);
@@ -107,6 +117,15 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
+  env->DeleteLocalRef(jconflictKind);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  env->DeleteLocalRef(jconflictAction);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  env->DeleteLocalRef(jconflictReason);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
   env->DeleteLocalRef(jnodeKind);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;

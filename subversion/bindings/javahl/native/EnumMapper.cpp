@@ -368,57 +368,57 @@ jobject EnumMapper::mapStatusKind(svn_wc_status_kind svnKind)
     }
 }
 
-jint EnumMapper::mapConflictKind(svn_wc_conflict_kind_t kind)
+jobject EnumMapper::mapConflictKind(svn_wc_conflict_kind_t kind)
 {
   switch (kind)
     {
     case svn_wc_conflict_kind_text:
     default:
-      return org_apache_subversion_javahl_ConflictDescriptor_Kind_text;
+      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Kind", "text");
 
     case svn_wc_conflict_kind_property:
-      return org_apache_subversion_javahl_ConflictDescriptor_Kind_property;
+      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Kind", "property");
     }
 }
 
-jint EnumMapper::mapConflictAction(svn_wc_conflict_action_t action)
+jobject EnumMapper::mapConflictAction(svn_wc_conflict_action_t action)
 {
   switch (action)
     {
     case svn_wc_conflict_action_edit:
     default:
-      return org_apache_subversion_javahl_ConflictDescriptor_Action_edit;
+      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Action", "edit");
 
     case svn_wc_conflict_action_add:
-      return org_apache_subversion_javahl_ConflictDescriptor_Action_add;
+      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Action", "add");
 
     case svn_wc_conflict_action_delete:
-      return org_apache_subversion_javahl_ConflictDescriptor_Action_delete;
+      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Action", "delete");
     }
 }
 
-jint EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
+jobject EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
 {
   switch (reason)
     {
     case svn_wc_conflict_reason_edited:
     default:
-      return org_apache_subversion_javahl_ConflictDescriptor_Reason_edited;
+      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason", "edited");
 
     case svn_wc_conflict_reason_obstructed:
-      return org_apache_subversion_javahl_ConflictDescriptor_Reason_obstructed;
+      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason", "obstructed");
 
     case svn_wc_conflict_reason_deleted:
-      return org_apache_subversion_javahl_ConflictDescriptor_Reason_deleted;
+      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason", "deleted");
 
     case svn_wc_conflict_reason_missing:
-      return org_apache_subversion_javahl_ConflictDescriptor_Reason_missing;
+      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason", "missing");
 
     case svn_wc_conflict_reason_unversioned:
-      return org_apache_subversion_javahl_ConflictDescriptor_Reason_unversioned;
+      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason", "unversioned");
 
     case svn_wc_conflict_reason_added:
-      return org_apache_subversion_javahl_ConflictDescriptor_Reason_added;
+      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason", "added");
     }
 }
 

@@ -33,10 +33,7 @@ public class ConflictDescriptor
 {
     private String path;
 
-    /**
-     * @see .Kind
-     */
-    private int conflictKind;
+    private Kind conflictKind;
 
     private NodeKind nodeKind;
 
@@ -45,22 +42,8 @@ public class ConflictDescriptor
     private boolean isBinary;
     private String mimeType;
 
-    // svn_wc_conflict_description_t also provides us with an
-    // svn_wc_adm_access_t *.  However, that is only useful to
-    // JNI-based APIs written against svn_wc.h.  So, we don't (yet)
-    // expose that to JavaHL.  We could expose it is a long
-    // representing the memory address of the struct, which could be
-    // passed off to other JNI APIs.
-
-    /**
-     * @see #Action
-     */
-    private int action;
-
-    /**
-     * @see #Reason
-     */
-    private int reason;
+    private Action action;
+    private Reason reason;
 
     // File paths, present only when the conflict involves the merging
     // of two files descended from a common ancestor, here are the
@@ -89,9 +72,9 @@ public class ConflictDescriptor
     private ConflictVersion srcRightVersion;
 
     /** This constructor should only be called from JNI code. */
-    public ConflictDescriptor(String path, int conflictKind, NodeKind nodeKind,
+    public ConflictDescriptor(String path, Kind conflictKind, NodeKind nodeKind,
                        String propertyName, boolean isBinary, String mimeType,
-                       int action, int reason, int operation,
+                       Action action, Reason reason, int operation,
                        String basePath, String theirPath,
                        String myPath, String mergedPath,
                        ConflictVersion srcLeft, ConflictVersion srcRight)
@@ -118,17 +101,11 @@ public class ConflictDescriptor
         return path;
     }
 
-    /**
-     * @see .Kind
-     */
-    public int getKind()
+    public Kind getKind()
     {
         return conflictKind;
     }
 
-    /**
-     * @see NodeKind
-     */
     public NodeKind getNodeKind()
     {
         return nodeKind;
@@ -149,18 +126,12 @@ public class ConflictDescriptor
         return mimeType;
     }
 
-    /**
-     * @see .Action
-     */
-    public int getAction()
+    public Action getAction()
     {
         return action;
     }
 
-    /**
-     * @see .Reason
-     */
-    public int getReason()
+    public Reason getReason()
     {
         return reason;
     }
@@ -201,76 +172,76 @@ public class ConflictDescriptor
     }
 
     /**
-     * Poor man's enum for <code>svn_wc_conflict_kind_t</code>.
+     * Rich man's enum for <code>svn_wc_conflict_kind_t</code>.
      */
-    public final class Kind
+    public enum Kind
     {
         /**
          * Attempting to change text or props.
          */
-        public static final int text = 0;
+        text,
 
         /**
          * Attempting to add object.
          */
-        public static final int property = 1;
+        property;
     }
 
     /**
-     * Poor man's enum for <code>svn_wc_conflict_action_t</code>.
+     * Rich man's enum for <code>svn_wc_conflict_action_t</code>.
      */
-    public final class Action
+    public enum Action
     {
         /**
          * Attempting to change text or props.
          */
-        public static final int edit = 0;
+        edit,
 
         /**
          * Attempting to add object.
          */
-        public static final int add = 1;
+        add,
 
         /**
          * Attempting to delete object.
          */
-        public static final int delete = 2;
+        delete;
     }
 
     /**
-     * Poor man's enum for <code>svn_wc_conflict_reason_t</code>.
+     * Rich man's enum for <code>svn_wc_conflict_reason_t</code>.
      */
-    public final class Reason
+    public enum Reason
     {
         /**
          * Local edits are already present.
          */
-        public static final int edited = 0;
+        edited,
 
         /**
          * Another object is in the way.
          */
-        public static final int obstructed = 1;
+        obstructed,
 
         /**
          * Object is already schedule-delete.
          */
-        public static final int deleted = 2;
+        deleted,
 
         /**
          * Object is unknown or missing.
          */
-        public static final int missing = 3;
+        missing,
 
         /**
          * Object is unversioned.
          */
-        public static final int unversioned = 4;
+        unversioned,
 
         /**
          * Object is already added or schedule-add.
          * @since New in 1.6.
          */
-        public static final int added = 5;
+        added;
     }
 }
