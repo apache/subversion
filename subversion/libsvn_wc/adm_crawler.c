@@ -1142,8 +1142,9 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                              SVN_WC_TRANSLATE_TO_NF,
                                              scratch_pool, scratch_pool));
 
-  /* Alert the caller that we have created a temporary file that might
-     need to be cleaned up, if he asked for one. */
+  /* If the caller wants a copy of the working file translated to
+   * repository-normal form, make the copy by tee-ing the stream and set
+   * *TEMPFILE to the path to it. */
   if (tempfile)
     {
       const char *tmp_base;
