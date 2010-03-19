@@ -338,6 +338,11 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
   JNIEnv *env = getEnv();
   jclass clazz = env->FindClass(className);
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
   if (getLogLevel() >= exceptionLog)
     {
       JNICriticalSection cs(*g_logMutex);
@@ -350,37 +355,25 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
       g_logStream << std::endl;
     }
   if (isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN();
 
   jstring jmessage = makeJString(msg);
   if (isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN();
   jstring jsource = makeJString(source);
   if (isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN();
 
   jmethodID mid = env->GetMethodID(clazz, "<init>",
                                    "(Ljava/lang/String;Ljava/lang/String;I)V");
   if (isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN();
   jobject nativeException = env->NewObject(clazz, mid, jmessage, jsource,
                                            static_cast<jint>(aprErr));
   if (isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN();
 
-  env->DeleteLocalRef(clazz);
-  if (isJavaExceptionThrown())
-    return;
-
-  env->DeleteLocalRef(jmessage);
-  if (isJavaExceptionThrown())
-    return;
-
-  env->DeleteLocalRef(jsource);
-  if (isJavaExceptionThrown())
-    return;
-
-  env->Throw(static_cast<jthrowable>(nativeException));
+  env->Throw(static_cast<jthrowable>(env->PopLocalFrame(nativeException)));
 }
 
 void JNIUtil::handleSVNError(svn_error_t *err)

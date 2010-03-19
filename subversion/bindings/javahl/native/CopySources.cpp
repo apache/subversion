@@ -47,17 +47,22 @@ CopySources::makeJCopySource(const char *path, svn_revnum_t rev, SVN::Pool &pool
 {
   JNIEnv *env = JNIUtil::getEnv();
 
-  jobject jpath = JNIUtil::makeJString(path);
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
+
+  jobject jpath = JNIUtil::makeJString(path);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
 
   jobject jrevision = Revision::makeJRevision(rev);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   jclass clazz = env->FindClass(JAVA_PACKAGE "/CopySource");
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   static jmethodID ctor = 0;
   if (ctor == 0)
@@ -67,22 +72,14 @@ CopySources::makeJCopySource(const char *path, svn_revnum_t rev, SVN::Pool &pool
                               "L" JAVA_PACKAGE "/Revision;"
                               "L" JAVA_PACKAGE "/Revision;)V");
       if (JNIUtil::isExceptionThrown())
-        return NULL;
+        POP_AND_RETURN_NULL;
     }
 
   jobject jcopySource = env->NewObject(clazz, ctor, jpath, jrevision, NULL);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
-  env->DeleteLocalRef(jpath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  env->DeleteLocalRef(jrevision);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  return jcopySource;
+  return env->PopLocalFrame(jcopySource);
 }
 
 apr_array_header_t *

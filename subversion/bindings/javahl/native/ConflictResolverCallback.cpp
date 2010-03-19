@@ -99,6 +99,11 @@ ConflictResolverCallback::resolve(svn_wc_conflict_result_t **result,
 {
   JNIEnv *env = JNIUtil::getEnv();
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
   // As Java method IDs will not change during the time this library
   // is loaded, they can be cached.
   static jmethodID mid = 0;
@@ -107,23 +112,19 @@ ConflictResolverCallback::resolve(svn_wc_conflict_result_t **result,
       // Initialize the callback method ID.
       jclass clazz = env->FindClass(JAVA_PACKAGE "/callback/ConflictResolverCallback");
       if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "resolve",
                              "(L" JAVA_PACKAGE "/ConflictDescriptor;)"
                              "L" JAVA_PACKAGE "/ConflictResult;");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        return SVN_NO_ERROR;
-
-      env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
     }
 
   // Create an instance of the conflict descriptor.
   jobject jdesc = CreateJ::ConflictDescriptor(desc);
   if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+    POP_AND_RETURN(SVN_NO_ERROR);
 
   // Invoke the Java conflict resolver callback method using the descriptor.
   jobject jresult = env->CallObjectMethod(m_conflictResolver, mid, jdesc);
@@ -132,17 +133,20 @@ ConflictResolverCallback::resolve(svn_wc_conflict_result_t **result,
       // If an exception is thrown by our conflict resolver, remove it
       // from the JNI env, and convert it into a Subversion error.
       const char *msg = JNIUtil::thrownExceptionToCString();
-      return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL, msg);
+      svn_error_t *err = svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                          NULL, msg);
+      env->PopLocalFrame(NULL);
+      return err;
     }
   *result = javaResultToC(jresult, pool);
   if (*result == NULL)
-    // Unable to convert the result into a C representation.
-    return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL, NULL);
+    {
+      // Unable to convert the result into a C representation.
+      env->PopLocalFrame(NULL);
+      return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL, NULL);
+    }
 
-  env->DeleteLocalRef(jdesc);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
+  env->PopLocalFrame(NULL);
   return SVN_NO_ERROR;
 }
 
@@ -150,6 +154,12 @@ svn_wc_conflict_result_t *
 ConflictResolverCallback::javaResultToC(jobject jresult, apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
   static jmethodID getChoice = 0;
   static jmethodID getMergedPath = 0;
 
@@ -158,7 +168,7 @@ ConflictResolverCallback::javaResultToC(jobject jresult, apr_pool_t *pool)
     {
       clazz = env->FindClass(JAVA_PACKAGE "/ConflictResult");
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+        POP_AND_RETURN_NULL;
     }
 
   if (getChoice == 0)
@@ -166,41 +176,33 @@ ConflictResolverCallback::javaResultToC(jobject jresult, apr_pool_t *pool)
       getChoice = env->GetMethodID(clazz, "getChoice",
                                    "()L"JAVA_PACKAGE"/ConflictResult$Choice;");
       if (JNIUtil::isJavaExceptionThrown() || getChoice == 0)
-        return NULL;
+        POP_AND_RETURN_NULL;
     }
   if (getMergedPath == 0)
     {
       getMergedPath = env->GetMethodID(clazz, "getMergedPath",
                                        "()Ljava/lang/String;");
       if (JNIUtil::isJavaExceptionThrown() || getMergedPath == 0)
-        return NULL;
-    }
-
-  if (clazz)
-    {
-      env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+        POP_AND_RETURN_NULL;
     }
 
   jobject jchoice = env->CallObjectMethod(jresult, getChoice);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   jstring jmergedPath = (jstring) env->CallObjectMethod(jresult, getMergedPath);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   JNIStringHolder mergedPath(jmergedPath);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
 
   svn_wc_conflict_result_t *result =
          svn_wc_create_conflict_result(EnumMapper::toConflictChoice(jchoice),
                                        mergedPath.pstrdup(pool),
                                        pool);
 
-  env->DeleteLocalRef(jchoice);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
+  env->PopLocalFrame(NULL);
   return result;
 }

@@ -256,7 +256,7 @@ class JNIUtil
   do                                    \
     {                                   \
       env->PopLocalFrame(NULL);         \
-      return (ret_val);                 \
+      return ret_val ;                  \
     }                                   \
   while (0)
 

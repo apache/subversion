@@ -125,9 +125,15 @@ ListCallback::createJavaDirEntry(const char *path, const char *absPath,
                                  const svn_dirent_t *dirent)
 {
   JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
   jclass clazz = env->FindClass(JAVA_PACKAGE"/DirEntry");
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   static jmethodID mid = 0;
   if (mid == 0)
@@ -137,20 +143,20 @@ ListCallback::createJavaDirEntry(const char *path, const char *absPath,
                              "L"JAVA_PACKAGE"/NodeKind;"
                              "JZJJLjava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+        POP_AND_RETURN_NULL;
     }
 
   jstring jPath = JNIUtil::makeJString(path);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   jstring jAbsPath = JNIUtil::makeJString(absPath);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   jobject jNodeKind = EnumMapper::mapNodeKind(dirent->kind);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   jlong jSize = dirent->size;
   jboolean jHasProps = (dirent->has_props? JNI_TRUE : JNI_FALSE);
@@ -158,32 +164,13 @@ ListCallback::createJavaDirEntry(const char *path, const char *absPath,
   jlong jLastChanged = dirent->time;
   jstring jLastAuthor = JNIUtil::makeJString(dirent->last_author);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   jobject ret = env->NewObject(clazz, mid, jPath, jAbsPath, jNodeKind,
                                jSize, jHasProps, jLastChangedRevision,
                                jLastChanged, jLastAuthor);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
-  env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  env->DeleteLocalRef(jNodeKind);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  env->DeleteLocalRef(jPath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  if (jLastAuthor != NULL)
-    {
-      env->DeleteLocalRef(jLastAuthor);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
-
-  return ret;
+  return env->PopLocalFrame(ret);
 }
