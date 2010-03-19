@@ -494,6 +494,33 @@ jobject EnumMapper::mapTristate(svn_tristate_t tristate)
     }
 }
 
+svn_wc_conflict_choice_t EnumMapper::toConflictChoice(jobject jchoice)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  jstring jname = getName(JAVA_PACKAGE"/ConflictResult$Choice", jchoice);
+  if (JNIUtil::isJavaExceptionThrown())
+    return svn_wc_conflict_choose_postpone;
+
+  JNIStringHolder str(jname);
+  std::string name((const char *)str);
+
+  if (name == "chooseBase")
+    return svn_wc_conflict_choose_base;
+  else if (name == "chooseTheirsFull")
+    return svn_wc_conflict_choose_theirs_full;
+  else if (name == "chooseMineFull")
+    return svn_wc_conflict_choose_mine_full;
+  else if (name == "chooseTheirsConflict")
+    return svn_wc_conflict_choose_theirs_conflict;
+  else if (name == "chooseMineConflict")
+    return svn_wc_conflict_choose_mine_conflict;
+  else if (name == "chooseMerged")
+    return svn_wc_conflict_choose_merged;
+  else
+    return svn_wc_conflict_choose_postpone;
+}
+
 svn_opt_revision_kind EnumMapper::toRevisionKind(jobject jkind)
 {
   JNIEnv *env = JNIUtil::getEnv();

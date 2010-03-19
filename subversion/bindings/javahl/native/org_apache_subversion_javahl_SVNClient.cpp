@@ -668,7 +668,7 @@ Java_org_apache_subversion_javahl_SVNClient_cleanup
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_resolve
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jdepth, jint jchoice)
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jdepth, jobject jchoice)
 {
   JNIEntry(SVNClient, resolve);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -682,7 +682,7 @@ Java_org_apache_subversion_javahl_SVNClient_resolve
     return;
 
   cl->resolve(path, EnumMapper::toDepth(jdepth),
-              (svn_wc_conflict_choice_t) jchoice);
+              EnumMapper::toConflictChoice(jchoice));
 }
 
 JNIEXPORT jlong JNICALL

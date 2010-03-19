@@ -1285,7 +1285,7 @@ public class BasicTests extends SVNTests
 
         // flag A/mu as resolved
         client.resolve(backupTest.getWCPath()+"/A/mu", Depth.empty,
-                ConflictResult.chooseMerged);
+                ConflictResult.Choice.chooseMerged);
         backupTest.getWc().setItemTextStatus("A/mu", Status.Kind.modified);
         backupTest.getWc().removeItem("A/mu.r1");
         backupTest.getWc().removeItem("A/mu.r2");
@@ -1293,7 +1293,7 @@ public class BasicTests extends SVNTests
 
         // flag A/D/G/rho as resolved
         client.resolve(backupTest.getWCPath()+"/A/D/G/rho", Depth.empty,
-                ConflictResult.chooseMerged);
+                ConflictResult.Choice.chooseMerged);
         backupTest.getWc().setItemTextStatus("A/D/G/rho",
                                              Status.Kind.modified);
         backupTest.getWc().removeItem("A/D/G/rho.r1");
@@ -2655,7 +2655,7 @@ public class BasicTests extends SVNTests
             {
                 public ConflictResult resolve(ConflictDescriptor descrip)
                 {
-                    return new ConflictResult(ConflictResult.chooseTheirsConflict,
+                    return new ConflictResult(ConflictResult.Choice.chooseTheirsConflict,
                                               null);
                 }
             });
