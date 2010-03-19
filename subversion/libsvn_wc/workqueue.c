@@ -60,6 +60,7 @@
 #define OP_POSTCOMMIT "postcommit"
 #define OP_INSTALL_PROPERTIES "install-properties"
 #define OP_DELETE "delete"
+#define OP_FILE_INSTALL "file-install"
 
 
 struct work_item_dispatch {
@@ -1806,6 +1807,7 @@ svn_wc__wq_add_install_properties(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+
 /* ------------------------------------------------------------------------ */
 
 /* OP_DELETE */
@@ -1899,6 +1901,60 @@ svn_wc__wq_add_delete(svn_wc__db_t *db,
 
 /* ------------------------------------------------------------------------ */
 
+/* OP_FILE_INSTALL */
+
+/* Process the OP_FILE_INSTALL work item WORK_ITEM.
+ * See svn_wc__wq_build_file_install() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
+static svn_error_t *
+run_file_install(svn_wc__db_t *db,
+                 const svn_skel_t *work_item,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_abspath;
+  svn_boolean_t use_commit_times;
+  svn_boolean_t record_fileinfo;
+
+  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  use_commit_times = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
+  record_fileinfo = svn_skel__parse_int(arg1->next->next, scratch_pool) != 0;
+
+  /* ### do something  */
+  NOT_IMPLEMENTED();
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_build_file_install(const svn_skel_t **work_item,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              svn_boolean_t use_commit_times,
+                              svn_boolean_t record_fileinfo,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  svn_skel_t *build_item = svn_skel__make_empty_list(result_pool);
+
+  svn_skel__prepend_int(record_fileinfo, build_item, result_pool);
+  svn_skel__prepend_int(use_commit_times, build_item, result_pool);
+  svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
+                        build_item, result_pool);
+  svn_skel__prepend_str(OP_FILE_INSTALL, build_item, result_pool);
+
+  /* Done. Assign to the const-ful WORK_ITEM.  */
+  *work_item = build_item;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
   { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
@@ -1909,6 +1965,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_POSTCOMMIT, run_postcommit },
   { OP_INSTALL_PROPERTIES, run_install_properties },
   { OP_DELETE, run_delete },
+  { OP_FILE_INSTALL, run_file_install },
 
   /* Sentinel.  */
   { NULL }
