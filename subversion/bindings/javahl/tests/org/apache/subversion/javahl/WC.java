@@ -92,7 +92,7 @@ public class WC
      */
     public Item getItem(String path)
     {
-        return (Item) items.get(path);
+        return items.get(path);
     }
 
     /**
@@ -131,7 +131,7 @@ public class WC
      */
     public void setItemWorkingCopyRevision(String path, long revision)
     {
-        ((Item) items.get(path)).workingCopyRev = revision;
+        items.get(path).workingCopyRev = revision;
     }
 
     /**
@@ -168,7 +168,7 @@ public class WC
         // content or setting a former not set content is not allowed. That
         // would change the type of the item.
         Assert.assertNotNull("cannot unset content", content);
-        Item i = (Item) items.get(path);
+        Item i = items.get(path);
         Assert.assertNotNull("cannot set content on directory", i.myContent);
         i.myContent = content;
     }
@@ -180,8 +180,7 @@ public class WC
      */
     public void setItemCheckContent(String path, boolean check)
     {
-        Item i = (Item) items.get(path);
-        i.checkContent = check;
+        items.get(path).checkContent = check;
     }
 
     /**
@@ -201,8 +200,7 @@ public class WC
      */
     public void setItemIsLocked(String path, boolean isLocked)
     {
-        Item i = (Item) items.get(path);
-        i.isLocked = isLocked;
+        items.get(path).isLocked = isLocked;
     }
 
     /**
@@ -212,8 +210,7 @@ public class WC
      */
     public void setItemIsSwitched(String path, boolean isSwitched)
     {
-        Item i = (Item) items.get(path);
-        i.isSwitched = isSwitched;
+        items.get(path).isSwitched = isSwitched;
     }
 
     /**
@@ -225,7 +222,7 @@ public class WC
      */
     public void setItemReposLastCmtRevision(String path, long revision)
     {
-        ((Item) items.get(path)).reposLastCmtRevision = revision;
+        items.get(path).reposLastCmtRevision = revision;
     }
 
     /**
@@ -237,7 +234,7 @@ public class WC
      */
     public void setItemReposLastCmtAuthor(String path, String author)
     {
-        ((Item) items.get(path)).reposLastCmtAuthor = author;
+        items.get(path).reposLastCmtAuthor = author;
     }
 
     /**
@@ -249,7 +246,7 @@ public class WC
      */
     public void setItemReposLastCmtDate(String path, long date)
     {
-        ((Item) items.get(path)).reposLastCmtDate = date;
+        items.get(path).reposLastCmtDate = date;
     }
 
     /**
@@ -306,7 +303,7 @@ public class WC
     void check(DirEntry[] tested, String singleFilePath)
     {
         Assert.assertEquals("not a single dir entry", 1, tested.length);
-        Item item = (Item)items.get(singleFilePath);
+        Item item = items.get(singleFilePath);
         Assert.assertNotNull("not found in working copy", item);
         Assert.assertNotNull("not a file", item.myContent);
         Assert.assertEquals("state says file, working copy not",
