@@ -32,12 +32,8 @@
 #include "JNIStringHolder.h"
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
 #include "../include/org_apache_subversion_javahl_Operation.h"
-#include "../include/org_apache_subversion_javahl_LockStatus.h"
 #include "../include/org_apache_subversion_javahl_Revision.h"
 #include "../include/org_apache_subversion_javahl_ScheduleKind.h"
-#include "../include/org_apache_subversion_javahl_ConflictDescriptor_Kind.h"
-#include "../include/org_apache_subversion_javahl_ConflictDescriptor_Action.h"
-#include "../include/org_apache_subversion_javahl_ConflictDescriptor_Reason.h"
 
 /**
  * Map a C commit state flag constant to the Java constant.
@@ -257,30 +253,26 @@ jobject EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
 
 /**
  * Map a C notify lock state constant to the Java constant.
- * @param state     the C notify lock state constant
- * @returns the Java constant
  */
-jint EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
+jobject EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
 {
   switch(state)
     {
+    default:
     case svn_wc_notify_lock_state_inapplicable:
-      return org_apache_subversion_javahl_LockStatus_inapplicable;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$LockStatus", "inapplicable");
 
     case svn_wc_notify_lock_state_unknown:
-      return org_apache_subversion_javahl_LockStatus_unknown;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$LockStatus", "unknown");
 
     case svn_wc_notify_lock_state_unchanged:
-      return org_apache_subversion_javahl_LockStatus_unchanged;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$LockStatus", "unchanged");
 
     case svn_wc_notify_lock_state_locked:
-      return org_apache_subversion_javahl_LockStatus_locked;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$LockStatus", "locked");
 
     case svn_wc_notify_lock_state_unlocked:
-      return org_apache_subversion_javahl_LockStatus_unlocked;
-
-    default:
-      return org_apache_subversion_javahl_LockStatus_inapplicable;
+      return mapEnum(JAVA_PACKAGE"/NotifyInformation$LockStatus", "unlocked");
     }
 }
 

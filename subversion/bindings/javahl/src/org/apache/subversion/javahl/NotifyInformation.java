@@ -80,7 +80,7 @@ public class NotifyInformation extends EventObject
     /**
      * The {@link LockStatus} of the lock of the item.
      */
-    private int lockState;
+    private LockStatus lockState;
 
     /**
      * The revision of the item.
@@ -127,7 +127,7 @@ public class NotifyInformation extends EventObject
     public NotifyInformation(String path, Action action, NodeKind kind,
                              String mimeType, Lock lock, String errMsg,
                              Status contentState, Status propState,
-                             int lockState, long revision,
+                             LockStatus lockState, long revision,
                              String changelistName, RevisionRange mergeRange,
                              String pathPrefix)
     {
@@ -213,7 +213,7 @@ public class NotifyInformation extends EventObject
     /**
      * @return The {@link LockStatus} of the lock of the item.
      */
-    public int getLockState()
+    public LockStatus getLockState()
     {
         return lockState;
     }
@@ -483,6 +483,39 @@ public class NotifyInformation extends EventObject
         private String description;
 
         Status(String description)
+        {
+            this.description = description;
+        }
+
+        public String toString()
+        {
+            return description;
+        }
+    }
+
+    public enum LockStatus
+    {
+        /** does not make sense for this operation */
+        inapplicable    ("inapplicable"),
+
+        /** unknown lock state */
+        unknown         ("unknown"),
+
+        /** the lock change did not change */
+        unchanged       ("unchanged"),
+
+        /** the item was locked */
+        locked          ("locked"),
+
+        /** the item was unlocked */
+        unlocked        ("unlocked");
+
+        /**
+         * The description of the action.
+         */
+        private String description;
+
+        LockStatus(String description)
         {
             this.description = description;
         }
