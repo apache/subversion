@@ -75,6 +75,11 @@ ListCallback::doList(const char *path,
 {
   JNIEnv *env = JNIUtil::getEnv();
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
   static jmethodID mid = 0;
@@ -82,45 +87,33 @@ ListCallback::doList(const char *path,
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ListCallback");
       if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "doEntry",
                              "(L"JAVA_PACKAGE"/DirEntry;"
                              "L"JAVA_PACKAGE"/Lock;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        return SVN_NO_ERROR;
-
-      env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
     }
 
   // convert the parameters to their Java relatives
   jobject jdirentry = createJavaDirEntry(path, abs_path, dirent);
   if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+    POP_AND_RETURN(SVN_NO_ERROR);
 
-  jobject jlock;
+  jobject jlock = NULL;
   if (lock != NULL)
     {
       jlock = CreateJ::Lock(lock);
       if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
-    }
-  else
-    {
-      jlock = NULL;
+        POP_AND_RETURN(SVN_NO_ERROR);
     }
 
   // call the Java method
   env->CallVoidMethod(m_callback, mid, jdirentry, jlock);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  // cleanup the temporary Java objects
-  env->DeleteLocalRef(jdirentry);
   // No need to check for exception here, because we'll just return anyway
 
+  env->PopLocalFrame(NULL);
   return SVN_NO_ERROR;
 }
 
