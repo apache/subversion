@@ -189,7 +189,7 @@ switch_internal(svn_revnum_t *result_rev,
   efb.ambient_depths = apr_hash_make(pool);
   efb.result_pool = pool;
   SVN_ERR(svn_wc_get_switch_editor4(&switch_editor, &switch_edit_baton,
-                                    ctx->wc_ctx, &revnum, anchor_abspath,
+                                    &revnum, ctx->wc_ctx, anchor_abspath,
                                     target, switch_rev_url, use_commit_times,
                                     depth,
                                     depth_is_sticky, allow_unver_obstructions,
