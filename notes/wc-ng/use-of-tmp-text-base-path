@@ -2,7 +2,7 @@
 Call graphs of the use of the WC-1 temporary text base path, as of r924197.
 
 This is to help us eliminate the use of this path and replace it with a more
-encapsulated way of refering to the new text base, as part of migration to a
+encapsulated way of referring to the new text base, as part of migration to a
 WC-NG pristine text store.
 
 
@@ -14,11 +14,12 @@ path is obtained, and the extent to which it is propagated.
 
 
                           svn_client_commit4()
-                                |^[T]  |
-      wc_to_repos_copy()        |^     |
-                |               |^     |
+                                |^[T]  |            [T] Terminates here
+      wc_to_repos_copy()        |^[M]  |
+                |               |^     |            [M] Multiple files
               svn_client__do_commit()  |
-                        |^             |
+                    [N] |^             |            [N] Not when caller is
+                        |^             |                wc_to_repos_copy()
   LIBSVN_CLIENT         |^             |
   ..........................................................................
   LIBSVN_WC             |^             |
@@ -31,9 +32,9 @@ path is obtained, and the extent to which it is propagated.
                         |^             +---+        *           |
                         |^                 |       apply_textdelta()  >>>v
   svn_wc_transmit_text_deltas3()           |          |^ [2]             v
-                |^                         |          |^                 v
+            [N] |^                         |          |^                 v
   svn_wc__internal_transmit_text_deltas()  |          |^    HB->work_abspath
-        |^                                 |          |^
+    [N] |^                                 |          |^
         |^                                 |          |^
         |^  { svn_wc_process_committed_queue2() }     |^
         |^  { svn_wc_process_committed4()       }     |^
@@ -116,8 +117,12 @@ NOTES
 =====
 
   All callers are shown if any are shown, except for deprecated wrappers.
+
+  |,+---+ indicates function calling (downwards).
+  * * * * indicates transfer of control, not by direct function call.
   ^,v,<,> indicates passing of the tmp text base path.
-  { ... } marks a group of functions that all call the same sub-function.
+  { ... } indicates a group of functions that all call the same sub-function.
+
   [T] Propagation terminates here.
   [1] These just return an editor that points to
       update_editor.c:apply_textdelta().  Calls to the editor are not shown.
@@ -127,4 +132,75 @@ NOTES
       a stream, not to the path.)  That is the only use of HB->work_abspath.
   [4] close_file() passes FB->new_text_base_abspath to merge_file().  That
       is the only use of FB->new_text_base_abspath.
+
+
+CHANGES REQUIRED
+================
+
+Goal:
+
+  The goal is to move to a WC-NG method of installing a new text base.  This
+  will require writing the new text base to a temporary location that is
+  determined by the new pristine store and may not necessarily have a
+  deterministic path.
+
+Observations:
+
+  There are two high-level operations that install a new text base.
+
+  1. Commit
+
+  2. Update/switch
+
+  The commit operation (1) is the one of primary interest, as it has a gap
+  in its data flow whereby the part of it that creates a temporary file does
+  not pass the name (or any other handle) of the file through to the part of
+  it that later needs to use this file.  Instead it depends on being able
+  deterministically to derive the path to the temporary file from the path
+  to the working file.
+
+  The update/switch operation (2) obtains a temporary file path once and
+  passes that path to all places where it needs to use it, which is sane.
+  The path need not be deterministic, it just needs to be atomically movable
+  into the final pristine location.
+
+  The commit operation is totally independent from the update/switch
+  operation: they could use completely different methods of locating and
+  storing the temporary text base.
+
+  A third high level operation, the WC-to-repository copy, involves a commit
+  but does not save a temporary text base file nor install a new text-base.
+
+Preferred Direction For Commit (1):
+
+  As soon as all the content is written to the temp file, move it fully into
+  the pristine store, named by its checksum.  Then later, in
+  install_committed_file(), make that pristine text become "this node's
+  base" by writing its checksum into the node's entry in the DB.
+
+  To achieve this, we need to create a data flow of the text base id (its
+  SHA-1 checksum) from the transmit-text-deltas part of the commit to the
+  install-committed-file part of the commit.
+
+  A text base that gets replaced and is then unused must be deleted from the
+  store at some point, but not necessarily as soon as it becomes unused.
+  The method of installing a new text base should use the Work Queue in such
+  a way as to enable unused text bases to be deleted without risk of
+  deleting a temporary text base that is about to go live.
+
+  The initial scheme for removing unused text bases must be simple and
+  reliable.  Probably this will involve deleting each unreferenced text base
+  as soon as it becomes unreferenced.
+
+Additional Changes Wanted:
+
+  * svn_wc__db_global_commit() should be OUTSIDE the Work Queue.
+
+  * "transmit_text_delta function is bogus and should go"
+
+    "API gap between transmit and the commit finalization. The dataflow and
+    *assumptions* made are ridiculous, creating offhand dependencies across
+    the codebase."
+
+  * update/switch should use the new pristine store
 
