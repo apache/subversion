@@ -2261,6 +2261,12 @@ svn_wc__db_base_get_props(apr_hash_t **props,
 
   err = svn_sqlite__column_properties(props, stmt, 0, result_pool,
                                       scratch_pool);
+  if (err == NULL && *props == NULL)
+    {
+      /* ### is this a DB constraint violation? the column "probably" should
+         ### never be null.  */
+      *props = apr_hash_make(result_pool);
+    }
 
   return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 }
@@ -2636,18 +2642,22 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
                                          scratch_pool));
 }
 
-svn_error_t *
-svn_wc__db_temp_op_set_pristine_props(svn_wc__db_t *db,
-                                      const char *local_abspath,
-                                      const apr_hash_t *props,
-                                      svn_boolean_t on_working,
-                                      apr_pool_t *scratch_pool)
+
+/* Set properties in a given table. The row must exist.  */
+static svn_error_t *
+set_properties(svn_wc__db_t *db,
+               const char *local_abspath,
+               const apr_hash_t *props,
+               int stmt_idx,
+               const char *table_name,
+               apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   int affected_rows;
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 on_working ? STMT_UPDATE_WORKING_PROPS
-                                            : STMT_UPDATE_BASE_PROPS,
+
+  SVN_ERR_ASSERT(props != NULL);
+
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath, stmt_idx,
                                  scratch_pool));
 
   SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
@@ -2658,10 +2668,37 @@ svn_wc__db_temp_op_set_pristine_props(svn_wc__db_t *db,
                              _("Can't store properties for '%s' in '%s'."),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool),
-                             on_working ? "working_node" : "base_node");
+                             table_name);
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_wc__db_temp_base_set_props(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               const apr_hash_t *props,
+                               apr_pool_t *scratch_pool)
+{
+  return svn_error_return(set_properties(db, local_abspath, props,
+                                         STMT_UPDATE_BASE_PROPS,
+                                         "base_node",
+                                         scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  const apr_hash_t *props,
+                                  apr_pool_t *scratch_pool)
+{
+  return svn_error_return(set_properties(db, local_abspath, props,
+                                         STMT_UPDATE_WORKING_PROPS,
+                                         "working_node",
+                                         scratch_pool));
+}
+
 
 svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
@@ -3977,6 +4014,7 @@ svn_wc__db_read_props(apr_hash_t **props,
   if (have_row)
     return SVN_NO_ERROR;
 
+  /* No local changes. Return the pristine props for this node.  */
   return svn_error_return(
       svn_wc__db_read_pristine_props(props, db, local_abspath,
                                      result_pool, scratch_pool));
@@ -3991,36 +4029,41 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row, have_value;
-  svn_error_t *err = NULL;
+  svn_boolean_t have_row;
+  svn_error_t *err;
+
   *props = NULL;
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
                                  STMT_SELECT_WORKING_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  if (have_row && !svn_sqlite__column_is_null(stmt, 0))
+  /* If there is a WORKING row, then we're done.
+
+     For adds/copies/moves, then properties are in this row.
+     For deletes, there are no properties.
+
+     Regardless, we never look at BASE. The properties (or not) are here.  */
+  if (have_row)
     {
-      have_value = TRUE;
       err = svn_sqlite__column_properties(props, stmt, 0, result_pool,
                                           scratch_pool);
+      SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+      if (*props == NULL)
+        {
+          /* ### is this a DB constraint violation? the column "probably"
+             ### should never be null. maybe we should leave it null for
+             ### delete operations, so this is okay.  */
+          *props = apr_hash_make(result_pool);
+        }
+      return SVN_NO_ERROR;
     }
-  else
-    have_value = FALSE;
+  SVN_ERR(svn_sqlite__reset(stmt));
 
-  SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
-
-  if (have_value)
-    return SVN_NO_ERROR;
-
-  err = svn_wc__db_base_get_props(props, db, local_abspath,
-                                  result_pool, scratch_pool);
-
-  if (err && (!have_row || err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND))
-    return svn_error_return(err);
-
-  svn_error_clear(err);
-  return SVN_NO_ERROR;
+  /* No WORKING node, so the props must be in the BASE node.  */
+  return svn_error_return(svn_wc__db_base_get_props(props, db, local_abspath,
+                                                    result_pool,
+                                                    scratch_pool));
 }
 
 

@@ -266,58 +266,6 @@ get_existing_prop_reject_file(const char **reject_file,
 /*---------------------------------------------------------------------*/
 
 
-/* Temporary helper for determining where to store pristine properties.
-   All calls will eventually be replaced by direct wc_db operations
-   of the right type. */
-svn_error_t *
-svn_wc__prop_pristine_is_working(svn_boolean_t *working,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_pool_t *scratch_pool)
-{
-  svn_wc__db_status_t status;
-  svn_boolean_t base_shadowed;
-  *working = TRUE;
-
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               &base_shadowed, NULL, NULL,
-                               db, local_abspath, scratch_pool, scratch_pool));
-
-  switch (status)
-    {
-      case svn_wc__db_status_normal:
-        *working = FALSE;
-        break;
-      case svn_wc__db_status_incomplete:
-        *working = base_shadowed;
-        break;
-      case svn_wc__db_status_deleted:
-        /* ### This call fails in some update_editor scenarios, because
-               the parent directory can be incomplete. In this specific
-               case a caller MUST provide the right location itself.
-               (Which (in this case) is always the BASE_NODE table)*/
-        SVN_ERR(svn_wc__db_scan_deletion(NULL, working, NULL, NULL, db,
-                                         local_abspath, scratch_pool,
-                                         scratch_pool));
-        break;
-      case svn_wc__db_status_added:
-        break;
-      case svn_wc__db_status_not_present:
-      case svn_wc__db_status_absent:
-      case svn_wc__db_status_excluded:
-        SVN_ERR_ASSERT(0 && "Node not here");
-      case svn_wc__db_status_obstructed:
-      case svn_wc__db_status_obstructed_add:
-      case svn_wc__db_status_obstructed_delete:
-        SVN_ERR_ASSERT(0 && "Node misses property information");
-      default:
-        SVN_ERR_ASSERT(0 && "Unhandled status");
-    }
-
-  return SVN_NO_ERROR;
-}
 
 /*** Loading regular properties. ***/
 svn_error_t *

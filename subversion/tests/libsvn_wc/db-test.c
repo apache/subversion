@@ -649,10 +649,6 @@ validate_node(svn_wc__db_t *db,
   value = apr_hash_get(props, "p999", APR_HASH_KEY_STRING);
   SVN_TEST_ASSERT(value != NULL && strcmp(value->data, "v1") == 0);
 
-  if (status == svn_wc__db_status_normal)
-    SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, path, props, FALSE,
-                                                  scratch_pool));
-
   return SVN_NO_ERROR;
 }
 

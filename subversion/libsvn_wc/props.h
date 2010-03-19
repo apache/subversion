@@ -231,16 +231,6 @@ svn_wc__marked_as_binary(svn_boolean_t *marked,
                          apr_pool_t *scratch_pool);
 
 
-/* Temporary helper for determining where to store pristine properties.
-   All calls will eventually be replaced by direct wc_db operations
-   of the right type. */
-svn_error_t *
-svn_wc__prop_pristine_is_working(svn_boolean_t *working,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_pool_t *scratch_pool);
-
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
