@@ -576,49 +576,51 @@ jobject EnumMapper::mapEnum(const char *clazzName, const char *name)
   methodSig.append(";");
 
   JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass(clazzName);
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
+
+  jclass clazz = env->FindClass(clazzName);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
 
   jmethodID mid = env->GetStaticMethodID(clazz, "valueOf", methodSig.c_str());
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   jstring jname = JNIUtil::makeJString(name);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   jobject jdepth = env->CallStaticObjectMethod(clazz, mid, jname);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
-  env->DeleteLocalRef(jname);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  return jdepth;
+  return env->PopLocalFrame(jdepth);
 }
 
 jstring EnumMapper::getName(const char *clazzName, jobject jenum)
 {
   JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass(clazzName);
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
+
+  jclass clazz = env->FindClass(clazzName);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
 
   jmethodID mid = env->GetMethodID(clazz, "name", "()Ljava/lang/String;");
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   jstring jname = (jstring) env->CallObjectMethod(jenum, mid);
-
-  env->DeleteLocalRef(clazz);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
-  return jname;
+  return (jstring) env->PopLocalFrame(jname);
 }

@@ -87,6 +87,11 @@ ProgressListener::onProgress(apr_off_t progressVal, apr_off_t total,
 {
   JNIEnv *env = JNIUtil::getEnv();
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
   // As Java method IDs will not change during the time this library
   // is loaded, they can be cached.
   static jmethodID mid = 0;
@@ -95,45 +100,33 @@ ProgressListener::onProgress(apr_off_t progressVal, apr_off_t total,
       // Initialize the method ID.
       jclass clazz = env->FindClass(JAVA_PACKAGE"/ProgressListener");
       if (JNIUtil::isJavaExceptionThrown())
-        return;
+        POP_AND_RETURN();
 
       mid = env->GetMethodID(clazz, "onProgress",
                              "(L"JAVA_PACKAGE"/ProgressEvent;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        return;
-
-      env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return;
+        POP_AND_RETURN();
     }
 
   static jmethodID midCT = 0;
   jclass clazz = env->FindClass(JAVA_PACKAGE"/ProgressEvent");
   if (JNIUtil::isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN();
 
   if (midCT == 0)
     {
       midCT = env->GetMethodID(clazz, "<init>", "(JJ)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
-        return;
+        POP_AND_RETURN();
     }
 
   // Call the Java method.
   jobject jevent = env->NewObject(clazz, midCT,
                                   (jlong) progressVal, (jlong) total);
   if (JNIUtil::isJavaExceptionThrown())
-    return;
-
-  env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN();
 
   env->CallVoidMethod(m_progressListener, mid, jevent);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
-
-  env->DeleteLocalRef(jevent);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
+  
+  POP_AND_RETURN();
 }
