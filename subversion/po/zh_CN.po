@@ -3,6 +3,7 @@
 # This file is distributed under the same license as the subversion package.
 #
 # Update to new pot:
+#    ../../tools/po/po-update.sh zh_CN
 #    msgmerge --update zh_CN.po subversion.pot
 #
 # Check translation:
@@ -37,8 +38,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2009-12-07 10:00+0800\n"
-"PO-Revision-Date: 2009-12-07 10:04+0800\n"
+"POT-Creation-Date: 2010-03-19 11:45+0800\n"
+"PO-Revision-Date: 2010-03-19 11:45+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2997,9 +2998,6 @@ msgstr "OPTIONS 响应中没有包含请求的 activity-collection-set 值。"
 msgid "%s of '%s': %d %s (%s://%s)"
 msgstr "%s 于 '%s': %d %s (%s://%s)"
 
-msgid "The OPTIONS response did not include the requested checked-in value"
-msgstr "OPTIONS 响应中没有包含请求的 checked-in 值。"
-
 msgid ""
 "The OPTIONS response did not include the requested baseline-collection value"
 msgstr "OPTIONS 响应中没有包含请求的 baseline-collection 值。"
@@ -3022,6 +3020,9 @@ msgstr "版本库的 URL 非法"
 #, c-format
 msgid "Unlock request failed: %d %s"
 msgstr "解锁请求失败: %d %s"
+
+msgid "The OPTIONS response did not include the requested checked-in value"
+msgstr "OPTIONS 响应中没有包含请求的 checked-in 值。"
 
 msgid "The OPTIONS response did not include the requested version-name value"
 msgstr "OPTIONS 响应中没有包含请求的 version-name 值。"
@@ -3115,6 +3116,13 @@ msgstr "子进程错误: %s"
 #, c-format
 msgid "Can't create tunnel"
 msgstr "无法创建隧道"
+
+msgid ""
+"To better debug SSH connection problems, remove the -q option from 'ssh' in "
+"the [tunnels] section of your Subversion configuration file."
+msgstr ""
+"为了更好的诊断 SSH 连接问题，请从你的 Subversion 配置文件中，[tunnels] 节，删"
+"除 ssh 命令行参数 -q 。"
 
 #, c-format
 msgid "Illegal svn repository URL '%s'"
@@ -4001,16 +4009,8 @@ msgid "Can't remove file '%s'"
 msgstr "不能移动文件“%s”"
 
 #, c-format
-msgid "Can't open directory '%s'"
-msgstr "无法打开目录“%s”"
-
-#, c-format
 msgid "Can't remove '%s'"
 msgstr "无法删除“%s”"
-
-#, c-format
-msgid "Can't rewind directory '%s'"
-msgstr "无法重绕目录“%s”"
 
 #, c-format
 msgid "Can't create process '%s' attributes"
@@ -4152,6 +4152,10 @@ msgstr "无法创建目录 “%s”"
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "无法隐藏目录 “%s”"
+
+#, c-format
+msgid "Can't open directory '%s'"
+msgstr "无法打开目录“%s”"
 
 #, c-format
 msgid "Can't remove directory '%s'"
