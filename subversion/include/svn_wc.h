@@ -626,6 +626,9 @@ svn_wc_set_adm_dir(const char *name,
 
 /** Callback for external definitions updates
  *
+ * ### See implementation of #svn_wc_traversal_info_t for documentation of
+ *     the parameters.
+ *
  * @since New in 1.7. */
 typedef svn_error_t *(*svn_wc_external_update_t)(void *baton,
                                                  const char *local_abspath,
@@ -3849,6 +3852,7 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  *
  * If @a external_func is non-NULL, call it with @a external_baton if an
  * external definition is found while walking @a local_abspath.
+ * ### call it with what other parameters?
  *
  * This function uses @a scratch_pool for temporary allocations.
  *
@@ -6915,15 +6919,17 @@ svn_wc_translated_stream(svn_stream_t **stream,
  * matching @a file_baton) through @a editor, then close @a file_baton
  * afterwards.  Use @a scratch_pool for any temporary allocation.
  *
- * This process creates a copy of @a local_abspath with keywords and eol
- * untranslated.  If @a tempfile is non-NULL, set @a *tempfile to the
- * absolute path to this copy, allocated in @a result_pool.  Do not clean
- * up the copy; caller can do that.  If @a digest is non-NULL, put the MD5
- * checksum of the temporary file into @a digest, which must point to @c
- * APR_MD5_DIGESTSIZE bytes of storage.  (The purpose of handing back the
- * tmp copy is that it is usually about to become the new text base anyway,
- * but the installation of the new text base is outside the scope of this
- * function.)
+ * If @a tempfile is non-NULL, make a copy of @a local_abspath with keywords
+ * and eol translated to repository-normal form, and set @a *tempfile to the
+ * absolute path to this copy, allocated in @a result_pool.  The copy will
+ * be in the temporary-text-base directory.  Do not clean up the copy;
+ * caller can do that.  (The purpose of handing back the tmp copy is that it
+ * is usually about to become the new text base anyway, but the installation
+ * of the new text base is outside the scope of this function.)
+ *
+ * If @a digest is non-NULL, put the MD5 checksum of (@a local_abspath
+ * translated to repository-normal form) into @a digest, which must point to
+ * @c APR_MD5_DIGESTSIZE bytes of storage.
  *
  * If @a fulltext, send the untranslated copy of @a local_abspath through
  * @a editor as full-text; else send it as svndiff against the current text
