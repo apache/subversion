@@ -1831,11 +1831,11 @@ run_delete(svn_wc__db_t *db,
   arg = arg->next;
   kind = (int) svn_skel__parse_int(arg, scratch_pool);
   arg = arg->next;
-  was_added = (svn_boolean_t) svn_skel__parse_int(arg, scratch_pool);
+  was_added = svn_skel__parse_int(arg, scratch_pool) != 0;
   arg = arg->next;
-  was_copied = (svn_boolean_t) svn_skel__parse_int(arg, scratch_pool);
+  was_copied = svn_skel__parse_int(arg, scratch_pool) != 0;
   arg = arg->next;
-  was_replaced = (svn_boolean_t) svn_skel__parse_int(arg, scratch_pool);
+  was_replaced = svn_skel__parse_int(arg, scratch_pool) != 0;
 
   if (was_replaced && was_copied)
     {
