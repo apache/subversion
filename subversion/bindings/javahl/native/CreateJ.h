@@ -29,6 +29,7 @@
 
 #include <jni.h>
 #include "svn_wc.h"
+#include "svn_client.h"
 
 #include <vector>
 
@@ -47,7 +48,16 @@ class CreateJ
   Info(const svn_wc_entry_t *entry);
 
   static jobject
+  Info2(const char *path, const svn_info_t *info);
+
+  static jobject
   Lock(const svn_lock_t *lock);
+
+  static jobject
+  Status(const char *local_abspath, const svn_wc_status2_t *status);
+
+  static jobject
+  NotifyInformation(const svn_wc_notify_t *notify);
 
   static jobject
   RevisionRangeList(apr_array_header_t *ranges);
