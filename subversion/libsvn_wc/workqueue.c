@@ -54,6 +54,9 @@
 #define OP_KILLME "killme"
 #define OP_LOGGY "loggy"
 #define OP_DELETION_POSTCOMMIT "deletion-postcommit"
+/* Arguments of OP_POSTCOMMIT:
+ *   (local_abspath, revnum, date, [author], [checksum],
+ *    [dav_cache/wc_props], keep_changelist). */
 #define OP_POSTCOMMIT "postcommit"
 #define OP_INSTALL_PROPERTIES "install-properties"
 #define OP_DELETE "delete"
@@ -170,7 +173,9 @@ maybe_remove_conflict(const char *parent_abspath,
 }
 
 
-/* */
+/* Process the OP_REVERT work item WORK_ITEM.
+ * See svn_wc__wq_add_revert() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
 static svn_error_t *
 run_revert(svn_wc__db_t *db,
            const svn_skel_t *work_item,
@@ -624,7 +629,9 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
 /* OP_PREPARE_REVERT_FILES  */
 
 
-/* */
+/* Process the OP_PREPARE_REVERT_FILES work item WORK_ITEM.
+ * See svn_wc__wq_prepare_revert_files() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
 static svn_error_t *
 run_prepare_revert_files(svn_wc__db_t *db,
                          const svn_skel_t *work_item,
@@ -719,7 +726,9 @@ svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
 /* OP_REMOVE_REVERT_FILES  */
 
 
-/* */
+/* Process the OP_REMOVE_REVERT_FILES work item WORK_ITEM.
+ * See svn_wc__wq_remove_revert_files() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
 static svn_error_t *
 run_remove_revert_files(svn_wc__db_t *db,
                         const svn_skel_t *work_item,
@@ -770,7 +779,9 @@ svn_wc__wq_remove_revert_files(svn_wc__db_t *db,
 
 /* OP_KILLME  */
 
-/* */
+/* Process the OP_KILLME work item WORK_ITEM.
+ * See svn_wc__wq_add_killme() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
 static svn_error_t *
 run_killme(svn_wc__db_t *db,
            const svn_skel_t *work_item,
@@ -892,7 +903,9 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
 
 /* OP_LOGGY  */
 
-/* */
+/* Process the OP_LOGGY work item WORK_ITEM.
+ * See svn_wc__wq_add_loggy() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
 static svn_error_t *
 run_loggy(svn_wc__db_t *db,
           const svn_skel_t *work_item,
@@ -937,7 +950,9 @@ svn_wc__wq_add_loggy(svn_wc__db_t *db,
 
 /* OP_DELETION_POSTCOMMIT  */
 
-/* */
+/* Process the OP_DELETION_POSTCOMMIT work item WORK_ITEM.
+ * See svn_wc__wq_add_deletion_postcommit() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
 static svn_error_t *
 run_deletion_postcommit(svn_wc__db_t *db,
                         const svn_skel_t *work_item,
@@ -1133,9 +1148,21 @@ install_committed_file(svn_boolean_t *overwrote_working,
                                  scratch_pool));
   SVN_ERR(svn_io_check_path(tmp_text_base, &kind, scratch_pool));
 
+  /* Copy and translate the new base-to-be file (if found, else the working
+   * file) from repository-normal form to working form, writing a new
+   * temporary file if any translation was actually done.  Set TMP_WFILE to
+   * the translated file's path, which may be the source file's path if no
+   * translation was done.  Set SAME to indicate whether the new working
+   * text is the same as the old working text (or TRUE if it's a special
+   * file). */
   {
     const char *tmp = (kind == svn_node_file) ? tmp_text_base : file_abspath;
 
+    /* Copy and translate, if necessary. The output file will be deleted at
+     * scratch_pool cleanup.
+     * ### That's not quite safe: we might rename the file and then maybe
+     * its path will get re-used for another temp file before pool clean-up.
+     * Instead, we should take responsibility for deleting it. */
     SVN_ERR(svn_wc__internal_translated_file(&tmp_wfile, tmp, db,
                                              file_abspath,
                                              SVN_WC_TRANSLATE_FROM_NF,
@@ -1524,7 +1551,9 @@ log_do_committed(svn_wc__db_t *db,
 }
 
 
-/* */
+/* Process the OP_POSTCOMMIT work item WORK_ITEM.
+ * See svn_wc__wq_add_postcommit() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
 static svn_error_t *
 run_postcommit(svn_wc__db_t *db,
                const svn_skel_t *work_item,
@@ -1623,7 +1652,9 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
 
 /* OP_INSTALL_PROPERTIES */
 
-/* */
+/* Process the OP_INSTALL_PROPERTIES work item WORK_ITEM.
+ * See svn_wc__wq_add_install_properties() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
 static svn_error_t *
 run_install_properties(svn_wc__db_t *db,
                        const svn_skel_t *work_item,
@@ -1779,7 +1810,9 @@ svn_wc__wq_add_install_properties(svn_wc__db_t *db,
 
 /* OP_DELETE */
 
-/* */
+/* Process the OP_DELETE work item WORK_ITEM.
+ * See svn_wc__wq_add_delete() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
 static svn_error_t *
 run_delete(svn_wc__db_t *db,
            const svn_skel_t *work_item,
