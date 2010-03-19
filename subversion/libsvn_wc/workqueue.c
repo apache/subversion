@@ -220,8 +220,14 @@ run_revert(svn_wc__db_t *db,
       SVN_ERR(move_if_present(revert_props_path, base_props_path,
                               scratch_pool));
 
-      SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath, NULL,
-                                                    TRUE, scratch_pool));
+      /* ### we should also be setting BASE props. and really... we shouldn't
+         ### even bother zero-ing out these props. the WORKING node should
+         ### be disappearing after a revert.  */
+#if 0
+      SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath,
+                                                apr_hash_make(scratch_pool),
+                                                scratch_pool));
+#endif
     }
 
   /* The "working" props contain changes. Nuke 'em from orbit.  */
@@ -677,10 +683,14 @@ run_prepare_revert_files(svn_wc__db_t *db,
                                         scratch_pool));
     }
 
-  /* Stop intheriting BASE_NODE properties */
-  SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath,
-                                                apr_hash_make(scratch_pool),
-                                                TRUE, scratch_pool));
+  /* Put some blank properties into the WORKING node.  */
+  /* ### this seems bogus. something else should come along and put the
+     ### correct values in here. we shouldn't put empty values in.  */
+#if 0
+  SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath,
+                                            apr_hash_make(scratch_pool),
+                                            scratch_pool));
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -1671,17 +1681,33 @@ run_install_properties(svn_wc__db_t *db,
         }
 
       {
-        svn_boolean_t in_working;
+        svn_boolean_t written = FALSE;
 
-        if (force_base_install)
-          in_working = FALSE;
-        else
-          SVN_ERR(svn_wc__prop_pristine_is_working(&in_working, db,
-                                                   local_abspath, scratch_pool));
+        if (!force_base_install)
+          {
+            svn_error_t *err;
 
-        SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath,
-                                                      base_props, in_working,
-                                                      scratch_pool));
+            /* Try writing to the WORKING tree first.  */
+            err = svn_wc__db_temp_working_set_props(db, local_abspath,
+                                                    base_props,
+                                                    scratch_pool);
+            if (err)
+              {
+                if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+                  return svn_error_return(err);
+                svn_error_clear(err);
+                /* The WORKING node is not present.  */
+              }
+            else
+              {
+                /* The WORKING node is present, and we wrote the props.  */
+                written = TRUE;
+              }
+          }
+
+        if (!written)
+          SVN_ERR(svn_wc__db_temp_base_set_props(db, local_abspath,
+                                                 base_props, scratch_pool));
       }
     }
 

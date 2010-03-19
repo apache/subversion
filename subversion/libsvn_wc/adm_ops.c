@@ -1204,9 +1204,9 @@ mark_item_copied(svn_wc__db_t *db,
   SVN_ERR(svn_wc__entry_modify2(db, local_abspath, kind, FALSE, &tmp_entry,
                                 SVN_WC__ENTRY_MODIFY_COPIED, scratch_pool));
 
-  /* Reinstall the pristine properties on working */
-  SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath, props,
-                                                TRUE, scratch_pool));
+  /* Reinstall the pristine properties on WORKING */
+  SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath, props,
+                                            scratch_pool));
   
   return SVN_NO_ERROR;
 }
@@ -1453,8 +1453,14 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
      we might delete the base table */
   if ((exists && status != svn_wc__db_status_not_present)
       && !is_replace && copyfrom_url != NULL)
-    SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
-                                           pool, pool));
+    {
+      /* NOTE: the conditions to reach here *exactly* match the
+         conditions used below when PROPS is referenced.
+         Be careful to keep these sets of conditionals aligned to avoid
+         an uninitialized PROPS value.  */
+      SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
+                                             pool, pool));
+    }
 
   /* Now, add the entry for this item to the parent_dir's
      entries file, marking it for addition. */
@@ -1612,12 +1618,20 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   if (exists && status != svn_wc__db_status_not_present)
     {
       if (!is_replace && copyfrom_url != NULL)
-        SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath, props,
-                                                      TRUE, pool));
+        {
+          /* NOTE: the conditions to reach here *exactly* match the
+             conditions that were used to initialize the PROPS localvar.
+             Be careful to keep these sets of conditionals aligned to avoid
+             an uninitialized PROPS value.  */
+          SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath, props,
+                                                    pool));
+        }
       else
-        SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, local_abspath,
-                                                      apr_hash_make(pool),
-                                                      TRUE, pool));
+        {
+          SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath,
+                                                    apr_hash_make(pool),
+                                                    pool));
+        }
     }
 
   /* Report the addition to the caller. */

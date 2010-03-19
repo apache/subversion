@@ -905,7 +905,7 @@ migrate_props(const char *wcroot_abspath,
      (since we aren't yet in a centralized system), and for any properties that
      exist, map them as follows:
 
-     if (node is replaced):
+     if (revert props exist):
        revert  -> BASE
        base    -> WORKING
        working -> ACTUAL
@@ -915,6 +915,8 @@ migrate_props(const char *wcroot_abspath,
      else:
        base    -> BASE
        working -> ACTUAL
+
+     ### the middle "test" should simply look for a WORKING_NODE row
 
      Note that it is legal for "working" props to be missing. That implies
      no local changes to the properties.
@@ -980,32 +982,33 @@ migrate_props(const char *wcroot_abspath,
       SVN_ERR(read_propfile(&base_props, prop_base_path, iterpool, iterpool));
       SVN_ERR_ASSERT(base_props != NULL);
 
-      /* if node is replaced ... */
-      SVN_ERR(svn_wc__internal_is_replaced(&replaced, db, child_abspath,
-                                           iterpool));
-      if (replaced)
+      SVN_ERR(read_propfile(&revert_props, prop_revert_path,
+                            iterpool, iterpool));
+      if (revert_props != NULL)
         {
-          apr_hash_t *revert_props;
-
-          SVN_ERR(read_propfile(&revert_props, prop_revert_path,
-                                iterpool, iterpool));
-          SVN_ERR_ASSERT(revert_props != NULL);
-
-          SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, child_abspath,
-                                                        revert_props, FALSE,
-                                                        iterpool));
-          SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, child_abspath,
-                                                        base_props, TRUE,
-                                                        iterpool));
+          SVN_ERR(svn_wc__db_temp_base_set_props(db, child_abspath,
+                                                 revert_props, iterpool));
+          SVN_ERR(svn_wc__db_temp_working_set_props(db, child_abspath,
+                                                    base_props, iterpool));
         }
       else
         {
-          SVN_ERR(svn_wc__prop_pristine_is_working(&pristine_is_working, db,
-                                                   child_abspath, iterpool));
-          SVN_ERR(svn_wc__db_temp_op_set_pristine_props(db, child_abspath,
-                                                        base_props,
-                                                        pristine_is_working,
-                                                        iterpool));
+          /* Try writing to the WORKING tree first.  */
+          err = svn_wc__db_temp_working_set_props(db, local_abspath,
+                                                  base_props,
+                                                  scratch_pool);
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+                return svn_error_return(err);
+              svn_error_clear(err);
+
+              /* The WORKING node is not present. Try writing to the
+                 BASE node now.  */
+              SVN_ERR(svn_wc__db_temp_base_set_props(db, local_abspath,
+                                                     base_props,
+                                                     scratch_pool));
+            }
         }
 
       /* If the properties file does not exist, then that simply means
