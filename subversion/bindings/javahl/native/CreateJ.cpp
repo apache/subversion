@@ -32,16 +32,6 @@
 #include "RevisionRange.h"
 #include "CreateJ.h"
 
-#define LOCAL_FRAME_SIZE            16
-
-#define POP_AND_RETURN_NULL         \
-  do                                \
-    {                               \
-      env->PopLocalFrame(NULL);     \
-      return NULL;                  \
-    }                               \
-  while (0)
-
 jobject
 CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
 {

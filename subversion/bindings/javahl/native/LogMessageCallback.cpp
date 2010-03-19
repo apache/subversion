@@ -70,6 +70,11 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
   static jmethodID sm_mid = 0;
@@ -77,22 +82,18 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/LogMessageCallback");
       if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
 
       sm_mid = env->GetMethodID(clazz,
                                 "singleMessage",
                                 "(Ljava/util/Set;JLjava/util/Map;Z)V");
       if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
-
-      env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
     }
 
   jclass clazzCP = env->FindClass(JAVA_PACKAGE"/ChangePath");
   if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+    POP_AND_RETURN(SVN_NO_ERROR);
 
   static jmethodID midCP = 0;
   if (midCP == 0)
@@ -104,7 +105,7 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
                                "L"JAVA_PACKAGE"/Tristate;"
                                "L"JAVA_PACKAGE"/Tristate;)V");
       if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
     }
 
   jobject jChangedPaths = NULL;
@@ -123,15 +124,15 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
 
           jstring jpath = JNIUtil::makeJString(path);
           if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
+            POP_AND_RETURN(SVN_NO_ERROR);
 
           jstring jcopyFromPath = JNIUtil::makeJString(log_item->copyfrom_path);
           if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
+            POP_AND_RETURN(SVN_NO_ERROR);
 
           jobject jnodeKind = EnumMapper::mapNodeKind(log_item->node_kind);
           if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
+            POP_AND_RETURN(SVN_NO_ERROR);
 
           jlong jcopyFromRev = log_item->copyfrom_rev;
           jchar jaction = log_item->action;
@@ -141,21 +142,21 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
                               EnumMapper::mapTristate(log_item->text_modified),
                               EnumMapper::mapTristate(log_item->props_modified));
           if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
+            POP_AND_RETURN(SVN_NO_ERROR);
 
           jcps.push_back(cp);
 
           env->DeleteLocalRef(jnodeKind);
           if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
+            POP_AND_RETURN(SVN_NO_ERROR);
 
           env->DeleteLocalRef(jpath);
           if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
+            POP_AND_RETURN(SVN_NO_ERROR);
 
           env->DeleteLocalRef(jcopyFromPath);
           if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
+            POP_AND_RETURN(SVN_NO_ERROR);
         }
 
       jChangedPaths = CreateJ::Set(jcps);
@@ -171,15 +172,8 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
                       (jlong)log_entry->revision,
                       jrevprops,
                       (jboolean)log_entry->has_children);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  env->DeleteLocalRef(jChangedPaths);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  env->DeleteLocalRef(jrevprops);
   // No need to check for an exception here, because we return anyway.
 
+  env->PopLocalFrame(NULL);
   return SVN_NO_ERROR;
 }
