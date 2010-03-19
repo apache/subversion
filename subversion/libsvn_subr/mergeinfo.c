@@ -892,7 +892,7 @@ svn_mergeinfo__set_inheritance(svn_mergeinfo_t mergeinfo,
    ranges in RANGELIST1 and RANGELIST2 into account when comparing them
    for intersection, see the doc string for svn_rangelist_intersection().
 
-   If CONSIDER_INHERITANCE is true, then ranges with differing inheritance
+   If CONSIDER_INHERITANCE is false, then ranges with differing inheritance
    may intersect, but the resulting intersection is non-inheritable only
    if both ranges were non-inheritable, e.g.:
 
@@ -919,31 +919,32 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                               svn_boolean_t consider_inheritance,
                               apr_pool_t *pool)
 {
-  int i, j, lasti;
-  svn_merge_range_t wboardelt;
+  int i1, i2, lasti2;
+  svn_merge_range_t working_elt2;
 
   *output = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
 
-  i = 0;
-  j = 0;
-  lasti = -1;  /* Initialized to a value that "i" will never be. */
+  i1 = 0;
+  i2 = 0;
+  lasti2 = -1;  /* Initialized to a value that "i2" will never be. */
 
-  while (i < rangelist2->nelts && j < rangelist1->nelts)
+  while (i1 < rangelist1->nelts && i2 < rangelist2->nelts)
     {
       svn_merge_range_t *elt1, *elt2;
 
-      elt2 = APR_ARRAY_IDX(rangelist1, j, svn_merge_range_t *);
+      elt1 = APR_ARRAY_IDX(rangelist1, i1, svn_merge_range_t *);
 
       /* Instead of making a copy of the entire array of rangelist2
          elements, we just keep a copy of the current rangelist2 element
          that needs to be used, and modify our copy if necessary. */
-      if (i != lasti)
+      if (i2 != lasti2)
         {
-          wboardelt = *(APR_ARRAY_IDX(rangelist2, i, svn_merge_range_t *));
-          lasti = i;
+          working_elt2 =
+            *(APR_ARRAY_IDX(rangelist2, i2, svn_merge_range_t *));
+          lasti2 = i2;
         }
 
-      elt1 = &wboardelt;
+      elt2 = &working_elt2;
 
       /* If the rangelist2 range is contained completely in the
          rangelist1, we increment the rangelist2.
@@ -953,30 +954,30 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
          the removal of rangelist1 from rangelist2, and possibly change
          the rangelist2 to the remaining portion of the right part of
          the removal, to test against. */
-      if (range_contains(elt2, elt1, consider_inheritance))
+      if (range_contains(elt1, elt2, consider_inheritance))
         {
           if (!do_remove)
             {
               svn_merge_range_t tmp_range;
-              tmp_range.start = elt1->start;
-              tmp_range.end = elt1->end;
+              tmp_range.start = elt2->start;
+              tmp_range.end = elt2->end;
               /* The intersection of two ranges is non-inheritable only
                  if both ranges are non-inheritable. */
               tmp_range.inheritable =
-                (elt1->inheritable || elt2->inheritable);
+                (elt2->inheritable || elt1->inheritable);
               SVN_ERR(combine_with_lastrange(&tmp_range, *output,
                                              consider_inheritance, pool,
                                              pool));
             }
 
-          i++;
+          i2++;
 
-          if (elt1->start == elt2->start && elt1->end == elt2->end)
-            j++;
+          if (elt2->start == elt1->start && elt2->end == elt1->end)
+            i1++;
         }
-      else if (range_intersect(elt2, elt1, consider_inheritance))
+      else if (range_intersect(elt1, elt2, consider_inheritance))
         {
-          if (elt1->start < elt2->start)
+          if (elt2->start < elt1->start)
             {
               /* The rangelist2 range starts before the rangelist1 range. */
               svn_merge_range_t tmp_range;
@@ -984,20 +985,20 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                 {
                   /* Retain the range that falls before the rangelist1
                      start. */
-                  tmp_range.start = elt1->start;
-                  tmp_range.end = elt2->start;
-                  tmp_range.inheritable = elt1->inheritable;
+                  tmp_range.start = elt2->start;
+                  tmp_range.end = elt1->start;
+                  tmp_range.inheritable = elt2->inheritable;
                 }
               else
                 {
                   /* Retain the range that falls between the rangelist1
                      start and rangelist2 end. */
-                  tmp_range.start = elt2->start;
-                  tmp_range.end = MIN(elt1->end, elt2->end);
+                  tmp_range.start = elt1->start;
+                  tmp_range.end = MIN(elt2->end, elt1->end);
                   /* The intersection of two ranges is non-inheritable only
                      if both ranges are non-inheritable. */
                   tmp_range.inheritable =
-                    (elt1->inheritable || elt2->inheritable);
+                    (elt2->inheritable || elt1->inheritable);
                 }
 
               SVN_ERR(combine_with_lastrange(&tmp_range,
@@ -1007,30 +1008,30 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
 
           /* Set up the rest of the rangelist2 range for further
              processing.  */
-          if (elt1->end > elt2->end)
+          if (elt2->end > elt1->end)
             {
               /* The rangelist2 range ends after the rangelist1 range. */
               if (!do_remove)
                 {
                   /* Partial overlap. */
                   svn_merge_range_t tmp_range;
-                  tmp_range.start = MAX(elt1->start, elt2->start);
-                  tmp_range.end = elt2->end;
+                  tmp_range.start = MAX(elt2->start, elt1->start);
+                  tmp_range.end = elt1->end;
                   /* The intersection of two ranges is non-inheritable only
                      if both ranges are non-inheritable. */
                   tmp_range.inheritable =
-                    (elt1->inheritable || elt2->inheritable);
+                    (elt2->inheritable || elt1->inheritable);
                   SVN_ERR(combine_with_lastrange(&tmp_range,
                                                  *output,
                                                  consider_inheritance,
                                                  pool, pool));
                 }
 
-              wboardelt.start = elt2->end;
-              wboardelt.end = elt1->end;
+              working_elt2.start = elt1->end;
+              working_elt2.end = elt2->end;
             }
           else
-            i++;
+            i2++;
         }
       else  /* ranges don't intersect */
         {
@@ -1040,8 +1041,8 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
              If it is on past the rangelist2 on the right side, we
              need to output the rangelist2 and increment the
              rangelist2.  */
-          if (svn_sort_compare_ranges(&elt2, &elt1) < 0)
-            j++;
+          if (svn_sort_compare_ranges(&elt1, &elt2) < 0)
+            i1++;
           else
             {
               svn_merge_range_t *lastrange;
@@ -1053,13 +1054,13 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                 lastrange = NULL;
 
               if (do_remove && !(lastrange &&
-                                 combine_ranges(lastrange, lastrange, elt1,
+                                 combine_ranges(lastrange, lastrange, elt2,
                                                 consider_inheritance)))
                 {
-                  lastrange = svn_merge_range_dup(elt1, pool);
+                  lastrange = svn_merge_range_dup(elt2, pool);
                   APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
                 }
-              i++;
+              i2++;
             }
         }
     }
@@ -1072,17 +1073,17 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
          array, we have to use our copy.  This case only happens when
          we ran out of rangelist1 before rangelist2, *and* we had changed
          the rangelist2 element. */
-      if (i == lasti && i < rangelist2->nelts)
+      if (i2 == lasti2 && i2 < rangelist2->nelts)
         {
-          SVN_ERR(combine_with_lastrange(&wboardelt, *output,
+          SVN_ERR(combine_with_lastrange(&working_elt2, *output,
                                          consider_inheritance, pool, pool));
-          i++;
+          i2++;
         }
 
       /* Copy any other remaining untouched rangelist2 elements.  */
-      for (; i < rangelist2->nelts; i++)
+      for (; i2 < rangelist2->nelts; i2++)
         {
-          svn_merge_range_t *elt = APR_ARRAY_IDX(rangelist2, i,
+          svn_merge_range_t *elt = APR_ARRAY_IDX(rangelist2, i2,
                                                  svn_merge_range_t *);
 
           SVN_ERR(combine_with_lastrange(elt, *output,
