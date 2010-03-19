@@ -2075,7 +2075,7 @@ do_entry_deletion(struct edit_baton *eb,
 {
   svn_wc__db_kind_t kind;
   svn_boolean_t already_conflicted;
-  svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   svn_wc_conflict_description2_t *tree_conflict = NULL;
   const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
   svn_boolean_t hidden;
@@ -2130,7 +2130,8 @@ do_entry_deletion(struct edit_baton *eb,
       /* When we raise a tree conflict on a directory, we want to avoid
        * making any changes inside it. (Will an update ever try to make
        * further changes to or inside a directory it's just deleted?) */
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(&log_item, tree_conflict, pool));
+      SVN_ERR(svn_wc__loggy_add_tree_conflict(&log_accum, tree_conflict,
+                                              pool));
 
       SVN_ERR(remember_skipped_tree(eb, local_abspath));
 
@@ -2154,7 +2155,7 @@ do_entry_deletion(struct edit_baton *eb,
           /* Run the log in the parent dir, to record the tree conflict.
            * Do this before schedule_existing_item_for_re_add(), in case
            * that needs to modify the same entries. */
-          SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
+          SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_accum, pool));
           SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
 
           SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, TRUE,
@@ -2183,7 +2184,7 @@ do_entry_deletion(struct edit_baton *eb,
           /* Run the log in the parent dir, to record the tree conflict.
            * Do this before schedule_existing_item_for_re_add(), in case
            * that needs to modify the same entries. */
-          SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
+          SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_accum, pool));
           SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
 
           SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, TRUE,
@@ -2198,7 +2199,7 @@ do_entry_deletion(struct edit_baton *eb,
   /* Issue a loggy command to delete the entry from version control and to
    * delete it from disk if unmodified, but leave any modified files on disk
    * unversioned. */
-  SVN_WC__FLUSH_LOG_ACCUM(eb->db, dir_abspath, log_item, pool);
+  SVN_WC__FLUSH_LOG_ACCUM(eb->db, dir_abspath, log_accum, pool);
   SVN_ERR(svn_wc__loggy_delete_entry(eb->db, dir_abspath, local_abspath,
                                      pool));
 
@@ -2219,7 +2220,7 @@ do_entry_deletion(struct edit_baton *eb,
 
       tmp_entry.deleted = TRUE;
 
-      SVN_ERR(svn_wc__loggy_entry_modify(&log_item,
+      SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
                                dir_abspath, local_abspath,
                                &tmp_entry,
                                SVN_WC__ENTRY_MODIFY_REVISION
@@ -2230,7 +2231,7 @@ do_entry_deletion(struct edit_baton *eb,
       eb->target_deleted = TRUE;
     }
 
-  SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_item, pool));
+  SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_accum, pool));
 
   if (eb->switch_relpath)
     {
@@ -2309,7 +2310,7 @@ delete_entry(const char *path,
   their_relpath = svn_relpath_join(pb->new_relpath, base, pool);
 
   /* Flush parent log before potentially adding tree conflicts */
-  flush_log(pb, pool);
+  SVN_ERR(flush_log(pb, pool));
 
   return do_entry_deletion(pb->edit_baton, local_abspath,
                            their_relpath,
