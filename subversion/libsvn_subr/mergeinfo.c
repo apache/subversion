@@ -459,6 +459,10 @@ range_to_string(const svn_merge_range_t *range,
 }
 
 /* Helper for svn_mergeinfo_parse()
+   Append revision ranges onto the array RANGELIST to represent the range
+   descriptions found in the string *INPUT.  Read only as far as a newline
+   or the position END, whichever comes first.  Set *INPUT to the position
+   after the last character of INPUT that was used.
 
    revisionlist -> (revisionelement)(COMMA revisionelement)*
    revisionrange -> REVISION "-" REVISION("*")
@@ -502,6 +506,11 @@ parse_rangelist(const char **input, const char *end,
       mrange->start = firstrev - 1;
       mrange->end = firstrev;
       mrange->inheritable = TRUE;
+
+      if (firstrev == 0)
+        return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+                                 _("Invalid revision number '0' found in "
+                                   "range list"));
 
       if (*curr == '-')
         {
