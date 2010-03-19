@@ -369,7 +369,7 @@ public interface ISVNClient
      * @throws SubversionException If an error occurs.
      * @since 1.5
      */
-    void resolve(String path, Depth depth, int conflictResult)
+    void resolve(String path, Depth depth, ConflictResult.Choice conflictResult)
         throws SubversionException;
 
     /**

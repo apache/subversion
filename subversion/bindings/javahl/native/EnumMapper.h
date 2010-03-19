@@ -44,6 +44,7 @@ class EnumMapper
   /* Converting to C enum's */
   static svn_depth_t toDepth(jobject jdepth);
   static svn_opt_revision_kind toRevisionKind(jobject jkind);
+  static svn_wc_conflict_choice_t toConflictChoice(jobject jchoice);
 
   /* Converting from C enum's */
   static jint mapCommitMessageStateFlags(apr_byte_t flags);

@@ -163,7 +163,8 @@ ConflictResolverCallback::javaResultToC(jobject jresult, apr_pool_t *pool)
 
   if (getChoice == 0)
     {
-      getChoice = env->GetMethodID(clazz, "getChoice", "()I");
+      getChoice = env->GetMethodID(clazz, "getChoice",
+                                   "()L"JAVA_PACKAGE"/ConflictResult$Choice;");
       if (JNIUtil::isJavaExceptionThrown() || getChoice == 0)
         return NULL;
     }
@@ -182,39 +183,24 @@ ConflictResolverCallback::javaResultToC(jobject jresult, apr_pool_t *pool)
         return NULL;
     }
 
-  jint jchoice = env->CallIntMethod(jresult, getChoice);
+  jobject jchoice = env->CallObjectMethod(jresult, getChoice);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jstring jmergedPath =
-    (jstring) env->CallObjectMethod(jresult, getMergedPath);
+  jstring jmergedPath = (jstring) env->CallObjectMethod(jresult, getMergedPath);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
+
   JNIStringHolder mergedPath(jmergedPath);
 
-  return svn_wc_create_conflict_result(javaChoiceToC(jchoice),
+  svn_wc_conflict_result_t *result =
+         svn_wc_create_conflict_result(EnumMapper::toConflictChoice(jchoice),
                                        mergedPath.pstrdup(pool),
                                        pool);
-}
 
-svn_wc_conflict_choice_t ConflictResolverCallback::javaChoiceToC(jint jchoice)
-{
-  switch (jchoice)
-    {
-    case org_apache_subversion_javahl_ConflictResult_postpone:
-    default:
-      return svn_wc_conflict_choose_postpone;
-    case org_apache_subversion_javahl_ConflictResult_chooseBase:
-      return svn_wc_conflict_choose_base;
-    case org_apache_subversion_javahl_ConflictResult_chooseTheirsFull:
-      return svn_wc_conflict_choose_theirs_full;
-    case org_apache_subversion_javahl_ConflictResult_chooseMineFull:
-      return svn_wc_conflict_choose_mine_full;
-    case org_apache_subversion_javahl_ConflictResult_chooseTheirsConflict:
-      return svn_wc_conflict_choose_theirs_conflict;
-    case org_apache_subversion_javahl_ConflictResult_chooseMineConflict:
-      return svn_wc_conflict_choose_mine_conflict;
-    case org_apache_subversion_javahl_ConflictResult_chooseMerged:
-      return svn_wc_conflict_choose_merged;
-    }
+  env->DeleteLocalRef(jchoice);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return result;
 }

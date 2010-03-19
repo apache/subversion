@@ -1058,7 +1058,9 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.resolve(path, Depth.toADepth(depth), conflictResult);
+            aSVNClient.resolve(path, Depth.toADepth(depth),
+               org.apache.subversion.javahl.ConflictResult.Choice.values()[
+                                                            conflictResult]);
         }
         catch (org.apache.subversion.javahl.SubversionException ex)
         {

@@ -266,7 +266,8 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void resolve(String path, Depth depth, int conflictResult)
+    public native void resolve(String path, Depth depth,
+                               ConflictResult.Choice conflictResult)
         throws SubversionException;
 
     /**
