@@ -157,7 +157,7 @@ public class NotifyInformation extends EventObject
              aInfo.getLock() == null ? null : new Lock(aInfo.getLock()),
              aInfo.getErrMsg(), fromAStatus(aInfo.getContentState()),
              fromAStatus(aInfo.getPropState()),
-             aInfo.getLockState(), aInfo.getRevision(),
+             aInfo.getLockState().ordinal(), aInfo.getRevision(),
              aInfo.getChangelistName(),
              aInfo.getMergeRange() == null ? null
                 : new RevisionRange(aInfo.getMergeRange()),

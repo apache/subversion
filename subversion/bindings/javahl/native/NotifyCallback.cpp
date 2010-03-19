@@ -150,7 +150,8 @@ NotifyCallback::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
                                "Ljava/lang/String;"
                                "L"JAVA_PACKAGE"/NotifyInformation$Status;"
                                "L"JAVA_PACKAGE"/NotifyInformation$Status;"
-                               "IJLjava/lang/String;"
+                               "L"JAVA_PACKAGE"/NotifyInformation$LockStatus;"
+                               "JLjava/lang/String;"
                                "L"JAVA_PACKAGE"/RevisionRange;"
                                "Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
@@ -190,7 +191,9 @@ NotifyCallback::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
-  jint jLockState = EnumMapper::mapNotifyLockState(wcNotify->lock_state);
+  jobject jLockState = EnumMapper::mapNotifyLockState(wcNotify->lock_state);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
 
   jstring jChangelistName = JNIUtil::makeJString(wcNotify->changelist_name);
   if (JNIUtil::isJavaExceptionThrown())
@@ -223,6 +226,10 @@ NotifyCallback::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
 
   // release all the temporary Java objects
   env->DeleteLocalRef(jPath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  env->DeleteLocalRef(jLockState);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
