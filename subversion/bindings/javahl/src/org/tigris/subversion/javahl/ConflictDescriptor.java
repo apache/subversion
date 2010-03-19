@@ -119,12 +119,12 @@ public class ConflictDescriptor
     public ConflictDescriptor(org.apache.subversion.javahl.ConflictDescriptor
                                                                 aDesc)
     {
-        this(aDesc.getPath(), aDesc.getKind(),
+        this(aDesc.getPath(), aDesc.getKind().ordinal(),
              NodeKind.fromApache(aDesc.getNodeKind()),
              aDesc.getPropertyName(), aDesc.isBinary(), aDesc.getMIMEType(),
-             aDesc.getAction(), aDesc.getReason(), aDesc.getOperation(),
-             aDesc.getBasePath(), aDesc.getTheirPath(), aDesc.getMyPath(),
-             aDesc.getMergedPath(),
+             aDesc.getAction().ordinal(), aDesc.getReason().ordinal(),
+             aDesc.getOperation(), aDesc.getBasePath(), aDesc.getTheirPath(),
+             aDesc.getMyPath(), aDesc.getMergedPath(),
              new ConflictVersion(aDesc.getSrcLeftVersion()),
              new ConflictVersion(aDesc.getSrcRightVersion()));
     }
