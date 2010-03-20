@@ -552,21 +552,43 @@ svn_opt_revision_kind EnumMapper::toRevisionKind(jobject jkind)
 
 jobject EnumMapper::mapSummarizeKind(svn_client_diff_summarize_kind_t sKind)
 {
-  switch (sKind)
-    {
-    default:
-    case svn_client_diff_summarize_kind_normal:
-      return mapEnum(JAVA_PACKAGE"/DiffSummary$DiffKind", "normal");
+  // We're assuming a value value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/DiffSummary$DiffKind", (int) sKind);
+}
 
-    case svn_client_diff_summarize_kind_added:
-      return mapEnum(JAVA_PACKAGE"/DiffSummary$DiffKind", "added");
+jobject EnumMapper::mapEnum(const char *clazzName, int index)
+{
+  // The fact that we can even do this depends upon a couple of assumptions,
+  // mainly some knowledge about the orderin of the various constants in
+  // both the C and Java enums.  Should those values ever change,
+  // the World Will End.
 
-    case svn_client_diff_summarize_kind_modified:
-      return mapEnum(JAVA_PACKAGE"/DiffSummary$DiffKind", "modified");
+  std::string methodSig("()[L");
+  methodSig.append(clazzName);
+  methodSig.append(";");
 
-    case svn_client_diff_summarize_kind_deleted:
-      return mapEnum(JAVA_PACKAGE"/DiffSummary$DiffKind", "deleted");
-    }
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jclass clazz = env->FindClass(clazzName);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jmethodID mid = env->GetStaticMethodID(clazz, "values", methodSig.c_str());
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jobjectArray jvalues = (jobjectArray) env->CallStaticObjectMethod(clazz, mid);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jobject jthing = env->GetObjectArrayElement(jvalues, index);
+
+  return env->PopLocalFrame(jthing);
 }
 
 jobject EnumMapper::mapEnum(const char *clazzName, const char *name)
