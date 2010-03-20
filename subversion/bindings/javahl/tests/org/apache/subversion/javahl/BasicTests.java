@@ -2357,7 +2357,8 @@ public class BasicTests extends SVNTests
      * are no revisions to return.
      * @since 1.5
      */
-    private long[] getMergeinfoRevisions(int kind, String pathOrUrl,
+    private long[] getMergeinfoRevisions(MergeinfoLogKind kind,
+                                         String pathOrUrl,
                                          Revision pegRevision,
                                          String mergeSourceUrl,
                                          Revision srcPegRevision)

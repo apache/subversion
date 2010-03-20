@@ -531,7 +531,7 @@ public interface ISVNClient
      * @param callback               the object to receive the log messages
      * @since 1.7
      */
-    void getMergeinfoLog(int kind, String pathOrUrl,
+    void getMergeinfoLog(MergeinfoLogKind kind, String pathOrUrl,
                          Revision pegRevision, String mergeSourceUrl,
                          Revision srcPegRevision, boolean discoverChangedPaths,
                          Depth depth, Set<String> revProps,
