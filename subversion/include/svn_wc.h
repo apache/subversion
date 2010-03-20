@@ -1049,7 +1049,7 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_update_update_deleted,
 
-  /* The mergeinfo on path was updated.  @since New in 1.7. */
+  /** The mergeinfo on path was updated.  @since New in 1.7. */
   svn_wc_notify_merge_record_info,
 
   /** An working copy directory was upgraded to the latest format
