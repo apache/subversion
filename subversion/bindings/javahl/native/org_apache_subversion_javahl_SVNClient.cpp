@@ -1141,7 +1141,7 @@ Java_org_apache_subversion_javahl_SVNClient_getMergeinfo
 }
 
 JNIEXPORT void JNICALL Java_org_apache_subversion_javahl_SVNClient_getMergeinfoLog
-(JNIEnv *env, jobject jthis, jint jkind, jstring jpathOrUrl,
+(JNIEnv *env, jobject jthis, jobject jkind, jstring jpathOrUrl,
  jobject jpegRevision, jstring jmergeSourceUrl, jobject jsrcPegRevision,
  jboolean jdiscoverChangedPaths, jobject jdepth, jobject jrevProps,
  jobject jlogMessageCallback)
@@ -1176,7 +1176,8 @@ JNIEXPORT void JNICALL Java_org_apache_subversion_javahl_SVNClient_getMergeinfoL
 
   LogMessageCallback callback(jlogMessageCallback);
 
-  cl->getMergeinfoLog((int)jkind, pathOrUrl, pegRevision, mergeSourceUrl,
+  cl->getMergeinfoLog(EnumMapper::toMergeinfoLogKind(jkind),
+                      pathOrUrl, pegRevision, mergeSourceUrl,
                       srcPegRevision, jdiscoverChangedPaths ? true : false,
                       EnumMapper::toDepth(jdepth), revProps, &callback);
 }

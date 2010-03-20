@@ -1392,15 +1392,15 @@ public class SVNClient implements SVNClientInterface
 
         try
         {
-            aSVNClient.getMergeinfoLog(kind, pathOrUrl,
-                        pegRevision == null ? null : pegRevision.toApache(),
-                        mergeSourceUrl,
-                        srcPegRevision == null ? null :
-                                                    srcPegRevision.toApache(),
-                        discoverChangedPaths, Depth.toADepth(depth),
-                        revprops == null ? null
-                          : new HashSet<String>(Arrays.asList(revprops)),
-                        new aLogMessageCallback());
+            aSVNClient.getMergeinfoLog(
+                org.apache.subversion.javahl.MergeinfoLogKind.values()[kind],
+                pathOrUrl, pegRevision == null ? null : pegRevision.toApache(),
+                mergeSourceUrl,
+                srcPegRevision == null ? null : srcPegRevision.toApache(),
+                discoverChangedPaths, Depth.toADepth(depth),
+                revprops == null ? null
+                   : new HashSet<String>(Arrays.asList(revprops)),
+                new aLogMessageCallback());
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {

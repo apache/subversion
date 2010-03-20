@@ -155,6 +155,11 @@ jobject EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
   return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason", (int) reason);
 }
 
+int EnumMapper::toMergeinfoLogKind(jobject jLogKind)
+{
+  return getOrdinal(JAVA_PACKAGE"/MergeinfoLogKind", jLogKind);
+}
+
 svn_depth_t EnumMapper::toDepth(jobject jdepth)
 {
   // The offset for depths is -2
