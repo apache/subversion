@@ -759,10 +759,15 @@ public class BasicTests extends SVNTests
                                  false);
         client.propertyCreate(itemPath, "cqcq", "qrz", Depth.empty, null,
                               false);
-        MyProplistCallback callback = new MyProplistCallback();
 
-        client.properties(itemPath, null, null, Depth.empty, null, callback);
-        Map<String, byte[]> propMap = callback.getProperties(itemPath);
+        final Map<String, Map<String, byte[]>> propMaps =
+                                    new HashMap<String, Map<String, byte[]>>();
+        client.properties(itemPath, null, null, Depth.empty, null,
+            new ProplistCallback () {
+                public void singlePath(String path, Map<String, byte[]> props)
+                { propMaps.put(path, props); }
+            });
+        Map<String, byte[]> propMap = propMaps.get(itemPath);
         for (String key : propMap.keySet())
         {
             assertEquals("cqcq", key);
@@ -2358,32 +2363,25 @@ public class BasicTests extends SVNTests
                                          Revision srcPegRevision)
         throws SubversionException
     {
-        class Callback implements LogMessageCallback {
+        final List<Long> revList = new ArrayList<Long>();
 
-            List<Long> revList = new ArrayList<Long>();
-
-            public void singleMessage(Set<ChangePath> changedPaths,
-                    long revision, Map<String, byte[]> revprops,
-                    boolean hasChildren) {
-                revList.add(new Long(revision));
-            }
-
-            public long[] getRevisions() {
-                long[] revisions = new long[revList.size()];
-                int i = 0;
-                for (Long revision : revList)
-                {
-                    revisions[i] = revision.longValue();
-                    i++;
-                }
-                return revisions;
-            }
-        }
-        Callback callback = new Callback();
         client.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
-                               srcPegRevision, false, Depth.empty, null,
-                               callback);
-        return callback.getRevisions();
+            srcPegRevision, false, Depth.empty, null,
+            new LogMessageCallback () {
+                public void singleMessage(Set<ChangePath> changedPaths,
+                    long revision, Map<String, byte[]> revprops,
+                    boolean hasChildren)
+                { revList.add(new Long(revision)); }
+            });
+
+        long[] revisions = new long[revList.size()];
+        int i = 0;
+        for (Long revision : revList)
+        {
+            revisions[i] = revision.longValue();
+            i++;
+        }
+        return revisions;
     }
 
     /**
@@ -3458,25 +3456,6 @@ public class BasicTests extends SVNTests
      */
     public void testCommitRevprops() throws Throwable
     {
-
-        class RevpropLogCallback implements LogMessageCallback
-        {
-            Map<String, byte[]> revprops;
-
-            public void singleMessage(Set<ChangePath> changedPaths,
-                                      long revision,
-                                      Map<String, byte[]> revprops,
-                                      boolean hasChildren)
-            {
-                this.revprops = revprops;
-            }
-
-            public Map<String, byte[]> getRevprops()
-            {
-                return revprops;
-            }
-        }
-
         // build the test setup
         OneTest thisTest = new OneTest();
 
@@ -3506,16 +3485,23 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         // Fetch our revprops from the server
-        RevpropLogCallback callback = new RevpropLogCallback();
+        final List<Map<String, byte[]>> revpropList =
+                            new ArrayList<Map<String, byte[]>>();
         Set<String> revProps = new HashSet<String>(2);
         revProps.add("kfogel");
         revProps.add("cmpilato");
         client.logMessages(thisTest.getWCPath(), Revision.getInstance(2),
-                           toRevisionRange(Revision.getInstance(2),
-                                           Revision.getInstance(2)),
-                           false, false, false, revProps, 0,
-                           callback);
-        Map<String, byte[]> fetchedProps = callback.getRevprops();
+                toRevisionRange(Revision.getInstance(2),
+                                Revision.getInstance(2)),
+                false, false, false, revProps, 0,
+                new LogMessageCallback () {
+                    public void singleMessage(Set<ChangePath> changedPaths,
+                                              long revision,
+                                              Map<String, byte[]> revprops,
+                                              boolean hasChildren)
+                  { revpropList.add(revprops); }
+                });
+        Map<String, byte[]> fetchedProps = revpropList.get(0);
 
         assertEquals("wrong number of fetched revprops", revprops.size(),
                      fetchedProps.size());
@@ -3612,22 +3598,6 @@ public class BasicTests extends SVNTests
 
         public Info2 getInfo() {
             return info;
-        }
-    }
-
-    private class MyProplistCallback implements ProplistCallback
-    {
-        Map<String, Map<String, byte[]>> propMap =
-                                    new HashMap<String, Map<String, byte[]>>();
-
-        public void singlePath(String path, Map<String, byte[]> props)
-        {
-            propMap.put(path, props);
-        }
-
-        public Map<String, byte[]> getProperties(String path)
-        {
-            return propMap.get(path);
         }
     }
 
