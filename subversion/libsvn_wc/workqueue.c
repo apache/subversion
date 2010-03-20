@@ -1917,13 +1917,119 @@ run_file_install(svn_wc__db_t *db,
   const char *local_abspath;
   svn_boolean_t use_commit_times;
   svn_boolean_t record_fileinfo;
+  svn_boolean_t special;
+  svn_stream_t *src_stream;
+  svn_subst_eol_style_t style;
+  const char *eol;
+  apr_hash_t *keywords;
+  const char *temp_dir_abspath;
+  svn_stream_t *dst_stream;
+  const char *dst_abspath;
 
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   use_commit_times = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
   record_fileinfo = svn_skel__parse_int(arg1->next->next, scratch_pool) != 0;
 
-  /* ### do something  */
-  NOT_IMPLEMENTED();
+  SVN_ERR(svn_wc__get_special(&special, db, local_abspath, scratch_pool));
+  if (special)
+    {
+      NOT_IMPLEMENTED();
+    }
+
+  /* Get the pristine contents (from WORKING or BASE, as appropriate).  */
+  SVN_ERR(svn_wc__get_pristine_contents(&src_stream, db, local_abspath,
+                                        scratch_pool, scratch_pool));
+
+  /* Fetch all the translation bits.  */
+  SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, local_abspath,
+                                scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__get_keywords(&keywords, db, local_abspath, NULL,
+                               scratch_pool, scratch_pool));
+
+  if (svn_subst_translation_required(style, eol, keywords,
+                                     FALSE /* special */,
+                                     TRUE /* force_eol_check */))
+    {
+      /* Wrap it in a translating (expanding) stream.  */
+      src_stream = svn_subst_stream_translated(src_stream, eol,
+                                               TRUE /* repair */,
+                                               keywords,
+                                               TRUE /* expand */,
+                                               scratch_pool);
+    }
+
+  /* Where is the Right Place to put a temp file in this working copy?  */
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath,
+                                         db, local_abspath,
+                                         scratch_pool, scratch_pool));
+
+  /* Translate to a temporary file. We don't want the user seeing a partial
+     file, nor let them muck with it while we translate. We may also need to
+     get its TRANSLATED_SIZE before the user can monkey it.  */
+  SVN_ERR(svn_stream_open_unique(&dst_stream, &dst_abspath,
+                                 temp_dir_abspath,
+                                 svn_io_file_del_none,
+                                 scratch_pool, scratch_pool));
+
+  /* Copy from the source to the dest, translating as we go. This will also
+     close both streams.  */
+  SVN_ERR(svn_stream_copy3(src_stream, dst_stream,
+                           cancel_func, cancel_baton,
+                           scratch_pool));
+
+  /* ### post-commit feature: avoid overwrite if same as working file.  */
+
+  /* All done. Move the file into place.  */
+  /* ### fix this. we should delay the rename.  */
+  SVN_ERR(svn_io_file_rename(dst_abspath, local_abspath, scratch_pool));
+
+  /* Tweak the on-disk file according to its properties.  */
+  SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__maybe_set_executable(NULL, db, local_abspath, scratch_pool));
+
+  if (use_commit_times)
+    {
+      apr_time_t changed_date;
+
+      SVN_ERR(svn_wc__db_read_info(
+                NULL, NULL, NULL, NULL, NULL, NULL,
+                NULL, &changed_date, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                NULL, NULL,
+                db, local_abspath,
+                scratch_pool, scratch_pool));
+
+      if (changed_date)
+        SVN_ERR(svn_io_set_file_affected_time(changed_date,
+                                              local_abspath,
+                                              scratch_pool));
+    }
+
+  if (record_fileinfo)
+    {
+      /* ### ugh. switch this over to some new wc_db APIs.  */
+
+      svn_wc_entry_t tmp_entry;
+      apr_finfo_t finfo;
+
+      /* loggy_set_entry_timestamp_from_wc()  */
+      SVN_ERR(svn_io_file_affected_time(&tmp_entry.text_time,
+                                        local_abspath,
+                                        scratch_pool));
+
+      /* loggy_set_entry_working_size_from_wc()  */
+      SVN_ERR(svn_io_stat(&finfo, local_abspath,
+                          APR_FINFO_MIN | APR_FINFO_LINK,
+                          scratch_pool));
+      tmp_entry.working_size = finfo.size;
+
+      SVN_ERR(svn_wc__entry_modify2(db, local_abspath,
+                                    svn_node_unknown, FALSE,
+                                    &tmp_entry,
+                                    SVN_WC__ENTRY_MODIFY_TEXT_TIME
+                                      | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
+                                    scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
