@@ -157,27 +157,8 @@ jobject EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
 
 svn_depth_t EnumMapper::toDepth(jobject jdepth)
 {
-  JNIEnv *env = JNIUtil::getEnv();
-
-  jstring jname = getName(JAVA_PACKAGE"/Depth", jdepth);
-  if (JNIUtil::isJavaExceptionThrown())
-    return (svn_depth_t)0;
-
-  JNIStringHolder str(jname);
-  std::string name((const char *)str);
-
-  if (name == "infinity")
-    return svn_depth_infinity;
-  else if (name == "immediates")
-    return svn_depth_immediates;
-  else if (name == "files")
-    return svn_depth_files;
-  else if (name == "empty")
-    return svn_depth_empty;
-  else if (name == "exclude")
-    return svn_depth_exclude;
-  else
-    return svn_depth_unknown;
+  // The offset for depths is -2
+  return (svn_depth_t) (getOrdinal(JAVA_PACKAGE"/Depth", jdepth) - 2);
 }
 
 jobject EnumMapper::mapDepth(svn_depth_t depth)
@@ -211,58 +192,14 @@ jobject EnumMapper::mapTristate(svn_tristate_t tristate)
 
 svn_wc_conflict_choice_t EnumMapper::toConflictChoice(jobject jchoice)
 {
-  JNIEnv *env = JNIUtil::getEnv();
-
-  jstring jname = getName(JAVA_PACKAGE"/ConflictResult$Choice", jchoice);
-  if (JNIUtil::isJavaExceptionThrown())
-    return svn_wc_conflict_choose_postpone;
-
-  JNIStringHolder str(jname);
-  std::string name((const char *)str);
-
-  if (name == "chooseBase")
-    return svn_wc_conflict_choose_base;
-  else if (name == "chooseTheirsFull")
-    return svn_wc_conflict_choose_theirs_full;
-  else if (name == "chooseMineFull")
-    return svn_wc_conflict_choose_mine_full;
-  else if (name == "chooseTheirsConflict")
-    return svn_wc_conflict_choose_theirs_conflict;
-  else if (name == "chooseMineConflict")
-    return svn_wc_conflict_choose_mine_conflict;
-  else if (name == "chooseMerged")
-    return svn_wc_conflict_choose_merged;
-  else
-    return svn_wc_conflict_choose_postpone;
+  return (svn_wc_conflict_choice_t) getOrdinal(
+                        JAVA_PACKAGE"/ConflictResult$Choice", jchoice);
 }
 
 svn_opt_revision_kind EnumMapper::toRevisionKind(jobject jkind)
 {
-  JNIEnv *env = JNIUtil::getEnv();
-
-  jstring jname = getName(JAVA_PACKAGE"/Revision$Kind", jkind);
-  if (JNIUtil::isJavaExceptionThrown())
-    return svn_opt_revision_unspecified;
-
-  JNIStringHolder str(jname);
-  std::string name((const char *)str);
-
-  if (name == "number")
-    return svn_opt_revision_number;
-  else if (name == "date")
-    return svn_opt_revision_date;
-  else if (name == "committed")
-    return svn_opt_revision_committed;
-  else if (name == "previous")
-    return svn_opt_revision_previous;
-  else if (name == "base")
-    return svn_opt_revision_base;
-  else if (name == "working")
-    return svn_opt_revision_working;
-  else if (name == "head")
-    return svn_opt_revision_head;
-  else
-    return svn_opt_revision_unspecified;
+  return (svn_opt_revision_kind) getOrdinal(JAVA_PACKAGE"/Revision$Kind",
+                                            jkind);
 }
 
 jobject EnumMapper::mapSummarizeKind(svn_client_diff_summarize_kind_t sKind)
@@ -308,26 +245,26 @@ jobject EnumMapper::mapEnum(const char *clazzName, int index)
   return env->PopLocalFrame(jthing);
 }
 
-jstring EnumMapper::getName(const char *clazzName, jobject jenum)
+int EnumMapper::getOrdinal(const char *clazzName, jobject jenum)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
   // Create a local frame for our references
   env->PushLocalFrame(LOCAL_FRAME_SIZE);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    return -1;
 
   jclass clazz = env->FindClass(clazzName);
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
+    POP_AND_RETURN(-1);
 
-  jmethodID mid = env->GetMethodID(clazz, "name", "()Ljava/lang/String;");
+  jmethodID mid = env->GetMethodID(clazz, "ordinal", "()I");
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
+    POP_AND_RETURN(-1);
 
-  jstring jname = (jstring) env->CallObjectMethod(jenum, mid);
+  jint jorder = env->CallIntMethod(jenum, mid);
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
+    POP_AND_RETURN(-1);
 
-  return (jstring) env->PopLocalFrame(jname);
+  return (int) jorder;
 }
