@@ -68,6 +68,7 @@ msg_separator = '------------------------------------' \
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 
@@ -1751,8 +1752,9 @@ test_list = [ None,
               only_one_wc_path,
               retrieve_revprops,
               log_xml_with_bad_data,
-              SkipUnless(merge_sensitive_log_target_with_bogus_mergeinfo,
-                         server_has_mergeinfo),
+              Wimp("Test is broken since r925290",
+                   SkipUnless(merge_sensitive_log_target_with_bogus_mergeinfo,
+                              server_has_mergeinfo)),
               SkipUnless(merge_sensitive_log_added_mergeinfo_replaces_inherited,
                          server_has_mergeinfo),
               SkipUnless(merge_sensitive_log_propmod_merge_inheriting_path,
