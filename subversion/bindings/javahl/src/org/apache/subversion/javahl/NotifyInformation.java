@@ -327,113 +327,102 @@ public class NotifyInformation extends EventObject
         /** Processed a single revision's blame. */
         blame_revision  ("blame revision processed"),
 
-        /**
-         * @since 1.2
-         * Locking a path
-         */
+        /** Locking a path */
         locked          ("locked"),
 
-        /**
-         * @since 1.2
-         * Unlocking a path
-         */
+        /** Unlocking a path */
         unlocked        ("unlocked"),
 
-        /**
-         * @since 1.2
-         * Failed to lock a path
-         */
+        /** Failed to lock a path */
         failed_lock     ("locking failed"),
 
-        /**
-         * @since 1.2
-         * Failed to unlock a path
-         */
+        /** Failed to unlock a path */
         failed_unlock   ("unlocking failed"),
 
-        /**
-         * @since 1.5
-         * Tried adding a path that already exists.
-         */
+        /** Tried adding a path that already exists.  */
         exists          ("path exists"),
 
-        /**
-         * @since 1.5
-         * Set the changelist for a path.
-         */
+        /** Set the changelist for a path.  */
         changelist_set  ("changelist set"),
 
-        /**
-         * @since 1.5
-         * Clear the changelist for a path.
-         */
+        /** Clear the changelist for a path.  */
         changelist_clear ("changelist cleared"),
 
-        /**
-         * @since 1.5
-         * A merge operation has begun.
-         */
+        /** A path has moved to another changelist.  */
+        changelist_moved    ("changelist moved"),
+
+        /** A merge operation has begun.  */
         merge_begin     ("merge begin"),
 
-        /**
-         * @since 1.5
-         * A merge operation from a foreign repository has begun.
-         */
+        /** A merge operation from a foreign repository has begun.  */
         foreign_merge_begin ("foreign merge begin"),
 
-        /**
-         * @since 1.5
-         * Got a replaced in an update.
-         */
+        /** Got a replaced in an update.  */
         update_replaced ("replaced"),
 
-        /**
-         * @since 1.6
-         * Property added.
-         */
+        /** Property added.  */
         property_added  ("property added"),
 
-        /**
-         * @since 1.6
-         * Property modified.
-         */
+        /** Property modified.  */
         property_modified ("property modified"),
 
-        /**
-         * @since 1.6
-         * Property deleted.
-         */
+        /** Property deleted.  */
         property_deleted ("property deleted"),
 
-        /**
-         * @since 1.6
-         * Property delete nonexistent.
-         */
+        /** Property delete nonexistent.  */
         property_deleted_nonexistent ("nonexistent property deleted"),
 
-        /**
-         * @since 1.6
-         * Revision property set.
-         */
+        /** Revision property set.  */
         revprop_set     ("revprop set"),
 
-        /**
-         * @since 1.6
-         * Revision property deleted.
-         */
+        /** Revision property deleted.  */
         revprop_deleted ("revprop deleted"),
 
-        /**
-         * @since 1.6
-         * The last notification in a merge
-         */
+        /** The last notification in a merge.  */
         merge_completed ("merge completed"),
 
-        /**
-         * @since 1.6
-         * The path is a tree-conflict victim of the intended action
-         */
-        tree_conflict   ("tree conflict");
+        /** The path is a tree-conflict victim of the intended action */
+        tree_conflict   ("tree conflict"),
+
+        /** The path is a subdirectory referenced in an externals definition
+          * which is unable to be operated on.  */
+        failed_external ("failed external"),
+
+        /** An update tried to add a file or directory at path but an
+          * unversioned obstruction was found.  */
+        update_obstruction  ("update obstruction"),
+
+        /** An update operation removed an external working copy.  */
+        update_external_removed ("update external removed"),
+
+        /** A node below a deleted and tree conflicted directory was added
+          *  during update.  */
+        update_add_deleted  ("update add deleted"),
+
+        /** A node below a deleted and tree conflicted directory was updated.
+          */
+        update_update_deleted   ("update modified deleted"),
+
+        /** The mergeinfo on path was updated.  */
+        merge_record_info   ("merge record info"),
+
+        /** An working copy directory was upgraded to the latest format.  */
+        upgraded_path       ("upgraded path"),
+
+        /** Mergeinfo describing a merge was recorded.  */
+        merge_record_info_begin     ("merge record info begin"),
+
+        /** Mergeinfo was removed due to elision.  */
+        merge_elide_info    ("Merge elide info"),
+
+        /** A file in the working copy was patched.  */
+        patch       ("patch"),
+
+        /** A hunk from a patch was applied.  */
+        patch_applied_hunk  ("patch applied hunk"),
+
+        /** A hunk from a patch was rejected.  */
+        patch_rejected_hunk ("patch rejected hunk");
 
         /**
          * The description of the action.

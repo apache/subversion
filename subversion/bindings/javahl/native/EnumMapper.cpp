@@ -63,39 +63,11 @@ jint EnumMapper::mapCommitMessageStateFlags(apr_byte_t flags)
 
 /**
  * Map a C notify state constant to the Java constant.
- * @param state     the C notify state constant
- * @returns the Java constant
  */
 jobject EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
 {
-  switch(state)
-    {
-    default:
-    case svn_wc_notify_state_inapplicable:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "inapplicable");
-
-    case svn_wc_notify_state_unknown:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "unknown");
-
-    case svn_wc_notify_state_unchanged:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "unchanged");
-
-    case svn_wc_notify_state_missing:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "missing");
-
-    case svn_wc_notify_state_obstructed:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "obstructed");
-
-    case svn_wc_notify_state_changed:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "changed");
-
-    case svn_wc_notify_state_merged:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "merged");
-
-    case svn_wc_notify_state_conflicted:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", "conflicted");
-    }
-
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/NotifyInformation$Status", (int) state);
 }
 
 /**
@@ -103,152 +75,17 @@ jobject EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
  */
 jobject EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
 {
-  switch(action)
-    {
-    case svn_wc_notify_add:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "add");
-
-    case svn_wc_notify_copy:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "copy");
-
-    case svn_wc_notify_delete:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "delete");
-
-    case svn_wc_notify_restore:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "restore");
-
-    case svn_wc_notify_revert:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "revert");
-
-    case svn_wc_notify_failed_revert:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "failed_revert");
-
-    case svn_wc_notify_resolved:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "resolved");
-
-    case svn_wc_notify_skip:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "skip");
-
-    case svn_wc_notify_status_completed:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "status_completed");
-
-    case svn_wc_notify_status_external:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "status_external");
-
-    case svn_wc_notify_update_delete:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "update_delete");
-
-    case svn_wc_notify_update_add:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "update_add");
-
-    case svn_wc_notify_update_replace:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "update_replace");
-
-    case svn_wc_notify_update_update:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "update_update");
-
-    case svn_wc_notify_update_completed:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "update_completed");
-
-    case svn_wc_notify_update_external:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "update_external");
-
-    case svn_wc_notify_commit_modified:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "commit_modified");
-
-    case svn_wc_notify_commit_added:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "commit_added");
-
-    case svn_wc_notify_commit_deleted:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "commit_deleted");
-
-    case svn_wc_notify_commit_replaced:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "commit_replaced");
-
-    case svn_wc_notify_commit_postfix_txdelta:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "commit_postfix_txdelta");
-
-    case svn_wc_notify_blame_revision:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "blame_revision");
-
-    case svn_wc_notify_locked:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "locked");
-
-    case svn_wc_notify_unlocked:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "unlocked");
-
-    case svn_wc_notify_failed_lock:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "failed_lock");
-
-    case svn_wc_notify_failed_unlock:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "failed_unlock");
-
-    case svn_wc_notify_exists:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "exists");
-
-    case svn_wc_notify_changelist_set:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "changelist_set");
-
-    case svn_wc_notify_changelist_clear:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "changelist_clear");
-
-    case svn_wc_notify_merge_begin:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "merge_begin");
-
-    case svn_wc_notify_foreign_merge_begin:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "foreign_merge_begin");
-
-    case svn_wc_notify_property_added:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "property_added");
-
-    case svn_wc_notify_property_modified:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "property_modified");
-
-    case svn_wc_notify_property_deleted:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "property_deleted");
-
-    case svn_wc_notify_property_deleted_nonexistent:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "property_deleted_nonexistent");
-
-    case svn_wc_notify_revprop_set:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "revprop_set");
-
-    case svn_wc_notify_revprop_deleted:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "revprop_deleted");
-
-    case svn_wc_notify_merge_completed:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "merge_completed");
-
-    case svn_wc_notify_tree_conflict:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", "tree_conflict");
-
-    default:
-      return NULL;
-    }
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/NotifyInformation$Action", (int) action);
 }
 
 /**
  * Map a C node kind constant to the Java constant.
- * @param state     the C node kind constant
- * @returns the Java constant
  */
 jobject EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
 {
-  switch(nodeKind)
-    {
-    case svn_node_none:
-      return mapEnum(JAVA_PACKAGE"/NodeKind", "none");
-
-    case svn_node_file:
-      return mapEnum(JAVA_PACKAGE"/NodeKind", "file");
-
-    case svn_node_dir:
-      return mapEnum(JAVA_PACKAGE"/NodeKind", "dir");
-
-    default:
-    case svn_node_unknown:
-      return mapEnum(JAVA_PACKAGE"/NodeKind", "unknown");
-    }
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/NodeKind", (int) nodeKind);
 }
 
 /**
@@ -256,24 +93,8 @@ jobject EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
  */
 jobject EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
 {
-  switch(state)
-    {
-    default:
-    case svn_wc_notify_lock_state_inapplicable:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$LockStatus", "inapplicable");
-
-    case svn_wc_notify_lock_state_unknown:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$LockStatus", "unknown");
-
-    case svn_wc_notify_lock_state_unchanged:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$LockStatus", "unchanged");
-
-    case svn_wc_notify_lock_state_locked:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$LockStatus", "locked");
-
-    case svn_wc_notify_lock_state_unlocked:
-      return mapEnum(JAVA_PACKAGE"/NotifyInformation$LockStatus", "unlocked");
-    }
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/NotifyInformation$LockStatus", (int) state);
 }
 
 /**
@@ -308,110 +129,30 @@ jint EnumMapper::mapScheduleKind(svn_wc_schedule_t schedule)
 
 /**
  * Map a C wc state constant to the Java constant.
- * @param state     the C wc state constant
- * @returns the Java constant
  */
 jobject EnumMapper::mapStatusKind(svn_wc_status_kind svnKind)
 {
-  switch(svnKind)
-    {
-    case svn_wc_status_none:
-    default:
-      return mapEnum(JAVA_PACKAGE"/Status$Kind", "none");
-
-    case svn_wc_status_unversioned:
-      return mapEnum(JAVA_PACKAGE"/Status$Kind", "unversioned");
-
-    case svn_wc_status_normal:
-      return mapEnum(JAVA_PACKAGE"/Status$Kind", "normal");
-
-    case svn_wc_status_added:
-      return mapEnum(JAVA_PACKAGE"/Status$Kind", "added");
-
-    case svn_wc_status_missing:
-      return mapEnum(JAVA_PACKAGE"/Status$Kind", "missing");
-
-    case svn_wc_status_deleted:
-      return mapEnum(JAVA_PACKAGE"/Status$Kind", "deleted");
-
-    case svn_wc_status_replaced:
-      return mapEnum(JAVA_PACKAGE"/Status$Kind", "replaced");
-
-    case svn_wc_status_modified:
-      return mapEnum(JAVA_PACKAGE"/Status$Kind", "modified");
-
-    case svn_wc_status_merged:
-      return mapEnum(JAVA_PACKAGE"/Status$Kind", "merged");
-
-    case svn_wc_status_conflicted:
-      return mapEnum(JAVA_PACKAGE"/Status$Kind", "conflicted");
-
-    case svn_wc_status_ignored:
-      return mapEnum(JAVA_PACKAGE"/Status$Kind", "ignored");
-
-    case svn_wc_status_obstructed:
-      return mapEnum(JAVA_PACKAGE"/Status$Kind", "obstructed");
-
-    case svn_wc_status_external:
-      return mapEnum(JAVA_PACKAGE"/Status$Kind", "external");
-
-    case svn_wc_status_incomplete:
-      return mapEnum(JAVA_PACKAGE"/Status$Kind", "incomplete");
-    }
+  // We're assuming a valid value for the C enum above
+  // The offset here is +1
+  return mapEnum(JAVA_PACKAGE"/Status$Kind", ((int) svnKind) - 1);
 }
 
 jobject EnumMapper::mapConflictKind(svn_wc_conflict_kind_t kind)
 {
-  switch (kind)
-    {
-    case svn_wc_conflict_kind_text:
-    default:
-      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Kind", "text");
-
-    case svn_wc_conflict_kind_property:
-      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Kind", "property");
-    }
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Kind", (int) kind);
 }
 
 jobject EnumMapper::mapConflictAction(svn_wc_conflict_action_t action)
 {
-  switch (action)
-    {
-    case svn_wc_conflict_action_edit:
-    default:
-      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Action", "edit");
-
-    case svn_wc_conflict_action_add:
-      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Action", "add");
-
-    case svn_wc_conflict_action_delete:
-      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Action", "delete");
-    }
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Action", (int) action);
 }
 
 jobject EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
 {
-  switch (reason)
-    {
-    case svn_wc_conflict_reason_edited:
-    default:
-      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason", "edited");
-
-    case svn_wc_conflict_reason_obstructed:
-      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason", "obstructed");
-
-    case svn_wc_conflict_reason_deleted:
-      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason", "deleted");
-
-    case svn_wc_conflict_reason_missing:
-      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason", "missing");
-
-    case svn_wc_conflict_reason_unversioned:
-      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason", "unversioned");
-
-    case svn_wc_conflict_reason_added:
-      return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason", "added");
-    }
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason", (int) reason);
 }
 
 svn_depth_t EnumMapper::toDepth(jobject jdepth)
@@ -441,27 +182,9 @@ svn_depth_t EnumMapper::toDepth(jobject jdepth)
 
 jobject EnumMapper::mapDepth(svn_depth_t depth)
 {
-  switch (depth)
-    {
-    case svn_depth_unknown:
-    default:
-      return mapEnum(JAVA_PACKAGE"/Depth", "unknown");
-
-    case svn_depth_exclude:
-      return mapEnum(JAVA_PACKAGE"/Depth", "exclude");
-
-    case svn_depth_empty:
-      return mapEnum(JAVA_PACKAGE"/Depth", "empty");
-
-    case svn_depth_files:
-      return mapEnum(JAVA_PACKAGE"/Depth", "files");
-
-    case svn_depth_immediates:
-      return mapEnum(JAVA_PACKAGE"/Depth", "immediates");
-
-    case svn_depth_infinity:
-      return mapEnum(JAVA_PACKAGE"/Depth", "infinity");
-    }
+  // We're assuming a valid value for the C enum above
+  // The offset for depths is -2
+  return mapEnum(JAVA_PACKAGE"/Depth", ((int) depth) + 2);
 }
 
 jint EnumMapper::mapOperation(svn_wc_operation_t operation)
@@ -482,16 +205,8 @@ jint EnumMapper::mapOperation(svn_wc_operation_t operation)
 
 jobject EnumMapper::mapTristate(svn_tristate_t tristate)
 {
-  switch (tristate)
-    {
-    case svn_tristate_unknown:
-    default:
-      return mapEnum(JAVA_PACKAGE"/Tristate", "Unknown");
-    case svn_tristate_true:
-      return mapEnum(JAVA_PACKAGE"/Tristate", "True");
-    case svn_tristate_false:
-      return mapEnum(JAVA_PACKAGE"/Tristate", "False");
-    }
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/Tristate", (int) tristate);
 }
 
 svn_wc_conflict_choice_t EnumMapper::toConflictChoice(jobject jchoice)
@@ -552,7 +267,7 @@ svn_opt_revision_kind EnumMapper::toRevisionKind(jobject jkind)
 
 jobject EnumMapper::mapSummarizeKind(svn_client_diff_summarize_kind_t sKind)
 {
-  // We're assuming a value value for the C enum above
+  // We're assuming a valid value for the C enum above
   return mapEnum(JAVA_PACKAGE"/DiffSummary$DiffKind", (int) sKind);
 }
 
@@ -587,40 +302,10 @@ jobject EnumMapper::mapEnum(const char *clazzName, int index)
     POP_AND_RETURN_NULL;
 
   jobject jthing = env->GetObjectArrayElement(jvalues, index);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
 
   return env->PopLocalFrame(jthing);
-}
-
-jobject EnumMapper::mapEnum(const char *clazzName, const char *name)
-{
-  std::string methodSig("(Ljava/lang/String;)L");
-  methodSig.append(clazzName);
-  methodSig.append(";");
-
-  JNIEnv *env = JNIUtil::getEnv();
-
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  jclass clazz = env->FindClass(clazzName);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jmethodID mid = env->GetStaticMethodID(clazz, "valueOf", methodSig.c_str());
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jstring jname = JNIUtil::makeJString(name);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jobject jdepth = env->CallStaticObjectMethod(clazz, mid, jname);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  return env->PopLocalFrame(jdepth);
 }
 
 jstring EnumMapper::getName(const char *clazzName, jobject jenum)

@@ -802,26 +802,26 @@ public class Status implements java.io.Serializable
         /** does not exist */
         none        ("non-svn"),
 
+        /** is not a versioned thing in this wc */
+        unversioned ("unversioned"),
+
         /** exists, but uninteresting */
         normal      ("normal"),
-
-        /** text or props have been modified */
-        modified    ("modified"),
 
         /** is scheduled for additon */
         added       ("added"),
 
-        /** scheduled for deletion */
-        deleted     ("deleted"),
-
-        /** is not a versioned thing in this wc */
-        unversioned ("unversioned"),
-
         /** under v.c., but is missing */
         missing     ("missing"),
 
+        /** scheduled for deletion */
+        deleted     ("deleted"),
+
         /** was deleted and then re-added */
         replaced    ("replaced"),
+
+        /** text or props have been modified */
+        modified    ("modified"),
 
         /** local mods received repos mods */
         merged      ("merged"),
@@ -829,17 +829,17 @@ public class Status implements java.io.Serializable
         /** local mods received conflicting repos mods */
         conflicted  ("conflicted"),
 
-        /** an unversioned resource is in the way of the versioned resource */
-        obstructed  ("obstructed"),
-
         /** a resource marked as ignored */
         ignored     ("ignored"),
 
-        /** a directory doesn't contain a complete entries list */
-        incomplete  ("incomplete"),
+        /** an unversioned resource is in the way of the versioned resource */
+        obstructed  ("obstructed"),
 
         /** an unversioned path populated by an svn:externals property */
-        external    ("external");
+        external    ("external"),
+
+        /** a directory doesn't contain a complete entries list */
+        incomplete  ("incomplete");
 
         /**
          * The description of the action.
