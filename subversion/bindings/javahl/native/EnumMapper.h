@@ -62,7 +62,6 @@ class EnumMapper
   static jobject mapTristate(svn_tristate_t);
   static jobject mapSummarizeKind(svn_client_diff_summarize_kind_t);
  private:
-  static jobject mapEnum(const char *clazzName, const char *name);
   static jobject mapEnum(const char *clazzName, int offset);
   static jstring getName(const char *clazzName, jobject jenum);
 };

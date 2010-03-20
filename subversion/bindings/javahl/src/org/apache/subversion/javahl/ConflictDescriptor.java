@@ -176,15 +176,14 @@ public class ConflictDescriptor
      */
     public enum Kind
     {
-        /**
-         * Attempting to change text or props.
-         */
+        /** Attempting to change text or props.  */
         text,
 
-        /**
-         * Attempting to add object.
-         */
-        property;
+        /** Attempting to add object.  */
+        property,
+
+        /** Tree conflict.  */
+        tree;
     }
 
     /**

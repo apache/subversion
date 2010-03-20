@@ -152,7 +152,7 @@ public class NotifyInformation extends EventObject
                         org.apache.subversion.javahl.NotifyInformation aInfo)
     {
         this(aInfo.getPath(),
-             aInfo.getAction() == null ? -1 : aInfo.getAction().ordinal(),
+             fromAAction(aInfo.getAction()),
              NodeKind.fromApache(aInfo.getKind()), aInfo.getMimeType(),
              aInfo.getLock() == null ? null : new Lock(aInfo.getLock()),
              aInfo.getErrMsg(), fromAStatus(aInfo.getContentState()),
@@ -294,5 +294,21 @@ public class NotifyInformation extends EventObject
         case conflicted:
             return NotifyStatus.conflicted;
         }
+    }
+
+    private static int
+    fromAAction(org.apache.subversion.javahl.NotifyInformation.Action aAction)
+    {
+        if (aAction == null)
+            return -1;
+
+        int order = aAction.ordinal();
+
+        /* The new class adds an item after changelist_clear, so adjust
+           accordingly. */
+        if (order < NotifyAction.changelist_clear)
+            return order;
+        else
+            return order - 1;
     }
 }

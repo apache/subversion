@@ -327,14 +327,10 @@ public class Status implements java.io.Serializable
              aStatus.getRevisionNumber(),
              aStatus.getLastChangedRevisionNumber(),
              aStatus.getLastChangedDateMicros(), aStatus.getLastCommitAuthor(),
-             aStatus.getTextStatus() == null ? StatusKind.none
-                : aStatus.getTextStatus().ordinal(),
-             aStatus.getPropStatus() == null ? StatusKind.none
-                : aStatus.getPropStatus().ordinal(),
-             aStatus.getRepositoryTextStatus() == null ? StatusKind.none
-                : aStatus.getRepositoryTextStatus().ordinal(),
-             aStatus.getRepositoryPropStatus() == null ? StatusKind.none
-                : aStatus.getRepositoryPropStatus().ordinal(),
+             fromAStatusKind(aStatus.getTextStatus()),
+             fromAStatusKind(aStatus.getPropStatus()),
+             fromAStatusKind(aStatus.getRepositoryTextStatus()),
+             fromAStatusKind(aStatus.getRepositoryPropStatus()),
              aStatus.isLocked(), aStatus.isCopied(), aStatus.hasTreeConflict(),
              aStatus.getConflictDescriptor() == null ? null
                 : new ConflictDescriptor(aStatus.getConflictDescriptor()),
@@ -872,5 +868,45 @@ public class Status implements java.io.Serializable
     private static Date microsecondsToDate(long micros)
     {
         return (micros == 0 ? null : new Date(micros / 1000));
+    }
+
+    private static int fromAStatusKind(
+                            org.apache.subversion.javahl.Status.Kind aKind)
+    {
+        if (aKind == null)
+            return StatusKind.none;
+
+        switch (aKind)
+        {
+            default:
+            case none:
+                return StatusKind.none;
+            case normal:
+                return StatusKind.normal;
+            case modified:
+                return StatusKind.modified;
+            case added:
+                return StatusKind.added;
+            case deleted:
+                return StatusKind.deleted;
+            case unversioned:
+                return StatusKind.unversioned;
+            case missing:
+                return StatusKind.missing;
+            case replaced:
+                return StatusKind.replaced;
+            case merged:
+                return StatusKind.merged;
+            case conflicted:
+                return StatusKind.conflicted;
+            case obstructed:
+                return StatusKind.obstructed;
+            case ignored:
+                return StatusKind.ignored;
+            case incomplete:
+                return StatusKind.incomplete;
+            case external:
+                return StatusKind.external;
+        }
     }
 }
