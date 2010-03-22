@@ -26,7 +26,6 @@
 
 #include "svn_error.h"
 
-#include "../include/org_apache_subversion_javahl_ConflictResult.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include "EnumMapper.h"

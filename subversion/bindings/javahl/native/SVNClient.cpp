@@ -61,8 +61,6 @@
 #include "svn_dirent_uri.h"
 #include "svn_utf.h"
 #include "svn_private_config.h"
-#include "../include/org_apache_subversion_javahl_Revision.h"
-#include "../include/org_apache_subversion_javahl_NodeKind.h"
 #include "JNIStringHolder.h"
 #include <vector>
 #include <iostream>
