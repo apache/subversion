@@ -33,7 +33,6 @@
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
 #include "../include/org_apache_subversion_javahl_Operation.h"
 #include "../include/org_apache_subversion_javahl_Revision.h"
-#include "../include/org_apache_subversion_javahl_ScheduleKind.h"
 
 /**
  * Map a C commit state flag constant to the Java constant.
@@ -99,32 +98,11 @@ jobject EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
 
 /**
  * Map a C wc schedule constant to the Java constant.
- * @param state     the C wc schedule constant
- * @returns the Java constant
  */
-jint EnumMapper::mapScheduleKind(svn_wc_schedule_t schedule)
+jobject EnumMapper::mapScheduleKind(svn_wc_schedule_t schedule)
 {
-  switch(schedule)
-    {
-      /** Nothing special here */
-    case svn_wc_schedule_normal:
-      return org_apache_subversion_javahl_ScheduleKind_normal;
-
-      /** Slated for addition */
-    case svn_wc_schedule_add:
-      return org_apache_subversion_javahl_ScheduleKind_add;
-
-      /** Slated for deletion */
-    case svn_wc_schedule_delete:
-      return org_apache_subversion_javahl_ScheduleKind_delete;
-
-      /** Slated for replacement (delete + add) */
-    case svn_wc_schedule_replace:
-      return org_apache_subversion_javahl_ScheduleKind_replace;
-
-    default:
-      return org_apache_subversion_javahl_ScheduleKind_normal;
-    }
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/Info2$ScheduleKind", (int) schedule);
 }
 
 /**

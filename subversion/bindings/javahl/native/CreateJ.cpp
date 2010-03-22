@@ -191,7 +191,8 @@ CreateJ::Info(const svn_wc_entry_t *entry)
     {
         mid = env->GetMethodID(clazz, "<init>",
                                "(Ljava/lang/String;Ljava/lang/String;"
-                               "Ljava/lang/String;Ljava/lang/String;I"
+                               "Ljava/lang/String;Ljava/lang/String;"
+                               "L"JAVA_PACKAGE"/Info2$ScheduleKind;"
                                "L"JAVA_PACKAGE"/NodeKind;"
                                "Ljava/lang/String;JJLjava/util/Date;"
                                "Ljava/util/Date;Ljava/util/Date;"
@@ -212,7 +213,9 @@ CreateJ::Info(const svn_wc_entry_t *entry)
   jstring jRepository = JNIUtil::makeJString(entry->repos);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
-  jint jSchedule = EnumMapper::mapScheduleKind(entry->schedule);
+  jobject jSchedule = EnumMapper::mapScheduleKind(entry->schedule);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
   jobject jNodeKind = EnumMapper::mapNodeKind(entry->kind);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
@@ -273,8 +276,9 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
                              "L"JAVA_PACKAGE"/NodeKind;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "JJLjava/lang/String;"
-                             "L"JAVA_PACKAGE"/Lock;"
-                             "ZILjava/lang/String;JJJ"
+                             "L"JAVA_PACKAGE"/Lock;Z"
+                             "L"JAVA_PACKAGE"/Info2$ScheduleKind;"
+                             "Ljava/lang/String;JJJ"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;JJ"
@@ -345,6 +349,10 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
+  jobject jscheduleKind = EnumMapper::mapScheduleKind(info->schedule);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
   jlong jworkingSize = info->working_size == SVN_INFO_SIZE_UNKNOWN
     ? -1 : (jlong) info->working_size;
   jlong jreposSize = info->size == SVN_INFO_SIZE_UNKNOWN
@@ -356,8 +364,8 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
                                   (jlong) info->last_changed_date,
                                   jlastChangedAuthor, jlock,
                                   info->has_wc_info ? JNI_TRUE : JNI_FALSE,
-                                  EnumMapper::mapScheduleKind(info->schedule),
-                                  jcopyFromUrl, (jlong) info->copyfrom_rev,
+                                  jscheduleKind, jcopyFromUrl,
+                                  (jlong) info->copyfrom_rev,
                                   (jlong) info->text_time,
                                   (jlong) info->prop_time, jchecksum,
                                   jconflictOld, jconflictNew, jconflictWrk,

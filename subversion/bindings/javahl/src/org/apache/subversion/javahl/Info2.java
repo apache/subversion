@@ -97,9 +97,9 @@ public class Info2 implements java.io.Serializable
     private boolean hasWcInfo;
 
     /**
-     * the scheduled operation at next commit (see ScheduleKind)
+     * the scheduled operation at next commit
      */
-    private int schedule;
+    private ScheduleKind schedule;
 
     /**
      * if the item was copied, the source url
@@ -213,11 +213,11 @@ public class Info2 implements java.io.Serializable
     public Info2(String path, String url, long rev, NodeKind kind,
           String reposRootUrl, String reposUUID, long lastChangedRev,
           long lastChangedDate, String lastChangedAuthor, Lock lock,
-          boolean hasWcInfo, int schedule, String copyFromUrl, long copyFromRev,
-          long textTime, long propTime, String checksum, String conflictOld,
-          String conflictNew, String conflictWrk, String prejfile,
-          String changelistName, long workingSize, long reposSize, Depth depth,
-          ConflictDescriptor treeConflict)
+          boolean hasWcInfo, ScheduleKind schedule, String copyFromUrl,
+          long copyFromRev, long textTime, long propTime, String checksum,
+          String conflictOld, String conflictNew, String conflictWrk,
+          String prejfile, String changelistName, long workingSize,
+          long reposSize, Depth depth, ConflictDescriptor treeConflict)
     {
         this.path = path;
         this.url = url;
@@ -341,7 +341,7 @@ public class Info2 implements java.io.Serializable
     /**
      * return the scheduled operation at next commit (see ScheduleKind)
      */
-    public int getSchedule()
+    public ScheduleKind getSchedule()
     {
         return schedule;
     }
@@ -483,5 +483,20 @@ public class Info2 implements java.io.Serializable
     public String toString()
     {
         return getUrl();
+    }
+
+    public enum ScheduleKind
+    {
+        /** exists, but uninteresting */
+        normal,
+
+        /** Slated for addition */
+        add,
+
+        /** Slated for deletion */
+        delete,
+
+        /** Slated for replacement (delete + add) */
+        replace;
     }
 }

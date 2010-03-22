@@ -2099,8 +2099,8 @@ public class BasicTests extends SVNTests
                                   Depth.empty, null)[0];
         assertEquals("wrong revision from info", 1,
                      info.getLastChangedRev());
-        assertEquals("wrong schedule kind from info", ScheduleKind.normal,
-                     info.getSchedule());
+        assertEquals("wrong schedule kind from info",
+                     Info2.ScheduleKind.normal, info.getSchedule());
         assertEquals("wrong node kind from info", NodeKind.file,
                      info.getKind());
     }

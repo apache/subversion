@@ -54,7 +54,7 @@ class EnumMapper
   static jobject mapNodeKind(svn_node_kind_t nodeKind);
   static jobject mapNotifyLockState(svn_wc_notify_lock_state_t state);
   static jobject mapStatusKind(svn_wc_status_kind svnKind);
-  static jint mapScheduleKind(svn_wc_schedule_t schedule);
+  static jobject mapScheduleKind(svn_wc_schedule_t schedule);
   static jobject mapConflictKind(svn_wc_conflict_kind_t kind);
   static jobject mapConflictAction(svn_wc_conflict_action_t action);
   static jobject mapConflictReason(svn_wc_conflict_reason_t reason);
