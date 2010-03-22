@@ -123,6 +123,17 @@ Candidate changes:
    Votes:
      +1: kameshj
 
+ * r926151, r926167
+   Add an additional check for bogus `changes' table item sequencing.
+   Apparently the custom Google backend managed to trigger some badness
+   along these lines.
+   Notes:
+     r926151 adds a test and fix for BDB; r926167 ports the change to FSFS.
+   Justification:
+     Safety first.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
