@@ -1433,22 +1433,35 @@ def log_xml_with_bad_data(sbox):
 
 def merge_sensitive_log_target_with_bogus_mergeinfo(sbox):
   "'svn log -g target_with_bogus_mergeinfo'"
-  #Refer issue 3172 for details.
-  #Create greek tree
-  #svn ps 'svn:mergeinfo' '/A/B:0' A/D
-  #svn ci -m 'setting bogus mergeinfo'
-  #svn log -g -r2
+  # A test for issue #3172 'svn log -g' seems to encounter error on server':
+  # 'log -g' fails the moment it encounters a bogus mergeinfo which claims a
+  # merge from a non-existentpath@REV1-REV2.
+  #
+  # ### Present test: test that 'svn log -g' does not report an error.
+  # ### Desirable test: test that 'svn log -g' produces the results expected
+  #     from ignoring all such revisions and reporting on all revisions that
+  #     are valid.
+
+  # In r2, create /A/B-copied as a copy of something that existed at r1, and
+  # /A/B-new as something new.  Manually set mergeinfo on /A/C@2 saying it
+  # was merged from the non-existent r1 of /A/B-copied, and on /A/D@2 saying
+  # it was merged from the non-existent r1 of /A/B-new.
   sbox.build()
   wc_path = sbox.wc_dir
+  B_copied_path = os.path.join(wc_path, 'A', 'B-copied')
+  B_new_path = os.path.join(wc_path, 'A', 'B-new')
+  B_path = os.path.join(wc_path, 'A', 'B')
+  C_path = os.path.join(wc_path, 'A', 'C')
   D_path = os.path.join(wc_path, 'A', 'D')
-  svntest.main.run_svn(None, 'ps', SVN_PROP_MERGEINFO, '/A/B:0', D_path)
-  #commit at r2
-  svntest.main.run_svn(None, 'ci', '-m', 'setting bogus mergeinfo', D_path)
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None,
-                                                              [], 'log',
-                                                              '-g', D_path)
-  if len(err):
-    raise svntest.Failure("svn log -g target_with_bogus_mergeinfo fails")
+  svntest.main.run_svn(None, 'cp', B_path, B_copied_path)
+  svntest.main.run_svn(None, 'ps', SVN_PROP_MERGEINFO, '/A/B-copied:1', C_path)
+  svntest.main.run_svn(None, 'mkdir', B_new_path)
+  svntest.main.run_svn(None, 'ps', SVN_PROP_MERGEINFO, '/A/B-new:1', D_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'setting bogus mergeinfo', wc_path)
+
+  # The tests: Check that 'svn log -g' doesn't error on these.
+  svntest.actions.run_and_verify_svn(None, None, [], 'log', '-g', C_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'log', '-g', D_path)
 
 def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   "log -g and explicit mergeinfo replacing inherited"
@@ -1752,9 +1765,8 @@ test_list = [ None,
               only_one_wc_path,
               retrieve_revprops,
               log_xml_with_bad_data,
-              Wimp("Test is broken since r925290",
-                   SkipUnless(merge_sensitive_log_target_with_bogus_mergeinfo,
-                              server_has_mergeinfo)),
+              SkipUnless(merge_sensitive_log_target_with_bogus_mergeinfo,
+                              server_has_mergeinfo),
               SkipUnless(merge_sensitive_log_added_mergeinfo_replaces_inherited,
                          server_has_mergeinfo),
               SkipUnless(merge_sensitive_log_propmod_merge_inheriting_path,
