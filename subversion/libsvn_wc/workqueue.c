@@ -1930,15 +1930,27 @@ run_file_install(svn_wc__db_t *db,
   use_commit_times = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
   record_fileinfo = svn_skel__parse_int(arg1->next->next, scratch_pool) != 0;
 
-  SVN_ERR(svn_wc__get_special(&special, db, local_abspath, scratch_pool));
-  if (special)
-    {
-      NOT_IMPLEMENTED();
-    }
-
   /* Get the pristine contents (from WORKING or BASE, as appropriate).  */
   SVN_ERR(svn_wc__get_pristine_contents(&src_stream, db, local_abspath,
                                         scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__get_special(&special, db, local_abspath, scratch_pool));
+  if (special)
+    {
+      /* When this stream is closed, the resulting special file will
+         atomically be created/moved into place at LOCAL_ABSPATH.  */
+      SVN_ERR(svn_subst_create_specialfile(&dst_stream, local_abspath,
+                                           scratch_pool, scratch_pool));
+
+      /* Copy the "repository normal" form of the special file into the
+         special stream.  */
+      SVN_ERR(svn_stream_copy3(src_stream, dst_stream,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
+
+      /* No need to set exec or read-only flags on special files.  */
+      return SVN_NO_ERROR;
+    }
 
   /* Fetch all the translation bits.  */
   SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, local_abspath,
