@@ -138,6 +138,11 @@ int EnumMapper::toMergeinfoLogKind(jobject jLogKind)
   return getOrdinal(JAVA_PACKAGE"/MergeinfoLogKind", jLogKind);
 }
 
+int EnumMapper::toLogLevel(jobject jLogLevel)
+{
+  return getOrdinal(JAVA_PACKAGE"/SVNClient$ClientLogLevel", jLogLevel);
+}
+
 svn_depth_t EnumMapper::toDepth(jobject jdepth)
 {
   // The offset for depths is -2

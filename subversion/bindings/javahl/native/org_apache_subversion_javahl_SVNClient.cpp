@@ -25,7 +25,6 @@
  */
 
 #include "../include/org_apache_subversion_javahl_SVNClient.h"
-#include "../include/org_apache_subversion_javahl_ClientLogLevel.h"
 #include "JNIUtil.h"
 #include "JNIStackElement.h"
 #include "JNIStringHolder.h"
@@ -1458,26 +1457,10 @@ JNIEXPORT void JNICALL Java_org_apache_subversion_javahl_SVNClient_upgrade
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_enableLogging
-(JNIEnv *env, jclass jclazz, jint jlogLevel, jstring jpath)
+(JNIEnv *env, jclass jclazz, jobject jlogLevel, jstring jpath)
 {
   JNIEntryStatic(SVNClient, enableLogging);
-  int cLevel = JNIUtil::noLog;
-  switch(jlogLevel)
-    {
-    case org_apache_subversion_javahl_ClientLogLevel_NoLog:
-      cLevel = JNIUtil::noLog;
-      break;
-    case org_apache_subversion_javahl_ClientLogLevel_ErrorLog:
-      cLevel = JNIUtil::errorLog;
-      break;
-    case org_apache_subversion_javahl_ClientLogLevel_ExceptionLog:
-      cLevel = JNIUtil::exceptionLog;
-      break;
-    case org_apache_subversion_javahl_ClientLogLevel_EntryLog:
-      cLevel = JNIUtil::entryLog;
-      break;
-    }
-  JNIUtil::initLogFile(cLevel, jpath);
+  JNIUtil::initLogFile(EnumMapper::toLogLevel(jlogLevel), jpath);
 
 }
 
