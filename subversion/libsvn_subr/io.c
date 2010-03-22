@@ -2906,17 +2906,16 @@ svn_io_file_rename(const char *from_path, const char *to_path,
   status = apr_file_rename(from_path_apr, to_path_apr, pool);
 
 #ifdef WIN32
-  if (status)
+  if (APR_STATUS_IS_EACCES(status))
     {
       /* Set the destination file writable because Windows will not
-         allow us to rename over files that are read-only. */
+         allow us to rename when to_path is read-only, but will
+         allow renaming when from_path is read only. */
       SVN_ERR(svn_io_set_file_read_write(to_path, TRUE, pool));
 
       status = apr_file_rename(from_path_apr, to_path_apr, pool);
-
-      WIN32_RETRY_LOOP(status,
-                       apr_file_rename(from_path_apr, to_path_apr, pool));
     }
+  WIN32_RETRY_LOOP(status, apr_file_rename(from_path_apr, to_path_apr, pool));
 #endif /* WIN32 */
 
   if (status)

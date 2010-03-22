@@ -170,12 +170,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r896915
-   On Windows, stop retrying a move operation without looking to the
-   initial error code. 
-   Justification:
-     Without this patch the initial move error is lost, which makes it
-     impossible to diagnose the real error.
-   Votes:
-     +1: rhuijben, cmpilato, hwright
