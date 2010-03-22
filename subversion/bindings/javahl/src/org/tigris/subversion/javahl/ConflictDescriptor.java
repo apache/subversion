@@ -123,8 +123,8 @@ public class ConflictDescriptor
              NodeKind.fromApache(aDesc.getNodeKind()),
              aDesc.getPropertyName(), aDesc.isBinary(), aDesc.getMIMEType(),
              aDesc.getAction().ordinal(), aDesc.getReason().ordinal(),
-             aDesc.getOperation(), aDesc.getBasePath(), aDesc.getTheirPath(),
-             aDesc.getMyPath(), aDesc.getMergedPath(),
+             aDesc.getOperation().ordinal(), aDesc.getBasePath(),
+             aDesc.getTheirPath(), aDesc.getMyPath(), aDesc.getMergedPath(),
              new ConflictVersion(aDesc.getSrcLeftVersion()),
              new ConflictVersion(aDesc.getSrcRightVersion()));
     }
