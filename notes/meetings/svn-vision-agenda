@@ -12,3 +12,9 @@ Potential topics for discussion:
  * Beyond Subversion 1.7 -- a high-level roadmap proposal
  * How do we encourage additional investment (of time, talent, and treasure)?
  * Subversion 2.0 (the Elephant in the Room)
+
+Some other random stuff Hyrum would like to talk about:
+ * Why is merge slow (compared to $OTHER_SYSTEM)?
+   - Is it endemic to Subversion's architecture, or can it be fixed?
+ * Some musing on FS library design (hopefully with the insight of
+   Mr. Jon Trowbridge).
