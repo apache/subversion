@@ -2357,8 +2357,10 @@ public class SVNClient implements SVNClientInterface
      */
     public static void enableLogging(int logLevel, String logFilePath)
     {
-        org.apache.subversion.javahl.SVNClient.enableLogging(logLevel,
-                                                             logFilePath);
+        org.apache.subversion.javahl.SVNClient.enableLogging(
+            org.apache.subversion.javahl.SVNClient.ClientLogLevel.values()[
+                                                                logLevel],
+            logFilePath);
     }
 
     /**

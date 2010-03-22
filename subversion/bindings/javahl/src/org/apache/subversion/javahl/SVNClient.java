@@ -557,15 +557,25 @@ public class SVNClient implements ISVNClient
      *                      ClientLogLevel)
      * @param logFilePath   path of the log file
      */
-    public static native void enableLogging(int logLevel, String logFilePath);
+    public static native void enableLogging(ClientLogLevel logLevel,
+                                            String logFilePath);
 
     /**
-     * class for the constants of the logging levels.
-     * The constants are defined in ClientLogLevel because of building
-     * reasons
+     * enum for the constants of the logging levels.
      */
-    public static final class LogLevel implements ClientLogLevel
+    public enum ClientLogLevel
     {
+        /** Log nothing */
+        NoLog,
+
+        /** Log fatal error */
+        ErrorLog,
+
+        /** Log exceptions thrown */
+        ExceptionLog,
+
+        /** Log the entry and exits of the JNI code */
+        EntryLog;
     }
 
     /**
