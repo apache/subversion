@@ -59,7 +59,8 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
                               "L"JAVA_PACKAGE"/NodeKind;"
                               "Ljava/lang/String;ZLjava/lang/String;"
                               "L"JAVA_PACKAGE"/ConflictDescriptor$Action;"
-                              "L"JAVA_PACKAGE"/ConflictDescriptor$Reason;I"
+                              "L"JAVA_PACKAGE"/ConflictDescriptor$Reason;"
+                              "L"JAVA_PACKAGE"/ConflictDescriptor$Operation;"
                               "Ljava/lang/String;Ljava/lang/String;"
                               "Ljava/lang/String;Ljava/lang/String;"
                               "L"JAVA_PACKAGE"/ConflictVersion;"
@@ -107,13 +108,15 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
   jobject jconflictReason = EnumMapper::mapConflictReason(desc->reason);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
+  jobject joperation = EnumMapper::mapOperation(desc->operation);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
 
   // Instantiate the conflict descriptor.
   jobject jdesc = env->NewObject(clazz, ctor, jpath, jconflictKind,
                                  jnodeKind, jpropertyName,
                                  (jboolean) desc->is_binary, jmimeType,
-                                 jconflictAction, jconflictReason,
-                                 EnumMapper::mapOperation(desc->operation),
+                                 jconflictAction, jconflictReason, joperation,
                                  jbasePath, jreposPath, juserPath,
                                  jmergedPath, jsrcLeft, jsrcRight);
   if (JNIUtil::isJavaExceptionThrown())

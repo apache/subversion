@@ -31,8 +31,6 @@
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
-#include "../include/org_apache_subversion_javahl_Operation.h"
-#include "../include/org_apache_subversion_javahl_Revision.h"
 
 /**
  * Map a C commit state flag constant to the Java constant.
@@ -156,20 +154,10 @@ jobject EnumMapper::mapDepth(svn_depth_t depth)
   return mapEnum(JAVA_PACKAGE"/Depth", ((int) depth) + 2);
 }
 
-jint EnumMapper::mapOperation(svn_wc_operation_t operation)
+jobject EnumMapper::mapOperation(svn_wc_operation_t operation)
 {
-  switch (operation)
-    {
-    case svn_wc_operation_none:
-    default:
-      return org_apache_subversion_javahl_Operation_none;
-    case svn_wc_operation_update:
-      return org_apache_subversion_javahl_Operation_update;
-    case svn_wc_operation_switch:
-      return org_apache_subversion_javahl_Operation_switched;
-    case svn_wc_operation_merge:
-      return org_apache_subversion_javahl_Operation_merge;
-    }
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Operation", (int) operation);
 }
 
 jobject EnumMapper::mapTristate(svn_tristate_t tristate)

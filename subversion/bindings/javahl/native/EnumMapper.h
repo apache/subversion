@@ -60,7 +60,7 @@ class EnumMapper
   static jobject mapConflictAction(svn_wc_conflict_action_t action);
   static jobject mapConflictReason(svn_wc_conflict_reason_t reason);
   static jobject mapDepth(svn_depth_t depth);
-  static jint mapOperation(svn_wc_operation_t);
+  static jobject mapOperation(svn_wc_operation_t);
   static jobject mapTristate(svn_tristate_t);
   static jobject mapSummarizeKind(svn_client_diff_summarize_kind_t);
  private:

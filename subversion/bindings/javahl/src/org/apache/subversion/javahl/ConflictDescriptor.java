@@ -59,7 +59,7 @@ public class ConflictDescriptor
     /**
      * @see Operation
      */
-    private int operation;
+    private Operation operation;
 
     /**
      * @see ConflictVersion
@@ -74,7 +74,7 @@ public class ConflictDescriptor
     /** This constructor should only be called from JNI code. */
     public ConflictDescriptor(String path, Kind conflictKind, NodeKind nodeKind,
                        String propertyName, boolean isBinary, String mimeType,
-                       Action action, Reason reason, int operation,
+                       Action action, Reason reason, Operation operation,
                        String basePath, String theirPath,
                        String myPath, String mergedPath,
                        ConflictVersion srcLeft, ConflictVersion srcRight)
@@ -156,7 +156,7 @@ public class ConflictDescriptor
         return mergedPath;
     }
 
-    public int getOperation()
+    public Operation getOperation()
     {
         return operation;
     }
@@ -242,5 +242,22 @@ public class ConflictDescriptor
          * @since New in 1.6.
          */
         added;
+    }
+
+    public enum Operation
+    {
+        /* none */
+        none,
+
+        /* update */
+        update,
+
+        /* switch */
+        /* Note: this is different that svn_wc.h, because 'switch' is a
+        * reserved word in java  :(  */
+        switched,
+
+        /* merge */
+        merge;
     }
 }
