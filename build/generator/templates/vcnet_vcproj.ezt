@@ -1,4 +1,4 @@
-[define COPYRIGHT]
+[#
 <!--
      Licensed to the Apache Software Foundation (ASF) under one
      or more contributor license agreements.  See the NOTICE file
@@ -17,7 +17,7 @@
      specific language governing permissions and limitations
      under the License.
 -->
-[end]<?xml version="1.0" encoding = "Windows-1252"?>
+]<?xml version="1.0" encoding = "Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="[version]"
@@ -128,7 +128,7 @@
 				<Tool
 					Name="VCCustomBuildTool"
 					CommandLine="[sources.custom_build]"
-[is sources.custom_desc ""][else]					Description="[sources.custom_desc]"
+[if-any sources.custom_desc]					Description="[sources.custom_desc]"
 [end]					AdditionalDependencies="[for sources.user_deps]&quot;[sources.user_deps]&quot;;[end]"
 					Outputs="&quot;[sources.custom_target]&quot;"/>
 			</FileConfiguration>
