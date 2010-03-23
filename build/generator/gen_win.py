@@ -480,9 +480,10 @@ class WinGeneratorBase(GeneratorBase):
       jar_exe = os.path.join(self.jdk_path, "bin", jar_exe)
 
     if not isinstance(target, gen_base.TargetProject):
-      cbuild = None
-      ctarget = None
       for source, object, reldir in self.get_win_sources(target):
+        cbuild = None
+        ctarget = None
+        cdesc = None
         if isinstance(target, gen_base.TargetJavaHeaders):
           classes = self.path(target.classes)
           if self.junit_path is not None:
@@ -496,6 +497,7 @@ class WinGeneratorBase(GeneratorBase):
                       self.quote(headers), classname)
 
           ctarget = self.path(object.filename_win)
+          cdesc = "Generating %s" % (object.filename_win)
 
         elif isinstance(target, gen_base.TargetJavaClasses):
           classes = targetdir = self.path(target.classes)
@@ -510,6 +512,7 @@ class WinGeneratorBase(GeneratorBase):
                                             targetdir, sourcepath)))
 
           ctarget = self.path(object.filename)
+          cdesc = "Compiling %s" % (source)
 
         rsrc = self.path(str(source))
         if quote_path and '-' in rsrc:
@@ -517,6 +520,7 @@ class WinGeneratorBase(GeneratorBase):
 
         sources.append(ProjectItem(path=rsrc, reldir=reldir, user_deps=[],
                                    custom_build=cbuild, custom_target=ctarget,
+                                   custom_desc=cdesc,
                                    extension=os.path.splitext(rsrc)[1]))
 
     if isinstance(target, gen_base.TargetJavaClasses) and target.jar:

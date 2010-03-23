@@ -128,7 +128,8 @@
 				<Tool
 					Name="VCCustomBuildTool"
 					CommandLine="[sources.custom_build]"
-					AdditionalDependencies="[for sources.user_deps]&quot;[sources.user_deps]&quot;;[end]"
+[is sources.custom_desc ""][else]					Description="[sources.custom_desc]"
+[end]					AdditionalDependencies="[for sources.user_deps]&quot;[sources.user_deps]&quot;;[end]"
 					Outputs="&quot;[sources.custom_target]&quot;"/>
 			</FileConfiguration>
 [end][end][end]
