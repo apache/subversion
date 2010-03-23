@@ -100,33 +100,33 @@ ProgressListener::onProgress(apr_off_t progressVal, apr_off_t total,
       // Initialize the method ID.
       jclass clazz = env->FindClass(JAVA_PACKAGE"/ProgressListener");
       if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN();
+        POP_AND_RETURN_NOTHING();
 
       mid = env->GetMethodID(clazz, "onProgress",
                              "(L"JAVA_PACKAGE"/ProgressEvent;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        POP_AND_RETURN();
+        POP_AND_RETURN_NOTHING();
     }
 
   static jmethodID midCT = 0;
   jclass clazz = env->FindClass(JAVA_PACKAGE"/ProgressEvent");
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN();
+    POP_AND_RETURN_NOTHING();
 
   if (midCT == 0)
     {
       midCT = env->GetMethodID(clazz, "<init>", "(JJ)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
-        POP_AND_RETURN();
+        POP_AND_RETURN_NOTHING();
     }
 
   // Call the Java method.
   jobject jevent = env->NewObject(clazz, midCT,
                                   (jlong) progressVal, (jlong) total);
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN();
+    POP_AND_RETURN_NOTHING();
 
   env->CallVoidMethod(m_progressListener, mid, jevent);
   
-  POP_AND_RETURN();
+  POP_AND_RETURN_NOTHING();
 }

@@ -261,6 +261,18 @@ class JNIUtil
   while (0)
 
 /**
+ * A statement macro use to pop the reference frame and return
+ */
+#define POP_AND_RETURN_NOTHING()        \
+  do                                    \
+    {                                   \
+      env->PopLocalFrame(NULL);         \
+      return;                           \
+    }                                   \
+  while (0)
+
+
+/**
  * A useful macro.
  */
 #define POP_AND_RETURN_NULL             POP_AND_RETURN(NULL)

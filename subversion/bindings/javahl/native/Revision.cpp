@@ -59,16 +59,16 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
         {
           jclass clazz = env->FindClass(JAVA_PACKAGE"/Revision");
           if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN();
+            POP_AND_RETURN_NOTHING();
 
           fid = env->GetFieldID(clazz, "revKind",
                                 "L"JAVA_PACKAGE"/Revision$Kind;");
           if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN();
+            POP_AND_RETURN_NOTHING();
         }
       jobject jKind = env->GetObjectField(jthis, fid);
       if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN();
+        POP_AND_RETURN_NOTHING();
 
       m_revision.value.number = 0;
       m_revision.kind = EnumMapper::toRevisionKind(jKind);
@@ -83,11 +83,11 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
                 jclass clazz =
                   env->FindClass(JAVA_PACKAGE"/Revision$Number");
                 if (JNIUtil::isJavaExceptionThrown())
-                  POP_AND_RETURN();
+                  POP_AND_RETURN_NOTHING();
 
                 fidNum = env->GetFieldID(clazz, "revNumber", "J");
                 if (JNIUtil::isJavaExceptionThrown())
-                  POP_AND_RETURN();
+                  POP_AND_RETURN_NOTHING();
               }
             jlong jNumber = env->GetLongField(jthis, fidNum);
             m_revision.value.number = (svn_revnum_t) jNumber;
@@ -101,31 +101,31 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
                 jclass clazz =
                   env->FindClass(JAVA_PACKAGE"/Revision$DateSpec");
                 if (JNIUtil::isJavaExceptionThrown())
-                  POP_AND_RETURN();
+                  POP_AND_RETURN_NOTHING();
 
                 fidDate = env->GetFieldID(clazz, "revDate",
                                           "Ljava/util/Date;");
                 if (JNIUtil::isJavaExceptionThrown())
-                  POP_AND_RETURN();
+                  POP_AND_RETURN_NOTHING();
               }
             jobject jDate = env->GetObjectField(jthis, fidDate);
             if (JNIUtil::isJavaExceptionThrown())
-              POP_AND_RETURN();
+              POP_AND_RETURN_NOTHING();
 
             static jmethodID mid = 0;
             if (mid == 0)
               {
                 jclass clazz = env->FindClass("java/util/Date");
                 if (JNIUtil::isJavaExceptionThrown())
-                  POP_AND_RETURN();
+                  POP_AND_RETURN_NOTHING();
 
                 mid = env->GetMethodID(clazz, "getTime", "()J");
                 if (JNIUtil::isJavaExceptionThrown())
-                  POP_AND_RETURN();
+                  POP_AND_RETURN_NOTHING();
               }
             jlong jMillSec = env->CallLongMethod(jDate, mid);
             if (JNIUtil::isJavaExceptionThrown())
-              POP_AND_RETURN();
+              POP_AND_RETURN_NOTHING();
 
             m_revision.value.date = jMillSec * 1000;
           }

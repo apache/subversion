@@ -504,7 +504,7 @@ class WinGeneratorBase(GeneratorBase):
 
           sourcepath = self.path(source.sourcepath)
 
-          cbuild = "%s -g -target 1.2 -source 1.3 -classpath %s -d %s " \
+          cbuild = "%s -g -target 1.5 -source 1.5 -classpath %s -d %s " \
                    "-sourcepath %s $(InputPath)" \
                    % tuple(map(self.quote, (javac_exe, classes,
                                             targetdir, sourcepath)))
