@@ -2183,15 +2183,17 @@ svn_wc_get_pristine_copy_path(const char *path,
                               const char **pristine_path,
                               apr_pool_t *pool)
 {
-  svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *db;
   const char *local_abspath;
 
-  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly, NULL,
+                          TRUE, TRUE, pool, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc__text_base_path(pristine_path, wc_ctx->db, local_abspath,
-                                          FALSE, pool));
-  return SVN_NO_ERROR;
+  SVN_ERR(svn_wc__text_base_path(pristine_path, db, local_abspath,
+                                 FALSE, pool));
+
+  return svn_error_return(svn_wc__db_close(db));
 }
 
 svn_error_t *
@@ -2276,12 +2278,14 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
   /* ### TODO 1.7: use pristine store instead of this block: */
   {
     const char *text_base;
+
     SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
                                    scratch_pool));
     SVN_ERR_ASSERT(text_base != NULL);
 
-    return svn_stream_open_readonly(contents, text_base, result_pool,
-                                    scratch_pool);
+    return svn_error_return(svn_stream_open_readonly(contents, text_base,
+                                                     result_pool,
+                                                     scratch_pool));
   }
 }
 
