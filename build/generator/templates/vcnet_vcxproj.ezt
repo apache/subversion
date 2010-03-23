@@ -91,7 +91,8 @@
 [for configs][for platforms]      <Command Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[sources.custom_build]</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[for sources.user_deps][sources.user_deps];[end]%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[sources.custom_target];%(Outputs)</Outputs>
-[end][end]    </CustomBuild>
+[is sources.custom_desc ""][else]<Message Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[sources.custom_desc]</Message>
+[end][end][end]    </CustomBuild>
 [else][is sources.extension ".c"]    <ClCompile Include="[sources.path]" />
 [else][is sources.extension ".cpp"]    <ClCompile Include="[sources.path]" />
 [else]    <None Include="[sources.path]" />
