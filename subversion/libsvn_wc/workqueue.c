@@ -1441,26 +1441,23 @@ log_do_committed(svn_wc__db_t *db,
           /* The working copy file hasn't been overwritten, meaning
              we need to decide which timestamp to use. */
 
-          const char *basef;
+          const char *base_abspath;
           apr_finfo_t basef_finfo;
           svn_boolean_t modified;
-          const char *base_abspath;
 
           /* If the working file was overwritten (due to re-translation)
              or touched (due to +x / -x), then use *that* textual
              timestamp instead. */
-          SVN_ERR(svn_wc__text_base_path(&basef, db,
+          SVN_ERR(svn_wc__text_base_path(&base_abspath, db,
                                          local_abspath, FALSE, pool));
-          err = svn_io_stat(&basef_finfo, basef, APR_FINFO_MIN | APR_FINFO_LINK,
+          err = svn_io_stat(&basef_finfo, base_abspath,
+                            APR_FINFO_MIN | APR_FINFO_LINK,
                             pool);
           if (err)
             return svn_error_createf
               (SVN_ERR_WC_BAD_ADM_LOG, err,
                _("Error getting 'affected time' for '%s'"),
-               svn_dirent_local_style(basef, pool));
-
-
-          SVN_ERR(svn_dirent_get_absolute(&base_abspath, basef, pool));
+               svn_dirent_local_style(base_abspath, pool));
 
           /* Verify that the working file is the same as the base file
              by comparing file sizes, then timestamps and the contents
@@ -1481,7 +1478,7 @@ log_do_committed(svn_wc__db_t *db,
                   (SVN_ERR_WC_BAD_ADM_LOG, err,
                    _("Error comparing '%s' and '%s'"),
                    svn_dirent_local_style(local_abspath, pool),
-                   svn_dirent_local_style(basef, pool));
+                   svn_dirent_local_style(base_abspath, pool));
             }
           /* If they are the same, use the working file's timestamp,
              else use the base file's timestamp. */
