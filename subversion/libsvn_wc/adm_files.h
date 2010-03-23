@@ -118,17 +118,17 @@ svn_error_t *svn_wc__open_adm_stream(svn_stream_t **stream,
                                      apr_pool_t *scratch_pool);
 
 
-/* Open the normal or revert text base, associated with LOCAL_ABSPATH, for
-   writing.
-   The selection is based on NEED_REVERT_BASE. The opened stream will be
-   returned in STREAM and the selected path will be returned in,
-   TEMP_BASE_ABSPATH, and both will be allocated in RESULT_POOL. Any temporary
-   allocations will be performed in SCRATCH_POOL. */
+/* Open a writable stream to a temporary (normal or revert) text base,
+   associated with the versioned file LOCAL_ABSPATH in DB.  Set *STREAM to
+   the opened stream and *TEMP_BASE_ABSPATH to the path to the temporary
+   file, both allocated in RESULT_POOL.  The temporary file will have an
+   arbitrary unique name, in contrast to the deterministic name that
+   svn_wc__text_base_path(tmp=TRUE) returns. */
 svn_error_t *
 svn_wc__open_writable_base(svn_stream_t **stream,
                            const char **temp_base_abspath,
+                           svn_wc__db_t *db,
                            const char *local_abspath,
-                           svn_boolean_t need_revert_base,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 

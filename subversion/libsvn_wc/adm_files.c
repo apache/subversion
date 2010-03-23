@@ -375,60 +375,6 @@ svn_wc__prop_path(const char **prop_path,
 
 /*** Opening and closing files in the adm area. ***/
 
-/* Create and open a writable file in the admin temporary area of the WC
-   directory DIR_ABSPATH, in a subdirectory named SUBDIR (such as "text-base"),
-   with the name FNAME and extra EXTENSION (such as ".svn-base").  If the
-   file already exists, first delete it.  Set *STREAM to a writable stream
-   to this file, and (if SELECTED_ABSPATH is not NULL) set *SELECTED_PATH to
-   the path to this file, both allocated in RESULT_POOL.
-
-   Closing the stream will close (but not delete) the file. */
-static svn_error_t *
-open_adm_file(svn_stream_t **stream,
-              const char **selected_abspath,
-              const char *dir_abspath,
-              const char *subdir,
-              const char *fname,
-              const char *extension,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
-
-  /* Extend with tmp name. */
-  dir_abspath = extend_with_adm_name(dir_abspath, extension, TRUE, result_pool,
-                                     subdir, fname, NULL);
-  if (selected_abspath)
-    *selected_abspath = dir_abspath;  /* note: built in result_pool */
-
-  err = svn_stream_open_writable(stream, dir_abspath, result_pool, scratch_pool);
-  if (err && APR_STATUS_IS_EEXIST(err->apr_err))
-    {
-      /* Exclusive open failed, delete and retry */
-      svn_error_clear(err);
-      SVN_ERR(svn_io_remove_file2(dir_abspath, FALSE, scratch_pool));
-      err = svn_stream_open_writable(stream, dir_abspath, result_pool, scratch_pool);
-    }
-
-  /* Examine the error from the first and/or second attempt at opening. */
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      /* If we receive a failure to open a file in our temporary directory,
-       * it may be because our temporary directories aren't created.
-       * Older SVN clients did not create these directories.
-       * 'svn cleanup' will fix this problem.
-       */
-      err = svn_error_quick_wrap(err,
-                                 _("Your .svn/tmp directory may be missing or "
-                                   "corrupt; run 'svn cleanup' and try again"));
-    }
-
-  return svn_error_return(err);
-}
-
-
 svn_error_t *
 svn_wc__open_adm_stream(svn_stream_t **stream,
                         const char *dir_abspath,
@@ -449,26 +395,24 @@ svn_wc__open_adm_stream(svn_stream_t **stream,
 svn_error_t *
 svn_wc__open_writable_base(svn_stream_t **stream,
                            const char **temp_base_abspath,
+                           svn_wc__db_t *db,
                            const char *local_abspath,
-                           svn_boolean_t need_revert_base,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  const char *parent_abspath;
-  const char *base_name;
-
+  const char *temp_dir_abspath;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  svn_dirent_split(local_abspath, &parent_abspath, &base_name, scratch_pool);
-
-  return open_adm_file(stream, temp_base_abspath,
-                       parent_abspath,
-                       SVN_WC__ADM_TEXT_BASE,
-                       base_name,
-                       need_revert_base
-                         ? SVN_WC__REVERT_EXT
-                         : SVN_WC__BASE_EXT,
-                       result_pool, scratch_pool);
+  /* Select a directory in which to put a WC-1-style temp text-base file. */
+  /* See update_editor.c:get_pristine_tee_stream() for the WC-NG way. */
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, db, local_abspath,
+                                         scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_open_unique(stream,
+                                 temp_base_abspath,
+                                 temp_dir_abspath,
+                                 svn_io_file_del_none,
+                                 result_pool, scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 
