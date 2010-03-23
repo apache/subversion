@@ -407,7 +407,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
                  svn_boolean_t merged_revision,
                  svn_txdelta_window_handler_t *content_delta_handler,
                  void **content_delta_baton,
-                 const apr_array_header_t *prop_diffs,
+                 apr_array_header_t *prop_diffs,
                  apr_pool_t *pool)
 {
   struct file_rev_baton *frb = baton;

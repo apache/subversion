@@ -2353,7 +2353,7 @@ static svn_error_t *
 file_rev_handler(void *baton, const char *path, svn_revnum_t rev,
                  apr_hash_t *rev_props, svn_boolean_t result_of_merge,
                  svn_txdelta_window_handler_t *delta_handler,
-                 void **delta_baton, const apr_array_header_t *prop_diffs,
+                 void **delta_baton, apr_array_header_t *prop_diffs,
                  apr_pool_t *pool)
 {
   apr_hash_t *ht = baton;

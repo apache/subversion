@@ -693,7 +693,7 @@ static svn_error_t *must_have_access(svn_ra_svn_conn_t *conn,
  */
 
 static svn_error_t *set_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                             const apr_array_header_t *params, void *baton)
+                             apr_array_header_t *params, void *baton)
 {
   report_driver_baton_t *b = baton;
   const char *path, *lock_token, *depth_word;
@@ -720,7 +720,7 @@ static svn_error_t *set_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *delete_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                const apr_array_header_t *params, void *baton)
+                                apr_array_header_t *params, void *baton)
 {
   report_driver_baton_t *b = baton;
   const char *path;
@@ -733,7 +733,7 @@ static svn_error_t *delete_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                              const apr_array_header_t *params, void *baton)
+                              apr_array_header_t *params, void *baton)
 {
   report_driver_baton_t *b = baton;
   const char *path, *url, *lock_token, *fs_path, *depth_word;
@@ -760,7 +760,7 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *finish_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                  const apr_array_header_t *params, void *baton)
+                                  apr_array_header_t *params, void *baton)
 {
   report_driver_baton_t *b = baton;
 
@@ -772,7 +772,7 @@ static svn_error_t *finish_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *abort_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                 const apr_array_header_t *params, void *baton)
+                                 apr_array_header_t *params, void *baton)
 {
   report_driver_baton_t *b = baton;
 
@@ -930,7 +930,7 @@ static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
 
 /* Set BATON->FS_PATH for the repository URL found in PARAMS. */
 static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                             const apr_array_header_t *params, void *baton)
+                             apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   const char *url;
@@ -948,7 +948,7 @@ static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *get_latest_rev(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                   const apr_array_header_t *params, void *baton)
+                                   apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -962,7 +962,7 @@ static svn_error_t *get_latest_rev(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *get_dated_rev(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                  const apr_array_header_t *params, void *baton)
+                                  apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -980,7 +980,7 @@ static svn_error_t *get_dated_rev(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *change_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                    const apr_array_header_t *params, void *baton)
+                                    apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -1003,7 +1003,7 @@ static svn_error_t *change_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *rev_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                 const apr_array_header_t *params, void *baton)
+                                 apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -1023,7 +1023,7 @@ static svn_error_t *rev_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                             const apr_array_header_t *params, void *baton)
+                             apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -1159,7 +1159,7 @@ static svn_error_t *unlock_paths(const apr_array_header_t *lock_tokens,
 }
 
 static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                           const apr_array_header_t *params, void *baton)
+                           apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   const char *log_msg = NULL,
@@ -1263,7 +1263,7 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                             const apr_array_header_t *params, void *baton)
+                             apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   const char *path, *full_path, *hex_digest;
@@ -1348,7 +1348,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                            const apr_array_header_t *params, void *baton)
+                            apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   const char *path, *full_path, *file_path, *cauthor, *cdate;
@@ -1512,7 +1512,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                           const apr_array_header_t *params, void *baton)
+                           apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -1565,7 +1565,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                               const apr_array_header_t *params, void *baton)
+                               apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -1610,7 +1610,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                           const apr_array_header_t *params, void *baton)
+                           apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -1645,7 +1645,7 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                         const apr_array_header_t *params, void *baton)
+                         apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -1709,7 +1709,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
    ASSUMPTION: When performing a 'merge' with two URLs at different
    revisions, the client will call this command more than once. */
 static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                  const apr_array_header_t *params, void *baton)
+                                  apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -1848,7 +1848,7 @@ static svn_error_t *log_receiver(void *baton,
 }
 
 static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                            const apr_array_header_t *params, void *baton)
+                            apr_array_header_t *params, void *baton)
 {
   svn_error_t *err, *write_err;
   server_baton_t *b = baton;
@@ -1949,7 +1949,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                               const apr_array_header_t *params, void *baton)
+                               apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -1979,7 +1979,7 @@ static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *stat_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                             const apr_array_header_t *params, void *baton)
+                             apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
@@ -2026,7 +2026,7 @@ static svn_error_t *stat_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                  const apr_array_header_t *params, void *baton)
+                                  apr_array_header_t *params, void *baton)
 {
   svn_error_t *err, *write_err;
   server_baton_t *b = baton;
@@ -2119,7 +2119,7 @@ static svn_error_t *gls_receiver(svn_location_segment_t *segment,
 
 static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool,
-                                          const apr_array_header_t *params,
+                                          apr_array_header_t *params,
                                           void *baton)
 {
   svn_error_t *err, *write_err;
@@ -2209,7 +2209,7 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
                                      svn_boolean_t merged_revision,
                                      svn_txdelta_window_handler_t *d_handler,
                                      void **d_baton,
-                                     const apr_array_header_t *prop_diffs,
+                                     apr_array_header_t *prop_diffs,
                                      apr_pool_t *pool)
 {
   file_revs_baton_t *frb = baton;
@@ -2244,7 +2244,7 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
 }
 
 static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                  const apr_array_header_t *params, void *baton)
+                                  apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_error_t *err, *write_err;
@@ -2293,7 +2293,7 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                         const apr_array_header_t *params, void *baton)
+                         apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   const char *path;
@@ -2325,7 +2325,7 @@ static svn_error_t *lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                              const apr_array_header_t *params, void *baton)
+                              apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   apr_array_header_t *path_revs;
@@ -2424,7 +2424,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *unlock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                           const apr_array_header_t *params, void *baton)
+                           apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   const char *path, *token, *full_path;
@@ -2451,7 +2451,7 @@ static svn_error_t *unlock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                const apr_array_header_t *params, void *baton)
+                                apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   svn_boolean_t break_lock;
@@ -2538,7 +2538,7 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *get_lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                             const apr_array_header_t *params, void *baton)
+                             apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   const char *path;
@@ -2567,7 +2567,7 @@ static svn_error_t *get_lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                              const apr_array_header_t *params, void *baton)
+                              apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
   const char *path;
@@ -2633,7 +2633,7 @@ static svn_error_t *replay_one_revision(svn_ra_svn_conn_t *conn,
 }
 
 static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                           const apr_array_header_t *params, void *baton)
+                           apr_array_header_t *params, void *baton)
 {
   svn_revnum_t rev, low_water_mark;
   svn_boolean_t send_deltas;
@@ -2653,7 +2653,7 @@ static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 static svn_error_t *replay_range(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                 const apr_array_header_t *params, void *baton)
+                                 apr_array_header_t *params, void *baton)
 {
   svn_revnum_t start_rev, end_rev, rev, low_water_mark;
   svn_boolean_t send_deltas;
@@ -2695,7 +2695,7 @@ static svn_error_t *replay_range(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 static svn_error_t *
 get_deleted_rev(svn_ra_svn_conn_t *conn,
                 apr_pool_t *pool,
-                const apr_array_header_t *params,
+                apr_array_header_t *params,
                 void *baton)
 {
   server_baton_t *b = baton;
