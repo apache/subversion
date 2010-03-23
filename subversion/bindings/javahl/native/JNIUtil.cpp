@@ -355,23 +355,23 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
       g_logStream << std::endl;
     }
   if (isJavaExceptionThrown())
-    POP_AND_RETURN();
+    POP_AND_RETURN_NOTHING();
 
   jstring jmessage = makeJString(msg);
   if (isJavaExceptionThrown())
-    POP_AND_RETURN();
+    POP_AND_RETURN_NOTHING();
   jstring jsource = makeJString(source);
   if (isJavaExceptionThrown())
-    POP_AND_RETURN();
+    POP_AND_RETURN_NOTHING();
 
   jmethodID mid = env->GetMethodID(clazz, "<init>",
                                    "(Ljava/lang/String;Ljava/lang/String;I)V");
   if (isJavaExceptionThrown())
-    POP_AND_RETURN();
+    POP_AND_RETURN_NOTHING();
   jobject nativeException = env->NewObject(clazz, mid, jmessage, jsource,
                                            static_cast<jint>(aprErr));
   if (isJavaExceptionThrown())
-    POP_AND_RETURN();
+    POP_AND_RETURN_NOTHING();
 
   env->Throw(static_cast<jthrowable>(env->PopLocalFrame(nativeException)));
 }
