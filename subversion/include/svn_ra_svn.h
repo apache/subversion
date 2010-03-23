@@ -114,7 +114,7 @@ typedef struct svn_ra_svn_conn_st svn_ra_svn_conn_t;
 /** Command handler, used by svn_ra_svn_handle_commands(). */
 typedef svn_error_t *(*svn_ra_svn_command_handler)(svn_ra_svn_conn_t *conn,
                                                    apr_pool_t *pool,
-                                                   const apr_array_header_t *params,
+                                                   apr_array_header_t *params,
                                                    void *baton);
 
 /** Command table, used by svn_ra_svn_handle_commands().

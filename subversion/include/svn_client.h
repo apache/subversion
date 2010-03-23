@@ -662,7 +662,7 @@ typedef svn_error_t *(*svn_client_get_commit_log2_t)(
 typedef svn_error_t *(*svn_client_get_commit_log_t)(
   const char **log_msg,
   const char **tmp_file,
-  const apr_array_header_t *commit_items,
+  apr_array_header_t *commit_items,
   void *baton,
   apr_pool_t *pool);
 
