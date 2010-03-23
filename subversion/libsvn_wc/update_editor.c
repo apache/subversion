@@ -5932,17 +5932,14 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
             && status != svn_wc__db_status_obstructed_add)
           {
             const char *dst_rtext;
-            const char *dst_txtb;
 
             /* ### replace this with: svn_wc__wq_prepare_revert_files()  */
 
             SVN_ERR(svn_wc__text_revert_path(&dst_rtext, db, local_abspath,
                                              pool));
-            SVN_ERR(svn_wc__text_base_path(&dst_txtb, db, local_abspath,
-                                           FALSE, pool));
 
             SVN_ERR(svn_wc__loggy_move(&pre_props_accum, dir_abspath,
-                                       dst_txtb, dst_rtext, pool, pool));
+                                       text_base_path, dst_rtext, pool, pool));
             SVN_ERR(svn_wc__loggy_revert_props_create(&pre_props_accum, db,
                                                       local_abspath,
                                                       dir_abspath,
@@ -6029,6 +6026,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       svn_stream_t *tmp_contents;
       const char *tmp_text_path;
 
+      /* ### it may be nice to have an option to OP_FILE_INSTALL to allow
+         ### an installation from an alternate location (TMP_TEXT_PATH).  */
+
       SVN_ERR(svn_stream_open_unique(&tmp_contents, &tmp_text_path,
                                      temp_dir_abspath, svn_io_file_del_none,
                                      pool, pool));
@@ -6045,18 +6045,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       /* After copying to the working directory, lose the temp file. */
       SVN_ERR(svn_wc__loggy_remove(&post_props_accum, dir_abspath,
                                    tmp_text_path, pool, pool));
-    }
-  else
-    {
-      /* No working file provided by the caller, copy and translate the
-         text base. */
-      SVN_ERR(svn_wc__loggy_copy(&post_props_accum, dir_abspath,
-                                 tmp_text_base_path, local_abspath,
-                                 pool, pool));
-      SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(
-                &post_props_accum, dir_abspath, local_abspath, pool, pool));
-      SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(
-                &post_props_accum, dir_abspath, local_abspath, pool, pool));
     }
 
   /* Install new text base. */
@@ -6081,21 +6069,47 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* Write our accumulation of log entries into a log file */
   SVN_ERR(svn_wc__wq_add_loggy(db, dir_abspath, pre_props_accum, pool));
+
+  /* Add some work items to install the properties.  */
   SVN_ERR(svn_wc__install_props(db, local_abspath, new_base_props,
                                 new_props ? new_props : new_base_props,
                                 TRUE, FALSE, pool));
 
-  SVN_ERR(svn_wc__run_log2(db, dir_abspath, pool));
-
   /* ### HACK: The following code should be performed in the same transaction as the install */
   if (last_change)
-    SVN_ERR(svn_wc__db_temp_op_set_working_last_change(db, local_abspath,
-                                                       last_change->cmt_rev,
-                                                       last_change->cmt_date,
-                                                       last_change->cmt_author,
-                                                       pool));
+    {
+      /* ### execute the work items which construct the node, allowing the
+         ### wc_db operation to tweak the WORKING_NODE row. these values
+         ### should be set some other way.  */
+      SVN_ERR(svn_wc__run_log2(db, dir_abspath, pool));
+      SVN_ERR(svn_wc__db_temp_op_set_working_last_change(
+                db, local_abspath,
+                last_change->cmt_rev,
+                last_change->cmt_date,
+                last_change->cmt_author,
+                pool));
+    }
+
   /* ### /HACK */
   SVN_ERR(svn_wc__wq_add_loggy(db, dir_abspath, post_props_accum, pool));
+
+  /* If a working file was not provided by the caller, then install one
+     from the text base (with appropriate translation).  */
+  if (new_contents == NULL)
+    {
+      const svn_skel_t *work_item;
+
+      SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                            db, local_abspath,
+                                            FALSE /* use_commit_times */,
+                                            TRUE /* record_fileinfo */,
+                                            pool, pool));
+      /* ### we should pass WORK_ITEM to some wc_db api that constructs
+         ### this new node. but alas, we do so much of this in pieces,
+         ### and not using wc_db apis. so just manually add the work item
+         ### into the queue.  */
+      SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
+    }
 
   return svn_error_return(svn_wc__run_log2(db, dir_abspath, pool));
 }
