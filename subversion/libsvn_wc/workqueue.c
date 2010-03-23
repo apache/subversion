@@ -1930,6 +1930,7 @@ run_file_install(svn_wc__db_t *db,
   /* Get the pristine contents (from WORKING or BASE, as appropriate).  */
   SVN_ERR(svn_wc__get_pristine_contents(&src_stream, db, local_abspath,
                                         scratch_pool, scratch_pool));
+  SVN_ERR_ASSERT(src_stream != NULL);
 
   SVN_ERR(svn_wc__get_special(&special, db, local_abspath, scratch_pool));
   if (special)
