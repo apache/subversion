@@ -3518,7 +3518,6 @@ add_file_with_history(const char *path,
   apr_hash_t *base_props, *working_props;
   svn_error_t *err;
   svn_stream_t *copied_stream;
-  const char *temp_dir_abspath;
   const char *src_local_abspath;
   svn_wc__db_t *db = eb->db;
   const char *dir_repos_relpath, *dir_repos_root, *dir_repos_uuid;
@@ -3544,13 +3543,10 @@ add_file_with_history(const char *path,
   else
     SVN_ERR(err);
 
-  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, db, pb->local_abspath,
-                                         subpool, subpool));
-  SVN_ERR(svn_stream_open_unique(&copied_stream,
-                                 &tfb->copied_text_base,
-                                 temp_dir_abspath,
-                                 svn_io_file_del_none,
-                                 pool, pool));
+  /* Open the text base for writing (this will get us a temporary file).  */
+  SVN_ERR(svn_wc__open_writable_base(&copied_stream, &tfb->copied_text_base,
+                                     db, pb->local_abspath,
+                                     pool, pool));
 #ifdef SVN_EXPERIMENTAL
   /* Copy the 'copied_stream' into a WC-NG pristine temp file as well. */
   SVN_ERR(get_pristine_tee_stream(&copied_stream, &tfb->temp_pristine_abspath,
@@ -4228,8 +4224,7 @@ apply_textdelta(void *file_baton,
 
   /* Open the text base for writing (this will get us a temporary file).  */
   err = svn_wc__open_writable_base(&target, &hb->work_abspath,
-                                   fb->local_abspath,
-                                   replaced /* need_revert_base */,
+                                   fb->edit_baton->db, fb->local_abspath,
                                    handler_pool, pool);
   if (err)
     {
@@ -6017,9 +6012,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* Copy the text base contents into a temporary file so our log
      can refer to it. Compute its checksum as we copy. */
-  SVN_ERR(svn_stream_open_unique(&tmp_base_contents, &tmp_text_base_path,
-                                 temp_dir_abspath, svn_io_file_del_none, pool,
-                                 pool));
+  SVN_ERR(svn_wc__open_writable_base(&tmp_base_contents, &tmp_text_base_path,
+                                     wc_ctx->db, local_abspath,
+                                     pool, pool));
   new_base_contents = svn_stream_checksummed2(new_base_contents,
                                               &base_checksum, NULL,
                                               svn_checksum_md5, TRUE, pool);
