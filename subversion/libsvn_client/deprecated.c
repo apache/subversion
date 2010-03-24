@@ -1823,7 +1823,7 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool)
 {
-  return svn_client_mergeinfo_log(path_or_url, TRUE, peg_revision,
+  return svn_client_mergeinfo_log(TRUE, path_or_url, peg_revision,
                                   merge_source_path_or_url,
                                   src_peg_revision,
                                   log_receiver, log_receiver_baton,
@@ -1844,7 +1844,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool)
 {
-  return svn_client_mergeinfo_log(path_or_url, FALSE, peg_revision,
+  return svn_client_mergeinfo_log(FALSE, path_or_url, peg_revision,
                                   merge_source_path_or_url,
                                   src_peg_revision,
                                   log_receiver, log_receiver_baton,

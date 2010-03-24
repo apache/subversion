@@ -1659,8 +1659,8 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
 
 
 svn_error_t *
-svn_client_mergeinfo_log(const char *path_or_url,
-                         svn_boolean_t finding_merged,
+svn_client_mergeinfo_log(svn_boolean_t finding_merged,
+                         const char *path_or_url,
                          const svn_opt_revision_t *peg_revision,
                          const char *merge_source_path_or_url,
                          const svn_opt_revision_t *src_peg_revision,
