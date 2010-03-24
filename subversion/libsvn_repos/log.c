@@ -1350,6 +1350,9 @@ do_logs(svn_fs_t *fs,
    which revisions to report as having been merged via the commit
    resulting in REV.
 
+   Silently ignore some failures to find the revisions mentioned in the
+   mergeinfo, as might happen if there is invalid mergeinfo.
+
    Other parameters are as described by do_logs(), around which this
    is a recursion wrapper. */
 static svn_error_t *
