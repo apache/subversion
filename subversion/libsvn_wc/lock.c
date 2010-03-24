@@ -1595,17 +1595,6 @@ extend_lock_cb(const char *local_abspath,
 }
 
 svn_error_t *
-svn_wc__adm_extend_lock_to_tree(svn_wc__db_t *db,
-                                const char *adm_abspath,
-                                apr_pool_t *pool)
-{
-  return svn_error_return(
-      svn_wc__internal_walk_children(db, adm_abspath, FALSE,
-                                     extend_lock_cb, db, svn_depth_infinity,
-                                     NULL, NULL, pool));
-}
-
-svn_error_t *
 svn_wc__adm_open_in_context(svn_wc_adm_access_t **adm_access,
                             svn_wc_context_t *wc_ctx,
                             const char *path,
