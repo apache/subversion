@@ -1,5 +1,5 @@
 
-Call graphs of the use of the WC-1 temporary text base path, as of r926637.
+Call graphs of the use of the WC-1 temporary text base path, as of r926814.
 
 This is to help us eliminate the use of this path and replace it with a more
 encapsulated way of referring to the new text base, as part of migration to a
@@ -39,7 +39,7 @@ path is obtained, and the extent to which it is propagated, within a commit.
         |^                |
         |^        process_committed_leaf()
         |^                |
-        |^        svn_wc__wq_add_post_commit()
+        |^        svn_wc__wq_add_postcommit()
         |^                |
         |^        WQ:OP_POSTCOMMIT
         |^                 *
@@ -82,9 +82,9 @@ within the update editor.
   LIBSVN_WC       |     |
                   |     |
     svn_wc_add_repos_file4()              { svn_wc_get_update_editor4() }
-      |^  |v      v                       { svn_wc_get_switch_editor4() }
-      |^  |v      v                           | [1]
-      |^  |v  cp.to.wkg.file                  |
+      |^  |v                              { svn_wc_get_switch_editor4() }
+      |^  |v                                  | [1]
+      |^  |v                                  |
       |^  |v                                make_editor()
       |^  |v                                     * [1]
       |^  |v                                       *
@@ -107,10 +107,10 @@ within the update editor.
       |^  |v                         |^  FB->new_text_base_abspath   |^
       |^  |v                         |^    v                         |^
       |^  |v                         |^    v                         |^
-      |^  |v                         |^  close_file() [4]            |^
-      |^  +---+                      |^        |v                    |^
+      |^  +---+                      |^  close_file() [4]            |^
       |^      |v                     |^        |v                    |^
       |^    install_text_base()      |^        |v                    |^
+      |^      (see below)            |^        |v                    |^
       |^                             |^        |v                    |^
       |^               +-------------+         |v                    |^
       +----------+     |^    +---------------------------------------+
@@ -140,6 +140,7 @@ within the update editor.
                                                       install_text_base()
                                                               |v
                                                       svn_wc__loggy_move()
+                                                        + svn_wc__loggy_set_readonly()
 
 
 NOTES
