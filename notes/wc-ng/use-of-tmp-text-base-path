@@ -1,7 +1,5 @@
 
-Call graphs of the use of the WC-1 temporary text base path, as of the
-revision (r927034 or perhaps a bit higher) in which we start to pass the
-temp text base path in to svn_wc__sync_text_base().
+Call graphs of the use of the WC-1 temporary text base path, as of r927056.
 
 This is to help us eliminate the use of this path and replace it with a more
 encapsulated way of referring to the new text base, as part of migration to a
