@@ -37,7 +37,6 @@
 #include "adm_files.h"
 #include "translate.h"
 #include "log.h"
-#include "lock.h"  /* for svn_wc__adm_available  */
 
 #include "svn_private_config.h"
 #include "private/svn_skel.h"
