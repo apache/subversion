@@ -3018,7 +3018,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * requested then return a #SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @a discover_changed_paths and @a revprops are the same as for
- * svn_client_log4().  Use @a scratch_pool for all temporary allocations.
+ * svn_client_log5().  Use @a scratch_pool for all temporary allocations.
  *
  * @a ctx is a context used for authentication.
  *
@@ -3028,8 +3028,8 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_client_mergeinfo_log(const char *path_or_url,
-                         svn_boolean_t finding_merged,
+svn_client_mergeinfo_log(svn_boolean_t finding_merged,
+                         const char *path_or_url,
                          const svn_opt_revision_t *peg_revision,
                          const char *merge_source_path_or_url,
                          const svn_opt_revision_t *src_peg_revision,
