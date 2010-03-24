@@ -63,6 +63,19 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.fs = None
     self.repos = None
 
+  def test_cease_invocation(self):
+    """Test returning SVN_ERR_CEASE_INVOCATION from a callback"""
+
+    revs = []
+    def history_lookup(path, rev, pool):
+      revs.append(rev)
+      raise core.SubversionException(apr_err=core.SVN_ERR_CEASE_INVOCATION,
+                                     message="Hi from history_lookup")
+    
+    repos.history2(self.fs, '/trunk/README2.txt', history_lookup, None, 0,
+                   self.rev, True)
+    self.assertEqual(len(revs), 1)
+
   def test_create(self):
     """Make sure that repos.create doesn't segfault when we set fs-type
        using a config hash"""

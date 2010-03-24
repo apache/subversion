@@ -1320,11 +1320,57 @@ commit_item_array_to_list(const apr_array_header_t *array)
 
 /*** Errors ***/
 
-/* Return a Subversion error about a failed callback. */
+/* If the currently set Python exception is a valid SubversionException,
+   clear exception state and transform it into a Subversion error.
+   Otherwise, return a Subversion error about an exception in a callback. */
 static svn_error_t *callback_exception_error(void)
 {
-  return svn_error_create(SVN_ERR_SWIG_PY_EXCEPTION_SET, NULL,
-                          "Python callback raised an exception");
+  PyObject *svn_module = NULL, *svn_exc = NULL;
+  PyObject *exc, *exc_type, *exc_traceback;
+  PyObject *message_ob = NULL, *apr_err_ob = NULL;
+  const char *message;
+  int apr_err;
+  svn_error_t *rv = NULL;
+
+  PyErr_Fetch(&exc_type, &exc, &exc_traceback);
+
+  if ((svn_module = PyImport_ImportModule("svn.core")) == NULL)
+    goto finished;
+  if ((svn_exc = PyObject_GetAttrString(svn_module, "SubversionException"))
+      == NULL)
+    goto finished;
+
+  if (!PyErr_GivenExceptionMatches(exc_type, svn_exc))
+    {
+      PyErr_Restore(exc_type, exc, exc_traceback);
+      exc = exc_type = exc_traceback = NULL;
+      goto finished;
+    }
+
+  if ((apr_err_ob = PyObject_GetAttrString(exc, "apr_err")) == NULL)
+    goto finished;
+  apr_err = PyInt_AsLong(apr_err_ob);
+  if (PyErr_Occurred()) goto finished;
+
+  if ((message_ob = PyObject_GetAttrString(exc, "message")) == NULL)
+    goto finished;
+  message = PyString_AsString(message_ob);
+  if (PyErr_Occurred()) goto finished;
+
+  /* A possible improvement here would be to convert the whole
+     SubversionException chain. */
+  rv = svn_error_create(apr_err, NULL, message);
+
+finished:
+  Py_XDECREF(exc);
+  Py_XDECREF(exc_type);
+  Py_XDECREF(exc_traceback);
+  Py_XDECREF(svn_module);
+  Py_XDECREF(svn_exc);
+  Py_XDECREF(apr_err_ob);
+  Py_XDECREF(message_ob);
+  return rv ? rv : svn_error_create(SVN_ERR_SWIG_PY_EXCEPTION_SET, NULL,
+                                    "Python callback raised an exception");
 }
 
 /* Raise a TypeError exception with MESSAGE, and return a Subversion
