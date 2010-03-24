@@ -223,17 +223,15 @@ make_adm_subdir(const char *path,
 /*** Syncing files in the adm area. ***/
 
 
-/* Rename a tmp text-base file to its real text-base name.
-   The file had better already be closed. */
 svn_error_t *
-svn_wc__sync_text_base(const char *path, apr_pool_t *pool)
+svn_wc__sync_text_base(const char *local_abspath, apr_pool_t *pool)
 {
   const char *parent_path;
   const char *base_name;
   const char *tmp_path;
   const char *base_path;
 
-  svn_dirent_split(path, &parent_path, &base_name, pool);
+  svn_dirent_split(local_abspath, &parent_path, &base_name, pool);
 
   /* Extend tmp name. */
   tmp_path = extend_with_adm_name(parent_path, SVN_WC__BASE_EXT, TRUE, pool,
@@ -249,7 +247,7 @@ svn_wc__sync_text_base(const char *path, apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_wc__text_base_path(const char **result_path,
+svn_wc__text_base_path(const char **result_abspath,
                        svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t tmp,
@@ -260,19 +258,19 @@ svn_wc__text_base_path(const char **result_path,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   svn_dirent_split(local_abspath, &newpath, &base_name, pool);
-  *result_path = extend_with_adm_name(newpath,
-                                      SVN_WC__BASE_EXT,
-                                      tmp,
-                                      pool,
-                                      SVN_WC__ADM_TEXT_BASE,
-                                      base_name,
-                                      NULL);
+  *result_abspath = extend_with_adm_name(newpath,
+                                         SVN_WC__BASE_EXT,
+                                         tmp,
+                                         pool,
+                                         SVN_WC__ADM_TEXT_BASE,
+                                         base_name,
+                                         NULL);
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_wc__text_revert_path(const char **result_path,
+svn_wc__text_revert_path(const char **result_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *pool)
@@ -282,13 +280,13 @@ svn_wc__text_revert_path(const char **result_path,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   svn_dirent_split(local_abspath, &newpath, &base_name, pool);
-  *result_path = extend_with_adm_name(newpath,
-                                      SVN_WC__REVERT_EXT,
-                                      FALSE,
-                                      pool,
-                                      SVN_WC__ADM_TEXT_BASE,
-                                      base_name,
-                                      NULL);
+  *result_abspath = extend_with_adm_name(newpath,
+                                         SVN_WC__REVERT_EXT,
+                                         FALSE,
+                                         pool,
+                                         SVN_WC__ADM_TEXT_BASE,
+                                         base_name,
+                                         NULL);
 
   return SVN_NO_ERROR;
 }

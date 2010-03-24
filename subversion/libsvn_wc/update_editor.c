@@ -4063,8 +4063,8 @@ open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* For the given PATH, fill out OLD_TEXT_BASE with the permanent text-base
-   path, or (if the entry is replaced with history) to the permanent
+/* For the given LOCAL_ABSPATH, set *OLD_TEXT_BASE_ABSPATH to the permanent
+   text-base path, or (if the entry is replaced with history) to the permanent
    revert-base path.
 
    If REPLACED_P is non-NULL, set *REPLACED_P to whether or not the
@@ -4072,13 +4072,10 @@ open_file(const char *path,
    use the revert base).  If CHECKSUM_P is non-NULL and the path
    already has an entry, set *CHECKSUM_P to the entry's checksum.
 
-   ROOT_ACCESS is an access baton which can be used to find associated
-   batons for the directory that PATH resides within.
-
    Use SCRATCH_POOL for temporary allocation and for *CHECKSUM_P (if
-   applicable), but allocate OLD_TEXT_BASE in RESULT_POOL. */
+   applicable), but allocate OLD_TEXT_BASE_ABSPATH in RESULT_POOL. */
 static svn_error_t *
-choose_base_paths(const char **old_text_base,
+choose_base_paths(const char **old_text_base_abspath,
                   const char **checksum_p,
                   svn_boolean_t *replaced_p,
                   svn_wc__db_t *db,
@@ -4095,10 +4092,10 @@ choose_base_paths(const char **old_text_base,
   replaced = entry && entry->schedule == svn_wc_schedule_replace;
   /* ### Should use pristine api here */
   if (replaced)
-    SVN_ERR(svn_wc__text_revert_path(old_text_base,
+    SVN_ERR(svn_wc__text_revert_path(old_text_base_abspath,
                                      db, local_abspath, result_pool));
   else
-    SVN_ERR(svn_wc__text_base_path(old_text_base,
+    SVN_ERR(svn_wc__text_base_path(old_text_base_abspath,
                                    db, local_abspath, FALSE, result_pool));
 
   if (checksum_p)
@@ -5852,17 +5849,17 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 {
   svn_wc__db_t *db = wc_ctx->db;
   const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
-  const char *tmp_text_base_path;
+  const char *tmp_text_base_abspath;
   svn_checksum_t *base_checksum;
   svn_stream_t *tmp_base_contents;
-  const char *text_base_path;
+  const char *text_base_abspath;
   const char *temp_dir_abspath;
   svn_stringbuf_t *pre_props_accum;
   svn_stringbuf_t *post_props_accum;
   struct last_change_info *last_change = NULL;
   svn_error_t *err;
 
-  SVN_ERR(svn_wc__text_base_path(&text_base_path, db, local_abspath,
+  SVN_ERR(svn_wc__text_base_path(&text_base_abspath, db, local_abspath,
                                  FALSE, pool));
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, db,
                                          local_abspath, pool, pool));
@@ -5939,7 +5936,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                              pool));
 
             SVN_ERR(svn_wc__loggy_move(&pre_props_accum, dir_abspath,
-                                       text_base_path, dst_rtext, pool, pool));
+                                       text_base_abspath, dst_rtext,
+                                       pool, pool));
             SVN_ERR(svn_wc__loggy_revert_props_create(&pre_props_accum, db,
                                                       local_abspath,
                                                       dir_abspath,
@@ -6009,7 +6007,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* Copy the text base contents into a temporary file so our log
      can refer to it. Compute its checksum as we copy. */
-  SVN_ERR(svn_wc__open_writable_base(&tmp_base_contents, &tmp_text_base_path,
+  SVN_ERR(svn_wc__open_writable_base(&tmp_base_contents,
+                                     &tmp_text_base_abspath,
                                      wc_ctx->db, local_abspath,
                                      pool, pool));
   new_base_contents = svn_stream_checksummed2(new_base_contents,
@@ -6049,15 +6048,11 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* Install new text base. */
   {
-    const char *tmp_text_base_abspath;
     svn_wc_entry_t tmp_entry;
-
-    SVN_ERR(svn_dirent_get_absolute(&tmp_text_base_abspath, tmp_text_base_path,
-                                    pool));
 
     /* Write out log commands to set up the new text base and its checksum. */
     SVN_ERR(install_text_base(&post_props_accum, dir_abspath,
-                              tmp_text_base_abspath, text_base_path,
+                              tmp_text_base_abspath, text_base_abspath,
                               pool, pool));
     tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
 
