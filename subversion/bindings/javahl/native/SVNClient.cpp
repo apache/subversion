@@ -843,8 +843,8 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
     Path srcURL(mergeSourceURL);
     SVN_JNI_ERR(srcURL.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_mergeinfo_log(urlPath.c_str(),
-                                         type == 1 ? true : false,
+    SVN_JNI_ERR(svn_client_mergeinfo_log((type == 1),
+                                         urlPath.c_str(),
                                          pegRevision.revision(),
                                          srcURL.c_str(),
                                          srcPegRevision.revision(),
