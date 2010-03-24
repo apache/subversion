@@ -1,5 +1,7 @@
 
-Call graphs of the use of the WC-1 temporary text base path, as of r926814.
+Call graphs of the use of the WC-1 temporary text base path, as of the
+revision (r927034 or perhaps a bit higher) in which we start to pass the
+temp text base path in to svn_wc__sync_text_base().
 
 This is to help us eliminate the use of this path and replace it with a more
 encapsulated way of referring to the new text base, as part of migration to a
@@ -50,20 +52,20 @@ path is obtained, and the extent to which it is propagated, within a commit.
         |^          log_do_committed()
         |^                    |
         |^          install_committed_file()
-        |^            |^[T]           |
-        |^            |^              |
-        |^            |^              |
-        |^            |^              |
-  svn_wc__text_base_path(tmp=TRUE)    |
-            |^                        |
-            |^    svn_wc__sync_text_base()
+        |^            |^              |v
+        |^            |^              |v
+        |^            |^              |v
+        |^            |^              |v
+  svn_wc__text_base_path(tmp=TRUE)    |v
+            |^                        |v
+            |^                      svn_wc__sync_text_base()
+            |^                                 |v
+            |^                              svn_io_rename()
+            |^    [initialization]            + svn_io_set_file_read_only()
+            |^      |
+            |^    make_adm_subdir()
             |^      |^
             |^      |^
-            |^      |^    [initialization]
-            |^      |^      |
-            |^      |^    make_adm_subdir()
-            |^      |^      |^
-            |^      |^      |^
           extend_with_adm_name(tmp=TRUE)
 
 
