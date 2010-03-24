@@ -56,7 +56,7 @@
 #define OP_DELETION_POSTCOMMIT "deletion-postcommit"
 /* Arguments of OP_POSTCOMMIT:
  *   (local_abspath, revnum, date, [author], [checksum],
- *    [dav_cache/wc_props], keep_changelist, tmp_text_base_abspath). */
+ *    [dav_cache/wc_props], keep_changelist, [tmp_text_base_abspath]). */
 #define OP_POSTCOMMIT "postcommit"
 #define OP_INSTALL_PROPERTIES "install-properties"
 #define OP_DELETE "delete"
@@ -1117,7 +1117,6 @@ install_committed_file(svn_boolean_t *overwrote_working,
                        svn_boolean_t remove_read_only,
                        apr_pool_t *scratch_pool)
 {
-  svn_node_kind_t kind;
   svn_boolean_t same, did_set;
   const char *tmp_wfile;
   svn_boolean_t special;
@@ -1143,12 +1142,6 @@ install_committed_file(svn_boolean_t *overwrote_working,
    * reread the file if they don't really need to.
    */
 
-  /* Is there a temporary text base that needs to be installed?  */
-  if (tmp_text_base_abspath != NULL)
-    SVN_ERR(svn_io_check_path(tmp_text_base_abspath, &kind, scratch_pool));
-  else
-    kind = svn_node_none;
-
   /* Copy and translate the new base-to-be file (if found, else the working
    * file) from repository-normal form to working form, writing a new
    * temporary file if any translation was actually done.  Set TMP_WFILE to
@@ -1157,7 +1150,8 @@ install_committed_file(svn_boolean_t *overwrote_working,
    * text is the same as the old working text (or TRUE if it's a special
    * file). */
   {
-    const char *tmp = (kind == svn_node_file) ? tmp_text_base_abspath : file_abspath;
+    const char *tmp
+      = (tmp_text_base_abspath != NULL) ? tmp_text_base_abspath : file_abspath;
 
     /* Copy and translate, if necessary. The output file will be deleted at
      * scratch_pool cleanup.
@@ -1234,7 +1228,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
     }
 
   /* Install the new text base if one is waiting. */
-  if (kind == svn_node_file)
+  if (tmp_text_base_abspath != NULL)
     SVN_ERR(svn_wc__sync_text_base(file_abspath, tmp_text_base_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1596,9 +1590,12 @@ run_postcommit(svn_wc__db_t *db,
     SVN_ERR(svn_skel__parse_proplist(&new_dav_cache, arg5->next,
                                      scratch_pool));
   keep_changelist = svn_skel__parse_int(arg5->next->next, scratch_pool) != 0;
-  tmp_text_base_abspath = apr_pstrmemdup(scratch_pool,
-                                         arg5->next->next->next->data,
-                                         arg5->next->next->next->len);
+  if (arg5->next->next->next->len == 0)
+    tmp_text_base_abspath = NULL;
+  else
+    tmp_text_base_abspath = apr_pstrmemdup(scratch_pool,
+                                           arg5->next->next->next->data,
+                                           arg5->next->next->next->len);
 
   SVN_ERR(log_do_committed(db, local_abspath, tmp_text_base_abspath,
                            new_revision, new_date,
@@ -1624,7 +1621,8 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
 {
   svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
 
-  svn_skel__prepend_str(tmp_text_base_abspath, work_item, scratch_pool);
+  svn_skel__prepend_str(tmp_text_base_abspath ? tmp_text_base_abspath : "",
+                        work_item, scratch_pool);
   svn_skel__prepend_int(keep_changelist, work_item, scratch_pool);
   if (new_dav_cache == NULL || apr_hash_count(new_dav_cache) == 0)
     {
