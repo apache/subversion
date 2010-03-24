@@ -34,37 +34,33 @@ path is obtained, and the extent to which it is propagated, within a commit.
   svn_wc__internal_transmit_text_deltas()  |
     [N] |^                                 |
         |^                                 |
-        |^      { svn_wc_process_committed_queue2() }
-        |^      { svn_wc_process_committed4()       }
-        |^                |
-        |^        svn_wc__process_committed_internal()
-        |^                |
-        |^        process_committed_leaf()
-        |^                |
-        |^        svn_wc__wq_add_postcommit()
-        |^                |
-        |^        WQ:OP_POSTCOMMIT
-        |^                 *
-        |^                  *
-        |^                   *
-        |^          run_postcommit()
-        |^                    |
-        |^          log_do_committed()
-        |^                    |
-        |^          install_committed_file()
-        |^            |^              |v
-        |^            |^              |v
-        |^            |^              |v
-        |^            |^              |v
-  svn_wc__text_base_path(tmp=TRUE)    |v
-            |^                        |v
-            |^                      svn_wc__sync_text_base()
-            |^                                 |v
-            |^                              svn_io_rename()
-            |^    [initialization]            + svn_io_set_file_read_only()
-            |^      |
+        |^            { svn_wc_process_committed_queue2() }
+        |^            { svn_wc_process_committed4()       }
+        |^                      |
+        |^              svn_wc__process_committed_internal()
+        |^                      |
+        |^              process_committed_leaf()
+        |^                |^          |v
+        |^                |^    svn_wc__wq_add_postcommit()
+        |^                |^          *v
+        |^                |^            *v
+        |^                |^              *v
+        |^                |^          WQ:OP_POSTCOMMIT
+        |^                |^                *v
+        |^                |^                  *v
+        |^                |^                    *v
+        |^                |^                run_postcommit()
+        |^                |^                      |v
+        |^                |^                log_do_committed()
+        |^                |^                      |v
+        |^                |^                install_committed_file()
+        |^                |^                      |v
+        |^                |^                      |v
+  svn_wc__text_base_path(tmp=TRUE)          svn_wc__sync_text_base()
+            |^                                    |v
+            |^    [initialization]          svn_io_rename()
+            |^      |                         + svn_io_set_file_read_only()
             |^    make_adm_subdir()
-            |^      |^
             |^      |^
           extend_with_adm_name(tmp=TRUE)
 

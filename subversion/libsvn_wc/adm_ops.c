@@ -359,6 +359,7 @@ process_committed_leaf(svn_wc__db_t *db,
   svn_wc__db_kind_t kind;
   const svn_checksum_t *copied_checksum;
   const char *adm_abspath;
+  const char *tmp_text_base_abspath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -449,7 +450,10 @@ process_committed_leaf(svn_wc__db_t *db,
     SVN_ERR(svn_wc__loggy_delete_lock(db, adm_abspath,
                                       local_abspath, scratch_pool));
 
-  SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, new_revnum,
+  SVN_ERR(svn_wc__text_base_path(&tmp_text_base_abspath, db, local_abspath,
+                                 TRUE, scratch_pool));
+  SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, tmp_text_base_abspath,
+                                    new_revnum,
                                     new_date, rev_author, checksum,
                                     new_dav_cache, keep_changelist,
                                     scratch_pool));
