@@ -698,7 +698,7 @@ class WinGeneratorBase(GeneratorBase):
     #
     # This section parses those dependencies and adds them to the dependency list
     # for this target.
-    if name == 'javahl-javah' or name == 'libsvnjavahl':
+    if name == 'javahl-javah' or name == 'libsvnjavahl' or name == 'javahl-callback-javah':
       for dep in re.findall('\$\(([^\)]*)_DEPS\)', target.add_deps):
         dep = dep.replace('_', '-')
         depends.extend(self.sections[dep].get_targets())
