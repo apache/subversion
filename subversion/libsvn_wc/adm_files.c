@@ -224,25 +224,22 @@ make_adm_subdir(const char *path,
 
 
 svn_error_t *
-svn_wc__sync_text_base(const char *local_abspath, apr_pool_t *pool)
+svn_wc__sync_text_base(const char *local_abspath,
+                       const char *tmp_text_base_abspath,
+                       apr_pool_t *pool)
 {
   const char *parent_path;
   const char *base_name;
-  const char *tmp_path;
   const char *base_path;
 
   svn_dirent_split(local_abspath, &parent_path, &base_name, pool);
-
-  /* Extend tmp name. */
-  tmp_path = extend_with_adm_name(parent_path, SVN_WC__BASE_EXT, TRUE, pool,
-                                  SVN_WC__ADM_TEXT_BASE, base_name, NULL);
 
   /* Extend real name. */
   base_path = extend_with_adm_name(parent_path, SVN_WC__BASE_EXT, FALSE, pool,
                                    SVN_WC__ADM_TEXT_BASE, base_name, NULL);
 
   /* Rename. */
-  SVN_ERR(svn_io_file_rename(tmp_path, base_path, pool));
+  SVN_ERR(svn_io_file_rename(tmp_text_base_abspath, base_path, pool));
   return svn_io_set_file_read_only(base_path, FALSE, pool);
 }
 

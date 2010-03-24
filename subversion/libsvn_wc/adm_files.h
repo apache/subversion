@@ -52,11 +52,13 @@ svn_boolean_t svn_wc__adm_area_exists(const svn_wc_adm_access_t *adm_access,
                                       apr_pool_t *pool);
 
 
-/* Atomically rename a temporary text-base file to its canonical
-   location.  LOCAL_ABSPATH is the path of the working file whose text-base is
-   to be moved.  The tmp file should be closed already. */
+/* Atomically rename a temporary text-base file TMP_TEXT_BASE_ABSPATH to its
+   canonical location.  LOCAL_ABSPATH is the path of the working file whose
+   text-base is to be moved.  The tmp file should be closed already. */
 svn_error_t *
-svn_wc__sync_text_base(const char *local_abspath, apr_pool_t *pool);
+svn_wc__sync_text_base(const char *local_abspath,
+                       const char *tmp_text_base_path,
+                       apr_pool_t *pool);
 
 
 /* Set *RESULT_ABSPATH to the absolute path to LOCAL_ABSPATH's text-base file,
