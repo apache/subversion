@@ -6068,7 +6068,7 @@ svn_wc__db_wclock_set(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_INSERT_WC_LOCK));
   SVN_ERR(svn_sqlite__bindf(stmt, "isi", pdh->wcroot->wc_id, local_relpath,
-                            levels_to_lock));
+                            (apr_int64_t) levels_to_lock));
   err = svn_sqlite__insert(NULL, stmt);
   if (err)
     return svn_error_createf(SVN_ERR_WC_LOCKED, err,
