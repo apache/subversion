@@ -130,6 +130,7 @@ svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__wq_add_postcommit(svn_wc__db_t *db,
                           const char *local_abspath,
+                          const char *tmp_text_base_abspath,
                           svn_revnum_t new_revision,
                           apr_time_t new_date,
                           const char *new_author,
