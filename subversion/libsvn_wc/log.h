@@ -304,17 +304,6 @@ svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
                      apr_pool_t *scratch_pool);
 
 
-/* Process the instructions in the log file for ADM_ABSPATH,
-   using its access baton that MUST BE cached in DB.
-
-   Use SCRATCH_POOL for temporary allocations.
- */
-svn_error_t *
-svn_wc__run_log2(svn_wc__db_t *db,
-                 const char *adm_abspath,
-                 apr_pool_t *scratch_pool);
-
-
 /* TODO ###
 
    Use SCRATCH_POOL for temporary allocations.

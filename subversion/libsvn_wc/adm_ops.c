@@ -2256,12 +2256,9 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 
   if (status == svn_wc__db_status_added)
     {
-      /* ### locally-added nodes *do* have a pristine. we install it when
-         ### the node is added/copied/moved.  */
-#if 0
-      /* For an added node, we return an empty stream. Make sure this is not
-       * copied-here or moved-here, in which case we return the copy/move
-       * source's contents. */
+      /* For an added node, we return "no stream". Make sure this is not
+         copied-here or moved-here, in which case we return the copy/move
+         source's contents.  */
       SVN_ERR(svn_wc__db_scan_addition(&status,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL,
@@ -2273,7 +2270,6 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
           *contents = NULL;
           return SVN_NO_ERROR;
         }
-#endif
     }
   else if (status == svn_wc__db_status_not_present)
     /* We know that the delete of this node has been committed.

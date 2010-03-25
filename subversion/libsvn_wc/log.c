@@ -760,23 +760,6 @@ svn_wc__run_xml_log(svn_wc__db_t *db,
 }
 
 
-svn_error_t *
-svn_wc__run_log2(svn_wc__db_t *db,
-                 const char *adm_abspath,
-                 apr_pool_t *scratch_pool)
-{
-  /* Verify that we're holding this directory's write lock.  */
-  SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
-
-  return svn_error_return(svn_wc__wq_run(
-                            db, adm_abspath,
-                            NULL, NULL,
-                            scratch_pool));
-}
-
-
-
-
 /*** Log file generation helpers ***/
 
 /* Extend LOG_ACCUM with log operations to do MOVE_COPY_OP to SRC_PATH and

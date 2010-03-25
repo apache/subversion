@@ -532,7 +532,9 @@ cleanup_dir_baton(void *dir_baton)
 
   err = flush_log(db, pool);
   if (!err)
-    err = svn_wc__run_log2(eb->db, db->local_abspath, pool);
+    err = svn_wc__wq_run(eb->db, db->local_abspath,
+                         eb->cancel_func, eb->cancel_baton,
+                         pool);
 
   /* If the editor aborts for some sort of error, the command line
      client relies on pool cleanup to run outstanding work queues and
@@ -2156,7 +2158,9 @@ do_entry_deletion(struct edit_baton *eb,
            * Do this before schedule_existing_item_for_re_add(), in case
            * that needs to modify the same entries. */
           SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_accum, pool));
-          SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
+          SVN_ERR(svn_wc__wq_run(eb->db, dir_abspath,
+                                 eb->cancel_func, eb->cancel_baton,
+                                 pool));
 
           SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, TRUE,
                                                pool));
@@ -2185,7 +2189,9 @@ do_entry_deletion(struct edit_baton *eb,
            * Do this before schedule_existing_item_for_re_add(), in case
            * that needs to modify the same entries. */
           SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_accum, pool));
-          SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
+          SVN_ERR(svn_wc__wq_run(eb->db, dir_abspath,
+                                 eb->cancel_func, eb->cancel_baton,
+                                 pool));
 
           SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, TRUE,
                                                pool));
@@ -2266,7 +2272,9 @@ do_entry_deletion(struct edit_baton *eb,
 
   /* Note: these two lines are duplicated in the tree-conflicts bail out
    * above. */
-  SVN_ERR(svn_wc__run_log2(eb->db, dir_abspath, pool));
+  SVN_ERR(svn_wc__wq_run(eb->db, dir_abspath,
+                         eb->cancel_func, eb->cancel_baton,
+                         pool));
 
   /* Notify. (If tree_conflict, we've already notified.) */
   if (eb->notify_func
@@ -2769,6 +2777,9 @@ open_directory(const char *path,
   SVN_ERR(make_dir_baton(&db, path, eb, pb, FALSE, pool));
   *child_baton = db;
 
+  /* We should have a write lock on every directory touched.  */
+  SVN_ERR(svn_wc__write_check(eb->db, db->local_abspath, pool));
+
   if (pb->skip_descendants)
     {
       if (!pb->skip_this)
@@ -3133,7 +3144,9 @@ close_directory(void *dir_baton,
                                                     last_change->cmt_author,
                                                     pool));
 
-  SVN_ERR(svn_wc__run_log2(eb->db, db->local_abspath, pool));
+  SVN_ERR(svn_wc__wq_run(eb->db, db->local_abspath,
+                         eb->cancel_func, eb->cancel_baton,
+                         pool));
 
   /* We're done with this directory, so remove one reference from the
      bump information. This may trigger a number of actions. See
@@ -5040,7 +5053,8 @@ close_file(void *file_baton,
 
       SVN_ERR(svn_wc__wq_run(eb->db,
                              fb->dir_baton->local_abspath,
-                             NULL, NULL, pool));
+                             eb->cancel_func, eb->cancel_baton,
+                             pool));
     }
 
   /* ### Hack: The following block should be an atomic operation (including the install
@@ -6046,7 +6060,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                    tmp_text_path, pool, pool));
     }
 
-  /* Install new text base. */
+  /* Install new text base for copied files. Added files do NOT have a
+     text base.  */
+  if (copyfrom_url != NULL)
   {
     svn_wc_entry_t tmp_entry;
 
@@ -6076,7 +6092,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       /* ### execute the work items which construct the node, allowing the
          ### wc_db operation to tweak the WORKING_NODE row. these values
          ### should be set some other way.  */
-      SVN_ERR(svn_wc__run_log2(db, dir_abspath, pool));
+      SVN_ERR(svn_wc__wq_run(db, dir_abspath,
+                             cancel_func, cancel_baton,
+                             pool));
       SVN_ERR(svn_wc__db_temp_op_set_working_last_change(
                 db, local_abspath,
                 last_change->cmt_rev,
@@ -6085,12 +6103,27 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                 pool));
     }
 
+  /* For added files without NEW_CONTENTS, then generate the working file
+     from the provided "pristine" contents.  */
+  if (new_contents == NULL && copyfrom_url == NULL)
+    {
+      /* Translate new temporary text file to working text. */
+      SVN_ERR(svn_wc__loggy_copy(&post_props_accum, dir_abspath,
+                                 tmp_text_base_abspath, local_abspath,
+                                 pool, pool));
+
+      /* After copying to the working directory, lose the temp file. */
+      SVN_ERR(svn_wc__loggy_remove(&post_props_accum, dir_abspath,
+                                   tmp_text_base_abspath, pool, pool));
+    }
+
   /* ### /HACK */
   SVN_ERR(svn_wc__wq_add_loggy(db, dir_abspath, post_props_accum, pool));
 
   /* If a working file was not provided by the caller, then install one
-     from the text base (with appropriate translation).  */
-  if (new_contents == NULL)
+     from the text base (with appropriate translation). Note that the
+     text base is available only for copied files.  */
+  if (new_contents == NULL && copyfrom_url != NULL)
     {
       const svn_skel_t *work_item;
 
@@ -6106,5 +6139,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
     }
 
-  return svn_error_return(svn_wc__run_log2(db, dir_abspath, pool));
+  return svn_error_return(svn_wc__wq_run(db, dir_abspath,
+                                         cancel_func, cancel_baton,
+                                         pool));
 }
