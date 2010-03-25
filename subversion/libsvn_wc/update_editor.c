@@ -5763,80 +5763,6 @@ svn_wc_get_actual_target2(const char **anchor,
   return SVN_NO_ERROR;
 }
 
-/* ### WHAT IT ACTUALLY DOES
-
-   Accumulate last-change info in LAST_CHANGE, and possibly remove a lock
-   token from DB, according to any entry-props that are present in
-   UNMODIFIED_PROPS.
-
-   Filter *UNMODIFIED_PROPS so that just the regular props remain, deleting
-   the wc-props and entry-props from it.
-
-   Ignore NEW_PROPS.
-
-   ### WHAT BERT SAID ON IRC
-
-   [This] function used to do more.. but all the work it was originally
-   supposed to do will eventually a db with a few wq installs.
-
-   I think it should just be moved in the parent function. Makes more sense
-   than that separate function with one caller and handling different
-   features.
-   [...]
-
-   Callers of this function sometimes do a checkout in a subdir and then
-   start modifying entries to make everything work as if it is a copy.
-
-   (svn_wc_addX() case is worse though.. This is only for single file changes)
-
-   The parent is just installing a file in WORKING_NODE (new or replacing)
-   with all the details provided by the caller.
-
-   It's primary users are svn cp URL file and svn merge (incoming file
-   additions).
-   [...]
-
-   ### WHAT THIS DOC STRING SAID BEFORE
-
-   Write, to DB, commands to install properties for an added LOCAL_ABSPATH
-   in DB. UNMODIFIED_PROPS and NEW_PROPS are the properties to be installed
-   in WORKING_NODE and ACTUAL_NODE, respectively.
-   UNMODIFIED_PROPS can contain entryprops and wcprops as well.
-   Use SCRATCH_POOL for temporary allocations. */
-static svn_error_t *
-install_added_props(struct last_change_info **last_change,
-                    svn_wc__db_t *db,
-                    const char *local_abspath,
-                    apr_hash_t **unmodified_props,
-                    apr_hash_t *new_props,
-                    apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *regular_props = NULL, *wc_props = NULL,
-    *entry_props = NULL;
-
-  /* Categorize the base properties. */
-  {
-    apr_array_header_t *prop_array;
-
-    /* Diff an empty prop has against the new base props gives us an array
-       of all props. */
-    SVN_ERR(svn_prop_diffs(&prop_array, *unmodified_props,
-                           apr_hash_make(scratch_pool), scratch_pool));
-    SVN_ERR(svn_categorize_props(prop_array,
-                                 &entry_props, &wc_props, &regular_props,
-                                 scratch_pool));
-
-    /* Put regular props back into a hash table. */
-    *unmodified_props = prop_hash_from_array(regular_props, scratch_pool);
-  }
-
-  /* Install the entry props. */
-  SVN_ERR(accumulate_last_change(last_change, NULL, db, local_abspath,
-                                 entry_props, scratch_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 /* ### Note that this function is completely different from the rest of the
        update editor in what it updates. The update editor changes only BASE
@@ -5868,10 +5794,16 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   svn_stream_t *tmp_base_contents;
   const char *text_base_abspath;
   const char *temp_dir_abspath;
-  svn_stringbuf_t *pre_props_accum;
-  svn_stringbuf_t *post_props_accum;
+  svn_stringbuf_t *log_accum;
   struct last_change_info *last_change = NULL;
   svn_error_t *err;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(new_base_contents != NULL);
+  SVN_ERR_ASSERT(new_base_props != NULL);
+
+  /* We should have a write lock on this file's parent directory.  */
+  SVN_ERR(svn_wc__write_check(db, dir_abspath, pool));
 
   SVN_ERR(svn_wc__text_base_path(&text_base_abspath, db, local_abspath,
                                  FALSE, pool));
@@ -5897,7 +5829,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* Accumulate log commands in this buffer until we're ready to close
      and run the log.  */
-  pre_props_accum = svn_stringbuf_create("", pool);
+  log_accum = svn_stringbuf_create("", pool);
 
   /* If we're replacing the file then we need to save the destination file's
      original text base and prop base before replacing it. This allows us to
@@ -5949,13 +5881,16 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
             SVN_ERR(svn_wc__text_revert_path(&dst_rtext, db, local_abspath,
                                              pool));
 
-            SVN_ERR(svn_wc__loggy_move(&pre_props_accum, dir_abspath,
+            SVN_ERR(svn_wc__loggy_move(&log_accum, dir_abspath,
                                        text_base_abspath, dst_rtext,
                                        pool, pool));
-            SVN_ERR(svn_wc__loggy_revert_props_create(&pre_props_accum, db,
+            SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
+
+            SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum, db,
                                                       local_abspath,
                                                       dir_abspath,
                                                       pool));
+            SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
           }
       }
   }
@@ -5983,9 +5918,10 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
           | SVN_WC__ENTRY_MODIFY_COPIED;
       }
 
-    SVN_ERR(svn_wc__loggy_entry_modify(&pre_props_accum, dir_abspath,
+    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, dir_abspath,
                                        local_abspath, &tmp_entry,
                                        modify_flags, pool, pool));
+    SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
   }
 
   /* ### Clear working node status in preparation for writing a new node. */
@@ -6003,21 +5939,42 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
        have an explicid 'changed' value, so we set the value to 'undefined'. */
     tmp_entry.text_time = 0;
 
-    SVN_ERR(svn_wc__loggy_entry_modify(&pre_props_accum, dir_abspath,
+    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, dir_abspath,
                                        local_abspath,  &tmp_entry,
                                        SVN_WC__ENTRY_MODIFY_KIND
                                          | SVN_WC__ENTRY_MODIFY_TEXT_TIME
                                          | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
                                        pool, pool));
-
+    SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
   }
 
-  post_props_accum = svn_stringbuf_create("", pool);
+  /* Categorize the base properties. */
+  {
+    apr_array_header_t *regular_props;
+    apr_array_header_t *wc_props;
+    apr_array_header_t *entry_props;
+    apr_array_header_t *prop_array;
 
-  /* Install the props before the loggy translation, so that it has access to
-     the properties for this file. */
-  SVN_ERR(install_added_props(&last_change, db, local_abspath, &new_base_props,
-                              new_props, pool));
+    /* Diff an empty prop has against the new base props gives us an array
+       of all props. */
+    SVN_ERR(svn_prop_diffs(&prop_array, new_base_props,
+                           apr_hash_make(pool), pool));
+    SVN_ERR(svn_categorize_props(prop_array,
+                                 &entry_props, &wc_props, &regular_props,
+                                 pool));
+
+    /* Put regular props back into a hash table. */
+    new_base_props = prop_hash_from_array(regular_props, pool);
+
+    /* Get the change_* info from the entry props.  */
+    SVN_ERR(accumulate_last_change(&last_change, NULL, db, local_abspath,
+                                   entry_props, pool, pool));
+  }
+
+  /* Add some work items to install the properties.  */
+  SVN_ERR(svn_wc__install_props(db, local_abspath, new_base_props,
+                                new_props ? new_props : new_base_props,
+                                TRUE, FALSE, pool));
 
   /* Copy the text base contents into a temporary file so our log
      can refer to it. Compute its checksum as we copy. */
@@ -6051,13 +6008,24 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                pool));
 
       /* Translate new temporary text file to working text. */
-      SVN_ERR(svn_wc__loggy_copy(&post_props_accum, dir_abspath,
+      SVN_ERR(svn_wc__loggy_copy(&log_accum, dir_abspath,
                                  tmp_text_path, local_abspath,
                                  pool, pool));
+      SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
 
       /* After copying to the working directory, lose the temp file. */
-      SVN_ERR(svn_wc__loggy_remove(&post_props_accum, dir_abspath,
-                                   tmp_text_path, pool, pool));
+      {
+        const svn_skel_t *work_item;
+
+        SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                             db, tmp_text_path,
+                                             pool, pool));
+        /* ### we should pass WORK_ITEM to some wc_db api that constructs
+           ### this new node. but alas, we do so much of this in pieces,
+           ### and not using wc_db apis. so just manually add the work item
+           ### into the queue.  */
+        SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
+      }
     }
 
   /* Install new text base for copied files. Added files do NOT have a
@@ -6067,24 +6035,19 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     svn_wc_entry_t tmp_entry;
 
     /* Write out log commands to set up the new text base and its checksum. */
-    SVN_ERR(install_text_base(&post_props_accum, dir_abspath,
+    SVN_ERR(install_text_base(&log_accum, dir_abspath,
                               tmp_text_base_abspath, text_base_abspath,
                               pool, pool));
+    SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
+
     tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
 
-    SVN_ERR(svn_wc__loggy_entry_modify(&post_props_accum, dir_abspath,
+    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, dir_abspath,
                                        local_abspath, &tmp_entry,
                                        SVN_WC__ENTRY_MODIFY_CHECKSUM,
                                        pool, pool));
+    SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
   }
-
-  /* Write our accumulation of log entries into a log file */
-  SVN_ERR(svn_wc__wq_add_loggy(db, dir_abspath, pre_props_accum, pool));
-
-  /* Add some work items to install the properties.  */
-  SVN_ERR(svn_wc__install_props(db, local_abspath, new_base_props,
-                                new_props ? new_props : new_base_props,
-                                TRUE, FALSE, pool));
 
   /* ### HACK: The following code should be performed in the same transaction as the install */
   if (last_change)
@@ -6108,17 +6071,27 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   if (new_contents == NULL && copyfrom_url == NULL)
     {
       /* Translate new temporary text file to working text. */
-      SVN_ERR(svn_wc__loggy_copy(&post_props_accum, dir_abspath,
+      SVN_ERR(svn_wc__loggy_copy(&log_accum, dir_abspath,
                                  tmp_text_base_abspath, local_abspath,
                                  pool, pool));
+      SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
 
       /* After copying to the working directory, lose the temp file. */
-      SVN_ERR(svn_wc__loggy_remove(&post_props_accum, dir_abspath,
-                                   tmp_text_base_abspath, pool, pool));
-    }
+      {
+        const svn_skel_t *work_item;
 
+        SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                             db, tmp_text_base_abspath,
+                                             pool, pool));
+        /* ### we should pass WORK_ITEM to some wc_db api that constructs
+           ### this new node. but alas, we do so much of this in pieces,
+           ### and not using wc_db apis. so just manually add the work item
+           ### into the queue.  */
+        SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
+      }
+    }
+  
   /* ### /HACK */
-  SVN_ERR(svn_wc__wq_add_loggy(db, dir_abspath, post_props_accum, pool));
 
   /* If a working file was not provided by the caller, then install one
      from the text base (with appropriate translation). Note that the
