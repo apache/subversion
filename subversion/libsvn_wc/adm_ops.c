@@ -49,6 +49,7 @@
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "svn_diff.h"
+#include "svn_sorts.h"
 
 #include "wc.h"
 #include "log.h"
@@ -68,8 +69,11 @@
 
 struct svn_wc_committed_queue_t
 {
+  /* The pool in which ->queue is allocated. */
   apr_pool_t *pool;
-  apr_array_header_t *queue;
+  /* Mapping (const char *) local_abspath to (committed_queue_item_t *). */
+  apr_hash_t *queue;
+  /* Is any item in the queue marked as 'recursive'? */
   svn_boolean_t have_recursive;
 };
 
@@ -405,22 +409,14 @@ process_committed_leaf(svn_wc__db_t *db,
           /* If we sent a delta (meaning: post-copy modification),
              then this file will appear in the queue.  See if we can
              find it. */
-          int i;
-
-          /* ### this is inefficient. switch to hash. that's round #2 */
-
           if (queue != NULL)
-            for (i = 0; i < queue->queue->nelts; i++)
-              {
-                const committed_queue_item_t *cqi
-                  = APR_ARRAY_IDX(queue->queue, i,
-                                  const committed_queue_item_t *);
-                if (strcmp(local_abspath, cqi->local_abspath) == 0)
-                  {
-                    checksum = cqi->checksum;
-                    break;
-                  }
-              }
+            {
+              const committed_queue_item_t *cqi
+                = apr_hash_get(queue->queue, local_abspath, APR_HASH_KEY_STRING);
+
+              if (cqi != NULL)
+                checksum = cqi->checksum;
+            }
           if (checksum == NULL)
             {
               /* It was copied and not modified. We should have a text
@@ -472,7 +468,6 @@ process_committed_leaf(svn_wc__db_t *db,
 }
 
 
-/* */
 svn_error_t *
 svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    const char *local_abspath,
@@ -621,7 +616,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool)
 
   q = apr_palloc(pool, sizeof(*q));
   q->pool = pool;
-  q->queue = apr_array_make(pool, 1, sizeof(committed_queue_item_t *));
+  q->queue = apr_hash_make(pool);
   q->have_recursive = FALSE;
 
   return q;
@@ -656,29 +651,32 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
   cqi->checksum = checksum;
   cqi->new_dav_cache = svn_wc__prop_array_to_hash(wcprop_changes, queue->pool);
 
-  APR_ARRAY_PUSH(queue->queue, committed_queue_item_t *) = cqi;
+  apr_hash_set(queue->queue, local_abspath, APR_HASH_KEY_STRING, cqi);
 
   return SVN_NO_ERROR;
 }
 
 /* Return TRUE if any item of QUEUE is a parent of ITEM and will be
    processed recursively, return FALSE otherwise.
+
+   The algorithmic complexity of this search implementation is O(queue
+   length), but it's quite quick.
 */
 static svn_boolean_t
-have_recursive_parent(const apr_array_header_t *queue, int item)
+have_recursive_parent(apr_hash_t *queue,
+                      const committed_queue_item_t *item,
+                      apr_pool_t *scratch_pool)
 {
-  int i;
-  const char *local_abspath
-    = APR_ARRAY_IDX(queue, item, committed_queue_item_t *)->local_abspath;
+  apr_hash_index_t *hi;
+  const char *local_abspath = item->local_abspath;
 
-  for (i = 0; i < queue->nelts; i++)
+  for (hi = apr_hash_first(scratch_pool, queue); hi; hi = apr_hash_next(hi))
     {
-      const committed_queue_item_t *qi;
+      const committed_queue_item_t *qi = svn__apr_hash_index_val(hi);
 
-      if (i == item)
+      if (qi == item)
         continue;
 
-      qi = APR_ARRAY_IDX(queue, i, const committed_queue_item_t *);
       if (qi->recurse && svn_dirent_is_child(qi->local_abspath, local_abspath,
                                              NULL))
         return TRUE;
@@ -695,6 +693,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                 const char *rev_author,
                                 apr_pool_t *scratch_pool)
 {
+  apr_array_header_t *sorted_queue;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_time_t new_date;
@@ -704,16 +703,23 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
   else
     new_date = 0;
 
-  for (i = 0; i < queue->queue->nelts; i++)
+  /* Process the queued items in order of their paths.  (The requirement is
+   * probably just that a directory must be processed before its children.) */
+  sorted_queue = svn_sort__hash(queue->queue, svn_sort_compare_items_as_paths,
+                                scratch_pool);
+  for (i = 0; i < sorted_queue->nelts; i++)
     {
-      const committed_queue_item_t *cqi
-        = APR_ARRAY_IDX(queue->queue, i, const committed_queue_item_t *);
+      const svn_sort__item_t *sort_item
+        = &APR_ARRAY_IDX(sorted_queue, i, svn_sort__item_t);
+      const committed_queue_item_t *cqi = sort_item->value;
 
       svn_pool_clear(iterpool);
 
-      /* If there are some recursive items, then see if this item is a
-         child of one, and will (implicitly) be accounted for. */
-      if (queue->have_recursive && have_recursive_parent(queue->queue, i))
+      /* Skip this item if it is a child of a recursive item, because it has
+         been (or will be) accounted for when that recursive item was (or
+         will be) processed. */
+      if (queue->have_recursive && have_recursive_parent(queue->queue, cqi,
+                                                         scratch_pool))
         continue;
 
       SVN_ERR(svn_wc__process_committed_internal(wc_ctx->db, cqi->local_abspath,
@@ -729,7 +735,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                              iterpool));
     }
 
-  queue->queue->nelts = 0;
+  apr_hash_clear(queue->queue);
 
   svn_pool_destroy(iterpool);
 
