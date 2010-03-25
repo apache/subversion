@@ -813,9 +813,6 @@ def reflect_dropped_renumbered_revs(sbox):
                              '/toplevel')
 
   # Verify the svn:mergeinfo properties
-  # Currently this test is set as XFail because the original fix for
-  # issue #3020 didn't have the correct expecations, see
-  # http://svn.haxx.se/dev/archive-2010-03/0244.shtml.
   svntest.actions.run_and_verify_svn(None, ["/trunk:2-4\n"],
                                      [], 'propget', 'svn:mergeinfo',
                                      sbox.repo_url + '/branch2')
@@ -1052,41 +1049,24 @@ def drop_mergeinfo_outside_of_dump_stream(sbox):
   #       /trunk:4
   #
   # But here we will load it into the existing skeleton repository in the
-  # projects/Project-X directory.  Since we are loading the dump into a
+  # Projects/Project-X directory.  Since we are loading the dump into a
   # subtree, all the merge sources should be prefixed with the path to
-  # that subtree, i.e. 'projects/Project-X', compared to the mergeinfo above.
+  # that subtree, i.e. 'Projects/Project-X', compared to the mergeinfo above.
   # In addition, since the skeleton repos already has 6 revisions, we expect
   # all the remaining revisions to be offset +6 from the above.  That should
   # result in this mergeinfo:
   #
-  #   Properties on 'projects/Project-X/branches/B1':
+  #   Properties on 'Projects/Project-X/branches/B1':
   #     svn:mergeinfo
-  #       /projects/Project-X/branches/B2:12-13
-  #       /projects/Project-X/trunk:7,10
-  #   Properties on 'projects/Project-X/branches/B1/B/E':
+  #       /Projects/Project-X/branches/B2:12-13
+  #       /Projects/Project-X/trunk:7,10
+  #   Properties on 'Projects/Project-X/branches/B1/B/E':
   #     svn:mergeinfo
-  #       /projects/Project-X/branches/B2/B/E:12-13
-  #       /projects/Project-X/trunk/B/E:7,9-10
-  #   Properties on 'projects/Project-X/branches/B2':
+  #       /Projects/Project-X/branches/B2/B/E:12-13
+  #       /Projects/Project-X/trunk/B/E:7,9-10
+  #   Properties on 'Projects/Project-X/branches/B2':
   #     svn:mergeinfo
-  #       /projects/Project-X/trunk:10
-  #
-  # ...Unfortunately this is currently the resulting mergeinfo
-  # (and why this test is set to XFail):
-  #
-  #   Properties on 'projects\Project-X\branches\B1':
-  #     svn:mergeinfo
-  #       /projects/Project-X/branches/B2:12-13
-  #       /projects/Project-X/trunk:6-7,10
-  #                                 ^
-  #   Properties on 'projects\Project-X\branches\B1\B\E':
-  #     svn:mergeinfo
-  #       /projects/Project-X/branches/B2/B/E:12-13
-  #       /projects/Project-X/trunk/B/E:5-7,9-10
-  #                                     ^^
-  #   Properties on 'projects\Project-X\branches\B2':
-  #     svn:mergeinfo
-  #       /projects/Project-X/trunk:10
+  #       /Projects/Project-X/trunk:10
 
   # Load the skeleton dump:
   dumpfile1 = svntest.main.file_read(
@@ -1147,13 +1127,13 @@ test_list = [ None,
               SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
               load_with_parent_dir,
               set_uuid,
-              XFail(reflect_dropped_renumbered_revs),
+              reflect_dropped_renumbered_revs,
               SkipUnless(fsfs_recover_handle_missing_revs_or_revprops_file,
                          svntest.main.is_fs_type_fsfs),
               create_in_repo_subdir,
               SkipUnless(verify_with_invalid_revprops,
                          svntest.main.is_fs_type_fsfs),
-              XFail(drop_mergeinfo_outside_of_dump_stream),
+              drop_mergeinfo_outside_of_dump_stream,
              ]
 
 if __name__ == '__main__':
