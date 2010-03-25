@@ -4836,6 +4836,12 @@ svn_client_info(const char *path_or_url,
  * Apply a unidiff patch that's located at absolute path
  * @a abs_patch_path to the working copy at @a local_abspath.
  *
+ * This function makes a best-effort attempt at applying the patch.
+ * It might skip patch targets which cannot be patched (e.g. targets
+ * that are outside of the working copy). It will also reject hunks
+ * which cannot be applied to a target in case the hunk's context
+ * does not match anywhere in the patch target.
+ *
  * If @a dry_run is TRUE, the patching process is carried out, and full
  * notification feedback is provided, but the working copy is not modified.
  *
