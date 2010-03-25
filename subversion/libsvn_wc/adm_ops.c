@@ -719,7 +719,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
          been (or will be) accounted for when that recursive item was (or
          will be) processed. */
       if (queue->have_recursive && have_recursive_parent(queue->queue, cqi,
-                                                         scratch_pool))
+                                                         iterpool))
         continue;
 
       SVN_ERR(svn_wc__process_committed_internal(wc_ctx->db, cqi->local_abspath,
@@ -735,7 +735,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                              iterpool));
     }
 
-  apr_hash_clear(queue->queue);
+  svn_hash__clear(queue->queue, scratch_pool);
 
   svn_pool_destroy(iterpool);
 
