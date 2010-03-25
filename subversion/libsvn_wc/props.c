@@ -656,7 +656,6 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                     void *cancel_baton,
                     apr_pool_t *pool /* scratch_pool */)
 {
-  svn_wc__db_kind_t kind;
   svn_boolean_t hidden;
   svn_stringbuf_t *log_accum;
   apr_hash_t *new_base_props;
@@ -691,33 +690,33 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                               pool, pool));
 
   if (!dry_run)
-    SVN_ERR(svn_wc__install_props(wc_ctx->db, local_abspath,
-                                  new_base_props, new_actual_props,
-                                  base_merge, FALSE, pool));
-
-
-  if (! dry_run)
     {
+      svn_wc__db_kind_t kind;
       const char *dir_abspath;
 
       SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath,
                                    FALSE, pool));
+      if (kind == svn_wc__db_kind_dir)
+        dir_abspath = local_abspath;
+      else
+        dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
-      switch (kind)
-        {
-        case svn_wc__db_kind_dir:
-          dir_abspath = local_abspath;
-          break;
-        default:
-          dir_abspath = svn_dirent_dirname(local_abspath, pool);
-          break;
-        }
+      /* Verify that we're holding this directory's write lock.  */
+      SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, pool));
+
+      SVN_ERR(svn_wc__install_props(wc_ctx->db, local_abspath,
+                                    new_base_props, new_actual_props,
+                                    base_merge, FALSE, pool));
+
+      /* ### add_loggy takes a DIR, but wq_run is a simple WRI_ABSPATH  */
 
       if (! svn_stringbuf_isempty(log_accum))
-          SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath, log_accum,
-                                       pool));
+        SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath, log_accum,
+                                     pool));
 
-      SVN_ERR(svn_wc__run_log2(wc_ctx->db, dir_abspath, pool));
+      SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
+                             cancel_func, cancel_baton,
+                             pool));
     }
 
   return SVN_NO_ERROR;
