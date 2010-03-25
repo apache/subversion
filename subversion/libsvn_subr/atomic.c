@@ -33,6 +33,10 @@ svn_error_t*
 svn_atomic__init_once(volatile svn_atomic_t *global_status,
                       svn_error_t *(*init_func)(apr_pool_t*), apr_pool_t* pool)
 {
+  /* !! Don't use localizable strings in this function, because these
+     !! might cause deadlocks. This function can be used to initialize
+     !! libraries that are used for generating error messages. */
+
   /* We have to call init_func exactly once.  Because APR
      doesn't have statically-initialized mutexes, we implement a poor
      man's spinlock using svn_atomic_cas. */
