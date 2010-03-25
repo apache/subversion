@@ -457,6 +457,7 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   apr_status_t status;
   apr_proc_t *proc;
   apr_procattr_t *attr;
+  svn_error_t *err;
 
   status = apr_procattr_create(&attr, pool);
   if (status == APR_SUCCESS)
@@ -510,7 +511,14 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
 
   /* Guard against dotfile output to stdout on the server. */
   *conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
-  SVN_ERR(svn_ra_svn_skip_leading_garbage(*conn, pool));
+  err = svn_ra_svn_skip_leading_garbage(*conn, pool);
+  if (err)
+    return svn_error_quick_wrap(
+             err,
+             _("To better debug SSH connection problems, remove the -q "
+               "option from 'ssh' in the [tunnels] section of your "
+               "Subversion configuration file."));
+
   return SVN_NO_ERROR;
 }
 

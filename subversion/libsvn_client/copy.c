@@ -67,7 +67,7 @@
    *TARGET_MERGEINFO.  ADM_ACCESS may be NULL, if SRC_PATH_OR_URL is an
    URL.  If NO_REPOS_ACCESS is set, this function is disallowed from
    consulting the repository about anything.  RA_SESSION may be NULL but
-   only if NO_REPOS_ACCESS is true. */
+   only if NO_REPOS_ACCESS is true.  */
 static svn_error_t *
 calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                            apr_hash_t **target_mergeinfo,
@@ -109,19 +109,22 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
 
   if (! locally_added)
     {
-      const char *mergeinfo_path;
-
       if (! no_repos_access)
         {
-          /* Fetch any existing (explicit) mergeinfo. */
-          SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, src_url,
-                                                    entry ? entry->repos : NULL,
-                                                    FALSE, ra_session,
-                                                    adm_access, pool));
+          /* Fetch any existing (explicit) mergeinfo.  We'll temporarily
+             reparent to the target URL here, just to keep the code simple.
+             We could, as an alternative, first see if the target URL was a
+             child of the session URL and use the relative "remainder", 
+             falling back to this reparenting as necessary.  */
+          const char *old_session_url = NULL;
+          SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url,
+                                                    ra_session, src_url, pool));
           SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
-                                                  mergeinfo_path, src_revnum,
+                                                  "", src_revnum,
                                                   svn_mergeinfo_inherited,
                                                   TRUE, pool));
+          if (old_session_url)
+            SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
         }
       else
         {

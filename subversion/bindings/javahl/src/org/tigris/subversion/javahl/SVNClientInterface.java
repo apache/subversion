@@ -42,7 +42,7 @@ public interface SVNClientInterface
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
      * @see <a
-     * href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">
+     * href="http://svn.apache.org/repos/asf/subversion/trunk/notes/asp-dot-net-hack.txt">
      * Instructions on changing this as a work-around for the behavior of
      * ASP.Net on Windows.</a>
      * @since 1.3

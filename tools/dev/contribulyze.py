@@ -606,14 +606,14 @@ index_introduction = '''
 <p>The following list of contributors and their contributions is meant
 to help us keep track of whom to consider for commit access.  The list
 was generated from "svn&nbsp;log" output by <a
-href="http://svn.collab.net/repos/svn/trunk/tools/dev/contribulyze.py"
+href="http://svn.apache.org/repos/asf/subversion/trunk/tools/dev/contribulyze.py"
 >contribulyze.py</a>, which looks for log messages that use the <a
 href="http://subversion.tigris.org/hacking.html#crediting">special
 contribution format</a>.</p>
 
 <p><i>Please do not use this list as a generic guide to who has
 contributed what to Subversion!</i> It omits existing <a
-href="http://svn.collab.net/repos/svn/trunk/COMMITTERS"
+href="http://svn.apache.org/repos/asf/subversion/trunk/COMMITTERS"
 >full committers</a>, for example, because they are irrelevant to our
 search for new committers.  Also, it merely counts changes, it does
 not evaluate them.  To truly understand what someone has contributed,

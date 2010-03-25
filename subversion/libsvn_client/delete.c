@@ -109,7 +109,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
             svn_client_ctx_t *ctx,
             apr_pool_t *pool)
 {
-  svn_ra_session_t *ra_session;
+  svn_ra_session_t *ra_session = NULL;
   const svn_delta_editor_t *editor;
   void *edit_baton;
   void *commit_baton;
@@ -162,29 +162,46 @@ delete_urls(svn_commit_info_t **commit_info_p,
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, pool));
 
-  /* Open an RA session for the URL. Note that we don't have a local
-     directory, nor a place to put temp files. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, common, NULL,
-                                               NULL, NULL, FALSE, TRUE,
-                                               ctx, pool));
-
   /* Verify that each thing to be deleted actually exists (to prevent
      the creation of a revision that has no changes, since the
-     filesystem allows for no-op deletes). */
+     filesystem allows for no-op deletes).  While here, we'll
+     URI-decode our targets.  */
   for (i = 0; i < targets->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(targets, i, const char *);
+      const char *item_url;
+
       svn_pool_clear(subpool);
+      item_url = svn_path_url_add_component2(common, path, subpool);
       path = svn_path_uri_decode(path, pool);
       APR_ARRAY_IDX(targets, i, const char *) = path;
-      SVN_ERR(svn_ra_check_path(ra_session, path, SVN_INVALID_REVNUM,
+
+      /* If we've not yet done so, open an RA session for the
+         URL. Note that we don't have a local directory, nor a place
+         to put temp files.  Otherwise, reparent our existing
+         session.  */
+      if (! ra_session)
+        {
+          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, item_url,
+                                                       NULL, NULL, NULL, FALSE,
+                                                       TRUE, ctx, pool));
+        }
+      else
+        {
+          SVN_ERR(svn_ra_reparent(ra_session, item_url, subpool));
+        }
+
+      SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM,
                                 &kind, subpool));
       if (kind == svn_node_none)
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  "URL '%s' does not exist",
-                                 svn_path_local_style(path, pool));
+                                 svn_path_local_style(item_url, pool));
     }
   svn_pool_destroy(subpool);
+
+  /* Reparent the RA_session to the common parent of our deletees. */
+  SVN_ERR(svn_ra_reparent(ra_session, common, pool));
 
   /* Fetch RA commit editor */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));

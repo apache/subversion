@@ -21,7 +21,7 @@ package org.tigris.subversion.javahl;
 /**
  * Encapsulates version information about the underlying native
  * libraries.  Basically a wrapper for <a
- * href="http://svn.collab.net/repos/svn/trunk/subversion/include/svn_version.h"><code>svn_version.h</code></a>.
+ * href="http://svn.apache.org/repos/asf/subversion/trunk/subversion/include/svn_version.h"><code>svn_version.h</code></a>.
  */
 public class Version
 {

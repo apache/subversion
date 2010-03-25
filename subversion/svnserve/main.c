@@ -772,6 +772,20 @@ int main(int argc, const char *argv[])
           return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
         }
 
+      /* Enable TCP keep-alives on the socket so we time out when
+       * the connection breaks due to network-layer problems.
+       * If the peer has dropped the connection due to a network partition
+       * or a crash, or if the peer no longer considers the connection
+       * valid because we are behind a NAT and our public IP has changed,
+       * it will respond to the keep-alive probe with a RST instead of an
+       * acknowledgment segment, which will cause svn to abort the session
+       * even while it is currently blocked waiting for data from the peer. */
+      status = apr_socket_opt_set(usock, APR_SO_KEEPALIVE, 1);
+      if (status)
+        {
+          /* It's not a fatal error if we cannot enable keep-alives. */
+        }
+
       conn = svn_ra_svn_create_conn(usock, NULL, NULL, connection_pool);
 
       if (run_mode == run_mode_listen_once)

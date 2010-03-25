@@ -1613,9 +1613,14 @@ do_plist(svnlook_ctxt_t *c,
       SVN_ERR(verify_path(&kind, root, path, pool));
       SVN_ERR(svn_fs_node_proplist(&props, root, path, pool));
     }
-  else
+  else if (c->is_revision)
     {
       SVN_ERR(svn_fs_revision_proplist(&props, c->fs, c->rev_id, pool));
+      revprop = TRUE;
+    }
+  else
+    {
+      SVN_ERR(svn_fs_txn_proplist(&props, c->txn, pool));
       revprop = TRUE;
     }
 
@@ -1631,8 +1636,16 @@ do_plist(svnlook_ctxt_t *c,
       if (revprop)
         {
           /* "<revprops ...>" */
-          svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops",
-                                "rev", revstr, NULL);
+          if (c->is_revision)
+            {
+              svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops",
+                                    "rev", revstr, NULL);
+            }
+          else
+            {
+              svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops",
+                                    "txn", c->txn_name, NULL);
+            }
         }
       else
         {

@@ -238,7 +238,7 @@ svn_wc__db_close(svn_wc__db_t *db,
  * Different kind of trees
  *
  * The design doc mentions three different kinds of trees, BASE, WORKING and
- * ACTUAL: http://svn.collab.net/repos/svn/trunk/notes/wc-ng-design
+ * ACTUAL: http://svn.apache.org/repos/asf/subversion/trunk/notes/wc-ng-design
  * We have different APIs to handle each tree, enumerated below, along with
  * a blurb to explain what that tree represents.
  */

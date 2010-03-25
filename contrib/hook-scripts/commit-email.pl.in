@@ -5,7 +5,7 @@
 # using mailer.py for post-commit and post-revprop change
 # notifications.  If you wish to improve or add features to a
 # post-commit notification script, please do that work on mailer.py.
-# See http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/mailer .
+# See http://svn.apache.org/repos/asf/subversion/trunk/tools/hook-scripts/mailer .
 # ====================================================================
 
 # ====================================================================

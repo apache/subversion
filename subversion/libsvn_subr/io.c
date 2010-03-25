@@ -1862,17 +1862,12 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
 
  Similar problem has been observed on FreeBSD.
 
- See http://subversion.tigris.org/issues/show_bug.cgi?id=1896 for more
- discussion and an initial solution.
+ The workaround is to delete the files only _after_ the initial
+ directory scan.  A previous workaround involving rewinddir is
+ problematic on Win32 and some NFS clients, notably NetBSD.
 
- To work around the problem, we do a rewinddir after we delete all files
- and see if there's anything left. We repeat the steps untill there's
- nothing left to delete.
-
- This workaround causes issues on Windows where delete's are asynchronous,
- however, so we never rewind if we're on Windows (the delete says it is
- complete, we rewind, we see the same file and try to delete it again,
- we fail.
+ See http://subversion.tigris.org/issues/show_bug.cgi?id=1896 and
+ http://subversion.tigris.org/issues/show_bug.cgi?id=3501.
 */
 
 /* Neither windows nor unix allows us to delete a non-empty
@@ -1884,13 +1879,10 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
                    svn_cancel_func_t cancel_func, void *cancel_baton,
                    apr_pool_t *pool)
 {
-  apr_status_t status;
-  apr_dir_t *this_dir;
-  apr_finfo_t this_entry;
+  svn_error_t *err;
   apr_pool_t *subpool;
-  apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
-  const char *path_apr;
-  int need_rewind;
+  apr_hash_t *dirents;
+  apr_hash_index_t *ent;
 
   /* Check for pending cancellation request.
      If we need to bail out, do so early. */
@@ -1898,112 +1890,50 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
   if (cancel_func)
     SVN_ERR((*cancel_func)(cancel_baton));
 
-  /* Convert path to native here and call apr_dir_open directly,
-     instead of just using svn_io_dir_open, because we're going to
-     need path_apr later anyway when we remove the dir itself. */
-
-  if (path[0] == '\0')
-    /* APR doesn't like "" directories; use "." instead. */
-    SVN_ERR(cstring_from_utf8(&path_apr, ".", pool));
-  else
-    SVN_ERR(cstring_from_utf8(&path_apr, path, pool));
-
-  status = apr_dir_open(&this_dir, path_apr, pool);
-  if (status)
-    {
-      /* if the directory doesn't exist, our mission is accomplished */
-      if (ignore_enoent && APR_STATUS_IS_ENOENT(status))
-        return SVN_NO_ERROR;
-      else
-        return svn_error_wrap_apr(status,
-                                  _("Can't open directory '%s'"),
-                                  svn_path_local_style(path, pool));
-    }
-
   subpool = svn_pool_create(pool);
 
-  do
+  err = svn_io_get_dirents2(&dirents, path, subpool);
+  if (err)
     {
-      need_rewind = FALSE;
+      /* if the directory doesn't exist, our mission is accomplished */
+      if (ignore_enoent && APR_STATUS_IS_ENOENT(err->apr_err))
+	{
+	  svn_error_clear(err);
+	  return SVN_NO_ERROR;
+	}
+      return err;
+    }
 
-      for (status = apr_dir_read(&this_entry, flags, this_dir);
-           status == APR_SUCCESS;
-           status = apr_dir_read(&this_entry, flags, this_dir))
+  for (ent = apr_hash_first(subpool, dirents); ent; ent = apr_hash_next(ent))
+    {
+      const void *key;
+      void *val;
+      char *fullpath;
+
+      apr_hash_this(ent, &key, NULL, &val);
+      fullpath = svn_path_join(path, key, subpool);
+      if (((svn_io_dirent_t *)val)->kind == svn_node_dir)
         {
-          svn_pool_clear(subpool);
-          if ((this_entry.filetype == APR_DIR)
-              && ((this_entry.name[0] == '.')
-                  && ((this_entry.name[1] == '\0')
-                      || ((this_entry.name[1] == '.')
-                          && (this_entry.name[2] == '\0')))))
-            {
-              continue;
-            }
-          else  /* something other than "." or "..", so proceed */
-            {
-              const char *fullpath, *entry_utf8;
-
-#ifndef WIN32
-              need_rewind = TRUE;
-#endif
-
-              SVN_ERR(entry_name_to_utf8(&entry_utf8, this_entry.name,
-                                         path_apr, subpool));
-
-              fullpath = svn_path_join(path, entry_utf8, subpool);
-
-              if (this_entry.filetype == APR_DIR)
-                {
-                  /* Don't check for cancellation, the callee
-                     will immediately do so */
-                  SVN_ERR(svn_io_remove_dir2(fullpath, FALSE,
-                                             cancel_func, cancel_baton,
-                                             subpool));
-                }
-              else
-                {
-                  svn_error_t *err;
-
-                  if (cancel_func)
-                    SVN_ERR((*cancel_func)(cancel_baton));
-
-                  err = svn_io_remove_file(fullpath, subpool);
-                  if (err)
-                    return svn_error_createf
-                      (err->apr_err, err, _("Can't remove '%s'"),
-                       svn_path_local_style(fullpath, subpool));
-                }
-            }
+          /* Don't check for cancellation, the callee will immediately do so */
+          SVN_ERR(svn_io_remove_dir2(fullpath, FALSE, cancel_func,
+                                     cancel_baton, subpool));
         }
-
-      if (need_rewind)
+      else
         {
-          status = apr_dir_rewind(this_dir);
-          if (status)
-            return svn_error_wrap_apr(status, _("Can't rewind directory '%s'"),
-                                      svn_path_local_style (path, pool));
+          if (cancel_func)
+            SVN_ERR((*cancel_func)(cancel_baton));
+
+          err = svn_io_remove_file(fullpath, subpool);
+          if (err)
+            return svn_error_createf
+              (err->apr_err, err, _("Can't remove '%s'"),
+               svn_path_local_style(fullpath, subpool));
         }
     }
-  while (need_rewind);
 
   svn_pool_destroy(subpool);
 
-  if (!APR_STATUS_IS_ENOENT(status))
-    return svn_error_wrap_apr(status, _("Can't read directory '%s'"),
-                              svn_path_local_style(path, pool));
-
-  status = apr_dir_close(this_dir);
-  if (status)
-    return svn_error_wrap_apr(status, _("Error closing directory '%s'"),
-                              svn_path_local_style(path, pool));
-
-  status = apr_dir_remove(path_apr, pool);
-  WIN32_RETRY_LOOP(status, apr_dir_remove(path_apr, pool));
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't remove '%s'"),
-                              svn_path_local_style(path, pool));
-
-  return APR_SUCCESS;
+  return svn_io_dir_remove_nonrecursive(path, pool);
 }
 
 svn_error_t *
@@ -2976,17 +2906,16 @@ svn_io_file_rename(const char *from_path, const char *to_path,
   status = apr_file_rename(from_path_apr, to_path_apr, pool);
 
 #ifdef WIN32
-  if (status)
+  if (APR_STATUS_IS_EACCES(status))
     {
       /* Set the destination file writable because Windows will not
-         allow us to rename over files that are read-only. */
+         allow us to rename when to_path is read-only, but will
+         allow renaming when from_path is read only. */
       SVN_ERR(svn_io_set_file_read_write(to_path, TRUE, pool));
 
       status = apr_file_rename(from_path_apr, to_path_apr, pool);
-
-      WIN32_RETRY_LOOP(status,
-                       apr_file_rename(from_path_apr, to_path_apr, pool));
     }
+  WIN32_RETRY_LOOP(status, apr_file_rename(from_path_apr, to_path_apr, pool));
 #endif /* WIN32 */
 
   if (status)

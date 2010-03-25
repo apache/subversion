@@ -1419,6 +1419,9 @@ svn_fs_fs__hotcopy(const char *src_path,
   /* Copy the uuid. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_UUID, pool));
 
+  /* Copy the config. */
+  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_CONFIG, pool));
+
   /* Copy the min unpacked rev, and read its value. */
   if (format >= SVN_FS_FS__MIN_PACKED_FORMAT)
     {

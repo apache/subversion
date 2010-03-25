@@ -15,43 +15,6 @@ Status of 1.6.10:
 
 Candidate changes:
 
- * r878078, r878088, r878102, r878196
-   Make KWallet window attached to terminal window.
-   Justification:
-     Without this change, KWallet window can appear behind terminal window
-     and is left after killing terminal.
-   Votes:
-     +1: arfrever
-     -0: peters, stsp (without r878196) (code is ugly and Linux-specific -
-                                            would getenv("WINDOWID") work
-                                            instead?)
-
- * r878216, r878341, r878343, r876862, r877203, r877595, r877665, r877597, r878269,
-   r878321, r878399, r878423, r878426
-   Fix issue #3432 'Merge can record mergeinfo from natural history gaps'
-   Justification:
-     Gaps in merge sources can lead to the creation of invalid mergeinfo
-     or the removal of valid mergeinfo.
-   Notes:     
-     The fix itself in r878399 is relatively simple, but recent refactoring
-     of the merge code on trunk makes it look a lot worse than it is.
-     Unless otherwise noted, all of the following are nominated simply to
-     avoid a conflict nightmare:
-     r878216, r878341, r878343 - New test and test tweaks for the issue.
-     r876862 - Comment changes only.
-     r877203 - Scope reduction of a pool.
-     r877595 - Minor bug fix and some refactoring.
-     r877665 - Comment changes only.
-     r877597 - Merge code refactoring.
-     r878269 - Pool use cleanup, no functional change.
-     r878321 - More merge code refactoring.
-     r878423 - Variable rename to avoid shadowing a previous local.
-     r878426 - Remove an unused variable.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3432
-   Votes:
-     +1: pburba, stsp
-
  * r876032, r876104, r878447, r878910, r878911, r878916
    Several fixes to the Win32 exception handler. This change also makes it
    available on Windows Vista and 7 where it was previously blocked by a
@@ -104,50 +67,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r880552
-   Try to enable TCP keep-alives in svnserve.
-   Justification:
-     ra_svn clients do this, too. It should not do any harm.
-     Is likely to fix hanging svnserve processes which still linger
-     blocking on reads from sockets after days of inactivity on the
-     connection, a problem seen and reported by MPlayer developers in #svn.
-   Votes:
-     +1: stsp, rhuijben
-
- * r892050, 892085
-   Fix a reintegrate bug which can occur when the merge source has mergeinfo
-   that explicitly describes common history with the reintegrate target.
-   Justification:
-     Reintegrate merges may not work if the reintegrate source has self-
-     referential mergeinfo that is also self-referential to the reintegrate
-     target.  This occured in our own repository, see
-     http://svn.haxx.se/dev/archive-2009-12/0338.shtml.
-   Votes:
-     +1: pburba, rhuijben
-
- * r891672
-   Fix issue #3552 - File external from URL cannot overwrite the existing
-   versioned item
-   Justification:
-     This defect affects 'subversive' client users in 1.6.x.
-   Notes:
-     The backport branch exists in order to make the patch compatible with
-     1.6.x tests. r876917 introduces 'switched' to wc status which is not 
-     available in 1.6.x.
-   Branch:
-     ^/subversion/branches/1.6.x-r891672
-   Votes:
-     +1: stylesen
-
- * r896915
-   On Windows, stop retrying a move operation without looking to the
-   initial error code. 
-   Justification:
-     Without this patch the initial move error is lost, which makes it
-     impossible to diagnose the real error.
-   Votes:
-     +1: rhuijben
-
  * r898048
    Extend the Windows only, crypto api verification of server certificates
    to check for certificate revocation. Also simplify the code by making
@@ -158,78 +77,114 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r898963, r899826, r899828
-   Fix issue #3501 - Repos & wc issues with some NFS clients, notably NetBSD,
-   due to buggy interaction between unlink, rewinddir, and NFS caching.
-   Branch resolves two trivial conflicts.
+ * r877016, r902093
+   Fix issue #3390 'relative externals not updated during switch'.
    Justification:
-     Bug reporter says, "For me, this problem forces us to stay with
-     Subversion 1.4."
-   Notes:
-     rhuijben: This patch triggers several errors in the python test suite
-               for me. File Deletes are asynchronous on Windows and after
-               applying this patch some delete calls in our test suite's
-               cleanup code get an access denied, which is not handled there.
-               The tests themselves complete successfully.
+     One of the selling points of relative externals was their ability
+     to be used to span branches and tags.  Not so useful if switching
+     to a different tag or branch doesn't actually cause the external
+     to point to the right place.
    Branch:
-     ^/subversion/branches/1.6.x-r898963
+     ^/subversion/branches/1.6.x-issue3390
    Votes:
-     +1: peters, rhuijben
+     +1: cmpilato, stsp
 
- * r901752
-   Allow 'svn log' on an uncommitted copy/move destination.
-   Notes:
-     svn_client_log5 API promises that unspecified peg revisions default
-     to svn_opt_revision_working for WC paths; prior to r901752 we were
-     not keeping this promise.
+ * r878590, r878607, r878625, r878626, r878627
+   In trunk we optimized the common case of 'find-and-replace with same uri'
+   of proxied content thanks to issue 3445.
+   r878590 is just a change that adds FIXME marker to code comment. We take it
+   to avoid spurious conflicts with other revisions.
+   r878607 Special cases no-op find and replace.
+   "r878625, r878626, r878627" are follow-up to r878607 and the other long 
+   pending Master info leak to the clients.
    Justification:
-     APIs should do what they say they do.
+     1. This group has the most common 'optimization' fix of *not* groking the
+        proxied response to find and replace with same string.
+     2. Fixes the master information leak via the Location header.
+     3. Need this to be ported for the other defect to be ported
+        without conflict.
+   Votes:
+     +1: kameshj
+     
+ * r908980, r908981
+   This followup on r896915, makes sure that the Windows specific remove
+   readonly attribute code still works on FAT32 filesystems. (The FAT32
+   driver reports a very different error than the NTFS driver)
+   Justification:
+     Without this patch, users using a USB stick formatted with this
+     filesystem will see 'file exists' errors on some working copy
+     operations. (This patch should have been part of the r896915
+     group). I certainly don't recommend using FAT32 to host a
+     subversion working copy. But AnkhSVN reports show that it is a
+     common user scenario.
+   Votes:
+     +1: rhuijben
+
+ * r916286, r917512
+   This backport depends on the r878590 group only for the conflict free port.
+   Justification:
+     Vague commit error when server has been configured with <Location /svn/>
+     and write through proxy.
+   Votes:
+     +1: kameshj
+
+ * r917523
+   This backport depends on the r878590 and r916286 groups only for the
+   conflict free port.
+   Justification:
+     If the configured slave url has the *encodable* characters *write through*
+     is not happening rather commit happens in slave itself.
+   Votes:
+     +1: kameshj
+
+ * r926151, r926167
+   Add an additional check for bogus `changes' table item sequencing.
+   Apparently the custom Google backend managed to trigger some badness
+   along these lines.
+   Notes:
+     r926151 adds a test and fix for BDB; r926167 ports the change to FSFS.
+   Justification:
+     Safety first.
+   Votes:
+     +1: cmpilato
+
+ * r927323, r927328
+   Return all atomical initialization errors wrapped in a
+   SVN_ERR_ATOMIC_INIT_FAILURE error, to make sure they are not
+   misidentified as just some error.
+   Justification:
+     This fix helps identifying some errors that were previously ignored
+     as just another error.
+   Votes:
+     +1: rhuijben, stylesen
+
+ * r923389, r923391
+   Fix a bug where the ordering of arguments to svn_rangelist_intersect can
+   produce different results.
+   Justification:
+     The intersection of A and B != the intersection of B and A?
+     In a word: bad.  See http://svn.haxx.se/dev/archive-2010-03/0400.shtml.
+   Notes:
+     r923389 is the fix and a new C test, r923391 is a follow-up that fixed
+     a build-breaking typo from r923389,
+   Branch:
+     ^/subversion/branches/1.6.x-r923389
    Votes:
      +1: pburba
- 
- * r904301, r904394
-   Update every occurence of the Subversion repository URL to apache.org,
-   except in CHANGES (for sentimental reasons, I guess).
+
+ * r921453, r927184, r927243
+   Fix reopened issue #3020 'Reflect dropped/renumbered revisions in
+   svn:mergeinfo data during svnadmin load'
    Justification:
-     Tools and doc references should point at the new locations.
-   Votes:
-     +1: neels
-
-* r904594
-  Update 'svnadmin verify' to recognize malformed/missing revprops files
-  Justification:
-    It's misleading for 'svnadmin verify' to say a repository is fine
-    when in reality it isn't.
-  Votes:
-    +1: jwhitlock, danielsh
-
- * r905303
-   Make 'svnadmin hotcopy' copy fsfs.conf for FSFS repositories.
-   Justification:
-     svnadmin hotcopy is supposed to copy all files.
-   Votes:
-     +1: stsp
-
-  * r905326
-    Issue #3561: Teach ra_serf the same out-of-date fix we taught ra_neon.
-    Justification:
-      Feature parity with ra_neon is goodness and fixes real-world issue.
-   Branch:
-     ^/subversion/branches/1.6.x-r905326
-    Votes:
-      +1: jerenkrantz, kameshj
-
- * r906256, 906305
-   Fix issue #3573 'local non-inheritable mergeinfo changes not properly
-   merged with updated mergeinfo'
+     Prior to this fix, when loading a partial dump with mergeinfo, the
+     resulting mergeinfo in the target repository could refer to non-existent
+     revisions or revisions that have nothing to do with the merge source
+     in the original repository.  The original fix for issue assumed that
+     the dump stream was for a complete repository.
    Notes:
-   Justification:
-     svn:mergeinfo should be mergeable, but in this issue mergeinfo changes
-     brought down by an update were not properly merged with local changes.
-   Notes:
-     r906256 is a test demonstrating the problem and r906305 is the fix.
+     r921453 and 927184 are tests, r927243 is the fix.
    Branch:
-     ^/subversion/branches/1.6.x-issue3573
+     ^/subversion/branches/1.6.x-issue3020
    Votes:
      +1: pburba
 
@@ -266,6 +221,17 @@ Veto-blocked changes:
      -0: cmpilato (Introduces new features and changes output)
      -1: rhuijben (Introduces new features and changes output;
                    I think it should be removed from STATUS)
+
+ * r878078, r878088, r878102, r878196
+   Make KWallet window attached to terminal window.
+   Justification:
+     Without this change, KWallet window can appear behind terminal window
+     and is left after killing terminal.
+   Votes:
+     +1: arfrever
+     -0: peters
+     -1: stsp, rhuijben ("/proc/%ld/stat" is ugly and Linux-specific -
+                         would just getenv("WINDOWID") work instead?)
 
 Approved changes:
 =================

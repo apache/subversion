@@ -1213,6 +1213,7 @@ svn_repos_verify_fs(svn_repos_t *repos,
       const svn_delta_editor_t *cancel_editor;
       void *cancel_edit_baton;
       svn_fs_root_t *to_root;
+      apr_hash_t *props;
 
       svn_pool_clear(iterpool);
 
@@ -1234,6 +1235,7 @@ svn_repos_verify_fs(svn_repos_t *repos,
       SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
                                 cancel_editor, cancel_edit_baton,
                                 NULL, NULL, iterpool));
+      SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, iterpool));
       SVN_ERR(svn_stream_printf(feedback_stream, iterpool,
                                 _("* Verified revision %ld.\n"),
                                 rev));
