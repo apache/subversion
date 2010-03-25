@@ -824,7 +824,7 @@ typedef struct
    working copy directories as the crawl progresses.  For each
    candidate found:
 
-     - create svn_client_commit_item_t for the candidate.
+     - create svn_client_commit_item3_t for the candidate.
 
      - add the structure to an apr_array_header_t array of commit
        items that are in the same repository, creating a new array if
@@ -843,7 +843,7 @@ typedef struct
 
    At the successful return of this function, COMMITTABLES will be an
    apr_hash_t * hash of apr_array_header_t * arrays (of
-   svn_client_commit_item_t * structures), keyed on const char *
+   svn_client_commit_item3_t * structures), keyed on const char *
    canonical repository URLs.  LOCK_TOKENS will point to a hash table
    with const char * lock tokens, keyed on const char * URLs.
 
