@@ -51,7 +51,8 @@ svn_atomic__init_once(volatile svn_atomic_t *global_status,
                          SVN_ATOMIC_INIT_FAILED,
                          SVN_ATOMIC_START_INIT);
 #endif
-          return err;
+          return svn_error_create(SVN_ERR_ATOMIC_INIT_FAILURE, err,
+                                  "Couldn't perform atomic initialization");
         }
       svn_atomic_cas(global_status,
                      SVN_ATOMIC_INITIALIZED,
