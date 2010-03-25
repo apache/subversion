@@ -156,7 +156,7 @@ Candidate changes:
      This fix helps identifying some errors that were previously ignored
      as just another error.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stylesen
 
 Veto-blocked changes:
 =====================
