@@ -148,6 +148,16 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r927323, r927328
+   Return all atomical initialization errors wrapped in a
+   SVN_ERR_ATOMIC_INIT_FAILURE error, to make sure they are not
+   misidentified as just some error.
+   Justification:
+     This fix helps identifying some errors that were previously ignored
+     as just another error.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
