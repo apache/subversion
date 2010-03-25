@@ -3183,7 +3183,7 @@ svn_wc_get_ancestry2(const char **url,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
-/* Similar to svn_wc_get_ancestry2(), but using an adm_access baton / relative
+/** Similar to svn_wc_get_ancestry2(), but using an adm_access baton / relative
  * path parameter pair.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -4126,7 +4126,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
              void *notify_baton,
              apr_pool_t *scratch_pool);
 
-/* Similar to svn_wc_copy3(), but takes access batons and a relative path
+/** Similar to svn_wc_copy3(), but takes access batons and a relative path
  * and a basename instead of absolute paths and a working copy context.
  *
  * @since New in 1.2.
@@ -4449,7 +4449,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                        void *notify_baton,
                        apr_pool_t *scratch_pool);
 
-/* Similar to svn_wc_add_repos_file4, but uses access batons and a
+/** Similar to svn_wc_add_repos_file4, but uses access batons and a
  * relative path instead of a working copy context and absolute path.
  *
  * @since New in 1.6.
@@ -6402,7 +6402,7 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
  * the copy/move source (even if the copy-/move-here replaces a locally
  * deleted file).
  *
- * If @local_abspath refers to an unversioned or non-existing path, return
+ * If @a local_abspath refers to an unversioned or non-existing path, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND. Use @a wc_ctx to access the working copy.
  * @a contents may not be @c NULL (unlike @a *contents).
  *

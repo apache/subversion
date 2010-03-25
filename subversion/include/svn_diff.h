@@ -770,15 +770,17 @@ svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
 /* Diff parsing. If you want to apply a patch to a working copy
  * rather than parse it, see svn_client_patch(). */
 
-/* A single hunk inside a patch
+/**
+ * A single hunk inside a patch
  *
  * @since New in 1.7. */
 typedef struct svn_hunk_t {
-  /* The hunk's unidiff text as it appeared in the patch file,
-   * without range information. */
+  /** The hunk's unidiff text as it appeared in the patch file,
+   *  without range information. */
   svn_stream_t *diff_text;
 
-  /* The original and modified texts in the hunk range.
+  /**
+   * The original and modified texts in the hunk range.
    * Derived from the diff text.
    *
    * For example, consider a hunk such as:
@@ -813,42 +815,47 @@ typedef struct svn_hunk_t {
   svn_stream_t *original_text;
   svn_stream_t *modified_text;
 
-  /* Hunk ranges as they appeared in the patch file.
+  /**
+   * Hunk ranges as they appeared in the patch file.
    * All numbers are lines, not bytes. */
   svn_linenum_t original_start;
   svn_linenum_t original_length;
   svn_linenum_t modified_start;
   svn_linenum_t modified_length;
 
-  /* Number of lines starting with ' ' before first '+' or '-'. */
+  /** Number of lines starting with ' ' before first '+' or '-'. */
   svn_linenum_t leading_context;
 
-  /* Number of lines starting with ' ' after last '+' or '-'. */
+  /** Number of lines starting with ' ' after last '+' or '-'. */
   svn_linenum_t trailing_context;
 } svn_hunk_t;
 
-/* Data type to manage parsing of patches.
+/**
+ * Data type to manage parsing of patches.
  *
  * @since New in 1.7. */
 typedef struct svn_patch_t {
-  /* Path to the patch file. */
+  /** Path to the patch file. */
   const char *path;
 
-  /* The patch file itself. */
+  /** The patch file itself. */
   apr_file_t *patch_file;
 
-  /* The old and new file names as retrieved from the patch file.
+  /**
+   * The old and new file names as retrieved from the patch file.
    * These paths are UTF-8 encoded and canonicalized, but otherwise
    * left unchanged from how they appeared in the patch file. */
   const char *old_filename;
   const char *new_filename;
 
-  /* An array containing an svn_hunk_t object for each hunk parsed
+  /**
+   * An array containing an svn_hunk_t object for each hunk parsed
    * from the patch. */
   apr_array_header_t *hunks;
 } svn_patch_t;
 
-/* Return the next @a *patch in @a patch_file.
+/**
+ * Return the next @a *patch in @a patch_file.
  * If no patch can be found, set @a *patch to NULL.
  * If @a reverse is TRUE, invert the patch while parsing it.
  * Allocate results in @a result_pool.
@@ -862,7 +869,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
-/* Dispose of @a patch, closing any streams used by it.
+/**
+ * Dispose of @a patch, closing any streams used by it.
  *
  * @since New in 1.7.
  */
