@@ -345,7 +345,8 @@ process_deletion_postcommit(svn_wc__db_t *db,
 }
 
 
-/* */
+/* CHECKSUM is the checksum of the new text base for LOCAL_ABSPATH, and must
+ * be provided if there is one, else NULL. */
 static svn_error_t *
 process_committed_leaf(svn_wc__db_t *db,
                        const char *local_abspath,
@@ -356,7 +357,6 @@ process_committed_leaf(svn_wc__db_t *db,
                        svn_boolean_t no_unlock,
                        svn_boolean_t keep_changelist,
                        const svn_checksum_t *checksum,
-                       const svn_wc_committed_queue_t *queue,
                        apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
@@ -402,21 +402,9 @@ process_committed_leaf(svn_wc__db_t *db,
 
       if (checksum == NULL)
         {
-          /* checksum will be NULL for recursive commits, which means that
-             a directory was copied. When we recurse on that directory, the
-             checksum will be NULL for all files. */
-
           /* If we sent a delta (meaning: post-copy modification),
-             then this file will appear in the queue.  See if we can
-             find it. */
-          if (queue != NULL)
-            {
-              const committed_queue_item_t *cqi
-                = apr_hash_get(queue->queue, local_abspath, APR_HASH_KEY_STRING);
-
-              if (cqi != NULL)
-                checksum = cqi->checksum;
-            }
+             then this file will appear in the queue and so we should have
+             its checksum already. */
           if (checksum == NULL)
             {
               /* It was copied and not modified. We should have a text
@@ -490,7 +478,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                  new_revnum, new_date, rev_author,
                                  new_dav_cache,
                                  no_unlock, keep_changelist,
-                                 checksum, queue, scratch_pool));
+                                 checksum, scratch_pool));
 
   if (recurse && kind == svn_wc__db_kind_dir)
     {
@@ -570,12 +558,24 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                   if (replaced)
                     continue;
                 }
+
+              checksum = NULL;
+              if (queue != NULL)
+                {
+                  const committed_queue_item_t *cqi
+                    = apr_hash_get(queue->queue, this_abspath,
+                                   APR_HASH_KEY_STRING);
+
+                  if (cqi != NULL)
+                    checksum = cqi->checksum;
+                }
+
               SVN_ERR(process_committed_leaf(db, this_abspath,
                                              new_revnum,
                                              new_date, rev_author, NULL,
                                              TRUE /* no_unlock */,
                                              keep_changelist,
-                                             NULL, queue, iterpool));
+                                             checksum, iterpool));
             }
         }
 
