@@ -157,14 +157,14 @@ copy_one_versioned_file(const char *from_abspath,
 
          Copied-/moved-here nodes have a base, so export both added and
          replaced files when they involve a copy-/move-here.
-      */
-      if ((entry->schedule == svn_wc_schedule_add
-           || entry->schedule == svn_wc_schedule_replace)
-          && !entry->copied)
-        return SVN_NO_ERROR;
 
+         We get all this for free from evaluating SOURCE == NULL:
+       */
       SVN_ERR(svn_wc_get_pristine_contents2(&source, wc_ctx, from_abspath,
                                             scratch_pool, scratch_pool));
+      if (source == NULL)
+        return SVN_NO_ERROR;
+
       SVN_ERR(svn_wc_get_prop_diffs2(NULL, &props, wc_ctx, from_abspath,
                                      scratch_pool, scratch_pool));
     }
