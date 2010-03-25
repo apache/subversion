@@ -609,6 +609,24 @@ void svn_skel__prepend_str(const char *value,
   svn_skel__prepend(atom, skel);
 }
 
+
+void svn_skel__append(svn_skel_t *list, const svn_skel_t *skel)
+{
+  SVN_ERR_ASSERT_NO_RETURN(list != NULL && !list->is_atom);
+
+  if (list->children == NULL)
+    {
+      list->children = skel;
+    }
+  else
+    {
+      list = list->children;
+      while (list->next != NULL)
+        list = list->next;
+      list->next = skel;
+    }
+}
+
 
 /* Examining skels.  */
 
