@@ -851,7 +851,7 @@ read_range_handler_apr(void *baton, char *buffer, apr_size_t *len)
 
       /* We're in range, but don't read over the end of the range. */
       if (pos + *len > btn->end)
-        *len = btn->end - pos;
+        *len = (apr_size_t)(btn->end - pos);
     }
 
   return read_handler_apr(baton, buffer, len);
