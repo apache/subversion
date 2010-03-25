@@ -60,6 +60,7 @@
 #define OP_INSTALL_PROPERTIES "install-properties"
 #define OP_DELETE "delete"
 #define OP_FILE_INSTALL "file-install"
+#define OP_FILE_REMOVE "file-remove"
 
 
 struct work_item_dispatch {
@@ -2076,6 +2077,51 @@ svn_wc__wq_build_file_install(const svn_skel_t **work_item,
 
 /* ------------------------------------------------------------------------ */
 
+/* OP_FILE_REMOVE  */
+
+/* Process the OP_FILE_REMOVE work item WORK_ITEM.
+ * See svn_wc__wq_build_file_remove() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
+static svn_error_t *
+run_file_remove(svn_wc__db_t *db,
+                 const svn_skel_t *work_item,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_abspath;
+
+  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+
+  /* Remove the path, no worrying if it isn't there.  */
+  return svn_error_return(svn_io_remove_file2(local_abspath, TRUE,
+                                              scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__wq_build_file_remove(const svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  svn_skel_t *build_item = svn_skel__make_empty_list(result_pool);
+
+  svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
+                        build_item, result_pool);
+  svn_skel__prepend_str(OP_FILE_REMOVE, build_item, result_pool);
+
+  /* Done. Assign to the const-ful WORK_ITEM.  */
+  *work_item = build_item;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
   { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
@@ -2087,6 +2133,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_INSTALL_PROPERTIES, run_install_properties },
   { OP_DELETE, run_delete },
   { OP_FILE_INSTALL, run_file_install },
+  { OP_FILE_REMOVE, run_file_remove },
 
   /* Sentinel.  */
   { NULL }

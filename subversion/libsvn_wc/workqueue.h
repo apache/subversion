@@ -77,6 +77,16 @@ svn_wc__wq_build_file_install(const svn_skel_t **work_item,
                               apr_pool_t *scratch_pool);
 
 
+/* Build a work item (returned in *WORK_ITEM) that will remove a single
+   file.  */
+svn_error_t *
+svn_wc__wq_build_file_remove(const svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+
 /* Record a work item to revert LOCAL_ABSPATH.  */
 svn_error_t *
 svn_wc__wq_add_revert(svn_boolean_t *will_revert,
