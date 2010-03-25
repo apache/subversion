@@ -4861,11 +4861,32 @@ svn_client_info(const char *path_or_url,
  * the @a include_patterns are applied first, i.e. the @a exclude_patterns
  * are applied to all targets which matched one of the @a include_patterns.
  *
+ * If @a patched_tempfiles is not NULL, return in @a *patched_tempfiles
+ * a mapping {target path -> path to temporary file containing patched result}
+ * for all patched targets which were neither skipped nor excluded via
+ * @ignore_patterns or @a exlude_patterns.
+ * Note that if all hunks were rejected, the patched result will look just
+ * like the target file, unmodified.
+ * If @a reject_tempfiles is not NULL, return in @a *reject_tempfiles
+ * a mapping {target path -> path to temporary file containing rejected hunks}
+ * Both @a *patched_tempfiles and @a *reject_tempfiles are allocated in
+ * @a result_pool, and the key (target path) used is the path as parsed
+ * from the patch, but in canonicalized form. The value (path to temporary
+ * file) is an absolute path, also in canonicalized form.
+ * The temporary files are closed, and it is the caller's responsibility
+ * to remove them when they are no longer needed.
+ * Using @a patched_tempfiles and @a reject_tempfiles in combination with
+ * @a dry_run = TRUE makes it possible to generate a preview of the result
+ * of the patching process, e.g. for display purposes, without actually
+ * modifying the working copy.
+ *
  * If @a ctx->notify_func2 is non-NULL, invoke @a ctx->notify_func2 with
  * @a ctx->notify_baton2 as patching progresses.
  *
  * If @a ctx->cancel_func is non-NULL, invoke it passing @a
  * ctx->cancel_baton at various places during the operation.
+ *
+ * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.7.
  */
@@ -4877,8 +4898,11 @@ svn_client_patch(const char *abs_patch_path,
                  svn_boolean_t reverse,
                  const apr_array_header_t *include_patterns,
                  const apr_array_header_t *exclude_patterns,
+                 apr_hash_t **patched_tempfiles,
+                 apr_hash_t **reject_tempfiles,
                  svn_client_ctx_t *ctx,
-                 apr_pool_t *pool);
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool);
 
 /** @} */
 
