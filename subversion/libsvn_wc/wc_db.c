@@ -1404,7 +1404,7 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                                     name,
                                                     scratch_pool),
                                     pibb->local_relpath,
-                                    pibb->revision));
+                                    (apr_int64_t)pibb->revision));
           SVN_ERR(svn_sqlite__insert(NULL, stmt));
         }
     }
@@ -3025,7 +3025,7 @@ svn_wc__db_op_set_last_mod_time(svn_wc__db_t *db,
                                     STMT_UPDATE_BASE_LAST_MOD_TIME));
   SVN_ERR(svn_sqlite__bindf(stmt, "isi",
                             pdh->wcroot->wc_id, local_relpath,
-                            last_mod_time));
+                            (apr_int64_t)last_mod_time));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   flush_entries(pdh);
