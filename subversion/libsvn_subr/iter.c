@@ -23,6 +23,7 @@
 
 #include "svn_iter.h"
 #include "svn_pools.h"
+#include "private/svn_dep_compat.h"
 
 #include "svn_error_codes.h"
 
@@ -36,6 +37,30 @@ static svn_error_t internal_break_error =
     __LINE__ /* line number */
   };
 
+#if APR_VERSION_AT_LEAST(1, 4, 0)
+struct hash_do_baton
+{
+  void *baton;
+  svn_iter_apr_hash_cb_t func;
+  svn_error_t *err;
+  apr_pool_t *iterpool;
+};
+
+static
+int hash_do_callback(void *baton,
+                     const void *key,
+                     apr_ssize_t klen,
+                     const void *value)
+{
+  struct hash_do_baton *hdb = baton;
+  
+  svn_pool_clear(hdb->iterpool);
+  hdb->err = (*hdb->func)(hdb->baton, key, klen, (void *)value, hdb->iterpool);
+
+  return hdb->err == SVN_NO_ERROR;
+}
+#endif
+
 svn_error_t *
 svn_iter_apr_hash(svn_boolean_t *completed,
                   apr_hash_t *hash,
@@ -43,6 +68,36 @@ svn_iter_apr_hash(svn_boolean_t *completed,
                   void *baton,
                   apr_pool_t *pool)
 {
+#if APR_VERSION_AT_LEAST(1, 4, 0)
+  struct hash_do_baton hdb;
+  svn_boolean_t error_received;
+
+  hdb.func = func;
+  hdb.baton = baton;
+  hdb.iterpool = svn_pool_create(pool);
+
+  error_received = !apr_hash_do(hash_do_callback, &hdb, hash);
+
+  svn_pool_destroy(hdb.iterpool);
+
+  if (completed)
+    *completed = !error_received;
+
+  if (!error_received)
+    return SVN_NO_ERROR;
+
+  if (hdb.err->apr_err == SVN_ERR_ITER_BREAK
+        && hdb.err != &internal_break_error)
+    {
+        /* Errors - except those created by svn_iter_break() -
+           need to be cleared when not further propagated. */
+        svn_error_clear(hdb.err);
+
+        hdb.err = SVN_NO_ERROR;
+    }
+
+  return hdb.err;
+#else
   svn_error_t *err = SVN_NO_ERROR;
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
@@ -78,6 +133,7 @@ svn_iter_apr_hash(svn_boolean_t *completed,
   svn_pool_destroy(iterpool);
 
   return err;
+#endif
 }
 
 svn_error_t *
