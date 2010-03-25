@@ -1474,6 +1474,62 @@ flush_entries(const svn_wc__db_pdh_t *pdh)
 }
 
 
+/* Add a single WORK_ITEM into the given SDB's WORK_QUEUE table. This does
+   not perform its work within a transaction, assuming the caller will
+   manage that.  */
+static svn_error_t *
+add_single_work_item(svn_sqlite__db_t *sdb,
+                     const svn_skel_t *work_item,
+                     apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *serialized;
+  svn_sqlite__stmt_t *stmt;
+
+  serialized = svn_skel__unparse(work_item, scratch_pool);
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_WORK_ITEM));
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 1, serialized->data, serialized->len));
+  return svn_error_return(svn_sqlite__insert(NULL, stmt));
+}
+
+
+/* Add work item(s) to the given SDB. Also see add_one_work_item(). This
+   SKEL is usually passed to the various wc_db operation functions. It may
+   be NULL, indicating no additional work items are needed, it may be a
+   single work item, or it may be a list of work items.  */
+static svn_error_t *
+add_work_items(svn_sqlite__db_t *sdb,
+               const svn_skel_t *skel,
+               apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool;
+
+  /* Maybe there are no work items to insert.  */
+  if (skel == NULL)
+    return SVN_NO_ERROR;
+
+  /* Should have a list.  */
+  SVN_ERR_ASSERT(!skel->is_atom);
+
+  /* If SKEL has an atom as its first child, then this is a work item
+     (and that atom is one of the OP_* values).  */
+  if (skel->children->is_atom)
+    return svn_error_return(add_single_work_item(sdb, skel, scratch_pool));
+
+  /* SKEL is a list-of-lists, aka list of work items.  */
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (skel = skel->children; skel; skel = skel->next)
+    {
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(add_single_work_item(sdb, skel, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* */
 static svn_error_t *
 create_db(svn_sqlite__db_t **sdb,
@@ -5221,8 +5277,6 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
-  svn_stringbuf_t *serialized;
-  svn_sqlite__stmt_t *stmt;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
   SVN_ERR_ASSERT(work_item != NULL);
@@ -5252,12 +5306,10 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
     }
 #endif
 
-  serialized = svn_skel__unparse(work_item, scratch_pool);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_INSERT_WORK_ITEM));
-  SVN_ERR(svn_sqlite__bind_blob(stmt, 1, serialized->data, serialized->len));
-  return svn_error_return(svn_sqlite__insert(NULL, stmt));
+  /* Add the work item(s) to the WORK_QUEUE.  */
+  return svn_error_return(add_work_items(pdh->wcroot->sdb,
+                                         work_item,
+                                         scratch_pool));
 }
 
 
