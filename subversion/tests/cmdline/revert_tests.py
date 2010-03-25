@@ -29,7 +29,8 @@ import re, os
 
 # Our testing module
 import svntest
-from svntest import wc
+from svntest import wc, main, actions
+from svntest.actions import run_and_verify_svn
 
 
 # (abbreviation)
@@ -952,6 +953,26 @@ def revert_tree_conflicts_in_updated_files(sbox):
   svntest.actions.run_and_verify_status(wc_dir_2, expected_status)
   svntest.actions.verify_disk(wc_dir_2, expected_disk)
 
+def revert_add_over_not_present_dir(sbox):
+  "reverting an add over not present directory"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  main.run_svn(None, 'rm', os.path.join(wc_dir, 'A/C'))
+  main.run_svn(None, 'ci', wc_dir, '-m', 'Deleted dir')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/C')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  
+  main.run_svn(None, 'mkdir', os.path.join(wc_dir, 'A/C'))
+  
+  # This fails in the current WC-NG state (r927318).
+  main.run_svn(None, 'revert', os.path.join(wc_dir, 'A/C'))
+  
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -979,6 +1000,7 @@ test_list = [ None,
                    status_of_missing_dir_after_revert_replaced_with_history_dir),
               revert_replaced_with_history_file_2,
               revert_tree_conflicts_in_updated_files,
+              XFail(revert_add_over_not_present_dir),
              ]
 
 if __name__ == '__main__':
