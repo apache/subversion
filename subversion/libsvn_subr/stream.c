@@ -848,12 +848,10 @@ read_range_handler_apr(void *baton, char *buffer, apr_size_t *len)
           *len = 0;
           return SVN_NO_ERROR;
         }
-      else
-        {
-          /* We're in range, but don't read over the end of the range. */
-          if (pos + *len > btn->end)
-              *len = btn->end - pos;
-        }
+
+      /* We're in range, but don't read over the end of the range. */
+      if (pos + *len > btn->end)
+        *len = btn->end - pos;
     }
 
   return read_handler_apr(baton, buffer, len);
