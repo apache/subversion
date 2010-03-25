@@ -1808,6 +1808,12 @@ svn_wc__db_wq_completed(svn_wc__db_t *db,
 /* @} */
 
 
+/* Note: LEVELS_TO_LOCK is here strictly for backward compat.  The access
+ * batons still have the notion of 'levels to lock' and we need to ensure
+ * that they still function correctly, even in the new world.  'levels to
+ * lock' should not be exposed through the wc-ng APIs at all: users either
+ * get to lock the entire tree (rooted at some subdir, of course), or none.
+ */
 svn_error_t *
 svn_wc__db_wclock_set(svn_wc__db_t *db,
                       const char *local_abspath,
