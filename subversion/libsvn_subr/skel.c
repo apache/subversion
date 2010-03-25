@@ -610,20 +610,20 @@ void svn_skel__prepend_str(const char *value,
 }
 
 
-void svn_skel__append(svn_skel_t *list, const svn_skel_t *skel)
+void svn_skel__append(svn_skel_t *list_skel, const svn_skel_t *skel)
 {
-  SVN_ERR_ASSERT_NO_RETURN(list != NULL && !list->is_atom);
+  SVN_ERR_ASSERT_NO_RETURN(list_skel != NULL && !list_skel->is_atom);
 
-  if (list->children == NULL)
+  if (list_skel->children == NULL)
     {
-      list->children = skel;
+      list_skel->children = (svn_skel_t *)skel;
     }
   else
     {
-      list = list->children;
-      while (list->next != NULL)
-        list = list->next;
-      list->next = skel;
+      list_skel = list_skel->children;
+      while (list_skel->next != NULL)
+        list_skel = list_skel->next;
+      list_skel->next = (svn_skel_t *)skel;
     }
 }
 
