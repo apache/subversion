@@ -3048,7 +3048,7 @@ close_directory(void *dir_baton,
   if (regular_props->nelts || entry_props->nelts || wc_props->nelts)
     {
       /* Make a temporary log accumulator for dirprop changes.*/
-      svn_stringbuf_t *dirprop_log = svn_stringbuf_create("", pool);
+      svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
 
       if (regular_props->nelts)
         {
@@ -3089,7 +3089,7 @@ close_directory(void *dir_baton,
 
           /* Merge pending properties into temporary files (ignoring
              conflicts). */
-          SVN_ERR_W(svn_wc__merge_props(&dirprop_log,
+          SVN_ERR_W(svn_wc__merge_props(&log_accum,
                                         &prop_state,
                                         &new_base_props,
                                         &new_actual_props,
@@ -3126,7 +3126,7 @@ close_directory(void *dir_baton,
 
       /* Add the dirprop loggy entries to the baton's log
          accumulator. */
-      svn_stringbuf_appendstr(db->log_accum, dirprop_log);
+      svn_stringbuf_appendstr(db->log_accum, log_accum);
     }
 
   if (new_base_props || new_actual_props)
@@ -5019,7 +5019,7 @@ close_file(void *file_baton,
          We can also clear entry.deleted here, as we are adding a new
          BASE_NODE anyway */
       svn_wc_entry_t tmp_entry;
-      svn_stringbuf_t *create_log = NULL;
+      svn_stringbuf_t *log_accum = NULL;
       apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_KIND
                            | SVN_WC__ENTRY_MODIFY_REVISION
                            | SVN_WC__ENTRY_MODIFY_DELETED;
@@ -5039,7 +5039,7 @@ close_file(void *file_baton,
       tmp_entry.revision = *eb->target_revision;
       tmp_entry.deleted = FALSE;
 
-      SVN_ERR(svn_wc__loggy_entry_modify(&create_log,
+      SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
                                          fb->dir_baton->local_abspath,
                                          fb->local_abspath,
                                          &tmp_entry,
@@ -5048,7 +5048,7 @@ close_file(void *file_baton,
 
       SVN_ERR(svn_wc__wq_add_loggy(eb->db,
                                    fb->dir_baton->local_abspath,
-                                   create_log,
+                                   log_accum,
                                    pool));
 
       SVN_ERR(svn_wc__wq_run(eb->db,
