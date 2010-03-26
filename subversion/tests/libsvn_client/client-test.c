@@ -317,7 +317,7 @@ test_patch(const svn_test_opts_t *opts,
   repos_url = svn_uri_canonicalize(repos_url, pool);
   wc_path = svn_dirent_join(cwd_utf8->data, "test-patch-wc", pool);
   wc_path = svn_dirent_canonicalize(wc_path, pool);
-  SVN_ERR(svn_io_remove_dir2(wc_path, FALSE, NULL, NULL, pool));
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
   rev.kind = svn_opt_revision_head;
   peg_rev.kind = svn_opt_revision_unspecified;
   SVN_ERR(svn_client_create_context(&ctx, pool));
