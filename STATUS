@@ -139,7 +139,7 @@ Candidate changes:
      SVN_TEST_OPTS_PASS macro.
      ^/subversion/branches/1.6.x-r926151
    Votes:
-     +1: cmpilato
+     +1: cmpilato, pburba
 
  * r923389, r923391
    Fix a bug where the ordering of arguments to svn_rangelist_intersect can
