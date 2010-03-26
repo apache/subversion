@@ -148,7 +148,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-r923389
    Votes:
-     +1: pburba
+     +1: pburba, rhuijben
 
  * r921453, r927184, r927243
    Fix reopened issue #3020 'Reflect dropped/renumbered revisions in
@@ -164,7 +164,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-issue3020
    Votes:
-     +1: pburba
+     +1: pburba, rhuijben
 
 Veto-blocked changes:
 =====================
