@@ -410,6 +410,10 @@ CREATE TABLE ACTUAL_NODE (
 
   /* Three columns containing the checksums of older, left and right conflict
      texts.  Stored in a column to allow storing them in the pristine store  */
+  /* stsp: This is meant for text conflicts, right? What about property
+           conflicts? Why do we need these in a column to refer to the
+           pristine store? Can't we just parse the checksums from
+           conflict_data as well? */
   older_checksum  TEXT,
   left_checksum  TEXT,
   right_checksum  TEXT,
