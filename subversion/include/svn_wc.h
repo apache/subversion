@@ -4755,8 +4755,9 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * If non-NULL, @a wcprop_changes is an array of <tt>svn_prop_t *</tt>
  * changes to wc properties; if an #svn_prop_t->value is NULL, then
  * that property is deleted.
- *   ### A prop whose value is NULL is ignored, not deleted.  (Maybe this
- *   ### isn't a set of changes but rather the new complete set of props?)
+ *   ### [JAF]  No, a prop whose value is NULL is ignored, not deleted.  This
+ *   ### seems to be not a set of changes but rather the new complete set of
+ *   ### props.  And it's renamed to 'new_dav_cache' inside; why?
  *
  * If @a remove_lock is @c TRUE, any entryprops related to a repository
  * lock will be removed.
@@ -4767,6 +4768,8 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * If @a local_abspath is a file and @a checksum is non-NULL, use @a checksum
  * as the checksum for the new text base. Otherwise, calculate the checksum
  * if needed.
+ *   ### [JAF]  No, it doesn't calculate the checksum, it stores null in wc.db:
+ *   ### see svn_wc__process_committed_internal().
  *
  * If @a recurse is TRUE and @a local_abspath is a directory, then bump every
  * versioned object at or under @a path.  This is usually done for
