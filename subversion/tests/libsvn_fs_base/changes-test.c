@@ -728,12 +728,19 @@ changes_fetch_ordering(const char **msg,
 
 
 static svn_error_t *
-changes_bad_sequences(const svn_test_opts_t *opts,
+changes_bad_sequences(const char **msg,
+                      svn_boolean_t msg_only,
+                      const svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
   svn_fs_t *fs;
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_error_t *err;
+
+  *msg = "verify that bad change sequences raise errors";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
@@ -936,7 +943,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(changes_delete),
     SVN_TEST_PASS(changes_fetch),
     SVN_TEST_PASS(changes_fetch_ordering),
-    SVN_TEST_OPTS_PASS(changes_bad_sequences,
-                       "verify that bad change sequences raise errors"),
+    SVN_TEST_PASS(changes_bad_sequences),
     SVN_TEST_NULL
   };
