@@ -212,18 +212,11 @@ static svn_error_t *
 check_patch_result(const char *path, const char **expected_lines,
                    int num_expected_lines, apr_pool_t *pool)
 {
-  svn_string_t *path_svnstr;
-  svn_string_t *path_utf8;
-  apr_file_t *patched_file;
   svn_stream_t *stream;
   apr_pool_t *iterpool;
   int i;
 
-  path_svnstr = svn_string_create(path, pool);
-  SVN_ERR(svn_subst_translate_string(&path_utf8, path_svnstr, NULL, pool));
-  SVN_ERR(svn_io_file_open(&patched_file, path_utf8->data,
-                           APR_READ, APR_OS_DEFAULT, pool));
-  stream = svn_stream_from_aprfile2(patched_file, TRUE, pool);
+  SVN_ERR(svn_stream_open_readonly(&stream, path, pool, pool));
   i = 0;
   iterpool = svn_pool_create(pool);
   while (TRUE)
@@ -235,15 +228,20 @@ check_patch_result(const char *path, const char **expected_lines,
 
       SVN_ERR(svn_stream_readline(stream, &line, APR_EOL_STR, &eof, pool));
       if (i < num_expected_lines)
-        SVN_ERR_ASSERT(strcmp(expected_lines[i++], line->data) == 0);
+        if (strcmp(expected_lines[i++], line->data) != 0)
+          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                   "%s line %d didn't match the expected line "
+                                   "(strlen=%d vs strlen=%d)", path, i,
+                                   strlen(expected_lines[i-1]),
+                                   strlen(line->data));
+
       if (eof)
         break;
     }
   svn_pool_destroy(iterpool);
 
-  SVN_ERR(svn_io_file_close(patched_file, pool));
   SVN_ERR_ASSERT(i == num_expected_lines);
-  SVN_ERR(svn_io_remove_file2(path_utf8->data, FALSE, pool));
+  SVN_ERR(svn_io_remove_file2(path, FALSE, pool));
 
   return SVN_NO_ERROR;
 }
