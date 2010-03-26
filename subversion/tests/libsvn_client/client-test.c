@@ -22,7 +22,7 @@
  */
 
 
-#include <unistd.h>
+
 #include <limits.h>
 #include "svn_mergeinfo.h"
 #include "../../libsvn_client/mergeinfo.h"
@@ -260,9 +260,7 @@ test_patch(const svn_test_opts_t *opts,
   apr_hash_t *reject_tempfiles;
   const char *repos_url;
   const char *wc_path;
-  char cwd[PATH_MAX];
-  svn_string_t *cwd_svnstr;
-  svn_string_t *cwd_utf8;
+  const char *cwd;
   svn_revnum_t committed_rev;
   svn_opt_revision_t rev;
   svn_opt_revision_t peg_rev;
@@ -309,14 +307,18 @@ test_patch(const svn_test_opts_t *opts,
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
 
   /* Check out the HEAD revision */
-  getcwd(cwd, sizeof(cwd));
-  cwd_svnstr = svn_string_create(cwd, pool);
-  SVN_ERR(svn_subst_translate_string(&cwd_utf8, cwd_svnstr, NULL, pool));
-  repos_url = apr_pstrcat(pool, "file://", cwd_utf8->data,
-                          "/test-patch-repos", NULL);
+  SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
+
+  if (cwd[0] == '/')
+    repos_url = apr_pstrcat(pool, "file://", cwd,
+                            "/test-patch-repos", NULL);
+  else
+    /* On Windows CWD is always in "X:/..." style */
+    repos_url = apr_pstrcat(pool, "file:///", cwd,
+                            "/test-patch-repos", NULL);
+
   repos_url = svn_uri_canonicalize(repos_url, pool);
-  wc_path = svn_dirent_join(cwd_utf8->data, "test-patch-wc", pool);
-  wc_path = svn_dirent_canonicalize(wc_path, pool);
+  wc_path = svn_dirent_join(cwd, "test-patch-wc", pool);
   SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
   rev.kind = svn_opt_revision_head;
   peg_rev.kind = svn_opt_revision_unspecified;
@@ -326,8 +328,7 @@ test_patch(const svn_test_opts_t *opts,
                                TRUE, FALSE, ctx, pool));
 
   /* Create the patch file. */
-  patch_file_path = svn_dirent_join(cwd_utf8->data, "test-patch.diff", pool);
-  patch_file_path = svn_dirent_canonicalize(patch_file_path, pool);
+  patch_file_path = svn_dirent_join(cwd, "test-patch.diff", pool);
   SVN_ERR(svn_io_file_open(&patch_file, patch_file_path,
                            (APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE),
                            APR_OS_DEFAULT, pool));
