@@ -204,6 +204,8 @@ svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue);
  *
  * @a new_dav_cache is a hash of dav property changes to be made to
  * the @a local_abspath.
+ *   ### [JAF]  Is it? See svn_wc_queue_committed3(). It ends up being
+ *   ### assigned as a whole to wc.db:BASE_NODE:dav_cache.
  *
  * If @a no_unlock is set, don't release any user locks on @a
  * local_abspath; otherwise release them as part of this processing.
@@ -214,6 +216,7 @@ svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue);
  * If @a local_abspath is a file and @a checksum is non-NULL, use @a checksum
  * as the checksum for the new text base. Otherwise, calculate the checksum
  * if needed.
+ *   ### [JAF]  No, it doesn't calculate the checksum, it stores null in wc.db.
  */
 svn_error_t *
 svn_wc__process_committed_internal(svn_wc__db_t *db,
