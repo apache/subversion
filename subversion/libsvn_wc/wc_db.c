@@ -2962,10 +2962,6 @@ set_tc_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   const char *tree_conflict_data;
   apr_hash_t *conflicts;
 
-  /* ### f13: just insert, remove or replace the row from the CONFLICT_VICTIM
-     ### table, rather than all this parsing, unparsing garbage. (and we
-     ### probably won't need a transaction, either.)*/
-
   /* Get the conflict information for the parent of LOCAL_ABSPATH. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", stb->wc_id, stb->local_relpath));
@@ -3124,9 +3120,6 @@ svn_wc__db_op_read_tree_conflict(
     return svn_error_return(err);
 
   VERIFY_USABLE_PDH(pdh);
-
-  /* ### f13: just read the row from the CONFLICT_VICTIM table, rather than
-     ### all this parsing, unparsing garbage. */
 
   /* Get the conflict information for the parent of LOCAL_ABSPATH. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
