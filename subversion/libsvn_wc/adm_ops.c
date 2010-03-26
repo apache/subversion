@@ -400,33 +400,30 @@ process_committed_leaf(svn_wc__db_t *db,
       /* ### don't directories have revert props? */
       SVN_ERR(svn_wc__wq_remove_revert_files(db, local_abspath, scratch_pool));
 
+      /* If we sent a delta (meaning: post-copy modification),
+         then this file will appear in the queue and so we should have
+         its checksum already. */
       if (checksum == NULL)
         {
-          /* If we sent a delta (meaning: post-copy modification),
-             then this file will appear in the queue and so we should have
-             its checksum already. */
-          if (checksum == NULL)
+          /* It was copied and not modified. We should have a text
+             base for it. And the entry should have a checksum. */
+          if (copied_checksum != NULL)
             {
-              /* It was copied and not modified. We should have a text
-                 base for it. And the entry should have a checksum. */
-              if (copied_checksum != NULL)
-                {
-                  checksum = copied_checksum;
-                }
-#ifdef SVN_DEBUG
-              else
-                {
-                  /* If we copy a deleted file, then it will become scheduled
-                     for deletion, but there is no base text for it. So we
-                     cannot get/compute a checksum for this file. */
-                  SVN_ERR_ASSERT(
-                    status == svn_wc__db_status_deleted
-                    || status == svn_wc__db_status_obstructed_delete);
-
-                  /* checksum will remain NULL in this one case. */
-                }
-#endif
+              checksum = copied_checksum;
             }
+#ifdef SVN_DEBUG
+          else
+            {
+              /* If we copy a deleted file, then it will become scheduled
+                 for deletion, but there is no base text for it. So we
+                 cannot get/compute a checksum for this file. */
+              SVN_ERR_ASSERT(
+                status == svn_wc__db_status_deleted
+                || status == svn_wc__db_status_obstructed_delete);
+
+              /* checksum will remain NULL in this one case. */
+            }
+#endif
         }
     }
 
