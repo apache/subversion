@@ -232,8 +232,8 @@ check_patch_result(const char *path, const char **expected_lines,
           return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                    "%s line %d didn't match the expected line "
                                    "(strlen=%d vs strlen=%d)", path, i,
-                                   strlen(expected_lines[i-1]),
-                                   strlen(line->data));
+                                   (int)strlen(expected_lines[i-1]),
+                                   (int)strlen(line->data));
 
       if (eof)
         break;
