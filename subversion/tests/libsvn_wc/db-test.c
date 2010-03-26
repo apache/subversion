@@ -1324,6 +1324,11 @@ test_upgrading_to_f15(apr_pool_t *pool)
 static int
 detect_work_item(const svn_skel_t *work_item)
 {
+  /* Test work items are a list with one integer atom as operation */
+  if (!work_item->children)
+    return -1;
+  work_item = work_item->children;
+
   if (!work_item->is_atom || work_item->len != 1)
     return -1;
   return work_item->data[0] - '0';
@@ -1343,13 +1348,16 @@ test_work_queue(apr_pool_t *pool)
                       svn_wc__db_openmode_readwrite, pool));
 
   /* Create three work items.  */
-  work_item = svn_skel__str_atom("0", pool);
+  work_item = svn_skel__make_empty_list(pool);
+  svn_skel__append(work_item, svn_skel__str_atom("0", pool));
   SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
 
-  work_item = svn_skel__str_atom("1", pool);
+  work_item = svn_skel__make_empty_list(pool);
+  svn_skel__append(work_item, svn_skel__str_atom("1", pool));
   SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
 
-  work_item = svn_skel__str_atom("2", pool);
+  work_item = svn_skel__make_empty_list(pool);
+  svn_skel__append(work_item, svn_skel__str_atom("2", pool));
   SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
 
   while (TRUE)
