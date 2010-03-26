@@ -218,11 +218,9 @@ read_node_version_info(const svn_wc_conflict_version_t **version_info,
 }
 
 /* Parse a newly allocated svn_wc_conflict_description2_t object from the
- * character string pointed to by *START. Return the result in *CONFLICT.
- * Don't read further than END. Set *START to point to the next character
- * after the description that was read.
+ * provided SKEL. Return the result in *CONFLICT, allocated in RESULT_POOL.
  * DIR_PATH is the path to the WC directory whose conflicts are being read.
- * Do all allocations in pool.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_wc__deserialize_conflict(const svn_wc_conflict_description2_t **conflict,
