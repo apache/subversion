@@ -106,7 +106,7 @@ Candidate changes:
      subversion working copy. But AnkhSVN reports show that it is a
      common user scenario.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, pburba
 
  * r916286, r917512
    This backport depends on the r878590 group only for the conflict free port.
