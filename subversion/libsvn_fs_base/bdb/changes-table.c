@@ -163,6 +163,15 @@ fold_change(apr_hash_t *changes,
           (SVN_ERR_FS_CORRUPT, NULL,
            _("Invalid change ordering: non-add change on deleted path"));
 
+      /* Sanity check: an add can't follow anything except
+         a delete or reset.  */
+      if ((change->kind == svn_fs_path_change_add)
+          && (old_change->change_kind != svn_fs_path_change_delete)
+          && (old_change->change_kind != svn_fs_path_change_reset))
+        return svn_error_create
+          (SVN_ERR_FS_CORRUPT, NULL,
+           _("Invalid change ordering: add change on preexisting path"));
+
       /* Now, merge that change in. */
       switch (change->kind)
         {
