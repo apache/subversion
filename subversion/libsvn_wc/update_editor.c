@@ -2411,7 +2411,6 @@ add_directory(const char *path,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL,
                              eb->db, db->local_abspath, db->pool, db->pool);
-
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -2482,7 +2481,7 @@ add_directory(const char *path,
                          svn_dirent_local_style(db->local_abspath, pool));
             }
 
-          if (switched && !eb->switch_relpath)
+          if (!err && switched && !eb->switch_relpath)
             {
               err = svn_error_createf(
                          SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -2492,15 +2491,15 @@ add_directory(const char *path,
                          svn_path_url_add_component2(eb->repos_root,
                                                      db->new_relpath, pool));
             }
-        }
 
-      if (err != NULL)
-        {
-          db->already_notified = TRUE;
-          do_notification(eb, db->local_abspath, svn_node_dir,
-                          svn_wc_notify_update_obstruction, pool);
+          if (err != NULL)
+            {
+              db->already_notified = TRUE;
+              do_notification(eb, db->local_abspath, svn_node_dir,
+                              svn_wc_notify_update_obstruction, pool);
 
-          return svn_error_return(err);
+              return svn_error_return(err);
+            }
         }
 
       /* What to do with a versioned or schedule-add dir:
