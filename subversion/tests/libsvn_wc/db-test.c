@@ -1349,15 +1349,15 @@ test_work_queue(apr_pool_t *pool)
 
   /* Create three work items.  */
   work_item = svn_skel__make_empty_list(pool);
-  svn_skel__append(work_item, svn_skel__str_atom("0", pool));
+  svn_skel__prepend_int(0, work_item, pool);
   SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
 
   work_item = svn_skel__make_empty_list(pool);
-  svn_skel__append(work_item, svn_skel__str_atom("1", pool));
+  svn_skel__prepend_int(1, work_item, pool);
   SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
 
   work_item = svn_skel__make_empty_list(pool);
-  svn_skel__append(work_item, svn_skel__str_atom("2", pool));
+  svn_skel__prepend_int(2, work_item, pool);
   SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
 
   while (TRUE)
