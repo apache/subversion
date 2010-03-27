@@ -510,12 +510,8 @@ node_get_relpath_ignore_errors(svn_wc__db_t *db,
 static svn_error_t *
 flush_log(struct dir_baton *db, apr_pool_t *pool)
 {
-  if (! svn_stringbuf_isempty(db->log_accum))
-    {
-      SVN_ERR(svn_wc__wq_add_loggy(db->edit_baton->db, db->local_abspath,
-                                   db->log_accum, pool));
-      svn_stringbuf_setempty(db->log_accum);
-    }
+  SVN_WC__FLUSH_LOG_ACCUM(db->edit_baton->db, db->local_abspath,
+                          db->log_accum, pool);
 
   return SVN_NO_ERROR;
 }
@@ -1073,13 +1069,8 @@ make_file_baton(struct file_baton **f_p,
 static svn_error_t *
 flush_file_log(struct file_baton *fb, apr_pool_t *pool)
 {
-  if (! svn_stringbuf_isempty(fb->log_accum))
-    {
-      SVN_ERR(svn_wc__wq_add_loggy(fb->edit_baton->db,
-                                   fb->dir_baton->local_abspath,
-                                   fb->log_accum, pool));
-      svn_stringbuf_setempty(fb->log_accum);
-    }
+  SVN_WC__FLUSH_LOG_ACCUM(fb->edit_baton->db, fb->dir_baton->local_abspath,
+                          fb->log_accum, pool);
 
   return SVN_NO_ERROR;
 }
@@ -2992,10 +2983,12 @@ close_directory(void *dir_baton,
     {
       db->bump_info->skipped = TRUE;
 
-      SVN_ERR(flush_log(db, pool));
+      /* The log accumulator better be empty because we aren't going to
+         be running any logs in this directory.  */
+      SVN_ERR_ASSERT(svn_stringbuf_isempty(db->log_accum));
 
       /* Allow the parent to complete its update. */
-      SVN_ERR(maybe_bump_dir_info(db->edit_baton, db->bump_info, db->pool));
+      SVN_ERR(maybe_bump_dir_info(eb, db->bump_info, db->pool));
 
       return SVN_NO_ERROR;
     }
@@ -3013,7 +3006,7 @@ close_directory(void *dir_baton,
       apr_hash_t *props_to_delete;
       svn_wc__db_kind_t kind;
 
-      SVN_ERR(svn_wc__db_read_kind(&kind, db->edit_baton->db,
+      SVN_ERR(svn_wc__db_read_kind(&kind, eb->db,
                                    db->local_abspath, TRUE, pool));
       if (kind == svn_wc__db_kind_unknown)
         {
@@ -3023,7 +3016,7 @@ close_directory(void *dir_baton,
       else
         {
           SVN_ERR(svn_wc__load_props(&base_props, &working_props,
-                                     db->edit_baton->db, db->local_abspath,
+                                     eb->db, db->local_abspath,
                                      pool, pool));
         }
 
@@ -3055,7 +3048,7 @@ close_directory(void *dir_baton,
           /* If recording traversal info, then see if the
              SVN_PROP_EXTERNALS property on this directory changed,
              and record before and after for the change. */
-            if (db->edit_baton->external_func)
+            if (eb->external_func)
             {
               const svn_prop_t *change = externals_prop_changed(regular_props);
 
@@ -3065,7 +3058,7 @@ close_directory(void *dir_baton,
                   const svn_string_t *old_val_s;
 
                   SVN_ERR(svn_wc__internal_propget(
-                           &old_val_s, db->edit_baton->db, db->local_abspath,
+                           &old_val_s, eb->db, db->local_abspath,
                            SVN_PROP_EXTERNALS, db->pool, db->pool));
 
                   if ((new_val_s == NULL) && (old_val_s == NULL))
@@ -3076,8 +3069,8 @@ close_directory(void *dir_baton,
                   else if (old_val_s || new_val_s)
                     /* something changed, record the change */
                     {
-                      SVN_ERR((db->edit_baton->external_func)(
-                                           db->edit_baton->external_baton,
+                      SVN_ERR((eb->external_func)(
+                                           eb->external_baton,
                                            db->local_abspath,
                                            old_val_s,
                                            new_val_s,
@@ -3102,10 +3095,10 @@ close_directory(void *dir_baton,
                                         regular_props,
                                         TRUE /* base_merge */,
                                         FALSE /* dry_run */,
-                                        db->edit_baton->conflict_func,
-                                        db->edit_baton->conflict_baton,
-                                        db->edit_baton->cancel_func,
-                                        db->edit_baton->cancel_baton,
+                                        eb->conflict_func,
+                                        eb->conflict_baton,
+                                        eb->cancel_func,
+                                        eb->cancel_baton,
                                         db->pool,
                                         pool),
                     _("Couldn't do property merge"));
@@ -3129,6 +3122,7 @@ close_directory(void *dir_baton,
       svn_stringbuf_appendstr(db->log_accum, log_accum);
     }
 
+  /* Queue some items to install the properties.  */
   if (new_base_props || new_actual_props)
     SVN_ERR(svn_wc__install_props(eb->db, db->local_abspath,
                                   new_base_props, new_actual_props,
@@ -3144,6 +3138,7 @@ close_directory(void *dir_baton,
                                                     last_change->cmt_author,
                                                     pool));
 
+  /* Process all of the queued work items for this directory.  */
   SVN_ERR(svn_wc__wq_run(eb->db, db->local_abspath,
                          eb->cancel_func, eb->cancel_baton,
                          pool));
@@ -3151,7 +3146,7 @@ close_directory(void *dir_baton,
   /* We're done with this directory, so remove one reference from the
      bump information. This may trigger a number of actions. See
      maybe_bump_dir_info() for more information.  */
-  SVN_ERR(maybe_bump_dir_info(db->edit_baton, db->bump_info, db->pool));
+  SVN_ERR(maybe_bump_dir_info(eb, db->bump_info, db->pool));
 
   /* Notify of any prop changes on this directory -- but do nothing if
      it's an added or skipped directory, because notification has already
@@ -3173,10 +3168,10 @@ close_directory(void *dir_baton,
       notify = svn_wc_create_notify(db->local_abspath, action, pool);
       notify->kind = svn_node_dir;
       notify->prop_state = prop_state;
-      notify->revision = *db->edit_baton->target_revision;
+      notify->revision = *eb->target_revision;
       notify->old_revision = db->old_revision;
 
-      eb->notify_func(db->edit_baton->notify_baton, notify, pool);
+      eb->notify_func(eb->notify_baton, notify, pool);
     }
 
   bdi = db->bump_info;
@@ -4323,7 +4318,6 @@ merge_props(svn_stringbuf_t *log_accum,
             struct last_change_info **last_change,
             svn_wc__db_t *db,
             const char *file_abspath,
-            const char *dir_abspath,
             const svn_wc_conflict_version_t *left_version,
             const svn_wc_conflict_version_t *right_version,
             const apr_array_header_t *prop_changes,
@@ -4335,8 +4329,9 @@ merge_props(svn_stringbuf_t *log_accum,
             void *cancel_baton,
             apr_pool_t *pool)
 {
-  apr_array_header_t *regular_props = NULL, *wc_props = NULL,
-    *entry_props = NULL;
+  apr_array_header_t *regular_props;
+  apr_array_header_t *wc_props;
+  apr_array_header_t *entry_props;
 
   /* Sort the property list into three arrays, based on kind. */
   SVN_ERR(svn_categorize_props(prop_changes, &entry_props, &wc_props,
@@ -4362,7 +4357,9 @@ merge_props(svn_stringbuf_t *log_accum,
                                   NULL /* update, not merge */,
                                   base_props,
                                   working_props,
-                                  regular_props, TRUE, FALSE,
+                                  regular_props,
+                                  TRUE /* base_merge */,
+                                  FALSE /* dry_run */,
                                   conflict_func, conflict_baton,
                                   cancel_func, cancel_baton,
                                   pool,
@@ -4382,6 +4379,7 @@ merge_props(svn_stringbuf_t *log_accum,
     *lock_state = svn_wc_notify_lock_state_unchanged;
 
   /* This writes a whole bunch of log commands to install wcprops.  */
+  /* ### no it doesn't. this immediately modifies them.  */
   if (wc_props)
     SVN_ERR(svn_wc__db_base_set_dav_cache(db, file_abspath,
                                           prop_hash_from_array(wc_props, pool),
@@ -4577,7 +4575,7 @@ merge_file(svn_wc_notify_state_t *content_state,
      which case we want the new entryprops to be in place. */
   SVN_ERR(merge_props(log_accum, prop_state, lock_state,
                       new_base_props, new_actual_props, last_change,
-                      eb->db, fb->local_abspath, pb->local_abspath,
+                      eb->db, fb->local_abspath,
                       left_version, right_version,
                       fb->propchanges,
                       fb->copied_base_props, fb->copied_working_props,
@@ -4936,6 +4934,7 @@ close_file(void *file_baton,
 
   if (fb->skip_this)
     {
+      /* Flush out the file changes. The parent directory may run them.  */
       SVN_ERR(flush_file_log(fb, pool));
       SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
       svn_pool_destroy(fb->pool);
@@ -5000,11 +4999,10 @@ close_file(void *file_baton,
                                         md5_actual_checksum, pool));
 #endif
 
-  /* It's a small world, after all. */
+  /* Do the hard work. This will queue some additional work.  */
   SVN_ERR(merge_file(&content_state, &prop_state, &lock_state,
                      &new_base_props, &new_actual_props, &last_change,
                      fb, new_base_abspath, md5_actual_checksum, pool));
-
 
   if (fb->added || fb->add_existed)
     {
@@ -5068,11 +5066,13 @@ close_file(void *file_baton,
                                                     last_change->cmt_author,
                                                     pool));
 
+  /* Queue some work items to install new props.  */
   if (new_base_props || new_actual_props)
       SVN_ERR(svn_wc__install_props(eb->db, fb->local_abspath,
                                     new_base_props, new_actual_props,
                                     TRUE /* write_base_props */, TRUE, pool));
 
+  /* Queue all operations.  */
   SVN_ERR(flush_file_log(fb, pool));
 
   /* We have one less referrer to the directory's bump information. */
