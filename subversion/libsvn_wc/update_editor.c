@@ -694,6 +694,25 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
                            apr_pool_t *scratch_pool);
 
 
+static void
+do_notification(const struct edit_baton *eb,
+                const char *local_abspath,
+                svn_node_kind_t kind,
+                svn_wc_notify_action_t action,
+                apr_pool_t *scratch_pool)
+{
+  svn_wc_notify_t *notify;
+
+  if (eb->notify_func == NULL)
+    return;
+
+  notify = svn_wc_create_notify(local_abspath, action, scratch_pool);
+  notify->kind = kind;
+
+  (*eb->notify_func)(eb->notify_baton, notify, scratch_pool);
+}
+
+
 /* Helper for maybe_bump_dir_info():
 
    In a single atomic action, (1) remove any 'deleted' entries from a
@@ -853,16 +872,11 @@ complete_directory(struct edit_baton *eb,
         {
           SVN_ERR(svn_wc__entry_remove(eb->db, node_abspath, iterpool));
 
-          if (eb->notify_func)
-            {
-              svn_wc_notify_t *notify
-                = svn_wc_create_notify(node_abspath,
-                                       svn_wc_notify_update_delete,
-                                       iterpool);
-              notify->kind = (kind == svn_wc__db_kind_dir) ? svn_node_dir
-                                                           : svn_node_file;
-              (* eb->notify_func)(eb->notify_baton, notify, iterpool);
-            }
+          do_notification(eb, node_abspath, svn_wc_notify_update_delete,
+                          (kind == svn_wc__db_kind_dir)
+                            ? svn_node_dir
+                            : svn_node_file,
+                          iterpool);
         }
     }
 
@@ -1378,12 +1392,8 @@ open_root(void *edit_baton,
 
       /* Notify that we skipped the target, while we actually skipped
          the anchor */
-      if (eb->notify_func)
-        eb->notify_func(eb->notify_baton,
-                        svn_wc_create_notify(eb->target_abspath,
-                                             svn_wc_notify_skip,
-                                             pool),
-                        pool);
+      do_notification(eb, eb->target_abspath, svn_node_unknown,
+                      svn_wc_notify_skip, pool);
 
       return SVN_NO_ERROR;
     }
@@ -2083,12 +2093,8 @@ do_entry_deletion(struct edit_baton *eb,
       SVN_ERR(remember_skipped_tree(eb, local_abspath));
 
       /* ### TODO: Also print victim_path in the skip msg. */
-      if (eb->notify_func)
-        eb->notify_func(eb->notify_baton,
-                        svn_wc_create_notify(local_abspath,
-                                             svn_wc_notify_skip,
-                                             pool),
-                        pool);
+      do_notification(eb, local_abspath, svn_node_unknown, svn_wc_notify_skip,
+                      pool);
 
       return SVN_NO_ERROR;
     }
@@ -2128,12 +2134,8 @@ do_entry_deletion(struct edit_baton *eb,
 
       SVN_ERR(remember_skipped_tree(eb, local_abspath));
 
-      if (eb->notify_func)
-        eb->notify_func(eb->notify_baton,
-                        svn_wc_create_notify(local_abspath,
-                                             svn_wc_notify_tree_conflict,
-                                             pool),
-                        pool);
+      do_notification(eb, local_abspath, svn_node_unknown,
+                      svn_wc_notify_tree_conflict, pool);
 
       if (tree_conflict->reason == svn_wc_conflict_reason_edited)
         {
@@ -2268,15 +2270,9 @@ do_entry_deletion(struct edit_baton *eb,
                          pool));
 
   /* Notify. (If tree_conflict, we've already notified.) */
-  if (eb->notify_func
-      && tree_conflict == NULL)
-    {
-      eb->notify_func(eb->notify_baton,
-                      svn_wc_create_notify(local_abspath,
-                                           svn_wc_notify_update_delete,
-                                           pool),
-                      pool);
-    }
+  if (tree_conflict == NULL)
+    do_notification(eb, local_abspath, svn_node_unknown,
+                    svn_wc_notify_update_delete, pool);
 
   return SVN_NO_ERROR;
 }
@@ -2394,12 +2390,8 @@ add_directory(const char *path,
       db->already_notified = TRUE;
 
       /* ### TODO: Also print victim_path in the skip msg. */
-      if (eb->notify_func)
-        eb->notify_func(eb->notify_baton,
-                        svn_wc_create_notify(db->local_abspath,
-                                             svn_wc_notify_skip,
-                                             pool),
-                        pool);
+      do_notification(eb, db->local_abspath, svn_node_unknown,
+                      svn_wc_notify_skip, pool);
 
       return SVN_NO_ERROR;
     }
@@ -2436,16 +2428,8 @@ add_directory(const char *path,
        wc_kind != svn_wc__db_kind_dir && IS_NODE_PRESENT(status)))
     {
       db->already_notified = TRUE;
-      if (eb->notify_func)
-        {
-          svn_wc_notify_t *notify =
-                svn_wc_create_notify(db->local_abspath,
-                                     svn_wc_notify_update_obstruction,
-                                     pool);
-
-          notify->kind = svn_node_dir;
-          eb->notify_func(eb->notify_baton, notify, pool);
-        }
+      do_notification(eb, db->local_abspath, svn_node_dir,
+                      svn_wc_notify_update_obstruction, pool);
 
       return svn_error_createf(
        SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -2463,16 +2447,8 @@ add_directory(const char *path,
       if (!eb->allow_unver_obstructions)
         {
           db->already_notified = TRUE;
-          if (eb->notify_func)
-            {
-              svn_wc_notify_t *notify =
-                    svn_wc_create_notify(db->local_abspath,
-                                         svn_wc_notify_update_obstruction,
-                                         pool);
-
-              notify->kind = svn_node_dir;
-              eb->notify_func(eb->notify_baton, notify, pool);
-            }
+          do_notification(eb, db->local_abspath, svn_node_dir,
+                          svn_wc_notify_update_obstruction, pool);
 
           return svn_error_createf(
              SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -2521,16 +2497,8 @@ add_directory(const char *path,
       if (err != NULL)
         {
           db->already_notified = TRUE;
-          if (eb->notify_func)
-            {
-              svn_wc_notify_t *notify =
-                    svn_wc_create_notify(db->local_abspath,
-                                         svn_wc_notify_update_obstruction,
-                                         pool);
-
-              notify->kind = svn_node_dir;
-              eb->notify_func(eb->notify_baton, notify, pool);
-            }
+          do_notification(eb, db->local_abspath, svn_node_dir,
+                          svn_wc_notify_update_obstruction, pool);
 
           return svn_error_return(err);
         }
@@ -2604,13 +2572,8 @@ add_directory(const char *path,
                   db->skip_descendants = TRUE;
                   db->already_notified = TRUE;
 
-                  if (eb->notify_func)
-                    eb->notify_func(eb->notify_baton,
-                                    svn_wc_create_notify(
-                                               db->local_abspath,
-                                               svn_wc_notify_tree_conflict,
-                                               pool),
-                                    pool);
+                  do_notification(eb, db->local_abspath, svn_node_unknown,
+                                  svn_wc_notify_tree_conflict, pool);
 
                   return SVN_NO_ERROR;
                 }
@@ -2731,7 +2694,6 @@ add_directory(const char *path,
      issued. */
   if (eb->notify_func && !db->already_notified && !db->add_existed)
     {
-      svn_wc_notify_t *notify;
       svn_wc_notify_action_t action;
 
       if (db->in_deleted_and_tree_conflicted_subtree)
@@ -2741,10 +2703,9 @@ add_directory(const char *path,
       else
         action = svn_wc_notify_update_add;
 
-      notify = svn_wc_create_notify(db->local_abspath, action, pool);
-      notify->kind = svn_node_dir;
-      eb->notify_func(eb->notify_baton, notify, pool);
       db->already_notified = TRUE;
+
+      do_notification(eb, db->local_abspath, svn_node_dir, action, pool);
     }
 
   return SVN_NO_ERROR;
@@ -2819,12 +2780,8 @@ open_directory(const char *path,
       db->skip_descendants = TRUE;
       db->already_notified = TRUE;
 
-      if (eb->notify_func)
-        eb->notify_func(eb->notify_baton,
-                        svn_wc_create_notify(db->local_abspath,
-                                             svn_wc_notify_skip,
-                                             pool),
-                        pool);
+      do_notification(eb, db->local_abspath, svn_node_unknown,
+                      svn_wc_notify_skip, pool);
 
       return SVN_NO_ERROR;
     }
@@ -2845,17 +2802,9 @@ open_directory(const char *path,
       SVN_ERR(svn_wc__loggy_add_tree_conflict(&pb->log_accum, tree_conflict,
                                               pool));
 
-      if (eb->notify_func)
-        {
-          svn_wc_notify_t *notify
-              = svn_wc_create_notify(db->local_abspath,
-                                     svn_wc_notify_tree_conflict,
-                                     pool);
-          notify->kind = svn_node_dir;
-
-          eb->notify_func(eb->notify_baton, notify, pool);
-          db->already_notified = TRUE;
-        }
+      do_notification(eb, db->local_abspath, svn_node_dir,
+                      svn_wc_notify_tree_conflict, pool);
+      db->already_notified = TRUE;
 
       /* Even if PATH is locally deleted we still need mark it as being
          at TARGET_REVISION, so fall through to the code below to do just
@@ -3725,12 +3674,8 @@ add_file(const char *path,
       fb->skip_this = TRUE;
       fb->already_notified = TRUE;
 
-      if (eb->notify_func)
-        eb->notify_func(eb->notify_baton,
-                        svn_wc_create_notify(fb->local_abspath,
-                                             svn_wc_notify_skip,
-                                             subpool),
-                        subpool);
+      do_notification(eb, fb->local_abspath, svn_node_unknown,
+                      svn_wc_notify_skip, subpool);
 
       svn_pool_destroy(subpool);
 
@@ -3770,16 +3715,8 @@ add_file(const char *path,
        wc_kind != svn_wc__db_kind_symlink && IS_NODE_PRESENT(status)))
     {
       fb->already_notified = TRUE;
-      if (eb->notify_func)
-        {
-          svn_wc_notify_t *notify =
-                svn_wc_create_notify(fb->local_abspath,
-                                     svn_wc_notify_update_obstruction,
-                                     pool);
-
-          notify->kind = svn_node_file;
-          eb->notify_func(eb->notify_baton, notify, pool);
-        }
+      do_notification(eb, fb->local_abspath, svn_node_file,
+                      svn_wc_notify_update_obstruction, pool);
 
       return svn_error_createf(
                SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -3796,16 +3733,8 @@ add_file(const char *path,
 
       if (!eb->allow_unver_obstructions)
         {
-          if (eb->notify_func)
-            {
-              svn_wc_notify_t *notify =
-                      svn_wc_create_notify(fb->local_abspath,
-                                           svn_wc_notify_update_obstruction,
-                                           pool);
-
-              notify->kind = svn_node_file;
-              eb->notify_func(eb->notify_baton, notify, pool);
-            }
+          do_notification(eb, fb->local_abspath, svn_node_file,
+                          svn_wc_notify_update_obstruction, pool);
 
           return svn_error_createf(
              SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -3851,16 +3780,8 @@ add_file(const char *path,
           if (err != NULL)
             {
               fb->already_notified = TRUE;
-              if (eb->notify_func)
-                {
-                  svn_wc_notify_t *notify =
-                        svn_wc_create_notify(fb->local_abspath,
-                                             svn_wc_notify_update_obstruction,
-                                             pool);
-
-                  notify->kind = svn_node_file;
-                  eb->notify_func(eb->notify_baton, notify, pool);
-                }
+              do_notification(eb, fb->local_abspath, svn_node_file,
+                              svn_wc_notify_update_obstruction, pool);
 
               return svn_error_return(err);
             }
@@ -3935,13 +3856,8 @@ add_file(const char *path,
                   fb->skip_this = TRUE;
                   fb->already_notified = TRUE;
 
-                  if (eb->notify_func)
-                    eb->notify_func(eb->notify_baton,
-                                    svn_wc_create_notify(
-                                           fb->local_abspath,
-                                           svn_wc_notify_tree_conflict,
-                                           subpool),
-                                    subpool);
+                  do_notification(eb, fb->local_abspath, svn_node_unknown,
+                                  svn_wc_notify_tree_conflict, subpool);
 
                   return SVN_NO_ERROR;
                 }
@@ -4019,12 +3935,8 @@ open_file(const char *path,
       fb->skip_this = TRUE;
       fb->already_notified = TRUE;
 
-      if (eb->notify_func)
-        eb->notify_func(eb->notify_baton,
-                        svn_wc_create_notify(fb->local_abspath,
-                                             svn_wc_notify_skip,
-                                             subpool),
-                        subpool);
+      do_notification(eb, fb->local_abspath, svn_node_unknown,
+                      svn_wc_notify_skip, subpool);
 
       svn_pool_destroy(subpool);
 
@@ -4058,12 +3970,8 @@ open_file(const char *path,
         fb->skip_this = TRUE;
 
       fb->already_notified = TRUE;
-      if (eb->notify_func)
-        eb->notify_func(eb->notify_baton,
-                        svn_wc_create_notify(fb->local_abspath,
-                                             svn_wc_notify_tree_conflict,
-                                             pool),
-                         pool);
+      do_notification(eb, fb->local_abspath, svn_node_unknown,
+                      svn_wc_notify_tree_conflict, pool);
     }
 
   svn_pool_destroy(subpool);
