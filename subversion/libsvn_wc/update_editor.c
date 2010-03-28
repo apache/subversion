@@ -4313,6 +4313,7 @@ install_text_base(svn_stringbuf_t **log_accum,
 static svn_error_t *
 merge_file(svn_stringbuf_t **log_accum,
            svn_wc_notify_state_t *content_state,
+           const svn_wc_entry_t *entry,
            struct file_baton *fb,
            const char *new_text_base_abspath,
            const svn_checksum_t *actual_checksum,
@@ -4325,7 +4326,6 @@ merge_file(svn_stringbuf_t **log_accum,
   svn_boolean_t is_replaced = FALSE;
   svn_boolean_t magic_props_changed;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
-  const svn_wc_entry_t *entry;
   svn_wc_conflict_version_t *left_version = NULL; /* ### Fill */
   svn_wc_conflict_version_t *right_version = NULL; /* ### Fill */
 
@@ -4352,14 +4352,6 @@ merge_file(svn_stringbuf_t **log_accum,
 
   /* Start by splitting the file path, getting an access baton for the parent,
      and an entry for the file if any. */
-
-  SVN_ERR(svn_wc__get_entry(&entry, eb->db, fb->local_abspath, TRUE,
-                            svn_node_file, FALSE, pool, pool));
-  if (! entry && ! fb->added)
-    return svn_error_createf(
-        SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-        _("'%s' is not under version control"),
-        svn_dirent_local_style(fb->local_abspath, pool));
 
   /* Determine if any of the propchanges are the "magic" ones that
      might require changing the working file. */
@@ -4691,6 +4683,73 @@ merge_file(svn_stringbuf_t **log_accum,
 }
 
 
+static svn_error_t *
+construct_base_node(svn_wc__db_t *db,
+                    const char *local_abspath,
+                    svn_revnum_t target_revision,
+                    svn_boolean_t resched_normal,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool)
+{
+  /* ### HACK: Before we can set properties, we need a node in
+     the database. This code could be its own WQ item,
+     handling more than just this tweak, but it will
+     be removed soon anyway.
+
+     ### HACK: The loggy stuff checked the preconditions for us,
+     we just make the property code happy here.
+
+     We can also clear entry.deleted here, as we are adding a new
+     BASE_NODE anyway */
+
+  const char *adm_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+  svn_wc_entry_t tmp_entry;
+  svn_stringbuf_t *log_accum = NULL;
+  apr_uint64_t flags = (SVN_WC__ENTRY_MODIFY_KIND
+                        | SVN_WC__ENTRY_MODIFY_REVISION
+                        | SVN_WC__ENTRY_MODIFY_DELETED);
+
+  if (resched_normal)
+    {
+      /* Make sure we have a record in BASE; not in WORKING,
+         or we try to install properties in the wrong place */
+      flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_FORCE;
+      tmp_entry.schedule = svn_wc_schedule_normal;
+    }
+
+  /* ### we can probably just use entry_modify2() rather than adding
+     ### a work item, then running it.  */
+
+  /* Create a very minimalistic file node that will be overridden
+     from the loggy operations we have in the file baton log accumulator */
+
+  tmp_entry.kind = svn_node_file;
+  tmp_entry.revision = target_revision;
+  tmp_entry.deleted = FALSE;
+
+  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+                                     adm_abspath,
+                                     local_abspath,
+                                     &tmp_entry,
+                                     flags,
+                                     scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath,
+                               log_accum,
+                               scratch_pool));
+
+  /* ### for now, we use the ADM_ABSPATH even tho a WRI_ABSPATH is all that
+     ### is required. BUT: the path must exist, and the file may not.
+     ### the directory certainly does tho...  */
+  SVN_ERR(svn_wc__wq_run(db, adm_abspath,
+                         cancel_func, cancel_baton,
+                         scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* An svn_delta_editor_t function. */
 /* Mostly a wrapper around merge_file. */
 static svn_error_t *
@@ -4713,6 +4772,7 @@ close_file(void *file_baton,
   apr_array_header_t *entry_props;
   apr_array_header_t *wc_props;
   apr_array_header_t *regular_props;
+  const svn_wc_entry_t *entry;
 
   if (fb->skip_this)
     {
@@ -4779,6 +4839,26 @@ close_file(void *file_baton,
                                         md5_actual_checksum, pool));
 #endif
 
+  /* Get a copy of the entry *before* we begin mucking around with the
+     tree. Behaviors are quite different based on the original state.  */
+  SVN_ERR(svn_wc__get_entry(&entry, eb->db, fb->local_abspath, TRUE,
+                            svn_node_file, FALSE, pool, pool));
+  if (! entry && ! fb->added)
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"),
+                             svn_dirent_local_style(fb->local_abspath, pool));
+
+  /* add_file() was called, or there was an added node here. Ensure that
+     we have a BASE node to work with.  */
+  if (fb->added || fb->add_existed)
+    {
+      SVN_ERR(construct_base_node(eb->db, fb->local_abspath,
+                                  *eb->target_revision,
+                                  fb->add_existed /* resched_normal */,
+                                  eb->cancel_func, eb->cancel_baton,
+                                  pool));
+    }
+
   /* Gather the changes for each kind of property.  */
   SVN_ERR(svn_categorize_props(fb->propchanges, &entry_props, &wc_props,
                                &regular_props, pool));
@@ -4788,6 +4868,15 @@ close_file(void *file_baton,
                                  eb->db, fb->local_abspath,
                                  entry_props,
                                  pool, pool));
+
+  /* ### Hack: The following block should be an atomic operation (including
+     ### the install loggy install portions of some functions called above */
+  SVN_ERR_ASSERT(last_change != NULL);  /* files should always have.. */
+  SVN_ERR(svn_wc__db_temp_op_set_base_last_change(eb->db, fb->local_abspath,
+                                                  last_change->cmt_rev,
+                                                  last_change->cmt_date,
+                                                  last_change->cmt_author,
+                                                  pool));
 
   /* Set the new revision and URL in the entry and clean up some other
      fields. This clears DELETED from any prior versioned file with the
@@ -4832,6 +4921,24 @@ close_file(void *file_baton,
                               pool,
                               pool));
 
+  /* We have the new (merged) properties now. Queue some work items to
+     install them.  */
+  if (new_base_props || new_actual_props)
+    SVN_ERR(svn_wc__install_props(eb->db, fb->local_abspath,
+                                  new_base_props, new_actual_props,
+                                  TRUE /* write_base_props */,
+                                  TRUE /* force_base_install */,
+                                  pool));
+
+#if 0
+  /* ### this breaks update_tests 34 for some reason. committing the rest
+     ### of the work, and will resolve this shortly.  */
+  /* Now that the installation of the props has been queued, flush out
+     anything from the delayed accumulator.  */
+  SVN_WC__FLUSH_LOG_ACCUM(eb->db, fb->dir_baton->local_abspath,
+                          delayed_log_accum, pool);
+#endif
+
   /* This writes a whole bunch of log commands to install wcprops.  */
   /* ### no it doesn't. this immediately modifies them. should probably
      ### occur later, when we know the (new) BASE node exists.  */
@@ -4841,78 +4948,10 @@ close_file(void *file_baton,
 
   /* Do the hard work. This will queue some additional work.  */
   SVN_ERR(merge_file(&delayed_log_accum,
-                     &content_state,
+                     &content_state, entry,
                      fb, new_base_abspath, md5_actual_checksum,
                      lock_state == svn_wc_notify_lock_state_unlocked,
                      pool));
-
-  if (fb->added || fb->add_existed)
-    {
-      /* ### HACK: Before we can set properties, we need a node in
-                   the database. This code could be its own WQ item,
-                   handling more than just this tweak, but it will
-                   be removed soon anyway.
-
-         ### HACK: The loggy stuff checked the preconditions for us,
-                   we just make the property code happy here.
-
-         We can also clear entry.deleted here, as we are adding a new
-         BASE_NODE anyway */
-      svn_wc_entry_t tmp_entry;
-      svn_stringbuf_t *log_accum = NULL;
-      apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_KIND
-                           | SVN_WC__ENTRY_MODIFY_REVISION
-                           | SVN_WC__ENTRY_MODIFY_DELETED;
-
-      if (fb->add_existed)
-        {
-          /* Make sure we have a record in BASE; not in WORKING,
-             or we try to install properties in the wrong place */
-          flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_FORCE;
-          tmp_entry.schedule = svn_wc_schedule_normal;
-        }
-
-      /* Create a very minimalistic file node that will be overridden
-         from the loggy operations we have in the file baton log accumulator */
-
-      tmp_entry.kind = svn_node_file;
-      tmp_entry.revision = *eb->target_revision;
-      tmp_entry.deleted = FALSE;
-
-      SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
-                                         fb->dir_baton->local_abspath,
-                                         fb->local_abspath,
-                                         &tmp_entry,
-                                         flags,
-                                         pool, pool));
-
-      SVN_ERR(svn_wc__wq_add_loggy(eb->db,
-                                   fb->dir_baton->local_abspath,
-                                   log_accum,
-                                   pool));
-
-      SVN_ERR(svn_wc__wq_run(eb->db,
-                             fb->dir_baton->local_abspath,
-                             eb->cancel_func, eb->cancel_baton,
-                             pool));
-    }
-
-  /* ### Hack: The following block should be an atomic operation (including the install
-               loggy install portions of some functions called above */
-  SVN_ERR_ASSERT(last_change != NULL); /* Should always be not NULL for files */
-
-  if (last_change)
-    SVN_ERR(svn_wc__db_temp_op_set_base_last_change(eb->db, fb->local_abspath,
-                                                    last_change->cmt_rev,
-                                                    last_change->cmt_date,
-                                                    last_change->cmt_author,
-                                                    pool));
-
-  /* Queue some work items to install new props.  */
-  if (new_base_props || new_actual_props)
-      SVN_ERR(svn_wc__install_props(eb->db, fb->local_abspath,
-                                    new_base_props, new_actual_props,
-                                    TRUE /* write_base_props */, TRUE, pool));
 
   /* Queue all operations.  */
   SVN_WC__FLUSH_LOG_ACCUM(eb->db, fb->dir_baton->local_abspath,
