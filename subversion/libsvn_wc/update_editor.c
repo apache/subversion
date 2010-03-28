@@ -4209,16 +4209,12 @@ change_file_prop(void *file_baton,
    ADM_ACCESS is the access baton for FILE_PATH.  Append log commands to
    LOG_ACCUM.  Use POOL for temporary allocations. */
 static svn_error_t *
-merge_props(svn_stringbuf_t *log_accum,
+merge_props(svn_stringbuf_t **log_accum,
             svn_wc_notify_state_t *prop_state,
-            svn_wc_notify_lock_state_t *lock_state,
             apr_hash_t **new_base_props,
             apr_hash_t **new_actual_props,
-            struct last_change_info **last_change,
             svn_wc__db_t *db,
             const char *file_abspath,
-            const svn_wc_conflict_version_t *left_version,
-            const svn_wc_conflict_version_t *right_version,
             const apr_array_header_t *prop_changes,
             apr_hash_t *base_props,
             apr_hash_t *working_props,
@@ -4230,11 +4226,10 @@ merge_props(svn_stringbuf_t *log_accum,
 {
   apr_array_header_t *regular_props;
   apr_array_header_t *wc_props;
-  apr_array_header_t *entry_props;
 
   /* Sort the property list into three arrays, based on kind. */
-  SVN_ERR(svn_categorize_props(prop_changes, &entry_props, &wc_props,
-                               &regular_props, pool));
+  SVN_ERR(svn_categorize_props(prop_changes, NULL, &wc_props, &regular_props,
+                               pool));
 
   /* Always initialize to unknown state. */
   *prop_state = svn_wc_notify_state_unknown;
@@ -4245,15 +4240,16 @@ merge_props(svn_stringbuf_t *log_accum,
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
-      SVN_ERR(svn_wc__merge_props(&log_accum,
+      SVN_ERR(svn_wc__merge_props(log_accum,
                                   prop_state,
                                   new_base_props,
                                   new_actual_props,
                                   db,
                                   file_abspath,
-                                  left_version,
-                                  right_version,
-                                  NULL /* update, not merge */,
+                                  NULL,
+                                  NULL,
+                                  NULL /* server_baseprops
+                                          (update, not merge)  */,
                                   base_props,
                                   working_props,
                                   regular_props,
@@ -4264,18 +4260,6 @@ merge_props(svn_stringbuf_t *log_accum,
                                   pool,
                                   pool));
     }
-
-  /* If there are any ENTRY PROPS, make sure those get appended to the
-     growing log as fields for the file's entry.
-
-     Note that no merging needs to happen; these kinds of props aren't
-     versioned, so if the property is present, we overwrite the value. */
-  if (entry_props)
-    SVN_ERR(accumulate_last_change(last_change, lock_state,
-                                   db, file_abspath, entry_props,
-                                   pool, pool));
-  else
-    *lock_state = svn_wc_notify_lock_state_unchanged;
 
   /* This writes a whole bunch of log commands to install wcprops.  */
   /* ### no it doesn't. this immediately modifies them.  */
@@ -4295,7 +4279,7 @@ merge_props(svn_stringbuf_t *log_accum,
    ### REPOS_ROOT must be the current repository root while still using
        entries here */
 static svn_error_t *
-loggy_tweak_base_node(svn_stringbuf_t *log_accum,
+loggy_tweak_base_node(svn_stringbuf_t **log_accum,
                       const char *local_abspath,
                       svn_revnum_t new_revision,
                       const char *repos_root,
@@ -4337,7 +4321,7 @@ loggy_tweak_base_node(svn_stringbuf_t *log_accum,
     }
 
   return svn_error_return(
-    svn_wc__loggy_entry_modify(&log_accum,
+    svn_wc__loggy_entry_modify(log_accum,
                                svn_dirent_dirname(local_abspath, pool),
                                local_abspath, &tmp_entry, modify_flags,
                                pool, pool));
@@ -4406,14 +4390,10 @@ install_text_base(svn_stringbuf_t **log_accum,
 static svn_error_t *
 merge_file(svn_stringbuf_t **log_accum,
            svn_wc_notify_state_t *content_state,
-           svn_wc_notify_state_t *prop_state,
-           svn_wc_notify_lock_state_t *lock_state,
-           apr_hash_t **new_base_props,
-           apr_hash_t **new_actual_props,
-           struct last_change_info **last_change,
            struct file_baton *fb,
            const char *new_text_base_abspath,
            const svn_checksum_t *actual_checksum,
+           svn_boolean_t lock_removed,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = fb->edit_baton;
@@ -4461,25 +4441,6 @@ merge_file(svn_stringbuf_t **log_accum,
   /* Determine if any of the propchanges are the "magic" ones that
      might require changing the working file. */
   magic_props_changed = svn_wc__has_magic_property(fb->propchanges);
-
-  /* Set the new revision and URL in the entry and clean up some other
-     fields. This clears DELETED from any prior versioned file with the
-     same name (needed before attempting to install props).  */
-  SVN_ERR(loggy_tweak_base_node(*log_accum, fb->local_abspath,
-                                *eb->target_revision,
-                                eb->repos_root, fb->new_relpath, pool));
-
-  /* Install all kinds of properties.  It is important to do this before
-     any file content merging, since that process might expand keywords, in
-     which case we want the new entryprops to be in place. */
-  SVN_ERR(merge_props(*log_accum, prop_state, lock_state,
-                      new_base_props, new_actual_props, last_change,
-                      eb->db, fb->local_abspath,
-                      left_version, right_version,
-                      fb->propchanges,
-                      fb->copied_base_props, fb->copied_working_props,
-                      eb->conflict_func, eb->conflict_baton,
-                      eb->cancel_func, eb->cancel_baton, pool));
 
   /* Has the user made local mods to the working file?
      Note that this compares to the current pristine file, which is
@@ -4719,7 +4680,7 @@ merge_file(svn_stringbuf_t **log_accum,
                                      tmptext, fb->local_abspath, pool, pool));
         }
 
-      if (*lock_state == svn_wc_notify_lock_state_unlocked)
+      if (lock_removed)
         /* If a lock was removed and we didn't update the text contents, we
            might need to set the file read-only. */
         SVN_ERR(svn_wc__loggy_maybe_set_readonly(log_accum, pb->local_abspath,
@@ -4892,11 +4853,44 @@ close_file(void *file_baton,
                                         md5_actual_checksum, pool));
 #endif
 
+  {
+    apr_array_header_t *entry_props;
+
+    /* Gather the changes to the "entry" properties.  */
+    SVN_ERR(svn_categorize_props(fb->propchanges, &entry_props, NULL, NULL,
+                                 pool));
+
+    /* Extract the changed_* and lock state information.  */
+    SVN_ERR(accumulate_last_change(&last_change, &lock_state,
+                                   eb->db, fb->local_abspath,
+                                   entry_props,
+                                   pool, pool));
+  }
+
+  /* Set the new revision and URL in the entry and clean up some other
+     fields. This clears DELETED from any prior versioned file with the
+     same name (needed before attempting to install props).  */
+  SVN_ERR(loggy_tweak_base_node(&delayed_log_accum, fb->local_abspath,
+                                *eb->target_revision,
+                                eb->repos_root, fb->new_relpath, pool));
+
+  /* Install all kinds of properties.  It is important to do this before
+     any file content merging, since that process might expand keywords, in
+     which case we want the new entryprops to be in place. */
+  SVN_ERR(merge_props(&delayed_log_accum, &prop_state,
+                      &new_base_props, &new_actual_props,
+                      eb->db, fb->local_abspath,
+                      fb->propchanges,
+                      fb->copied_base_props, fb->copied_working_props,
+                      eb->conflict_func, eb->conflict_baton,
+                      eb->cancel_func, eb->cancel_baton, pool));
+
   /* Do the hard work. This will queue some additional work.  */
   SVN_ERR(merge_file(&delayed_log_accum,
-                     &content_state, &prop_state, &lock_state,
-                     &new_base_props, &new_actual_props, &last_change,
-                     fb, new_base_abspath, md5_actual_checksum, pool));
+                     &content_state,
+                     fb, new_base_abspath, md5_actual_checksum,
+                     lock_state == svn_wc_notify_lock_state_unlocked,
+                     pool));
 
   if (fb->added || fb->add_existed)
     {
