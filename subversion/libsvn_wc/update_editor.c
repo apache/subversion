@@ -4193,83 +4193,6 @@ change_file_prop(void *file_baton,
 }
 
 
-/* TODO ### Update to mention DB, FILE_ABSPATH, DIR_ABSPATH; not ADM_ACCESS.
-
-   Write log commands to merge PROP_CHANGES into the existing
-   properties of FILE_PATH.  PROP_CHANGES can contain regular
-   properties as well as entryprops and wcprops.  Update *PROP_STATE
-   to reflect the result of the regular prop merge.  Make *LOCK_STATE
-   reflect the possible removal of a lock token from FILE_PATH's
-   entryprops.  BASE_PROPS and WORKING_PROPS are hashes of the base and
-   working props of the file; if NULL they are read from the wc.
-
-   CONFICT_FUNC/BATON is a callback which allows the client to
-   possibly resolve a property conflict interactively.
-
-   ADM_ACCESS is the access baton for FILE_PATH.  Append log commands to
-   LOG_ACCUM.  Use POOL for temporary allocations. */
-static svn_error_t *
-merge_props(svn_stringbuf_t **log_accum,
-            svn_wc_notify_state_t *prop_state,
-            apr_hash_t **new_base_props,
-            apr_hash_t **new_actual_props,
-            svn_wc__db_t *db,
-            const char *file_abspath,
-            const apr_array_header_t *prop_changes,
-            apr_hash_t *base_props,
-            apr_hash_t *working_props,
-            svn_wc_conflict_resolver_func_t conflict_func,
-            void *conflict_baton,
-            svn_cancel_func_t cancel_func,
-            void *cancel_baton,
-            apr_pool_t *pool)
-{
-  apr_array_header_t *regular_props;
-  apr_array_header_t *wc_props;
-
-  /* Sort the property list into three arrays, based on kind. */
-  SVN_ERR(svn_categorize_props(prop_changes, NULL, &wc_props, &regular_props,
-                               pool));
-
-  /* Always initialize to unknown state. */
-  *prop_state = svn_wc_notify_state_unknown;
-
-  /* Merge the 'regular' props into the existing working proplist. */
-  if (regular_props)
-    {
-      /* This will merge the old and new props into a new prop db, and
-         write <cp> commands to the logfile to install the merged
-         props.  */
-      SVN_ERR(svn_wc__merge_props(log_accum,
-                                  prop_state,
-                                  new_base_props,
-                                  new_actual_props,
-                                  db,
-                                  file_abspath,
-                                  NULL,
-                                  NULL,
-                                  NULL /* server_baseprops
-                                          (update, not merge)  */,
-                                  base_props,
-                                  working_props,
-                                  regular_props,
-                                  TRUE /* base_merge */,
-                                  FALSE /* dry_run */,
-                                  conflict_func, conflict_baton,
-                                  cancel_func, cancel_baton,
-                                  pool,
-                                  pool));
-    }
-
-  /* This writes a whole bunch of log commands to install wcprops.  */
-  /* ### no it doesn't. this immediately modifies them.  */
-  if (wc_props)
-    SVN_ERR(svn_wc__db_base_set_dav_cache(db, file_abspath,
-                                          prop_hash_from_array(wc_props, pool),
-                                          pool));
-
-  return SVN_NO_ERROR;
-}
 
 /* Append to LOG_ACCUM, log commands to update the entry for LOCAL_ABSPATH
    with a NEW_REVISION and a NEW_RELPATH(if non-NULL), making sure
@@ -4787,6 +4710,9 @@ close_file(void *file_baton,
   apr_hash_t *new_base_props = NULL;
   apr_hash_t *new_actual_props = NULL;
   svn_stringbuf_t *delayed_log_accum = svn_stringbuf_create("", pool);
+  apr_array_header_t *entry_props;
+  apr_array_header_t *wc_props;
+  apr_array_header_t *regular_props;
 
   if (fb->skip_this)
     {
@@ -4853,19 +4779,15 @@ close_file(void *file_baton,
                                         md5_actual_checksum, pool));
 #endif
 
-  {
-    apr_array_header_t *entry_props;
+  /* Gather the changes for each kind of property.  */
+  SVN_ERR(svn_categorize_props(fb->propchanges, &entry_props, &wc_props,
+                               &regular_props, pool));
 
-    /* Gather the changes to the "entry" properties.  */
-    SVN_ERR(svn_categorize_props(fb->propchanges, &entry_props, NULL, NULL,
-                                 pool));
-
-    /* Extract the changed_* and lock state information.  */
-    SVN_ERR(accumulate_last_change(&last_change, &lock_state,
-                                   eb->db, fb->local_abspath,
-                                   entry_props,
-                                   pool, pool));
-  }
+  /* Extract the changed_* and lock state information.  */
+  SVN_ERR(accumulate_last_change(&last_change, &lock_state,
+                                 eb->db, fb->local_abspath,
+                                 entry_props,
+                                 pool, pool));
 
   /* Set the new revision and URL in the entry and clean up some other
      fields. This clears DELETED from any prior versioned file with the
@@ -4877,13 +4799,45 @@ close_file(void *file_baton,
   /* Install all kinds of properties.  It is important to do this before
      any file content merging, since that process might expand keywords, in
      which case we want the new entryprops to be in place. */
-  SVN_ERR(merge_props(&delayed_log_accum, &prop_state,
-                      &new_base_props, &new_actual_props,
-                      eb->db, fb->local_abspath,
-                      fb->propchanges,
-                      fb->copied_base_props, fb->copied_working_props,
-                      eb->conflict_func, eb->conflict_baton,
-                      eb->cancel_func, eb->cancel_baton, pool));
+
+  /* Write log commands to merge REGULAR_PROPS into the existing
+     properties of FB->LOCAL_PATH.  Update *PROP_STATE to reflect
+     the result of the regular prop merge.
+
+     BASE_PROPS and WORKING_PROPS are hashes of the base and
+     working props of the file; if NULL they are read from the wc.  */
+
+  prop_state = svn_wc_notify_state_unknown;
+
+  /* Merge the 'regular' props into the existing working proplist. */
+  /* This will merge the old and new props into a new prop db, and
+     write <cp> commands to the logfile to install the merged
+     props.  */
+  SVN_ERR(svn_wc__merge_props(&delayed_log_accum,
+                              &prop_state,
+                              &new_base_props,
+                              &new_actual_props,
+                              eb->db,
+                              fb->local_abspath,
+                              NULL /* left_version */,
+                              NULL /* right_version */,
+                              NULL /* server_baseprops (update, not merge)  */,
+                              fb->copied_base_props,
+                              fb->copied_working_props,
+                              regular_props,
+                              TRUE /* base_merge */,
+                              FALSE /* dry_run */,
+                              eb->conflict_func, eb->conflict_baton,
+                              eb->cancel_func, eb->cancel_baton,
+                              pool,
+                              pool));
+
+  /* This writes a whole bunch of log commands to install wcprops.  */
+  /* ### no it doesn't. this immediately modifies them. should probably
+     ### occur later, when we know the (new) BASE node exists.  */
+  SVN_ERR(svn_wc__db_base_set_dav_cache(eb->db, fb->local_abspath,
+                                        prop_hash_from_array(wc_props, pool),
+                                        pool));
 
   /* Do the hard work. This will queue some additional work.  */
   SVN_ERR(merge_file(&delayed_log_accum,
