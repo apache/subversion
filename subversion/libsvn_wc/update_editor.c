@@ -4350,6 +4350,11 @@ merge_file(svn_stringbuf_t **log_accum,
       modifications.
   */
 
+#if 0
+  /* ### this will break update_tests 43. see comment in close_file()  */
+  SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
+#endif
+
   /* Start by splitting the file path, getting an access baton for the parent,
      and an entry for the file if any. */
 
@@ -4444,6 +4449,7 @@ merge_file(svn_stringbuf_t **log_accum,
       else if (! is_locally_modified)
         {
           if (!fb->deleted)
+            {
             /* If there are no local mods, who cares whether it's a text
                or binary file!  Just write a log command to overwrite
                any working file with the new text-base.  If newline
@@ -4456,6 +4462,9 @@ merge_file(svn_stringbuf_t **log_accum,
                                        pb->local_abspath,
                                        new_text_base_abspath,
                                        fb->local_abspath, pool, pool));
+            SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
+                                    pool);
+            }
         }
       else   /* working file or obstruction is locally modified... */
         {
@@ -4470,6 +4479,8 @@ merge_file(svn_stringbuf_t **log_accum,
                                          pb->local_abspath,
                                          new_text_base_abspath,
                                          fb->local_abspath, pool, pool));
+              SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
+                                      pool);
             }
           else if (! fb->existed)
             /* Working file exists and has local mods
@@ -4533,6 +4544,11 @@ merge_file(svn_stringbuf_t **log_accum,
                  textbase into the file we're updating.
                  Remember that this function wants full paths! */
               /* ### TODO: Pass version info here. */
+              /* ### NOTE: if this call bails out, then we must ensure
+                 ###   that no work items have been queued which might
+                 ###   place this file into an inconsistent state.
+                 ###   in the future, all the state changes should be
+                 ###   made atomically.  */
               SVN_ERR(svn_wc__internal_merge(
                        log_accum, &merge_outcome,
                        eb->db,
@@ -4558,6 +4574,8 @@ merge_file(svn_stringbuf_t **log_accum,
                             log_accum, pb->local_abspath,
                             fb->copied_working_text, pool, pool));
 
+              SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
+                                      pool);
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
     } /* end: "textual" merging process */
@@ -4593,14 +4611,18 @@ merge_file(svn_stringbuf_t **log_accum,
              retranslation is actually done according to the new props. */
           SVN_ERR(svn_wc__loggy_copy(log_accum, pb->local_abspath,
                                      tmptext, fb->local_abspath, pool, pool));
+          SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
         }
 
       if (lock_removed)
+        {
         /* If a lock was removed and we didn't update the text contents, we
            might need to set the file read-only. */
         SVN_ERR(svn_wc__loggy_maybe_set_readonly(log_accum, pb->local_abspath,
                                                  fb->local_abspath, pool,
                                                  pool));
+        SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
+        }
     }
 
   /* Deal with installation of the new textbase, if appropriate. */
@@ -4625,6 +4647,7 @@ merge_file(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_wc__loggy_entry_modify(log_accum, pb->local_abspath,
                                      fb->local_abspath, &tmp_entry, flags,
                                      pool, pool));
+  SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
 
   /* Log commands to handle text-timestamp and working-size,
      if the file is - or will be - unmodified and schedule-normal */
@@ -4650,13 +4673,17 @@ merge_file(svn_stringbuf_t **log_accum,
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(
                         log_accum, pb->local_abspath,
                         fb->local_abspath, pool, pool));
+
+      SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
     }
 
   /* Clean up add-with-history temp file. */
   if (fb->copied_text_base)
+    {
     SVN_ERR(svn_wc__loggy_remove(log_accum, pb->local_abspath,
                                  fb->copied_text_base, pool, pool));
-
+      SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
+    }
 
   /* Set the returned content state. */
 
@@ -4931,8 +4958,10 @@ close_file(void *file_baton,
                                   pool));
 
 #if 0
-  /* ### this breaks update_tests 34 for some reason. committing the rest
-     ### of the work, and will resolve this shortly.  */
+  /* ### this breaks update_tests 43. it does a *partial* edit of the
+     ### state. if the user cancels a merge resolution (e.g EOF), then
+     ### the working copy ends up horked.  */
+
   /* Now that the installation of the props has been queued, flush out
      anything from the delayed accumulator.  */
   SVN_WC__FLUSH_LOG_ACCUM(eb->db, fb->dir_baton->local_abspath,
