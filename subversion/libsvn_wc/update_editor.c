@@ -4345,9 +4345,9 @@ merge_file(svn_stringbuf_t **log_accum,
          - fb->old_text_base_path is the old pristine F.
            (This is only set if there's a new text base).
 
-      The goal is to update the local working copy of F to reflect
-      the changes received from the repository, preserving any local
-      modifications.
+     The goal is to update the local working copy of F to reflect
+     the changes received from the repository, preserving any local
+     modifications.
   */
 
 #if 0
@@ -4438,6 +4438,7 @@ merge_file(svn_stringbuf_t **log_accum,
 
    So the first thing we do is figure out where we are in the
    matrix. */
+
   if (new_text_base_abspath)
     {
       if (is_replaced)
@@ -4450,20 +4451,20 @@ merge_file(svn_stringbuf_t **log_accum,
         {
           if (!fb->deleted)
             {
-            /* If there are no local mods, who cares whether it's a text
-               or binary file!  Just write a log command to overwrite
-               any working file with the new text-base.  If newline
-               conversion or keyword substitution is activated, this
-               will happen as well during the copy.
-               For replaced files, though, we want to merge in the changes
-               even if the file is not modified compared to the (non-revert)
-               text-base. */
-            SVN_ERR(svn_wc__loggy_copy(log_accum,
-                                       pb->local_abspath,
-                                       new_text_base_abspath,
-                                       fb->local_abspath, pool, pool));
-            SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
-                                    pool);
+              /* If there are no local mods, who cares whether it's a text
+                 or binary file!  Just write a log command to overwrite
+                 any working file with the new text-base.  If newline
+                 conversion or keyword substitution is activated, this
+                 will happen as well during the copy.
+                 For replaced files, though, we want to merge in the changes
+                 even if the file is not modified compared to the (non-revert)
+                 text-base. */
+              SVN_ERR(svn_wc__loggy_copy(log_accum,
+                                         pb->local_abspath,
+                                         new_text_base_abspath,
+                                         fb->local_abspath, pool, pool));
+              SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
+                                      pool);
             }
         }
       else   /* working file or obstruction is locally modified... */
@@ -4550,29 +4551,29 @@ merge_file(svn_stringbuf_t **log_accum,
                  ###   in the future, all the state changes should be
                  ###   made atomically.  */
               SVN_ERR(svn_wc__internal_merge(
-                       log_accum, &merge_outcome,
-                       eb->db,
-                       merge_left, left_version,
-                       new_text_base_abspath, right_version,
-                       fb->local_abspath,
-                       fb->copied_working_text,
-                       oldrev_str, newrev_str, mine_str,
-                       FALSE, eb->diff3_cmd, NULL, fb->propchanges,
-                       eb->conflict_func, eb->conflict_baton,
-                       eb->cancel_func, eb->cancel_baton,
-                       pool));
+                        log_accum, &merge_outcome,
+                        eb->db,
+                        merge_left, left_version,
+                        new_text_base_abspath, right_version,
+                        fb->local_abspath,
+                        fb->copied_working_text,
+                        oldrev_str, newrev_str, mine_str,
+                        FALSE, eb->diff3_cmd, NULL, fb->propchanges,
+                        eb->conflict_func, eb->conflict_baton,
+                        eb->cancel_func, eb->cancel_baton,
+                        pool));
 
               /* If we created a temporary left merge file, get rid of it. */
               if (delete_left)
                 SVN_ERR(svn_wc__loggy_remove(
-                            log_accum, pb->local_abspath,
-                            merge_left, pool, pool));
+                          log_accum, pb->local_abspath,
+                          merge_left, pool, pool));
 
               /* And clean up add-with-history-related temp file too. */
               if (fb->copied_working_text)
                 SVN_ERR(svn_wc__loggy_remove(
-                            log_accum, pb->local_abspath,
-                            fb->copied_working_text, pool, pool));
+                          log_accum, pb->local_abspath,
+                          fb->copied_working_text, pool, pool));
 
               SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
                                       pool);
@@ -4601,9 +4602,9 @@ merge_file(svn_stringbuf_t **log_accum,
           /* Copy and DEtranslate the working file to a temp text-base.
              Note that detranslation is done according to the old props. */
           SVN_ERR(svn_wc__internal_translated_file(
-                   &tmptext, fb->local_abspath, eb->db, fb->local_abspath,
-                   SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
-                   pool, pool));
+                    &tmptext, fb->local_abspath, eb->db, fb->local_abspath,
+                    SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
+                    pool, pool));
 
           /* A log command that copies the tmp-text-base and REtranslates
              it back to the working file.
@@ -4616,12 +4617,12 @@ merge_file(svn_stringbuf_t **log_accum,
 
       if (lock_removed)
         {
-        /* If a lock was removed and we didn't update the text contents, we
-           might need to set the file read-only. */
-        SVN_ERR(svn_wc__loggy_maybe_set_readonly(log_accum, pb->local_abspath,
-                                                 fb->local_abspath, pool,
-                                                 pool));
-        SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
+          /* If a lock was removed and we didn't update the text contents, we
+             might need to set the file read-only. */
+          SVN_ERR(svn_wc__loggy_maybe_set_readonly(log_accum, pb->local_abspath,
+                                                   fb->local_abspath, pool,
+                                                   pool));
+          SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
         }
     }
 
@@ -4658,21 +4659,21 @@ merge_file(svn_stringbuf_t **log_accum,
          obstruction. */
       if (fb->last_changed_date && !fb->existed)
         SVN_ERR(svn_wc__loggy_set_timestamp(
-                        log_accum, pb->local_abspath,
-                        fb->local_abspath, fb->last_changed_date,
-                        pool, pool));
+                  log_accum, pb->local_abspath,
+                  fb->local_abspath, fb->last_changed_date,
+                  pool, pool));
 
       if ((new_text_base_abspath || magic_props_changed)
           && !fb->deleted)
         {
           /* Adjust entries file to match working file */
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(
-                        log_accum, pb->local_abspath,
-                        fb->local_abspath, pool, pool));
+                    log_accum, pb->local_abspath,
+                    fb->local_abspath, pool, pool));
         }
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(
-                        log_accum, pb->local_abspath,
-                        fb->local_abspath, pool, pool));
+                log_accum, pb->local_abspath,
+                fb->local_abspath, pool, pool));
 
       SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
     }
@@ -4680,8 +4681,8 @@ merge_file(svn_stringbuf_t **log_accum,
   /* Clean up add-with-history temp file. */
   if (fb->copied_text_base)
     {
-    SVN_ERR(svn_wc__loggy_remove(log_accum, pb->local_abspath,
-                                 fb->copied_text_base, pool, pool));
+      SVN_ERR(svn_wc__loggy_remove(log_accum, pb->local_abspath,
+                                   fb->copied_text_base, pool, pool));
       SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
     }
 
