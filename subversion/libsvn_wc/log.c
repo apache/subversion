@@ -88,9 +88,6 @@
    the DEST. */
 #define SVN_WC__LOG_CP_AND_TRANSLATE    "cp-and-translate"
 
-/* Remove file SVN_WC__LOG_ATTR_NAME. */
-#define SVN_WC__LOG_RM                  "rm"
-
 /* Append file from SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
 #define SVN_WC__LOG_APPEND              "append"
 
@@ -119,11 +116,7 @@
 
 #define SVN_WC__LOG_ATTR_NAME           "name"
 #define SVN_WC__LOG_ATTR_DEST           "dest"
-#define SVN_WC__LOG_ATTR_REVISION       "revision"
 #define SVN_WC__LOG_ATTR_TIMESTAMP      "timestamp"
-#define SVN_WC__LOG_ATTR_PROPNAME       "propname"
-#define SVN_WC__LOG_ATTR_PROPVAL        "propval"
-#define SVN_WC__LOG_ATTR_FORMAT         "format"
 #define SVN_WC__LOG_ATTR_FORCE          "force"
 #define SVN_WC__LOG_ATTR_DATA           "data"
 
@@ -385,18 +378,6 @@ log_do_file_timestamp(struct log_runner *loggy,
     }
 
   return SVN_NO_ERROR;
-}
-
-
-/* Remove file NAME in log's CWD. */
-static svn_error_t *
-log_do_rm(struct log_runner *loggy, const char *name)
-{
-  const char *local_abspath
-    = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
-
-  return svn_error_return(
-    svn_io_remove_file2(local_abspath, TRUE, loggy->pool));
 }
 
 
@@ -669,9 +650,6 @@ start_handler(void *userData, const char *eltname, const char **atts)
   }
   else if (strcmp(eltname, SVN_WC__LOG_DELETE_ENTRY) == 0) {
     err = log_do_delete_entry(loggy, name);
-  }
-  else if (strcmp(eltname, SVN_WC__LOG_RM) == 0) {
-    err = log_do_rm(loggy, name);
   }
   else if (strcmp(eltname, SVN_WC__LOG_MV) == 0) {
     err = log_do_file_xfer(loggy, name, svn_wc__xfer_mv, atts);
@@ -1215,27 +1193,6 @@ svn_wc__loggy_set_timestamp(svn_stringbuf_t **log_accum,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
-                     const char *adm_abspath,
-                     const char *path,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
-{
-  const char *loggy_path1;
-
-  SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
-  /* No need to check whether BASE_NAME exists: ENOENT is ignored
-     by the log-runner */
-  svn_xml_make_open_tag(log_accum, result_pool,
-                        svn_xml_self_closing,
-                        SVN_WC__LOG_RM,
-                        SVN_WC__LOG_ATTR_NAME,
-                        loggy_path1,
-                        NULL);
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,

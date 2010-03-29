@@ -115,8 +115,7 @@ svn_wc__internal_propset(svn_wc__db_t *db,
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.  */
 svn_error_t *
-svn_wc__merge_props(svn_stringbuf_t **entry_accum,
-                    svn_wc_notify_state_t *state,
+svn_wc__merge_props(svn_wc_notify_state_t *state,
                     apr_hash_t **new_base_props,
                     apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,

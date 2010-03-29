@@ -289,20 +289,6 @@ svn_wc__loggy_set_timestamp(svn_stringbuf_t **log_accum,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-/* Extend **LOG_ACCUM with log instructions to remove the file
-   PATH, if it exists.
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
-*/
-svn_error_t *
-svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
-                     const char *adm_abspath,
-                     const char *path,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool);
-
 
 /* TODO ###
 
