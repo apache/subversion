@@ -321,7 +321,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
               /* Since the start revision of svn_merge_range_t are not
                  inclusive there is one possible valid start revision that
                  won't be found in the PB->REV_MAP mapping of load stream
-                 revsions to loaded revisions: The revision immediately
+                 revisions to loaded revisions: The revision immediately
                  preceeding the oldest revision from the load stream.
                  This is a valid revision for mergeinfo, but not a valid
                  copy from revision (which PB->REV_MAP also maps for) so it
@@ -339,11 +339,11 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
           rev_from_map = apr_hash_get(pb->rev_map, &range->end,
                                       sizeof(svn_revnum_t));
           if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
-              range->end = *rev_from_map;
-         }
-       apr_hash_set(final_mergeinfo, merge_source,
-                    APR_HASH_KEY_STRING, rangelist);
-     }
+            range->end = *rev_from_map;
+        }
+      apr_hash_set(final_mergeinfo, merge_source,
+                   APR_HASH_KEY_STRING, rangelist);
+    }
 
   SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
   SVN_ERR(svn_mergeinfo_to_string(final_val, final_mergeinfo, pool));
