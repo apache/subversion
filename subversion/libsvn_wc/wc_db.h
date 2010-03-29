@@ -1406,7 +1406,7 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
 /* @} */
 
 
-/* @defgroup svn_wc__db_global  Operations that alter BASE and WORKING trees
+/* @defgroup svn_wc__db_global  Operations that alter multiple trees
    @{
 */
 
@@ -1470,6 +1470,50 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
                          const apr_array_header_t *new_children,
                          apr_hash_t *new_dav_cache,
                          svn_boolean_t keep_changelist,
+                         apr_pool_t *scratch_pool);
+
+
+/* ### docco
+
+   Perform an "update" operation at this node. It will create/modify a BASE
+   node, and possibly update the ACTUAL tree's node (e.g put the node into
+   a conflicted state).
+
+   ### there may be cases where we need to tweak an existing WORKING node
+
+   ### this operations on a single node, but may affect children
+
+   ### the repository cannot be changed with this function, but a "switch"
+   ### (aka changing repos_relpath) is possible
+
+   ### one of NEW_CHILDREN, NEW_CHECKSUM, or NEW_TARGET must be provided.
+   ### the other two values must be NULL.
+   ### should this be broken out into an update_(directory|file|symlink) ?
+
+   ### how does this differ from base_add_*? just the CONFLICT param.
+   ### the WORK_ITEMS param is new here, but the base_add_* functions
+   ### should probably grow that. should we instead just (re)use base_add
+   ### rather than grow a new function?
+
+   ### this does not allow a change of depth
+
+   ### we do not update a file's TRANSLATED_SIZE here. at some future point,
+   ### when the file is installed, then a TRANSLATED_SIZE will be set.
+*/
+svn_error_t *
+svn_wc__db_global_update(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         const char *new_repos_relpath,
+                         svn_revnum_t new_revision,
+                         const apr_hash_t *new_props,
+                         svn_revnum_t new_changed_rev,
+                         apr_time_t new_changed_date,
+                         const char *new_changed_author,
+                         const apr_array_header_t *new_children,
+                         const svn_checksum_t *new_checksum,
+                         const char *new_target,
+                         const svn_skel_t *conflict,
+                         const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
 
 
