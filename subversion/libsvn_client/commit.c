@@ -801,6 +801,9 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
 }
 
 
+/* Remove (if it exists) each file whose path is given by a value in the
+ * hash TEMPFILES, which is a mapping from (const char *) path to (const
+ * char *) tempfile abspath.  Ignore the keys of TEMPFILES. */
 static svn_error_t *
 remove_tmpfiles(apr_hash_t *tempfiles,
                 apr_pool_t *pool)
@@ -818,7 +821,7 @@ remove_tmpfiles(apr_hash_t *tempfiles,
   /* Clean up any tempfiles. */
   for (hi = apr_hash_first(pool, tempfiles); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
+      const char *path = svn__apr_hash_index_val(hi);
 
       svn_pool_clear(subpool);
 
