@@ -316,7 +316,15 @@ test_patch(const svn_test_opts_t *opts,
                             "/test-patch-repos", NULL);
 
   repos_url = svn_uri_canonicalize(repos_url, pool);
-  wc_path = svn_dirent_join(cwd, "test-patch-wc", pool);
+
+  /* Put wc inside an unversioned directory.  Checking out a 1.7 wc
+     directly inside a 1.6 wc doesn't work reliably, an intervening
+     unversioned directory prevents the problems. */
+  wc_path = svn_dirent_join(cwd, "test-patch", pool);
+  SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
+  svn_test_add_dir_cleanup(wc_path);
+
+  wc_path = svn_dirent_join(wc_path, "test-patch-wc", pool);
   SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
   rev.kind = svn_opt_revision_head;
   peg_rev.kind = svn_opt_revision_unspecified;
