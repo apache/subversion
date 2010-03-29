@@ -1,0 +1,92 @@
+                                                                -*- Text -*-
+
+
+Ideas for conflict handling UI improvements for Subversion 1.7/1.8
+==================================================================
+
+The new working copy library records detailed conflict information,
+which allows for user interface improvements when dealing with conflicts.
+
+New CLI Keywords
+----------------
+
+Access to the 3 versions of a conflicted item is provided
+via new peg-revision keywords, for text-, prop-, tree-, and patch-conflicts.
+
+  svn cat foo.c@MINE
+  svn ls src/include/@LEFT
+  svn diff foo.c@MINE foo.c@RIGHT
+  svn diff foo.c@LEFT foo.c
+  svn diff foo.c@RIGHT foo.c
+
+  LEFT: For update, the 'LEFT' version is the common ancestor
+        of the 'RIGHT' and 'MINE' versions (i.e. the base version
+        from before when the update was run).
+        For merge, the 'LEFT' version is the version of the item
+        as it appears at the merge-left revision.
+ RIGHT: For update, the 'RIGHT' version is the version of the item
+        as it appears in the revision updated to.
+        For merge, the 'right' version is the version of the item
+        as it appears at the merge-right revision.
+  MINE: For both update and merge, this is the version of the item
+        as found in the working copy when the conflict was detected
+        (which does not necessarily equal the current working version!)
+
+The following commands support this notation:
+  blame
+  cat
+  copy (only for @LEFT and @RIGHT as copy source)
+  diff (### any restrictions here?)
+  export
+  info
+  list
+  log
+  propget (get value of conflict version of property, e.g.
+           "svn propget svn:eol-style foo.c@MINE")
+  proplist (with -v, as above, but for multiple properties, e.g.
+           "svn proplist -v foo.c@MINE" would display the 'mine'
+           value for all conflicted properties, and the current
+           value for non-conflicted properties)
+  propset (set a conflict version as new value, e.g.
+           "svn propset svn:mime-type foo.c@RIGHT foo.c"
+           ### slightly cumbersome syntax)
+
+For backwards compatibility, temporary files in the working copy
+containing the content of these versions are still created for
+text and property conflicts. As before, these files are removed
+when the conflict is marked resolved.
+
+Special keywords exists for reject conflicts flagged by 'svn patch':
+  
+  svn cat foo.c@REJECT1
+  svn cat foo.c@REJECT2
+  svn cat foo.c@REJECT-2,5+10,4
+
+REJECTN: The unidiff text of the N'th hunk which was rejected when
+         the patch was applied.
+An alternative syntax is provided:
+REJECT-A,B+C,D: The unidiff text of the hunk with original offset A
+                and original length B, and modified offset C and
+                modified length D, which was rejected when the patch
+                was applied. Each hunk has a unique header of the form
+                "@@ -A,B+C,D @@", which is printed by 'svn patch' when
+                a conflict occurs, and by 'svn status' when a patch
+                reject conflict is shown.
+
+The following commands support this notation:
+  svn cat
+
+
+Resolver
+--------
+
+Interactive conflict resolution (which runs during update/merge in 1.6.x)
+can be invoked using the 'svn resolve' command (text and property conflicts
+only for now). The --accept option can still be used but is no longer required.
+
+Conflict URL/operation information
+------------------------
+'svn info' can show URL@peg_rev information for any type of conflict.
+1.6.x only shows this information for tree conflicts. It can also
+show which type of operation caused the conflict, and on which revisions
+the operation was operating.

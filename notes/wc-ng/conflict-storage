@@ -1,0 +1,173 @@
+                                                                -*- Text -*-
+
+
+Conflict meta data storage in wc-ng
+===================================
+
+Conflict meta data is stored in the ACTUAL_NODE table, within the
+'conflict_data' column. The data in this column is a skel containing
+conflict information, or NULL (meaning no conflict is present).
+
+There are 4 types of conflicts (text conflicts, property conflicts,
+tree conflicts, patch conflicts), so the skel contains the following
+lists in order:
+( (text conflict data) (prop conflict data) (tree conflict data) (patch
+    conflict data) )
+### need conflict data format version info inside skel, too?
+### or do we bump the entire wc.db format number if we need to tweak this?
+If the 'conflict_data' column is not NULL, at least one of these
+lists must be non-empty, describing a conflict.
+
+Contrary to wc-1, wc-ng records sufficient information to help users
+understand, in hindsight, which operation led to the conflict (as long
+as all conflict information is exposed by the UI).
+Some information which wc-1 was storing in entries has no direct
+equivalent in wc-ng conflict storage (such as paths to temporary files),
+but this information can be deduced from the information stored
+(e.g. conflict-old and friends; foo.r42 is now 'foo' + '.r' + left_rev)
+
+Terminology
+--------------------
+
+There are 3 versions of an item involved in a conflict:
+  left: During update, the 'left' version is the common ancestor
+        of the 'right' and 'mine' versions.
+        During merge, the 'left' version is the version of the item
+        as it appears at the merge-left revision.
+ right: During update, the 'right' version is the version of the item
+        as it appears in the revision updated to.
+        During merge, the 'right' version is the version of the item
+        as it appears at the merge-right revision.
+  mine: During both update and merge, this is the version of the item
+        as found in the working copy when the conflict was detected
+        (which does not necessarily equal the current working version!)
+
+Text conflicts
+--------------
+
+Text conflicts only exist on files. The following information
+is stored if there is a text conflict on the node:
+
+( (operation)
+  (left_rev right_rev)
+  (left_repos_uuid left_repos_root_url left_path_in_repos left_peg_rev)
+  (right_repos_uuid right_repos_root_url right_path_in_repos right_peg_rev)
+  (left_sha1 right_sha1 mine_sha1) )
+
+'operation' is "update", "switch", or "merge", indicating during what
+type of operation the conflict occurred.
+'{left,right}_rev' is the revision of the {left,right} side of
+the operation. With "update" and "switch", 'left_rev' is the base revision
+prior to the update/switch, and 'right_rev' is the revision updated/switched
+to. During "merge", 'left_rev' is the merge-left revision, and 'right_rev'
+is the merge-right revision, of a continuous revision range which was merged
+(merge tracking might split a merge up into multiple merges of continuous
+revision ranges).
+
+'{left,right}_repos_uuid' is the UUID of the repository the {left,right}
+version of the item comes from, in order to recognize merges from foreign
+repositories.
+
+'{left,right}_repos_root_url' is the repository root URL the {left,right}
+version of the item comes from.
+'{left,right}_path_in_repos' is the path in the repository of the {left,right}
+version of the item.
+'{left,right}_peg_rev is the peg revision of the {left,right} version
+of the item.
+
+'{left,right,mine}_sha1' are sha1 checksums of the full texts of
+the {left,right,mine} version of the file. File version's content
+can be obtained from the pristine store.
+
+Property conflicts
+--------------
+
+Property conflicts can exist on files and directories.
+There can be one or more property conflicts on the node,
+so property conflict data is a list. For each property conflict,
+an item exists in the list, storing the following information:
+
+( (operation)
+  (left_rev right_rev)
+  (left_repos_uuid left_repos_root_url left_path_in_repos left_peg_rev)
+  (right_repos_uuid right_repos_root_url right_path_in_repos right_peg_rev)
+  (incoming_change local_change)
+  (property_name)
+  (left_value right_value mine_value) )
+   
+'operation' see text conflicts
+'{left,right}_rev' see text conflicts
+
+'{left,right}_repos_uuid' see text conflicts
+'{left,right}_repos_root_url' see text conflicts
+'{left,right}_path_in_repos' see text conflicts
+
+'property_name' is the name of the property, such as "svn:eol-style".
+
+'incoming_change' is the incoming change which conflicted with the
+local change during the operation. Possible values are "edit", "add",
+and "delete".
+
+'local_change' is the local change which conflicted with the
+incoming change during the operation. Possible values are "edit", "add",
+and "delete".
+
+'{left,right,mine}_value' is the value of the {left,right,mine}
+version of the property.
+
+Tree conflicts
+--------------
+
+Tree conflicts exist on files or directories.
+The following information is stored if there is a tree conflict on the node:
+
+( (operation)
+  (left_rev right_rev)
+  (left_repos_uuid left_repos_root_url left_path_in_repos left_peg_rev)
+  (right_repos_uuid right_repos_root_url right_path_in_repos right_peg_rev)
+  (incoming_change local_change)
+  (left_node_kind right_node_kind)
+  (left_sha1 right_sha1 mine_sha1) )
+
+'operation' see text conflicts
+'{left,right}_rev' see text conflicts
+
+'{left,right}_repos_uuid' see text conflicts
+'{left,right}_repos_root_url' see text conflicts
+'{left,right}_path_in_repos' see text conflicts
+
+'incoming_change' is the incoming change which conflicted with the
+local change during the operation. Possible values are "edit", "add",
+"delete", "rename", and "replace".
+
+'local_change' is the local change which conflicted with the
+incoming change during the operation. Possible values are "edit", "add",
+"delete", "rename", "replace", "obstructed", and "missing".
+
+If the {left,right,mine} version of the item is a file and the content
+of that file is known, '{left,right,mine}_sha1' is the sha1 checksum of the
+full text of the {left,right,mine} version of the file. The file version's
+content can be obtained from the pristine store.
+
+Patch conflicts (a.k.a. "rejects")
+----------------------------------
+For patches, the content of the left and right versions is not fully known,
+so the conflict is not a diff3-style text conflict. Rather, the conflict
+is the failure to find a match for a hunk's context in the patch target.
+
+( ((patch_file_abspath)
+   (hunk_original_offset hunk_original_len)
+   (hunk_modified_offset hunk_modified_length)
+   (reject_diff_sha1) ) ... )
+
+'patch_file_abspath' is the absolute path of the patch file the
+application of which to the node led to hunks being rejected.
+
+'hunk_{original,modified}_offset' and 'hunk_{original,modified}_length'
+are the hunk header values as parsed from the patch file (i.e. the "ID"
+of the hunk within the patch file). These also occur in the reject
+diff text but are stored here for easy retrieval.
+
+'reject_diff_sha1' is the sha1 of the unidiff content of the rejected
+hunk as written to the .svnpatch.rej file. The actual unidiff content
+(which can be large!) can be retrieved from the pristine store.
