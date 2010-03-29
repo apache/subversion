@@ -193,6 +193,8 @@ svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue);
 
 /** Internal helper for svn_wc_process_committed_queue2().
  *
+ * ### If @a queue is NULL, then ...?
+ * ### else:
  * Bump an item from @a queue (the one associated with @a
  * local_abspath) to @a new_revnum after a commit succeeds, recursing
  * if @a recurse is set.
