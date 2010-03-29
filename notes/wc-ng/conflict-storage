@@ -1,6 +1,5 @@
                                                                 -*- Text -*-
 
-
 Conflict meta data storage in wc-ng
 ===================================
 
@@ -9,18 +8,30 @@ Conflict meta data is stored in the ACTUAL_NODE table, within the
 conflict information, or NULL (meaning no conflict is present).
 
 There are 4 types of conflicts (text conflicts, property conflicts,
-tree conflicts, patch conflicts), so the skel contains the following
-lists in order:
-( (common conflict data) (text conflict data) (prop conflict data)
-  (tree conflict data) (obstruction data) (patch conflict data) )
+tree conflicts, patch conflicts). The conflict skel has the form:
+
+  (COMMON (KIND KIND-SPECIFIC) (KIND KIND-SPECIFIC) ...)
+
+where KIND is one of "text", "prop", "tree", or "patch". KIND-SPECIFIC
+is specific to each KIND, and is detailed below. The COMMON skel
+contains data that is common to all KINDs, and is detailed below.
+
 ### need conflict data format version info inside skel, too?
-### or do we bump the entire wc.db format number if we need to tweak this?
-If the 'conflict_data' column is not NULL, at least one of these
-lists must be non-empty, describing a conflict.
+### or do we bump the entire wc.db format number if we need to tweak
+### this?
+###
+### gstein sez: the KIND can become "text-2" or somesuch if we need to
+###   radically alter the kind-specific data. but we can easily append
+###   information to the skel without much problem. adjusting the
+###   COMMON skel shouldn't be hard, if appending is insufficient.
+
+If the 'conflict_data' column is not NULL, then COMMON must exist and
+at least one KIND of conflict skel, describing the conflict(s).
 
 Contrary to wc-1, wc-ng records sufficient information to help users
 understand, in hindsight, which operation led to the conflict (as long
 as all conflict information is exposed by the UI).
+
 Some information which wc-1 was storing in entries has no direct
 equivalent in wc-ng conflict storage (such as paths to temporary files),
 but this information can be deduced from the information stored
@@ -42,18 +53,18 @@ There are 3 versions of an item involved in a conflict:
         as found in the working copy when the conflict was detected
         (which does not necessarily equal the current working version!)
 
+
 Common conflict data
 --------------------
 
 Some information is shared for all conflict data that applies to a node. E.g.
 when a node has a combination of text and property conflicts these were
 always caused by the same operation. (Any later operation will skip the node
-unless the conflicts are resolved)
+unless the conflicts are resolved). The COMMON skel has the form:
 
-( (operation)
-  (left_rev right_rev)
-  (left_repos_uuid left_repos_root_url left_path_in_repos left_peg_rev)
-  (right_repos_uuid right_repos_root_url right_path_in_repos right_peg_rev) )
+  (OPERATION LEFT_REV RIGHT_REV
+    (LEFT_UUID LEFT_ROOT_URL LEFT_RELPATH LEFT_PEG_REV)
+    (RIGHT_UUID RIGHT_ROOT_URL RIGHT_RELPATH RIGHT_PEG_REV) )
 
 ### BH: I don't know if all these values apply to obstructions and patch
 ###     conflicts. And most of these values are not available for conflicts
@@ -63,38 +74,37 @@ unless the conflicts are resolved)
 ### BH: Should we have the (left_node_kind right_node_kind) block here?
 ### BH: Do we need more data on 'older/mine' or is that handled via left/right?
 
-'operation' is "update", "switch", or "merge", indicating during what
+OPERATION is "update", "switch", or "merge", indicating during what
 type of operation the conflict occurred.
-'{left,right}_rev' is the revision of the {left,right} side of
-the operation. With "update" and "switch", 'left_rev' is the base revision
-prior to the update/switch, and 'right_rev' is the revision updated/switched
-to. During "merge", 'left_rev' is the merge-left revision, and 'right_rev'
+
+{LEFT,RIGHT}_REV is the revision of the {left,right} side of
+the operation. With "update" and "switch", LEFT_REV is the base revision
+prior to the update/switch, and RIGHT_REV is the revision updated/switched
+to. During "merge", LEFT_REV is the merge-left revision, and RIGHT_REV
 is the merge-right revision, of a continuous revision range which was merged
 (merge tracking might split a merge up into multiple merges of continuous
 revision ranges).
 
-'{left,right}_repos_uuid' is the UUID of the repository the {left,right}
+{LEFT,RIGHT}_UUID is the UUID of the repository the {left,right}
 version of the item comes from, in order to recognize merges from foreign
 repositories.
 
-'{left,right}_repos_root_url' is the repository root URL the {left,right}
+{LEFT,RIGHT}_ROOT_URL is the repository root URL the {left,right}
 version of the item comes from.
-'{left,right}_path_in_repos' is the path in the repository of the {left,right}
-version of the item.
-'{left,right}_peg_rev is the peg revision of the {left,right} version
-of the item.
 
-'{left,right,mine}_sha1' are sha1 checksums of the full texts of
-the {left,right,mine} version of the file. File version's content
-can be obtained from the pristine store.
+{LEFT,RIGHT}_RELPATH is the path in the repository of the {left,right}
+version of the item.
+
+{LEFT,RIGHT}_PEG_REV is the peg revision of the {left,right} version
+of the item.
 
 Text conflicts
 --------------
 
-Text conflicts only exist on files. The following information
-is stored if there is a text conflict on the node:
+Text conflicts only exist on files. The following skel represents the
+"text" KIND of conflict:
 
-( (left_sha1 right_sha1 mine_sha1) )
+  ("text" LEFT_SHA1 RIGHT_SHA1 MINE_SHA1)
 
 ### BH: We need some marker here, but these values must also be stored
 ###     in the older_checksum, left_checksum, right_checksum colums of ACTUAL
@@ -102,21 +112,27 @@ is stored if there is a text conflict on the node:
 
 ### BH: What about symlinks?
 
+{LEFT,RIGHT,MINE}_SHA1 are sha1 checksums of the full texts of
+the {left,right,mine} version of the file. File version's content
+can be obtained from the pristine store.
+
+
 Property conflicts
 --------------
 
 Property conflicts can exist on files, directories and symlinks.
-There can be  or more property conflicts on the node,
-so property conflict data is a list. For each property conflict,
-an item exists in the list:
+There can be one or more property conflicts on the node, represented
+by one or more "prop" KIND conflicts. Each "prop" conflict has the
+following form:
 
-( ( ( (property_name) (left_value) (right_value) (mine_value) ) )... ) )
+  ("prop" PROPERTY_NAME ([LEFT_VALUE]) ([RIGHT_VALUE]) ([MINE_VALUE]))
 
-'property_name' is the name of the property, such as "svn:eol-style".
+PROPERTY_NAME is the name of the property, such as "svn:eol-style".
 
-'{left,right,mine}_value' is the value of the {left,right,mine}
-version of the property. An empty item specifies that the property
-does not exist in that version.
+Each property value ({LEFT,RIGHT,MINE}_VALUE) is represented as an
+empty list indicating the property did not exist in that version, or a
+1-item list containing the particular value.
+
 
 Tree conflicts
 --------------
@@ -124,30 +140,32 @@ Tree conflicts
 Tree conflicts exist on files or directories.
 The following information is stored if there is a tree conflict on the node:
 
-( (incoming_change local_change)
-  (left_node_kind right_node_kind)
-  (left_sha1 right_sha1 mine_sha1) )
+  ("tree"
+    INCOMING_CHANGE LOCAL_CHANGE
+    LEFT_NODE_KIND RIGHT_NODE_KIND
+    LEFT_SHA1 RIGHT_SHA1 MINE_SHA1)
 
-'incoming_change' is the incoming change which conflicted with the
+INCOMING_CHANGE is the incoming change which conflicted with the
 local change during the operation. Possible values are "edit", "add",
 "delete", "rename", and "replace".
 
-'local_change' is the local change which conflicted with the
+LOCAL_CHANGE is the local change which conflicted with the
 incoming change during the operation. Possible values are "edit", "add",
 "delete", "rename", "replace", "obstructed", and "missing".
 
 If the {left,right,mine} version of the item is a file and the content
-of that file is known, '{left,right,mine}_sha1' is the sha1 checksum of the
+of that file is known, {LEFT,RIGHT,MINE}_SHA1 is the sha1 checksum of the
 full text of the {left,right,mine} version of the file. The file version's
 content can be obtained from the pristine store.
 
 ### BH: We need to duplicate the sha1 values in the older_checksum,
-###     left_checksum, right_checksum colums of ACTUAL
+###     left_checksum, right_checksum columns of ACTUAL
 ###     to allow pristine store cleanups.
 
 ### BH: Can we share some of the sha1 logic with the text conflicts to
 ###     allow resolving this in the same way?
 ###     (We should keep the history of the node valid via replace vs update)
+
 
 (Unversioned) Obstructions
 --------------------------
@@ -158,6 +176,9 @@ the BASE_NODE table.
 
 ### BH: I don't think we need specific data here; just a boolean?
 ### It is always a conflict between the IN-WC data and the local WC.
+###
+### gstein sez: maybe KIND == "obstructed" ? thus, a skel such as:
+###   ("obstructed")
 
 
 Patch conflicts (a.k.a. "rejects")
@@ -166,20 +187,20 @@ For patches, the content of the left and right versions is not fully known,
 so the conflict is not a diff3-style text conflict. Rather, the conflict
 is the failure to find a match for a hunk's context in the patch target.
 
-( ((patch_file_abspath)
-   (hunk_original_offset hunk_original_len)
-   (hunk_modified_offset hunk_modified_length)
-   (reject_diff_sha1) ) ... )
+  ("patch" PATCH_FILE_ABSPATH
+    HUNK_ORIGINAL_OFFSET HUNK_ORIGINAL_LEN
+    HUNK_MODIFIED_OFFSET HUNK_MODIFIED_LENGTH
+    REJECT_DIFF_SHA1)
 
-'patch_file_abspath' is the absolute path of the patch file the
+PATCH_FILE_ABSPATH is the absolute path of the patch file the
 application of which to the node led to hunks being rejected.
 
-'hunk_{original,modified}_offset' and 'hunk_{original,modified}_length'
+HUNK_{ORIGINAL,MODIFIED}_OFFSET and HUNK_{ORIGINAL,MODIFIED}_LENGTH
 are the hunk header values as parsed from the patch file (i.e. the "ID"
 of the hunk within the patch file). These also occur in the reject
 diff text but are stored here for easy retrieval.
 
-'reject_diff_sha1' is the sha1 of the unidiff content of the rejected
+REJECT_DIFF_SHA1 is the sha1 of the unidiff content of the rejected
 hunk as written to the .svnpatch.rej file. The actual unidiff content
 (which can be large!) can be retrieved from the pristine store.
 
@@ -187,3 +208,6 @@ hunk as written to the .svnpatch.rej file. The actual unidiff content
 ###     The pristine store needs all references to be stored in a DB column.
 ###     To support this we would need an extra table.
 
+### gstein: why keep the PATCH_FILE_ABSPATH? couldn't that be rm'd at
+###   some point after the attempted 'svn patch'? and doesn't this
+###   obviate the future possibility of patch from stdin?
