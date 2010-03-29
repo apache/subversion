@@ -918,9 +918,11 @@ svn_client__condense_commit_items(const char **base_url,
    NOTIFY_PATH_PREFIX will be passed to CTX->notify_func2() as the
    common absolute path prefix of the committed paths.  It can be NULL.
 
-   If the caller wants to keep track of any outstanding temporary
-   files left after the transmission of text and property mods,
-   *TEMPFILES is the place to look.
+   If TEMPFILES is not NULL, create in the temporary-text-base directory a
+   copy of the working version of each file transmitted, but with keywords
+   and eol translated to repository-normal form, and set *TEMPFILES to a
+   hash whose keys are the (const char *) abspaths of these files and whose
+   values are unspecified.
 
    MD5 checksums, if available,  for the new text bases of committed
    files are stored in *CHECKSUMS, which maps const char* paths (from the
