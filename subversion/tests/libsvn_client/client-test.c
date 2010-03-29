@@ -334,7 +334,8 @@ test_patch(const svn_test_opts_t *opts,
                                TRUE, FALSE, ctx, pool));
 
   /* Create the patch file. */
-  patch_file_path = svn_dirent_join(cwd, "test-patch.diff", pool);
+  patch_file_path = svn_dirent_join_many(pool, cwd,
+                                         "test-patch", "test-patch.diff", NULL);
   SVN_ERR(svn_io_file_open(&patch_file, patch_file_path,
                            (APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE),
                            APR_OS_DEFAULT, pool));
