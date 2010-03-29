@@ -1276,7 +1276,12 @@ struct path_driver_cb_baton
 };
 
 
-/* This implements svn_delta_path_driver_cb_func_t */
+/* This implements svn_delta_path_driver_cb_func_t.
+ * Act on the item of CALLBACK_BATON->commit_items keyed by PATH.
+ * CALLBACK_BATON->commit_items is an input.
+ * If the item is a file with text mods, then add a mapping of "item-url =>
+ * (commit-item, file-baton)" into CALLBACK_BATON->file_mods.
+ * (That is the sole use of CALLBACK_BATON->file_mods.) */
 static svn_error_t *
 do_item_commit(void **dir_baton,
                void *parent_baton,
