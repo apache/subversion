@@ -202,19 +202,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r921453, r927184, r927243
-   Fix reopened issue #3020 'Reflect dropped/renumbered revisions in
-   svn:mergeinfo data during svnadmin load'
-   Justification:
-     Prior to this fix, when loading a partial dump with mergeinfo, the
-     resulting mergeinfo in the target repository could refer to non-existent
-     revisions or revisions that have nothing to do with the merge source
-     in the original repository.  The original fix for issue assumed that
-     the dump stream was for a complete repository.
-   Notes:
-     r921453 and 927184 are tests, r927243 is the fix.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3020
-   Votes:
-     +1: pburba, rhuijben, kameshj
