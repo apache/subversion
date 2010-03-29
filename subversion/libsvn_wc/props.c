@@ -657,7 +657,6 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                     apr_pool_t *pool /* scratch_pool */)
 {
   svn_boolean_t hidden;
-  svn_stringbuf_t *log_accum;
   apr_hash_t *new_base_props;
   apr_hash_t *new_actual_props;
 
@@ -672,14 +671,9 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                              _("The node '%s' was not found."),
                              svn_dirent_local_style(local_abspath, pool));
 
-  if (! dry_run)
-    log_accum = svn_stringbuf_create("", pool);
-  else
-    log_accum = NULL; /* Provide NULL to __merge_props */
-
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
-  SVN_ERR(svn_wc__merge_props(&log_accum, state,
+  SVN_ERR(svn_wc__merge_props(state,
                               &new_base_props, &new_actual_props,
                               wc_ctx->db, local_abspath,
                               left_version, right_version,
@@ -709,10 +703,6 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                                     base_merge, FALSE, pool));
 
       /* ### add_loggy takes a DIR, but wq_run is a simple WRI_ABSPATH  */
-
-      if (! svn_stringbuf_isempty(log_accum))
-        SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath, log_accum,
-                                     pool));
 
       SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
                              cancel_func, cancel_baton,
@@ -1532,8 +1522,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
 
 
 svn_error_t *
-svn_wc__merge_props(svn_stringbuf_t **log_accum,
-                    svn_wc_notify_state_t *state,
+svn_wc__merge_props(svn_wc_notify_state_t *state,
                     apr_hash_t **new_base_props,
                     apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,
@@ -1757,26 +1746,33 @@ svn_wc__merge_props(svn_stringbuf_t **log_accum,
       /* We've now guaranteed that some kind of .prej file exists
          above the .svn/ dir.  We write log entries to append our
          conflicts to it. */
-      SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, *log_accum, scratch_pool);
       SVN_ERR(svn_wc__loggy_append(db, adm_abspath, reject_tmp_path,
-                                   reject_path, result_pool));
+                                   reject_path, scratch_pool));
 
       /* And of course, delete the temporary reject file. */
-      SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, *log_accum, scratch_pool);
-      SVN_ERR(svn_wc__loggy_remove(log_accum, adm_abspath,
-                                   reject_tmp_path, result_pool,
-                                   scratch_pool));
+      {
+        const svn_skel_t *work_item;
+
+        SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                             db, reject_tmp_path,
+                                             scratch_pool, scratch_pool));
+        /* ### we should pass WORK_ITEM to some wc_db api that records
+           ### the property conflicts.  */
+        SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
+      }
 
       /* Mark entry as "conflicted" with a particular .prej file. */
       {
+        svn_stringbuf_t *log_accum = NULL;
         svn_wc_entry_t entry;
 
         entry.prejfile = svn_dirent_is_child(adm_abspath, reject_path, NULL);
-        SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, *log_accum, scratch_pool);
-        SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_abspath,
+        SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_abspath,
                                            local_abspath, &entry,
                                            SVN_WC__ENTRY_MODIFY_PREJFILE,
-                                           result_pool, scratch_pool));
+                                           scratch_pool, scratch_pool));
+        SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
+                                     scratch_pool));
       }
 
     } /* if (reject_tmp_fp) */

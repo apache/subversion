@@ -2971,9 +2971,6 @@ close_directory(void *dir_baton,
      to deal with them. */
   if (regular_props->nelts || entry_props->nelts || wc_props->nelts)
     {
-      /* Make a temporary log accumulator for dirprop changes.*/
-      svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
-
       if (regular_props->nelts)
         {
           /* If recording traversal info, then see if the
@@ -3013,8 +3010,7 @@ close_directory(void *dir_baton,
 
           /* Merge pending properties into temporary files (ignoring
              conflicts). */
-          SVN_ERR_W(svn_wc__merge_props(&log_accum,
-                                        &prop_state,
+          SVN_ERR_W(svn_wc__merge_props(&prop_state,
                                         &new_base_props,
                                         &new_actual_props,
                                         eb->db,
@@ -3047,10 +3043,6 @@ close_directory(void *dir_baton,
                                                                      pool),
                                                 pool));
         }
-
-      /* Add the dirprop loggy entries to the baton's log
-         accumulator. */
-      svn_stringbuf_appendstr(db->log_accum, log_accum);
     }
 
   /* Queue some items to install the properties.  */
@@ -3059,7 +3051,7 @@ close_directory(void *dir_baton,
                                   new_base_props, new_actual_props,
                                   TRUE /* write_base_props */, TRUE, pool));
 
-  /* Flush and run the log. */
+  /* Flush the log.  */
   SVN_ERR(flush_log(db, pool));
 
   if (last_change)
@@ -4493,6 +4485,7 @@ merge_file(svn_stringbuf_t **log_accum,
               const char *merge_left;
               svn_boolean_t delete_left = FALSE;
               const char *path_ext = "";
+              const svn_skel_t *work_item;
 
               /* If we have any file extensions we're supposed to
                  preserve in generated conflict file names, then find
@@ -4562,21 +4555,29 @@ merge_file(svn_stringbuf_t **log_accum,
                         eb->conflict_func, eb->conflict_baton,
                         eb->cancel_func, eb->cancel_baton,
                         pool));
+              SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
+                                      pool);
 
               /* If we created a temporary left merge file, get rid of it. */
               if (delete_left)
-                SVN_ERR(svn_wc__loggy_remove(
-                          log_accum, pb->local_abspath,
-                          merge_left, pool, pool));
+                {
+                  SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                                       eb->db, merge_left,
+                                                       pool, pool));
+                  SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath,
+                                            work_item, pool));
+                }
 
               /* And clean up add-with-history-related temp file too. */
               if (fb->copied_working_text)
-                SVN_ERR(svn_wc__loggy_remove(
-                          log_accum, pb->local_abspath,
-                          fb->copied_working_text, pool, pool));
-
-              SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
-                                      pool);
+                {
+                  SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                                       eb->db,
+                                                       fb->copied_working_text,
+                                                       pool, pool));
+                  SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath,
+                                            work_item, pool));
+                }
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
     } /* end: "textual" merging process */
@@ -4681,9 +4682,12 @@ merge_file(svn_stringbuf_t **log_accum,
   /* Clean up add-with-history temp file. */
   if (fb->copied_text_base)
     {
-      SVN_ERR(svn_wc__loggy_remove(log_accum, pb->local_abspath,
-                                   fb->copied_text_base, pool, pool));
-      SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
+      const svn_skel_t *work_item;
+
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                           eb->db, fb->copied_text_base,
+                                           pool, pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item, pool));
     }
 
   /* Set the returned content state. */
@@ -4930,8 +4934,7 @@ close_file(void *file_baton,
   /* This will merge the old and new props into a new prop db, and
      write <cp> commands to the logfile to install the merged
      props.  */
-  SVN_ERR(svn_wc__merge_props(&delayed_log_accum,
-                              &prop_state,
+  SVN_ERR(svn_wc__merge_props(&prop_state,
                               &new_base_props,
                               &new_actual_props,
                               eb->db,
