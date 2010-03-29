@@ -7,14 +7,16 @@ Conflict meta data is stored in the ACTUAL_NODE table, within the
 'conflict_data' column. The data in this column is a skel containing
 conflict information, or NULL (meaning no conflict is present).
 
-There are 4 types of conflicts (text conflicts, property conflicts,
-tree conflicts, patch conflicts). The conflict skel has the form:
+There are five types of conflicts (text conflicts, property conflicts,
+tree conflicts, patch conflicts, and obstructions). The conflict skel
+has the form:
 
   (COMMON (KIND KIND-SPECIFIC) (KIND KIND-SPECIFIC) ...)
 
-where KIND is one of "text", "prop", "tree", or "patch". KIND-SPECIFIC
-is specific to each KIND, and is detailed below. The COMMON skel
-contains data that is common to all KINDs, and is detailed below.
+where KIND is one of "text", "prop", "tree", "patch", or
+"obstructed". KIND-SPECIFIC is specific to each KIND, and is detailed
+below. The COMMON skel contains data that is common to all KINDs, and
+is detailed below.
 
 ### need conflict data format version info inside skel, too?
 ### or do we bump the entire wc.db format number if we need to tweak
@@ -36,6 +38,7 @@ Some information which wc-1 was storing in entries has no direct
 equivalent in wc-ng conflict storage (such as paths to temporary files),
 but this information can be deduced from the information stored
 (e.g. conflict-old and friends; foo.r42 is now 'foo' + '.r' + left_rev)
+
 
 Terminology
 --------------------
@@ -97,6 +100,7 @@ version of the item.
 
 {LEFT,RIGHT}_PEG_REV is the peg revision of the {left,right} version
 of the item.
+
 
 Text conflicts
 --------------
@@ -170,15 +174,14 @@ content can be obtained from the pristine store.
 (Unversioned) Obstructions
 --------------------------
 
-When an update introduces a new node where an existing node is
+When an update introduces a new node where an existing unversioned node is
 stored locally we need to add some marker to allow the operation to update
 the BASE_NODE table.
 
-### BH: I don't think we need specific data here; just a boolean?
-### It is always a conflict between the IN-WC data and the local WC.
-###
-### gstein sez: maybe KIND == "obstructed" ? thus, a skel such as:
-###   ("obstructed")
+There is no particular data which needs to be recorded for an
+obstruction. Thus, the "obstructed" conflict skel has the form:
+
+  ("obstructed")
 
 
 Patch conflicts (a.k.a. "rejects")
