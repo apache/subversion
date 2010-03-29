@@ -918,11 +918,11 @@ svn_client__condense_commit_items(const char **base_url,
    NOTIFY_PATH_PREFIX will be passed to CTX->notify_func2() as the
    common absolute path prefix of the committed paths.  It can be NULL.
 
-   If TEMPFILES is not NULL, create in the temporary-text-base directory a
-   copy of the working version of each file transmitted, but with keywords
-   and eol translated to repository-normal form, and set *TEMPFILES to a
-   hash whose keys are the (const char *) abspaths of these files and whose
-   values are unspecified.
+   If NEW_TEXT_BASE_ABSPATHS is not NULL, create in the temporary-text-base
+   directory a copy of the working version of each file transmitted, but
+   with keywords and eol translated to repository-normal form, and set
+   *NEW_TEXT_BASE_ABSPATHS to a hash that maps (const char *) paths (from
+   the items' paths) to the (const char *) abspaths of these files.
 
    MD5 checksums, if available,  for the new text bases of committed
    files are stored in *CHECKSUMS, which maps const char* paths (from the
@@ -934,7 +934,7 @@ svn_client__do_commit(const char *base_url,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
-                      apr_hash_t **tempfiles,
+                      apr_hash_t **new_text_base_abspaths,
                       apr_hash_t **checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool);

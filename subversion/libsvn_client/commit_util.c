@@ -1583,7 +1583,7 @@ svn_client__do_commit(const char *base_url,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
-                      apr_hash_t **tempfiles,
+                      apr_hash_t **new_text_base_abspaths,
                       apr_hash_t **checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
@@ -1607,8 +1607,8 @@ svn_client__do_commit(const char *base_url,
 
   /* If the caller wants us to track temporary file creation, create a
      hash to store those paths in. */
-  if (tempfiles)
-    *tempfiles = apr_hash_make(pool);
+  if (new_text_base_abspaths)
+    *new_text_base_abspaths = apr_hash_make(pool);
 
   /* Ditto for the md5 checksums. */
   if (checksums)
@@ -1673,15 +1673,14 @@ svn_client__do_commit(const char *base_url,
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         fulltext = TRUE;
 
-      SVN_ERR(svn_wc_transmit_text_deltas3(tempfiles ? &tempfile : NULL,
+      SVN_ERR(svn_wc_transmit_text_deltas3(new_text_base_abspaths ? &tempfile
+                                                                  : NULL,
                                            digest, ctx->wc_ctx, item_abspath,
                                            fulltext, editor, file_baton,
                                            iterpool, iterpool));
-      if (tempfiles && tempfile)
-        {
-          tempfile = apr_pstrdup(pool, tempfile);
-          apr_hash_set(*tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
-        }
+      if (new_text_base_abspaths && tempfile)
+        apr_hash_set(*new_text_base_abspaths, item->path, APR_HASH_KEY_STRING,
+                     apr_pstrdup(pool, tempfile));
       if (checksums)
         apr_hash_set(*checksums, item->path, APR_HASH_KEY_STRING,
                      svn_checksum__from_digest(digest, svn_checksum_md5,
