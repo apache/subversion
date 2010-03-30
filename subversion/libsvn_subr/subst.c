@@ -769,9 +769,9 @@ struct translation_baton
   apr_hash_t *keywords;
   svn_boolean_t expand;
 
-  /* Characters (excluding the terminating NUL character) which
+  /* 'short boolean' array that encodes what character values
      may trigger a translation action, hence are 'interesting' */
-  const char *interesting;
+  char interesting[256];
 
   /* Length of the string EOL_STR points to. */
   apr_size_t eol_str_len;
@@ -821,10 +821,20 @@ create_translation_baton(const char *eol_str,
   b->repair = repair;
   b->keywords = keywords;
   b->expand = expand;
-  b->interesting = (eol_str && keywords) ? "$\r\n" : eol_str ? "\r\n" : "$";
   b->newline_off = 0;
   b->keyword_off = 0;
   b->src_format_len = 0;
+
+  /* Most characters don't start translation actions.
+   * Mark those that do depending on the parameters we got. */
+  memset(b->interesting, FALSE, sizeof(b->interesting));
+  if (keywords)
+    b->interesting['$'] = TRUE;
+  if (eol_str)
+    {
+      b->interesting['\r'] = TRUE;
+      b->interesting['\n'] = TRUE;
+    }
 
   return b;
 }
@@ -938,14 +948,9 @@ translate_chunk(svn_stream_t *dst,
           len = 0;
 
           /* We wanted memcspn(), but lacking that, the loop below has
-             the same effect.
-
-             Also, skip NUL characters explicitly, since strchr()
-             considers them part of the string argument,
-             but we don't consider them interesting
+             the same effect. Also, skip NUL characters.
           */
-          while ((p + len) < end
-                 && (! p[len] || ! strchr(interesting, p[len])))
+          while ((p + len) < end && !interesting[(unsigned char)p[len]])
             len++;
 
           if (len)
