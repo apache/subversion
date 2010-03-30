@@ -23,20 +23,14 @@
 
 package org.apache.subversion.javahl;
 
-/**
- * The schedule states an entry can be in.
- */
-public interface ScheduleKind
+public enum Tristate
 {
-    /** exists, but uninteresting */
-    public static final int normal = 0;
+    /** The state of the thing is not known. */
+    Unknown,
 
-    /** Slated for addition */
-    public static final int add = 1;
+    /** The state of the thing is false. */
+    False,
 
-    /** Slated for deletion */
-    public static final int delete = 2;
-
-    /** Slated for replacement (delete + add) */
-    public static final int replace = 3;
+    /** The state of the thing is true. */
+    True;
 }

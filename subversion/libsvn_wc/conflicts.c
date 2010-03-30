@@ -67,6 +67,7 @@ struct svn_wc_conflict_t
   /* ### TODO: Add more fields */
 };
 
+/* */
 static svn_error_t *
 conflict_alloc(svn_wc_conflict_t **conflict, apr_pool_t *result_pool)
 {
@@ -427,6 +428,7 @@ resolve_conflict_on_node(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* */
 static svn_error_t *
 resolve_one_conflict(svn_wc__db_t *db,
                      const char *local_abspath,
@@ -545,6 +547,7 @@ resolve_one_conflict(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* */
 static svn_error_t *
 recursive_resolve_conflict(svn_wc__db_t *db,
                            const char *local_abspath,

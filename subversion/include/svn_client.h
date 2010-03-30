@@ -3018,7 +3018,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * requested then return a #SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @a discover_changed_paths and @a revprops are the same as for
- * svn_client_log4().  Use @a scratch_pool for all temporary allocations.
+ * svn_client_log5().  Use @a scratch_pool for all temporary allocations.
  *
  * @a ctx is a context used for authentication.
  *
@@ -3028,8 +3028,8 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_client_mergeinfo_log(const char *path_or_url,
-                         svn_boolean_t finding_merged,
+svn_client_mergeinfo_log(svn_boolean_t finding_merged,
+                         const char *path_or_url,
                          const svn_opt_revision_t *peg_revision,
                          const char *merge_source_path_or_url,
                          const svn_opt_revision_t *src_peg_revision,
@@ -3373,7 +3373,7 @@ typedef struct svn_client_copy_source_t
  */
 svn_error_t *
 svn_client_copy5(svn_commit_info_t **commit_info_p,
-                 apr_array_header_t *sources,
+                 const apr_array_header_t *sources,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
@@ -3392,7 +3392,7 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
 SVN_DEPRECATED
 svn_error_t *
 svn_client_copy4(svn_commit_info_t **commit_info_p,
-                 apr_array_header_t *sources,
+                 const apr_array_header_t *sources,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
@@ -3541,7 +3541,7 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  */
 svn_error_t *
 svn_client_move5(svn_commit_info_t **commit_info_p,
-                 apr_array_header_t *src_paths,
+                 const apr_array_header_t *src_paths,
                  const char *dst_path,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,
@@ -4836,6 +4836,12 @@ svn_client_info(const char *path_or_url,
  * Apply a unidiff patch that's located at absolute path
  * @a abs_patch_path to the working copy at @a local_abspath.
  *
+ * This function makes a best-effort attempt at applying the patch.
+ * It might skip patch targets which cannot be patched (e.g. targets
+ * that are outside of the working copy). It will also reject hunks
+ * which cannot be applied to a target in case the hunk's context
+ * does not match anywhere in the patch target.
+ *
  * If @a dry_run is TRUE, the patching process is carried out, and full
  * notification feedback is provided, but the working copy is not modified.
  *
@@ -4848,17 +4854,45 @@ svn_client_info(const char *path_or_url,
  * This is useful when applying a unidiff which was created with the
  * original and modified files swapped due to human error.
  *
- * Excluding patch targets from the patching process is possible by
- * passing a @a filter_globs array containing elements of type const char *.
- * If @a filter_globs is not NULL, patch targets matching any glob pattern
- * in @a filter_globs will not be patched. The match is performed on the
- * target path as parsed from the patch file, after canonicalization.
+ * Excluding patch targets from the patching process is possible by passing
+ * @a include_patterns and/or @a exclude_patterns arrays containing
+ * elements of type const char *.
+ * If @a include_patterns is not NULL, patch targets not matching any glob
+ * pattern in @a include_patterns will not be patched.
+ * If @a exclude_patterns is not NULL, patch targets matching any glob pattern
+ * in @a exclude_patterns will not be patched
+ * The match is performed on the target path as parsed from the patch file,
+ * after canonicalization.
+ * If both @a include_patterns and @a exclude_patterns are specified,
+ * the @a include_patterns are applied first, i.e. the @a exclude_patterns
+ * are applied to all targets which matched one of the @a include_patterns.
+ *
+ * If @a patched_tempfiles is not NULL, return in @a *patched_tempfiles
+ * a mapping {target path -> path to temporary file containing patched result}
+ * for all patched targets which were neither skipped nor excluded via
+ * @ignore_patterns or @a exlude_patterns.
+ * Note that if all hunks were rejected, the patched result will look just
+ * like the target file, unmodified.
+ * If @a reject_tempfiles is not NULL, return in @a *reject_tempfiles
+ * a mapping {target path -> path to temporary file containing rejected hunks}
+ * Both @a *patched_tempfiles and @a *reject_tempfiles are allocated in
+ * @a result_pool, and the key (target path) used is the path as parsed
+ * from the patch, but in canonicalized form. The value (path to temporary
+ * file) is an absolute path, also in canonicalized form.
+ * The temporary files are closed, and it is the caller's responsibility
+ * to remove them when they are no longer needed.
+ * Using @a patched_tempfiles and @a reject_tempfiles in combination with
+ * @a dry_run = TRUE makes it possible to generate a preview of the result
+ * of the patching process, e.g. for display purposes, without actually
+ * modifying the working copy.
  *
  * If @a ctx->notify_func2 is non-NULL, invoke @a ctx->notify_func2 with
  * @a ctx->notify_baton2 as patching progresses.
  *
  * If @a ctx->cancel_func is non-NULL, invoke it passing @a
  * ctx->cancel_baton at various places during the operation.
+ *
+ * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.7.
  */
@@ -4868,9 +4902,13 @@ svn_client_patch(const char *abs_patch_path,
                  svn_boolean_t dry_run,
                  int strip_count,
                  svn_boolean_t reverse,
-                 apr_array_header_t *filter_globs,
+                 const apr_array_header_t *include_patterns,
+                 const apr_array_header_t *exclude_patterns,
+                 apr_hash_t **patched_tempfiles,
+                 apr_hash_t **reject_tempfiles,
                  svn_client_ctx_t *ctx,
-                 apr_pool_t *pool);
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool);
 
 /** @} */
 

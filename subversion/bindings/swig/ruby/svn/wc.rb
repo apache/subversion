@@ -725,7 +725,7 @@ module Svn
           return context
         end
 
-        # Creates an new instance of Context for use in the block, the context 
+        # Creates an new instance of Context for use in the block, the context
         # is destroyed when the block completes.
         #
         # ==== arguments

@@ -31,6 +31,7 @@
 #include <apr_fnmatch.h>
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
+#include "svn_diff.h"
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_pools.h"
@@ -40,7 +41,6 @@
 #include "client.h"
 
 #include "svn_private_config.h"
-#include "private/svn_diff_private.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_wc_private.h"
 
@@ -325,18 +325,24 @@ resolve_target_path(patch_target_t *target,
  * which should be stripped from target paths in the patch.
  * Upon success, allocate the patch target structure in RESULT_POOL.
  * Else, set *target to NULL.
- * If a target matches a glob in FILTER_GLOBS, mark it as filtered.
+ * If a target does not match a glob in INCLUDE_PATTERNS, mark it as filtered.
+ * If a target matches a glob in EXCLUDE_PATTERNS, mark it as filtered.
+ * If PATCHED_TEMPFILES or REJECT_TEMPFILES are not NULL, add the path
+ * to temporary patched/reject files to them, keyed by the target's path
+ * as parsed from the patch file (after canonicalization).
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
 init_patch_target(patch_target_t **patch_target,
                   const svn_patch_t *patch,
                   const char *base_dir,
                   svn_wc_context_t *wc_ctx, int strip_count,
-                  apr_array_header_t *filter_globs,
+                  const apr_array_header_t *include_patterns,
+                  const apr_array_header_t *exclude_patterns,
+                  apr_hash_t *patched_tempfiles,
+                  apr_hash_t *reject_tempfiles,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *target;
-  int i;
 
   target = apr_pcalloc(result_pool, sizeof(*target));
 
@@ -345,13 +351,37 @@ init_patch_target(patch_target_t **patch_target,
                               result_pool, scratch_pool));
 
   target->filtered = FALSE;
-  if (filter_globs)
+  if (include_patterns)
     {
-      for (i = 0; i < filter_globs->nelts; i++)
-        {
-          const char *glob;
+      int i;
+      const char *glob;
+      svn_boolean_t match;
 
-          glob = APR_ARRAY_IDX(filter_globs, i, const char *);
+      match = FALSE;
+      for (i = 0; i < include_patterns->nelts; i++)
+        {
+          glob = APR_ARRAY_IDX(include_patterns, i, const char *);
+          match = (apr_fnmatch(glob, target->canon_path_from_patchfile,
+                               APR_FNM_CASE_BLIND) == APR_SUCCESS);
+          if (match)
+            break;
+        }
+
+      if (! match)
+        {
+          target->filtered = TRUE;
+          *patch_target = target;
+          return SVN_NO_ERROR;
+        }
+    }
+  if (exclude_patterns)
+    {
+      int i;
+      const char *glob;
+
+      for (i = 0; i < exclude_patterns->nelts; i++)
+        {
+          glob = APR_ARRAY_IDX(exclude_patterns, i, const char *);
           target->filtered = (apr_fnmatch(glob,
                                           target->canon_path_from_patchfile,
                                           APR_FNM_CASE_BLIND) == APR_SUCCESS);
@@ -381,7 +411,7 @@ init_patch_target(patch_target_t **patch_target,
 
       if (target->kind == svn_node_file)
         {
-          /* Open the file. */ 
+          /* Open the file. */
           SVN_ERR(svn_io_file_open(&target->file, target->abs_path,
                                    APR_READ | APR_BINARY | APR_BUFFERED,
                                    APR_OS_DEFAULT, result_pool));
@@ -441,8 +471,14 @@ init_patch_target(patch_target_t **patch_target,
       /* Create a temporary file to write the patched result to. */
       SVN_ERR(svn_stream_open_unique(&target->patched_raw,
                                      &target->patched_path, NULL,
-                                     svn_io_file_del_on_pool_cleanup,
+                                     patched_tempfiles ?
+                                       svn_io_file_del_none :
+                                       svn_io_file_del_on_pool_cleanup,
                                      result_pool, scratch_pool));
+      if (patched_tempfiles)
+        apr_hash_set(patched_tempfiles, target->canon_path_from_patchfile,
+                     APR_HASH_KEY_STRING, target->patched_path);
+
       /* Expand keywords in the patched file.
        * Repair newlines if svn:eol-style dictates a particular style. */
       repair_eol = (target->eol_style == svn_subst_eol_style_fixed ||
@@ -456,8 +492,13 @@ init_patch_target(patch_target_t **patch_target,
        * in reject files. */
       SVN_ERR(svn_stream_open_unique(&target->reject,
                                      &target->reject_path, NULL,
-                                     svn_io_file_del_on_pool_cleanup,
+                                     reject_tempfiles ?
+                                       svn_io_file_del_none :
+                                       svn_io_file_del_on_pool_cleanup,
                                      result_pool, scratch_pool));
+      if (reject_tempfiles)
+        apr_hash_set(reject_tempfiles, target->canon_path_from_patchfile,
+                     APR_HASH_KEY_STRING, target->reject_path);
 
       /* The reject stream needs a diff header. */
       diff_header = apr_psprintf(scratch_pool, "--- %s%s+++ %s%s",
@@ -688,7 +729,7 @@ scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
           for (i = 0; i < target->hunks->nelts; i++)
             {
               const hunk_info_t *hi;
-              
+
               hi = APR_ARRAY_IDX(target->hunks, i, const hunk_info_t *);
               taken = (! hi->rejected &&
                        target->current_line >= hi->matched_line &&
@@ -1055,12 +1096,20 @@ send_patch_notification(const patch_target_t *target,
  * in RESULT_POOL. Use WC_CTX as the working copy context.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
- * If a target matches a glob in FILTER_GLOBS, mark it as filtered.
+ * If a target does not match a glob in INCLUDE_PATTERNS, mark it as filtered.
+ * If a target matches a glob in EXCLUDE_PATTERNS, mark it as filtered.
+ * If PATCHED_TEMPFILES or REJECT_TEMPFILES are not NULL, add the path
+ * to temporary patched/reject files to them, keyed by the target's path
+ * as parsed from the patch file (after canonicalization).
  * Do temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
 apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                 const char *abs_wc_path, svn_wc_context_t *wc_ctx,
-                int strip_count, apr_array_header_t *filter_globs,
+                int strip_count,
+                const apr_array_header_t *include_patterns,
+                const apr_array_header_t *exclude_patterns,
+                apr_hash_t *patched_tempfiles,
+                apr_hash_t *reject_tempfiles,
                 apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *target;
@@ -1069,7 +1118,9 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   static const int MAX_FUZZ = 2;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
-                            filter_globs, result_pool, scratch_pool));
+                            include_patterns, exclude_patterns,
+                            patched_tempfiles, reject_tempfiles,
+                            result_pool, scratch_pool));
 
   if (target->skipped || target->filtered)
     {
@@ -1091,7 +1142,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
       /* Determine the line the hunk should be applied at.
        * If no match is found initially, try with fuzz. */
-      do 
+      do
         {
           SVN_ERR(get_hunk_info(&hi, target, hunk, fuzz,
                                 result_pool, iterpool));
@@ -1267,7 +1318,7 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                   /* The WC_DB doesn't know much about this node.
                    * Check what's on disk. */
                   svn_node_kind_t disk_kind;
- 
+
                   SVN_ERR(svn_io_check_path(abs_path, &disk_kind, iterpool));
                   if (disk_kind != svn_node_none)
                     {
@@ -1295,7 +1346,7 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                     {
                       if (ctx->notify_func2)
                         {
-                          /* Just do notification. */ 
+                          /* Just do notification. */
                           svn_wc_notify_t *notify;
                           notify = svn_wc_create_notify(abs_path,
                                                         svn_wc_notify_add,
@@ -1378,8 +1429,18 @@ typedef struct {
   /* Whether to apply the patch in reverse. */
   svn_boolean_t reverse;
 
-  /* Glob patterns. Files matching any of these patterns won't be patched. */
-  apr_array_header_t *filter_globs;
+  /* Files not matching any of these patterns won't be patched. */
+  const apr_array_header_t *include_patterns;
+
+  /* Files matching any of these patterns won't be patched. */
+  const apr_array_header_t *exclude_patterns;
+
+  /* Mapping patch target path -> path to tempfile with patched result. */
+  apr_hash_t *patched_tempfiles;
+
+  /* Mapping patch target path -> path to tempfile with rejected hunks. */
+  apr_hash_t *reject_tempfiles;
+
 
   /* The client context. */
   svn_client_ctx_t *ctx;
@@ -1399,7 +1460,7 @@ apply_patches(void *baton,
   apr_array_header_t *targets;
   int i;
   apply_patches_baton_t *btn;
-  
+
   btn = (apply_patches_baton_t *)baton;
 
   /* Try to open the patch file. */
@@ -1425,17 +1486,19 @@ apply_patches(void *baton,
       if (btn->ctx->cancel_func)
         SVN_ERR(btn->ctx->cancel_func(btn->ctx->cancel_baton));
 
-      SVN_ERR(svn_diff__parse_next_patch(&patch, patch_file,
-                                         btn->reverse, scratch_pool, iterpool));
+      SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
+                                        btn->reverse, scratch_pool, iterpool));
       if (patch)
         {
           patch_target_t *target;
 
           SVN_ERR(apply_one_patch(&target, patch, btn->abs_wc_path,
                                   btn->ctx->wc_ctx, btn->strip_count,
-                                  btn->filter_globs, scratch_pool, iterpool));
+                                  btn->include_patterns, btn->exclude_patterns,
+                                  btn->patched_tempfiles, btn->reject_tempfiles,
+                                  result_pool, iterpool));
           if (target->filtered)
-            SVN_ERR(svn_diff__close_patch(patch));
+            SVN_ERR(svn_diff_close_patch(patch));
           else
             APR_ARRAY_PUSH(targets, patch_target_t *) = target;
         }
@@ -1457,7 +1520,7 @@ apply_patches(void *baton,
         SVN_ERR(install_patched_target(target, btn->abs_wc_path,
                                        btn->ctx, btn->dry_run, iterpool));
       SVN_ERR(send_patch_notification(target, btn->ctx, iterpool));
-      SVN_ERR(svn_diff__close_patch(target->patch));
+      SVN_ERR(svn_diff_close_patch(target->patch));
     }
 
   SVN_ERR(svn_io_file_close(patch_file, iterpool));
@@ -1473,9 +1536,13 @@ svn_client_patch(const char *abs_patch_path,
                  svn_boolean_t dry_run,
                  int strip_count,
                  svn_boolean_t reverse,
-                 apr_array_header_t *filter_globs,
+                 const apr_array_header_t *include_patterns,
+                 const apr_array_header_t *exclude_patterns,
+                 apr_hash_t **patched_tempfiles,
+                 apr_hash_t **reject_tempfiles,
                  svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   apply_patches_baton_t baton;
 
@@ -1489,11 +1556,26 @@ svn_client_patch(const char *abs_patch_path,
   baton.ctx = ctx;
   baton.strip_count = strip_count;
   baton.reverse = reverse;
-  baton.filter_globs = filter_globs;
+  baton.include_patterns = include_patterns;
+  baton.exclude_patterns = exclude_patterns;
+  if (patched_tempfiles)
+    {
+      (*patched_tempfiles) = apr_hash_make(result_pool);
+      baton.patched_tempfiles = (*patched_tempfiles);
+    }
+  else
+    baton.patched_tempfiles = NULL;
+  if (reject_tempfiles)
+    {
+      (*reject_tempfiles) = apr_hash_make(result_pool);
+      baton.reject_tempfiles = (*reject_tempfiles);
+    }
+  else
+    baton.reject_tempfiles = NULL;
 
   SVN_ERR(svn_wc__call_with_write_lock(apply_patches, &baton,
                                        ctx->wc_ctx, local_abspath,
-                                       pool, pool));
+                                       result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }

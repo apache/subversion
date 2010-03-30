@@ -661,7 +661,7 @@ svn_cmdline__parse_config_option(apr_array_header_t *config_options,
 
 svn_error_t *
 svn_cmdline__apply_config_options(apr_hash_t *config,
-                                  apr_array_header_t *config_options,
+                                  const apr_array_header_t *config_options,
                                   const char *prefix,
                                   const char *argument_name)
 {

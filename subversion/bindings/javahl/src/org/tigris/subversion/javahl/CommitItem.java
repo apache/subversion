@@ -91,8 +91,9 @@ public class CommitItem implements java.io.Serializable
      */
     public CommitItem(org.apache.subversion.javahl.CommitItem aItem)
     {
-        this(aItem.getPath(), aItem.getNodeKind(), aItem.getStateFlags(),
-             aItem.getUrl(), aItem.getCopyUrl(), aItem.getRevision());
+        this(aItem.getPath(), NodeKind.fromApache(aItem.getNodeKind()),
+             aItem.getStateFlags(), aItem.getUrl(), aItem.getCopyUrl(),
+             aItem.getRevision());
     }
 
     /**

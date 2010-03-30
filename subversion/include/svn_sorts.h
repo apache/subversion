@@ -170,7 +170,7 @@ svn_sort__hash(apr_hash_t *ht,
    COMPARE_FUNC is defined as for the C stdlib function bsearch(). */
 int
 svn_sort__bsearch_lower_bound(const void *key,
-                              apr_array_header_t *array,
+                              const apr_array_header_t *array,
                               int (*compare_func)(const void *, const void *));
 
 /* Insert a shallow copy of *NEW_ELEMENT into the array ARRAY at the index

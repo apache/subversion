@@ -844,7 +844,7 @@ svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
                hi;
                hi = apr_hash_next(hi))
             {
-              svn_fs_dirent_t *dirent = svn_apr_hash_index_val(hi);
+              svn_fs_dirent_t *dirent = svn__apr_hash_index_val(hi);
 
               SVN_ERR(svn_fs_fs__dag_delete_if_mutable(fs, dirent->id,
                                                        pool));

@@ -226,7 +226,7 @@ svn_error_t *svn_fs_base__change_txn_prop(svn_fs_txn_t *txn, const char *name,
                                           apr_pool_t *pool);
 
 svn_error_t *svn_fs_base__change_txn_props(svn_fs_txn_t *txn,
-                                           apr_array_header_t *props,
+                                           const apr_array_header_t *props,
                                            apr_pool_t *pool);
 
 

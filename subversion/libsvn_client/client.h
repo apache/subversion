@@ -388,7 +388,7 @@ svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
                                      const char *base_dir,
-                                     apr_array_header_t *commit_items,
+                                     const apr_array_header_t *commit_items,
                                      svn_boolean_t use_admin,
                                      svn_boolean_t read_only_wc,
                                      svn_client_ctx_t *ctx,
@@ -655,7 +655,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    TARGET is a working-copy path, the base of the hierarchy to be
    compared.  It corresponds to the URL opened in RA_SESSION below.
 
-   WC_CTX is a context for the working copy.
+   WC_CTX is a context for the working copy and should be NULL for
+   operations that do not involve a working copy.
 
    DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
    implement the file comparison function
@@ -730,11 +731,8 @@ svn_client__get_diff_summarize_editor(const char *target,
 */
 typedef struct
 {
-    /* The source path or url. */
+    /* The absolute source path or url. */
     const char *src;
-
-    /* The absolute path of the source. */
-    const char *src_abs;
 
     /* The base name of the object.  It should be the same for both src
        and dst. */
@@ -756,11 +754,11 @@ typedef struct
     /* The source revision number. */
     svn_revnum_t src_revnum;
 
-    /* The destination path or url */
+    /* The absolute destination path or url */
     const char *dst;
 
-    /* The destination's parent path */
-    const char *dst_parent;
+    /* The absolute source path or url of the destination's parent. */
+    const char *dst_parent_abspath;
 } svn_client__copy_pair_t;
 
 /* ---------------------------------------------------------------- */
@@ -821,12 +819,12 @@ typedef struct
 #define SVN_CLIENT__SINGLE_REPOS_NAME "svn:single-repos"
 
 
-/* Recursively crawl a set of working copy paths (PARENT_DIR + each
+/* Recursively crawl a set of working copy paths (DIR_ABSPATH + each
    item in the TARGETS array) looking for commit candidates, locking
    working copy directories as the crawl progresses.  For each
    candidate found:
 
-     - create svn_client_commit_item_t for the candidate.
+     - create svn_client_commit_item3_t for the candidate.
 
      - add the structure to an apr_array_header_t array of commit
        items that are in the same repository, creating a new array if
@@ -845,13 +843,9 @@ typedef struct
 
    At the successful return of this function, COMMITTABLES will be an
    apr_hash_t * hash of apr_array_header_t * arrays (of
-   svn_client_commit_item_t * structures), keyed on const char *
+   svn_client_commit_item3_t * structures), keyed on const char *
    canonical repository URLs.  LOCK_TOKENS will point to a hash table
-   with const char * lock tokens, keyed on const char * URLs.  Also,
-   LOCKED_DIRS will be an apr_hash_t * hash of svn_wc_adm_access_t *
-   keyed on const char * working copy path directory names which were
-   locked in the process of this crawl.  These will need to be
-   unlocked again post-commit.
+   with const char * lock tokens, keyed on const char * URLs.
 
    If DEPTH is specified, descend (or not) into each target in TARGETS
    as specified by DEPTH; the behavior is the same as that described
@@ -871,8 +865,8 @@ typedef struct
 svn_error_t *
 svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_hash_t **lock_tokens,
-                                 svn_wc_adm_access_t *parent_dir,
-                                 apr_array_header_t *targets,
+                                 const char *dir_abspath,
+                                 const apr_array_header_t *targets,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
@@ -880,12 +874,11 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_pool_t *pool);
 
 
-/* Recursively crawl each working copy path SRC in COPY_PAIRS, harvesting
-   commit_items into a COMMITABLES hash (see the docstring for
-   svn_client__harvest_committables for what that really means, and
-   for the relevance of LOCKED_DIRS) as if every entry at or below
-   the SRC was to be committed as a set of adds (mostly with history)
-   to a new repository URL (DST in COPY_PAIRS).
+/* Recursively crawl each absolute working copy path SRC in COPY_PAIRS,
+   harvesting commit_items into a COMMITABLES hash (see the docstring for
+   svn_client__harvest_committables for what that really means) as if
+   every entry at or below the SRC was to be committed as a set of adds
+   (mostly with history) to a new repository URL (DST in COPY_PAIRS).
 
    If CTX->CANCEL_FUNC is non-null, it will be called with
    CTX->CANCEL_BATON while harvesting to determine if the client has
@@ -925,9 +918,11 @@ svn_client__condense_commit_items(const char **base_url,
    NOTIFY_PATH_PREFIX will be passed to CTX->notify_func2() as the
    common absolute path prefix of the committed paths.  It can be NULL.
 
-   If the caller wants to keep track of any outstanding temporary
-   files left after the transmission of text and property mods,
-   *TEMPFILES is the place to look.
+   If NEW_TEXT_BASE_ABSPATHS is not NULL, create in the temporary-text-base
+   directory a copy of the working version of each file transmitted, but
+   with keywords and eol translated to repository-normal form, and set
+   *NEW_TEXT_BASE_ABSPATHS to a hash that maps (const char *) paths (from
+   the items' paths) to the (const char *) abspaths of these files.
 
    MD5 checksums, if available,  for the new text bases of committed
    files are stored in *CHECKSUMS, which maps const char* paths (from the
@@ -935,11 +930,11 @@ svn_client__condense_commit_items(const char **base_url,
    null.  */
 svn_error_t *
 svn_client__do_commit(const char *base_url,
-                      apr_array_header_t *commit_items,
+                      const apr_array_header_t *commit_items,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
-                      apr_hash_t **tempfiles,
+                      apr_hash_t **new_text_base_abspaths,
                       apr_hash_t **checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool);

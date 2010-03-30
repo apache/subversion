@@ -437,7 +437,7 @@ remove_props_not_in_source(svn_ra_session_t *session,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *propname = svn_apr_hash_index_key(hi);
+      const char *propname = svn__apr_hash_index_key(hi);
 
       svn_pool_clear(subpool);
 
@@ -477,8 +477,8 @@ filter_props(int *filtered_count, apr_hash_t *props,
 
   for (hi = apr_hash_first(pool, props); hi ; hi = apr_hash_next(hi))
     {
-      const char *propname = svn_apr_hash_index_key(hi);
-      void *propval = svn_apr_hash_index_val(hi);
+      const char *propname = svn__apr_hash_index_key(hi);
+      void *propval = svn__apr_hash_index_val(hi);
 
       /* Copy all properties:
           - not matching the exclude pattern if provided OR
@@ -519,8 +519,8 @@ write_revprops(int *filtered_count,
 
   for (hi = apr_hash_first(pool, rev_props); hi; hi = apr_hash_next(hi))
     {
-      const char *propname = svn_apr_hash_index_key(hi);
-      const svn_string_t *propval = svn_apr_hash_index_val(hi);
+      const char *propname = svn__apr_hash_index_key(hi);
+      const svn_string_t *propval = svn__apr_hash_index_val(hi);
 
       svn_pool_clear(subpool);
 

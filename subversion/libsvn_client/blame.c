@@ -381,7 +381,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 /* Throw an SVN_ERR_CLIENT_IS_BINARY_FILE error if PROP_DIFFS indicates a
    binary MIME type.  Else, return SVN_NO_ERROR. */
 static svn_error_t *
-check_mimetype(apr_array_header_t *prop_diffs, const char *target,
+check_mimetype(const apr_array_header_t *prop_diffs, const char *target,
                apr_pool_t *pool)
 {
   int i;

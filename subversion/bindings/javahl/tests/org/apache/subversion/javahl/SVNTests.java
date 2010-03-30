@@ -46,7 +46,7 @@ class SVNTests extends TestCase
      * our admin object, mostly used for creating,dumping and loading
      * repositories
      */
-    protected SVNAdmin admin;
+    protected ISVNAdmin admin;
 
     /**
      * the subversion client, what we want to test.
@@ -200,11 +200,11 @@ class SVNTests extends TestCase
         if (this.fsType == null)
         {
             this.fsType =
-                System.getProperty("test.fstype", SVNAdmin.FSFS).toLowerCase();
-            if (!(SVNAdmin.FSFS.equals(this.fsType) ||
-                  SVNAdmin.BDB.equals(this.fsType)))
+                System.getProperty("test.fstype", ISVNAdmin.FSFS).toLowerCase();
+            if (!(ISVNAdmin.FSFS.equals(this.fsType) ||
+                  ISVNAdmin.BDB.equals(this.fsType)))
             {
-                this.fsType = SVNAdmin.FSFS;
+                this.fsType = ISVNAdmin.FSFS;
             }
         }
 
@@ -379,7 +379,7 @@ class SVNTests extends TestCase
     protected void addExpectedCommitItem(String workingCopyPath,
                                          String baseUrl,
                                          String itemPath,
-                                         int nodeKind,
+                                         NodeKind nodeKind,
                                          int stateFlags)
     {
         //determine the full working copy path and the full url of the item.
@@ -882,7 +882,7 @@ class SVNTests extends TestCase
         /**
          * the kind of node (file, directory or none, see NodeKind)
          */
-        int myNodeKind;
+        NodeKind myNodeKind;
         /**
          * the reason why this item is commited (see CommitItemStateFlag)
          */
@@ -898,7 +898,7 @@ class SVNTests extends TestCase
          * @param stateFlags    the expected state flags
          * @param url           the expected url
          */
-        private MyCommitItem(String path, int nodeKind, int stateFlags,
+        private MyCommitItem(String path, NodeKind nodeKind, int stateFlags,
                              String url)
         {
             myPath = path;

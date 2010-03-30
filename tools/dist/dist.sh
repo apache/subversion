@@ -238,7 +238,12 @@ rm -rf "$DISTPATH/contrib"
 rm -rf "$DISTPATH/packages"
 
 # Check for a recent enough Python
-PYTHON="`$DISTPATH/build/find_python.sh`"
+# Instead of attempting to deal with various line ending issues, just export
+# the find_python script manually.
+${svn:-svn} export -q -r "$REVISION"  \
+     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH/build/find_python.sh" \
+     --username none --password none "$DIST_SANDBOX/find_python.sh"
+PYTHON="`$DIST_SANDBOX/find_python.sh`"
 if test -z "$PYTHON"; then
   echo "Python 2.4 or later is required to run dist.sh"
   echo "If you have a suitable Python installed, but not on the"

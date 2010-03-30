@@ -1261,7 +1261,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info = push_state(parser, ctx, OPEN_DIR);
 
-      info->base_rev = apr_atoi64(rev);
+      info->base_rev = SVN_STR_TO_REV(rev);
       info->dir->base_rev = info->base_rev;
       info->dir->target_rev = ctx->target_rev;
       info->fetch_props = TRUE;
@@ -1308,7 +1308,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       dir = info->dir;
 
-      info->base_rev = apr_atoi64(rev);
+      info->base_rev = SVN_STR_TO_REV(rev);
       dir->base_rev = info->base_rev;
       dir->target_rev = ctx->target_rev;
 
@@ -1356,7 +1356,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info->name = dir->name;
 
       info->copyfrom_path = cf ? apr_pstrdup(info->pool, cf) : NULL;
-      info->copyfrom_rev = cr ? apr_atoi64(cr) : SVN_INVALID_REVNUM;
+      info->copyfrom_rev = cr ? SVN_STR_TO_REV(cr) : SVN_INVALID_REVNUM;
 
       /* Mark that we don't have a base. */
       info->base_rev = SVN_INVALID_REVNUM;
@@ -1390,7 +1390,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info = push_state(parser, ctx, OPEN_FILE);
 
-      info->base_rev = apr_atoi64(rev);
+      info->base_rev = SVN_STR_TO_REV(rev);
       info->target_rev = ctx->target_rev;
       info->fetch_props = FALSE;
 
@@ -1425,7 +1425,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info->name = NULL;
 
       info->copyfrom_path = cf ? apr_pstrdup(info->pool, cf) : NULL;
-      info->copyfrom_rev = cr ? apr_atoi64(cr) : SVN_INVALID_REVNUM;
+      info->copyfrom_rev = cr ? SVN_STR_TO_REV(cr) : SVN_INVALID_REVNUM;
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "delete-entry") == 0)

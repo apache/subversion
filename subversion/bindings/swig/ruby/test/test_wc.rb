@@ -333,15 +333,6 @@ class SvnWcTest < Test::Unit::TestCase
                      ],
                      ignored_errors.collect {|path, err| [path, err.class]})
       end
-
-      Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
-        assert_raises(Svn::Error::WcPathFound) do
-          access.mark_missing_deleted(path1)
-        end
-        FileUtils.rm(path1)
-        access.mark_missing_deleted(path1)
-        access.maybe_set_repos_root(path2, @repos_uri)
-      end
     end
   end
 
@@ -1091,7 +1082,7 @@ EOE
 
   def test_context_create
     assert_nothing_raised do
-      result = Svn::Wc::Context.create do |context| 
+      result = Svn::Wc::Context.create do |context|
         assert_not_nil context
         assert_kind_of Svn::Wc::Context, context
       end

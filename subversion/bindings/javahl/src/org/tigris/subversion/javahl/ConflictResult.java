@@ -94,8 +94,9 @@ public class ConflictResult
 
     public org.apache.subversion.javahl.ConflictResult toApache()
     {
-        return new org.apache.subversion.javahl.ConflictResult(choice,
-                                                               mergedPath);
+        return new org.apache.subversion.javahl.ConflictResult(
+            org.apache.subversion.javahl.ConflictResult.Choice.values()[choice],
+            mergedPath);
     }
 
     /**

@@ -86,7 +86,7 @@ correctly, nor as a place-holder for a test that is not yet written.
 
 Each test function conforms to the svn_test_driver_t prototype:
 
-	svn_error_t *f (const char **MSG,
+        svn_error_t *f (const char **MSG,
                         svn_boolean_t MSG_ONLY
                         apr_pool_t *POOL);
 

@@ -141,7 +141,7 @@ class Generator(gen_win.WinGeneratorBase):
 
     # apr doesn't supply vcproj files, the user must convert them
     # manually before loading the generated solution
-    self.move_proj_file(os.path.join('build', 'win32'), 
+    self.move_proj_file(os.path.join('build', 'win32'),
                         'svn_config' + self.vcproj_extension,
                           (
                             ('sql', sql),
@@ -180,7 +180,7 @@ class Generator(gen_win.WinGeneratorBase):
     for target in install_targets:
       fname = self.get_external_project(target, self.vcproj_extension[1:])
       if fname is None:
-        fname = os.path.join(self.projfilesdir, "%s%s" % 
+        fname = os.path.join(self.projfilesdir, "%s%s" %
                              (target.proj_name, self.vcproj_extension))
       target.fname = fname
 

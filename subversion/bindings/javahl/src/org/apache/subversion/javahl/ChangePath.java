@@ -42,14 +42,17 @@ public class ChangePath implements java.io.Serializable
      * @param action            action performed
      * @param nodeKind          the kind of the changed path
      */
-    ChangePath(String path, long copySrcRevision, String copySrcPath,
-               char action, int nodeKind)
+    public ChangePath(String path, long copySrcRevision, String copySrcPath,
+               char action, NodeKind nodeKind, Tristate textMods,
+               Tristate propMods)
     {
         this.path = path;
         this.copySrcRevision = copySrcRevision;
         this.copySrcPath = copySrcPath;
         this.action = action;
         this.nodeKind = nodeKind;
+        this.textMods = textMods;
+        this.propMods = propMods;
     }
 
     /** Path of commited item */
@@ -65,7 +68,13 @@ public class ChangePath implements java.io.Serializable
     private char action;
 
     /** The kind of the changed path. */
-    private int nodeKind;
+    private NodeKind nodeKind;
+
+    /** Whether the text was modified. */
+    private Tristate textMods;
+
+    /** Whether the properties were modified. */
+    private Tristate propMods;
 
     /**
      * Retrieve the path to the commited item
@@ -107,8 +116,26 @@ public class ChangePath implements java.io.Serializable
      * Retrieve the node kind
      * @return  the node kind
      */
-    public int getNodeKind()
+    public NodeKind getNodeKind()
     {
         return nodeKind;
+    }
+
+    /**
+     * Retrieve whether the text was modified.
+     * @return   the text mod state
+     */
+    public Tristate getTextMods()
+    {
+        return textMods;
+    }
+
+    /**
+     * Retrieve whether the properties were modified.
+     * @return   the prop mod state
+     */
+    public Tristate getPropMods()
+    {
+        return propMods;
     }
 }

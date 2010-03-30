@@ -18,7 +18,7 @@
 # under the License.
 #
 #
-import unittest, os, setup_path, tempfile
+import unittest, setup_path, tempfile
 from sys import version_info # For Python version check
 if version_info[0] >= 3:
   # Python >=3.0
@@ -40,7 +40,7 @@ class ChangeReceiver(delta.Editor):
     self.tgt_root = tgt_root
     self.textdeltas = []
 
-  def apply_textdelta(self, file_baton, base_checksum):
+  def apply_textdelta(self, file_baton, base_checksum, pool=None):
     def textdelta_handler(textdelta):
       if textdelta is not None:
         self.textdeltas.append(textdelta)
@@ -62,6 +62,19 @@ class SubversionRepositoryTestCase(unittest.TestCase):
   def tearDown(self):
     self.fs = None
     self.repos = None
+
+  def test_cease_invocation(self):
+    """Test returning SVN_ERR_CEASE_INVOCATION from a callback"""
+
+    revs = []
+    def history_lookup(path, rev, pool):
+      revs.append(rev)
+      raise core.SubversionException(apr_err=core.SVN_ERR_CEASE_INVOCATION,
+                                     message="Hi from history_lookup")
+    
+    repos.history2(self.fs, '/trunk/README2.txt', history_lookup, None, 0,
+                   self.rev, True)
+    self.assertEqual(len(revs), 1)
 
   def test_create(self):
     """Make sure that repos.create doesn't segfault when we set fs-type
@@ -160,7 +173,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     # Check results
     self.assertEqual(editor.textdeltas[0].new_data, "This is a test.\n")
     self.assertEqual(editor.textdeltas[1].new_data, "A test.\n")
-    self.assertEqual(len(editor.textdeltas),2)
+    self.assertEqual(len(editor.textdeltas), 2)
 
   def test_retrieve_and_change_rev_prop(self):
     """Test playing with revprops"""

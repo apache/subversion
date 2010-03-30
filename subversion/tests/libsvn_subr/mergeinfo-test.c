@@ -159,7 +159,7 @@ static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
     "/patch-common::netasq-bpf.c",
     "/patch-common_netasq-bpf.c:",
     "/:patch:common:netasq:bpf.c",
-    
+
     "/trunk",
     "/trunk",
     "/trunk",
@@ -382,7 +382,7 @@ range_to_string(svn_merge_range_t *range,
    verified (e.g. "svn_rangelist_intersect"), while TYPE is a word
    describing what the ranges being examined represent. */
 static svn_error_t *
-verify_ranges_match(apr_array_header_t *actual_rangelist,
+verify_ranges_match(const apr_array_header_t *actual_rangelist,
                     svn_merge_range_t *expected_ranges, int nbr_expected,
                     const char *func_verified, const char *type,
                     apr_pool_t *pool)
@@ -479,21 +479,68 @@ static svn_error_t *
 test_rangelist_intersect(apr_pool_t *pool)
 {
   apr_array_header_t *rangelist1, *rangelist2, *intersection;
-  svn_merge_range_t expected_intersection[] =
-    { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE}, {30, 32, TRUE},
+
+  /* Expected intersection when considering inheritance. */
+  svn_merge_range_t intersection_consider_inheritance[] =
+    { {0, 1, TRUE}, {11, 12, TRUE}, {30, 32, FALSE}, {39, 42, TRUE} };
+
+  /* Expected intersection when ignoring inheritance. */
+  svn_merge_range_t intersection_ignore_inheritance[] =
+    { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE}, {30, 32, FALSE},
       {39, 42, TRUE} };
 
-  SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16,30-32,40-42", pool));
-  SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4,7,9,11-12,31-34,38-44",
+  SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16,30-32*,40-42", pool));
+  SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4*,7,9,11-12,31-34*,38-44",
                               pool));
   rangelist1 = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   rangelist2 = apr_hash_get(info2, "/trunk", APR_HASH_KEY_STRING);
 
+  /* Check the intersection while considering inheritance twice, reversing
+     the order of the rangelist arguments on the second call to
+     svn_rangelist_intersection.  The order *should* have no effect on
+     the result -- see http://svn.haxx.se/dev/archive-2010-03/0351.shtml.
+
+     '3-4*' has different inheritance than '1-6', so no intersection is
+     expected.  '30-32*' and '31-34*' have the same inheritance, so intersect
+     at '31-32*'.  Per the svn_rangelist_intersect API, since both ranges
+     are non-inheritable, so is the result. */
   SVN_ERR(svn_rangelist_intersect(&intersection, rangelist1, rangelist2,
                                   TRUE, pool));
 
-  return verify_ranges_match(intersection, expected_intersection, 5,
-                             "svn_rangelist_intersect", "intersect", pool);
+  SVN_ERR(verify_ranges_match(intersection,
+                              intersection_consider_inheritance,
+                              4, "svn_rangelist_intersect", "intersect",
+                              pool));
+
+  SVN_ERR(svn_rangelist_intersect(&intersection, rangelist2, rangelist1,
+                                  TRUE, pool));
+
+  SVN_ERR(verify_ranges_match(intersection,
+                              intersection_consider_inheritance,
+                              4, "svn_rangelist_intersect", "intersect",
+                              pool));
+
+  /* Check the intersection while ignoring inheritance.  The one difference
+     from when we consider inheritance is that '3-4*' and '1-6' now intersect,
+     since we don't care about inheritability, just the start and end ranges.
+     Per the svn_rangelist_intersect API, since only one range is
+     non-inheritable the result is inheritable. */
+  SVN_ERR(svn_rangelist_intersect(&intersection, rangelist1, rangelist2,
+                                  FALSE, pool));
+
+  SVN_ERR(verify_ranges_match(intersection,
+                              intersection_ignore_inheritance,
+                              5, "svn_rangelist_intersect", "intersect",
+                              pool));
+
+  SVN_ERR(svn_rangelist_intersect(&intersection, rangelist2, rangelist1,
+                                  FALSE, pool));
+
+  SVN_ERR(verify_ranges_match(intersection,
+                              intersection_ignore_inheritance,
+                              5, "svn_rangelist_intersect", "intersect",
+                              pool));
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -880,7 +927,8 @@ test_remove_rangelist(apr_pool_t *pool)
 /* Random number seed. */
 static apr_uint32_t random_rev_array_seed;
 
-/* Fill 3/4 of the array with 1s. */
+/* Set a random 3/4-ish of the elements of array REVS[RANDOM_REV_ARRAY_LENGTH]
+ * to TRUE and the rest to FALSE. */
 static void
 randomly_fill_rev_array(svn_boolean_t *revs)
 {
@@ -892,6 +940,8 @@ randomly_fill_rev_array(svn_boolean_t *revs)
     }
 }
 
+/* Set *RANGELIST to a rangelist representing the revisions that are marked
+ * with TRUE in the array REVS[RANDOM_REV_ARRAY_LENGTH]. */
 static svn_error_t *
 rev_array_to_rangelist(apr_array_header_t **rangelist,
                        svn_boolean_t *revs,
@@ -946,6 +996,9 @@ test_rangelist_remove_randomly(apr_pool_t *pool)
 
       randomly_fill_rev_array(first_revs);
       randomly_fill_rev_array(second_revs);
+      /* There is no change numbered "r0" */
+      first_revs[0] = FALSE;
+      second_revs[0] = FALSE;
       for (j = 0; j < RANDOM_REV_ARRAY_LENGTH; j++)
         expected_revs[j] = second_revs[j] && !first_revs[j];
 
@@ -1001,6 +1054,9 @@ test_rangelist_intersect_randomly(apr_pool_t *pool)
 
       randomly_fill_rev_array(first_revs);
       randomly_fill_rev_array(second_revs);
+      /* There is no change numbered "r0" */
+      first_revs[0] = FALSE;
+      second_revs[0] = FALSE;
       for (j = 0; j < RANDOM_REV_ARRAY_LENGTH; j++)
         expected_revs[j] = second_revs[j] && first_revs[j];
 
@@ -1098,7 +1154,7 @@ test_mergeinfo_to_string(apr_pool_t *pool)
                APR_HASH_KEY_STRING,
                apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING));
   SVN_ERR(svn_mergeinfo_to_string(&output, info2, pool));
-  
+
   if (svn_string_compare(expected, output) != TRUE)
     return fail(pool, "Mergeinfo string not what we expected");
 

@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.Map;
 import java.text.DateFormat;
-import java.text.SimpleDateFormat; 
+import java.text.SimpleDateFormat;
 
 
 /**
@@ -759,10 +759,15 @@ public class BasicTests extends SVNTests
                                  false);
         client.propertyCreate(itemPath, "cqcq", "qrz", Depth.empty, null,
                               false);
-        MyProplistCallback callback = new MyProplistCallback();
 
-        client.properties(itemPath, null, null, Depth.empty, null, callback);
-        Map<String, byte[]> propMap = callback.getProperties(itemPath);
+        final Map<String, Map<String, byte[]>> propMaps =
+                                    new HashMap<String, Map<String, byte[]>>();
+        client.properties(itemPath, null, null, Depth.empty, null,
+            new ProplistCallback () {
+                public void singlePath(String path, Map<String, byte[]> props)
+                { propMaps.put(path, props); }
+            });
+        Map<String, byte[]> propMap = propMaps.get(itemPath);
         for (String key : propMap.keySet())
         {
             assertEquals("cqcq", key);
@@ -1285,7 +1290,7 @@ public class BasicTests extends SVNTests
 
         // flag A/mu as resolved
         client.resolve(backupTest.getWCPath()+"/A/mu", Depth.empty,
-                ConflictResult.chooseMerged);
+                ConflictResult.Choice.chooseMerged);
         backupTest.getWc().setItemTextStatus("A/mu", Status.Kind.modified);
         backupTest.getWc().removeItem("A/mu.r1");
         backupTest.getWc().removeItem("A/mu.r2");
@@ -1293,7 +1298,7 @@ public class BasicTests extends SVNTests
 
         // flag A/D/G/rho as resolved
         client.resolve(backupTest.getWCPath()+"/A/D/G/rho", Depth.empty,
-                ConflictResult.chooseMerged);
+                ConflictResult.Choice.chooseMerged);
         backupTest.getWc().setItemTextStatus("A/D/G/rho",
                                              Status.Kind.modified);
         backupTest.getWc().removeItem("A/D/G/rho.r1");
@@ -2094,8 +2099,8 @@ public class BasicTests extends SVNTests
                                   Depth.empty, null)[0];
         assertEquals("wrong revision from info", 1,
                      info.getLastChangedRev());
-        assertEquals("wrong schedule kind from info", ScheduleKind.normal,
-                     info.getSchedule());
+        assertEquals("wrong schedule kind from info",
+                     Info2.ScheduleKind.normal, info.getSchedule());
         assertEquals("wrong node kind from info", NodeKind.file,
                      info.getKind());
     }
@@ -2352,38 +2357,32 @@ public class BasicTests extends SVNTests
      * are no revisions to return.
      * @since 1.5
      */
-    private long[] getMergeinfoRevisions(int kind, String pathOrUrl,
+    private long[] getMergeinfoRevisions(MergeinfoLogKind kind,
+                                         String pathOrUrl,
                                          Revision pegRevision,
                                          String mergeSourceUrl,
-                                         Revision srcPegRevision) 
+                                         Revision srcPegRevision)
         throws SubversionException
     {
-        class Callback implements LogMessageCallback {
+        final List<Long> revList = new ArrayList<Long>();
 
-            List<Long> revList = new ArrayList<Long>();
-
-            public void singleMessage(Set<ChangePath> changedPaths,
-                    long revision, Map<String, byte[]> revprops,
-                    boolean hasChildren) {
-                revList.add(new Long(revision));
-            }
-
-            public long[] getRevisions() {
-                long[] revisions = new long[revList.size()];
-                int i = 0;
-                for (Long revision : revList)
-                {
-                    revisions[i] = revision.longValue();
-                    i++;
-                }
-                return revisions;
-            }
-        }
-        Callback callback = new Callback();
         client.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
-                               srcPegRevision, false, Depth.empty, null,
-                               callback);
-        return callback.getRevisions();
+            srcPegRevision, false, Depth.empty, null,
+            new LogMessageCallback () {
+                public void singleMessage(Set<ChangePath> changedPaths,
+                    long revision, Map<String, byte[]> revprops,
+                    boolean hasChildren)
+                { revList.add(new Long(revision)); }
+            });
+
+        long[] revisions = new long[revList.size()];
+        int i = 0;
+        for (Long revision : revList)
+        {
+            revisions[i] = revision.longValue();
+            i++;
+        }
+        return revisions;
     }
 
     /**
@@ -2452,7 +2451,7 @@ public class BasicTests extends SVNTests
         {
             public void onNotify(NotifyInformation info)
             {
-                if (info.getAction() == NotifyAction.merge_begin)
+                if (info.getAction() == NotifyInformation.Action.merge_begin)
                 {
                     RevisionRange r = info.getMergeRange();
                     actualRange[0] = r.getFromRevision();
@@ -2540,7 +2539,7 @@ public class BasicTests extends SVNTests
 
         String branchPath = thisTest.getWCPath() + "/branches/A";
         String modUrl = thisTest.getUrl() + "/A";
-        Revision unspec = new Revision(RevisionKind.unspecified);
+        Revision unspec = new Revision(Revision.Kind.unspecified);
         List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
         ranges.add(new RevisionRange(unspec, unspec));
         client.merge(modUrl, Revision.HEAD, ranges,
@@ -2594,7 +2593,7 @@ public class BasicTests extends SVNTests
 
         String branchPath = thisTest.getWCPath() + "/branches/A";
         String modUrl = thisTest.getUrl() + "/A";
-        Revision unspec = new Revision(RevisionKind.unspecified);
+        Revision unspec = new Revision(Revision.Kind.unspecified);
         List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
         ranges.add(new RevisionRange(unspec, unspec));
         client.merge(modUrl, Revision.HEAD, ranges,
@@ -2655,7 +2654,7 @@ public class BasicTests extends SVNTests
             {
                 public ConflictResult resolve(ConflictDescriptor descrip)
                 {
-                    return new ConflictResult(ConflictResult.chooseTheirsConflict,
+                    return new ConflictResult(ConflictResult.Choice.chooseTheirsConflict,
                                               null);
                 }
             });
@@ -3069,10 +3068,10 @@ public class BasicTests extends SVNTests
         assertEquals("Incorrect path for " + BETA_PATH, BETA_PATH,
                      betaDiff.getPath());
         assertTrue("Incorrect diff kind for " + BETA_PATH,
-                   DiffSummary.DiffKind.ADDED.equals(betaDiff.getDiffKind()));
+                   betaDiff.getDiffKind() == DiffSummary.DiffKind.added);
         assertEquals("Incorrect props changed notice for " + BETA_PATH,
                      false, betaDiff.propsChanged());
-        assertEquals("Incorrect node kind for " + BETA_PATH, 1,
+        assertEquals("Incorrect node kind for " + BETA_PATH, NodeKind.file,
                      betaDiff.getNodeKind());
     }
 
@@ -3228,8 +3227,8 @@ public class BasicTests extends SVNTests
         // we expect the tree conflict to turn the existing item into
         // a scheduled-add with history.  We expect the modifications in
         // the local file to have been copied to the new file.
-        tcTest.getWc().setItemTextStatus("A/B/E/alpha", StatusKind.added);
-        tcTest.getWc().setItemTextStatus("A/B/F/alpha", StatusKind.modified);
+        tcTest.getWc().setItemTextStatus("A/B/E/alpha", Status.Kind.added);
+        tcTest.getWc().setItemTextStatus("A/B/F/alpha", Status.Kind.modified);
 
         // check the status of the working copy of the tc test
         tcTest.checkStatus();
@@ -3310,8 +3309,8 @@ public class BasicTests extends SVNTests
         Status[] secondWCStatus = statusCallback.getStatusArray();
         if (!(secondWCStatus.length == 1 &&
             secondWCStatus[0].getPath().endsWith("A/B/lambda") &&
-            secondWCStatus[0].getTextStatus() == StatusKind.modified &&
-            secondWCStatus[0].getPropStatus() == StatusKind.none))
+            secondWCStatus[0].getTextStatus() == Status.Kind.modified &&
+            secondWCStatus[0].getPropStatus() == Status.Kind.none))
         {
             fail("Unexpected WC status after co with " +
                  "unversioned obstructions");
@@ -3458,25 +3457,6 @@ public class BasicTests extends SVNTests
      */
     public void testCommitRevprops() throws Throwable
     {
-
-        class RevpropLogCallback implements LogMessageCallback
-        {
-            Map<String, byte[]> revprops;
-
-            public void singleMessage(Set<ChangePath> changedPaths,
-                                      long revision,
-                                      Map<String, byte[]> revprops,
-                                      boolean hasChildren)
-            {
-                this.revprops = revprops;
-            }
-
-            public Map<String, byte[]> getRevprops()
-            {
-                return revprops;
-            }
-        }
-
         // build the test setup
         OneTest thisTest = new OneTest();
 
@@ -3506,16 +3486,23 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         // Fetch our revprops from the server
-        RevpropLogCallback callback = new RevpropLogCallback();
+        final List<Map<String, byte[]>> revpropList =
+                            new ArrayList<Map<String, byte[]>>();
         Set<String> revProps = new HashSet<String>(2);
         revProps.add("kfogel");
         revProps.add("cmpilato");
         client.logMessages(thisTest.getWCPath(), Revision.getInstance(2),
-                           toRevisionRange(Revision.getInstance(2),
-                                           Revision.getInstance(2)),
-                           false, false, false, revProps, 0,
-                           callback);
-        Map<String, byte[]> fetchedProps = callback.getRevprops();
+                toRevisionRange(Revision.getInstance(2),
+                                Revision.getInstance(2)),
+                false, false, false, revProps, 0,
+                new LogMessageCallback () {
+                    public void singleMessage(Set<ChangePath> changedPaths,
+                                              long revision,
+                                              Map<String, byte[]> revprops,
+                                              boolean hasChildren)
+                  { revpropList.add(revprops); }
+                });
+        Map<String, byte[]> fetchedProps = revpropList.get(0);
 
         assertEquals("wrong number of fetched revprops", revprops.size(),
                      fetchedProps.size());
@@ -3615,22 +3602,6 @@ public class BasicTests extends SVNTests
         }
     }
 
-    private class MyProplistCallback implements ProplistCallback
-    {
-        Map<String, Map<String, byte[]>> propMap =
-                                    new HashMap<String, Map<String, byte[]>>();
-
-        public void singlePath(String path, Map<String, byte[]> props)
-        {
-            propMap.put(path, props);
-        }
-
-        public Map<String, byte[]> getProperties(String path)
-        {
-            return propMap.get(path);
-        }
-    } 
-
     private class MyStatusCallback implements StatusCallback
     {
         private List<Status> statuses = new ArrayList<Status>();
@@ -3648,35 +3619,24 @@ public class BasicTests extends SVNTests
 
     private Map<String, byte[]> collectProperties(String path,
                                              Revision revision,
-                                             Revision pegRevision, int depth,
+                                             Revision pegRevision, Depth depth,
                                              Collection<String> changelists)
         throws ClientException
     {
-        class MyProplistCallback implements ProplistCallback
-        {
-            Map<String, Map<String, byte[]>> propMap =
-                                new HashMap<String, Map<String, byte[]>>();
-
-            public void singlePath(String path, Map<String, byte[]> props)
-            {
-                propMap.put(path, props);
-            }
-
-            public Map<String, byte[]> getProperties(String path)
-            {
-                return propMap.get(path);
-            }
-        }
-
-        MyProplistCallback callback = new MyProplistCallback();
+       final Map<String, Map<String, byte[]>> propMap = 
+            new HashMap<String, Map<String, byte[]>>();
+       
         client.properties(path, revision, revision, depth, changelists,
-                callback);
+                new ProplistCallback () {
+            public void singlePath(String path, Map<String, byte[]> props)
+            { propMap.put(path, props); }          
+        });
 
-        return callback.getProperties(path);
+        return propMap.get(path);
     }
 
     private DirEntry[] collectDirEntries(String url, Revision revision,
-                                         Revision pegRevision, int depth,
+                                         Revision pegRevision, Depth depth,
                                          int direntFields, boolean fetchLocks)
         throws ClientException
     {
@@ -3725,29 +3685,18 @@ public class BasicTests extends SVNTests
     }
 
     private Info2[] collectInfos(String pathOrUrl, Revision revision,
-                                 Revision pegRevision, int depth,
+                                 Revision pegRevision, Depth depth,
                                  Collection<String> changelists)
         throws ClientException
     {
-        class MyInfoCallback implements InfoCallback
-        {
-            private List<Info2> infos = new ArrayList<Info2>();
-
-            public void singleInfo(Info2 info)
-            {
-                infos.add(info);
-            }
-
-            public Info2[] getInfoArray()
-            {
-                return infos.toArray(new Info2[infos.size()]);
-            }
-        }
-
-        MyInfoCallback callback = new MyInfoCallback();
+       final List<Info2> infos = new ArrayList<Info2>();
+       
         client.info2(pathOrUrl, revision, pegRevision, depth, changelists,
-                     callback);
-        return callback.getInfoArray();
+                     new InfoCallback () {
+            public void singleInfo(Info2 info)
+            { infos.add(info); }           
+        });
+        return infos.toArray(new Info2[infos.size()]);
     }
 
     private LogMessage[] collectLogMessages(String path, Revision pegRevision,
@@ -3829,6 +3778,67 @@ public class BasicTests extends SVNTests
         return sb.toString().getBytes();
     }
 
+    protected class LogMessage
+    {
+        private String message;
+
+        private long timeMicros;
+
+        private Date date;
+
+        private long revision;
+
+        private String author;
+
+        private Set<ChangePath> changedPaths;
+
+        LogMessage(Set<ChangePath> cp, long r, String a, long t, String m)
+        {
+            changedPaths = cp;
+            revision = r;
+            author = a;
+            timeMicros = t;
+            date = null;
+            message = m;
+        }
+
+        public String getMessage()
+        {
+            return message;
+        }
+
+        public long getTimeMicros()
+        {
+            return timeMicros;
+        }
+
+        public long getTimeMillis()
+        {
+            return timeMicros / 1000;
+        }
+
+        public Date getDate()
+        {
+            if (date == null)
+               date = new Date(timeMicros / 1000);
+            return date;
+        }
+
+        public long getRevisionNumber()
+        {
+            return revision;
+        }
+
+        public String getAuthor()
+        {
+            return author;
+        }
+
+        public Set<ChangePath> getChangedPaths()
+        {
+            return changedPaths;
+        }
+    }
 
     /* A blame callback implementation. */
     protected class BlameCallbackImpl implements BlameCallback
@@ -4042,5 +4052,5 @@ public class BasicTests extends SVNTests
                 sb.append(val);
             }
         }
-    }    
+    }
 }

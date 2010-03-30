@@ -38,38 +38,6 @@
 
 #include "svn_private_config.h"
 
-
-/* OVERVIEW
- *
- * This file handles the storage and retrieval of tree conflict descriptions
- * (svn_wc_conflict_description_t) in the WC.
- *
- * Data Format
- *
- * All tree conflicts descriptions for the current tree conflict victims in
- * one parent directory are stored in a single "tree_conflict_data" text
- * field in that parent's THIS_DIR entry.
- *
- *   tree_conflict_data: zero or more conflicts (one per victim path),
- *     separated by the SVN_WC__TREE_CONFLICT_DESC_SEPARATOR character.
- *
- *   a description entry: a fixed sequence of text fields, some of which
- *     may be empty, corresponding to the pertinent fields of
- *     svn_wc_conflict_description_t, separated by
- *     SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR.
- *
- *   a field: a string within which any separator or escape characters are
- *     escaped with the escape character SVN_WC__TREE_CONFLICT_ESCAPE_CHAR.
- *
- * Error Handling
- *
- * On reading from the WC entry, errors of malformed data are handled by
- * raising an svn_error_t, as these can occur from WC corruption. On
- * writing, errors in the internal data consistency before it is written are
- * handled more severely because any such errors must be due to a bug.
- */
-
-
 /* ### this should move to a more general location...  */
 /* A map for svn_node_kind_t values. */
 static const svn_token_map_t node_kind_map[] =
@@ -115,6 +83,7 @@ const svn_token_map_t svn_wc__conflict_reason_map[] =
 };
 
 
+/* */
 static svn_boolean_t
 is_valid_version_info_skel(const svn_skel_t *skel)
 {
@@ -127,6 +96,7 @@ is_valid_version_info_skel(const svn_skel_t *skel)
 }
 
 
+/* */
 static svn_boolean_t
 is_valid_conflict_skel(const svn_skel_t *skel)
 {
@@ -216,11 +186,9 @@ read_node_version_info(const svn_wc_conflict_version_t **version_info,
 }
 
 /* Parse a newly allocated svn_wc_conflict_description2_t object from the
- * character string pointed to by *START. Return the result in *CONFLICT.
- * Don't read further than END. Set *START to point to the next character
- * after the description that was read.
+ * provided SKEL. Return the result in *CONFLICT, allocated in RESULT_POOL.
  * DIR_PATH is the path to the WC directory whose conflicts are being read.
- * Do all allocations in pool.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_wc__deserialize_conflict(const svn_wc_conflict_description2_t **conflict,
@@ -468,7 +436,7 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
     {
       svn_skel_t *c_skel;
 
-      SVN_ERR(svn_wc__serialize_conflict(&c_skel, svn_apr_hash_index_val(hi),
+      SVN_ERR(svn_wc__serialize_conflict(&c_skel, svn__apr_hash_index_val(hi),
                                          pool, pool));
       svn_skel__prepend(c_skel, skel);
     }

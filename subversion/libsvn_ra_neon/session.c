@@ -680,8 +680,8 @@ ra_neon_get_schemes(apr_pool_t *pool)
 
 typedef struct neonprogress_baton_t
 {
-  svn_ra_progress_notify_func_t progress_func;
-  void *progress_baton;
+  svn_ra_neon__session_t *ras;
+  apr_off_t last_progress;
   apr_pool_t *pool;
 } neonprogress_baton_t;
 
@@ -692,12 +692,36 @@ ra_neon_neonprogress(void *baton, ne_off_t progress, ne_off_t total)
 ra_neon_neonprogress(void *baton, off_t progress, off_t total)
 #endif /* SVN_NEON_0_27 */
 {
-  const neonprogress_baton_t *neonprogress_baton = baton;
-  if (neonprogress_baton->progress_func)
+  neonprogress_baton_t *pb = baton;
+  svn_ra_neon__session_t *ras = pb->ras;
+
+ if (ras->progress_func)
     {
-      neonprogress_baton->progress_func(progress, total,
-                                        neonprogress_baton->progress_baton,
-                                        neonprogress_baton->pool);
+      if (total < 0)
+        {
+          /* Neon sends the total number of bytes sent for this specific
+             session and there are two sessions active at once.
+
+             For this case we combine the totals to allow clients to provide
+             a better progress indicator. */
+
+          if (progress >= pb->last_progress)
+            ras->total_progress += (progress - pb->last_progress);
+          else
+            /* Session total has been reset. A new stream started */
+            ras->total_progress += pb->last_progress;
+
+          pb->last_progress = progress;
+
+          ras->progress_func(ras->total_progress, -1, ras->progress_baton,
+                             pb->pool);
+        }
+      else
+        {
+          /* Neon provides total bytes to receive information. Pass literaly
+             to allow providing a percentage. */
+          ras->progress_func(progress, total, ras->progress_baton, pb->pool);
+        }
     }
 }
 
@@ -761,14 +785,13 @@ svn_ra_neon__open(svn_ra_session_t *session,
   svn_boolean_t compression;
   svn_config_t *cfg, *cfg_client;
   const char *server_group;
-  char *itr;
   unsigned int neon_auth_types = 0;
   const char *pkcs11_provider;
-  neonprogress_baton_t *neonprogress_baton =
-    apr_pcalloc(pool, sizeof(*neonprogress_baton));
   const char *useragent = NULL;
   const char *client_string = NULL;
   svn_revnum_t ignored_revnum;
+
+  SVN_ERR_ASSERT(svn_uri_is_canonical(repos_URL, pool));
 
   if (callbacks->get_client_string)
     callbacks->get_client_string(callback_baton, &client_string, pool);
@@ -791,16 +814,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
   /* we want to know if the repository is actually somewhere else */
   /* ### not yet: http_redirect_register(sess, ... ); */
 
-  /* HACK!  Neon uses strcmp when checking for https, but RFC 2396 says
-   * we should be using case-insensitive comparisons when checking for
-   * URI schemes.  To allow our users to use WeIrd CasE HttPS we force
-   * the scheme to lower case before we pass it on to Neon, otherwise we
-   * would crash later on when we assume Neon has set up its https stuff
-   * but it really didn't. */
-  for (itr = uri->scheme; *itr; ++itr)
-    *itr = tolower(*itr);
-
-  is_ssl_session = (svn_cstring_casecmp(uri->scheme, "https") == 0);
+  is_ssl_session = (strcmp(uri->scheme, "https") == 0);
   if (is_ssl_session)
     {
       if (ne_has_support(NE_FEATURE_SSL) == 0)
@@ -975,10 +989,10 @@ svn_ra_neon__open(svn_ra_session_t *session,
               ca_cert = ne_ssl_cert_read(file);
               if (ca_cert == NULL)
                 {
-                  return svn_error_createf
-                    (SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                     _("Invalid config: unable to load certificate file '%s'"),
-                     svn_path_local_style(file, pool));
+                  return svn_error_createf(
+                    SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                    _("Invalid config: unable to load certificate file '%s'"),
+                    svn_dirent_local_style(file, pool));
                 }
               ne_ssl_trust_cert(sess, ca_cert);
               ne_ssl_trust_cert(sess2, ca_cert);
@@ -1040,11 +1054,22 @@ svn_ra_neon__open(svn_ra_session_t *session,
           ne_ssl_trust_default_ca(sess2);
         }
     }
-  neonprogress_baton->pool = pool;
-  neonprogress_baton->progress_baton = callbacks->progress_baton;
-  neonprogress_baton->progress_func = callbacks->progress_func;
-  ne_set_progress(sess, ra_neon_neonprogress, neonprogress_baton);
-  ne_set_progress(sess2, ra_neon_neonprogress, neonprogress_baton);
+
+  if (ras->progress_func)
+    {
+      neonprogress_baton_t *progress1 = apr_pcalloc(pool, sizeof(*progress1));
+      neonprogress_baton_t *progress2 = apr_pcalloc(pool, sizeof(*progress2));
+
+      progress1->pool = pool;
+      progress1->ras = ras;
+      progress1->last_progress = 0;
+
+      *progress2 = *progress1;
+
+      ne_set_progress(sess, ra_neon_neonprogress, progress1);
+      ne_set_progress(sess2, ra_neon_neonprogress, progress2);
+    }
+
   session->priv = ras;
 
   return svn_ra_neon__exchange_capabilities(ras, &ignored_revnum, pool);

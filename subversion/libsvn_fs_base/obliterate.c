@@ -161,8 +161,8 @@ svn_fs_base__node_rev_dup(const svn_fs_id_t **new_id,
           for (hi = apr_hash_first(scratch_pool, entries); hi;
                hi = apr_hash_next(hi))
             {
-              const char *child_name = svn_apr_hash_index_key(hi);
-              svn_fs_dirent_t *child_entry = svn_apr_hash_index_val(hi);
+              const char *child_name = svn__apr_hash_index_key(hi);
+              svn_fs_dirent_t *child_entry = svn__apr_hash_index_val(hi);
               const svn_fs_id_t *new_child_id;
 
               svn_pool_clear(iterpool);

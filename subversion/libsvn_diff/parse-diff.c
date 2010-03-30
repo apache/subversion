@@ -31,9 +31,7 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 #include "svn_dirent_uri.h"
-
-#include "private/svn_diff_private.h"
-
+#include "svn_diff.h"
 
 /* Helper macro for readability */
 #define starts_with(str, start)  \
@@ -411,7 +409,7 @@ parse_next_hunk(svn_hunk_t **hunk,
 
   if (! eof)
     /* Rewind to the start of the line just read, so subsequent calls
-     * to this function or svn_diff__parse_next_patch() don't end
+     * to this function or svn_diff_parse_next_patch() don't end
      * up skipping the line -- it may contain a patch or hunk header. */
     SVN_ERR(svn_io_file_seek(patch->patch_file, APR_SET, &last_line,
                              scratch_pool));
@@ -499,11 +497,11 @@ close_hunk(const svn_hunk_t *hunk)
 }
 
 svn_error_t *
-svn_diff__parse_next_patch(svn_patch_t **patch,
-                           apr_file_t *patch_file,
-                           svn_boolean_t reverse,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
+svn_diff_parse_next_patch(svn_patch_t **patch,
+                          apr_file_t *patch_file,
+                          svn_boolean_t reverse,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   static const char * const minus = "--- ";
   static const char * const plus = "+++ ";
@@ -633,7 +631,7 @@ svn_diff__parse_next_patch(svn_patch_t **patch,
 }
 
 svn_error_t *
-svn_diff__close_patch(const svn_patch_t *patch)
+svn_diff_close_patch(const svn_patch_t *patch)
 {
   int i;
 

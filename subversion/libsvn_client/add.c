@@ -312,8 +312,8 @@ add_file(const char *local_abspath,
       for (hi = apr_hash_first(pool, properties);
            hi != NULL; hi = apr_hash_next(hi))
         {
-          const char *pname = svn_apr_hash_index_key(hi);
-          const svn_string_t *pval = svn_apr_hash_index_val(hi);
+          const char *pname = svn__apr_hash_index_key(hi);
+          const svn_string_t *pval = svn__apr_hash_index_val(hi);
           svn_error_t *err;
 
           /* It's probably best to pass 0 for force, so that if

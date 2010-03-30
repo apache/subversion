@@ -57,9 +57,9 @@ public class Info2 implements java.io.Serializable
     private long rev;
 
     /**
-     * the item kinds (see NodeKind)
+     * the item kinds
      */
-    private int kind;
+    private NodeKind kind;
 
     /**
      * the root URL of the repository
@@ -97,9 +97,9 @@ public class Info2 implements java.io.Serializable
     private boolean hasWcInfo;
 
     /**
-     * the scheduled operation at next commit (see ScheduleKind)
+     * the scheduled operation at next commit
      */
-    private int schedule;
+    private ScheduleKind schedule;
 
     /**
      * if the item was copied, the source url
@@ -175,7 +175,7 @@ public class Info2 implements java.io.Serializable
      * The depth of the item.
      * @since 1.6
      */
-    private int depth;
+    private Depth depth;
 
     /**
      * Info on any tree conflict of which this node is a victim.
@@ -210,14 +210,14 @@ public class Info2 implements java.io.Serializable
      * @param depth
      * @param treeConflict
      */
-    Info2(String path, String url, long rev, int kind, String reposRootUrl,
-          String reposUUID, long lastChangedRev, long lastChangedDate,
-          String lastChangedAuthor, Lock lock, boolean hasWcInfo, int schedule,
-          String copyFromUrl, long copyFromRev, long textTime, long propTime,
-          String checksum, String conflictOld, String conflictNew,
-          String conflictWrk, String prejfile, String changelistName,
-          long workingSize, long reposSize, int depth,
-          ConflictDescriptor treeConflict)
+    public Info2(String path, String url, long rev, NodeKind kind,
+          String reposRootUrl, String reposUUID, long lastChangedRev,
+          long lastChangedDate, String lastChangedAuthor, Lock lock,
+          boolean hasWcInfo, ScheduleKind schedule, String copyFromUrl,
+          long copyFromRev, long textTime, long propTime, String checksum,
+          String conflictOld, String conflictNew, String conflictWrk,
+          String prejfile, String changelistName, long workingSize,
+          long reposSize, Depth depth, ConflictDescriptor treeConflict)
     {
         this.path = path;
         this.url = url;
@@ -274,7 +274,7 @@ public class Info2 implements java.io.Serializable
     /**
      * return the item kinds (see NodeKind)
      */
-    public int getKind()
+    public NodeKind getKind()
     {
         return kind;
     }
@@ -341,7 +341,7 @@ public class Info2 implements java.io.Serializable
     /**
      * return the scheduled operation at next commit (see ScheduleKind)
      */
-    public int getSchedule()
+    public ScheduleKind getSchedule()
     {
         return schedule;
     }
@@ -463,7 +463,7 @@ public class Info2 implements java.io.Serializable
      * item is a file.
      * @since New in 1.5.
      */
-    public int getDepth()
+    public Depth getDepth()
     {
         return depth;
     }
@@ -483,5 +483,20 @@ public class Info2 implements java.io.Serializable
     public String toString()
     {
         return getUrl();
+    }
+
+    public enum ScheduleKind
+    {
+        /** exists, but uninteresting */
+        normal,
+
+        /** Slated for addition */
+        add,
+
+        /** Slated for deletion */
+        delete,
+
+        /** Slated for replacement (delete + add) */
+        replace;
     }
 }

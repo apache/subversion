@@ -711,8 +711,8 @@ remote_propget(apr_hash_t *props,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *this_name = svn_apr_hash_index_key(hi);
-          svn_dirent_t *this_ent = svn_apr_hash_index_val(hi);
+          const char *this_name = svn__apr_hash_index_key(hi);
+          svn_dirent_t *this_ent = svn__apr_hash_index_val(hi);
           const char *new_target_relative;
           svn_depth_t depth_below_here = depth;
 
@@ -1008,9 +1008,9 @@ remote_proplist(const char *target_prefix,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *name = svn_apr_hash_index_key(hi);
-      apr_ssize_t klen = svn_apr_hash_index_klen(hi);
-      svn_string_t *value = svn_apr_hash_index_val(hi);
+      const char *name = svn__apr_hash_index_key(hi);
+      apr_ssize_t klen = svn__apr_hash_index_klen(hi);
+      svn_string_t *value = svn__apr_hash_index_val(hi);
       svn_prop_kind_t prop_kind;
 
       prop_kind = svn_property_kind(NULL, name);
@@ -1036,8 +1036,8 @@ remote_proplist(const char *target_prefix,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *this_name = svn_apr_hash_index_key(hi);
-          svn_dirent_t *this_ent = svn_apr_hash_index_val(hi);
+          const char *this_name = svn__apr_hash_index_key(hi);
+          svn_dirent_t *this_ent = svn__apr_hash_index_val(hi);
           const char *new_target_relative;
 
           svn_pool_clear(subpool);

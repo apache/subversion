@@ -23,8 +23,6 @@
 
 package org.tigris.subversion.javahl;
 
-import org.apache.subversion.javahl.*;
-
 /**
  * This exception is thrown whenever something goes wrong in the
  * Subversion JavaHL binding's JNI interface.

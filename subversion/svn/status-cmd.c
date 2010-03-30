@@ -180,7 +180,7 @@ print_status(void *baton,
       scache->path = apr_pstrdup(sb->cl_pool, path);
       scache->status = svn_wc_dup_status2(status, sb->cl_pool);
 
-      path_array = (apr_array_header_t *)
+      path_array =
         apr_hash_get(sb->cached_changelists, cl_key, APR_HASH_KEY_STRING);
       if (path_array == NULL)
         {
@@ -305,8 +305,8 @@ svn_cl__status(apr_getopt_t *os,
       for (hi = apr_hash_first(scratch_pool, master_cl_hash); hi;
            hi = apr_hash_next(hi))
         {
-          const char *changelist_name = svn_apr_hash_index_key(hi);
-          apr_array_header_t *path_array = svn_apr_hash_index_val(hi);
+          const char *changelist_name = svn__apr_hash_index_key(hi);
+          apr_array_header_t *path_array = svn__apr_hash_index_val(hi);
           int j;
 
           /* ### TODO: For non-XML output, we shouldn't print the

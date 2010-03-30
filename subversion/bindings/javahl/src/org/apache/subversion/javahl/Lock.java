@@ -80,7 +80,7 @@ public class Lock implements java.io.Serializable
      * @param creationDate      the date when the lock was created
      * @param expirationDate    the date when the lock will expire
      */
-    Lock(String owner, String path, String token, String comment,
+    public Lock(String owner, String path, String token, String comment,
          long creationDate, long expirationDate)
     {
         this.owner = owner;

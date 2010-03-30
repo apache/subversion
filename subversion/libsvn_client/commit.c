@@ -221,8 +221,8 @@ import_file(const svn_delta_editor_t *editor,
     {
       for (hi = apr_hash_first(pool, properties); hi; hi = apr_hash_next(hi))
         {
-          const char *pname = svn_apr_hash_index_key(hi);
-          const svn_string_t *pval = svn_apr_hash_index_val(hi);
+          const char *pname = svn__apr_hash_index_key(hi);
+          const svn_string_t *pval = svn__apr_hash_index_val(hi);
 
           SVN_ERR(editor->change_file_prop(file_baton, pname, pval, pool));
         }
@@ -315,8 +315,8 @@ import_dir(const svn_delta_editor_t *editor,
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
       const char *this_path, *this_edit_path, *abs_path;
-      const char *filename = svn_apr_hash_index_key(hi);
-      const svn_io_dirent_t *dirent = svn_apr_hash_index_val(hi);
+      const char *filename = svn__apr_hash_index_key(hi);
+      const svn_io_dirent_t *dirent = svn__apr_hash_index_val(hi);
 
       svn_pool_clear(subpool);
 
@@ -478,7 +478,7 @@ import_dir(const svn_delta_editor_t *editor,
  */
 static svn_error_t *
 import(const char *path,
-       apr_array_header_t *new_entries,
+       const apr_array_header_t *new_entries,
        const svn_delta_editor_t *editor,
        void *edit_baton,
        svn_depth_t depth,
@@ -601,7 +601,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
               const char *base_url,
               const char *base_dir,
               const char *log_msg,
-              apr_array_header_t *commit_items,
+              const apr_array_header_t *commit_items,
               const apr_hash_t *revprop_table,
               svn_commit_info_t **commit_info_p,
               svn_boolean_t is_commit,
@@ -801,6 +801,9 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
 }
 
 
+/* Remove (if it exists) each file whose path is given by a value in the
+ * hash TEMPFILES, which is a mapping from (const char *) path to (const
+ * char *) tempfile abspath.  Ignore the keys of TEMPFILES. */
 static svn_error_t *
 remove_tmpfiles(apr_hash_t *tempfiles,
                 apr_pool_t *pool)
@@ -818,7 +821,7 @@ remove_tmpfiles(apr_hash_t *tempfiles,
   /* Clean up any tempfiles. */
   for (hi = apr_hash_first(pool, tempfiles); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn_apr_hash_index_key(hi);
+      const char *path = svn__apr_hash_index_val(hi);
 
       svn_pool_clear(subpool);
 
@@ -914,8 +917,8 @@ collect_lock_tokens(apr_hash_t **result,
 
   for (hi = apr_hash_first(pool, all_tokens); hi; hi = apr_hash_next(hi))
     {
-      const char *url = svn_apr_hash_index_key(hi);
-      const char *token = svn_apr_hash_index_val(hi);
+      const char *url = svn__apr_hash_index_key(hi);
+      const char *token = svn__apr_hash_index_val(hi);
 
       if (strncmp(base_url, url, base_len) == 0
           && (url[base_len] == '\0' || url[base_len] == '/'))
@@ -935,7 +938,7 @@ struct post_commit_baton
 {
   svn_wc_committed_queue_t *queue;
   apr_pool_t *qpool;
-  svn_wc_adm_access_t *base_dir_access;
+  svn_wc_context_t *wc_ctx;
   svn_boolean_t keep_changelists;
   svn_boolean_t keep_locks;
   apr_hash_t *checksums;
@@ -950,35 +953,23 @@ post_process_commit_item(void *baton, void *this_item, apr_pool_t *pool)
   svn_client_commit_item3_t *item =
     *(svn_client_commit_item3_t **)this_item;
   svn_boolean_t loop_recurse = FALSE;
-  const char *adm_access_path;
-  svn_wc_adm_access_t *adm_access;
   svn_boolean_t remove_lock;
-  svn_error_t *bump_err;
 
-  if (item->kind == svn_node_dir)
-    adm_access_path = item->path;
-  else
-    adm_access_path = svn_dirent_dirname(item->path, pool);
-
-  bump_err = svn_wc_adm_retrieve(&adm_access, btn->base_dir_access,
-                                 adm_access_path, pool);
-  if (bump_err
-      && bump_err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+  /* Is it a missing, deleted directory?
+ 
+     ### Temporary: once we centralise this sort of node is just a
+     normal delete and will get handled by the post-commit queue. */
+  if (item->kind == svn_node_dir
+      && item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
     {
-      /* Is it a directory that was deleted in the commit?
-         Then we probably committed a missing directory. */
-      if (item->kind == svn_node_dir
-          && item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-        {
-          /* Mark it as deleted in the parent. */
-          svn_error_clear(bump_err);
-          return svn_wc_mark_missing_deleted(item->path,
-                                             btn->base_dir_access, pool);
-        }
-    }
-  if (bump_err)
-    return bump_err;
+      svn_boolean_t obstructed;
 
+      SVN_ERR(svn_wc__node_is_status_obstructed(&obstructed,
+                                                btn->wc_ctx, item->path, pool));
+      if (obstructed)
+        return svn_wc__temp_mark_missing_not_present(item->path,
+                                                     btn->wc_ctx, pool);
+    }
 
   if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
       && (item->kind == svn_node_dir)
@@ -990,7 +981,7 @@ post_process_commit_item(void *baton, void *this_item, apr_pool_t *pool)
 
   /* Allocate the queue in a longer-lived pool than (iter)pool:
      we want it to survive the next iteration. */
-  return svn_wc_queue_committed2(btn->queue, item->path, adm_access,
+  return svn_wc_queue_committed3(btn->queue, item->path,
                                  loop_recurse, item->incoming_prop_changes,
                                  remove_lock, !btn->keep_changelists,
                                  apr_hash_get(btn->checksums,
@@ -1013,7 +1004,6 @@ commit_item_is_changed(void *baton, void *this_item, apr_pool_t *pool)
 
 struct check_dir_delete_baton
 {
-  svn_wc_adm_access_t *base_dir_access;
   svn_wc_context_t *wc_ctx;
   svn_depth_t depth;
 };
@@ -1022,17 +1012,24 @@ static svn_error_t *
 check_nonrecursive_dir_delete(void *baton, void *this_item, apr_pool_t *pool)
 {
   struct check_dir_delete_baton *btn = baton;
-  const char *target_abspath;
+  const char *target_abspath, *lock_abspath;
+  svn_boolean_t locked_here;
+  svn_node_kind_t kind;
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, *(const char **)this_item,
                                   pool));
 
-  {
-    svn_wc_adm_access_t *adm_access;
-    SVN_ERR_W(svn_wc_adm_probe_retrieve(&adm_access, btn->base_dir_access,
-                                        target_abspath, pool),
-              _("Are all the targets part of the same working copy?"));
-  }
+  SVN_ERR(svn_wc__node_get_kind(&kind, btn->wc_ctx, target_abspath, FALSE,
+                                pool));
+  if (kind == svn_node_dir)
+    lock_abspath = target_abspath;
+  else
+    lock_abspath = svn_dirent_dirname(target_abspath, pool);
+
+  SVN_ERR(svn_wc_locked2(&locked_here, NULL, btn->wc_ctx, lock_abspath, pool));
+  if (!locked_here)
+    return svn_error_create(SVN_ERR_WC_LOCKED, NULL,
+                           _("Are all targets part of the same working copy?"));
 
   /* ### TODO(sd): This check is slightly too strict.  It should be
      ### possible to:
@@ -1052,13 +1049,10 @@ check_nonrecursive_dir_delete(void *baton, void *this_item, apr_pool_t *pool)
   */
   if (btn->depth != svn_depth_infinity)
     {
-      svn_wc_status2_t *status;
-      svn_node_kind_t kind;
-
-      SVN_ERR(svn_io_check_path(target_abspath, &kind, pool));
-
       if (kind == svn_node_dir)
         {
+          svn_wc_status2_t *status;
+
           /* ### Looking at schedule is probably enough, no need for
                  pristine compare etc. */
           SVN_ERR(svn_wc_status3(&status, btn->wc_ctx, target_abspath, pool,
@@ -1106,7 +1100,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   apr_hash_t *lock_tokens;
   apr_hash_t *tempfiles = NULL;
   apr_hash_t *checksums;
-  svn_wc_adm_access_t *base_dir_access;
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
   svn_error_t *bump_err = SVN_NO_ERROR, *cleanup_err = SVN_NO_ERROR;
@@ -1164,13 +1157,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
         }
     }
 
-  SVN_ERR(svn_wc__adm_open_in_context(&base_dir_access,
-                                      ctx->wc_ctx,
-                                      base_dir,
-                                      TRUE,  /* Write lock */
-                                      -1, /* recursive lock */
-                                      ctx->cancel_func, ctx->cancel_baton,
-                                      pool));
+  SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, base_dir, pool, pool));
 
   /* One day we might support committing from multiple working copies, but
      we don't yet.  This check ensures that we don't silently commit a
@@ -1181,7 +1168,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   {
     struct check_dir_delete_baton btn;
 
-    btn.base_dir_access = base_dir_access;
     btn.wc_ctx = ctx->wc_ctx;
     btn.depth = depth;
     SVN_ERR(svn_iter_apr_array(NULL, targets,
@@ -1192,7 +1178,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   /* Crawl the working copy for commit items. */
   if ((cmt_err = svn_client__harvest_committables(&committables,
                                                   &lock_tokens,
-                                                  base_dir_access,
+                                                  base_dir,
                                                   rel_targets,
                                                   depth,
                                                   ! keep_locks,
@@ -1282,7 +1268,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
       btn.queue = queue;
       btn.qpool = pool;
-      btn.base_dir_access = base_dir_access;
+      btn.wc_ctx = ctx->wc_ctx;
       btn.keep_changelists = keep_changelists;
       btn.keep_locks = keep_locks;
       btn.checksums = checksums;
@@ -1298,7 +1284,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
       SVN_ERR_ASSERT(*commit_info_p);
       bump_err
-        = svn_wc_process_committed_queue(queue, base_dir_access,
+        = svn_wc_process_committed_queue2(queue, ctx->wc_ctx,
                                          (*commit_info_p)->revision,
                                          (*commit_info_p)->date,
                                          (*commit_info_p)->author,
@@ -1320,7 +1306,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
      clean-up. */
   if (! bump_err)
     {
-      unlock_err = svn_wc_adm_close2(base_dir_access, pool);
+      unlock_err = svn_wc__release_write_lock(ctx->wc_ctx, base_dir, pool);
 
       if (! unlock_err)
         cleanup_err = remove_tmpfiles(tempfiles, pool);

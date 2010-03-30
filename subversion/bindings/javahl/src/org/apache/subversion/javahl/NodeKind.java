@@ -24,40 +24,34 @@
 package org.apache.subversion.javahl;
 
 /**
- * Poor mans enum for svn_node_kind_t
+ * Rich man's enum for svn_node_kind_t
  */
-public final class NodeKind
+public enum NodeKind
 {
     /* absent */
-    public static final int none = 0;
+    none    ("none"),
 
     /* regular file */
-    public static final int file = 1;
+    file    ("file"),
 
     /* directory */
-    public static final int dir = 2;
+    dir     ("dir"),
 
     /* something's here, but we don't know what */
-    public static final int unknown = 3;
+    unknown ("unknown");
 
     /**
-     * mapping for the constants to text
+     * The description of the node kind.
      */
-    private static final String[] statusNames =
-    {
-        "none",
-        "file",
-        "dir ",
-        "unknown",
-    };
+    private String description;
 
-    /**
-     * Returns the textual representation for a NodeKind
-     * @param kind  kind of node
-     * @return english text
-     */
-    public static final String getNodeKindName(int kind)
+    NodeKind(String description)
     {
-        return statusNames[kind];
+        this.description = description;
+    }
+
+    public String toString()
+    {
+        return description;
     }
 }

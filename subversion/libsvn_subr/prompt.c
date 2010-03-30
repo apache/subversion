@@ -71,7 +71,7 @@ static apr_status_t wait_for_input(apr_file_t *f,
    * ourselves here.
    */
   return APR_ENOTIMPL;
-#endif  
+#endif
 }
 
 /* Set @a *result to the result of prompting the user with @a

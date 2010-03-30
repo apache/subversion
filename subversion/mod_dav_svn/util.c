@@ -381,7 +381,7 @@ dav_svn__simple_parse_uri(dav_svn__uri_info *info,
 
 /* ### move this into apr_xml */
 int
-dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri)
+dav_svn__find_ns(const apr_array_header_t *namespaces, const char *uri)
 {
   int i;
 

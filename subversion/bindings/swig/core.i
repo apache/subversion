@@ -785,6 +785,10 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #endif
 
 #ifdef SWIGPERL
+/* The apr_file_t* 'in' typemap can't cope with struct members, and there
+   is no reason to change this one. */
+%immutable svn_patch_t::patch_file;
+
 %include svn_diff_h.swg
 %include svn_error_h.swg
 

@@ -209,7 +209,7 @@ AC_DEFUN(SVN_FIND_SWIG,
 
     AC_CACHE_CHECK([how to compile Ruby extensions], [svn_cv_ruby_compile],[
       # Ruby doesn't like '-ansi', so strip that out of CFLAGS
-      svn_cv_ruby_compile="$rbconfig_CC `echo $CFLAGS | $SED -e "s/ -ansi//g"`"
+      svn_cv_ruby_compile="$rbconfig_CC `echo $CFLAGS | $SED -e "s/ -ansi//g;s/ -std=c89//g"`"
     ])
     SWIG_RB_COMPILE="$svn_cv_ruby_compile"
 

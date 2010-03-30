@@ -190,6 +190,14 @@ where repos_id = ?1 and
 update base_node set last_mod_time = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_BASE_FILEINFO
+UPDATE BASE_NODE SET translated_size = ?3, last_mod_time = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_WORKING_FILEINFO
+UPDATE WORKING_NODE SET translated_size = ?3, last_mod_time = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
 -- STMT_UPDATE_ACTUAL_TREE_CONFLICTS
 update actual_node set tree_conflict_data = ?3
 where wc_id = ?1 and local_relpath = ?2;
@@ -242,6 +250,14 @@ where wc_id = ?1 and local_relpath = ?2;
 -- STMT_UPDATE_WORKING_PRESENCE
 update working_node set presence = ?3
 where wc_id = ?1 and local_relpath =?2;
+
+-- STMT_UPDATE_BASE_PRESENCE_AND_REVNUM
+update base_node set presence = ?3, revnum = ?4
+where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_BASE_PRESENCE_REVNUM_AND_REPOS_RELPATH
+update base_node set presence = ?3, revnum = ?4, repos_relpath = ?5
+where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_LOOK_FOR_WORK
 SELECT id FROM WORK_QUEUE LIMIT 1;
@@ -320,6 +336,38 @@ SELECT wc_id, local_relpath, parent_relpath, ?3 AS presence, kind, checksum,
     translated_size, changed_rev, changed_date, changed_author, depth,
     symlink_target, last_mod_time FROM BASE_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_INSERT_WORKING_NODE_NORMAL_FROM_BASE_NODE
+INSERT INTO WORKING_NODE (
+    wc_id, local_relpath, parent_relpath, presence, kind, checksum,
+    translated_size, changed_rev, changed_date, changed_author, depth,
+    symlink_target, last_mod_time, properties, copyfrom_repos_id,
+    copyfrom_repos_path, copyfrom_revnum )
+SELECT wc_id, local_relpath, parent_relpath, 'normal', kind, checksum,
+    translated_size, changed_rev, changed_date, changed_author, depth,
+    symlink_target, last_mod_time, properties, repos_id,
+    repos_relpath, revnum FROM BASE_NODE
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_INSERT_WORKING_NODE_NOT_PRESENT_FROM_BASE_NODE
+INSERT INTO WORKING_NODE (
+    wc_id, local_relpath, parent_relpath, presence, kind, changed_rev,
+    changed_date, changed_author, copyfrom_repos_id,
+    copyfrom_repos_path, copyfrom_revnum )
+SELECT wc_id, local_relpath, parent_relpath, 'not-present', kind, changed_rev,
+    changed_date, changed_author, repos_id,
+    repos_relpath, revnum FROM BASE_NODE
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_COPYFROM
+UPDATE WORKING_NODE set copyfrom_repos_id = ?3, copyfrom_repos_path = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_DETERMINE_TREE_FOR_RECORDING
+SELECT 0 FROM BASE_NODE WHERE wc_id = ?1 AND local_relpath = ?2
+UNION
+SELECT 1 FROM WORKING_NODE WHERE wc_id = ?1 AND local_relpath = ?2;
+
 
 /* ------------------------------------------------------------------------- */
 

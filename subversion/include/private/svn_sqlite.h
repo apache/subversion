@@ -150,7 +150,7 @@ svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
    Spec  Argument type       Item type
    ----  -----------------   ---------
    i     apr_int64_t         Number
-   s     const char **       String
+   s     const char *        String
    b     const void *        Blob data
          apr_size_t          Blob length
    t     const svn_token_t * Token mapping table

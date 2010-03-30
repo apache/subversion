@@ -253,18 +253,25 @@ main(int argc, const char *argv[])
           return EXIT_SUCCESS;
         }
 
-      SVN_INT_ERR(svn_wc_revision_status2(&res, wc_ctx, local_abspath,
-                                          trail_url, committed, NULL, NULL,
-                                          pool, pool));
+      err = svn_wc_revision_status2(&res, wc_ctx, local_abspath,
+                                    trail_url, committed, NULL, NULL,
+                                    pool, pool);
 
-      /* Unversioned file in versioned directory */
-      if (res->min_rev == -1)
+      if (err)
         {
-          SVN_INT_ERR(svn_cmdline_printf(pool, _("Unversioned file%s"),
-                                         no_newline ? "" : "\n"));
-          svn_pool_destroy(pool);
-          return EXIT_SUCCESS;
+          /* Unversioned file in versioned directory */
+          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+            {
+              svn_error_clear(err);
+              SVN_INT_ERR(svn_cmdline_printf(pool, _("Unversioned file%s"),
+                                             no_newline ? "" : "\n"));
+              svn_pool_destroy(pool);
+              return EXIT_SUCCESS;
+            }
+          else
+              SVN_INT_ERR(err);
         }
+
     }
   else if (kind == svn_node_none)
     {

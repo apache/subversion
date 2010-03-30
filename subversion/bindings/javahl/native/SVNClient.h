@@ -34,7 +34,6 @@
 
 class Revision;
 class RevisionRange;
-class Notify;
 class NotifyCallback;
 class ConflictResolverCallback;
 class ProgressListener;
@@ -144,7 +143,6 @@ class SVNClient :public SVNBase
   void revert(const char *path, svn_depth_t depth, StringArray &changelists);
   void remove(Targets &targets, const char *message, bool force,
               bool keep_local, RevpropTable &revprops);
-  void notification(Notify *notify);
   void notification2(NotifyCallback *notify2);
   void setConflictResolver(ConflictResolverCallback *conflictResolver);
   void setProgressListener(ProgressListener *progressListener);
@@ -227,7 +225,6 @@ class SVNClient :public SVNBase
             bool ignoreAncestry, bool noDiffDelete, bool force,
             bool showCopiesAsAdds);
 
-  Notify *m_notify;
   NotifyCallback *m_notify2;
   ConflictResolverCallback *m_conflictResolver;
   ProgressListener *m_progressListener;

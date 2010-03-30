@@ -92,7 +92,7 @@ public class WC
      */
     public Item getItem(String path)
     {
-        return (Item) items.get(path);
+        return items.get(path);
     }
 
     /**
@@ -109,9 +109,9 @@ public class WC
      * @param path      the path, where the status is set
      * @param status    the new text status
      */
-    public void setItemTextStatus(String path, int status)
+    public void setItemTextStatus(String path, Status.Kind status)
     {
-        ((Item) items.get(path)).textStatus = status;
+        items.get(path).textStatus = status;
     }
 
     /**
@@ -119,9 +119,9 @@ public class WC
      * @param path      the path, where the status is set
      * @param status    the new property status
      */
-    public void setItemPropStatus(String path, int status)
+    public void setItemPropStatus(String path, Status.Kind status)
     {
-        ((Item) items.get(path)).propStatus = status;
+        items.get(path).propStatus = status;
     }
 
     /**
@@ -131,7 +131,7 @@ public class WC
      */
     public void setItemWorkingCopyRevision(String path, long revision)
     {
-        ((Item) items.get(path)).workingCopyRev = revision;
+        items.get(path).workingCopyRev = revision;
     }
 
     /**
@@ -168,7 +168,7 @@ public class WC
         // content or setting a former not set content is not allowed. That
         // would change the type of the item.
         Assert.assertNotNull("cannot unset content", content);
-        Item i = (Item) items.get(path);
+        Item i = items.get(path);
         Assert.assertNotNull("cannot set content on directory", i.myContent);
         i.myContent = content;
     }
@@ -180,8 +180,7 @@ public class WC
      */
     public void setItemCheckContent(String path, boolean check)
     {
-        Item i = (Item) items.get(path);
-        i.checkContent = check;
+        items.get(path).checkContent = check;
     }
 
     /**
@@ -189,10 +188,9 @@ public class WC
      * @param path      the path, where the node kind is set
      * @param nodeKind  the expected node kind
      */
-    public void setItemNodeKind(String path, int nodeKind)
+    public void setItemNodeKind(String path, NodeKind nodeKind)
     {
-        Item i = (Item) items.get(path);
-        i.nodeKind = nodeKind;
+        items.get(path).nodeKind = nodeKind;
     }
 
     /**
@@ -202,8 +200,7 @@ public class WC
      */
     public void setItemIsLocked(String path, boolean isLocked)
     {
-        Item i = (Item) items.get(path);
-        i.isLocked = isLocked;
+        items.get(path).isLocked = isLocked;
     }
 
     /**
@@ -213,8 +210,7 @@ public class WC
      */
     public void setItemIsSwitched(String path, boolean isSwitched)
     {
-        Item i = (Item) items.get(path);
-        i.isSwitched = isSwitched;
+        items.get(path).isSwitched = isSwitched;
     }
 
     /**
@@ -226,7 +222,7 @@ public class WC
      */
     public void setItemReposLastCmtRevision(String path, long revision)
     {
-        ((Item) items.get(path)).reposLastCmtRevision = revision;
+        items.get(path).reposLastCmtRevision = revision;
     }
 
     /**
@@ -238,7 +234,7 @@ public class WC
      */
     public void setItemReposLastCmtAuthor(String path, String author)
     {
-        ((Item) items.get(path)).reposLastCmtAuthor = author;
+        items.get(path).reposLastCmtAuthor = author;
     }
 
     /**
@@ -250,7 +246,7 @@ public class WC
      */
     public void setItemReposLastCmtDate(String path, long date)
     {
-        ((Item) items.get(path)).reposLastCmtDate = date;
+        items.get(path).reposLastCmtDate = date;
     }
 
     /**
@@ -260,9 +256,9 @@ public class WC
      * @param revision The last node kind for <code>path</code> known
      * to the repository.
      */
-    public void setItemReposKind(String path, int nodeKind)
+    public void setItemReposKind(String path, NodeKind nodeKind)
     {
-        ((Item) items.get(path)).reposKind = nodeKind;
+        items.get(path).reposKind = nodeKind;
     }
 
     /**
@@ -276,7 +272,7 @@ public class WC
      * @param nodeKind The last node kind.
      */
     public void setItemOODInfo(String path, long revision, String author,
-                               long date, int nodeKind)
+                               long date, NodeKind nodeKind)
     {
         this.setItemReposLastCmtRevision(path, revision);
         this.setItemReposLastCmtAuthor(path, author);
@@ -307,12 +303,12 @@ public class WC
     void check(DirEntry[] tested, String singleFilePath)
     {
         Assert.assertEquals("not a single dir entry", 1, tested.length);
-        Item item = (Item)items.get(singleFilePath);
+        Item item = items.get(singleFilePath);
         Assert.assertNotNull("not found in working copy", item);
         Assert.assertNotNull("not a file", item.myContent);
         Assert.assertEquals("state says file, working copy not",
                 tested[0].getNodeKind(),
-                item.nodeKind == -1 ? NodeKind.file : item.nodeKind);
+                item.nodeKind == null ? NodeKind.file : item.nodeKind);
     }
 
     /**
@@ -350,13 +346,13 @@ public class WC
             {
                 Assert.assertEquals("Expected '" + entry + "' to be file",
                         entry.getNodeKind(),
-                        item.nodeKind == -1 ? NodeKind.file : item.nodeKind);
+                        item.nodeKind == null ? NodeKind.file : item.nodeKind);
             }
             else
             {
                 Assert.assertEquals("Expected '" + entry + "' to be dir",
                         entry.getNodeKind(),
-                        item.nodeKind == -1 ? NodeKind.dir : item.nodeKind);
+                        item.nodeKind == null ? NodeKind.dir : item.nodeKind);
             }
             item.touched = true;
         }
@@ -471,7 +467,7 @@ public class WC
             {
                 Assert.assertEquals("state says file, working copy not: " + path,
                         status.getNodeKind(),
-                        item.nodeKind == -1 ? NodeKind.file : item.nodeKind);
+                        item.nodeKind == null ? NodeKind.file : item.nodeKind);
                 if (status.getTextStatus() == Status.Kind.normal ||
                         item.checkContent)
                 {
@@ -493,7 +489,7 @@ public class WC
             {
                 Assert.assertEquals("state says dir, working copy not: " + path,
                         status.getNodeKind(),
-                        item.nodeKind == -1 ? NodeKind.dir : item.nodeKind);
+                        item.nodeKind == null ? NodeKind.dir : item.nodeKind);
             }
 
             if (checkRepos)
@@ -553,12 +549,12 @@ public class WC
         /**
          * the text (content) status of the item
          */
-        int textStatus = Status.Kind.normal;
+        Status.Kind textStatus = Status.Kind.normal;
 
         /**
          * the property status of the item.
          */
-        int propStatus = Status.Kind.none;
+        Status.Kind propStatus = Status.Kind.none;
 
         /**
          * the expected revision number. -1 means do not check.
@@ -576,9 +572,9 @@ public class WC
         boolean checkContent;
 
         /**
-         * expected node kind. -1 means do not check.
+         * expected node kind. null means do not check.
          */
-        int nodeKind = -1;
+        NodeKind nodeKind = null;
 
         /**
          * expected locked status
@@ -603,7 +599,7 @@ public class WC
         /**
          * node kind of the youngest commit if out of date
          */
-        int reposKind = NodeKind.none;
+        NodeKind reposKind = NodeKind.none;
 
         /**
          * author of the youngest commit if out of date.

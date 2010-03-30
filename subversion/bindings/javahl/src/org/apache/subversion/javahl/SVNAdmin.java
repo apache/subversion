@@ -29,7 +29,7 @@ import java.util.Set;
  * This class offers the same commands as the svnadmin commandline
  * client.
  */
-public class SVNAdmin
+public class SVNAdmin implements ISVNAdmin
 {
     /**
      * Load the required native library.
@@ -79,21 +79,11 @@ public class SVNAdmin
     protected long cppAddr;
 
     /**
-     * Filesystem in a Berkeley DB
-     */
-    public static final String BDB = "bdb";
-
-    /**
-     * Filesystem in the filesystem
-     */
-    public static final String FSFS = "fsfs";
-
-    /**
      * @return Version information about the underlying native libraries.
      */
     public Version getVersion()
     {
-        return NativeResources.version;
+        return NativeResources.getVersion();
     }
 
     /**

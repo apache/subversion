@@ -59,7 +59,7 @@ public class ChangePath implements java.io.Serializable, Comparable
     {
         this(aChangePath.getPath(), aChangePath.getCopySrcRevision(),
              aChangePath.getCopySrcPath(), aChangePath.getAction(),
-             aChangePath.getNodeKind());
+             NodeKind.fromApache(aChangePath.getNodeKind()));
     }
 
     public int compareTo(Object other)

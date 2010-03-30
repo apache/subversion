@@ -80,7 +80,7 @@ public class SVNAdmin
     public Version getVersion()
     {
         return new Version(
-                    org.apache.subversion.javahl.NativeResources.version);
+                    org.apache.subversion.javahl.NativeResources.getVersion());
     }
 
     /**
@@ -426,7 +426,7 @@ public class SVNAdmin
                        Revision start, Revision end)
             throws ClientException
     {
-        try 
+        try
         {
             aSVNAdmin.verify(path, messageOut,
                              start == null ? null : start.toApache(),
@@ -452,7 +452,7 @@ public class SVNAdmin
             Set<org.apache.subversion.javahl.Lock> aLocks =
                                                     aSVNAdmin.lslocks(path);
             Lock[] locks = new Lock[aLocks.size()];
-            
+
             int i = 0;
             for (org.apache.subversion.javahl.Lock lock : aLocks)
             {
