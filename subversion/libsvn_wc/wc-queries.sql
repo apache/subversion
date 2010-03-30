@@ -186,10 +186,6 @@ where repos_id = ?1 and
   (repos_relpath = ?2 or
    repos_relpath like ?3 escape '#');
 
--- STMT_UPDATE_BASE_LAST_MOD_TIME
-update base_node set last_mod_time = ?3
-where wc_id = ?1 and local_relpath = ?2;
-
 -- STMT_UPDATE_BASE_FILEINFO
 UPDATE BASE_NODE SET translated_size = ?3, last_mod_time = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2;

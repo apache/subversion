@@ -47,6 +47,7 @@
 #include "translate.h"
 #include "entries.h"
 #include "lock.h"
+#include "workqueue.h"
 
 #include "svn_private_config.h"
 
@@ -66,108 +67,32 @@ static svn_error_t *
 restore_file(svn_wc__db_t *db,
              const char *local_abspath,
              svn_boolean_t use_commit_times,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
-  svn_stream_t *src_stream;
-  svn_boolean_t special;
-  apr_time_t text_time;
+  const svn_skel_t *work_item;
 
-  SVN_ERR(svn_wc__get_pristine_contents(&src_stream, db, local_abspath, pool,
-                                        pool));
-  if (src_stream == NULL)
-    /* Nothing to restore. */
-    return SVN_NO_ERROR;
+  SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                        db, local_abspath,
+                                        use_commit_times,
+                                        TRUE /* record_fileinfo */,
+                                        scratch_pool, scratch_pool));
+  /* ### we need an existing path for wq_add. not entirely WRI_ABSPATH yet  */
+  SVN_ERR(svn_wc__db_wq_add(db,
+                            svn_dirent_dirname(local_abspath, scratch_pool),
+                            work_item, scratch_pool));
 
-  SVN_ERR(svn_wc__get_special(&special, db, local_abspath, pool));
-  if (special)
-    {
-      svn_stream_t *dst_stream;
-
-      /* Copy the source into the destination to create the special file.
-         The creation wil happen atomically. */
-      SVN_ERR(svn_subst_create_specialfile(&dst_stream, local_abspath,
-                                           pool, pool));
-      /* ### need a cancel_func/baton */
-      SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool));
-    }
-  else
-    {
-      svn_subst_eol_style_t style;
-      const char *eol_str;
-      apr_hash_t *keywords;
-      const char *tmp_dir;
-      const char *tmp_file;
-      svn_stream_t *tmp_stream;
-
-      SVN_ERR(svn_wc__get_eol_style(&style, &eol_str, db, local_abspath,
-                                    pool, pool));
-      SVN_ERR(svn_wc__get_keywords(&keywords, db, local_abspath, NULL, pool,
-                                   pool));
-
-      /* Get a temporary destination so we can use a rename to create the
-         real destination atomically. */
-      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmp_dir, db, local_abspath,
-                                             pool, pool));
-      SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_file, tmp_dir,
-                                     svn_io_file_del_none, pool, pool));
-
-      /* Wrap the (temp) destination stream with a translating stream. */
-      if (svn_subst_translation_required(style, eol_str, keywords,
-                                         FALSE /* special */,
-                                         TRUE /* force_eol_check */))
-        {
-          tmp_stream = svn_subst_stream_translated(tmp_stream,
-                                                   eol_str,
-                                                   TRUE /* repair */,
-                                                   keywords,
-                                                   TRUE /* expand */,
-                                                   pool);
-        }
-
-      SVN_ERR(svn_stream_copy3(src_stream, tmp_stream, NULL, NULL, pool));
-      /* ### need a cancel_func/baton */
-      SVN_ERR(svn_io_file_rename(tmp_file, local_abspath, pool));
-    }
-
-  SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, local_abspath, pool));
-
-  /* If necessary, tweak the new working file's executable bit. */
-  SVN_ERR(svn_wc__maybe_set_executable(NULL, db, local_abspath, pool));
+  /* Run the work item immediately.  */
+  SVN_ERR(svn_wc__wq_run(db, local_abspath,
+                         NULL, NULL, /* ### nice to have cancel_func/baton */
+                         scratch_pool));
 
   /* Remove any text conflict */
   SVN_ERR(svn_wc__internal_resolved_conflict(
                     db, local_abspath, svn_depth_empty, TRUE, NULL, FALSE,
                     svn_wc_conflict_choose_merged, NULL, NULL, NULL, NULL,
-                    pool));
+                    scratch_pool));
 
-  /* Possibly set timestamp to last-commit-time. */
-  if (use_commit_times && (! special))
-    {
-      apr_time_t changed_date;
-
-      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   NULL, &changed_date, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   db, local_abspath,
-                                   pool, pool));
-
-      SVN_ERR(svn_io_set_file_affected_time(changed_date, local_abspath,
-                                            pool));
-
-      text_time = changed_date;
-    }
-  else
-    {
-      SVN_ERR(svn_io_file_affected_time(&text_time, local_abspath, pool));
-    }
-
-  /* Modify our entry's text-timestamp to match the working file. */
-  return svn_error_return(
-    svn_wc__db_op_set_last_mod_time(db, local_abspath, text_time, pool));
+  return SVN_NO_ERROR;
 }
 
 /* Try to restore LOCAL_ABSPATH of node type KIND and if successfull,
