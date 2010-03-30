@@ -35,25 +35,25 @@ extern "C" {
    based on the response of the server. */
 svn_error_t *
 svn_ra_serf__handle_kerb_auth(svn_ra_serf__handler_t *ctx,
-			      serf_request_t *request,
-			      serf_bucket_t *response,
-			      const char *auth_hdr,
-			      const char *auth_attr,
-			      apr_pool_t *pool);
+                              serf_request_t *request,
+                              serf_bucket_t *response,
+                              const char *auth_hdr,
+                              const char *auth_attr,
+                              apr_pool_t *pool);
 
 /* Initializes a new connection based on the info stored in the session
    object. */
 svn_error_t *
 svn_ra_serf__init_kerb_connection(svn_ra_serf__session_t *session,
-				  svn_ra_serf__connection_t *conn,
-				  apr_pool_t *pool);
+                                  svn_ra_serf__connection_t *conn,
+                                  apr_pool_t *pool);
 
 
 svn_error_t *
 svn_ra_serf__setup_request_kerb_auth(svn_ra_serf__connection_t *conn,
-				     const char *method,
-				     const char *uri,
-				     serf_bucket_t *hdrs_bkt);
+                                     const char *method,
+                                     const char *uri,
+                                     serf_bucket_t *hdrs_bkt);
 
 svn_error_t *
 svn_ra_serf__validate_response_kerb_auth(svn_ra_serf__handler_t *ctx,

@@ -170,7 +170,7 @@ svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
                                           apr_pool_t *scratch_pool);
 
 /* Filter each mergeinfo in CATALOG as per
-   svn_mergeinfo__filter_mergefino_by_ranges and put a deep copy of the
+   svn_mergeinfo__filter_mergeinfo_by_ranges() and put a deep copy of the
    result in *FILTERED_CATALOG, allocated in RESULT_POOL.  If any mergeinfo
    is filtered to an empty hash then filter that path/mergeinfo as well.
    If all mergeinfo is filtered or CATALOG is NULL then set *FILTERED_CATALOG

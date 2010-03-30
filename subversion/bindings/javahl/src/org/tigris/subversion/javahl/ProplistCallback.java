@@ -23,10 +23,6 @@
 
 package org.tigris.subversion.javahl;
 
-import org.apache.subversion.javahl.callback.*;
-
-import java.util.Map;
-
 /**
  * This interface is used to property lists for each path in a
  * SVNClientInterface.properties call.

@@ -19,7 +19,23 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- */
+ *
+ *
+ * Greg says:
+ *
+ * I think the current items are misdirected
+ * work items should NOT touch the DB
+ * the work items should be inserted into WORK_QUEUE by wc_db,
+ * meaning: workqueue.[ch] should return work items for passing to the wc_db API,
+ * which installs them during a transaction with the other work,
+ * and those items should *only* make the on-disk state match what is in the database
+ * before you rejoined the chan, I was discussing with Bert that I might rejigger the postcommit work,
+ * in order to do the prop file handling as work items,
+ * and pass those to db_global_commit for insertion as part of its transaction
+ * so that once we switch to in-db props, those work items just get deleted,
+ * (where they're simple things like: move this file to there, or delete that file)
+ * i.e. workqueue should be seriously dumb
+ * */
 
 #ifndef SVN_WC_WORKQUEUE_H
 #define SVN_WC_WORKQUEUE_H
@@ -44,6 +60,31 @@ svn_wc__wq_run(svn_wc__db_t *db,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *scratch_pool);
+
+
+/* Build a work item (returned in *WORK_ITEM) that will install the working
+   copy file at LOCAL_ABSPATH. If USE_COMMIT_TIMES is TRUE, then the newly
+   installed file will use the nodes CHANGE_DATE for the file timestamp.
+   If RECORD_FILEINFO is TRUE, then the resulting LAST_MOD_TIME and
+   TRANSLATED_SIZE will be recorded in the database.  */
+svn_error_t *
+svn_wc__wq_build_file_install(const svn_skel_t **work_item,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              svn_boolean_t use_commit_times,
+                              svn_boolean_t record_fileinfo,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+
+/* Build a work item (returned in *WORK_ITEM) that will remove a single
+   file.  */
+svn_error_t *
+svn_wc__wq_build_file_remove(const svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 
 /* Record a work item to revert LOCAL_ABSPATH.  */
@@ -99,6 +140,7 @@ svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__wq_add_postcommit(svn_wc__db_t *db,
                           const char *local_abspath,
+                          const char *tmp_text_base_abspath,
                           svn_revnum_t new_revision,
                           apr_time_t new_date,
                           const char *new_author,

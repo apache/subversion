@@ -27,11 +27,11 @@ package org.apache.subversion.javahl;
  * Constants to specify which collection of revisions to report in
  * getMergeinfoLog.
  */
-public interface MergeinfoLogKind
+public enum MergeinfoLogKind
 {
     /** Revisions eligible for merging from merge-source to merge-target. */
-    public static final int eligible = 0;
+    eligible,
 
     /** Revisions already merged from merge-source to merge-target. */
-    public static final int merged = 1;
+    merged;
 }

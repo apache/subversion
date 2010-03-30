@@ -35,7 +35,8 @@
    the request is ready to be proxied away.  MASTER_URI is the URI
    specified in the SVNMasterURI Apache configuration value.
    URI_SEGMENT is the URI bits relative to the repository root (but if
-   non-empty, *does* have a leading slash delimiter).  */
+   non-empty, *does* have a leading slash delimiter).
+   MASTER_URI and URI_SEGMENT are not URI-encoded. */
 static void proxy_request_fixup(request_rec *r,
                                 const char *master_uri,
                                 const char *uri_segment)

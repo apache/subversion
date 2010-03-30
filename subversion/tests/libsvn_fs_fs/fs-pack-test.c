@@ -380,7 +380,7 @@ get_set_revprop_packed_fs(const svn_test_opts_t *opts,
 
   /* Try to get revprop for revision 0. */
   SVN_ERR(svn_fs_revision_prop(&prop_value, fs, 0, SVN_PROP_REVISION_AUTHOR, pool));
-  
+
   /* Try to change revprop for revision 0. */
   SVN_ERR(svn_fs_change_rev_prop(fs, 0, SVN_PROP_REVISION_AUTHOR,
                                  svn_string_create("tweaked-author", pool), pool));

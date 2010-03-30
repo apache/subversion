@@ -244,4 +244,37 @@ class JNIUtil
     }                                                   \
   } while (0)
 
+/**
+ * The initial capacity of a create local reference frame.
+ */
+#define LOCAL_FRAME_SIZE            16
+
+/**
+ * A statement macro use to pop the reference frame and return NULL
+ */
+#define POP_AND_RETURN(ret_val)         \
+  do                                    \
+    {                                   \
+      env->PopLocalFrame(NULL);         \
+      return ret_val ;                  \
+    }                                   \
+  while (0)
+
+/**
+ * A statement macro use to pop the reference frame and return
+ */
+#define POP_AND_RETURN_NOTHING()        \
+  do                                    \
+    {                                   \
+      env->PopLocalFrame(NULL);         \
+      return;                           \
+    }                                   \
+  while (0)
+
+
+/**
+ * A useful macro.
+ */
+#define POP_AND_RETURN_NULL             POP_AND_RETURN(NULL)
+
 #endif  // JNIUTIL_H

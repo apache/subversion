@@ -1963,7 +1963,7 @@ svn_repos_stat(svn_dirent_t **dirent,
 
 svn_error_t *
 svn_repos_remember_client_capabilities(svn_repos_t *repos,
-                                       apr_array_header_t *capabilities)
+                                       const apr_array_header_t *capabilities)
 {
   repos->client_capabilities = capabilities;
   return SVN_NO_ERROR;

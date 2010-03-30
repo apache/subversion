@@ -1056,7 +1056,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
               const svn_fs_dirent_t *s_entry;
 
               svn_pool_clear(subpool);
-              s_entry = svn_apr_hash_index_val(hi);
+              s_entry = svn__apr_hash_index_val(hi);
 
               if (apr_hash_get(t_entries, s_entry->name,
                                APR_HASH_KEY_STRING) == NULL)
@@ -1094,7 +1094,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
           const svn_fs_dirent_t *s_entry, *t_entry;
 
           svn_pool_clear(subpool);
-          t_entry = svn_apr_hash_index_val(hi);
+          t_entry = svn__apr_hash_index_val(hi);
 
           if (is_depth_upgrade(wc_depth, requested_depth, t_entry->kind))
             {

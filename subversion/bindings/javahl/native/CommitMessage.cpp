@@ -26,6 +26,7 @@
 
 #include "CommitMessage.h"
 #include "CreateJ.h"
+#include "EnumMapper.h"
 #include "JNIUtil.h"
 #include <apr_tables.h>
 #include "svn_client.h"
@@ -105,7 +106,8 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
     {
       midConstructor = env->GetMethodID(clazz, "<init>",
                                         "(Ljava/lang/String;"
-                                        "IILjava/lang/String;"
+                                        "L"JAVA_PACKAGE"/NodeKind;"
+                                        "ILjava/lang/String;"
                                         "Ljava/lang/String;J)V");
       if (JNIUtil::isExceptionThrown())
         return NULL;
@@ -139,7 +141,9 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
       // convert the commit item members to the match Java members
       jstring jpath = JNIUtil::makeJString(item->path);
 
-      jint jnodeKind = item->kind;
+      jobject jnodeKind = EnumMapper::mapNodeKind(item->kind);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
 
       jint jstateFlags = 0;
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
@@ -159,8 +163,12 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
           org_apache_subversion_javahl_CommitItemStateFlags_IsCopy;
 
       jstring jurl = JNIUtil::makeJString(item->url);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
 
       jstring jcopyUrl = JNIUtil::makeJString(item->copyfrom_url);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
 
       jlong jcopyRevision = item->revision;
 
@@ -176,6 +184,9 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
+      env->DeleteLocalRef(jnodeKind);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
 
       env->DeleteLocalRef(jurl);
       if (JNIUtil::isJavaExceptionThrown())

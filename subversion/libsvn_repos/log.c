@@ -490,7 +490,7 @@ check_history(svn_boolean_t *changed,
 
 /* Return the next interesting revision in our list of HISTORIES. */
 static svn_revnum_t
-next_history_rev(apr_array_header_t *histories)
+next_history_rev(const apr_array_header_t *histories)
 {
   svn_revnum_t next_rev = SVN_INVALID_REVNUM;
   int i;
@@ -1349,6 +1349,9 @@ do_logs(svn_fs_t *fs,
    by examining paths of interest to a log operation), and determine
    which revisions to report as having been merged via the commit
    resulting in REV.
+
+   Silently ignore some failures to find the revisions mentioned in the
+   mergeinfo, as might happen if there is invalid mergeinfo.
 
    Other parameters are as described by do_logs(), around which this
    is a recursion wrapper. */

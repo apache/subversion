@@ -29,7 +29,7 @@ import stat, os, re, shutil
 
 # Our testing module
 import svntest
-
+from svntest import main
 from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
@@ -4322,6 +4322,74 @@ def reverse_merge_move(sbox):
                                         None,
                                         None)
 
+def nonrecursive_commit_of_copy(sbox):
+  """commit only top of copy; check child behavior"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  main.run_svn(None, 'cp', os.path.join(wc_dir, 'A'),
+               os.path.join(wc_dir, 'A_new'))
+  main.run_svn(None, 'cp', os.path.join(wc_dir, 'A/D/G'),
+               os.path.join(wc_dir, 'A_new/G_new'))
+  main.run_svn(None, 'rm', os.path.join(wc_dir, 'A_new/C'))
+  main.run_svn(None, 'rm', os.path.join(wc_dir, 'A_new/B/E'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+      'A_new'             : Item(status='A ', copied='+', wc_rev='-'),
+      'A_new/D'           : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/G'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/G/pi'      : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/G/rho'     : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/G/tau'     : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/H'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/H/psi'     : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/H/chi'     : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/H/omega'   : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/D/gamma'     : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/B'           : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/B/lambda'    : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/B/E'         : Item(status='D ', wc_rev='?'),
+      'A_new/B/E/alpha'   : Item(status='D ', wc_rev='?'),
+      'A_new/B/E/beta'    : Item(status='D ', wc_rev='?'),
+      'A_new/B/F'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/mu'          : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/C'           : Item(status='D ', wc_rev='?'),
+      'A_new/G_new'       : Item(status='A ', copied='+', wc_rev='-'),
+      'A_new/G_new/pi'    : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/G_new/rho'   : Item(status='  ', copied='+', wc_rev='-'),
+      'A_new/G_new/tau'   : Item(status='  ', copied='+', wc_rev='-'),
+    })
+
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  
+  expected_output = svntest.wc.State(wc_dir, {
+    'A_new': Item(verb='Adding'),
+    })
+  
+  # These nodes are added by the commit
+  expected_status.tweak('A_new', 'A_new/D', 'A_new/D/G', 'A_new/D/G/pi',
+                        'A_new/D/G/rho', 'A_new/D/G/tau', 'A_new/D/H',
+                        'A_new/D/H/psi', 'A_new/D/H/chi', 'A_new/D/H/omega',
+                        'A_new/D/gamma', 'A_new/B', 'A_new/B/lambda',
+                        'A_new/B/F', 'A_new/mu',
+                        status='  ', copied=None, wc_rev='2')
+
+  # And these are deleted with their parent (not sure if this is ok)
+  expected_status.remove('A_new/C', 'A_new/B/E', 'A_new/B/E/alpha',
+                         'A_new/B/E/beta')
+
+  # 'A_new/G_new' and everything below should still be added
+  # as their operation root was not committed
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir, '--depth', 'immediates')
+
+
 ########################################################################
 # Run the tests
 
@@ -4410,6 +4478,7 @@ test_list = [ None,
               copy_below_copy,
               XFail(move_below_move),
               reverse_merge_move,
+              XFail(nonrecursive_commit_of_copy),
              ]
 
 if __name__ == '__main__':

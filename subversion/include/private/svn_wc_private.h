@@ -77,9 +77,7 @@ svn_wc__maybe_get_entry(const svn_wc_entry_t **entry,
 
 /** Given a @a local_abspath with a @a wc_ctx, set @a *switched to
  * TRUE if @a local_abspath is switched, otherwise set @a *switched to FALSE.
- * If neither @a local_abspath or its parent have valid URLs, return
- * @c SVN_ERR_ENTRY_MISSING_URL.  All temporaryallocations are done in
- * @a scratch_pool.
+ * All temporary allocations are done in * @a scratch_pool.
  */
 svn_error_t *
 svn_wc__path_switched(svn_boolean_t *switched,
@@ -250,22 +248,6 @@ svn_wc__adm_probe_in_context(svn_wc_adm_access_t **adm_access,
                              void *cancel_baton,
                              apr_pool_t *pool);
 
-/** Like svn_wc_adm_open_anchor(), but with a svn_wc_context_t * to use
- * when opening the access batons.
- *
- * NOT FOR NEW DEVELOPMENT!  (See note to svn_wc__adm_open_in_context().)
- */
-svn_error_t *
-svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
-                                   svn_wc_adm_access_t **target_access,
-                                   const char **target,
-                                   svn_wc_context_t *wc_ctx,
-                                   const char *path,
-                                   svn_boolean_t write_lock,
-                                   int levels_to_lock,
-                                   svn_cancel_func_t cancel_func,
-                                   void *cancel_baton,
-                                   apr_pool_t *pool);
 
 
 /**
@@ -520,13 +502,12 @@ svn_wc__node_get_lock_token(const char **lock_token,
  * @a anchor_abspath is NULL.  If @a anchor_abspath is not NULL then
  * recursively acquire write locks for the anchor of @a local_abspath
  * and return the anchor path in @a *anchor_abspath.  Use @a wc_ctx
- * for working copy access. 
+ * for working copy access.
  *
- * Returns @c SVN_ERR_WC_LOCKED an existing lock is encountered, but
- * may have set locks of it's own; it's not clear how the caller is
- * expected to handle this.
+ * Returns @c SVN_ERR_WC_LOCKED if an existing lock is encountered, in
+ * which case any locks acquired will have been released.
  *
- * If @a *anchor_abspath is not NULL it will be set evenwhen
+ * If @a *anchor_abspath is not NULL it will be set even when
  * SVN_ERR_WC_LOCKED is returned.
  *
  * ### @a anchor_abspath should be removed when we move to centralised
@@ -542,8 +523,8 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
 
 /**
  * Recursively release write locks for @a local_abspath, using @a wc_ctx
- * for working copy access.  Locks are not removed if work queue items are
- * present.  Only the @c db member of @c wc_ctx is used.
+ * for working copy access.  Only locks held by @a wc_ctx are released.
+ * Locks are not removed if work queue items are present.
  */
 svn_error_t *
 svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
@@ -569,7 +550,19 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
                              const char *local_abspath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
-                      
+
+
+/** Mark missing, deleted directory @a local_abspath as 'not-present'
+ * in its parent's list of entries.
+ *
+ * Return #SVN_ERR_WC_PATH_FOUND if @a local_abspath isn't actually a
+ * missing, deleted directory.
+ */
+svn_error_t *
+svn_wc__temp_mark_missing_not_present(const char *local_abspath,
+                                      svn_wc_context_t *wc_ctx,
+                                      apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

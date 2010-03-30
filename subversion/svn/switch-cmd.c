@@ -40,7 +40,7 @@
 /*** Code. ***/
 
 static svn_error_t *
-rewrite_urls(apr_array_header_t *targets,
+rewrite_urls(const apr_array_header_t *targets,
              svn_boolean_t recurse,
              svn_client_ctx_t *ctx,
              apr_pool_t *pool)

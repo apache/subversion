@@ -114,6 +114,7 @@ typedef struct {
 /*** reading and writing the entries file ***/
 
 
+/* */
 static svn_wc_entry_t *
 alloc_entry(apr_pool_t *pool)
 {
@@ -179,6 +180,7 @@ take_from_entry(const svn_wc_entry_t *src,
     }
 }
 
+/* */
 static svn_error_t *
 fetch_wc_id(apr_int64_t *wc_id, svn_sqlite__db_t *sdb)
 {
@@ -756,7 +758,7 @@ read_entries_new(apr_hash_t **result_entries,
 
               if (base_status == svn_wc__db_status_not_present)
                 {
-                  /* ### the underlying node is DELETED in this revision.  */
+                  /* The underlying node is DELETED in this revision.  */
                   entry->deleted = TRUE;
 
                   /* This is an add since there isn't a node to replace.  */
@@ -1081,6 +1083,7 @@ read_entries_new(apr_hash_t **result_entries,
 }
 
 
+/* */
 static svn_error_t *
 read_entries(apr_hash_t **entries,
              svn_wc__db_t *db,
@@ -1487,7 +1490,7 @@ prune_deleted(apr_hash_t **entries_pruned,
       svn_boolean_t hidden;
 
       SVN_ERR(svn_wc__entry_is_hidden(&hidden,
-                                      svn_apr_hash_index_val(hi)));
+                                      svn__apr_hash_index_val(hi)));
       if (hidden)
         break;
     }
@@ -1505,8 +1508,8 @@ prune_deleted(apr_hash_t **entries_pruned,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key = svn_apr_hash_index_key(hi);
-      const svn_wc_entry_t *entry = svn_apr_hash_index_val(hi);
+      const void *key = svn__apr_hash_index_key(hi);
+      const svn_wc_entry_t *entry = svn__apr_hash_index_val(hi);
       svn_boolean_t hidden;
 
       SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
@@ -1607,6 +1610,7 @@ svn_wc__set_depth(svn_wc__db_t *db,
                                                            scratch_pool));
 }
 
+/* */
 static svn_error_t *
 insert_base_node(svn_sqlite__db_t *sdb,
                  const db_base_node_t *base_node,
@@ -1681,6 +1685,7 @@ insert_base_node(svn_sqlite__db_t *sdb,
   return svn_error_return(svn_sqlite__insert(NULL, stmt));
 }
 
+/* */
 static svn_error_t *
 insert_working_node(svn_sqlite__db_t *sdb,
                     const db_working_node_t *working_node,
@@ -1762,6 +1767,7 @@ insert_working_node(svn_sqlite__db_t *sdb,
   return svn_error_return(svn_sqlite__insert(NULL, stmt));
 }
 
+/* */
 static svn_error_t *
 insert_actual_node(svn_sqlite__db_t *sdb,
                    const db_actual_node_t *actual_node,
@@ -2254,8 +2260,8 @@ entries_write_new_cb(void *baton,
   for (hi = apr_hash_first(scratch_pool, ewb->entries); hi;
        hi = apr_hash_next(hi))
     {
-      const char *name = svn_apr_hash_index_key(hi);
-      const svn_wc_entry_t *this_entry = svn_apr_hash_index_val(hi);
+      const char *name = svn__apr_hash_index_key(hi);
+      const svn_wc_entry_t *this_entry = svn__apr_hash_index_val(hi);
       const char *child_abspath;
 
       svn_pool_clear(iterpool);
@@ -2459,6 +2465,7 @@ write_one_entry_cb(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* */
 static svn_error_t *
 write_one_entry(svn_wc__db_t *db,
                 const char *local_abspath,
@@ -3190,8 +3197,8 @@ walker_helper(const char *dirpath,
   /* Loop over each of the other entries. */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      const char *name = svn_apr_hash_index_key(hi);
-      const svn_wc_entry_t *current_entry = svn_apr_hash_index_val(hi);
+      const char *name = svn__apr_hash_index_key(hi);
+      const svn_wc_entry_t *current_entry = svn__apr_hash_index_val(hi);
       const char *entrypath;
       const char *entry_abspath;
       svn_boolean_t hidden;
@@ -3358,36 +3365,60 @@ svn_wc_walk_entries3(const char *path,
 }
 
 svn_error_t *
-svn_wc_mark_missing_deleted(const char *path,
-                            svn_wc_adm_access_t *parent,
-                            apr_pool_t *pool)
+svn_wc__temp_mark_missing_not_present(const char *local_abspath,
+                                      svn_wc_context_t *wc_ctx,
+                                      apr_pool_t *scratch_pool)
 {
-  svn_node_kind_t pkind;
-  const char *local_abspath;
-  svn_wc__db_t *db = svn_wc__adm_get_db(parent);
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  SVN_ERR(svn_io_check_path(path, &pkind, pool));
-
-  if (pkind == svn_node_none)
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR(svn_wc__db_read_info(&status, &kind,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+  if (kind == svn_wc__db_kind_dir
+      && status == svn_wc__db_status_obstructed_delete)
     {
       svn_wc_entry_t tmp_entry;
 
       tmp_entry.deleted = TRUE;
       tmp_entry.schedule = svn_wc_schedule_normal;
 
-      return svn_error_return(
-        svn_wc__entry_modify2(db, local_abspath, svn_node_unknown, FALSE,
-                              &tmp_entry,
-                              (SVN_WC__ENTRY_MODIFY_DELETED
-                               | SVN_WC__ENTRY_MODIFY_SCHEDULE
-                               | SVN_WC__ENTRY_MODIFY_FORCE),
-                              pool));
+      SVN_ERR(svn_wc__entry_modify2(wc_ctx->db, local_abspath,
+                                    svn_node_dir, TRUE, &tmp_entry,
+                                    (SVN_WC__ENTRY_MODIFY_DELETED
+                                     | SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                     | SVN_WC__ENTRY_MODIFY_FORCE),
+                                    scratch_pool));
+      return SVN_NO_ERROR;
     }
 
   return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
                            _("Unexpectedly found '%s': "
                              "path is marked 'missing'"),
-                           svn_dirent_local_style(path, pool));
+                           svn_dirent_local_style(local_abspath, scratch_pool));
+}
+
+svn_error_t *
+svn_wc_mark_missing_deleted(const char *path,
+                            svn_wc_adm_access_t *parent,
+                            apr_pool_t *pool)
+{
+  const char *local_abspath;
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(parent), pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__temp_mark_missing_not_present(local_abspath, wc_ctx, pool));
+
+  SVN_ERR(svn_wc_context_destroy(wc_ctx));
+
+  return SVN_NO_ERROR;
 }

@@ -53,10 +53,10 @@ public class Info implements java.io.Serializable
     private String repository;
 
     /** the schedule on the next commit (see NodeKind) */
-    private int schedule;
+    private Info2.ScheduleKind schedule;
 
     /** the kind of node (file or directory or unknown */
-    private int nodeKind;
+    private NodeKind nodeKind;
 
     /** the author of the last commit before base */
     private String author;
@@ -113,10 +113,10 @@ public class Info implements java.io.Serializable
      * @param copyRev               copy source revision
      * @param copyUrl               copy source url
      */
-    Info(String name, String url, String uuid, String repository, int schedule,
-         int nodeKind, String author, long revision, long lastChangedRevision,
-         Date lastChangedDate, Date lastDateTextUpdate,
-         Date lastDatePropsUpdate, boolean copied,
+    public Info(String name, String url, String uuid, String repository,
+         Info2.ScheduleKind schedule, NodeKind nodeKind, String author,
+         long revision, long lastChangedRevision, Date lastChangedDate,
+         Date lastDateTextUpdate, Date lastDatePropsUpdate, boolean copied,
          boolean deleted, boolean absent, boolean incomplete, long copyRev,
          String copyUrl)
     {
@@ -180,7 +180,7 @@ public class Info implements java.io.Serializable
      * Retrieves the schedule of the next commit
      * @return schedule of the next commit
      */
-    public int getSchedule()
+    public Info2.ScheduleKind getSchedule()
     {
         return schedule;
     }
@@ -189,7 +189,7 @@ public class Info implements java.io.Serializable
      * Retrieves the nodeKind
      * @return nodeKind
      */
-    public int getNodeKind()
+    public NodeKind getNodeKind()
     {
         return nodeKind;
     }

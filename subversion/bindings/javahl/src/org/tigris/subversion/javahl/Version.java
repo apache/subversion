@@ -23,8 +23,6 @@
 
 package org.tigris.subversion.javahl;
 
-import org.apache.subversion.javahl.*;
-
 /**
  * Encapsulates version information about the underlying native
  * libraries.  Basically a wrapper for <a

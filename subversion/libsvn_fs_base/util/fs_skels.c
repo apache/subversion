@@ -433,8 +433,9 @@ svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
     {
       /* Committed transactions have a revision number... */
       transaction->base_id = NULL;
-      transaction->revision = atoi(apr_pstrmemdup(pool, base_id_or_rev->data,
-                                                  base_id_or_rev->len));
+      transaction->revision =
+        SVN_STR_TO_REV(apr_pstrmemdup(pool, base_id_or_rev->data,
+                                      base_id_or_rev->len));
       if (! SVN_IS_VALID_REVNUM(transaction->revision))
         return skel_err("transaction");
 

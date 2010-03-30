@@ -45,22 +45,22 @@ public class DiffSummary extends EventObject
 
     private DiffKind diffKind;
     private boolean propsChanged;
-    private int nodeKind;
+    private NodeKind nodeKind;
 
     /**
      * This constructor is to be used by the native code.
      *
      * @param path The path we have a diff for.
      * @param diffKind The kind of diff this describes.
-     * @param propChanged Whether any properties have changed.
+     * @param propsChanged Whether any properties have changed.
      * @param nodeKind The type of node which changed (corresponds to
      * the {@link NodeKind} enumeration).
      */
-    DiffSummary(String path, int diffKind, boolean propsChanged,
-                int nodeKind)
+    public DiffSummary(String path, DiffKind diffKind, boolean propsChanged,
+                NodeKind nodeKind)
     {
         super(path);
-        this.diffKind = DiffKind.getInstance(diffKind);
+        this.diffKind = diffKind;
         this.propsChanged = propsChanged;
         this.nodeKind = nodeKind;
     }
@@ -93,7 +93,7 @@ public class DiffSummary extends EventObject
      * @return The type of node which changed (corresponds to the
      * {@link NodeKind} enumeration).
      */
-    public int getNodeKind()
+    public NodeKind getNodeKind()
     {
         return this.nodeKind;
     }
@@ -109,78 +109,26 @@ public class DiffSummary extends EventObject
     /**
      * The type of difference being summarized.
      */
-    public static class DiffKind
+    public enum DiffKind
     {
-        // Corresponds to the svn_client_diff_summarize_kind_t enum.
-        public static DiffKind NORMAL = new DiffKind(0);
-        public static DiffKind ADDED = new DiffKind(1);
-        public static DiffKind MODIFIED = new DiffKind(2);
-        public static DiffKind DELETED = new DiffKind(3);
-
-        private int kind;
-
-        private DiffKind(int kind)
-        {
-            this.kind = kind;
-        }
+        normal      ("normal"),
+        added       ("added"),
+        modified    ("modified"),
+        deleted     ("deleted");
 
         /**
-         * @return The appropriate instance.
-         * @throws IllegalArgumentException If the diff kind is not
-         * recognized.
+         * The description of the action.
          */
-        public static DiffKind getInstance(int diffKind)
-            throws IllegalArgumentException
+        private String description;
+
+        DiffKind(String description)
         {
-            switch (diffKind)
-            {
-            case 0:
-                return NORMAL;
-            case 1:
-                return ADDED;
-            case 2:
-                return MODIFIED;
-            case 3:
-                return DELETED;
-            default:
-                throw new IllegalArgumentException("Diff kind " + diffKind +
-                                                   " not recognized");
-            }
+            this.description = description;
         }
 
-        /**
-         * @param diffKind A DiffKind for comparison.
-         * @return Whether both DiffKinds are of the same type.
-         */
-        public boolean equals(Object diffKind)
-        {
-            return (((DiffKind) diffKind).kind == this.kind);
-        }
-
-        public int hashCode()
-        {
-            // Equivalent to new Integer(this.kind).hashCode().
-            return this.kind;
-        }
-
-        /**
-         * @return A textual representation of the type of diff.
-         */
         public String toString()
         {
-            switch (this.kind)
-            {
-            case 0:
-                return "normal";
-            case 1:
-                return "added";
-            case 2:
-                return "modified";
-            case 3:
-                return "deleted";
-            default:
-                return "unknown";
-            }
+            return description;
         }
     }
 }

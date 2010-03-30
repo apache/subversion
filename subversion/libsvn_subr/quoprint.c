@@ -37,24 +37,24 @@
 
 /* Caveats:
 
-	(1) This code is for the encoding and decoding of binary data
-	    only.  Thus, CRLF sequences are encoded as =0D=0A, and we
-	    don't have to worry about tabs and spaces coming before
-	    hard newlines, since there aren't any.
+        (1) This code is for the encoding and decoding of binary data
+            only.  Thus, CRLF sequences are encoded as =0D=0A, and we
+            don't have to worry about tabs and spaces coming before
+            hard newlines, since there aren't any.
 
-	(2) The decoder does no error reporting, and instead throws
-	    away invalid sequences.  It also discards CRLF sequences,
-	    since those can only appear in the encoding of text data.
+        (2) The decoder does no error reporting, and instead throws
+            away invalid sequences.  It also discards CRLF sequences,
+            since those can only appear in the encoding of text data.
 
-	(3) The decoder does not strip whitespace at the end of a
-	    line, so it is not actually compliant with RFC 2045.
-	    (Such whitespace should never occur, even in the encoding
-	    of text data, but RFC 2045 requires a decoder to detect
-	    that a transport agent has added trailing whitespace).
+        (3) The decoder does not strip whitespace at the end of a
+            line, so it is not actually compliant with RFC 2045.
+            (Such whitespace should never occur, even in the encoding
+            of text data, but RFC 2045 requires a decoder to detect
+            that a transport agent has added trailing whitespace).
 
-	(4) The encoder is tailored to make output embeddable in XML,
-	    which means it quotes <>'"& as well as the characters
-	    required by RFC 2045.  */
+        (4) The encoder is tailored to make output embeddable in XML,
+            which means it quotes <>'"& as well as the characters
+            required by RFC 2045.  */
 
 #define QUOPRINT_LINELEN 76
 #define VALID_LITERAL(c) ((c) == '\t' || ((c) >= ' ' && (c) <= '~' \

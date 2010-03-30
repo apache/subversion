@@ -1734,6 +1734,51 @@ def post_revprop_change_hook(sbox):
                                      'ps', '--revprop', '-r0', 'p', 'v',
                                      wc_dir)
 
+def rm_of_replaced_file(sbox):
+  """properties after a removal of a replaced file"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add some properties to iota and mu
+  iota_path = os.path.join(wc_dir, 'iota')
+  svntest.main.run_svn(None, 'propset', 'red', 'rojo', iota_path)
+  svntest.main.run_svn(None, 'propset', 'blue', 'lagoon', iota_path)
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.run_svn(None, 'propset', 'yellow', 'submarine', mu_path)
+  svntest.main.run_svn(None, 'propset', 'orange', 'toothpick', mu_path)
+
+  svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
+
+  # Copy iota over the top of mu
+  svntest.main.run_svn(None, 'rm', mu_path)
+  svntest.main.run_svn(None, 'cp', iota_path, mu_path)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', props={'red': 'rojo', 'blue': 'lagoon'})
+  expected_disk.tweak('A/mu', props={'red': 'rojo', 'blue': 'lagoon'},
+                      contents="This is the file 'iota'.\n")
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
+
+  # Remove the copy. Properties should go back to mu's original props.
+  svntest.main.run_svn(None, 'rm', '--force', mu_path)
+
+  exit_code, output, errput = svntest.main.run_svn(None,
+                                                   'proplist', '-v', mu_path)
+  expected_output = svntest.verify.UnorderedRegexOutput([
+      'Properties on',
+      '  yellow',
+      '    submarine',
+      '  orange',
+      '    toothpick',
+      ])
+  svntest.verify.compare_and_display_lines('message', 'label',
+                                           expected_output, output)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
+
 
 ########################################################################
 # Run the tests
@@ -1775,6 +1820,7 @@ test_list = [ None,
               added_moved_file,
               delete_nonexistent_property,
               XFail(post_revprop_change_hook, svntest.main.is_ra_type_dav),
+              rm_of_replaced_file,
              ]
 
 if __name__ == '__main__':

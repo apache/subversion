@@ -329,11 +329,10 @@ Java_org_apache_subversion_javahl_SVNAdmin_rmtxns
   if (JNIUtil::isExceptionThrown())
     return;
 
-  Targets transactions(jtransactions);
+  StringArray transactions(jtransactions);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  transactions.setDoesNotContainsPath();
   cl->rmtxns(path, transactions);
 }
 
@@ -463,10 +462,9 @@ Java_org_apache_subversion_javahl_SVNAdmin_rmlocks
   if (JNIUtil::isExceptionThrown())
     return;
 
-  Targets locks(jlocks);
+  StringArray locks(jlocks);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  locks.setDoesNotContainsPath();
   cl->rmlocks(path, locks);
 }

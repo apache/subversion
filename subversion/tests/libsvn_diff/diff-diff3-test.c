@@ -567,20 +567,20 @@ test_two_way_unified(apr_pool_t *pool)
 
   SVN_ERR(two_way_diff("foo5d", "bar5d",
                        "Aa\r\n"
-					   "\r\n"
+                       "\r\n"
                        "Bb\r\n"
-					   "\r\n"
+                       "\r\n"
                        "Cc\r\n"
-					   "\r\n",
+                       "\r\n",
 
                        "Aa\n"
-					   "\n"
+                       "\n"
                        "Bb\n"
-					   "\n"
+                       "\n"
                        "Cc\n"
-					   "\n",
+                       "\n",
 
-					   "",
+                       "",
                        diff_opts, pool));
   diff_opts->ignore_eol_style = FALSE;
 

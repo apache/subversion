@@ -20,9 +20,7 @@
 #
 import unittest, os, weakref, tempfile, setup_path
 
-from svn import core, repos, fs, delta, client, wc
-from svn.core import SubversionException
-import weakref
+from svn import core, client, wc
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH, REPOS_URL
@@ -78,8 +76,8 @@ class SubversionClientTestCase(unittest.TestCase):
     # We have to free client_ctx first, since it may be holding handles
     # to WC DBs
     del self.client_ctx
-    for dir in self.cleanup_dirs:
-      core.svn_io_remove_dir(dir)
+    for directory in self.cleanup_dirs:
+      core.svn_io_remove_dir(directory)
 
   def allocate_temp_dir(self, suffix = ""):
     temp_dir_name = core.svn_dirent_internal_style(tempfile.mkdtemp(suffix))
@@ -194,30 +192,30 @@ class SubversionClientTestCase(unittest.TestCase):
 
   def test_mkdir_url(self):
     """Test svn_client_mkdir2 on a file:// URL"""
-    dir = urljoin(REPOS_URL+"/", "dir1")
+    directory = urljoin(REPOS_URL+"/", "dir1")
 
-    commit_info = client.mkdir2((dir,), self.client_ctx)
+    commit_info = client.mkdir2((directory,), self.client_ctx)
     self.assertEqual(commit_info.revision, 13)
     self.assertEqual(self.log_message_func_calls, 1)
 
   def test_mkdir_url_with_revprops(self):
     """Test svn_client_mkdir3 on a file:// URL, with added revprops"""
-    dir = urljoin(REPOS_URL+"/", "some/deep/subdir")
+    directory = urljoin(REPOS_URL+"/", "some/deep/subdir")
 
-    commit_info = client.mkdir3((dir,), 1, {'customprop':'value'},
+    commit_info = client.mkdir3((directory,), 1, {'customprop':'value'},
                                 self.client_ctx)
     self.assertEqual(commit_info.revision, 14)
     self.assertEqual(self.log_message_func_calls, 1)
 
   def test_log3_url(self):
     """Test svn_client_log3 on a file:// URL"""
-    dir = urljoin(REPOS_URL+"/", "trunk/dir1")
+    directory = urljoin(REPOS_URL+"/", "trunk/dir1")
 
     start = core.svn_opt_revision_t()
     end = core.svn_opt_revision_t()
     core.svn_opt_parse_revision(start, end, "4:0")
-    client.log3((dir,), start, start, end, 1, True, False, self.log_receiver,
-        self.client_ctx)
+    client.log3((directory,), start, start, end, 1, True, False,
+        self.log_receiver, self.client_ctx)
     self.assertEqual(self.change_author, "john")
     self.assertEqual(self.log_message, "More directories.")
     self.assertEqual(len(self.changed_paths), 3)
@@ -363,11 +361,11 @@ class SubversionClientTestCase(unittest.TestCase):
     end.kind = core.svn_opt_revision_number
     end.value.number = 9
 
-    range = core.svn_opt_revision_range_t()
-    range.start = start
-    range.end = end
+    rrange = core.svn_opt_revision_range_t()
+    rrange.start = start
+    rrange.end = end
 
-    client.merge_peg3(v1x_path, (range,), end, trunk_path,
+    client.merge_peg3(v1x_path, (rrange,), end, trunk_path,
                       core.svn_depth_infinity, False, False, False, False,
                       None, self.client_ctx)
 

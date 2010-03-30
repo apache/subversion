@@ -192,7 +192,7 @@ typedef struct svn_ra__vtable_t {
                                 apr_hash_t **locations,
                                 const char *path,
                                 svn_revnum_t peg_revision,
-                                apr_array_header_t *location_revisions,
+                                const apr_array_header_t *location_revisions,
                                 apr_pool_t *pool);
   svn_error_t *(*get_location_segments)(svn_ra_session_t *session,
                                         const char *path,
@@ -330,7 +330,7 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
                            apr_hash_t **locations_p,
                            const char *path,
                            svn_revnum_t peg_revision,
-                           apr_array_header_t *location_revisions,
+                           const apr_array_header_t *location_revisions,
                            apr_pool_t *pool);
 
 /**

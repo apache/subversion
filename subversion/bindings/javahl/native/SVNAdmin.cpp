@@ -333,7 +333,7 @@ jlong SVNAdmin::recover(const char *path)
   return youngest_rev;
 }
 
-void SVNAdmin::rmtxns(const char *path, Targets &transactions)
+void SVNAdmin::rmtxns(const char *path, StringArray &transactions)
 {
   SVN::Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -541,7 +541,7 @@ jobject SVNAdmin::lslocks(const char *path)
   return CreateJ::Set(jlocks);
 }
 
-void SVNAdmin::rmlocks(const char *path, Targets &locks)
+void SVNAdmin::rmlocks(const char *path, StringArray &locks)
 {
   SVN::Pool requestPool;
   apr_pool_t *pool = requestPool.pool();

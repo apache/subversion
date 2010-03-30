@@ -117,6 +117,7 @@ typedef enum {
   opt_show_copies_as_adds,
   opt_ignore_keywords,
   opt_reverse_diff,
+  opt_include_pattern,
   opt_exclude_pattern,
 } svn_cl__longopt_t;
 
@@ -348,6 +349,24 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("apply the unidiff in reverse\n"
                        "                             "
                        "[alias: --rd]")},
+  {"include-pattern", opt_include_pattern, 1,
+                    N_("operate only on targets matching ARG,\n"
+                       "                             "
+                       "which may be a glob pattern such as '*.txt'.\n"
+                       "                             "
+                       "If this option is specified multiple times,\n"
+                       "                             "
+                       "all patterns are matched in turn.\n"
+                       "                             "
+                       "If both --include-pattern and --exclude-pattern\n"
+                       "                             "
+                       "options are specified include patterns are applied\n"
+                       "                             "
+                       "first, i.e. exclude patterns are applied to all\n"
+                       "                             "
+                       "targets which match an include pattern.\n"
+                       "                             "
+                       "[alias: --ip]")},
   {"exclude-pattern", opt_exclude_pattern, 1,
                     N_("do not operate on targets matching ARG,\n"
                        "                             "
@@ -356,6 +375,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        "If this option is specified multiple times,\n"
                        "                             "
                        "all patterns are matched in turn.\n"
+                       "                             "
+                       "See also the --include-pattern option.\n"
                        "                             "
                        "[alias: --ep]")},
   /* Long-opt Aliases
@@ -382,6 +403,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"ri",            opt_reintegrate, 0, NULL},
   {"sca",           opt_show_copies_as_adds, 0, NULL},
   {"ik",            opt_ignore_keywords, 0, NULL},
+  {"ip",            opt_include_pattern, 1, NULL},
   {"ep",            opt_exclude_pattern, 1, NULL},
 
   {0,               0, 0, 0},
@@ -824,7 +846,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  for addition. Use 'svn revert' to undo deletions and additions you\n"
      "  do not agree with.\n"
      ),
-    {'q', opt_dry_run, 'p', opt_reverse_diff, opt_exclude_pattern} },
+    {'q', opt_dry_run, 'p', opt_reverse_diff, opt_include_pattern,
+     opt_exclude_pattern} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1738,6 +1761,12 @@ main(int argc, const char *argv[])
         break;
       case opt_reverse_diff:
         opt_state.reverse_diff = TRUE;
+        break;
+      case opt_include_pattern:
+        if (opt_state.include_patterns == NULL)
+          opt_state.include_patterns = apr_array_make(pool, 1,
+                                                      sizeof (const char *));
+        APR_ARRAY_PUSH(opt_state.include_patterns, const char *) = opt_arg;
         break;
       case opt_exclude_pattern:
         if (opt_state.exclude_patterns == NULL)

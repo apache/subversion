@@ -93,7 +93,7 @@ dup_dir_listing(void **out,
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      svn_fs_dirent_t *dirent = svn_apr_hash_index_val(hi);
+      svn_fs_dirent_t *dirent = svn__apr_hash_index_val(hi);
       svn_fs_dirent_t *new_dirent;
 
       new_dirent = apr_palloc(pool, sizeof(*new_dirent));

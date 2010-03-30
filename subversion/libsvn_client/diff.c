@@ -126,8 +126,8 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   for (hi = apr_hash_first(pool, deleted);
        hi; hi = apr_hash_next(hi))
     {
-      const char *from_path = svn_apr_hash_index_key(hi);
-      apr_array_header_t *merge_revarray = svn_apr_hash_index_val(hi);
+      const char *from_path = svn__apr_hash_index_key(hi);
+      apr_array_header_t *merge_revarray = svn__apr_hash_index_val(hi);
       svn_string_t *merge_revstr;
 
       SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
@@ -141,8 +141,8 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   for (hi = apr_hash_first(pool, added);
        hi; hi = apr_hash_next(hi))
     {
-      const char *from_path = svn_apr_hash_index_key(hi);
-      apr_array_header_t *merge_revarray = svn_apr_hash_index_val(hi);
+      const char *from_path = svn__apr_hash_index_key(hi);
+      apr_array_header_t *merge_revarray = svn__apr_hash_index_val(hi);
       svn_string_t *merge_revstr;
 
       SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
@@ -1281,7 +1281,7 @@ diff_repos_repos(const struct diff_parameters *diff_param,
      Otherwise, we just use "". */
   SVN_ERR(svn_client__get_diff_editor
           (drr.base_path ? drr.base_path : "",
-           ctx->wc_ctx, callbacks, callback_baton, diff_param->depth,
+           NULL, callbacks, callback_baton, diff_param->depth,
            FALSE /* doesn't matter for diff */, extra_ra_session, drr.rev1,
            NULL /* no notify_func */, NULL /* no notify_baton */,
            ctx->cancel_func, ctx->cancel_baton,

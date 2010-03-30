@@ -58,7 +58,7 @@ public class ProgressEvent implements java.io.Serializable
      * @param total The total number of bytes, or <code>-1</code> if
      * not known.
      */
-    ProgressEvent(long progress, long total)
+    public ProgressEvent(long progress, long total)
     {
         this.progress = progress;
         this.total = total;

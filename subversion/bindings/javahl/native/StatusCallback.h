@@ -54,9 +54,6 @@ class StatusCallback
    * This a local reference to the Java object.
    */
   jobject m_callback;
-
-  jobject createJavaStatus(const char *local_abspath,
-                           const svn_wc_status2_t *status);
 };
 
 #endif // STATUSCALLBACK_H

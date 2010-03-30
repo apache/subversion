@@ -138,6 +138,10 @@ svn_skel_t *svn_skel__make_empty_list(apr_pool_t *pool);
 void svn_skel__prepend(svn_skel_t *skel, svn_skel_t *list);
 
 
+/* Append SKEL to LIST.  */
+void svn_skel__append(svn_skel_t *list, const svn_skel_t *skel);
+
+
 /* Create an atom skel whose contents are the string representation
    of the integer VALUE, allocated in RESULT_POOL, and then prepend
    it to SKEL.  */

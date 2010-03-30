@@ -26,7 +26,6 @@
 
 #include "SVNClient.h"
 #include "JNIUtil.h"
-#include "Notify.h"
 #include "NotifyCallback.h"
 #include "CopySources.h"
 #include "DiffSummaryReceiver.h"
@@ -62,9 +61,6 @@
 #include "svn_dirent_uri.h"
 #include "svn_utf.h"
 #include "svn_private_config.h"
-#include "../include/org_apache_subversion_javahl_Revision.h"
-#include "../include/org_apache_subversion_javahl_NodeKind.h"
-#include "../include/org_apache_subversion_javahl_StatusKind.h"
 #include "JNIStringHolder.h"
 #include <vector>
 #include <iostream>
@@ -78,7 +74,6 @@ struct log_msg_baton
 
 SVNClient::SVNClient()
 {
-    m_notify = NULL;
     m_notify2 = NULL;
     m_progressListener = NULL;
     m_prompter = NULL;
@@ -88,7 +83,6 @@ SVNClient::SVNClient()
 
 SVNClient::~SVNClient()
 {
-    delete m_notify;
     delete m_notify2;
     delete m_progressListener;
     delete m_prompter;
@@ -294,12 +288,6 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
                 -1);
 
     return rev;
-}
-
-void SVNClient::notification(Notify *notify)
-{
-    delete m_notify;
-    m_notify = notify;
 }
 
 void SVNClient::notification2(NotifyCallback *notify2)
@@ -855,8 +843,8 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
     Path srcURL(mergeSourceURL);
     SVN_JNI_ERR(srcURL.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_mergeinfo_log(urlPath.c_str(),
-                                         type == 1 ? true : false,
+    SVN_JNI_ERR(svn_client_mergeinfo_log((type == 1),
+                                         urlPath.c_str(),
                                          pegRevision.revision(),
                                          srcURL.c_str(),
                                          srcPegRevision.revision(),
@@ -1240,8 +1228,8 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
                                m_passWord.c_str());
 
     ctx->auth_baton = ab;
-    ctx->notify_func = Notify::notify;
-    ctx->notify_baton = m_notify;
+    ctx->notify_func = NULL;
+    ctx->notify_baton = NULL;
     ctx->log_msg_func3 = getCommitMessage;
     ctx->log_msg_baton3 = getCommitMessageBaton(message);
     ctx->cancel_func = checkCancel;

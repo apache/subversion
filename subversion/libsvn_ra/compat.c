@@ -284,7 +284,7 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
                            apr_hash_t **locations_p,
                            const char *path,
                            svn_revnum_t peg_revision,
-                           apr_array_header_t *location_revisions,
+                           const apr_array_header_t *location_revisions,
                            apr_pool_t *pool)
 {
   apr_hash_t *locations = apr_hash_make(pool);

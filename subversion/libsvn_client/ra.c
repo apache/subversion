@@ -57,7 +57,7 @@ typedef struct
 
   /* An array of svn_client_commit_item3_t * structures, present only
      during working copy commits. */
-  apr_array_header_t *commit_items;
+  const apr_array_header_t *commit_items;
 
   /* A client context. */
   svn_client_ctx_t *ctx;
@@ -290,7 +290,7 @@ svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
                                      const char *base_dir,
-                                     apr_array_header_t *commit_items,
+                                     const apr_array_header_t *commit_items,
                                      svn_boolean_t use_admin,
                                      svn_boolean_t read_only_wc,
                                      svn_client_ctx_t *ctx,
@@ -754,9 +754,9 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
      remembering the youngest matching location. */
   for (hi = apr_hash_first(pool, history1); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn_apr_hash_index_key(hi);
-      apr_ssize_t path_len = svn_apr_hash_index_klen(hi);
-      apr_array_header_t *ranges1 = svn_apr_hash_index_val(hi);
+      const char *path = svn__apr_hash_index_key(hi);
+      apr_ssize_t path_len = svn__apr_hash_index_klen(hi);
+      apr_array_header_t *ranges1 = svn__apr_hash_index_val(hi);
       apr_array_header_t *ranges2, *common;
 
       ranges2 = apr_hash_get(history2, path, path_len);

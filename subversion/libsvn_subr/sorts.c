@@ -196,7 +196,7 @@ bsearch_lower_bound(const void *key,
 
 int
 svn_sort__bsearch_lower_bound(const void *key,
-                              apr_array_header_t *array,
+                              const apr_array_header_t *array,
                               int (*compare_func)(const void *, const void *))
 {
   return bsearch_lower_bound(key,

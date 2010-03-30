@@ -1091,7 +1091,7 @@ svn_error_t *
 svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
                           const char *url,
                           apr_hash_t *prop_changes,
-                          apr_array_header_t *prop_deletes,
+                          const apr_array_header_t *prop_deletes,
                           apr_hash_t *extra_headers,
                           apr_pool_t *pool)
 {

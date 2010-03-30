@@ -31,43 +31,43 @@ package org.apache.subversion.javahl;
  * concepts of depth.
  *
  */
-public final class Depth
+public enum Depth
 {
     /* The order of these depths is important: the higher the number,
        the deeper it descends.  This allows us to compare two depths
        numerically to decide which should govern. */
 
     /** Depth undetermined or ignored. */
-    public static final int unknown = -2;
+    unknown,
 
     /** Exclude (i.e, don't descend into) directory D. */
-    public static final int exclude = -1;
+    exclude,
 
     /** Just the named directory D, no entries.  Updates will not pull in
         any files or subdirectories not already present. */
-    public static final int empty = 0;
+    empty,
 
     /** D + its file children, but not subdirs.  Updates will pull in any
         files not already present, but not subdirectories. */
-    public static final int files = 1;
+    files,
 
     /** D + immediate children (D and its entries).  Updates will pull in
         any files or subdirectories not already present; those
         subdirectories' this_dir entries will have depth-empty. */
-    public static final int immediates = 2;
+    immediates,
 
     /** D + all descendants (full recursion from D).  Updates will pull
         in any files or subdirectories not already present; those
         subdirectories' this_dir entries will have depth-infinity.
         Equivalent to the pre-1.5 default update behavior. */
-    public static final int infinity = 3;
+    infinity;
 
     /**
      * @return A depth value of {@link #infinity} when
      * <code>recurse</code> is <code>true</code>, or {@link #empty}
      * otherwise.
      */
-    public static final int infinityOrEmpty(boolean recurse)
+    public static final Depth infinityOrEmpty(boolean recurse)
     {
         return (recurse ? infinity : empty);
     }
@@ -77,7 +77,7 @@ public final class Depth
      * <code>recurse</code> is <code>true</code>, or {@link #files}
      * otherwise.
      */
-    public static final int infinityOrFiles(boolean recurse)
+    public static final Depth infinityOrFiles(boolean recurse)
     {
         return (recurse ? infinity : files);
     }
@@ -87,7 +87,7 @@ public final class Depth
      * <code>recurse</code> is <code>true</code>, or {@link
      * #immediates} otherwise.
      */
-    public static final int infinityOrImmediates(boolean recurse)
+    public static final Depth infinityOrImmediates(boolean recurse)
     {
         return (recurse ? infinity : immediates);
     }
@@ -97,7 +97,7 @@ public final class Depth
      * <code>recurse</code> is <code>true</code>, or {@link #empty}
      * otherwise.
      */
-    public static final int unknownOrEmpty(boolean recurse)
+    public static final Depth unknownOrEmpty(boolean recurse)
     {
         return (recurse ? unknown : empty);
     }
@@ -107,7 +107,7 @@ public final class Depth
      * <code>recurse</code> is <code>true</code>, or {@link #files}
      * otherwise.
      */
-    public static final int unknownOrFiles(boolean recurse)
+    public static final Depth unknownOrFiles(boolean recurse)
     {
         return (recurse ? unknown : files);
     }
@@ -117,7 +117,7 @@ public final class Depth
      * <code>recurse</code> is <code>true</code>, or {@link
      * #immediates} otherwise.
      */
-    public static final int unknownOrImmediates(boolean recurse)
+    public static final Depth unknownOrImmediates(boolean recurse)
     {
         return (recurse ? unknown : immediates);
     }

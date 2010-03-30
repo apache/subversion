@@ -115,6 +115,7 @@ struct dir_baton
   void *wrapped_baton;
 };
 
+/* */
 static svn_error_t *
 make_dir_baton(struct dir_baton **d_p,
                const char *path,
@@ -206,6 +207,7 @@ make_dir_baton(struct dir_baton **d_p,
   return SVN_NO_ERROR;
 }
 
+/* */
 static svn_error_t *
 make_file_baton(struct file_baton **f_p,
                 struct dir_baton *pb,
@@ -264,6 +266,7 @@ make_file_baton(struct file_baton **f_p,
 
 /*** Editor Functions ***/
 
+/* */
 static svn_error_t *
 set_target_revision(void *edit_baton,
                     svn_revnum_t target_revision,
@@ -276,6 +279,7 @@ set_target_revision(void *edit_baton,
                                                 target_revision, pool);
 }
 
+/* */
 static svn_error_t *
 open_root(void *edit_baton,
           svn_revnum_t base_revision,
@@ -322,6 +326,7 @@ open_root(void *edit_baton,
                                        pool, &b->wrapped_baton);
 }
 
+/* */
 static svn_error_t *
 delete_entry(const char *path,
              svn_revnum_t base_revision,
@@ -361,6 +366,7 @@ delete_entry(const char *path,
                                           pb->wrapped_baton, pool);
 }
 
+/* */
 static svn_error_t *
 add_directory(const char *path,
               void *parent_baton,
@@ -406,6 +412,7 @@ add_directory(const char *path,
                                            pool, &b->wrapped_baton);
 }
 
+/* */
 static svn_error_t *
 open_directory(const char *path,
                void *parent_baton,
@@ -458,6 +465,7 @@ open_directory(const char *path,
   return SVN_NO_ERROR;
 }
 
+/* */
 static svn_error_t *
 add_file(const char *path,
          void *parent_baton,
@@ -481,6 +489,7 @@ add_file(const char *path,
                                       pool, &b->wrapped_baton);
 }
 
+/* */
 static svn_error_t *
 open_file(const char *path,
           void *parent_baton,
@@ -502,6 +511,7 @@ open_file(const char *path,
                                        &b->wrapped_baton);
 }
 
+/* */
 static svn_error_t *
 apply_textdelta(void *file_baton,
                 const char *base_checksum,
@@ -525,6 +535,7 @@ apply_textdelta(void *file_baton,
                                              handler, handler_baton);
 }
 
+/* */
 static svn_error_t *
 close_file(void *file_baton,
            const char *text_checksum,
@@ -540,6 +551,7 @@ close_file(void *file_baton,
                                         text_checksum, pool);
 }
 
+/* */
 static svn_error_t *
 absent_file(const char *path,
             void *parent_baton,
@@ -554,6 +566,7 @@ absent_file(const char *path,
   return eb->wrapped_editor->absent_file(path, pb->wrapped_baton, pool);
 }
 
+/* */
 static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
@@ -567,6 +580,7 @@ close_directory(void *dir_baton,
   return eb->wrapped_editor->close_directory(db->wrapped_baton, pool);
 }
 
+/* */
 static svn_error_t *
 absent_directory(const char *path,
                  void *parent_baton,
@@ -582,6 +596,7 @@ absent_directory(const char *path,
   return eb->wrapped_editor->absent_directory(path, pb->wrapped_baton, pool);
 }
 
+/* */
 static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
@@ -598,6 +613,7 @@ change_file_prop(void *file_baton,
                                               name, value, pool);
 }
 
+/* */
 static svn_error_t *
 change_dir_prop(void *dir_baton,
                 const char *name,
@@ -614,6 +630,7 @@ change_dir_prop(void *dir_baton,
                                              name, value, pool);
 }
 
+/* */
 static svn_error_t *
 close_edit(void *edit_baton,
            apr_pool_t *pool)

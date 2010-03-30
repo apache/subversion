@@ -99,7 +99,7 @@ public class SVNClient implements ISVNClient
      */
     public Version getVersion()
     {
-        return NativeResources.version;
+        return NativeResources.getVersion();
     }
 
     /**
@@ -121,28 +121,18 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public void status(String path, int depth, boolean onServer, boolean getAll,
-                       boolean noIgnore, boolean ignoreExternals,
-                       Collection<String> changelists, StatusCallback callback)
-            throws ClientException
-    {
-        this.status(path, depth, onServer, getAll, noIgnore, ignoreExternals,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]),
-                    callback);
-    }
-
-    private native void status(String path, int depth, boolean onServer,
-                               boolean getAll, boolean noIgnore,
-                               boolean ignoreExternals, String[] changelists,
-                               StatusCallback callback)
+    public native void status(String path, Depth depth, boolean onServer,
+                              boolean getAll, boolean noIgnore,
+                              boolean ignoreExternals,
+                              Collection<String> changelists,
+                              StatusCallback callback)
             throws ClientException;
 
     /**
      * @since 1.5
      */
     public native void list(String url, Revision revision,
-                            Revision pegRevision, int depth, int direntFields,
+                            Revision pegRevision, Depth depth, int direntFields,
                             boolean fetchLocks, ListCallback callback)
             throws ClientException;
 
@@ -164,51 +154,22 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.6
      */
-    public void logMessages(String path,
-                            Revision pegRevision,
-                            List<RevisionRange> revisionRanges,
-                            boolean stopOnCopy,
-                            boolean discoverPath,
-                            boolean includeMergedRevisions,
-                            Set<String> revProps,
-                            long limit,
-                            LogMessageCallback callback)
-            throws ClientException
-    {
-        this.logMessages(path, pegRevision,
-                         revisionRanges == null ? null
-                            : revisionRanges.toArray(new RevisionRange[
-                                                        revisionRanges.size()]),
-                         stopOnCopy, discoverPath, includeMergedRevisions,
-                         revProps == null ? null
-                            : revProps.toArray(new String[revProps.size()]),
-                         limit, callback);
-    }
-
-    private native void logMessages(String path,
-                                    Revision pegRevision,
-                                    RevisionRange[] revisionRanges,
-                                    boolean stopOnCopy,
-                                    boolean discoverPath,
-                                    boolean includeMergedRevisions,
-                                    String[] revProps,
-                                    long limit,
-                                    LogMessageCallback callback)
+    public native void logMessages(String path, Revision pegRevision,
+                                   List<RevisionRange> revisionRanges,
+                                   boolean stopOnCopy, boolean discoverPath,
+                                   boolean includeMergedRevisions,
+                                   Set<String> revProps, long limit,
+                                   LogMessageCallback callback)
             throws ClientException;
+
     /**
      * @since 1.5
      */
     public native long checkout(String moduleName, String destPath,
                                 Revision revision, Revision pegRevision,
-                                int depth, boolean ignoreExternals,
+                                Depth depth, boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
-
-    /**
-     * @since 1.0
-     * @deprecated
-     */
-    public native void notification(Notify notify);
 
     /**
      * @since 1.2
@@ -233,133 +194,65 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public void remove(Set<String> paths, String message, boolean force,
-                       boolean keepLocal, Map<String, String> revpropTable)
-            throws ClientException
-    {
-        this.remove(paths.toArray(new String[paths.size()]), message, force,
-                    keepLocal, revpropTable);
-    }
-
-    private native void remove(String[] paths, String message, boolean force,
-                               boolean keepLocal,
-                               Map<String, String> revpropTable)
+    public native void remove(Set<String> paths, String message, boolean force,
+                              boolean keepLocal,
+                              Map<String, String> revpropTable)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public void revert(String path, int depth, Collection<String> changelists)
-            throws ClientException
-    {
-        this.revert(path, depth,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]));
-    }
-
-    private native void revert(String path, int depth, String[] changelists)
+    public native void revert(String path, Depth depth,
+                              Collection<String> changelists)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public native void add(String path, int depth, boolean force,
+    public native void add(String path, Depth depth, boolean force,
                            boolean noIgnores, boolean addParents)
         throws ClientException;
 
     /**
      * @since 1.5
      */
-    public long[] update(Set<String> paths, Revision revision,
-                         int depth, boolean depthIsSticky,
-                         boolean ignoreExternals,
-                         boolean allowUnverObstructions)
-            throws ClientException
-    {
-        return update(paths.toArray(new String[paths.size()]), revision, depth,
-                      depthIsSticky, ignoreExternals, allowUnverObstructions);
-    }
-
-    private native long[] update(String[] paths, Revision revision,
-                                 int depth, boolean depthIsSticky,
-                                 boolean ignoreExternals,
-                                 boolean allowUnverObstructions)
+    public native long[] update(Set<String> paths, Revision revision,
+                                Depth depth, boolean depthIsSticky,
+                                boolean ignoreExternals,
+                                boolean allowUnverObstructions)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public long commit(Set<String> paths, String message, int depth,
-                       boolean noUnlock, boolean keepChangelist,
-                       Collection<String> changelists,
-                       Map<String, String> revpropTable)
-            throws ClientException
-    {
-        return this.commit(paths.toArray(new String[paths.size()]),
-                    message, depth, noUnlock, keepChangelist,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]),
-                    revpropTable);
-    }
-
-    private native long commit(String[] paths, String message, int depth,
-                               boolean noUnlock, boolean keepChangelist,
-                               String[] changelists,
-                               Map<String, String> revpropTable)
+    public native long commit(Set<String> paths, String message, Depth depth,
+                              boolean noUnlock, boolean keepChangelist,
+                              Collection<String> changelists,
+                              Map<String, String> revpropTable)
             throws ClientException;
 
     /**
      * @since 1.7
      */
-    public void copy(List<CopySource> sources, String destPath,
-                     String message, boolean copyAsChild,
-                     boolean makeParents, boolean ignoreExternals,
-                     Map<String, String> revpropTable)
-            throws ClientException
-    {
-        this.copy(sources.toArray(new CopySource[sources.size()]),
-                  destPath, message, copyAsChild, makeParents,
-                  ignoreExternals, revpropTable);
-    }
-
-    private native void copy(CopySource[] sources, String destPath,
-                             String message, boolean copyAsChild,
-                             boolean makeParents, boolean ignoreExternals,
-                             Map<String, String> revpropTable)
+    public native void copy(List<CopySource> sources, String destPath,
+                            String message, boolean copyAsChild,
+                            boolean makeParents, boolean ignoreExternals,
+                            Map<String, String> revpropTable)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public void move(Set<String> srcPaths, String destPath,
-                     String message, boolean force, boolean moveAsChild,
-                     boolean makeParents, Map<String, String> revpropTable)
-            throws ClientException
-    {
-        this.move(srcPaths.toArray(new String[srcPaths.size()]), destPath,
-                  message, force, moveAsChild, makeParents, revpropTable);
-    }
-
-    private native void move(String[] srcPaths, String destPath,
-                             String message,
-                             boolean force, boolean moveAsChild,
-                             boolean makeParents,
-                             Map<String, String> revpropTable)
+    public native void move(Set<String> srcPaths, String destPath,
+                            String message, boolean force, boolean moveAsChild,
+                            boolean makeParents,
+                            Map<String, String> revpropTable)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public void mkdir(Set<String> paths, String message,
-                      boolean makeParents,
-                      Map<String, String> revpropTable)
-            throws ClientException
-    {
-        this.mkdir(paths.toArray(new String[paths.size()]), message,
-                   makeParents, revpropTable);
-    }
-
-    private native void mkdir(String[] paths, String message,
+    public native void mkdir(Set<String> paths, String message,
                              boolean makeParents,
                              Map<String, String> revpropTable)
             throws ClientException;
@@ -373,7 +266,8 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void resolve(String path, int depth, int conflictResult)
+    public native void resolve(String path, Depth depth,
+                               ConflictResult.Choice conflictResult)
         throws SubversionException;
 
     /**
@@ -382,14 +276,14 @@ public class SVNClient implements ISVNClient
     public native long doExport(String srcPath, String destPath,
                                 Revision revision, Revision pegRevision,
                                 boolean force, boolean ignoreExternals,
-                                int depth, String nativeEOL)
+                                Depth depth, String nativeEOL)
             throws ClientException;
 
     /**
      * @since 1.5
      */
     public native long doSwitch(String path, String url, Revision revision,
-                                Revision pegRevision, int depth,
+                                Revision pegRevision, Depth depth,
                                 boolean depthIsSticky, boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
@@ -398,7 +292,7 @@ public class SVNClient implements ISVNClient
      * @since 1.5
      */
     public native void doImport(String path, String url, String message,
-                                int depth, boolean noIgnore,
+                                Depth depth, boolean noIgnore,
                                 boolean ignoreUnknownNodeTypes,
                                 Map<String, String> revpropTable)
             throws ClientException;
@@ -415,7 +309,7 @@ public class SVNClient implements ISVNClient
      */
     public native void merge(String path1, Revision revision1, String path2,
                              Revision revision2, String localPath,
-                             boolean force, int depth,
+                             boolean force, Depth depth,
                              boolean ignoreAncestry, boolean dryRun,
                              boolean recordOnly)
             throws ClientException;
@@ -423,22 +317,10 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public void merge(String path, Revision pegRevision,
-                      List<RevisionRange> revisions, String localPath,
-                      boolean force, int depth, boolean ignoreAncestry,
-                      boolean dryRun, boolean recordOnly)
-            throws ClientException
-    {
-        this.merge(path, pegRevision,
-                   revisions == null ? null
-                    : revisions.toArray(new RevisionRange[revisions.size()]),
-                   localPath, force, depth, ignoreAncestry, dryRun, recordOnly);
-    }
-
-    private native void merge(String path, Revision pegRevision,
-                              RevisionRange[] revisions, String localPath,
-                              boolean force, int depth, boolean ignoreAncestry,
-                              boolean dryRun, boolean recordOnly)
+    public native void merge(String path, Revision pegRevision,
+                             List<RevisionRange> revisions, String localPath,
+                             boolean force, Depth depth, boolean ignoreAncestry,
+                             boolean dryRun, boolean recordOnly)
             throws ClientException;
 
     /**
@@ -457,201 +339,95 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.7
      */
-    public void getMergeinfoLog(int kind, String pathOrUrl,
-                                Revision pegRevision,
-                                String mergeSourceUrl,
-                                Revision srcPegRevision,
-                                boolean discoverChangedPaths,
-                                int depth,
-                                Set<String> revProps,
-                                LogMessageCallback callback)
-        throws ClientException
-    {
-        this.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
-                             srcPegRevision, discoverChangedPaths, depth,
-                             revProps == null ? null
-                                : revProps.toArray(new String[revProps.size()]),
-                             callback);
-    }
-
-    private native void getMergeinfoLog(int kind, String pathOrUrl,
-                                        Revision pegRevision,
-                                        String mergeSourceUrl,
-                                        Revision srcPegRevision,
-                                        boolean discoverChangedPaths,
-                                        int depth,
-                                        String[] revProps,
-                                        LogMessageCallback callback)
+    public native void getMergeinfoLog(MergeinfoLogKind kind, String pathOrUrl,
+                                       Revision pegRevision,
+                                       String mergeSourceUrl,
+                                       Revision srcPegRevision,
+                                       boolean discoverChangedPaths, Depth depth,
+                                       Set<String> revProps,
+                                       LogMessageCallback callback)
         throws ClientException;
 
     /**
      * @since 1.7
      */
-    public void diff(String target1, Revision revision1, String target2,
-                     Revision revision2, String relativeToDir,
-                     String outFileName, int depth,
-                     Collection<String> changelists, boolean ignoreAncestry,
-                     boolean noDiffDeleted, boolean force,
-                     boolean copiesAsAdds)
-            throws ClientException
-    {
-        this.diff(target1, revision1, target2, revision2, relativeToDir,
-                    outFileName, depth,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]),
-                    ignoreAncestry, noDiffDeleted, force, copiesAsAdds);
-                
-    }
-
-    private native void diff(String target1, Revision revision1, String target2,
-                             Revision revision2, String relativeToDir,
-                             String outFileName, int depth,
-                             String[] changelists, boolean ignoreAncestry,
-                             boolean noDiffDeleted, boolean force,
-                             boolean copiesAsAdds)
+    public native void diff(String target1, Revision revision1, String target2,
+                            Revision revision2, String relativeToDir,
+                            String outFileName, Depth depth,
+                            Collection<String> changelists,
+                            boolean ignoreAncestry, boolean noDiffDeleted,
+                            boolean force, boolean copiesAsAdds)
             throws ClientException;
 
     /**
      * @since 1.7
      */
-    public void diff(String target, Revision pegRevision,
-                     Revision startRevision, Revision endRevision,
-                     String relativeToDir, String outFileName,
-                     int depth, Collection<String> changelists,
-                     boolean ignoreAncestry, boolean noDiffDeleted,
-                     boolean force, boolean copiesAsAdds)
-            throws ClientException
-    {
-        this.diff(target, pegRevision, startRevision, endRevision,
-                    relativeToDir, outFileName, depth,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]),
-                    ignoreAncestry, noDiffDeleted, force, copiesAsAdds);
-    }
-
-    private native void diff(String target, Revision pegRevision,
-                             Revision startRevision, Revision endRevision,
-                             String relativeToDir, String outFileName,
-                             int depth, String[] changelists,
-                             boolean ignoreAncestry, boolean noDiffDeleted,
-                             boolean force, boolean copiesAsAdds)
+    public native void diff(String target, Revision pegRevision,
+                            Revision startRevision, Revision endRevision,
+                            String relativeToDir, String outFileName,
+                            Depth depth, Collection<String> changelists,
+                            boolean ignoreAncestry, boolean noDiffDeleted,
+                            boolean force, boolean copiesAsAdds)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public void diffSummarize(String target1, Revision revision1,
-                              String target2, Revision revision2,
-                              int depth, Collection<String> changelists,
-                              boolean ignoreAncestry,
-                              DiffSummaryCallback receiver)
-            throws ClientException
-    {
-        this.diffSummarize(target1, revision1, target2, revision2, depth,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]),
-                    ignoreAncestry, receiver);
-    }
-
-    private native void diffSummarize(String target1, Revision revision1,
-                                      String target2, Revision revision2,
-                                      int depth, String[] changelists,
-                                      boolean ignoreAncestry,
-                                      DiffSummaryCallback receiver)
+    public native void diffSummarize(String target1, Revision revision1,
+                                     String target2, Revision revision2,
+                                     Depth depth, Collection<String> changelists,
+                                     boolean ignoreAncestry,
+                                     DiffSummaryCallback receiver)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public void diffSummarize(String target, Revision pegRevision,
-                              Revision startRevision,
-                              Revision endRevision,
-                              int depth, Collection<String> changelists,
-                              boolean ignoreAncestry,
-                              DiffSummaryCallback receiver)
-            throws ClientException
-    {
-        this.diffSummarize(target, pegRevision, startRevision, endRevision,
-                    depth,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]),
-                    ignoreAncestry, receiver);
-    }
-
-    private native void diffSummarize(String target, Revision pegRevision,
-                                      Revision startRevision,
-                                      Revision endRevision,
-                                      int depth, String[] changelists,
-                                      boolean ignoreAncestry,
-                                      DiffSummaryCallback receiver)
+    public native void diffSummarize(String target, Revision pegRevision,
+                                     Revision startRevision,
+                                     Revision endRevision, Depth depth,
+                                     Collection<String> changelists,
+                                     boolean ignoreAncestry,
+                                     DiffSummaryCallback receiver)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public void properties(String path, Revision revision,
-                           Revision pegRevision, int depth,
-                           Collection<String> changelists,
-                           ProplistCallback callback)
-            throws ClientException
-    {
-        this.properties(path, revision, pegRevision, depth,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]),
-                    callback);
-    }
-
-    private native void properties(String path, Revision revision,
-                                   Revision pegRevision, int depth,
-                                   String[] changelists,
-                                   ProplistCallback callback)
+    public native void properties(String path, Revision revision,
+                                  Revision pegRevision, Depth depth,
+                                  Collection<String> changelists,
+                                  ProplistCallback callback)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public void propertySet(String path, String name, String value,
-                            int depth, Collection<String> changelists,
-                            boolean force, Map<String, String> revpropTable)
-            throws ClientException
-    {
-        this.propertySet(path, name, value, depth,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]),
-                    force, revpropTable);
-    }
-
-    private native void propertySet(String path, String name, String value,
-                                    int depth, String[] changelists,
-                                    boolean force,
-                                    Map<String, String> revpropTable)
+    public native void propertySet(String path, String name, String value,
+                                   Depth depth, Collection<String> changelists,
+                                   boolean force,
+                                   Map<String, String> revpropTable)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public void propertyRemove(String path, String name, int depth,
+    public void propertyRemove(String path, String name, Depth depth,
                                Collection<String> changelists)
             throws ClientException
     {
-        propertySet(path, name, null, depth,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]),
-                    false, null);
+        propertySet(path, name, null, depth, changelists, false, null);
     }
 
     /**
      * @since 1.5
      */
     public void propertyCreate(String path, String name, String value,
-                               int depth, Collection<String> changelists,
+                               Depth depth, Collection<String> changelists,
                                boolean force)
             throws ClientException
     {
-        propertySet(path, name, value, depth,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]),
-                    force, null);
+        propertySet(path, name, value, depth, changelists, force, null);
     }
 
     /**
@@ -742,52 +518,24 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public void addToChangelist(Set<String> paths, String changelist,
-                                int depth, Collection<String> changelists)
-            throws ClientException
-    {
-        this.addToChangelist(paths.toArray(new String[paths.size()]),
-                    changelist, depth,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]));
-    }
-
-    private native void addToChangelist(String[] paths, String changelist,
-                                        int depth, String[] changelists)
+    public native void addToChangelist(Set<String> paths, String changelist,
+                                       Depth depth,
+                                       Collection<String> changelists)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public void removeFromChangelists(Set<String> paths, int depth,
-                                      Collection<String> changelists)
-            throws ClientException
-    {
-        this.removeFromChangelists(paths.toArray(new String[paths.size()]),
-                    depth,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]));
-    }
-
-    private native void removeFromChangelists(String[] paths, int depth,
-                                              String[] changelists)
+    public native void removeFromChangelists(Set<String> paths, Depth depth,
+                                             Collection<String> changelists)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public void getChangelists(String rootPath, Collection<String> changelists,
-                               int depth, ChangelistCallback callback)
-            throws ClientException
-    {
-        this.getChangelists(rootPath,
-                    changelists == null ? null :
-                      changelists.toArray(new String[changelists.size()]),
-                    depth, callback);
-    }
-
-    private native void getChangelists(String rootPath, String[] changelists,
-                                       int depth, ChangelistCallback callback)
+    public native void getChangelists(String rootPath,
+                                      Collection<String> changelists,
+                                      Depth depth, ChangelistCallback callback)
             throws ClientException;
 
     /**
@@ -809,15 +557,25 @@ public class SVNClient implements ISVNClient
      *                      ClientLogLevel)
      * @param logFilePath   path of the log file
      */
-    public static native void enableLogging(int logLevel, String logFilePath);
+    public static native void enableLogging(ClientLogLevel logLevel,
+                                            String logFilePath);
 
     /**
-     * class for the constants of the logging levels.
-     * The constants are defined in ClientLogLevel because of building
-     * reasons
+     * enum for the constants of the logging levels.
      */
-    public static final class LogLevel implements ClientLogLevel
+    public enum ClientLogLevel
     {
+        /** Log nothing */
+        NoLog,
+
+        /** Log fatal error */
+        ErrorLog,
+
+        /** Log exceptions thrown */
+        ExceptionLog,
+
+        /** Log the entry and exits of the JNI code */
+        EntryLog;
     }
 
     /**
@@ -850,43 +608,21 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.2
      */
-    public void lock(Set<String> paths, String comment, boolean force)
-            throws ClientException
-    {
-        this.lock(paths.toArray(new String[paths.size()]), comment, force);
-    }
-
-    private native void lock(String[] paths, String comment, boolean force)
+    public native void lock(Set<String> paths, String comment, boolean force)
             throws ClientException;
 
     /**
      * @since 1.2
      */
-    public void unlock(Set<String> paths, boolean force)
-            throws ClientException
-    {
-        this.unlock(paths.toArray(new String[paths.size()]), force);
-    }
-
-    private native void unlock(String[] paths, boolean force)
+    public native void unlock(Set<String> paths, boolean force)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public void info2(String pathOrUrl, Revision revision,
-                      Revision pegRevision, int depth,
-                      Collection<String> changelists, InfoCallback callback)
-            throws ClientException
-    {
-        this.info2(pathOrUrl, revision, pegRevision, depth, 
-                   changelists == null ? null :
-                     changelists.toArray(new String[changelists.size()]),
-                   callback);
-    }
-
-    private native void info2(String pathOrUrl, Revision revision,
-                              Revision pegRevision, int depth,
-                              String[] changelists, InfoCallback callback)
+    public native void info2(String pathOrUrl, Revision revision,
+                             Revision pegRevision, Depth depth,
+                             Collection<String> changelists,
+                             InfoCallback callback)
             throws ClientException;
 }

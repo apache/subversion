@@ -153,6 +153,7 @@ load_props(apr_hash_t **hash,
 }
 
 
+/* */
 static svn_error_t *
 loggy_write_properties(svn_stringbuf_t **log_accum,
                        apr_hash_t *properties,
@@ -265,58 +266,6 @@ get_existing_prop_reject_file(const char **reject_file,
 /*---------------------------------------------------------------------*/
 
 
-/* Temporary helper for determining where to store pristine properties.
-   All calls will eventually be replaced by direct wc_db operations
-   of the right type. */
-svn_error_t *
-svn_wc__prop_pristine_is_working(svn_boolean_t *working,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_pool_t *scratch_pool)
-{
-  svn_wc__db_status_t status;
-  svn_boolean_t base_shadowed;
-  *working = TRUE;
-
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               &base_shadowed, NULL, NULL,
-                               db, local_abspath, scratch_pool, scratch_pool));
-
-  switch (status)
-    {
-      case svn_wc__db_status_normal:
-        *working = FALSE;
-        break;
-      case svn_wc__db_status_incomplete:
-        *working = base_shadowed;
-        break;
-      case svn_wc__db_status_deleted:
-        /* ### This call fails in some update_editor scenarios, because
-               the parent directory can be incomplete. In this specific
-               case a caller MUST provide the right location itself.
-               (Which (in this case) is always the BASE_NODE table)*/
-        SVN_ERR(svn_wc__db_scan_deletion(NULL, working, NULL, NULL, db,
-                                         local_abspath, scratch_pool,
-                                         scratch_pool));
-        break;
-      case svn_wc__db_status_added:
-        break;
-      case svn_wc__db_status_not_present:
-      case svn_wc__db_status_absent:
-      case svn_wc__db_status_excluded:
-        SVN_ERR_ASSERT(0 && "Node not here");
-      case svn_wc__db_status_obstructed:
-      case svn_wc__db_status_obstructed_add:
-      case svn_wc__db_status_obstructed_delete:
-        SVN_ERR_ASSERT(0 && "Node misses property information");
-      default:
-        SVN_ERR_ASSERT(0 && "Unhandled status");
-    }
-
-  return SVN_NO_ERROR;
-}
 
 /*** Loading regular properties. ***/
 svn_error_t *
@@ -344,29 +293,26 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 #ifdef TEST_DB_PROPS
       {
         apr_hash_t *db_base_props;
+
         SVN_ERR(svn_wc__db_read_pristine_props(&db_base_props, db,
                                                local_abspath,
                                                scratch_pool, scratch_pool));
+        SVN_ERR_ASSERT(db_base_props != NULL);
 
         if (base_props != NULL)
           {
-            if (apr_hash_count(base_props) > 0)
-              {
-                apr_array_header_t *diffs;
+            apr_array_header_t *diffs;
 
-                SVN_ERR_ASSERT(db_base_props != NULL);
-
-                SVN_ERR(svn_prop_diffs(&diffs, base_props, db_base_props,
-                                       scratch_pool));
-
-                SVN_ERR_ASSERT(diffs->nelts == 0);
-              }
-            else
-              SVN_ERR_ASSERT(db_base_props == NULL ||
-                             (apr_hash_count(db_base_props) == 0));
+            SVN_ERR(svn_prop_diffs(&diffs, base_props, db_base_props,
+                                   scratch_pool));
+            SVN_ERR_ASSERT(diffs->nelts == 0);
           }
         else
-          SVN_ERR_ASSERT(db_base_props == NULL);
+          {
+            /* If the propfile is missing, then we should see empty props
+               in the database.  */
+            SVN_ERR_ASSERT(apr_hash_count(db_base_props) == 0);
+          }
       }
 #endif
     }
@@ -387,28 +333,16 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 #ifdef TEST_DB_PROPS
       {
         apr_hash_t *db_props;
+        apr_array_header_t *diffs;
+
+        SVN_ERR_ASSERT(*props_p != NULL);
+
         SVN_ERR(svn_wc__db_read_props(&db_props, db, local_abspath,
                                       scratch_pool, scratch_pool));
+        SVN_ERR_ASSERT(db_props != NULL);
 
-        if (*props_p != NULL)
-          {
-            if (apr_hash_count(*props_p) > 0)
-              {
-                apr_array_header_t *diffs;
-
-                SVN_ERR_ASSERT(db_props != NULL);
-
-                SVN_ERR(svn_prop_diffs(&diffs, *props_p, db_props,
-                                       scratch_pool));
-
-                SVN_ERR_ASSERT(diffs->nelts == 0);
-              }
-            else
-              SVN_ERR_ASSERT(db_props == NULL ||
-                             (apr_hash_count(db_props) == 0));
-          }
-        else
-          SVN_ERR_ASSERT(db_props == NULL);
+        SVN_ERR(svn_prop_diffs(&diffs, *props_p, db_props, scratch_pool));
+        SVN_ERR_ASSERT(diffs->nelts == 0);
       }
 #endif
     }
@@ -436,25 +370,18 @@ svn_wc__load_revert_props(apr_hash_t **revert_props_p,
         *revert_props_p = apr_hash_make(result_pool);
     }
 
-  #ifdef TEST_DB_PROPS
+#ifdef TEST_DB_PROPS
   {
     apr_hash_t *db_props;
+    apr_array_header_t *diffs;
+
     SVN_ERR(svn_wc__db_base_get_props(&db_props, db, local_abspath,
                                       scratch_pool, scratch_pool));
+    SVN_ERR_ASSERT(db_props != NULL);
 
-    if (apr_hash_count(*revert_props_p) > 0)
-      {
-        apr_array_header_t *diffs;
-        SVN_ERR_ASSERT(db_props != NULL);
-
-        SVN_ERR(svn_prop_diffs(&diffs, *revert_props_p, db_props,
-                               scratch_pool));
-
-        SVN_ERR_ASSERT(diffs->nelts == 0);
-      }
-    else
-      SVN_ERR_ASSERT(db_props == NULL ||
-                     (apr_hash_count(db_props) == 0));
+    SVN_ERR(svn_prop_diffs(&diffs, *revert_props_p, db_props,
+                           scratch_pool));
+    SVN_ERR_ASSERT(diffs->nelts == 0);
   }
 #endif
 
@@ -493,6 +420,7 @@ svn_wc__install_props(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* */
 static svn_error_t *
 immediate_install_props(svn_wc__db_t *db,
                         const char *local_abspath,
@@ -728,9 +656,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                     void *cancel_baton,
                     apr_pool_t *pool /* scratch_pool */)
 {
-  svn_wc__db_kind_t kind;
   svn_boolean_t hidden;
-  svn_stringbuf_t *log_accum;
   apr_hash_t *new_base_props;
   apr_hash_t *new_actual_props;
 
@@ -745,14 +671,9 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                              _("The node '%s' was not found."),
                              svn_dirent_local_style(local_abspath, pool));
 
-  if (! dry_run)
-    log_accum = svn_stringbuf_create("", pool);
-  else
-    log_accum = NULL; /* Provide NULL to __merge_props */
-
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
-  SVN_ERR(svn_wc__merge_props(&log_accum, state,
+  SVN_ERR(svn_wc__merge_props(state,
                               &new_base_props, &new_actual_props,
                               wc_ctx->db, local_abspath,
                               left_version, right_version,
@@ -763,33 +684,29 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                               pool, pool));
 
   if (!dry_run)
-    SVN_ERR(svn_wc__install_props(wc_ctx->db, local_abspath,
-                                  new_base_props, new_actual_props,
-                                  base_merge, FALSE, pool));
-
-
-  if (! dry_run)
     {
+      svn_wc__db_kind_t kind;
       const char *dir_abspath;
 
       SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath,
                                    FALSE, pool));
+      if (kind == svn_wc__db_kind_dir)
+        dir_abspath = local_abspath;
+      else
+        dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
-      switch (kind)
-        {
-        case svn_wc__db_kind_dir:
-          dir_abspath = local_abspath;
-          break;
-        default:
-          dir_abspath = svn_dirent_dirname(local_abspath, pool);
-          break;
-        }
+      /* Verify that we're holding this directory's write lock.  */
+      SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, pool));
 
-      if (! svn_stringbuf_isempty(log_accum))
-          SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath, log_accum,
-                                       pool));
+      SVN_ERR(svn_wc__install_props(wc_ctx->db, local_abspath,
+                                    new_base_props, new_actual_props,
+                                    base_merge, FALSE, pool));
 
-      SVN_ERR(svn_wc__run_log2(wc_ctx->db, dir_abspath, pool));
+      /* ### add_loggy takes a DIR, but wq_run is a simple WRI_ABSPATH  */
+
+      SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
+                             cancel_func, cancel_baton,
+                             pool));
     }
 
   return SVN_NO_ERROR;
@@ -1605,8 +1522,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
 
 
 svn_error_t *
-svn_wc__merge_props(svn_stringbuf_t **entry_accum,
-                    svn_wc_notify_state_t *state,
+svn_wc__merge_props(svn_wc_notify_state_t *state,
                     apr_hash_t **new_base_props,
                     apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,
@@ -1830,26 +1746,33 @@ svn_wc__merge_props(svn_stringbuf_t **entry_accum,
       /* We've now guaranteed that some kind of .prej file exists
          above the .svn/ dir.  We write log entries to append our
          conflicts to it. */
-      SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, *entry_accum, scratch_pool);
       SVN_ERR(svn_wc__loggy_append(db, adm_abspath, reject_tmp_path,
-                                   reject_path, result_pool));
+                                   reject_path, scratch_pool));
 
       /* And of course, delete the temporary reject file. */
-      SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, *entry_accum, scratch_pool);
-      SVN_ERR(svn_wc__loggy_remove(entry_accum, adm_abspath,
-                                   reject_tmp_path, result_pool,
-                                   scratch_pool));
+      {
+        const svn_skel_t *work_item;
+
+        SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                             db, reject_tmp_path,
+                                             scratch_pool, scratch_pool));
+        /* ### we should pass WORK_ITEM to some wc_db api that records
+           ### the property conflicts.  */
+        SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
+      }
 
       /* Mark entry as "conflicted" with a particular .prej file. */
       {
+        svn_stringbuf_t *log_accum = NULL;
         svn_wc_entry_t entry;
 
         entry.prejfile = svn_dirent_is_child(adm_abspath, reject_path, NULL);
-        SVN_WC__FLUSH_LOG_ACCUM(db, adm_abspath, *entry_accum, scratch_pool);
-        SVN_ERR(svn_wc__loggy_entry_modify(entry_accum, adm_abspath,
+        SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_abspath,
                                            local_abspath, &entry,
                                            SVN_WC__ENTRY_MODIFY_PREJFILE,
-                                           result_pool, scratch_pool));
+                                           scratch_pool, scratch_pool));
+        SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
+                                     scratch_pool));
       }
 
     } /* if (reject_tmp_fp) */
@@ -2055,6 +1978,7 @@ struct getter_baton {
 };
 
 
+/* */
 static svn_error_t *
 get_file_for_validation(const svn_string_t **mime_type,
                         svn_stream_t *stream,
@@ -2084,6 +2008,7 @@ get_file_for_validation(const svn_string_t **mime_type,
 }
 
 
+/* */
 static svn_error_t *
 validate_eol_prop_against_file(const char *path,
                                svn_wc_canonicalize_svn_prop_get_file_t getter,

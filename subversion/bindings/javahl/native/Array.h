@@ -19,32 +19,32 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
+ *
+ * @file Array.h
+ * @brief Interface of the class Array
  */
 
-package org.apache.subversion.javahl;
+#ifndef ARRAY_H
+#define ARRAY_H
 
-/**
- * Class for the constants of the logging levels.
- */
-public interface ClientLogLevel
+#include <jni.h>
+#include "Pool.h"
+
+struct apr_array_header_t;
+
+#include <vector>
+
+class Array
 {
-    /**
-     * Log nothing
-     */
-    public static final int NoLog = 0;
+ private:
+  jobjectArray m_objectArray;
+  std::vector<jobject> m_objects;
+  void init(jobjectArray jobjects);
+ public:
+  Array(jobjectArray jobjects);
+  Array(jobject jobjectsCollection);
+  virtual ~Array();
+  const std::vector<jobject> &vector(void) const;
+};
 
-    /**
-     * Log fatal error
-     */
-    public static final int ErrorLog = 1;
-
-    /**
-     * Log exceptions thrown
-     */
-    public static final int ExceptionLog = 2;
-
-    /**
-     * Log the entry and exits of the JNI code
-     */
-    public static final int EntryLog = 3;
-}
+#endif // ARRAY_H

@@ -23,8 +23,6 @@
 
 package org.tigris.subversion.javahl;
 
-import org.apache.subversion.javahl.*;
-
 /**
  * Subversion path validation and manipulation.
  *

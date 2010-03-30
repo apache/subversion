@@ -30,6 +30,7 @@
 #include "svn_subst.h"
 #include "svn_pools.h"
 #include "svn_props.h"
+#include "svn_time.h"
 #include "svn_dirent_uri.h"
 
 #include "private/svn_wc_private.h"
@@ -37,6 +38,7 @@
 #include "wc.h"
 #include "lock.h"
 #include "props.h"
+#include "workqueue.h"
 
 #include "svn_private_config.h"
 
@@ -163,6 +165,7 @@ struct wrap_3to2_report_baton {
   void *baton;
 };
 
+/* */
 static svn_error_t *wrap_3to2_set_path(void *report_baton,
                                        const char *path,
                                        svn_revnum_t revision,
@@ -177,6 +180,7 @@ static svn_error_t *wrap_3to2_set_path(void *report_baton,
                                  lock_token, pool);
 }
 
+/* */
 static svn_error_t *wrap_3to2_delete_path(void *report_baton,
                                           const char *path,
                                           apr_pool_t *pool)
@@ -186,6 +190,7 @@ static svn_error_t *wrap_3to2_delete_path(void *report_baton,
   return wrb->reporter->delete_path(wrb->baton, path, pool);
 }
 
+/* */
 static svn_error_t *wrap_3to2_link_path(void *report_baton,
                                         const char *path,
                                         const char *url,
@@ -201,6 +206,7 @@ static svn_error_t *wrap_3to2_link_path(void *report_baton,
                                   start_empty, lock_token, pool);
 }
 
+/* */
 static svn_error_t *wrap_3to2_finish_report(void *report_baton,
                                             apr_pool_t *pool)
 {
@@ -209,6 +215,7 @@ static svn_error_t *wrap_3to2_finish_report(void *report_baton,
   return wrb->reporter->finish_report(wrb->baton, pool);
 }
 
+/* */
 static svn_error_t *wrap_3to2_abort_report(void *report_baton,
                                            apr_pool_t *pool)
 {
@@ -296,6 +303,7 @@ struct wrap_2to1_report_baton {
   void *baton;
 };
 
+/* */
 static svn_error_t *wrap_2to1_set_path(void *report_baton,
                                        const char *path,
                                        svn_revnum_t revision,
@@ -309,6 +317,7 @@ static svn_error_t *wrap_2to1_set_path(void *report_baton,
                                  pool);
 }
 
+/* */
 static svn_error_t *wrap_2to1_delete_path(void *report_baton,
                                           const char *path,
                                           apr_pool_t *pool)
@@ -318,6 +327,7 @@ static svn_error_t *wrap_2to1_delete_path(void *report_baton,
   return wrb->reporter->delete_path(wrb->baton, path, pool);
 }
 
+/* */
 static svn_error_t *wrap_2to1_link_path(void *report_baton,
                                         const char *path,
                                         const char *url,
@@ -332,6 +342,7 @@ static svn_error_t *wrap_2to1_link_path(void *report_baton,
                                   start_empty, pool);
 }
 
+/* */
 static svn_error_t *wrap_2to1_finish_report(void *report_baton,
                                             apr_pool_t *pool)
 {
@@ -340,6 +351,7 @@ static svn_error_t *wrap_2to1_finish_report(void *report_baton,
   return wrb->reporter->finish_report(wrb->baton, pool);
 }
 
+/* */
 static svn_error_t *wrap_2to1_abort_report(void *report_baton,
                                            apr_pool_t *pool)
 {
@@ -533,6 +545,49 @@ svn_wc_get_pristine_contents(svn_stream_t **contents,
                                         scratch_pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
+}
+
+
+svn_error_t *
+svn_wc_process_committed4(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t recurse,
+                          svn_revnum_t new_revnum,
+                          const char *rev_date,
+                          const char *rev_author,
+                          const apr_array_header_t *wcprop_changes,
+                          svn_boolean_t remove_lock,
+                          svn_boolean_t remove_changelist,
+                          const unsigned char *digest,
+                          apr_pool_t *pool)
+{
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
+  const char *local_abspath;
+  const svn_checksum_t *checksum;
+  apr_time_t new_date;
+  apr_hash_t *wcprop_changes_hash;
+
+  if (rev_date)
+    SVN_ERR(svn_time_from_cstring(&new_date, rev_date, pool));
+  else
+    new_date = 0;
+
+  if (digest)
+    checksum = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
+  else
+    checksum = NULL;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  wcprop_changes_hash = svn_wc__prop_array_to_hash(wcprop_changes, pool);
+  SVN_ERR(svn_wc__process_committed_internal(db, local_abspath, recurse,
+                                             new_revnum, new_date, rev_author,
+                                             wcprop_changes_hash,
+                                             !remove_lock, !remove_changelist,
+                                             checksum, NULL, pool));
+
+  /* Run the log file(s) we just created. */
+  return svn_error_return(svn_wc__wq_run(db, local_abspath, NULL, NULL, pool));
 }
 
 
@@ -2171,6 +2226,7 @@ struct status4_wrapper_baton
   const char *anchor_relpath;
 };
 
+/* */
 static svn_error_t *
 status4_wrapper_func(void *baton,
                      const char *local_abspath,
@@ -2267,6 +2323,7 @@ struct status_editor3_compat_baton
   void *old_baton;
 };
 
+/* */
 static svn_error_t *
 status_editor3_compat_func(void *baton,
                            const char *path,
@@ -2289,7 +2346,7 @@ svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
                           svn_depth_t depth,
                           svn_boolean_t get_all,
                           svn_boolean_t no_ignore,
-                          apr_array_header_t *ignore_patterns,
+                          const apr_array_header_t *ignore_patterns,
                           svn_wc_status_func2_t status_func,
                           void *status_baton,
                           svn_cancel_func_t cancel_func,
@@ -2356,6 +2413,7 @@ struct old_status_func_cb_baton
   void *original_baton;
 };
 
+/* */
 static void old_status_func_cb(void *baton,
                                const char *path,
                                svn_wc_status2_t *status)
@@ -2671,7 +2729,7 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                           svn_wc_get_file_t fetch_func,
                           void *fetch_baton,
                           const char *diff3_cmd,
-                          apr_array_header_t *preserved_exts,
+                          const apr_array_header_t *preserved_exts,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_wc_traversal_info_t *traversal_info,
@@ -2786,7 +2844,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                           svn_wc_conflict_resolver_func_t conflict_func,
                           void *conflict_baton,
                           const char *diff3_cmd,
-                          apr_array_header_t *preserved_exts,
+                          const apr_array_header_t *preserved_exts,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_wc_traversal_info_t *traversal_info,
@@ -3643,3 +3701,68 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
+
+svn_error_t *
+svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        svn_boolean_t recurse,
+                        const apr_array_header_t *wcprop_changes,
+                        svn_boolean_t remove_lock,
+                        svn_boolean_t remove_changelist,
+                        const svn_checksum_t *checksum,
+                        apr_pool_t *scratch_pool)
+{
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+  return svn_wc_queue_committed3(queue, local_abspath, recurse, wcprop_changes,
+                                 remove_lock, remove_changelist, checksum,
+                                 scratch_pool);
+}
+
+svn_error_t *
+svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
+                       const char *path,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_boolean_t recurse,
+                       const apr_array_header_t *wcprop_changes,
+                       svn_boolean_t remove_lock,
+                       svn_boolean_t remove_changelist,
+                       const unsigned char *digest,
+                       apr_pool_t *pool)
+{
+  const svn_checksum_t *checksum;
+
+  if (digest)
+    checksum = svn_checksum__from_digest(
+                   digest, svn_checksum_md5,
+                   svn_wc__get_committed_queue_pool(*queue));
+  else
+    checksum = NULL;
+
+  return svn_wc_queue_committed2(*queue, path, adm_access, recurse,
+                                 wcprop_changes, remove_lock,
+                                 remove_changelist, checksum, pool);
+}
+
+svn_error_t *
+svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
+                               svn_wc_adm_access_t *adm_access,
+                               svn_revnum_t new_revnum,
+                               const char *rev_date,
+                               const char *rev_author,
+                               apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+  SVN_ERR(svn_wc_process_committed_queue2(queue, wc_ctx, new_revnum,
+                                          rev_date, rev_author, pool));
+  SVN_ERR(svn_wc_context_destroy(wc_ctx));
+
+  return SVN_NO_ERROR;
+}
+

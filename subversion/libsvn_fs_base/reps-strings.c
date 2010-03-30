@@ -132,7 +132,7 @@ delta_string_keys(apr_array_header_t **keys,
 
 /* Delete the strings associated with array KEYS in FS as part of TRAIL.  */
 static svn_error_t *
-delete_strings(apr_array_header_t *keys,
+delete_strings(const apr_array_header_t *keys,
                svn_fs_t *fs,
                trail_t *trail,
                apr_pool_t *pool)
@@ -323,7 +323,7 @@ get_one_window(struct compose_handler_baton *cb,
 
 static svn_error_t *
 rep_undeltify_range(svn_fs_t *fs,
-                    apr_array_header_t *deltas,
+                    const apr_array_header_t *deltas,
                     representation_t *fulltext,
                     int cur_chunk,
                     char *buf,

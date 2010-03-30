@@ -56,7 +56,7 @@ public class ConflictVersion
     public ConflictVersion(org.apache.subversion.javahl.ConflictVersion aVer)
     {
         this(aVer.getReposURL(), aVer.getPegRevision(), aVer.getPathInRepos(),
-             aVer.getNodeKind());
+             NodeKind.fromApache(aVer.getNodeKind()));
     }
 
     public String getReposURL()

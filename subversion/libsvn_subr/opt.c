@@ -739,7 +739,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
 svn_error_t *
 svn_opt__args_to_target_array(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
+                              const apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
   int i;
@@ -1067,7 +1067,7 @@ svn_opt_print_help3(apr_getopt_t *os,
 
 svn_error_t *
 svn_opt_eat_peg_revisions(apr_array_header_t **true_targets_p,
-                          apr_array_header_t *targets,
+                          const apr_array_header_t *targets,
                           apr_pool_t *pool)
 {
   int i;

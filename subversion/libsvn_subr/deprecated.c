@@ -38,6 +38,7 @@
 #include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_dso.h"
+#include "svn_mergeinfo.h"
 
 #include "opt.h"
 #include "private/svn_opt_private.h"
@@ -414,7 +415,7 @@ svn_opt_subcommand_help(const char *subcommand,
 svn_error_t *
 svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
+                              const apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
   return svn_opt__args_to_target_array(targets_p, os,known_targets, pool);
@@ -423,7 +424,7 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
 svn_error_t *
 svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
+                              const apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
   svn_error_t *err = svn_opt_args_to_target_array3(targets_p, os,
@@ -441,7 +442,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
 svn_error_t *
 svn_opt_args_to_target_array(apr_array_header_t **targets_p,
                              apr_getopt_t *os,
-                             apr_array_header_t *known_targets,
+                             const apr_array_header_t *known_targets,
                              svn_opt_revision_t *start_revision,
                              svn_opt_revision_t *end_revision,
                              svn_boolean_t extract_revisions,
@@ -849,6 +850,12 @@ svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
                           NULL, NULL, scratch_pool);
 }
 
+svn_stream_t *
+svn_stream_from_aprfile(apr_file_t *file, apr_pool_t *pool)
+{
+  return svn_stream_from_aprfile2(file, TRUE, pool);
+}
+
 /*** From path.c ***/
 
 const char *
@@ -886,3 +893,30 @@ svn_path_is_canonical(const char *path, apr_pool_t *pool)
       svn_dirent_is_canonical(path, pool) ||
       svn_relpath_is_canonical(path, pool);
 }
+
+
+/*** From mergeinfo.c ***/
+
+svn_error_t *
+svn_mergeinfo_inheritable(svn_mergeinfo_t *output,
+                          svn_mergeinfo_t mergeinfo,
+                          const char *path,
+                          svn_revnum_t start,
+                          svn_revnum_t end,
+                          apr_pool_t *pool)
+{
+  return svn_mergeinfo_inheritable2(output, mergeinfo, path, start, end,
+                                    TRUE, pool, pool);
+}
+
+svn_error_t *
+svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
+                          const apr_array_header_t *rangelist,
+                          svn_revnum_t start,
+                          svn_revnum_t end,
+                          apr_pool_t *pool)
+{
+  return svn_rangelist_inheritable2(inheritable_rangelist, rangelist,
+                                    start, end, TRUE, pool, pool);
+}
+

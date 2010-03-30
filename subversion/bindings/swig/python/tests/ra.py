@@ -18,9 +18,9 @@
 # under the License.
 #
 #
-import unittest, os, setup_path
+import unittest, setup_path
 
-from svn import core, repos, fs, delta, client, ra
+from svn import core, repos, fs, delta, ra
 from sys import version_info # For Python version check
 if version_info[0] >= 3:
   # Python >=3.0
@@ -83,10 +83,10 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
   def test_get_latest_revnum(self):
     ra_revnum = ra.get_latest_revnum(self.ra_ctx)
     fs_revnum = fs.youngest_rev(self.fs)
-    self.assertEqual(ra_revnum,fs_revnum)
+    self.assertEqual(ra_revnum, fs_revnum)
 
   def test_get_dir2(self):
-    (dirents,_,props) = ra.get_dir2(self.ra_ctx, '', 1, core.SVN_DIRENT_KIND)
+    (dirents, _, props) = ra.get_dir2(self.ra_ctx, '', 1, core.SVN_DIRENT_KIND)
     self.assert_('trunk' in dirents)
     self.assert_('branches' in dirents)
     self.assert_('tags' in dirents)
@@ -96,14 +96,14 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.assert_(core.SVN_PROP_ENTRY_UUID in props)
     self.assert_(core.SVN_PROP_ENTRY_LAST_AUTHOR in props)
 
-    (dirents,_,_) = ra.get_dir2(self.ra_ctx, 'trunk', 1, core.SVN_DIRENT_KIND)
+    (dirents, _, _) = ra.get_dir2(self.ra_ctx, 'trunk', 1, core.SVN_DIRENT_KIND)
 
     self.assertEqual(dirents, {})
 
-    (dirents,_,_) = ra.get_dir2(self.ra_ctx, 'trunk', 10, core.SVN_DIRENT_KIND)
+    (dirents, _, _) = ra.get_dir2(self.ra_ctx, 'trunk', 10, core.SVN_DIRENT_KIND)
 
     self.assert_('README2.txt' in dirents)
-    self.assertEqual(dirents['README2.txt'].kind,core.svn_node_file)
+    self.assertEqual(dirents['README2.txt'].kind, core.svn_node_file)
 
   def test_commit3(self):
     commit_info = []
@@ -238,7 +238,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
         def __init__(self):
             self.textdeltas = []
 
-        def apply_textdelta(self, file_baton, base_checksum):
+        def apply_textdelta(self, file_baton, base_checksum, pool=None):
             def textdelta_handler(textdelta):
                 if textdelta is not None:
                     self.textdeltas.append(textdelta)
@@ -266,7 +266,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.assertEqual(1, len(editor.textdeltas))
 
   def test_get_locations(self):
-    locations = ra.get_locations(self.ra_ctx, "trunk/README.txt", 2, list(range(1,5)))
+    locations = ra.get_locations(self.ra_ctx, "trunk/README.txt", 2, list(range(1, 5)))
     self.assertEqual(locations, {
         2: '/trunk/README.txt',
         3: '/trunk/README.txt',
@@ -382,7 +382,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
         called[0] = True
         return 'namestring_test'
       self.callbacks.get_client_string = cb
-      svn.ra.stat(self.ra_ctx, "", 1)
+      ra.stat(self.ra_ctx, "", 1)
       self.assert_(called[0])
 
 def suite():

@@ -95,6 +95,13 @@ svn_error_t *svn_fs_base__get_path_created_rev(svn_revnum_t *rev,
                                                trail_t *trail,
                                                apr_pool_t *pool);
 
+/* ### Experimental obliterate-like-deltify - see implementation. */
+svn_error_t *
+svn_fs_base__obliterate_rep(svn_fs_t *fs,
+                            const char *path,
+                            svn_revnum_t revision,
+                            apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

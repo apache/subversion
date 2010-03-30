@@ -252,15 +252,16 @@ public class Info2 implements java.io.Serializable
      */
     public Info2(org.apache.subversion.javahl.Info2 aInfo)
     {
-        this(aInfo.getPath(), aInfo.getUrl(), aInfo.getRev(), aInfo.getKind(),
+        this(aInfo.getPath(), aInfo.getUrl(), aInfo.getRev(),
+             NodeKind.fromApache(aInfo.getKind()),
              aInfo.getReposRootUrl(), aInfo.getReposUUID(),
              aInfo.getLastChangedRev(),
              aInfo.getLastChangedDate() == null ? 0
                 : aInfo.getLastChangedDate().getTime() * 1000,
              aInfo.getLastChangedAuthor(),
              aInfo.getLock() == null ? null : new Lock(aInfo.getLock()),
-             aInfo.isHasWcInfo(), aInfo.getSchedule(), aInfo.getCopyFromUrl(),
-             aInfo.getCopyFromRev(),
+             aInfo.isHasWcInfo(), aInfo.getSchedule().ordinal(),
+             aInfo.getCopyFromUrl(), aInfo.getCopyFromRev(),
              aInfo.getTextTime() == null ? 0
                 : aInfo.getTextTime().getTime() * 1000,
              aInfo.getPropTime() == null ? 0
@@ -268,8 +269,8 @@ public class Info2 implements java.io.Serializable
              aInfo.getConflictOld(), aInfo.getConflictNew(),
              aInfo.getConflictWrk(), aInfo.getPrejfile(),
              aInfo.getChangelistName(), aInfo.getWorkingSize(),
-             aInfo.getReposSize(), aInfo.getDepth(),
-             aInfo.getConflictDescriptor() == null ? null 
+             aInfo.getReposSize(), Depth.fromADepth(aInfo.getDepth()),
+             aInfo.getConflictDescriptor() == null ? null
                 : new ConflictDescriptor(aInfo.getConflictDescriptor()));
     }
 

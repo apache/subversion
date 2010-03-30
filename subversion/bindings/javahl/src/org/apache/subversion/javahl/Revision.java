@@ -44,16 +44,17 @@ public class Revision implements java.io.Serializable
     /**
      * kind of revision specified
      */
-    protected int revKind;
+    protected Kind revKind;
 
     /**
      * Internally create a new revision.  Public for backward compat reasons.
      * Callers should use getInstance() instead.
      * @param kind    kind of revision
      */
-    public Revision(int kind)
+    public Revision(Kind kind)
     {
-        if (kind < RevisionKind.unspecified || kind > RevisionKind.head)
+        if (kind.ordinal() < Kind.unspecified.ordinal()
+               || kind.ordinal() > Kind.head.ordinal())
             throw new IllegalArgumentException(
                     kind+" is not a legal revision kind");
         revKind = kind;
@@ -63,7 +64,7 @@ public class Revision implements java.io.Serializable
      * Returns the kind of the Revsion
      * @return kind
      */
-    public int getKind()
+    public Kind getKind()
     {
         return revKind;
     }
@@ -75,11 +76,11 @@ public class Revision implements java.io.Serializable
     public String toString()
     {
         switch(revKind) {
-            case Kind.base : return "BASE";
-            case Kind.committed : return "COMMITTED";
-            case Kind.head : return "HEAD";
-            case Kind.previous : return "PREV";
-            case Kind.working : return "WORKING";
+            case base : return "BASE";
+            case committed : return "COMMITTED";
+            case head : return "HEAD";
+            case previous : return "PREV";
+            case working : return "WORKING";
         }
         return super.toString();
     }
@@ -89,7 +90,7 @@ public class Revision implements java.io.Serializable
      */
     public int hashCode()
     {
-        return revKind * -1;
+        return revKind.ordinal() * -1;
     }
 
     /**
@@ -321,10 +322,31 @@ public class Revision implements java.io.Serializable
      * refers to the uncommitted "working" revision, which may be modified
      * with respect to its base revision.  In other contexts, `working'
      * should behave the same as `committed' or `current'.
-     *
-     * the values are defined in RevisionKind because of building reasons
      */
-    public static final class Kind implements RevisionKind
+    public enum Kind
     {
+       /** No revision information given. */
+        unspecified,
+
+        /** revision given as number */
+        number,
+
+        /** revision given as date */
+        date,
+
+        /** rev of most recent change */
+        committed,
+
+        /** (rev of most recent change) - 1 */
+        previous,
+
+        /** .svn/entries current revision */
+        base,
+
+        /** current, plus local mods */
+        working,
+
+        /** repository youngest */
+        head;
     }
 }

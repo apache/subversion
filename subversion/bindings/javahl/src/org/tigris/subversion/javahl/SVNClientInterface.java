@@ -331,7 +331,7 @@ public interface SVNClientInterface
      * Retrieve the log messages for an item.
      * @param path          path or url to get the log message for.
      * @param pegRevision   revision to interpret path
-     * @param revisionRanges an array of revision ranges to show
+     * @param ranges        an array of revision ranges to show
      * @param stopOnCopy    do not continue on copy operations
      * @param discoverPath  returns the paths of the changed items in the
      *                      returned objects
@@ -1108,7 +1108,7 @@ public interface SVNClientInterface
     void getMergeinfoLog(int kind, String pathOrUrl,
                          Revision pegRevision, String mergeSourceUrl,
                          Revision srcPegRevision, boolean discoverChangedPaths,
-                         int depth, String[] revprops,
+                         int depth, String[] revProps,
                          LogMessageCallback callback)
         throws ClientException;
 
@@ -1131,7 +1131,7 @@ public interface SVNClientInterface
     void getMergeinfoLog(int kind, String pathOrUrl,
                          Revision pegRevision, String mergeSourceUrl,
                          Revision srcPegRevision, boolean discoverChangedPaths,
-                         String[] revprops, LogMessageCallback callback)
+                         String[] revProps, LogMessageCallback callback)
         throws ClientException;
 
     /**
@@ -1888,7 +1888,7 @@ public interface SVNClientInterface
      * @param changelists changelists to filter by
      * @since 1.5
      */
-    void removeFromChangelists(String[] paths, int depth, String[] changelist)
+    void removeFromChangelists(String[] paths, int depth, String[] changelists)
             throws ClientException;
 
     /**

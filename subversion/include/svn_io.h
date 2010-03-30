@@ -702,7 +702,7 @@ typedef svn_error_t *(*svn_close_fn_t)(void *baton);
  */
 typedef svn_error_t *(*svn_io_reset_fn_t)(void *baton);
 
-/* An opaque type which represents a mark on a stream.
+/** An opaque type which represents a mark on a stream.
  *
  * @see svn_stream_mark().
  * @since New in 1.7.
@@ -794,7 +794,7 @@ void
 svn_stream_set_reset(svn_stream_t *stream,
                      svn_io_reset_fn_t reset_fn);
 
-/** Set @a stream's mark function to @a mark_fn 
+/** Set @a stream's mark function to @a mark_fn
  *
  * @since New in 1.7.
  */
@@ -802,7 +802,7 @@ void
 svn_stream_set_mark(svn_stream_t *stream,
                     svn_io_mark_fn_t mark_fn);
 
-/** Set @a stream's seek function to @a seek_fn 
+/** Set @a stream's seek function to @a seek_fn
  *
  * @since New in 1.7.
  */
@@ -1091,7 +1091,7 @@ svn_stream_mark(svn_stream_t *stream,
                 svn_stream_mark_t **mark,
                 apr_pool_t *pool);
 
-/* Seek to a @a mark in a generic @a stream.
+/** Seek to a @a mark in a generic @a stream.
  * This function returns the #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error
  * if the stream doesn't implement seeking.
  *
@@ -1904,7 +1904,7 @@ svn_io_write_version_file(const char *path,
  * @since New in 1.7. */
 svn_error_t *
 svn_io_file_mktemp(apr_file_t **new_file,
-                   char *templ,
+                   const char *templ,
                    apr_int32_t flags,
                    apr_pool_t *pool);
 

@@ -71,6 +71,11 @@ svn_error_t *ProplistCallback::singlePath(const char *path,
 {
   JNIEnv *env = JNIUtil::getEnv();
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
   static jmethodID mid = 0;
@@ -83,35 +88,23 @@ svn_error_t *ProplistCallback::singlePath(const char *path,
       mid = env->GetMethodID(clazz, "singlePath",
                              "(Ljava/lang/String;Ljava/util/Map;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        return SVN_NO_ERROR;
-
-      env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
     }
 
   // convert the parameters to their Java relatives
   jstring jpath = JNIUtil::makeJString(path);
   if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+    POP_AND_RETURN(SVN_NO_ERROR);
 
-  jobject jmap = NULL;
-  jmap = CreateJ::PropertyMap(prop_hash, pool);
+  jobject jmap = CreateJ::PropertyMap(prop_hash, pool);
   if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+    POP_AND_RETURN(SVN_NO_ERROR);
 
   // call the Java method
   env->CallVoidMethod(m_callback, mid, jpath, jmap);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  // cleanup the temporary Java objects
-  env->DeleteLocalRef(jpath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  env->DeleteLocalRef(jmap);
   // We return whether an exception was thrown or not.
+
+  env->PopLocalFrame(NULL);
 
   return SVN_NO_ERROR;
 }

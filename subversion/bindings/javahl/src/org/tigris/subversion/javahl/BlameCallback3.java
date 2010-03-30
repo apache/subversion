@@ -23,7 +23,6 @@
 
 package org.tigris.subversion.javahl;
 
-import java.util.Date;
 import java.util.Map;
 
 /**
@@ -36,7 +35,7 @@ public interface BlameCallback3
 {
     /**
      * the method will be called for every line in a file.
-     * @param line              the line number for this line
+     * @param lineNum           the line number for this line
      * @param revision          the revision of the last change.
      * @param revProps          the revision properties for this revision.
      * @param mergedRevision    the revision of the last merged change.

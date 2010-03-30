@@ -3525,17 +3525,20 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
 
 /* Wrapper for apr_file_mktemp(). */
 svn_error_t *
-svn_io_file_mktemp(apr_file_t **new_file, char *templ,
+svn_io_file_mktemp(apr_file_t **new_file, const char *templ,
                   apr_int32_t flags, apr_pool_t *pool)
 {
   const char *templ_apr;
   apr_status_t status;
 
-  SVN_ERR(cstring_from_utf8(&templ_apr, templ, pool));
+  SVN_ERR(svn_path_cstring_from_utf8(&templ_apr, templ, pool));
 
-  /* ### I don't want to copy the template string again just to
-   * make it writable... so cast away const.
-   * Should the UTF-8 conversion functions really be returning const??? */
+  /* ### svn_path_cstring_from_utf8() guarantees to make a copy of the
+         data available in POOL and we need a non-const pointer here,
+         as apr changes the template to return the new filename. 
+
+         But we can't provide the filename to our caller as that might need
+         more bytes then there are XXXXs after converting it back to utf-8. */
   status = apr_file_mktemp(new_file, (char *)templ_apr, flags, pool);
 
   if (status)

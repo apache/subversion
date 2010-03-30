@@ -3011,7 +3011,7 @@ def merge_dir_and_file_replace(sbox):
     'A/C/foo'                : Item(verb='Replacing'),
     'A/C/foo/bar'            : Item(verb='Adding'),
     })
-  
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/foo'                : Item(status='  ', wc_rev=5),
@@ -7838,7 +7838,7 @@ def merge_away_subtrees_noninheritable_ranges(sbox):
     'mu' : Item(status=' G'),
     })
   expected_elision_output = wc.State('.', {
-    })    
+    })
   expected_status = wc.State('.', {
     ''          : Item(status=' M'),
     'B'         : Item(status='  '),
@@ -10746,7 +10746,7 @@ def reintegrate_with_rename(sbox):
     'D/G/tauprime' : Item(status=' G'),
     })
   expected_elision_output = wc.State(A_path, {
-    })    
+    })
   k_expected_status = wc.State(A_path, {
     "B"            : Item(status='  ', wc_rev=9),
     "B/lambda"     : Item(status='  ', wc_rev=9),
@@ -12378,7 +12378,7 @@ def merge_chokes_on_renamed_subtrees(sbox):
   # svn: svn: File not found: revision 3, path '/A/D/H/psi'
   svntest.actions.run_and_verify_svn(
     None,
-    expected_merge_output([[5,6],[3,6]], 
+    expected_merge_output([[5,6],[3,6]],
                           ['U    ' + psi_COPY_moved_path + '\n',
                            ' U   ' + psi_COPY_moved_path + '\n',
                            ' G   ' + psi_COPY_moved_path + '\n',],
@@ -13227,7 +13227,7 @@ def subtree_source_missing_in_requested_range(sbox):
     ''          : Item(status=' U'),
     'D/H/psi'   : Item(status=' U'),
     'D/H/omega' : Item(status=' U'),
-    })    
+    })
   expected_status = wc.State(A_COPY_path, {
     ''          : Item(status=' M', wc_rev=13),
     'B'         : Item(status='  ', wc_rev=13),
@@ -18447,7 +18447,7 @@ def merge_into_wc_for_deleted_branch(sbox):
   # Some paths we'll care about
   A_COPY_path = os.path.join(wc_dir, "A_COPY")
   gamma_path  = os.path.join(wc_dir, "A", "D", "gamma")
-  
+
   # r7 - Delete the branch on the repository, obviously it still
   # exists in our WC.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -18539,7 +18539,7 @@ def merge_into_wc_for_deleted_branch(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None,
-                                       None, 1, 0)  
+                                       None, 1, 0)
 
 # Test for a reintegrate bug which can occur when the merge source
 # has mergeinfo that explicitly describes common history with the reintegrate
@@ -18562,7 +18562,7 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
   A2_B_path    = os.path.join(wc_dir, "A2", "B")
   A2_1_path    = os.path.join(wc_dir, "A2.1")
   A2_1_mu_path = os.path.join(wc_dir, "A2.1", "mu")
-  
+
   # r6 Copy A to A2 and then manually set some self-referential mergeinfo on
   # A2/B and A2.
   svntest.actions.run_and_verify_svn(None, ["At revision 5.\n"], [],
@@ -18592,7 +18592,7 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                      '-m', 'Work done on the A2.1 branch.',
                                      wc_dir)
-  
+
   # Update to uniform revision and reintegrate A2.1 back to A2.
   # Note that the mergeinfo on A2/B is not changed by the reintegration
   # and so is not expected to by updated to describe the merge.

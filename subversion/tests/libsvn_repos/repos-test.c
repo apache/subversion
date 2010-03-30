@@ -2152,13 +2152,12 @@ prop_validation_commit_with_revprop(const char *filename,
                    APR_HASH_KEY_STRING,
                    svn_string_create("plato", pool));
     }
-  else
-    if (strcmp(prop_key, SVN_PROP_REVISION_LOG) != 0)
-      {
-        apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG,
-                     APR_HASH_KEY_STRING,
-                     svn_string_create("revision log", pool));
-      }
+  else if (strcmp(prop_key, SVN_PROP_REVISION_LOG) != 0)
+    {
+      apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG,
+                   APR_HASH_KEY_STRING,
+                   svn_string_create("revision log", pool));
+    }
 
   /* Make an arbitrary change and commit using above values... */
 
@@ -2213,12 +2212,11 @@ prop_validation(const svn_test_opts_t *opts,
     return svn_error_create(SVN_ERR_TEST_FAILED, err,
                             "Failed to reject a log with invalid "
                             "UTF-8");
-  else
-    if (err->apr_err != SVN_ERR_BAD_PROPERTY_VALUE)
-      return svn_error_create(SVN_ERR_TEST_FAILED, err,
-                              "Expected SVN_ERR_BAD_PROPERTY_VALUE for "
-                              "a log with invalid UTF-8, "
-                              "got another error.");
+  else if (err->apr_err != SVN_ERR_BAD_PROPERTY_VALUE)
+    return svn_error_create(SVN_ERR_TEST_FAILED, err,
+                            "Expected SVN_ERR_BAD_PROPERTY_VALUE for "
+                            "a log with invalid UTF-8, "
+                            "got another error.");
   svn_error_clear(err);
 
 
@@ -2233,12 +2231,11 @@ prop_validation(const svn_test_opts_t *opts,
     return svn_error_create(SVN_ERR_TEST_FAILED, err,
                             "Failed to reject a log with inconsistent "
                             "line ending style");
-  else
-    if (err->apr_err != SVN_ERR_BAD_PROPERTY_VALUE)
-      return svn_error_create(SVN_ERR_TEST_FAILED, err,
-                              "Expected SVN_ERR_BAD_PROPERTY_VALUE for "
-                              "a log with inconsistent line ending style, "
-                              "got another error.");
+  else if (err->apr_err != SVN_ERR_BAD_PROPERTY_VALUE)
+    return svn_error_create(SVN_ERR_TEST_FAILED, err,
+                            "Expected SVN_ERR_BAD_PROPERTY_VALUE for "
+                            "a log with inconsistent line ending style, "
+                            "got another error.");
   svn_error_clear(err);
 
 

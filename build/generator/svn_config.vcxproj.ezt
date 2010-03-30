@@ -1,4 +1,4 @@
-[define COPYRIGHT]
+﻿[#
 <!--
      Licensed to the Apache Software Foundation (ASF) under one
      or more contributor license agreements.  See the NOTICE file
@@ -17,7 +17,7 @@
      specific language governing permissions and limitations
      under the License.
 -->
-[end]<?xml version="1.0" encoding="utf-8"?>
+]<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
 [for configs][for platforms]    <ProjectConfiguration Include="[configs]|[platforms]">
@@ -26,14 +26,13 @@
     </ProjectConfiguration>
 [end][end]  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectName>__CONFIG__</ProjectName>
     <ProjectGuid>[project_guid]</ProjectGuid>
     <Keyword>MakeFileProj</Keyword>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 [for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'" Label="Configuration">
     <ConfigurationType>Utility</ConfigurationType>
-    <CLRSupport>false</CLRSupport>
+    <UseDebugLibraries>[is configs "Debug"]true[else]false[end]</UseDebugLibraries>
   </PropertyGroup>
 [end][end]  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

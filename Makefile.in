@@ -532,6 +532,7 @@ check-clean:
 	       subversion/tests/libsvn_repos/test-repo-*       \
 	       subversion/tests/libsvn_subr/z                  \
 	       subversion/tests/libsvn_wc/fake-wc              \
+	       subversion/tests/libsvn_client/test-patch*      \
 	       subversion/tests/svnserveautocheck.pid          \
 	       tests.log
 

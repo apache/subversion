@@ -1130,6 +1130,67 @@ def query_absent_tree_conflicted_dir(sbox):
   # using info:
   run_and_verify_svn(None, None, [], 'info', C_C_path)
 
+#----------------------------------------------------------------------
+
+def up_add_onto_add_revert(sbox):
+  "issue #3608: reverting an add onto add conflict"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc2_dir = sbox.add_wc_path('wc2')
+  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+                                     sbox.repo_url, wc2_dir)
+
+  file1 = os.path.join(wc_dir, 'newfile')
+  file2 = os.path.join(wc2_dir, 'newfile')
+
+  dir1 = os.path.join(wc_dir, 'NewDir')
+  dir2 = os.path.join(wc2_dir, 'NewDir')
+
+  main.run_svn(None, 'cp', os.path.join(wc_dir, 'iota'), file1)
+  main.run_svn(None, 'cp', os.path.join(wc2_dir, 'iota'), file2)
+
+  main.run_svn(None, 'cp', os.path.join(wc_dir, 'A/C'), dir1)
+  main.run_svn(None, 'cp', os.path.join(wc2_dir, 'A/C'), dir2)
+
+  main.run_svn(None, 'ci', wc_dir, '-m', 'Added file')
+
+  expected_disk = main.greek_state.copy()
+  expected_disk.add({
+    'newfile'           : Item(contents="This is the file 'iota'.\n"),
+    'NewDir'            : Item(),
+    })
+
+  expected_status = get_virginal_state(wc2_dir, 2)
+  expected_status.add({
+    'newfile' : Item(status='A ', copied='+', treeconflict='C', wc_rev='-'),
+    'NewDir'  : Item(status='A ', copied='+', treeconflict='C', wc_rev='-'),
+    })
+
+  run_and_verify_update(wc2_dir,
+                        None, expected_disk, expected_status,
+                        None, None, None, None, None, 1,
+                        wc2_dir)
+
+  # Currently (r927086), this removes dir2 and file2 in a way that
+  # they don't reappear after update.
+  main.run_svn(None, 'revert', file2)
+  main.run_svn(None, 'revert', dir2)
+
+  expected_status = get_virginal_state(wc2_dir, 2)
+  expected_status.add({
+    'newfile' : Item(status='  ', wc_rev='2'),
+    'NewDir'  : Item(status='  ', wc_rev='2'),
+    })
+
+  # Expected behavior is that after revert + update the tree matches
+  # the repository
+  run_and_verify_update(wc2_dir,
+                        None, expected_disk, expected_status,
+                        None, None, None, None, None, 1,
+                        wc2_dir)
+
+
 
 #######################################################################
 # Run the tests
@@ -1159,6 +1220,7 @@ test_list = [ None,
               XFail(keep_local_del_tc_is_target),
               XFail(force_del_tc_is_target),
               XFail(query_absent_tree_conflicted_dir),
+              XFail(up_add_onto_add_revert),
              ]
 
 if __name__ == '__main__':

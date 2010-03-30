@@ -341,6 +341,7 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
 }
 
 
+/* */
 static svn_error_t *
 alloc_db(svn_wc__db_t **db,
          svn_config_t *config,
@@ -358,6 +359,7 @@ alloc_db(svn_wc__db_t **db,
 }
 
 
+/* */
 static svn_error_t *
 add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool)
 {
@@ -379,6 +381,7 @@ add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool)
 }
 
 
+/* */
 static svn_wc_adm_access_t *
 get_from_shared(const char *abspath,
                 svn_wc__db_t *db,
@@ -391,6 +394,7 @@ get_from_shared(const char *abspath,
 }
 
 
+/* */
 static svn_error_t *
 probe(svn_wc__db_t *db,
       const char **dir,
@@ -437,6 +441,7 @@ probe(svn_wc__db_t *db,
 }
 
 
+/* */
 static svn_error_t *
 open_single(svn_wc_adm_access_t **adm_access,
             const char *path,
@@ -487,6 +492,7 @@ open_single(svn_wc_adm_access_t **adm_access,
 }
 
 
+/* */
 static svn_error_t *
 close_single(svn_wc_adm_access_t *adm_access,
              svn_boolean_t preserve_lock,
@@ -679,6 +685,7 @@ do_open(svn_wc_adm_access_t **adm_access,
 }
 
 
+/* */
 static svn_error_t *
 open_all(svn_wc_adm_access_t **adm_access,
          const char *path,
@@ -1024,6 +1031,7 @@ svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
 }
 
 
+/* */
 static svn_error_t *
 child_is_disjoint(svn_boolean_t *disjoint,
                   svn_wc__db_t *db,
@@ -1045,7 +1053,7 @@ child_is_disjoint(svn_boolean_t *disjoint,
   err = svn_wc__db_read_children(&children, db, parent_abspath, scratch_pool,
                                  scratch_pool);
 
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+  if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
     {
       svn_error_clear(err);
       *disjoint = TRUE;
@@ -1125,6 +1133,7 @@ child_is_disjoint(svn_boolean_t *disjoint,
 }
 
 
+/* */
 static svn_error_t *
 open_anchor(svn_wc_adm_access_t **anchor_access,
             svn_wc_adm_access_t **target_access,
@@ -1329,23 +1338,6 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
                                       cancel_baton, pool));
 }
 
-svn_error_t *
-svn_wc__adm_open_anchor_in_context(svn_wc_adm_access_t **anchor_access,
-                                   svn_wc_adm_access_t **target_access,
-                                   const char **target,
-                                   svn_wc_context_t *wc_ctx,
-                                   const char *path,
-                                   svn_boolean_t write_lock,
-                                   int levels_to_lock,
-                                   svn_cancel_func_t cancel_func,
-                                   void *cancel_baton,
-                                   apr_pool_t *pool)
-{
-  return svn_error_return(open_anchor(anchor_access, target_access, target,
-                                      wc_ctx->db, TRUE, path, write_lock,
-                                      levels_to_lock, cancel_func,
-                                      cancel_baton, pool));
-}
 
 svn_error_t *
 svn_wc__adm_retrieve_from_context(svn_wc_adm_access_t **adm_access,
@@ -1392,8 +1384,8 @@ do_close(svn_wc_adm_access_t *adm_access,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *abspath = svn_apr_hash_index_key(hi);
-          svn_wc_adm_access_t *child = svn_apr_hash_index_val(hi);
+          const char *abspath = svn__apr_hash_index_key(hi);
+          svn_wc_adm_access_t *child = svn__apr_hash_index_val(hi);
           const char *path = child->path;
 
           if (IS_MISSING(child))
@@ -1512,7 +1504,14 @@ svn_wc__adm_access_set_entries(svn_wc_adm_access_t *adm_access,
 apr_hash_t *
 svn_wc__adm_access_entries(svn_wc_adm_access_t *adm_access)
 {
+  /* Compile with -DSVN_DISABLE_ENTRY_CACHE to disable the in-memory
+     entry caching. As of 2010-03-18 (r924708) merge_tests 34 and 134
+     fail during "make check".  */
+#ifdef SVN_DISABLE_ENTRY_CACHE
+  return NULL;
+#else
   return adm_access->entries_all;
+#endif
 }
 
 
@@ -1550,60 +1549,6 @@ svn_wc__adm_missing(svn_wc__db_t *db,
                                         scratch_pool));
 
   return (kind == svn_wc__db_kind_dir) && !available && obstructed;
-}
-
-
-/* Extend the scope of the svn_wc_adm_access_t * instances in WALK_BATON
-   for the entire WC tree below LOCAL_ABSPATH.
-   An implementation of svn_wc__node_found_func_t */
-static svn_error_t *
-extend_lock_cb(const char *local_abspath,
-               void *walk_baton,
-               apr_pool_t *scratch_pool)
-{
-  svn_wc__db_t *db = walk_baton;
-  svn_wc__db_kind_t kind;
-  svn_wc_adm_access_t *parent_access, *adm_access;
-  const char *parent_abspath, *base;
-
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
-
-  if (kind != svn_wc__db_kind_dir)
-    return SVN_NO_ERROR;
-
-  if (NULL != svn_wc__adm_retrieve_internal2(db, local_abspath, scratch_pool))
-    return SVN_NO_ERROR;
-
-  svn_dirent_split(local_abspath, &parent_abspath, &base, scratch_pool);
-
-  parent_access = svn_wc__adm_retrieve_internal2(db, parent_abspath,
-                                                 scratch_pool);
-
-  /* We are EXTENDING the lock, so we must have the parent locked */
-  SVN_ERR_ASSERT(parent_access != NULL);
-
-  /* Open the child baton in the same pool as the parent, because it
-     would be closed directly if we would open it in the scratch
-     pool. And this way it is always cleaned up with the parent. */
-  SVN_ERR(svn_wc_adm_open3(&adm_access, parent_access,
-                           svn_dirent_join(
-                               svn_wc_adm_access_path(parent_access),
-                               base, scratch_pool),
-                           TRUE, -1, NULL, NULL,
-                           svn_wc_adm_access_pool(parent_access)));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__adm_extend_lock_to_tree(svn_wc__db_t *db,
-                                const char *adm_abspath,
-                                apr_pool_t *pool)
-{
-  return svn_error_return(
-      svn_wc__internal_walk_children(db, adm_abspath, FALSE,
-                                     extend_lock_cb, db, svn_depth_infinity,
-                                     NULL, NULL, pool));
 }
 
 svn_error_t *
@@ -1797,8 +1742,27 @@ svn_wc__acquire_write_lock(const char **anchor_abspath,
       SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, child_abspath, FALSE,
                                    iterpool));
       if (kind == svn_wc__db_kind_dir)
-        SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, child_abspath,
-                                           NULL, iterpool));
+        {
+          err = svn_wc__acquire_write_lock(NULL, wc_ctx, child_abspath, NULL,
+                                           iterpool);
+          if (err && err->apr_err == SVN_ERR_WC_LOCKED)
+            {
+              while(i >= 0)
+                {
+                  svn_error_t *err2;
+                  svn_pool_clear(iterpool);
+                  child_relpath = APR_ARRAY_IDX(children, i, const char *);
+                  child_abspath = svn_dirent_join(local_abspath, child_relpath,
+                                                  iterpool);
+                   err2 = svn_wc__release_write_lock(wc_ctx, child_abspath,
+                                                     iterpool);
+                   if (err2)
+                     svn_error_compose(err, err2);
+                   --i;
+                }
+              return svn_error_return(err);
+            }
+        }
     }
 
   /* We don't want to try and lock an unversioned directory that
@@ -1827,6 +1791,7 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
   const apr_array_header_t *children;
   apr_uint64_t id;
   svn_skel_t *work_item;
+  svn_boolean_t locked_here;
   int i;
 
   SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
@@ -1859,7 +1824,10 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
         SVN_ERR(svn_wc__release_write_lock(wc_ctx, child_abspath, iterpool));
     }
 
-  SVN_ERR(svn_wc__db_wclock_remove(wc_ctx->db, local_abspath, iterpool));
+  SVN_ERR(svn_wc__db_temp_own_lock(&locked_here, wc_ctx->db, local_abspath,
+                                   iterpool));
+  if (locked_here)
+    SVN_ERR(svn_wc__db_wclock_remove(wc_ctx->db, local_abspath, iterpool));
 
   svn_pool_destroy(iterpool);
 
@@ -1881,3 +1849,15 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
   err2 = svn_wc__release_write_lock(wc_ctx, local_abspath, scratch_pool);
   return svn_error_compose_create(err1, err2);
 }
+
+svn_error_t *
+svn_wc__path_switched(svn_boolean_t *switched,
+                      svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool)
+{
+  return svn_error_return(child_is_disjoint(switched, wc_ctx->db,
+                                            local_abspath, scratch_pool));
+}
+
+

@@ -351,7 +351,7 @@ svn_cstring_split_append(apr_array_header_t *array,
  * of zero or more glob patterns.
  */
 svn_boolean_t
-svn_cstring_match_glob_list(const char *str, apr_array_header_t *list);
+svn_cstring_match_glob_list(const char *str, const apr_array_header_t *list);
 
 /**
  * Return the number of line breaks in @a msg, allowing any kind of newline

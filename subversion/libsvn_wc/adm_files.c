@@ -223,33 +223,28 @@ make_adm_subdir(const char *path,
 /*** Syncing files in the adm area. ***/
 
 
-/* Rename a tmp text-base file to its real text-base name.
-   The file had better already be closed. */
 svn_error_t *
-svn_wc__sync_text_base(const char *path, apr_pool_t *pool)
+svn_wc__sync_text_base(const char *local_abspath,
+                       const char *tmp_text_base_abspath,
+                       apr_pool_t *pool)
 {
   const char *parent_path;
   const char *base_name;
-  const char *tmp_path;
   const char *base_path;
 
-  svn_dirent_split(path, &parent_path, &base_name, pool);
-
-  /* Extend tmp name. */
-  tmp_path = extend_with_adm_name(parent_path, SVN_WC__BASE_EXT, TRUE, pool,
-                                  SVN_WC__ADM_TEXT_BASE, base_name, NULL);
+  svn_dirent_split(local_abspath, &parent_path, &base_name, pool);
 
   /* Extend real name. */
   base_path = extend_with_adm_name(parent_path, SVN_WC__BASE_EXT, FALSE, pool,
                                    SVN_WC__ADM_TEXT_BASE, base_name, NULL);
 
   /* Rename. */
-  SVN_ERR(svn_io_file_rename(tmp_path, base_path, pool));
+  SVN_ERR(svn_io_file_rename(tmp_text_base_abspath, base_path, pool));
   return svn_io_set_file_read_only(base_path, FALSE, pool);
 }
 
 svn_error_t *
-svn_wc__text_base_path(const char **result_path,
+svn_wc__text_base_path(const char **result_abspath,
                        svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t tmp,
@@ -260,19 +255,19 @@ svn_wc__text_base_path(const char **result_path,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   svn_dirent_split(local_abspath, &newpath, &base_name, pool);
-  *result_path = extend_with_adm_name(newpath,
-                                      SVN_WC__BASE_EXT,
-                                      tmp,
-                                      pool,
-                                      SVN_WC__ADM_TEXT_BASE,
-                                      base_name,
-                                      NULL);
+  *result_abspath = extend_with_adm_name(newpath,
+                                         SVN_WC__BASE_EXT,
+                                         tmp,
+                                         pool,
+                                         SVN_WC__ADM_TEXT_BASE,
+                                         base_name,
+                                         NULL);
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_wc__text_revert_path(const char **result_path,
+svn_wc__text_revert_path(const char **result_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *pool)
@@ -282,13 +277,13 @@ svn_wc__text_revert_path(const char **result_path,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   svn_dirent_split(local_abspath, &newpath, &base_name, pool);
-  *result_path = extend_with_adm_name(newpath,
-                                      SVN_WC__REVERT_EXT,
-                                      FALSE,
-                                      pool,
-                                      SVN_WC__ADM_TEXT_BASE,
-                                      base_name,
-                                      NULL);
+  *result_abspath = extend_with_adm_name(newpath,
+                                         SVN_WC__REVERT_EXT,
+                                         FALSE,
+                                         pool,
+                                         SVN_WC__ADM_TEXT_BASE,
+                                         base_name,
+                                         NULL);
 
   return SVN_NO_ERROR;
 }
@@ -302,6 +297,8 @@ svn_wc__get_revert_contents(svn_stream_t **contents,
                             apr_pool_t *scratch_pool)
 {
   const char *revert_base;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_wc__text_revert_path(&revert_base, db, local_abspath,
                                    scratch_pool));
@@ -373,58 +370,6 @@ svn_wc__prop_path(const char **prop_path,
 
 /*** Opening and closing files in the adm area. ***/
 
-/* Create and open a writable file in the admin temporary area of the WC
-   directory DIR_ABSPATH, in a subdirectory named SUBDIR (such as "text-base"),
-   with the name FNAME and extra EXTENSION (such as ".svn-base").  If the
-   file already exists, first delete it.  Set *STREAM to a writable stream
-   to this file, and (if SELECTED_ABSPATH is not NULL) set *SELECTED_PATH to
-   the path to this file, both allocated in RESULT_POOL.
-
-   Closing the stream will close (but not delete) the file. */
-static svn_error_t *
-open_adm_file(svn_stream_t **stream,
-              const char **selected_abspath,
-              const char *dir_abspath,
-              const char *subdir,
-              const char *fname,
-              const char *extension,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-
-  /* Extend with tmp name. */
-  dir_abspath = extend_with_adm_name(dir_abspath, extension, TRUE, result_pool,
-                                     subdir, fname, NULL);
-  if (selected_abspath)
-    *selected_abspath = dir_abspath;  /* note: built in result_pool */
-
-  err = svn_stream_open_writable(stream, dir_abspath, result_pool, scratch_pool);
-  if (err && APR_STATUS_IS_EEXIST(err->apr_err))
-    {
-      /* Exclusive open failed, delete and retry */
-      svn_error_clear(err);
-      SVN_ERR(svn_io_remove_file2(dir_abspath, FALSE, scratch_pool));
-      err = svn_stream_open_writable(stream, dir_abspath, result_pool, scratch_pool);
-    }
-
-  /* Examine the error from the first and/or second attempt at opening. */
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      /* If we receive a failure to open a file in our temporary directory,
-       * it may be because our temporary directories aren't created.
-       * Older SVN clients did not create these directories.
-       * 'svn cleanup' will fix this problem.
-       */
-      err = svn_error_quick_wrap(err,
-                                 _("Your .svn/tmp directory may be missing or "
-                                   "corrupt; run 'svn cleanup' and try again"));
-    }
-
-  return svn_error_return(err);
-}
-
-
 svn_error_t *
 svn_wc__open_adm_stream(svn_stream_t **stream,
                         const char *dir_abspath,
@@ -433,6 +378,8 @@ svn_wc__open_adm_stream(svn_stream_t **stream,
                         apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
   local_abspath = svn_wc__adm_child(dir_abspath, fname, scratch_pool);
   return svn_error_return(svn_stream_open_readonly(stream, local_abspath,
@@ -443,24 +390,24 @@ svn_wc__open_adm_stream(svn_stream_t **stream,
 svn_error_t *
 svn_wc__open_writable_base(svn_stream_t **stream,
                            const char **temp_base_abspath,
+                           svn_wc__db_t *db,
                            const char *local_abspath,
-                           svn_boolean_t need_revert_base,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  const char *parent_abspath;
-  const char *base_name;
+  const char *temp_dir_abspath;
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  svn_dirent_split(local_abspath, &parent_abspath, &base_name, scratch_pool);
-
-  return open_adm_file(stream, temp_base_abspath,
-                       parent_abspath,
-                       SVN_WC__ADM_TEXT_BASE,
-                       base_name,
-                       need_revert_base
-                         ? SVN_WC__REVERT_EXT
-                         : SVN_WC__BASE_EXT,
-                       result_pool, scratch_pool);
+  /* Select a directory in which to put a WC-1-style temp text-base file. */
+  /* See update_editor.c:get_pristine_tee_stream() for the WC-NG way. */
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, db, local_abspath,
+                                         scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_open_unique(stream,
+                                 temp_base_abspath,
+                                 temp_dir_abspath,
+                                 svn_io_file_del_none,
+                                 result_pool, scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 
@@ -468,6 +415,7 @@ svn_wc__open_writable_base(svn_stream_t **stream,
 /*** Checking for and creating administrative subdirs. ***/
 
 
+/* */
 static svn_error_t *
 init_adm_tmp_area(const char *path, apr_pool_t *pool)
 {
@@ -623,6 +571,8 @@ svn_wc__adm_destroy(svn_wc__db_t *db,
 {
   const char *adm_abspath;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
+
   SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
 
   /* Well, the coast is clear for blowing away the administrative
@@ -642,6 +592,8 @@ svn_wc__adm_cleanup_tmp_area(svn_wc__db_t *db,
                              apr_pool_t *scratch_pool)
 {
   const char *tmp_path;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(adm_abspath));
 
   SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
 

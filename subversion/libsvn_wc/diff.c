@@ -514,7 +514,7 @@ get_working_mimetype(const char **mimetype,
  */
 static apr_hash_t *
 apply_propchanges(apr_hash_t *props,
-                  apr_array_header_t *propchanges)
+                  const apr_array_header_t *propchanges)
 {
   apr_hash_t *newprops = apr_hash_copy(apr_hash_pool_get(props), props);
   int i;
@@ -1501,6 +1501,8 @@ apply_textdelta(void *file_baton,
       /* The current text-base is the starting point if replacing */
       SVN_ERR(svn_wc__get_pristine_contents(&source, eb->db, fb->local_abspath,
                                             fb->pool, fb->pool));
+      if (source == NULL)
+        source = svn_stream_empty(fb->pool);
     }
 
   /* This is the file that will contain the pristine repository version. It
@@ -1549,7 +1551,6 @@ close_file(void *file_baton,
   const char *localfile;
   /* The path to the temporary copy of the pristine repository version. */
   const char *temp_file_path;
-  const char *temp_file_abspath;
   svn_boolean_t modified;
   /* The working copy properties at the base of the wc->repos
      comparison: either BASE or WORKING. */
@@ -1588,8 +1589,6 @@ close_file(void *file_baton,
   if (!temp_file_path)
     SVN_ERR(svn_wc__text_base_path(&temp_file_path, eb->db, fb->local_abspath,
                                    FALSE, fb->pool));
-  SVN_ERR(svn_dirent_get_absolute(&temp_file_abspath, temp_file_path,
-                                  fb->pool));
 
   /* If the file isn't in the working copy (either because it was added
      in the BASE->repos diff or because we're diffing against WORKING

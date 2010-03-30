@@ -640,7 +640,7 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
                                apr_hash_t **locations,
                                const char *fs_path,
                                svn_revnum_t peg_revision,
-                               apr_array_header_t *location_revisions_orig,
+                               const apr_array_header_t *location_revisions_orig,
                                svn_repos_authz_func_t authz_read_func,
                                void *authz_read_baton,
                                apr_pool_t *pool)
@@ -1189,14 +1189,15 @@ compare_path_revisions(const void *a, const void *b)
 
 static svn_error_t *
 find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
-                      apr_array_header_t *mainline_path_revisions,
+                      const apr_array_header_t *mainline_path_revisions,
                       svn_repos_t *repos,
                       apr_hash_t *duplicate_path_revs,
                       svn_repos_authz_func_t authz_read_func,
                       void *authz_read_baton,
                       apr_pool_t *pool)
 {
-  apr_array_header_t *old, *new;
+  const apr_array_header_t *old;
+  apr_array_header_t *new;
   apr_pool_t *iter_pool, *last_pool;
   apr_array_header_t *merged_path_revisions = apr_array_make(pool, 0,
                                                 sizeof(struct path_revision *));
