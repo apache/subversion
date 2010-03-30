@@ -18,9 +18,21 @@ where KIND is one of "text", "prop", "tree", "patch", or
 below. The COMMON skel contains data that is common to all KINDs, and
 is detailed below.
 
-### need conflict data format version info inside skel, too?
-### or do we bump the entire wc.db format number if we need to tweak
-### this?
+### stsp: I think the COMMON block should appear at the start of each
+###   type-specific block instead. For instance, if I apply a patch and
+###   rejects are recorded by the "patch" operation on the node,
+###   it does not hurt to allow update or merge operations on the node
+###   while it still has a patch conflict recorded.
+###   A similar situation is a text vs. prop conflicts. E.g. if a node
+###   node has only property conflicts, why not allow an update or merge
+###   which does not touch conflicted properties? Even if we do not want
+###   to allow this, I think embedding this decision into the storage
+###   layer design is a bad idea. We can make higher layers deal with it.
+###   See also http://svn.haxx.se/dev/archive-2010-03/0646.shtml
+
+### stsp: need conflict data format version info inside skel, too?
+###   or do we bump the entire wc.db format number if we need to tweak
+###   this?
 ###
 ### gstein sez: the KIND can become "text-2" or somesuch if we need to
 ###   radically alter the kind-specific data. but we can easily append
@@ -73,11 +85,14 @@ unless the conflicts are resolved). The COMMON skel has the form:
 ###     conflicts. And most of these values are not available for conflicts
 ###     that are introduced via 1.6 (and some of our deprecated svn_wc apis)
 
+### stsp: We can simply use empty strings for fields which don't make
+###   sense for the current conflict type.
+
 ### BH: Should we have the (incoming_change local_change) block here?
 ### BH: Should we have the (left_node_kind right_node_kind) block here?
 ### BH: Do we need more data on 'older/mine' or is that handled via left/right?
 
-OPERATION is "update", "switch", or "merge", indicating during what
+OPERATION is "update", "switch", "merge", or "patch", indicating during what
 type of operation the conflict occurred.
 
 {LEFT,RIGHT}_REV is the revision of the {left,right} side of
@@ -115,6 +130,9 @@ Text conflicts only exist on files. The following skel represents the
 ###     to allow pristine store cleanups.
 
 ### BH: What about symlinks?
+### stsp: I guess we can say that all SHA1 sums refer to proper files,
+###   and symlinks are resolved before the SHA1 is calculated and
+###   stored in the db?
 
 {LEFT,RIGHT,MINE}_SHA1 are sha1 checksums of the full texts of
 the {left,right,mine} version of the file. File version's content
@@ -169,6 +187,7 @@ content can be obtained from the pristine store.
 ### BH: Can we share some of the sha1 logic with the text conflicts to
 ###     allow resolving this in the same way?
 ###     (We should keep the history of the node valid via replace vs update)
+### stsp: I don't really understand your question. Can you be more specific?
 
 
 (Unversioned) Obstructions
@@ -210,7 +229,13 @@ hunk as written to the .svnpatch.rej file. The actual unidiff content
 ### BH: Using a sha1 here, makes it impossible to cleanup the pristine store
 ###     The pristine store needs all references to be stored in a DB column.
 ###     To support this we would need an extra table.
+### stsp: I'm fine with not storing the reject diff text if we don't
+###   have a good location for it. However, keeping it around in case
+###   the user deletes the tempfile would be nice. And I don't see an issue
+###   with also storing the SHA1 sum in the ACTUAL table. We do this for
+###   text conflicts as well. Why would it need an extra table?
 
 ### gstein: why keep the PATCH_FILE_ABSPATH? couldn't that be rm'd at
 ###   some point after the attempted 'svn patch'? and doesn't this
 ###   obviate the future possibility of patch from stdin?
+### stsp: See http://svn.haxx.se/dev/archive-2010-03/0645.shtml
