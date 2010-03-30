@@ -1263,7 +1263,6 @@ log_do_committed(svn_wc__db_t *db,
   svn_boolean_t set_read_write = FALSE;
   const svn_wc_entry_t *orig_entry;
   svn_boolean_t prop_mods;
-  svn_wc_entry_t tmp_entry;
 
   /*** Perform sanity checking operations ***/
 
@@ -1389,6 +1388,8 @@ log_do_committed(svn_wc__db_t *db,
     {
       svn_boolean_t overwrote_working;
       apr_finfo_t finfo;
+      svn_filesize_t translated_size;
+      apr_time_t last_mod_time;
 
       SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
                                        new_revision, new_date, new_author,
@@ -1425,12 +1426,12 @@ log_do_committed(svn_wc__db_t *db,
 
       /* We will compute and modify the size and timestamp */
 
-      tmp_entry.working_size = finfo.size;
-
-      /* ### svn_wc__db_op_set_last_mod_time()  */
+      translated_size = finfo.size;
 
       if (overwrote_working)
-        tmp_entry.text_time = finfo.mtime;
+        {
+          last_mod_time = finfo.mtime;
+        }
       else
         {
           /* The working copy file hasn't been overwritten, meaning
@@ -1477,15 +1478,12 @@ log_do_committed(svn_wc__db_t *db,
             }
           /* If they are the same, use the working file's timestamp,
              else use the base file's timestamp. */
-          tmp_entry.text_time = modified ? basef_finfo.mtime : finfo.mtime;
+          last_mod_time = modified ? basef_finfo.mtime : finfo.mtime;
         }
 
-      return svn_error_return(svn_wc__entry_modify2(
+      return svn_error_return(svn_wc__db_global_record_fileinfo(
                                 db, local_abspath,
-                                svn_node_unknown, FALSE,
-                                &tmp_entry,
-                                SVN_WC__ENTRY_MODIFY_WORKING_SIZE
-                                | SVN_WC__ENTRY_MODIFY_TEXT_TIME,
+                                translated_size, last_mod_time,
                                 pool));
     }
 
@@ -1516,6 +1514,7 @@ log_do_committed(svn_wc__db_t *db,
   /* Make sure our entry exists in the parent. */
   {
     const svn_wc_entry_t *dir_entry;
+    svn_wc_entry_t tmp_entry;
 
     /* Check if we have a valid record in our parent */
     SVN_ERR(svn_wc__get_entry(&dir_entry, db, local_abspath,
@@ -2021,15 +2020,14 @@ run_file_install(svn_wc__db_t *db,
                                               scratch_pool));
     }
 
+  /* ### this should happen before we rename the file into place.  */
   if (record_fileinfo)
     {
-      /* ### ugh. switch this over to some new wc_db APIs.  */
-
-      svn_wc_entry_t tmp_entry;
+      apr_time_t last_mod_time;
       apr_finfo_t finfo;
 
       /* loggy_set_entry_timestamp_from_wc()  */
-      SVN_ERR(svn_io_file_affected_time(&tmp_entry.text_time,
+      SVN_ERR(svn_io_file_affected_time(&last_mod_time,
                                         local_abspath,
                                         scratch_pool));
 
@@ -2037,14 +2035,28 @@ run_file_install(svn_wc__db_t *db,
       SVN_ERR(svn_io_stat(&finfo, local_abspath,
                           APR_FINFO_MIN | APR_FINFO_LINK,
                           scratch_pool));
-      tmp_entry.working_size = finfo.size;
 
+      /* ### for now, stick to the entry_modify2(). there is something more
+         ### going on there. merge_tests 34 will fail if we switch to the
+         ### wc_db API.  */
+#if 0
+      SVN_ERR(svn_wc__db_global_record_fileinfo(db, local_abspath,
+                                                finfo.size, last_mod_time,
+                                                scratch_pool));
+#else
+      {
+        svn_wc_entry_t tmp_entry;
+
+        tmp_entry.text_time = last_mod_time;
+        tmp_entry.working_size = finfo.size;
       SVN_ERR(svn_wc__entry_modify2(db, local_abspath,
                                     svn_node_unknown, FALSE,
                                     &tmp_entry,
                                     SVN_WC__ENTRY_MODIFY_TEXT_TIME
                                       | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
                                     scratch_pool));
+      }
+#endif
     }
 
   return SVN_NO_ERROR;

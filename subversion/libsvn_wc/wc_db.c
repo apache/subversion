@@ -3100,35 +3100,6 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
   NOT_IMPLEMENTED();
 }
 
-svn_error_t *
-svn_wc__db_op_set_last_mod_time(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_time_t last_mod_time,
-                                apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_UPDATE_BASE_LAST_MOD_TIME));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi",
-                            pdh->wcroot->wc_id, local_relpath,
-                            last_mod_time));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  flush_entries(pdh);
-
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_wc__db_op_read_tree_conflict(
