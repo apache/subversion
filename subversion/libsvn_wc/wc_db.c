@@ -1530,6 +1530,48 @@ add_work_items(svn_sqlite__db_t *sdb,
 }
 
 
+/* Determine which trees' nodes exist for a given WC_ID and LOCAL_RELPATH
+   in the specified SDB.  */
+static svn_error_t *
+which_trees_exist(svn_boolean_t *base_exists,
+                  svn_boolean_t *working_exists,
+                  svn_sqlite__db_t *sdb,
+                  apr_int64_t wc_id,
+                  const char *local_relpath)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  *base_exists = FALSE;
+  *working_exists = FALSE;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_DETERMINE_TREE_FOR_RECORDING));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      int value = svn_sqlite__column_int(stmt, 0);
+
+      if (value)
+        *working_exists = TRUE;  /* value == 1  */
+      else
+        *base_exists = TRUE;  /* value == 0  */
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      if (have_row)
+        {
+          /* If both rows, then both tables.  */
+          *base_exists = TRUE;
+          *working_exists = TRUE;
+        }
+    }
+
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
+
+
 /* */
 static svn_error_t *
 create_db(svn_sqlite__db_t **sdb,
@@ -4745,6 +4787,90 @@ svn_wc__db_global_update(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, update_node, &ub,
                                        scratch_pool));
 #endif
+
+  /* We *totally* monkeyed the entries. Toss 'em.  */
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
+}
+
+
+struct record_baton {
+  apr_int64_t wc_id;
+  const char *local_relpath;
+
+  svn_filesize_t translated_size;
+  apr_time_t last_mod_time;
+
+  /* For error reporting.  */
+  const char *local_abspath;
+};
+
+
+/* Record TRANSLATED_SIZE and LAST_MOD_TIME into the WORKING tree if a
+   node is present; otherwise, record it into the BASE tree. One of them
+   must exist.  */
+static svn_error_t *
+record_fileinfo(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  struct record_baton *rb = baton;
+  svn_boolean_t base_exists;
+  svn_boolean_t working_exists;
+  svn_sqlite__stmt_t *stmt;
+  int affected_rows;
+
+  SVN_ERR(which_trees_exist(&base_exists, &working_exists,
+                            sdb, rb->wc_id, rb->local_relpath));
+  if (!base_exists && !working_exists)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("Could not find node '%s' for recording file "
+                               "information."),
+                             svn_dirent_local_style(rb->local_abspath,
+                                                    scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    working_exists
+                                      ? STMT_UPDATE_WORKING_FILEINFO
+                                      : STMT_UPDATE_BASE_FILEINFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isii",
+                            rb->wc_id, rb->local_relpath,
+                            rb->translated_size, rb->last_mod_time));
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+  SVN_ERR_ASSERT(affected_rows == 1);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  svn_filesize_t translated_size,
+                                  apr_time_t last_mod_time,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  struct record_baton rb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  rb.wc_id = pdh->wcroot->wc_id;
+  rb.local_relpath = local_relpath;
+
+  rb.translated_size = translated_size;
+  rb.last_mod_time = last_mod_time;
+
+  rb.local_abspath = local_abspath;
+
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, record_fileinfo, &rb,
+                                       scratch_pool));
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
   flush_entries(pdh);

@@ -1517,6 +1517,26 @@ svn_wc__db_global_update(svn_wc__db_t *db,
                          apr_pool_t *scratch_pool);
 
 
+/* Record the TRANSLATED_SIZE and LAST_MOD_TIME for a versioned node.
+
+   This function will record the information within the WORKING node,
+   if present, or within the BASE tree. If neither node is present, then
+   SVN_ERR_WC_PATH_NOT_FOUND will be returned.
+
+   TRANSLATED_SIZE may be SVN_INVALID_FILESIZE, which will be recorded
+   as such, implying "unknown size".
+
+   LAST_MOD_TIME may be 0, which will be recorded as such, implying
+   "unknown last mod time".
+*/
+svn_error_t *
+svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  svn_filesize_t translated_size,
+                                  apr_time_t last_mod_time,
+                                  apr_pool_t *scratch_pool);
+
+
 /* ### post-commit handling.
    ### maybe multiple phases?
    ### 1) mark a changelist as being-committed

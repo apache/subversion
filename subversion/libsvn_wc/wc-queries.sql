@@ -190,6 +190,14 @@ where repos_id = ?1 and
 update base_node set last_mod_time = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_BASE_FILEINFO
+UPDATE BASE_NODE SET translated_size = ?3, last_mod_time = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_WORKING_FILEINFO
+UPDATE WORKING_NODE SET translated_size = ?3, last_mod_time = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
 -- STMT_UPDATE_ACTUAL_TREE_CONFLICTS
 update actual_node set tree_conflict_data = ?3
 where wc_id = ?1 and local_relpath = ?2;
@@ -351,9 +359,15 @@ SELECT wc_id, local_relpath, parent_relpath, 'not-present', kind, changed_rev,
     repos_relpath, revnum FROM BASE_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
--- STMT_UPDATE_COPYFROM (
+-- STMT_UPDATE_COPYFROM
 UPDATE WORKING_NODE set copyfrom_repos_id = ?3, copyfrom_repos_path = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_DETERMINE_TREE_FOR_RECORDING
+SELECT 0 FROM BASE_NODE WHERE wc_id = ?1 AND local_relpath = ?2
+UNION
+SELECT 1 FROM WORKING_NODE WHERE wc_id = ?1 AND local_relpath = ?2;
+
 
 /* ------------------------------------------------------------------------- */
 
