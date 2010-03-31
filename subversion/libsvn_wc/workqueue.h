@@ -66,11 +66,19 @@ svn_wc__wq_run(svn_wc__db_t *db,
    copy file at LOCAL_ABSPATH. If USE_COMMIT_TIMES is TRUE, then the newly
    installed file will use the nodes CHANGE_DATE for the file timestamp.
    If RECORD_FILEINFO is TRUE, then the resulting LAST_MOD_TIME and
-   TRANSLATED_SIZE will be recorded in the database.  */
+   TRANSLATED_SIZE will be recorded in the database.
+
+   If SOURCE_ABSPATH is NULL, then the pristine contents will be installed
+   (with appropriate translation). If SOURCE_ABSPATH is not NULL, then it
+   specifies a source file for the translation. The file must exist for as
+   long as *WORK_ITEM exists (and is queued). Typically, it will be a
+   temporary file, and an OP_FILE_REMOVE will be queued to later remove it.
+*/
 svn_error_t *
 svn_wc__wq_build_file_install(const svn_skel_t **work_item,
                               svn_wc__db_t *db,
                               const char *local_abspath,
+                              const char *source_abspath,
                               svn_boolean_t use_commit_times,
                               svn_boolean_t record_fileinfo,
                               apr_pool_t *result_pool,

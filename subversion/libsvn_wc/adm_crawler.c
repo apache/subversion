@@ -73,6 +73,7 @@ restore_file(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__wq_build_file_install(&work_item,
                                         db, local_abspath,
+                                        NULL /* source_abspath */,
                                         use_commit_times,
                                         TRUE /* record_fileinfo */,
                                         scratch_pool, scratch_pool));
