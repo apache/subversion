@@ -176,16 +176,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
-  * r929382
-    Ignore errors reading .svn/wc.db from up the tree somewhere, in
-    trying to prevent creating a 1.6 wc inside a wc-ng.
-    Justification:
-      If there happens to be, for example, a /home/.svn that I don't
-      have permission to read, that should not prevent me from using
-      'svn checkout'.
-      http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=570271
-    Branch:
-      ^/subversion/branches/1.6.x-wc-ng-error
-    Votes:
-      +1: peters, gstein, julianfoad
