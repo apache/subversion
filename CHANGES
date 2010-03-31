@@ -19,7 +19,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.10
   * fixed: 'svnlook plist --revprop' with '-t TXN_NAME' (r917640, -8211)
   * fixed: file external from URL cannot overwrite existing item (issue #3552)
   * fixed: potential memory error in 'svn status' (r923674, -9)
-  * fixed: merge records merginfo from natural history gaps (issue #3432)
+  * fixed: merge records mergeinfo from natural history gaps (issue #3432)
   * fixed: theoretical possibility of DB corruption (r926151, -67)
 
  Developer-visible changes:
