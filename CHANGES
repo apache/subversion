@@ -14,17 +14,19 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.10
   * make mergeinfo queries not require access to the repo root (issue #3242)
   * update URLs to refer the the new apache.org repository (r904301, -94)
   * update relative externals during a switch (issue #3390)
-  * update fix for dropped mergeinfo revisions in 'svnadmin load' (issue #3020)
   * fix 'merge --reintegrate' with self-referential mergeinfo (r892050, -85)
+  * improve wc-ng working copy detection (r929382)
   * fixed: 'svnlook plist --revprop' with '-t TXN_NAME' (r917640, -8211)
   * fixed: file external from URL cannot overwrite existing item (issue #3552)
   * fixed: potential memory error in 'svn status' (r923674, -9)
   * fixed: merge records merginfo from natural history gaps (issue #3432)
+  * fixed: theoretical possibility of DB corruption (r926151, -67)
 
  Developer-visible changes:
   * disable checks for wc-ng working copies when running the test suite
   * on Windows, don't ignore move operation error codes (r896915)
   * more precise reporting of errors occuring with sqlite init (r927323, -8)
+  * ensure rangelist APIs are commutative (r923389, -91)
 
 
 Version 1.6.9
