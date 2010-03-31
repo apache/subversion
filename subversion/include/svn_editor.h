@@ -865,6 +865,15 @@ svn_editor_copy(svn_editor_t *editor,
  * ###   Would the following be valid?
  * ###   svn_editor_add_file(ed, "foo.c", props, rN);
  * ###   svn_editor_move(ed, "foo.c", rM, "bar.c", rN);
+ * ###
+ * ### gstein: no, it would be:
+ * ###   svn_editor_delete(e, "foo.c", rN);
+ * ###   svn_editor_add_file(e, "foo.c", props, SVN_INVALID_REVNUM);
+ * ###   svn_editor_move(e, "foo.c", rM, "bar.c", SVN_INVALID_REVNUM);
+ * ###
+ * ###   replaces_rev is to indicate a deletion of the destination node
+ * ###   that occurs as part of the move. there are no replacements in
+ * ###   your example.
  *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.7.
