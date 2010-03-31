@@ -8,15 +8,15 @@ Conflict meta data is stored in the ACTUAL_NODE table, within the
 conflict information, or NULL (meaning no conflict is present).
 
 There are five types of conflicts (text conflicts, property conflicts,
-tree conflicts, patch conflicts, and obstructions). The conflict skel
+tree conflicts, reject conflicts, and obstructions). The conflict skel
 has the form:
 
   ((KIND OPERATION KIND-SPECIFIC) (KIND OPERATION KIND-SPECIFIC) ...)
 
-where KIND is one of "text", "prop", "tree", "patch", or
-"obstructed". OPERATION indicates the operation which caused
-the conflict and is detailed below. KIND-SPECIFIC is specific
-to each KIND, and is detailed below.
+where KIND is one of "text", "prop", "tree", "reject", or "obstructed".
+OPERATION indicates the operation which caused the conflict and is
+detailed below. KIND-SPECIFIC is specific to each KIND, and is detailed
+below.
 
 ### stsp: need conflict data format version info inside skel, too?
 ###   or do we bump the entire wc.db format number if we need to tweak
