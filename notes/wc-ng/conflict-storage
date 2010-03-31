@@ -59,10 +59,9 @@ To record an "update" operation, the skel has the form:
 
 For "switch", the skel has the form:
 
-  ("switch" BASE_REV TARGET_REV REPOS_ROOT_URL REPOS_RELPATH)
+  ("switch" BASE_REV TARGET_REV REPOS_RELPATH)
 
   BASE_REV and TARGET_REV are as for "update" above.
-  REPOS_ROOT_URL is the repository root of the URL being switched to.
   REPOS_RELPATH is the path in the repository being switched to.
 
 For "merge", the skel has the form:
