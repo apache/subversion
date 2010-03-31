@@ -312,6 +312,8 @@ run_revert(svn_wc__db_t *db,
               reinstall_working = TRUE;
 #endif
 #if 0
+              /* ### try to avoid altering the timestamp if the intended
+                 ### contents are the same as current-contents.  */
               SVN_ERR(svn_wc__text_modified_internal_p(&reinstall_working,
                                                        db, local_abspath,
                                                        FALSE, FALSE,
@@ -324,6 +326,8 @@ run_revert(svn_wc__db_t *db,
         {
           svn_boolean_t use_commit_times;
           apr_finfo_t finfo;
+
+          /* ### this should use OP_FILE_INSTALL.  */
 
           /* Copy from the text base to the working file. The working file
              specifies the params for translation.  */
@@ -2036,27 +2040,16 @@ run_file_install(svn_wc__db_t *db,
                           APR_FINFO_MIN | APR_FINFO_LINK,
                           scratch_pool));
 
-      /* ### for now, stick to the entry_modify2(). there is something more
-         ### going on there. merge_tests 34 will fail if we switch to the
-         ### wc_db API.  */
-#if 0
       SVN_ERR(svn_wc__db_global_record_fileinfo(db, local_abspath,
                                                 finfo.size, last_mod_time,
                                                 scratch_pool));
-#else
-      {
-        svn_wc_entry_t tmp_entry;
 
-        tmp_entry.text_time = last_mod_time;
-        tmp_entry.working_size = finfo.size;
-      SVN_ERR(svn_wc__entry_modify2(db, local_abspath,
-                                    svn_node_unknown, FALSE,
-                                    &tmp_entry,
-                                    SVN_WC__ENTRY_MODIFY_TEXT_TIME
-                                      | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
-                                    scratch_pool));
-      }
-#endif
+      /* ### there used to be a call to entry_modify2() here, to set the
+         ### TRANSLATED_SIZE and LAST_MOD_TIME values. that function elided
+         ### copyfrom information that snuck into the database. it should
+         ### not be there in the first place, but we can manually get rid
+         ### of the erroneous, inheritable copyfrom data.  */
+      SVN_ERR(svn_wc__db_temp_elide_copyfrom(db, local_abspath, scratch_pool));
     }
 
   return SVN_NO_ERROR;
