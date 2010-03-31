@@ -5,18 +5,36 @@ Conflict meta data storage in wc-ng
 
 Conflict meta data is stored in the ACTUAL_NODE table, within the
 'conflict_data' column. The data in this column is a skel containing
-conflict information, or NULL (meaning no conflict is present).
+conflict information (meaning the node is in conflict, and the details
+are inside), or NULL (meaning no conflict is present).
 
-There are five types of conflicts (text conflicts, property conflicts,
-tree conflicts, reject conflicts, and obstructions). The conflict skel
-has the form:
+The conflict skel has the form:
 
   ((KIND OPERATION KIND-SPECIFIC) (KIND OPERATION KIND-SPECIFIC) ...)
 
-where KIND is one of "text", "prop", "tree", "reject", or "obstructed".
+KIND indicates the kind of conflict description that follows and is one
+of:
+
+  "text" - meaning a "normal" text conflict of the whole node (which must be a
+    file), with left/right/mine full texts saved, and (unless it's
+    "binary") conflict markers in the working text;
+  "prop" - meaning a "normal" property conflict, with left/right/mine full
+    values saved;
+  "tree" - meaning a tree conflict;
+  "reject" - meaning a text conflict for a single hunk of text, with the source
+    being a patch file (rather than left/right full texts), and with a
+    "reject" file being saved (?);
+  "obstructed" - meaning ### TODO
+
 OPERATION indicates the operation which caused the conflict and is
-detailed below. KIND-SPECIFIC is specific to each KIND, and is detailed
-below.
+detailed below.
+
+KIND-SPECIFIC is specific to each KIND, and is detailed below.
+
+There are restrictions on what mixture of conflicts can meaningfully be
+recorded - e.g. there must not be two "text" nor one "text" and one
+"reject".  These restrictions are implied but not spelled out here.
+
 
 ### stsp: need conflict data format version info inside skel, too?
 ###   or do we bump the entire wc.db format number if we need to tweak
@@ -42,11 +60,21 @@ but this information can be deduced from the information stored
 Operation skel
 --------------
 
+Meaning:  The Operation skel indicates what kind of operation was being
+performed that resulted in a conflict, including the format and content
+(or reference to content) of the diff that was being applied to this
+node.
+
 The OPERATION skel has the following form:
 
   (NAME OPERATION-SPECIFIC)
 
-NAME is "update", "switch", "merge", or "patch".
+NAME is one of:
+
+  "update" - meaning a 3-way merge as in "svn update";
+  "switch" - meaning a 3-way merge as in "svn switch";
+  "merge" - meaning a 3(4?)-way merge as in "svn merge";
+  "patch" - meaning application of a context-diff, as in "svn patch".
 
 OPERATION-SPECIFIC is as follows:
 
@@ -161,6 +189,9 @@ Tree conflicts
 --------------
 
 Tree conflicts exist on files or directories.
+
+### JAF: And symlinks, I presume - or, if not, why not?
+
 The following information is stored if there is a tree conflict on the node:
 
   ("tree" OPERATION
