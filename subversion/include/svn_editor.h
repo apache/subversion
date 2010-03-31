@@ -859,6 +859,13 @@ svn_editor_copy(svn_editor_t *editor,
  *
  * For a description of @a replaces_rev, see svn_editor_add_file().
  *
+ * ### stsp: How would I describe a merge of revision range rA-rB,
+ * ###   within which a file foo.c was delete in rN, re-created in rM,
+ * ###   and then renamed to bar.c in rX?
+ * ###   Would the following be valid?
+ * ###   svn_editor_add_file(ed, "foo.c", props, rN);
+ * ###   svn_editor_move(ed, "foo.c", rM, "bar.c", rN);
+ *
  * For all restrictions on driving the editor, see #svn_editor_t.
  * @since New in 1.7.
  */
