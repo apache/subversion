@@ -2173,8 +2173,8 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)(
 
 /**
  * A callback vtable invoked by our diff-editors, as they receive diffs
- * from the server.  'svn diff', 'svn merge' and 'svn patch' all
- * implement their own versions of this vtable.
+ * from the server. 'svn diff' and 'svn merge' implement their own versions
+ * of this vtable.
  *
  * Common parameters:
  *
