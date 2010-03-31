@@ -66,6 +66,7 @@ Candidate changes:
      running apache or svnserve.
    Votes:
      +1: rhuijben
+	 +1: steveking
 
  * r898048
    Extend the Windows only, crypto api verification of server certificates
