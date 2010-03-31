@@ -11,24 +11,12 @@ There are five types of conflicts (text conflicts, property conflicts,
 tree conflicts, patch conflicts, and obstructions). The conflict skel
 has the form:
 
-  (COMMON (KIND KIND-SPECIFIC) (KIND KIND-SPECIFIC) ...)
+  ((KIND OPERATION KIND-SPECIFIC) (KIND OPERATION KIND-SPECIFIC) ...)
 
 where KIND is one of "text", "prop", "tree", "patch", or
-"obstructed". KIND-SPECIFIC is specific to each KIND, and is detailed
-below. The COMMON skel contains data that is common to all KINDs, and
-is detailed below.
-
-### stsp: I think the COMMON block should appear at the start of each
-###   type-specific block instead. For instance, if I apply a patch and
-###   rejects are recorded by the "patch" operation on the node,
-###   it does not hurt to allow update or merge operations on the node
-###   while it still has a patch conflict recorded.
-###   A similar situation is a text vs. prop conflicts. E.g. if a node
-###   node has only property conflicts, why not allow an update or merge
-###   which does not touch conflicted properties? Even if we do not want
-###   to allow this, I think embedding this decision into the storage
-###   layer design is a bad idea. We can make higher layers deal with it.
-###   See also http://svn.haxx.se/dev/archive-2010-03/0646.shtml
+"obstructed". OPERATION indicates the operation which caused
+the conflict and is detailed below. KIND-SPECIFIC is specific
+to each KIND, and is detailed below.
 
 ### stsp: need conflict data format version info inside skel, too?
 ###   or do we bump the entire wc.db format number if we need to tweak
@@ -36,11 +24,10 @@ is detailed below.
 ###
 ### gstein sez: the KIND can become "text-2" or somesuch if we need to
 ###   radically alter the kind-specific data. but we can easily append
-###   information to the skel without much problem. adjusting the
-###   COMMON skel shouldn't be hard, if appending is insufficient.
+###   information to the skel without much problem.
 
-If the 'conflict_data' column is not NULL, then COMMON must exist and
-at least one KIND of conflict skel, describing the conflict(s).
+If the 'conflict_data' column is not NULL, then at least one
+one KIND of conflict skel must exist, describing the conflict(s).
 
 Contrary to wc-1, wc-ng records sufficient information to help users
 understand, in hindsight, which operation led to the conflict (as long
@@ -69,52 +56,54 @@ There are 3 versions of an item involved in a conflict:
         (which does not necessarily equal the current working version!)
 
 
-Common conflict data
---------------------
 
-Some information is shared for all conflict data that applies to a node. E.g.
-when a node has a combination of text and property conflicts these were
-always caused by the same operation. (Any later operation will skip the node
-unless the conflicts are resolved). The COMMON skel has the form:
+Operation skel
+--------------
 
-  (OPERATION LEFT_REV RIGHT_REV
-    (LEFT_UUID LEFT_ROOT_URL LEFT_RELPATH LEFT_PEG_REV)
-    (RIGHT_UUID RIGHT_ROOT_URL RIGHT_RELPATH RIGHT_PEG_REV) )
+The OPERATION skel has the following form:
 
-### BH: I don't know if all these values apply to obstructions and patch
-###     conflicts. And most of these values are not available for conflicts
-###     that are introduced via 1.6 (and some of our deprecated svn_wc apis)
+  (NAME OPERATION-SPECIFIC)
 
-### stsp: We can simply use empty strings for fields which don't make
-###   sense for the current conflict type.
+NAME is "update", "switch", "merge", or "patch".
 
-### BH: Should we have the (incoming_change local_change) block here?
-### BH: Should we have the (left_node_kind right_node_kind) block here?
-### BH: Do we need more data on 'older/mine' or is that handled via left/right?
+OPERATION-SPECIFIC is as follows:
 
-OPERATION is "update", "switch", "merge", or "patch", indicating during what
-type of operation the conflict occurred.
+For update: (BASE_REV TARGET_REV)
 
-{LEFT,RIGHT}_REV is the revision of the {left,right} side of
-the operation. With "update" and "switch", LEFT_REV is the base revision
-prior to the update/switch, and RIGHT_REV is the revision updated/switched
-to. During "merge", LEFT_REV is the merge-left revision, and RIGHT_REV
-is the merge-right revision, of a continuous revision range which was merged
-(merge tracking might split a merge up into multiple merges of continuous
-revision ranges).
+  BASE_REV is the base revision prior to the update.
+  TARGET_REV is the revision being updated to.
 
-{LEFT,RIGHT}_UUID is the UUID of the repository the {left,right}
-version of the item comes from, in order to recognize merges from foreign
-repositories.
+For switch: (BASE_REV TARGET_REV REPOS_ROOT_URL REPOS_RELPATH)
 
-{LEFT,RIGHT}_ROOT_URL is the repository root URL the {left,right}
-version of the item comes from.
+  REPOS_ROOT_URL is the repository root of the URL being switched to.
+  REPOS_RELPATH is the path in the repository being switched to.
 
-{LEFT,RIGHT}_RELPATH is the path in the repository of the {left,right}
-version of the item.
+For merge:
+  (LEFT_REV RIGHT_REV
+   (LEFT_REPOS_UUID LEFT_REPOS_ROOT_URL LEFT_REPOS_RELPATH LEFT_PEG_REV)
+   (RIGHT_REPOS_UUID RIGHT_REPOS_ROOT_URL RIGHT_REPOS_RELPATH RIGHT_PEG_REV) )
 
-{LEFT,RIGHT}_PEG_REV is the peg revision of the {left,right} version
-of the item.
+  LEFT_REV is the merge-left revision, and RIGHT_REV is the merge-right
+    revision of a continuous revision range which was merged (merge tracking
+    might split a merge up into multiple merges of continuous revision ranges).
+
+  {LEFT,RIGHT}_REPOS_UUID is the UUID of the repository the {left,right}
+    version of the item comes from, in order to recognize merges from foreign
+    repositories.
+
+  {LEFT,RIGHT}_REPOS_ROOT_URL is the repository root URL the {left,right}
+    version of the item comes from.
+
+  {LEFT,RIGHT}_REPOS_RELPATH is the path in the repository of the {left,right}
+    version of the item.
+
+  {LEFT,RIGHT}_PEG_REV is the peg revision of the {left,right} version
+    of the item.
+
+For patch: (PATCH_FILE_ABSPATH)
+
+  PATCH_FILE_ABSPATH is the absolute path of the patch file the
+  application of which led to conflicts.
 
 
 Text conflicts
@@ -203,19 +192,16 @@ obstruction. Thus, the "obstructed" conflict skel has the form:
   ("obstructed")
 
 
-Patch conflicts (a.k.a. "rejects")
-----------------------------------
+Reject conflicts
+----------------
 For patches, the content of the left and right versions is not fully known,
 so the conflict is not a diff3-style text conflict. Rather, the conflict
 is the failure to find a match for a hunk's context in the patch target.
 
-  ("patch" PATCH_FILE_ABSPATH
+  ("reject"
     HUNK_ORIGINAL_OFFSET HUNK_ORIGINAL_LEN
     HUNK_MODIFIED_OFFSET HUNK_MODIFIED_LENGTH
     REJECT_DIFF_SHA1)
-
-PATCH_FILE_ABSPATH is the absolute path of the patch file the
-application of which to the node led to hunks being rejected.
 
 HUNK_{ORIGINAL,MODIFIED}_OFFSET and HUNK_{ORIGINAL,MODIFIED}_LENGTH
 are the hunk header values as parsed from the patch file (i.e. the "ID"
