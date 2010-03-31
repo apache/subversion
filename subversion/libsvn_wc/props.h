@@ -164,18 +164,6 @@ svn_wc__install_props(svn_wc__db_t *db,
                       svn_boolean_t force_base_install,
                       apr_pool_t *scratch_pool);
 
-/* Extend LOG_ACCUM with log entries to save the current baseprops of PATH
-   as revert props.
-
-   Makes sure the baseprops are destroyed if DESTROY_BASEPROPS is TRUE,
-   the baseprops are preserved otherwise.
-*/
-svn_error_t *
-svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
-                                  svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  const char *adm_abspath,
-                                  apr_pool_t *pool);
 
 /* Delete PROPS_KIND props for LOCAL_ABSPATH */
 svn_error_t *
