@@ -358,8 +358,10 @@ CREATE INDEX I_WORKING_PARENT ON WORKING_NODE (wc_id, parent_relpath);
 
 /* The ACTUAL_NODE table describes text changes and property changes on each
    node in the WC, relative to the WORKING_NODE table row for the same path
-   (if present) or else to the BASE_NODE row for the same path (which must
-   exist in that case).
+   (if present) or else to the BASE_NODE row for the same path.  (Either a
+   WORKING_NODE row or a BASE_NODE row must exist if this node exists, but
+   an ACTUAL_NODE row can exist on its own if it is just recording info on
+   a non-present node - a tree conflict or a changelist, for example.)
 
    The ACTUAL_NODE table row for a given path exists if the node at that
    path is known to have text or property changes relative to its
