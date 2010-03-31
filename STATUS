@@ -65,8 +65,7 @@ Candidate changes:
      will be bigger when measured on a real subversion server like one
      running apache or svnserve.
    Votes:
-     +1: rhuijben
-	 +1: steveking
+     +1: rhuijben, steveking
 
  * r898048
    Extend the Windows only, crypto api verification of server certificates
