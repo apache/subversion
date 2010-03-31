@@ -50,19 +50,24 @@ NAME is "update", "switch", "merge", or "patch".
 
 OPERATION-SPECIFIC is as follows:
 
-For update: (BASE_REV TARGET_REV)
+To record an "update" operation, the skel has the form:
+
+  ("update" BASE_REV TARGET_REV)
 
   BASE_REV is the base revision prior to the update.
   TARGET_REV is the revision being updated to.
 
-For switch: (BASE_REV TARGET_REV REPOS_ROOT_URL REPOS_RELPATH)
+For "switch", the skel has the form:
+
+  ("switch" BASE_REV TARGET_REV REPOS_ROOT_URL REPOS_RELPATH)
 
   BASE_REV and TARGET_REV are as for "update" above.
   REPOS_ROOT_URL is the repository root of the URL being switched to.
   REPOS_RELPATH is the path in the repository being switched to.
 
-For merge:
-  (LEFT_REV RIGHT_REV
+For "merge", the skel has the form:
+
+  ("merge" LEFT_REV RIGHT_REV
    (LEFT_REPOS_UUID LEFT_REPOS_ROOT_URL LEFT_REPOS_RELPATH LEFT_PEG_REV)
    (RIGHT_REPOS_UUID RIGHT_REPOS_ROOT_URL RIGHT_REPOS_RELPATH RIGHT_PEG_REV) )
 
@@ -104,15 +109,13 @@ For merge:
 ###   The item which is being renamed is not the one which was edited -- it
 ###   just happened to live at the same path at a different time.
 
-For patch: (PATCH_FILE_ABSPATH)
+For "patch", the skel has the form:
 
-  PATCH_FILE_ABSPATH is the absolute path of the patch file the
-  application of which led to conflicts.
+  ("patch" PATCH_SOURCE_LABEL)
 
-### gstein: why keep the PATCH_FILE_ABSPATH? couldn't that be rm'd at
-###   some point after the attempted 'svn patch'? and doesn't this
-###   obviate the future possibility of patch from stdin?
-### stsp: See http://svn.haxx.se/dev/archive-2010-03/0645.shtml
+  PATCH_SOURCE_LABEL is (typically) the absolute path of the patch
+  file the application of which led to conflicts. In the future, it
+  may also be something like "<stdin>".
 
 
 Text conflicts
@@ -121,7 +124,7 @@ Text conflicts
 Text conflicts only exist on files. The following skel represents the
 "text" KIND of conflict:
 
-  ("text" LEFT_SHA1 RIGHT_SHA1 MINE_SHA1)
+  ("text" OPERATION LEFT_SHA1 RIGHT_SHA1 MINE_SHA1)
 
 {LEFT,RIGHT,MINE}_SHA1 are sha1 checksums of the full texts of
 the {left,right,mine} version of the file. File version's content
@@ -145,7 +148,8 @@ There can be one or more property conflicts on the node, represented
 by one or more "prop" KIND conflicts. Each "prop" conflict has the
 following form:
 
-  ("prop" PROPERTY_NAME ([LEFT_VALUE]) ([RIGHT_VALUE]) ([MINE_VALUE]))
+  ("prop" OPERATION
+   PROPERTY_NAME ([LEFT_VALUE]) ([RIGHT_VALUE]) ([MINE_VALUE]))
 
 PROPERTY_NAME is the name of the property, such as "svn:eol-style".
 
@@ -160,7 +164,7 @@ Tree conflicts
 Tree conflicts exist on files or directories.
 The following information is stored if there is a tree conflict on the node:
 
-  ("tree"
+  ("tree" OPERATION
     INCOMING_CHANGE LOCAL_CHANGE
     LEFT_NODE_KIND RIGHT_NODE_KIND
     LEFT_SHA1 RIGHT_SHA1 MINE_SHA1)
@@ -187,6 +191,16 @@ content can be obtained from the pristine store.
 ###     (We should keep the history of the node valid via replace vs update)
 ### stsp: I don't really understand your question. Can you be more specific?
 
+### gstein suggests:
+###
+###   ("tree" OPERATION LOCAL_STATE INCOMING_STATE)
+###
+###   LOCAL_STATE := (LOCAL_CHANGE NODE_KIND [ORIGINAL_SHA1 MINE_SHA1])
+###   INCOMING_STATE := (INCOMING_CHANGE NODE_KIND [INCOMING_SHA1])
+###
+### this groups the data better, and has nice (optional) placeholders
+### for the SHA1 values when NODE_KIND is "file"
+
 
 (Unversioned) Obstructions
 --------------------------
@@ -198,7 +212,7 @@ the BASE_NODE table.
 There is no particular data which needs to be recorded for an
 obstruction. Thus, the "obstructed" conflict skel has the form:
 
-  ("obstructed")
+  ("obstructed" OPERATION)
 
 
 Reject conflicts
@@ -209,7 +223,7 @@ is the failure to find a match for a hunk's context in the patch target.
 There can be one or more reject conflicts on a node. Each "reject" conflict
 has the following form:
 
-  ("reject"
+  ("reject" OPERATION
     HUNK_ORIGINAL_OFFSET HUNK_ORIGINAL_LEN
     HUNK_MODIFIED_OFFSET HUNK_MODIFIED_LENGTH
     REJECT_DIFF_SHA1)
