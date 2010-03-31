@@ -1920,6 +1920,7 @@ run_file_install(svn_wc__db_t *db,
                  apr_pool_t *scratch_pool)
 {
   const svn_skel_t *arg1 = work_item->children->next;
+  const svn_skel_t *arg4 = arg1->next->next->next;
   const char *local_abspath;
   svn_boolean_t use_commit_times;
   svn_boolean_t record_fileinfo;
@@ -1936,10 +1937,22 @@ run_file_install(svn_wc__db_t *db,
   use_commit_times = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
   record_fileinfo = svn_skel__parse_int(arg1->next->next, scratch_pool) != 0;
 
-  /* Get the pristine contents (from WORKING or BASE, as appropriate).  */
-  SVN_ERR(svn_wc__get_pristine_contents(&src_stream, db, local_abspath,
-                                        scratch_pool, scratch_pool));
-  SVN_ERR_ASSERT(src_stream != NULL);
+  if (arg4 == NULL)
+    {
+      /* Get the pristine contents (from WORKING or BASE, as appropriate).  */
+      SVN_ERR(svn_wc__get_pristine_contents(&src_stream, db, local_abspath,
+                                            scratch_pool, scratch_pool));
+      SVN_ERR_ASSERT(src_stream != NULL);
+    }
+  else
+    {
+      const char *source_abspath;
+
+      /* Use the provided path for the source.  */
+      source_abspath = apr_pstrmemdup(scratch_pool, arg4->data, arg4->len);
+      SVN_ERR(svn_stream_open_readonly(&src_stream, source_abspath,
+                                       scratch_pool, scratch_pool));
+    }
 
   SVN_ERR(svn_wc__get_special(&special, db, local_abspath, scratch_pool));
   if (special)
@@ -2060,12 +2073,19 @@ svn_error_t *
 svn_wc__wq_build_file_install(const svn_skel_t **work_item,
                               svn_wc__db_t *db,
                               const char *local_abspath,
+                              const char *source_abspath,
                               svn_boolean_t use_commit_times,
                               svn_boolean_t record_fileinfo,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
   svn_skel_t *build_item = svn_skel__make_empty_list(result_pool);
+
+  /* If a SOURCE_ABSPATH was provided, then put it into the skel. If this
+     value is not provided, then the file's pristine contents will be used.  */
+  if (source_abspath != NULL)
+    svn_skel__prepend_str(apr_pstrdup(result_pool, source_abspath),
+                          build_item, result_pool);
 
   svn_skel__prepend_int(record_fileinfo, build_item, result_pool);
   svn_skel__prepend_int(use_commit_times, build_item, result_pool);
