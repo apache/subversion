@@ -111,36 +111,6 @@ Candidate changes:
    Votes:
      +1: kameshj
 
- * r926151, r926167
-   Add an additional check for bogus `changes' table item sequencing.
-   Apparently the custom Google backend managed to trigger some badness
-   along these lines.
-   Notes:
-     r926151 adds a test and fix for BDB; r926167 ports the change to FSFS.
-   Justification:
-     Safety first.
-   Branch:
-     r876470 has not been backported to 1.6.x, so the test added in r926151
-     must use the old-style SVN_TEST_PASS macro rather than the
-     SVN_TEST_OPTS_PASS macro.
-     ^/subversion/branches/1.6.x-r926151
-   Votes:
-     +1: cmpilato, pburba
-
- * r923389, r923391
-   Fix a bug where the ordering of arguments to svn_rangelist_intersect can
-   produce different results.
-   Justification:
-     The intersection of A and B != the intersection of B and A?
-     In a word: bad.  See http://svn.haxx.se/dev/archive-2010-03/0400.shtml.
-   Notes:
-     r923389 is the fix and a new C test, r923391 is a follow-up that fixed
-     a build-breaking typo from r923389,
-   Branch:
-     ^/subversion/branches/1.6.x-r923389
-   Votes:
-     +1: pburba, rhuijben
-
   * r929382
     Ignore errors reading .svn/wc.db from up the tree somewhere, in
     trying to prevent creating a 1.6 wc inside a wc-ng.
@@ -219,3 +189,33 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r923389, r923391
+   Fix a bug where the ordering of arguments to svn_rangelist_intersect can
+   produce different results.
+   Justification:
+     The intersection of A and B != the intersection of B and A?
+     In a word: bad.  See http://svn.haxx.se/dev/archive-2010-03/0400.shtml.
+   Notes:
+     r923389 is the fix and a new C test, r923391 is a follow-up that fixed
+     a build-breaking typo from r923389,
+   Branch:
+     ^/subversion/branches/1.6.x-r923389
+   Votes:
+     +1: pburba, rhuijben, gstein
+
+ * r926151, r926167
+   Add an additional check for bogus `changes' table item sequencing.
+   Apparently the custom Google backend managed to trigger some badness
+   along these lines.
+   Notes:
+     r926151 adds a test and fix for BDB; r926167 ports the change to FSFS.
+   Justification:
+     Safety first.
+   Branch:
+     r876470 has not been backported to 1.6.x, so the test added in r926151
+     must use the old-style SVN_TEST_PASS macro rather than the
+     SVN_TEST_OPTS_PASS macro.
+     ^/subversion/branches/1.6.x-r926151
+   Votes:
+     +1: cmpilato, pburba, gstein
