@@ -7034,6 +7034,7 @@ svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
   svn_revnum_t original_revision;
   const char *parent_abspath;
   const char *name;
+  svn_error_t *err;
   const char *op_root_abspath;
   const char *parent_repos_relpath;
   const char *parent_uuid;
@@ -7070,13 +7071,24 @@ svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
   /* If this node is copied/moved, then there MUST be a parent. The above
      copyfrom values cannot be set on a wcroot.  */
   svn_dirent_split(local_abspath, &parent_abspath, &name, scratch_pool);
-  SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL, NULL,
-                                   &parent_repos_relpath,
-                                   NULL,
-                                   &parent_uuid,
-                                   &parent_revision,
-                                   db, parent_abspath,
-                                   scratch_pool, scratch_pool));
+  err = svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL, NULL,
+                                 &parent_repos_relpath,
+                                 NULL,
+                                 &parent_uuid,
+                                 &parent_revision,
+                                 db, parent_abspath,
+                                 scratch_pool, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+      svn_error_clear(err);
+
+      /* ### hunh? sometimes the parent is missing? stupid semi-stable
+         ### state crap, probably. don't bother trying to reset the
+         ### copyfrom data for this case.  */
+      return SVN_NO_ERROR;
+    }
 
   /* Now we need to determine if the child's values are derivable from
      the parent values.  */
