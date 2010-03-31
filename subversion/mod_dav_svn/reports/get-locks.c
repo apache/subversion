@@ -41,7 +41,7 @@
 #include "../dav_svn.h"
 
 /* Respond to a get-locks-report request.  See description of this
-   report in libsvn_ra_dav/fetch.c.  */
+   report in libsvn_ra_neon/get_locks.c.  */
 
 
 #define SVN_APR_ERR(expr)                       \
