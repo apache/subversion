@@ -54,6 +54,7 @@ is_inside_wc_ng(const char *abspath,
   svn_node_kind_t kind;
   const char *wc_db_path;
   char *wc_ng_check_env_var;
+  svn_error_t *err;
 
   wc_ng_check_env_var = getenv(SVN_WC_NG_CHECK_ENV_VAR);
   if (wc_ng_check_env_var &&
@@ -62,7 +63,12 @@ is_inside_wc_ng(const char *abspath,
 
   wc_db_path = svn_path_join_many(pool, abspath, SVN_WC_ADM_DIR_NAME,
                                   "wc.db", NULL);
-  SVN_ERR(svn_io_check_path(wc_db_path, &kind, pool));
+  err = svn_io_check_path(wc_db_path, &kind, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
 
   if (kind == svn_node_file)
     {
