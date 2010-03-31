@@ -83,6 +83,9 @@ For merge:
   {LEFT,RIGHT}_PEG_REV is the peg revision of the {left,right} version
     of the item.
 
+### JAF: Don't want both "rev" and "peg-rev" separately: that's recording too
+###   much UI.  Just have the revision in which to find the repos-relpath.
+
 For patch: (PATCH_FILE_ABSPATH)
 
   PATCH_FILE_ABSPATH is the absolute path of the patch file the
