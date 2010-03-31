@@ -6860,6 +6860,8 @@ make_copy_txn(void *baton,
       SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid, sdb,
                               iterpool));
 
+      /* ### this is not setting the COPYFROM_REVISION column!!  */
+
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_COPYFROM));
       SVN_ERR(svn_sqlite__bindf(stmt, "isis",
                                 mcb->pdh->wcroot->wc_id,
@@ -7013,6 +7015,106 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__with_transaction(mcb.pdh->wcroot->sdb,
                                        make_copy_txn, &mcb,
                                        scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_int64_t original_repos_id;
+  const char *original_repos_relpath;
+  svn_revnum_t original_revision;
+  const char *parent_abspath;
+  const char *name;
+  const char *op_root_abspath;
+  const char *parent_repos_relpath;
+  const char *parent_uuid;
+  svn_revnum_t parent_revision;
+  const char *implied_relpath;
+  const char *original_uuid;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  /* Examine the current WORKING_NODE row's copyfrom information. If there
+     is no WORKING node, then simply exit.  */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_return(svn_sqlite__reset(stmt));
+
+  /* Already inheriting copyfrom information?  */
+  if (svn_sqlite__column_is_null(stmt, 9 /* copyfrom_repos_id */))
+    return svn_error_return(svn_sqlite__reset(stmt));
+
+  original_repos_id = svn_sqlite__column_int64(stmt, 9);
+  original_repos_relpath = svn_sqlite__column_text(stmt, 10, scratch_pool);
+  original_revision = svn_sqlite__column_revnum(stmt, 11);
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* If this node is copied/moved, then there MUST be a parent. The above
+     copyfrom values cannot be set on a wcroot.  */
+  svn_dirent_split(local_abspath, &parent_abspath, &name, scratch_pool);
+  SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL, NULL,
+                                   &parent_repos_relpath,
+                                   NULL,
+                                   &parent_uuid,
+                                   &parent_revision,
+                                   db, parent_abspath,
+                                   scratch_pool, scratch_pool));
+
+  /* Now we need to determine if the child's values are derivable from
+     the parent values.  */
+
+  /* If the revision numbers are not the same, then easy exit.  */
+  if (original_revision != parent_revision)
+    return SVN_NO_ERROR;
+
+  /* The child repos_relpath should be under the parent's.  */
+  if (svn_relpath_is_child(parent_repos_relpath,
+                           original_repos_relpath,
+                           NULL) == NULL)
+    return SVN_NO_ERROR;
+
+  /* Given the relpath from OP_ROOT_ABSPATH down to LOCAL_ABSPATH, compute
+     an implied REPOS_RELPATH. If that does not match the RELPATH we found,
+     then we can exit (the child is a new copy root).  */
+  implied_relpath = svn_relpath_join(parent_repos_relpath,
+                                     svn_dirent_skip_ancestor(op_root_abspath,
+                                                              local_abspath),
+                                     scratch_pool);
+  if (strcmp(implied_relpath, original_repos_relpath) != 0)
+    return SVN_NO_ERROR;
+
+  /* Everything matches up. Grab the details for ORIGINAL_REPOS_ID and
+     compare to the parent.  */
+  SVN_ERR(fetch_repos_info(NULL, &original_uuid,
+                           pdh->wcroot->sdb, original_repos_id,
+                           scratch_pool));
+  if (strcmp(original_uuid, parent_uuid) != 0)
+    return SVN_NO_ERROR;
+
+  /* The child's copyfrom information is derivable from the parent.
+     The data should be reset to null, indicating the derivation.  */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_UPDATE_COPYFROM_TO_INHERIT));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
 
   return SVN_NO_ERROR;
 }
