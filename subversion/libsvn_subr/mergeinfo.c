@@ -835,15 +835,42 @@ svn_rangelist__set_inheritance(apr_array_header_t *rangelist,
   return;
 }
 
-/* Either remove any overlapping ranges described by ERASER from
-   WHITEBOARD (when DO_REMOVE is TRUE), or capture the overlap, and
-   place the remaining or overlapping ranges in OUTPUT. */
-/*  ### FIXME: Some variables names and inline comments for this method
-    ### are legacy from when it was solely the remove() impl. */
+/* If DO_REMOVE is true, then remove any overlapping ranges described by
+   RANGELIST1 from RANGELIST2 and place the results in *OUTPUT.  When
+   DO_REMOVE is true, RANGELIST1 is effectively the "eraser" and RANGELIST2
+   the "whiteboard".
+
+   If DO_REMOVE is false, then capture the intersection between RANGELIST1
+   and RANGELIST2 and place the results in *OUTPUT.  The ordering of
+   RANGELIST1 and RANGELIST2 doesn't matter when DO_REMOVE is false.
+
+   If CONSIDER_INHERITANCE is true, then take the inheritance of the
+   ranges in RANGELIST1 and RANGELIST2 into account when comparing them
+   for intersection, see the doc string for svn_rangelist_intersection().
+
+   If CONSIDER_INHERITANCE is true, then ranges with differing inheritance
+   may intersect, but the resulting intersection is non-inheritable only
+   if both ranges were non-inheritable, e.g.:
+
+   RANGELIST1  RANGELIST2  CONSIDER     DO_REMOVE  *OUTPUT
+                           INHERITANCE
+   ----------  ------      -----------  ---------  -------
+
+   90-420*     1-100       TRUE         FALSE      Empty Rangelist
+   90-420      1-100*      TRUE         FALSE      Empty Rangelist
+   90-420      1-100       TRUE         FALSE      90-100
+   90-420*     1-100*      TRUE         FALSE      90-100*
+
+   90-420*     1-100       FALSE        FALSE      90-100
+   90-420      1-100*      FALSE        FALSE      90-100
+   90-420      1-100       FALSE        FALSE      90-100
+   90-420*     1-100*      FALSE        FALSE      90-100*
+
+   Allocate the contents of *OUTPUT in POOL. */
 static svn_error_t *
 rangelist_intersect_or_remove(apr_array_header_t **output,
-                              apr_array_header_t *eraser,
-                              apr_array_header_t *whiteboard,
+                              const apr_array_header_t *rangelist1,
+                              const apr_array_header_t *rangelist2,
                               svn_boolean_t do_remove,
                               svn_boolean_t consider_inheritance,
                               apr_pool_t *pool)
@@ -858,37 +885,46 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
   j = 0;
   lasti = -1;  /* Initialized to a value that "i" will never be. */
 
-  while (i < whiteboard->nelts && j < eraser->nelts)
+  while (i < rangelist2->nelts && j < rangelist1->nelts)
     {
       svn_merge_range_t *elt1, *elt2;
 
-      elt2 = APR_ARRAY_IDX(eraser, j, svn_merge_range_t *);
+      elt2 = APR_ARRAY_IDX(rangelist1, j, svn_merge_range_t *);
 
-      /* Instead of making a copy of the entire array of whiteboard
-         elements, we just keep a copy of the current whiteboard element
+      /* Instead of making a copy of the entire array of rangelist2
+         elements, we just keep a copy of the current rangelist2 element
          that needs to be used, and modify our copy if necessary. */
       if (i != lasti)
         {
-          wboardelt = *(APR_ARRAY_IDX(whiteboard, i, svn_merge_range_t *));
+          wboardelt = *(APR_ARRAY_IDX(rangelist2, i, svn_merge_range_t *));
           lasti = i;
         }
 
       elt1 = &wboardelt;
 
-      /* If the whiteboard range is contained completely in the
-         eraser, we increment the whiteboard.
+      /* If the rangelist2 range is contained completely in the
+         rangelist1, we increment the rangelist2.
          If the ranges intersect, and match exactly, we increment both
-         eraser and whiteboard.
+         rangelist1 and rangelist2.
          Otherwise, we have to generate a range for the left part of
-         the removal of eraser from whiteboard, and possibly change
-         the whiteboard to the remaining portion of the right part of
+         the removal of rangelist1 from rangelist2, and possibly change
+         the rangelist2 to the remaining portion of the right part of
          the removal, to test against. */
       if (range_contains(elt2, elt1, consider_inheritance))
         {
           if (!do_remove)
-            SVN_ERR(combine_with_lastrange(&lastrange, elt1, *output,
-                                           consider_inheritance, pool,
-                                           pool));
+            {
+              svn_merge_range_t tmp_range;
+              tmp_range.start = elt1->start;
+              tmp_range.end = elt1->end;
+              /* The intersection of two ranges is non-inheritable only
+                 if both ranges are non-inheritable. */
+              tmp_range.inheritable =
+                (elt1->inheritable || elt2->inheritable);
+              SVN_ERR(combine_with_lastrange(&lastrange, &tmp_range, *output,
+                                             consider_inheritance, pool,
+                                             pool));
+            }
 
           i++;
 
@@ -899,21 +935,26 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
         {
           if (elt1->start < elt2->start)
             {
-              /* The whiteboard range starts before the eraser range. */
+              /* The rangelist2 range starts before the rangelist1 range. */
               svn_merge_range_t tmp_range;
-              tmp_range.inheritable = elt1->inheritable;
               if (do_remove)
                 {
-                  /* Retain the range that falls before the eraser start. */
+                  /* Retain the range that falls before the rangelist1
+                     start. */
                   tmp_range.start = elt1->start;
                   tmp_range.end = elt2->start;
+                  tmp_range.inheritable = elt1->inheritable;
                 }
               else
                 {
-                  /* Retain the range that falls between the eraser
-                     start and whiteboard end. */
+                  /* Retain the range that falls between the rangelist1
+                     start and rangelist2 end. */
                   tmp_range.start = elt2->start;
                   tmp_range.end = MIN(elt1->end, elt2->end);
+                  /* The intersection of two ranges is non-inheritable only
+                     if both ranges are non-inheritable. */
+                  tmp_range.inheritable =
+                    (elt1->inheritable || elt2->inheritable);
                 }
 
               SVN_ERR(combine_with_lastrange(&lastrange, &tmp_range,
@@ -921,18 +962,21 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                                              pool, pool));
             }
 
-          /* Set up the rest of the whiteboard range for further
+          /* Set up the rest of the rangelist2 range for further
              processing.  */
           if (elt1->end > elt2->end)
             {
-              /* The whiteboard range ends after the eraser range. */
+              /* The rangelist2 range ends after the rangelist1 range. */
               if (!do_remove)
                 {
                   /* Partial overlap. */
                   svn_merge_range_t tmp_range;
                   tmp_range.start = MAX(elt1->start, elt2->start);
                   tmp_range.end = elt2->end;
-                  tmp_range.inheritable = elt1->inheritable;
+                  /* The intersection of two ranges is non-inheritable only
+                     if both ranges are non-inheritable. */
+                  tmp_range.inheritable =
+                    (elt1->inheritable || elt2->inheritable);
                   SVN_ERR(combine_with_lastrange(&lastrange, &tmp_range,
                                                  *output,
                                                  consider_inheritance,
@@ -947,12 +991,12 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
         }
       else  /* ranges don't intersect */
         {
-          /* See which side of the whiteboard the eraser is on.  If it
-             is on the left side, we need to move the eraser.
+          /* See which side of the rangelist2 the rangelist1 is on.  If it
+             is on the left side, we need to move the rangelist1.
 
-             If it is on past the whiteboard on the right side, we
-             need to output the whiteboard and increment the
-             whiteboard.  */
+             If it is on past the rangelist2 on the right side, we
+             need to output the rangelist2 and increment the
+             rangelist2.  */
           if (svn_sort_compare_ranges(&elt2, &elt1) < 0)
             j++;
           else
@@ -971,23 +1015,23 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
 
   if (do_remove)
     {
-      /* Copy the current whiteboard element if we didn't hit the end
-         of the whiteboard, and we still had it around.  This element
-         may have been touched, so we can't just walk the whiteboard
+      /* Copy the current rangelist2 element if we didn't hit the end
+         of the rangelist2, and we still had it around.  This element
+         may have been touched, so we can't just walk the rangelist2
          array, we have to use our copy.  This case only happens when
-         we ran out of eraser before whiteboard, *and* we had changed
-         the whiteboard element. */
-      if (i == lasti && i < whiteboard->nelts)
+         we ran out of rangelist1 before rangelist2, *and* we had changed
+         the rangelist2 element. */
+      if (i == lasti && i < rangelist2->nelts)
         {
           SVN_ERR(combine_with_lastrange(&lastrange, &wboardelt, *output,
                                          consider_inheritance, pool, pool));
           i++;
         }
 
-      /* Copy any other remaining untouched whiteboard elements.  */
-      for (; i < whiteboard->nelts; i++)
+      /* Copy any other remaining untouched rangelist2 elements.  */
+      for (; i < rangelist2->nelts; i++)
         {
-          svn_merge_range_t *elt = APR_ARRAY_IDX(whiteboard, i,
+          svn_merge_range_t *elt = APR_ARRAY_IDX(rangelist2, i,
                                                  svn_merge_range_t *);
 
           SVN_ERR(combine_with_lastrange(&lastrange, elt, *output,

@@ -190,20 +190,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r923389, r923391
-   Fix a bug where the ordering of arguments to svn_rangelist_intersect can
-   produce different results.
-   Justification:
-     The intersection of A and B != the intersection of B and A?
-     In a word: bad.  See http://svn.haxx.se/dev/archive-2010-03/0400.shtml.
-   Notes:
-     r923389 is the fix and a new C test, r923391 is a follow-up that fixed
-     a build-breaking typo from r923389,
-   Branch:
-     ^/subversion/branches/1.6.x-r923389
-   Votes:
-     +1: pburba, rhuijben, gstein
-
  * r926151, r926167
    Add an additional check for bogus `changes' table item sequencing.
    Apparently the custom Google backend managed to trigger some badness

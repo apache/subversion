@@ -522,25 +522,72 @@ test_rangelist_intersect(const char **msg,
                          apr_pool_t *pool)
 {
   apr_array_header_t *rangelist1, *rangelist2, *intersection;
-  svn_merge_range_t expected_intersection[] =
-    { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE}, {30, 32, TRUE},
+
+  /* Expected intersection when considering inheritance. */
+  svn_merge_range_t intersection_consider_inheritance[] =
+    { {0, 1, TRUE}, {11, 12, TRUE}, {30, 32, FALSE}, {39, 42, TRUE} };
+
+  /* Expected intersection when ignoring inheritance. */
+  svn_merge_range_t intersection_ignore_inheritance[] =
+    { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE}, {30, 32, FALSE},
       {39, 42, TRUE} };
 
   *msg = "intersection of rangelists";
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16,30-32,40-42", pool));
-  SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4,7,9,11-12,31-34,38-44",
+  SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16,30-32*,40-42", pool));
+  SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4*,7,9,11-12,31-34*,38-44",
                               pool));
   rangelist1 = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   rangelist2 = apr_hash_get(info2, "/trunk", APR_HASH_KEY_STRING);
 
+  /* Check the intersection while considering inheritance twice, reversing
+     the order of the rangelist arguments on the second call to
+     svn_rangelist_intersection.  The order *should* have no effect on
+     the result -- see http://svn.haxx.se/dev/archive-2010-03/0351.shtml.
+
+     '3-4*' has different inheritance than '1-6', so no intersection is
+     expected.  '30-32*' and '31-34*' have the same inheritance, so intersect
+     at '31-32*'.  Per the svn_rangelist_intersect API, since both ranges
+     are non-inheritable, so is the result. */
   SVN_ERR(svn_rangelist_intersect(&intersection, rangelist1, rangelist2,
                                   TRUE, pool));
 
-  return verify_ranges_match(intersection, expected_intersection, 5,
-                             "svn_rangelist_intersect", "intersect", pool);
+  SVN_ERR(verify_ranges_match(intersection,
+                              intersection_consider_inheritance,
+                              4, "svn_rangelist_intersect", "intersect",
+                              pool));
+
+  SVN_ERR(svn_rangelist_intersect(&intersection, rangelist2, rangelist1,
+                                  TRUE, pool));
+
+  SVN_ERR(verify_ranges_match(intersection,
+                              intersection_consider_inheritance,
+                              4, "svn_rangelist_intersect", "intersect",
+                              pool));
+
+  /* Check the intersection while ignoring inheritance.  The one difference
+     from when we consider inheritance is that '3-4*' and '1-6' now intersect,
+     since we don't care about inheritability, just the start and end ranges.
+     Per the svn_rangelist_intersect API, since only one range is
+     non-inheritable the result is inheritable. */
+  SVN_ERR(svn_rangelist_intersect(&intersection, rangelist1, rangelist2,
+                                  FALSE, pool));
+
+  SVN_ERR(verify_ranges_match(intersection,
+                              intersection_ignore_inheritance,
+                              5, "svn_rangelist_intersect", "intersect",
+                              pool));
+
+  SVN_ERR(svn_rangelist_intersect(&intersection, rangelist2, rangelist1,
+                                  FALSE, pool));
+
+  SVN_ERR(verify_ranges_match(intersection,
+                              intersection_ignore_inheritance,
+                              5, "svn_rangelist_intersect", "intersect",
+                              pool));
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
