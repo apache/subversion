@@ -1526,7 +1526,11 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                                 pool);
 
           /* Make sure this new directory has an admistrative subdirectory
-             created inside of it */
+             created inside of it.
+
+             This creates a BASE_NODE for an added directory, really
+             it should create a WORKING_NODE.  It gets removed by the
+             next modify2 call. */
           SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
                                               new_url, parent_entry->repos,
                                               parent_entry->uuid, 0,
@@ -1537,11 +1541,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
           /* When we are called with the copyfrom arguments set and with
              the admin directory already in existence, then the dir will
              contain the copyfrom settings.  So we need to pass the
-             copyfrom arguments to the ensure call.
-
-             This creates a BASE_NODE for an added directory, really
-             it should create a WORKING_NODE.  It gets removed by the
-             next modify2 call. */
+             copyfrom arguments to the ensure call. */
           SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
                                               copyfrom_url,
                                               parent_entry->repos,
