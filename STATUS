@@ -177,22 +177,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r926151, r926167
-   Add an additional check for bogus `changes' table item sequencing.
-   Apparently the custom Google backend managed to trigger some badness
-   along these lines.
-   Notes:
-     r926151 adds a test and fix for BDB; r926167 ports the change to FSFS.
-   Justification:
-     Safety first.
-   Branch:
-     r876470 has not been backported to 1.6.x, so the test added in r926151
-     must use the old-style SVN_TEST_PASS macro rather than the
-     SVN_TEST_OPTS_PASS macro.
-     ^/subversion/branches/1.6.x-r926151
-   Votes:
-     +1: cmpilato, pburba, gstein
-
   * r929382
     Ignore errors reading .svn/wc.db from up the tree somewhere, in
     trying to prevent creating a 1.6 wc inside a wc-ng.
@@ -205,4 +189,3 @@ Approved changes:
       ^/subversion/branches/1.6.x-wc-ng-error
     Votes:
       +1: peters, gstein, julianfoad
-
