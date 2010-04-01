@@ -1839,8 +1839,7 @@ files_same_p(svn_boolean_t *same,
 
       /* Compare the file content, translating 'mine' to 'normal' form. */
       SVN_ERR(svn_wc__versioned_file_modcheck(&modified, wc_ctx, mine_abspath,
-                                              older_abspath, TRUE,
-                                              scratch_pool));
+                                              older_abspath, scratch_pool));
       *same = !modified;
     }
 
