@@ -1879,8 +1879,8 @@ merge_file_deleted(const char *local_dir_abspath,
 
   SVN_ERR(svn_dirent_get_absolute(&mine_abspath, mine, subpool));
 
-  if (*tree_conflicted)
-    tree_conflicted = FALSE;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
 
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
@@ -4632,8 +4632,7 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
    to the reporter.
 
    DEPTH, NOTIFY_B, and MERGE_B are cascasded from do_directory_merge(), see
-   that function for more info.  CALLBACKS are the svn merge versions of
-   the svn_wc_diff_callbacks4_t callbacks invoked by the editor.
+   that function for more info.
 
    If MERGE_B->sources_ancestral is set, then URL1@REVISION1 must be a
    historical ancestor of URL2@REVISION2, or vice-versa (see
@@ -4649,7 +4648,6 @@ drive_merge_report_editor(const char *target_abspath,
                           const apr_array_header_t *children_with_mergeinfo,
                           svn_depth_t depth,
                           notification_receiver_baton_t *notify_b,
-                          const svn_wc_diff_callbacks4_t *callbacks,
                           merge_cmd_baton_t *merge_b,
                           apr_pool_t *pool)
 {
@@ -4727,7 +4725,7 @@ drive_merge_report_editor(const char *target_abspath,
   /* Get the diff editor and a reporter with which to, ultimately,
      drive it. */
   SVN_ERR(svn_client__get_diff_editor(target_abspath, merge_b->ctx->wc_ctx,
-                                      callbacks, merge_b, depth,
+                                      &merge_callbacks, merge_b, depth,
                                       merge_b->dry_run,
                                       merge_b->ra_session2, revision1,
                                       notification_receiver, notify_b,
@@ -6808,7 +6806,6 @@ do_mergeinfo_unaware_dir_merge(const char *url1,
   return drive_merge_report_editor(target_dir_wcpath,
                                    url1, revision1, url2, revision2,
                                    NULL, depth, notify_b,
-                                   &merge_callbacks,
                                    merge_b, pool);
 }
 
@@ -7729,7 +7726,7 @@ do_directory_merge(const char *url1,
                 real_url2, end_rev,
                 notify_b->children_with_mergeinfo,
                 depth, notify_b,
-                &merge_callbacks, merge_b,
+                merge_b,
                 iterpool));
               if (old_sess1_url)
                 SVN_ERR(svn_ra_reparent(merge_b->ra_session1,
@@ -7791,7 +7788,7 @@ do_directory_merge(const char *url1,
                                             url1, revision1, url2, revision2,
                                             NULL,
                                             depth, notify_b,
-                                            &merge_callbacks, merge_b,
+                                            merge_b,
                                             pool));
         }
     }
