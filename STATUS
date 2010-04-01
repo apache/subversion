@@ -110,6 +110,13 @@ Candidate changes:
      is not happening rather commit happens in slave itself.
    Votes:
      +1: kameshj
+ 
+ * r906587
+   Make a fsfs-specific test skip on BDB.
+   Justification:
+     Resolves a FAIL in 'make check FS_TYPE=bdb'.
+   Votes:
+     +1: danielsh
 
 Veto-blocked changes:
 =====================
