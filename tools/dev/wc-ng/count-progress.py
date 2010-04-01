@@ -33,6 +33,7 @@ TERMS = ['svn_wc_adm_access_t',
          'log_accum',
          'svn_wc__wq_add_loggy',
          'svn_wc__db_temp_',
+         'svn_wc__db_node_hidden',
          ]
 
 
