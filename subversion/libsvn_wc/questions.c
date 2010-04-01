@@ -89,6 +89,8 @@
  * if verify_checksum is TRUE. If checksum does not match, return the error
  * SVN_ERR_WC_CORRUPT_TEXT_BASE.
  *
+ * PRISTINE_STREAM will be closed before a successful return.
+ *
  * DB is a wc_db; use SCRATCH_POOL for temporary allocation.
  */
 static svn_error_t *
@@ -125,7 +127,6 @@ compare_and_verify(svn_boolean_t *modified_p,
       /* Reading files is necessary. */
       svn_checksum_t *checksum;
       svn_stream_t *v_stream;  /* versioned_file */
-      svn_stream_t *p_stream = svn_stream_disown(pristine_stream, scratch_pool);
       const svn_checksum_t *node_checksum;
 
       if (verify_checksum)
@@ -142,9 +143,10 @@ compare_and_verify(svn_boolean_t *modified_p,
                                        scratch_pool, scratch_pool));
 
           if (node_checksum)
-            p_stream = svn_stream_checksummed2(p_stream, &checksum, NULL,
-                                               svn_checksum_md5, TRUE,
-                                               scratch_pool);
+            pristine_stream = svn_stream_checksummed2(pristine_stream,
+                                                      &checksum, NULL,
+                                                      svn_checksum_md5, TRUE,
+                                                      scratch_pool);
         }
 
       if (special)
@@ -176,17 +178,15 @@ compare_and_verify(svn_boolean_t *modified_p,
           else if (need_translation)
             {
               /* Wrap base stream to translate into working copy form. */
-              p_stream = svn_subst_stream_translated(p_stream, eol_str, FALSE,
-                                                     keywords, TRUE,
-                                                     scratch_pool);
+              pristine_stream = svn_subst_stream_translated(pristine_stream,
+                                                            eol_str, FALSE,
+                                                            keywords, TRUE,
+                                                            scratch_pool);
             }
         }
 
-      SVN_ERR(svn_stream_contents_same(&same, p_stream, v_stream,
-                                       scratch_pool));
-
-      SVN_ERR(svn_stream_close(v_stream));
-      SVN_ERR(svn_stream_close(p_stream));
+      SVN_ERR(svn_stream_contents_same2(&same, pristine_stream, v_stream,
+                                        scratch_pool));
 
       if (verify_checksum && node_checksum)
         {
@@ -211,10 +211,8 @@ compare_and_verify(svn_boolean_t *modified_p,
       SVN_ERR(svn_stream_open_readonly(&v_stream, versioned_file_abspath,
                                        scratch_pool, scratch_pool));
 
-      SVN_ERR(svn_stream_contents_same(&same, pristine_stream, v_stream,
-                                       scratch_pool));
-
-      SVN_ERR(svn_stream_close(v_stream));
+      SVN_ERR(svn_stream_contents_same2(&same, pristine_stream, v_stream,
+                                        scratch_pool));
     }
 
   *modified_p = (! same);
@@ -236,11 +234,12 @@ svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
   SVN_ERR(svn_stream_open_readonly(&pristine_stream, base_file_abspath,
                                    scratch_pool, scratch_pool));
 
-  SVN_ERR(compare_and_verify(modified_p, db, versioned_file_abspath,
-                             pristine_stream, compare_textbases, FALSE,
-                             scratch_pool));
-
-  return svn_error_return(svn_stream_close(pristine_stream));
+  return svn_error_return(compare_and_verify(modified_p, db,
+                                             versioned_file_abspath,
+                                             pristine_stream,
+                                             compare_textbases,
+                                             FALSE,
+                                             scratch_pool));
 }
 
 svn_error_t *
@@ -376,12 +375,11 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
     }
 
   /* Check all bytes, and verify checksum if requested. */
-  err = compare_and_verify(modified_p, db, local_abspath, pristine_stream,
-                           compare_textbases, force_comparison,
-                           scratch_pool);
-
-  return svn_error_compose_create(err,
-                                  svn_stream_close(pristine_stream));
+  return svn_error_return(compare_and_verify(modified_p, db, local_abspath,
+                                             pristine_stream,
+                                             compare_textbases,
+                                             force_comparison,
+                                             scratch_pool));
 }
 
 
