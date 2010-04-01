@@ -25,8 +25,12 @@
  */
 
 #include "JNIUtil.h"
+#include "Array.h"
+
 #include <sstream>
+#include <vector>
 #include <locale.h>
+
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_general.h>
@@ -376,12 +380,74 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
   env->Throw(static_cast<jthrowable>(env->PopLocalFrame(nativeException)));
 }
 
+void
+JNIUtil::putErrorsInTrace(svn_error_t *err,
+                          std::vector<jobject> &stackTrace)
+{
+  if (!err)
+    return;
+
+  JNIEnv *env = getEnv();
+
+  // First, put all our child errors in the stack trace
+  putErrorsInTrace(err->child, stackTrace);
+
+  // Now, put our own error in the stack trace
+  jclass stClazz = env->FindClass("java/lang/StackTraceElement");
+  if (isJavaExceptionThrown())
+    return;
+
+  static jmethodID ctor_mid = 0;
+  if (ctor_mid == 0)
+    {
+      ctor_mid = env->GetMethodID(stClazz, "<init>",
+                                  "(Ljava/lang/String;Ljava/lang/String;"
+                                  "Ljava/lang/String;I)V");
+      if (isJavaExceptionThrown())
+        return;
+    }
+
+  jstring jdeclClass = makeJString("native");
+  if (isJavaExceptionThrown())
+    return;
+
+  char *tmp_path;
+  char *path = svn_relpath_dirname(err->file, err->pool);
+  while (tmp_path = strchr(path, '/'))
+    *tmp_path = '.';
+
+  jstring jmethodName = makeJString(path);
+  if (isJavaExceptionThrown())
+    return;
+
+  jstring jfileName = makeJString(svn_relpath_basename(err->file, err->pool));
+  if (isJavaExceptionThrown())
+    return;
+
+  jobject jelement = env->NewObject(stClazz, ctor_mid, jdeclClass, jmethodName,
+                                    jfileName, (jint) err->line);
+
+  stackTrace.push_back(jelement);
+
+  env->DeleteLocalRef(stClazz);
+  if (isJavaExceptionThrown())
+    return;
+  env->DeleteLocalRef(jdeclClass);
+  if (isJavaExceptionThrown())
+    return;
+  env->DeleteLocalRef(jmethodName);
+  if (isJavaExceptionThrown())
+    return;
+  env->DeleteLocalRef(jfileName);
+}
+
 void JNIUtil::handleSVNError(svn_error_t *err)
 {
   std::string msg;
   assembleErrorMessage(svn_error_purge_tracing(err), 0, APR_SUCCESS, msg);
   const char *source = NULL;
 #ifdef SVN_DEBUG
+#ifndef SVN_ERR__TRACING
   if (err->file)
     {
       std::ostringstream buf;
@@ -391,8 +457,113 @@ void JNIUtil::handleSVNError(svn_error_t *err)
       source = buf.str().c_str();
     }
 #endif
-  throwNativeException(JAVA_PACKAGE "/ClientException", msg.c_str(),
-                       source, err->apr_err);
+#endif
+
+  // Much of the following is stolen from throwNativeException().  As much as
+  // we'd like to call that function, we need to do some manual stack
+  // unrolling, so it isn't feasible.
+
+  JNIEnv *env = getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/ClientException");
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+  if (getLogLevel() >= exceptionLog)
+    {
+      JNICriticalSection cs(*g_logMutex);
+      g_logStream << "Subversion JavaHL exception thrown, message:<";
+      g_logStream << msg << ">";
+      if (source)
+        g_logStream << " source:<" << source << ">";
+      if (err->apr_err != -1)
+        g_logStream << " apr-err:<" << err->apr_err << ">";
+      g_logStream << std::endl;
+    }
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+  jstring jmessage = makeJString(msg.c_str());
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+  jstring jsource = makeJString(source);
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+  jmethodID mid = env->GetMethodID(clazz, "<init>",
+                                   "(Ljava/lang/String;Ljava/lang/String;I)V");
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+  jobject nativeException = env->NewObject(clazz, mid, jmessage, jsource,
+                                           static_cast<jint>(err->apr_err));
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+#ifdef SVN_ERR__TRACING
+  // Add all the C error stack trace information to the Java Exception
+
+  // Get the standard stack trace, and vectorize it using the Array class.
+  static jmethodID mid_gst = 0;
+  if (mid_gst == 0)
+    {
+      mid_gst = env->GetMethodID(clazz, "getStackTrace",
+                                 "()[Ljava/lang/StackTraceElement;");
+      if (isJavaExceptionThrown())
+        POP_AND_RETURN_NOTHING();
+    }
+  Array stackTraceArray((jobjectArray) env->CallObjectMethod(nativeException,
+                                                             mid_gst));
+  std::vector<jobject> oldStackTrace = stackTraceArray.vector();
+
+  // Build the new stack trace elements from the chained errors.
+  std::vector<jobject> newStackTrace;
+  putErrorsInTrace(err, newStackTrace);
+
+  // Join the new elements with the old ones
+  for (std::vector<jobject>::const_iterator it = oldStackTrace.begin();
+            it < oldStackTrace.end(); ++it)
+    {
+      newStackTrace.push_back(*it);
+    }
+
+  jclass stClazz = env->FindClass("java/lang/StackTraceElement");
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+  jobjectArray jStackTrace = env->NewObjectArray(newStackTrace.size(), stClazz,
+                                                 NULL);
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
+  int i = 0;
+  for (std::vector<jobject>::const_iterator it = newStackTrace.begin();
+       it < newStackTrace.end(); ++it)
+    {
+      env->SetObjectArrayElement(jStackTrace, i, *it);
+      ++i;
+    }
+
+  // And put the entire trace back into the exception
+  static jmethodID mid_sst = 0;
+  if (mid_sst == 0)
+    {
+      mid_sst = env->GetMethodID(clazz, "setStackTrace",
+                                 "([Ljava/lang/StackTraceElement;)V");
+      if (isJavaExceptionThrown())
+        POP_AND_RETURN_NOTHING();
+    }
+  env->CallVoidMethod(nativeException, mid_sst, jStackTrace);
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+#endif
+
+  env->Throw(static_cast<jthrowable>(env->PopLocalFrame(nativeException)));
+
   svn_error_clear(err);
 }
 
