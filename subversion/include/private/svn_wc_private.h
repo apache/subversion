@@ -122,7 +122,6 @@ svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
                                 svn_wc_context_t *wc_ctx,
                                 const char *versioned_file_abspath,
                                 const char *base_file_abspath,
-                                svn_boolean_t compare_textbases,
                                 apr_pool_t *scratch_pool);
 
 /**
