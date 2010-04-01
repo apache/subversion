@@ -4269,10 +4269,6 @@ merge_file(svn_stringbuf_t **log_accum,
   svn_boolean_t is_replaced = FALSE;
   svn_boolean_t magic_props_changed;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
-  svn_wc_conflict_version_t *left_version = NULL; /* ### Fill */
-  svn_wc_conflict_version_t *right_version = NULL; /* ### Fill */
-
-  /* Accumulated entry modifications. */
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = 0;
 
@@ -4285,6 +4281,7 @@ merge_file(svn_stringbuf_t **log_accum,
 
          - The .svn/entries file still reflects the old version of F.
 
+         ### there is no fb->old_text_base_path
          - fb->old_text_base_path is the old pristine F.
            (This is only set if there's a new text base).
 
@@ -4324,16 +4321,34 @@ merge_file(svn_stringbuf_t **log_accum,
      call reads the entries from the database the returned entry is
      svn_wc_schedule_replace.  2 lines marked ### EBUG below. */
   if (fb->copied_working_text)
-    is_locally_modified = TRUE;
+    {
+      /* The file was copied here, and it came with both a (new) pristine
+         and a working file. Presumably, the working file is modified
+         relative to the new pristine.
+
+         The new pristine is in NEW_TEXT_BASE_ABSPATH, which should also
+         be FB->COPIED_TEXT_BASE.  */
+      is_locally_modified = TRUE;
+    }
   else if (entry && entry->file_external_path
            && entry->schedule == svn_wc_schedule_replace) /* ###EBUG */
-    is_locally_modified = FALSE;
+    {
+      is_locally_modified = FALSE;
+    }
   else if (! fb->obstruction_found)
-    SVN_ERR(svn_wc__internal_text_modified_p(&is_locally_modified, eb->db,
-                                             fb->local_abspath, FALSE, FALSE,
-                                             pool));
+    {
+      /* The working file is not an obstruction. So: is the file modified,
+         relative to its ORIGINAL pristine?  */
+      SVN_ERR(svn_wc__internal_text_modified_p(&is_locally_modified, eb->db,
+                                               fb->local_abspath,
+                                               FALSE /* force_comparison */,
+                                               FALSE /* compare_textbases */,
+                                               pool));
+    }
   else if (new_text_base_abspath)
     {
+      /* We have a new pristine to install. Is the file modified relative
+         to this new pristine?  */
       SVN_ERR(svn_wc__internal_versioned_file_modcheck(&is_locally_modified,
                                                        eb->db,
                                                        fb->local_abspath,
@@ -4341,7 +4356,10 @@ merge_file(svn_stringbuf_t **log_accum,
                                                        FALSE, pool));
     }
   else
-    is_locally_modified = FALSE;
+    {
+      /* No other potential changes, so the working file is NOT modified.  */
+      is_locally_modified = FALSE;
+    }
 
   if (entry && entry->schedule == svn_wc_schedule_replace
       && ! entry->file_external_path)  /* ### EBUG */
@@ -4495,8 +4513,8 @@ merge_file(svn_stringbuf_t **log_accum,
               SVN_ERR(svn_wc__internal_merge(
                         log_accum, &merge_outcome,
                         eb->db,
-                        merge_left, left_version,
-                        new_text_base_abspath, right_version,
+                        merge_left, NULL,
+                        new_text_base_abspath, NULL,
                         fb->local_abspath,
                         fb->copied_working_text,
                         oldrev_str, newrev_str, mine_str,
@@ -4504,6 +4522,9 @@ merge_file(svn_stringbuf_t **log_accum,
                         eb->conflict_func, eb->conflict_baton,
                         eb->cancel_func, eb->cancel_baton,
                         pool));
+
+              /* ### now that we're past the internal_merge() (which might
+                 ### cause an exit), we can start writing work items.  */
               SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
                                       pool);
 
@@ -4563,6 +4584,18 @@ merge_file(svn_stringbuf_t **log_accum,
           SVN_ERR(svn_wc__loggy_copy(log_accum, pb->local_abspath,
                                      tmptext, fb->local_abspath, pool, pool));
           SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
+
+          /* Done with the temporary file. Toss it.  */
+          {
+            const svn_skel_t *work_item;
+
+            SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                                 eb->db,
+                                                 tmptext,
+                                                 pool, pool));
+            SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath,
+                                      work_item, pool));
+          }
         }
 
       if (lock_removed)
@@ -4626,17 +4659,6 @@ merge_file(svn_stringbuf_t **log_accum,
                 fb->local_abspath, pool, pool));
 
       SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
-    }
-
-  /* Clean up add-with-history temp file. */
-  if (fb->copied_text_base)
-    {
-      const svn_skel_t *work_item;
-
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                           eb->db, fb->copied_text_base,
-                                           pool, pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item, pool));
     }
 
   /* Set the returned content state. */
@@ -4938,6 +4960,18 @@ close_file(void *file_baton,
   /* Queue all operations.  */
   SVN_WC__FLUSH_LOG_ACCUM(eb->db, fb->dir_baton->local_abspath,
                           delayed_log_accum, pool);
+
+  /* Clean up any temporary files.  */
+  if (fb->copied_text_base)
+    {
+      const svn_skel_t *work_item;
+
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                           eb->db, fb->copied_text_base,
+                                           pool, pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
+                                work_item, pool));
+    }
 
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
