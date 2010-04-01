@@ -1,0 +1,11 @@
+@echo off
+CALL "c:\Program Files\Microsoft Visual Studio 9.0\VC\vcvarsall.bat" x86
+
+SET TESTDIR=E:\Full
+SET TESTPORT=1234
+
+SET TEMP=%TESTDIR%\temp
+SET TMP=%TEMP%
+
+IF NOT EXIST "%TESTDIR%\" MKDIR "%TESTDIR%"
+IF NOT EXIST "%TEMP%\" MKDIR "%TEMP%"

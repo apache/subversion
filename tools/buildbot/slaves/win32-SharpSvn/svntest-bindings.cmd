@@ -1,0 +1,9 @@
+@echo off
+SETLOCAL ENABLEEXTENSIONS
+
+CALL ..\svn-config.cmd
+IF ERRORLEVEL 1 EXIT /B 1
+
+
+
+
