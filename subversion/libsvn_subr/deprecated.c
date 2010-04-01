@@ -856,6 +856,19 @@ svn_stream_from_aprfile(apr_file_t *file, apr_pool_t *pool)
   return svn_stream_from_aprfile2(file, TRUE, pool);
 }
 
+svn_error_t *
+svn_stream_contents_same(svn_boolean_t *same,
+                         svn_stream_t *stream1,
+                         svn_stream_t *stream2,
+                         apr_pool_t *pool)
+{
+  return svn_error_return(svn_stream_contents_same2(
+                            same,
+                            svn_stream_disown(stream1, pool),
+                            svn_stream_disown(stream2, pool),
+                            pool));
+}
+
 /*** From path.c ***/
 
 const char *
