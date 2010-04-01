@@ -379,7 +379,7 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
 void JNIUtil::handleSVNError(svn_error_t *err)
 {
   std::string msg;
-  assembleErrorMessage(err, 0, APR_SUCCESS, msg);
+  assembleErrorMessage(svn_error_purge_tracing(err), 0, APR_SUCCESS, msg);
   const char *source = NULL;
 #ifdef SVN_DEBUG
   if (err->file)
