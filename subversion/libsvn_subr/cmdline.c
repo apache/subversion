@@ -124,7 +124,17 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 #ifdef SVN_USE_WIN32_CRASHHANDLER
   /* Attach (but don't load) the crash handler */
   SetUnhandledExceptionFilter(svn__unhandled_exception_filter);
-#endif
+
+#if _MSC_VER >= 1400
+  /* ### Does this work for older MSC versions? */
+  /* Show the abort message on STDERR instead of a dialog to allow
+     scripts (e.g. our testsuite) to continue after an abort without
+     user intervention. Allow overriding for easier debugging. */
+  if (!getenv("SVN_CMDLINE_USE_DIALOG_FOR_ABORT"))
+    _set_error_mode(_OUT_TO_STDERR);
+#endif /* _MSC_VER >= 1400 */
+
+#endif /* SVN_USE_WIN32_CRASHHANDLER */
 
 #endif /* WIN32 */
 
