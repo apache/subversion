@@ -4260,7 +4260,6 @@ merge_file(svn_stringbuf_t **log_accum,
            struct file_baton *fb,
            const char *new_text_base_abspath,
            const svn_checksum_t *actual_checksum,
-           svn_boolean_t lock_removed,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = fb->edit_baton;
@@ -4523,10 +4522,11 @@ merge_file(svn_stringbuf_t **log_accum,
                         eb->cancel_func, eb->cancel_baton,
                         pool));
 
-              /* ### now that we're past the internal_merge() (which might
-                 ### cause an exit), we can start writing work items.  */
-              SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
-                                      pool);
+              /* svn_wc__internal_merge() should have queued all of
+                 its work (including a bunch of stuff that we pre-loaded
+                 into the log accumulator).  */
+              SVN_ERR_ASSERT(*log_accum == NULL
+                             || svn_stringbuf_isempty(*log_accum));
 
               /* If we created a temporary left merge file, get rid of it. */
               if (delete_left)
@@ -4597,16 +4597,7 @@ merge_file(svn_stringbuf_t **log_accum,
                                       work_item, pool));
           }
         }
-
-      if (lock_removed)
-        {
-          /* If a lock was removed and we didn't update the text contents, we
-             might need to set the file read-only. */
-          SVN_ERR(svn_wc__loggy_maybe_set_readonly(log_accum, pb->local_abspath,
-                                                   fb->local_abspath, pool,
-                                                   pool));
-          SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
-        }
+      /* ### */
     }
 
   /* Deal with installation of the new textbase, if appropriate. */
@@ -4954,12 +4945,24 @@ close_file(void *file_baton,
   SVN_ERR(merge_file(&delayed_log_accum,
                      &content_state, entry,
                      fb, new_base_abspath, md5_actual_checksum,
-                     lock_state == svn_wc_notify_lock_state_unlocked,
                      pool));
 
   /* Queue all operations.  */
   SVN_WC__FLUSH_LOG_ACCUM(eb->db, fb->dir_baton->local_abspath,
                           delayed_log_accum, pool);
+
+  /* Now that all the state has settled, should we update the readonly
+     status of the working file? The LOCK_STATE will signal what we should
+     do for this node.  */
+  if (new_base_abspath == NULL
+      && lock_state == svn_wc_notify_lock_state_unlocked)
+    {
+      /* If a lock was removed and we didn't update the text contents, we
+         might need to set the file read-only. */
+      SVN_ERR(svn_wc__loggy_maybe_set_readonly(eb->db,
+                                               fb->dir_baton->local_abspath,
+                                               fb->local_abspath, pool));
+    }
 
   /* Clean up any temporary files.  */
   if (fb->copied_text_base)
