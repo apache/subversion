@@ -937,7 +937,12 @@ svn_wc__wq_add_loggy(svn_wc__db_t *db,
                      const svn_stringbuf_t *log_content,
                      apr_pool_t *scratch_pool)
 {
-  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
+  svn_skel_t *work_item;
+
+  if (log_content == NULL || svn_stringbuf_isempty(log_content))
+    return SVN_NO_ERROR;
+
+  work_item = svn_skel__make_empty_list(scratch_pool);
 
   /* The skel still points at ADM_ABSPATH and LOG_CONTENT, but the skel will
      be serialized just below in the wq_add call.  */
