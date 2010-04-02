@@ -1062,44 +1062,46 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
 }
 
 svn_error_t *
-svn_wc__loggy_maybe_set_executable(svn_stringbuf_t **log_accum,
+svn_wc__loggy_maybe_set_executable(svn_wc__db_t *db,
                                    const char *adm_abspath,
                                    const char *path,
-                                   apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool)
 {
+  svn_stringbuf_t *log_accum = NULL;
   const char *loggy_path1;
 
   SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
-  svn_xml_make_open_tag(log_accum,
-                        result_pool,
+  svn_xml_make_open_tag(&log_accum,
+                        scratch_pool,
                         svn_xml_self_closing,
                         SVN_WC__LOG_MAYBE_EXECUTABLE,
                         SVN_WC__LOG_ATTR_NAME, loggy_path1,
                         NULL);
 
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
+                                               scratch_pool));
 }
 
 svn_error_t *
-svn_wc__loggy_maybe_set_readonly(svn_stringbuf_t **log_accum,
+svn_wc__loggy_maybe_set_readonly(svn_wc__db_t *db,
                                  const char *adm_abspath,
                                  const char *path,
-                                 apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
+  svn_stringbuf_t *log_accum = NULL;
   const char *loggy_path1;
 
   SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
-  svn_xml_make_open_tag(log_accum,
-                        result_pool,
+  svn_xml_make_open_tag(&log_accum,
+                        scratch_pool,
                         svn_xml_self_closing,
                         SVN_WC__LOG_MAYBE_READONLY,
                         SVN_WC__LOG_ATTR_NAME,
                         loggy_path1,
                         NULL);
 
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
+                                               scratch_pool));
 }
 
 svn_error_t *

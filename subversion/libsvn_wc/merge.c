@@ -1253,23 +1253,33 @@ svn_wc__internal_merge(svn_stringbuf_t **log_accum,
                             cancel_baton,
                             pool));
 
+  SVN_ERR_ASSERT(!dry_run
+                 || *log_accum == NULL
+                 || svn_stringbuf_isempty(*log_accum));
+
+  /* Queue everything that has been accumulated.  */
+  if (*log_accum != NULL)
+    {
+      SVN_ERR(svn_wc__wq_add_loggy(db, dir_abspath, *log_accum, pool));
+      svn_stringbuf_setempty(*log_accum);
+    }
+
   /* Merging is complete.  Regardless of text or binariness, we might
      need to tweak the executable bit on the new working file, and
      possibly make it read-only. */
   if (! dry_run)
     {
-      SVN_ERR(svn_wc__loggy_maybe_set_executable(log_accum, dir_abspath,
+      SVN_ERR(svn_wc__loggy_maybe_set_executable(db, dir_abspath,
                                                  target_abspath,
-                                                 pool, pool));
-      SVN_ERR(svn_wc__loggy_maybe_set_readonly(log_accum, dir_abspath,
+                                                 pool));
+      SVN_ERR(svn_wc__loggy_maybe_set_readonly(db, dir_abspath,
                                                target_abspath,
-                                               pool, pool));
+                                               pool));
     }
 
   return SVN_NO_ERROR;
 }
 
-
 
 svn_error_t *
 svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
@@ -1292,8 +1302,14 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
               void *cancel_baton,
               apr_pool_t *scratch_pool)
 {
-  svn_stringbuf_t *log_accum = svn_stringbuf_create("", scratch_pool);
+  svn_stringbuf_t *log_accum = NULL;
+  const char *dir_abspath = svn_dirent_dirname(target_abspath, scratch_pool);
 
+  /* Before we do any work, make sure we hold a write lock.  */
+  if (!dry_run)
+    SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, scratch_pool));
+
+  /* Queue all the work.  */
   SVN_ERR(svn_wc__internal_merge(&log_accum, merge_outcome,
                                  wc_ctx->db,
                                  left_abspath, left_version,
@@ -1309,23 +1325,14 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
                                  cancel_func, cancel_baton,
                                  scratch_pool));
 
-  /* Write our accumulation of log entries into a log file */
+  /* svn_wc__internal_merge() should have queued all of its work.  */
+  SVN_ERR_ASSERT(log_accum == NULL || svn_stringbuf_isempty(log_accum));
+
+  /* If this isn't a dry run, then run the work!  */
   if (!dry_run)
-    {
-      const char *dir_abspath = svn_dirent_dirname(target_abspath,
-                                                   scratch_pool);
-
-      /* Verify that we're holding this directory's write lock.  */
-      SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, scratch_pool));
-
-      /* Add all the work items to the queue, then run it.  */
-      /* ### add_loggy takes a DIR, but wq_run is a simple WRI_ABSPATH  */
-      SVN_ERR(svn_wc__wq_add_loggy(wc_ctx->db, dir_abspath,
-                                   log_accum, scratch_pool));
-      SVN_ERR(svn_wc__wq_run(wc_ctx->db, target_abspath,
-                             cancel_func, cancel_baton,
-                             scratch_pool));
-    }
+    SVN_ERR(svn_wc__wq_run(wc_ctx->db, target_abspath,
+                           cancel_func, cancel_baton,
+                           scratch_pool));
 
   return SVN_NO_ERROR;
 }
