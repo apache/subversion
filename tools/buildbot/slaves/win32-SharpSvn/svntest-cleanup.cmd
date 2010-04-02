@@ -12,17 +12,23 @@ IF NOT EXIST "imports\" (
 )
 IF NOT EXIST build\imports.done (
   copy /y imports\dev-default.build default.build
-  nant build
+  nant build %NANTARGS%
   IF NOT ERRORLEVEL 1 (
     echo. > build\imports.done
   )
 )
 
 POPD
-    
-IF EXIST subversion_vcnet.sln (
-  msbuild subversion_vcnet.sln /p:Configuration=Debug /p:Platform=Win32 /t:clean
+
+PUSHD "%TEMP%"
+IF NOT ERRORLEVEL 1 (
+  rmdir /s /q "%TEMP%" 2> nul:
 )
-IF EXIST "debug\" rmdir /s /q debug
+POPD
+
+taskkill /im svn.exe /f 2> nul:
+taskkill /im svnadmin.exe /f 2> nul:
+taskkill /im svnserve.exe /f 2> nul:
+taskkill /im httpd.exe /f 2> nul:
 
 exit /B 0
