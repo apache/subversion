@@ -31,6 +31,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#else
+#include <crtdbg.h>
 #endif
 
 #include <apr_errno.h>          /* for apr_strerror */
@@ -126,12 +128,22 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
   SetUnhandledExceptionFilter(svn__unhandled_exception_filter);
 
 #if _MSC_VER >= 1400
-  /* ### Does this work for older MSC versions? */
+  /* ### This should work for VC++ 2002 (=1300) and later */
   /* Show the abort message on STDERR instead of a dialog to allow
      scripts (e.g. our testsuite) to continue after an abort without
      user intervention. Allow overriding for easier debugging. */
   if (!getenv("SVN_CMDLINE_USE_DIALOG_FOR_ABORT"))
-    _set_error_mode(_OUT_TO_STDERR);
+    {
+      /* In release mode: Redirect abort() errors to stderr */
+      _set_error_mode(_OUT_TO_STDERR);
+
+      /* In _DEBUG mode: Redirect all debug output (E.g. assert() to stderr.
+         (Ignored in releas builds) */
+      _CrtSetReportFile( _CRT_ASSERT, _CRTDBG_FILE_STDERR);
+      _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+      _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+      _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+    }
 #endif /* _MSC_VER >= 1400 */
 
 #endif /* SVN_USE_WIN32_CRASHHANDLER */
