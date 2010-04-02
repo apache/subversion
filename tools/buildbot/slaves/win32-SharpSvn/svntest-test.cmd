@@ -45,7 +45,7 @@ IF NOT "%1" == "" GOTO next
 IF NOT EXIST "%TESTDIR%\bin" MKDIR "%TESTDIR%\bin"
 xcopy /y /i ..\deps\release\bin\* "%TESTDIR%\bin"
 
-PATH E:\w2k3\bin;%PATH%
+PATH %TESTDIR%\bin;%PATH%
 
 if "%LOCAL%+%FSFS%" == "1+1" (
   echo win-tests.py -c %PARALLEL% %MODE% -f fsfs %ARGS% "%TESTDIR%\tests"
@@ -54,14 +54,14 @@ if "%LOCAL%+%FSFS%" == "1+1" (
 )
 
 if "%SVN%+%FSFS%" == "1+1" (
-  taskkill /im svnserve.exe /f
+  taskkill /im svnserve.exe /f 2> nul:
   echo win-tests.py -c %PARALLEL% %MODE% -f fsfs -u svn://localhost %ARGS% "%TESTDIR%\tests"
   win-tests.py -c %PARALLEL% -v %MODE% -f fsfs -u svn://localhost %ARGS% "%TESTDIR%\tests"
   IF ERRORLEVEL 1 EXIT /B 1
 )
 
 if "%SERF%+%FSFS%" == "1+1" (
-  taskkill /im httpd.exe /f
+  taskkill /im httpd.exe /f 2> nul:
   echo win-tests.py -c %PARALLEL% %MODE% -f fsfs --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://localhost:%TESTPORT% %ARGS% "%TESTDIR%\tests"
   win-tests.py -c %PARALLEL% %MODE% -f fsfs --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://localhost:%TESTPORT% %ARGS% "%TESTDIR%\tests"
   IF ERRORLEVEL 1 EXIT /B 1
