@@ -40,8 +40,13 @@ struct walk_baton
   svn_wc__db_t *db;
 };
 
-/* An svn_wc__node_found_func_t callback function for analyzing the status
- * of nodes */
+/* An svn_wc__node_found_func_t callback function for analyzing the wc
+ * status of LOCAL_ABSPATH. Since it can be invoked for a lot of paths in
+ * a wc but some data , i.e. if the wc is switched or has modifications, is
+ * expensive to calculate, we optimize by checking if those values are
+ * already set before runnning the db operations. The found status
+ * information is stored in BATON. Temporary allocations are made in
+ * SCRATCH_POOL. */
 static svn_error_t *
 analyze_status(const char *local_abspath,
                void *baton,
@@ -50,10 +55,9 @@ analyze_status(const char *local_abspath,
   struct walk_baton *wb = baton;
   svn_revnum_t changed_rev;
   svn_revnum_t revision;
+  svn_revnum_t item_rev; 
   svn_depth_t depth;
   svn_wc__db_status_t status;
-  svn_boolean_t wc_root;
-  svn_boolean_t switched;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, 
                                NULL, NULL, &changed_rev, 
@@ -71,24 +75,36 @@ analyze_status(const char *local_abspath,
       wb->result->sparse_checkout = TRUE;
       return SVN_NO_ERROR;
     }
-
-  if (status == svn_wc__db_status_not_present)
-    return SVN_NO_ERROR;
+  else if (status == svn_wc__db_status_not_present)
+    {
+      return SVN_NO_ERROR;
+    }
+  else if (status == svn_wc__db_status_added
+           || status == svn_wc__db_status_obstructed_add
+           || status == svn_wc__db_status_deleted
+           || status == svn_wc__db_status_obstructed_delete)
+    {
+      wb->result->modified = TRUE; 
+    }
 
   if (! wb->result->switched)
     {
+      svn_boolean_t wc_root;
+      svn_boolean_t switched;
+
       SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, &switched, wb->db,
                                     local_abspath, scratch_pool));
 
       wb->result->switched |= switched;
     }
 
+  item_rev = (wb->committed
+              ? changed_rev
+              : revision);
+
   /* Added files have a revision of no interest */
-  if (revision != SVN_INVALID_REVNUM)
+  if (item_rev != SVN_INVALID_REVNUM)
     {
-      svn_revnum_t item_rev = (wb->committed
-                               ? changed_rev
-                               : revision);
 
       if (wb->result->min_rev == SVN_INVALID_REVNUM
           || item_rev < wb->result->min_rev)
@@ -101,22 +117,27 @@ analyze_status(const char *local_abspath,
 
   if (! wb->result->modified)
     {
-      svn_boolean_t text_mod;
       svn_boolean_t props_mod;
 
       SVN_ERR(svn_wc__props_modified(&props_mod, wb->db, local_abspath,
                                      scratch_pool));
+      wb->result->modified |= props_mod;
+    }
+
+  if (! wb->result->modified)
+    {
+      svn_boolean_t text_mod;
 
       SVN_ERR(svn_wc__internal_text_modified_p(&text_mod, wb->db,
                                                local_abspath,
                                                FALSE,
                                                TRUE,
                                                scratch_pool));
-      wb->result->modified |= (text_mod || props_mod);
+      wb->result->modified |= text_mod; 
     }
 
-  wb->result->sparse_checkout |= ((depth != svn_depth_infinity 
-                                  && depth != svn_depth_unknown));
+  wb->result->sparse_checkout |= (depth != svn_depth_infinity 
+                                  && depth != svn_depth_unknown);
   return SVN_NO_ERROR;
 }
 
