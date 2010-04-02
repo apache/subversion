@@ -129,7 +129,11 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
                       apr_pool_t *scratch_pool);
 
 
-/* ### temporary compat for mapping the old loggy into workqueue space.  */
+/* ### temporary compat for mapping the old loggy into workqueue space.
+
+   LOG_CONTENT may be NULL or reference an empty log. No work item will be
+   queued in this case.
+*/
 svn_error_t *
 svn_wc__wq_add_loggy(svn_wc__db_t *db,
                      const char *adm_abspath,
