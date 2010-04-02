@@ -326,11 +326,6 @@ test_patch(const svn_test_opts_t *opts,
 
   wc_path = svn_dirent_join(wc_path, "test-patch-wc", pool);
   SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
-
-  /* Create an extra directory level to avoid upgrade require message */
-  SVN_ERR(svn_io_dir_make(wc_path, APR_OS_DEFAULT, pool));
-  wc_path = svn_dirent_join(wc_path, "wc", pool);
-
   rev.kind = svn_opt_revision_head;
   peg_rev.kind = svn_opt_revision_unspecified;
   SVN_ERR(svn_client_create_context(&ctx, pool));
