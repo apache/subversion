@@ -6482,7 +6482,8 @@ svn_wc__db_temp_op_set_working_incomplete(svn_wc__db_t *db,
                                db, local_dir_abspath,
                                scratch_pool, scratch_pool));
 
-  SVN_ERR_ASSERT(status == svn_wc__db_status_normal ||
+  /* Presence in WORKING_NODE must be normal or incomplete */
+  SVN_ERR_ASSERT(status == svn_wc__db_status_added ||
                  status == svn_wc__db_status_incomplete);
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_dir_abspath,
