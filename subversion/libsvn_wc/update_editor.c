@@ -4586,6 +4586,9 @@ merge_file(svn_stringbuf_t **log_accum,
           SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
 
           /* Done with the temporary file. Toss it.  */
+          /* ### stupid fucking function sometimes decides NOT to create a
+             ### temp file. but how are we supposed to know?  */
+          if (strcmp(tmptext, fb->local_abspath) != 0)
           {
             const svn_skel_t *work_item;
 
@@ -4597,7 +4600,6 @@ merge_file(svn_stringbuf_t **log_accum,
                                       work_item, pool));
           }
         }
-      /* ### */
     }
 
   /* Deal with installation of the new textbase, if appropriate. */
