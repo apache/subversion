@@ -563,9 +563,12 @@ class WinGeneratorBase(GeneratorBase):
                 cbuild = '%s %s -o %s $(InputPath)' \
                          % (self.swig_exe, " ".join(swig_options), cout)
 
+                cdesc = 'Generating %s' % cout
+
                 sources.append(ProjectItem(path=isrc, reldir=None,
                                            custom_build=cbuild,
                                            custom_target=csrc,
+                                           custom_desc=cdesc,
                                            user_deps=user_deps,
                                            extension=''))
 
@@ -580,8 +583,13 @@ class WinGeneratorBase(GeneratorBase):
       cbuild = "python $(InputPath) %s > %s" \
                % (" ".join(deps), def_file)
 
-      sources.append(ProjectItem(path=gsrc, reldir=None, custom_build=cbuild,
-                                 user_deps=deps, custom_target=def_file,
+      cdesc = 'Generating %s ' % def_file
+
+      sources.append(ProjectItem(path=gsrc, reldir=None, 
+                                 custom_build=cbuild,
+                                 custom_target=def_file,
+                                 custom_desc=cdesc,
+                                 user_deps=deps, 
                                  extension=''))
 
       sources.append(ProjectItem(path=def_file, reldir=None,
@@ -698,7 +706,7 @@ class WinGeneratorBase(GeneratorBase):
     #
     # This section parses those dependencies and adds them to the dependency list
     # for this target.
-    if name[0:7] == 'javahl-' or name == 'libsvnjavahl':
+    if name.startswith('javahl') or name == 'libsvnjavahl':
       for dep in re.findall('\$\(([^\)]*)_DEPS\)', target.add_deps):
         dep = dep.replace('_', '-')
         depends.extend(self.sections[dep].get_targets())

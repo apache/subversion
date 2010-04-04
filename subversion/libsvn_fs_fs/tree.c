@@ -2132,7 +2132,8 @@ fs_copy(svn_fs_root_t *from_root,
         const char *to_path,
         apr_pool_t *pool)
 {
-  return copy_helper(from_root, from_path, to_root, to_path, TRUE, pool);
+  return svn_error_return(copy_helper(from_root, from_path, to_root, to_path,
+                                    TRUE, pool));
 }
 
 
@@ -2148,7 +2149,8 @@ fs_revision_link(svn_fs_root_t *from_root,
   if (! to_root->is_txn_root)
     return SVN_FS__NOT_TXN(to_root);
 
-  return copy_helper(from_root, path, to_root, path, FALSE, pool);
+  return svn_error_return(copy_helper(from_root, path, to_root, path,
+                                      FALSE, pool));
 }
 
 

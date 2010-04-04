@@ -656,7 +656,7 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
   SVN_ERR(svn_fs_file_contents(&stream1, root1, path1, pool));
   SVN_ERR(svn_fs_file_contents(&stream2, root2, path2, pool));
 
-  SVN_ERR(svn_stream_contents_same(&same, stream1, stream2, pool));
+  SVN_ERR(svn_stream_contents_same2(&same, stream1, stream2, pool));
 
   *changed_p = !same;
 

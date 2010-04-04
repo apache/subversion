@@ -37,7 +37,6 @@
 
 #include "wc.h"
 #include "adm_files.h"
-#include "adm_ops.h"
 #include "entries.h"
 #include "lock.h"
 #include "tree_conflicts.h"
@@ -47,7 +46,6 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_sqlite.h"
-#include "private/svn_skel.h"
 
 #define MAYBE_ALLOC(x,p) ((x) ? (x) : apr_pcalloc((p), sizeof(*(x))))
 
@@ -2564,10 +2562,6 @@ fold_entry(apr_hash_t *entries,
   /* Absent state */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_ABSENT)
     cur_entry->absent = entry->absent;
-
-  /* Incomplete state */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_INCOMPLETE)
-    cur_entry->incomplete = entry->incomplete;
 
   /* Text/prop modification times */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)

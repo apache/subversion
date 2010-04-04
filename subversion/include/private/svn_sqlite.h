@@ -71,7 +71,8 @@ svn_error_t *
 svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt);
 
 /* Perform an an update/delete an then return the number of affected rows.
-   *AFFECTED_ROWS will be set to the number of rows changed.
+   If AFFECTED_ROWS is not NULL, then *AFFECTED_ROWS will be set to the
+   number of rows changed.
    STMT will be reset prior to returning. */
 svn_error_t *
 svn_sqlite__update(int *affected_rows, svn_sqlite__stmt_t *stmt);

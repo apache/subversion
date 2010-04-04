@@ -2167,16 +2167,24 @@ svn_wc__internal_propset(svn_wc__db_t *db,
       if (svn_subst_keywords_differ2(old_keywords, new_keywords, FALSE,
                                      scratch_pool))
         {
-          /* NOTE: this change is immediate. If the overall propset fails,
-             then we end up with an un-cached text_time. Big whoop.  */
+          /* If the keywords have changed, then the translation of the file
+             may be different. We should invalidate the cached TRANSLATED_SIZE
+             and LAST_MOD_TIME on this node.
 
-          /* If we changed the keywords or newlines, void the entry
-             timestamp for this file, so svn_wc_text_modified_p() does
-             a real (albeit slow) check later on. */
-          /* Setting the last mod time to zero will effectively invalidate
-             it's value. */
-          SVN_ERR(svn_wc__db_op_set_last_mod_time(db, local_abspath, 0,
-                                                  scratch_pool));
+             Note that we don't immediately re-translate the file. But a
+             "has it changed?" check in the future will do a translation
+             from the pristine, and it will want to compare the (new)
+             resulting TRANSLATED_SIZE against the working copy file.
+
+             Also, when this file is (de)translated with the new keywords,
+             then it could be different, relative to the pristine. We want
+             to ensure the LAST_MOD_TIME is different, to indicate that
+             a full detranslate/compare is performed.  */
+          /* ### we should be performing similar logic for changes to the
+             ### svn:eol-style property.  */
+          SVN_ERR(svn_wc__db_global_record_fileinfo(db, local_abspath,
+                                                    SVN_INVALID_FILESIZE, 0,
+                                                    scratch_pool));
         }
     }
 
