@@ -36,6 +36,7 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_props.h"
+#include "svn_sorts.h"
 #include "svn_subst.h"
 #include "svn_wc.h"
 #include "client.h"
@@ -1233,6 +1234,250 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   return SVN_NO_ERROR;
 }
 
+/* Baton for find_existing_children() */
+struct status_baton
+{
+  apr_array_header_t *existing_targets;
+  const char *parent_path;
+  apr_pool_t *result_pool;
+};
+
+/* Implements svn_wc_status_func4_t. */
+static svn_error_t *
+find_existing_children(void *baton,
+                    const char *abspath,
+                    const svn_wc_status2_t *status,
+                    apr_pool_t *pool)
+{
+  struct status_baton *btn = baton;
+
+  if (status->text_status != svn_wc_status_none
+      && status->text_status != svn_wc_status_deleted
+      && strcmp(abspath, btn->parent_path))
+    {
+      APR_ARRAY_PUSH(btn->existing_targets, 
+                     const char *) = apr_pstrdup(btn->result_pool,
+                                                 abspath);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Check if PARENT_DIR_ABSPATH has any versioned or unversioned children if
+ * we ignore the ones in TARGETS_TO_BE_DELETED. Return the answer in
+ * EMPTY. */
+static svn_error_t *
+is_dir_empty(svn_boolean_t *empty, const char *parent_dir_abspath,
+             svn_wc_context_t *wc_ctx, 
+             apr_array_header_t *targets_to_be_deleted,
+             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  struct status_baton btn;
+  svn_opt_revision_t revision;
+  int i;
+
+  btn.existing_targets = apr_array_make(scratch_pool, 0, 
+                                        sizeof(patch_target_t *));
+  btn.parent_path = parent_dir_abspath;
+  btn.result_pool = scratch_pool;
+  revision.kind = svn_opt_revision_unspecified;
+
+  SVN_ERR(svn_wc_walk_status(wc_ctx, parent_dir_abspath, svn_depth_immediates,
+                             TRUE, TRUE, TRUE, NULL, find_existing_children,
+                             &btn, NULL, NULL, NULL, NULL, scratch_pool));
+  *empty = TRUE;
+
+  /* Do we delete all targets? */
+  for (i = 0; i < btn.existing_targets->nelts; i++)
+    {
+      int j;
+      const char *found = APR_ARRAY_IDX(btn.existing_targets, i, const char *);
+      svn_boolean_t deleted = FALSE;
+
+      for (j = 0; j < targets_to_be_deleted->nelts; j++)
+        {
+          patch_target_t *to_be_del;
+          to_be_del = APR_ARRAY_IDX(targets_to_be_deleted, j, patch_target_t *);
+          if (! strcmp(found, to_be_del->abs_path))
+           {
+              deleted = TRUE;
+              break;
+           }
+        }
+      if (! deleted)
+        {
+          *empty = FALSE;
+          break;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Add TARGET to the array of targets keyed by their parent dir in
+ * TARGETS_TO_BE_DELETED. If there is no array for the parent dir a new one
+ * is created. All allocations are done in RESULT_POOL. */
+static svn_error_t *
+add_target_to_hash_keyed_by_parent_dir(apr_hash_t *targets_to_be_deleted, 
+                                       patch_target_t *target,
+                                       apr_pool_t *result_pool)
+{
+  apr_array_header_t * deleted_targets_in_dir;
+
+  /* We're using the abs_path of the target. The abs_path is not
+   * present if the path is a symlink pointing outside the wc but we
+   * know that's not the case. */
+  const char *dirname = svn_dirent_dirname(target->abs_path, 
+                                           result_pool);
+
+  deleted_targets_in_dir = apr_hash_get(targets_to_be_deleted, 
+                                        dirname, APR_HASH_KEY_STRING);
+
+  if (! deleted_targets_in_dir)
+    {
+      deleted_targets_in_dir = apr_array_make(result_pool, 0,
+                                              sizeof(patch_target_t *));
+      apr_hash_set(targets_to_be_deleted, 
+                   dirname, APR_HASH_KEY_STRING, deleted_targets_in_dir);
+    }
+
+  APR_ARRAY_PUSH(deleted_targets_in_dir, patch_target_t *) = target;
+
+  return SVN_NO_ERROR;
+}
+
+/* Compare A and B and return an integer greater than, equal to, or less
+ * than 0, according to whether A has less subdirs, just as many or more
+ * subdir than B. That means that the path with the most subdirs is placed
+ * first. */
+static int
+sort_compare_nr_of_path_elements(const svn_sort__item_t *a, 
+                                 const svn_sort__item_t *b)
+{
+  const char *astr, *bstr;
+  int n_a = 0, n_b = 0, i;
+  
+  astr = a->key;
+  bstr = b->key;
+
+  for (i = 0; i < a->klen; i++)
+    if (astr[i] == '/')
+      n_a++;
+
+  for (i = 0; i < b->klen; i++)
+    if (bstr[i] == '/')
+      n_b++;
+
+  if (n_a > n_b)
+    return -1;
+  else if (n_a == n_b)
+    return 0;
+  else
+    return 1;
+}
+
+/* Condense the list of TARGETS such that there is only a single entry for
+ * each common parent directory of deleted targets. Use WC_CTX for checking
+ * if a dir is empty. Re-allocate TARGETS in RESULT_POOL if deleted targets
+ * exists. Do temporary allocations in SCRATCH_POOL. */
+static svn_error_t *
+condense_deleted_targets(apr_array_header_t **targets, svn_wc_context_t
+                         *wc_ctx, apr_pool_t *result_pool, apr_pool_t
+                         *scratch_pool)
+{
+  int i;
+  apr_array_header_t *new_targets;
+  apr_array_header_t *sorted_keys;
+  apr_hash_t *targets_to_be_deleted;
+
+  /* We have deleted targets, time to do some allocations. */
+  new_targets = apr_array_make(result_pool, 0, sizeof(patch_target_t *));
+  targets_to_be_deleted = apr_hash_make(result_pool);
+
+  /* First we collect the targets that should be deleted ... */
+  for (i = 0; i < (*targets)->nelts; i++)
+    {
+      patch_target_t *target = APR_ARRAY_IDX(*targets, i, patch_target_t *);
+
+      if (! target->deleted)
+          APR_ARRAY_PUSH(new_targets, patch_target_t *) = target;
+      else
+          SVN_ERR(add_target_to_hash_keyed_by_parent_dir(targets_to_be_deleted,
+                                                         target, result_pool));
+    }
+
+  /* ... Then we sort the keys to allow us to detect when multiple subdirs
+   * should be deleted. */
+  sorted_keys = svn_sort__hash(targets_to_be_deleted,
+                               sort_compare_nr_of_path_elements,
+                               scratch_pool);
+
+  /* For each directory that contains targets to be deleted determine if the
+   * entire dir is empty and in that case mark it to be deleted. Else just
+   * add the individual targets in it to 'new_targets'. */ 
+  for (i = 0; i < sorted_keys->nelts ; i++)
+    {
+      svn_sort__item_t *item;
+      svn_boolean_t empty;
+      char *parent_dir;
+      apr_array_header_t *targets_array;
+      int j;
+
+      item = &APR_ARRAY_IDX(sorted_keys, i, svn_sort__item_t);
+      parent_dir = (char *) item->key;
+      targets_array = (apr_array_header_t *) item->value;
+
+      SVN_ERR(is_dir_empty(&empty, parent_dir, wc_ctx, targets_array, 
+                           result_pool, scratch_pool));
+      if (empty)
+        {
+          patch_target_t *parent_target = apr_palloc(result_pool,
+                                                     sizeof(*parent_target));
+          parent_target->deleted = TRUE;
+          parent_target->kind = svn_node_dir;
+          parent_target->abs_path = apr_pstrdup(result_pool, parent_dir);
+
+          /* Since the dir was empty we'll use a parent_dir target instead
+           * of the child targets. Time to close unused streams! */
+          for (j = 0; j < targets_array->nelts; j++)
+            {
+              patch_target_t *child_target;
+
+              child_target = APR_ARRAY_IDX(targets_array, j, patch_target_t *);
+
+              if (child_target->patch)
+                SVN_ERR(svn_diff_close_patch(child_target->patch));
+            }
+
+          /* Marking one dir as to be deleted may mean that it's parent dir
+           * will be empty too and thus should be marked for deletion. */
+          SVN_ERR(add_target_to_hash_keyed_by_parent_dir(targets_to_be_deleted,
+                                                         parent_target,
+                                                         result_pool));
+
+          /* Hack! Since the added target of the parent dir has a shorter
+           * path, we're guarenteed that it will be inserted later. We do
+           * the sort and just continue our iteration. */
+          sorted_keys = svn_sort__hash(targets_to_be_deleted,
+                                       sort_compare_nr_of_path_elements,
+                                       scratch_pool);
+        }
+      else
+        {
+          /* No empty dir, just add the targets to be deleted */
+          for (j = 0; j < targets_array->nelts; j++)
+            {
+              patch_target_t *target = APR_ARRAY_IDX(targets_array, j, 
+                                                     patch_target_t *);
+              APR_ARRAY_PUSH(new_targets, patch_target_t *) = target;
+            }
+        }
+    }
+  *targets = new_targets;
+
+  return SVN_NO_ERROR;
+}
+
 /* Install a patched TARGET into the working copy at ABS_WC_PATH.
  * Use client context CTX to retrieve WC_CTX, and possibly doing
  * notifications. If DRY_RUN is TRUE, don't modify the working copy.
@@ -1505,12 +1750,16 @@ apply_patches(void *baton,
     }
   while (patch);
 
+  SVN_ERR(condense_deleted_targets(&targets, btn->ctx->wc_ctx, 
+                                         scratch_pool, result_pool));
+
   /* Install patched targets into the working copy. */
   for (i = 0; i < targets->nelts; i++)
     {
       patch_target_t *target;
 
       svn_pool_clear(iterpool);
+
 
       if (btn->ctx->cancel_func)
         SVN_ERR(btn->ctx->cancel_func(btn->ctx->cancel_baton));
@@ -1520,7 +1769,8 @@ apply_patches(void *baton,
         SVN_ERR(install_patched_target(target, btn->abs_wc_path,
                                        btn->ctx, btn->dry_run, iterpool));
       SVN_ERR(send_patch_notification(target, btn->ctx, iterpool));
-      SVN_ERR(svn_diff_close_patch(target->patch));
+      if (target->patch)
+        SVN_ERR(svn_diff_close_patch(target->patch));
     }
 
   SVN_ERR(svn_io_file_close(patch_file, iterpool));
