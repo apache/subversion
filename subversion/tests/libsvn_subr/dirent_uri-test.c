@@ -2314,6 +2314,9 @@ test_dirent_get_absolute_from_lc_drive(apr_pool_t *pool)
   char current_dir_on_C[1024];
   char *dir_on_c;
   svn_error_t *err;
+  apr_hash_t *dirents;
+  apr_hash_index_t *hi;
+  const char *some_dir_on_C = NULL;
 
   if (! getcwd(current_dir, sizeof(current_dir)))
     return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
@@ -2322,8 +2325,36 @@ test_dirent_get_absolute_from_lc_drive(apr_pool_t *pool)
   if (! getdcwd(3, current_dir_on_C, sizeof(current_dir_on_C)))
     return svn_error_create(SVN_ERR_BASE, NULL, "getdcwd() failed");
 
-  /* Use the same path, but now with a lower case driveletter */
-  dir_on_c = apr_pstrdup(pool, current_dir_on_C);
+  SVN_ERR(svn_io_get_dirents2(&dirents, "C:\\", pool));
+
+  /* We need a directory on 'C:\' to switch to lower case and back.
+     We use the first directory we can find that is not the CWD and
+     where we can chdir to */
+
+  for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
+    {
+      const char *dir = svn__apr_hash_index_key(hi);
+      svn_io_dirent_t *de = svn__apr_hash_index_val(hi);
+
+      if (de->kind == svn_node_dir &&
+          strcmp(dir, current_dir_on_C))
+        {
+          dir = svn_dirent_join("C:/", dir, pool);
+          if (!chdir(dir))
+            {
+              chdir(current_dir_on_C); /* Switch back to old CWD */
+              some_dir_on_C = dir;
+              break;
+            }
+        }
+    }
+
+  if (!some_dir_on_C)
+    return svn_error_create(SVN_ERR_BASE, NULL, 
+                            "No usable test directory found in C:\\");
+
+  /* Use the test path, but now with a lower case driveletter */
+  dir_on_c = apr_pstrdup(pool, some_dir_on_C);
   dir_on_c[0] = (char)tolower(dir_on_c[0]);
 
   chdir(dir_on_c);
