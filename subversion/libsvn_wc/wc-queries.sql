@@ -186,10 +186,6 @@ where repos_id = ?1 and
   (repos_relpath = ?2 or
    repos_relpath like ?3 escape '#');
 
--- STMT_UPDATE_BASE_LAST_MOD_TIME
-update base_node set last_mod_time = ?3
-where wc_id = ?1 and local_relpath = ?2;
-
 -- STMT_UPDATE_BASE_FILEINFO
 UPDATE BASE_NODE SET translated_size = ?3, last_mod_time = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2;
@@ -359,8 +355,16 @@ SELECT wc_id, local_relpath, parent_relpath, 'not-present', kind, changed_rev,
     repos_relpath, revnum FROM BASE_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- ### the statement below should be setting copyfrom_revision!
 -- STMT_UPDATE_COPYFROM
 UPDATE WORKING_NODE set copyfrom_repos_id = ?3, copyfrom_repos_path = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_COPYFROM_TO_INHERIT
+UPDATE WORKING_NODE SET
+  copyfrom_repos_id = null,
+  copyfrom_repos_path = null,
+  copyfrom_revnum = null
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_DETERMINE_TREE_FOR_RECORDING

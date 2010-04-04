@@ -67,17 +67,20 @@
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-[is configs.name "Debug"][else]    <OptimizeReferences>true</OptimizeReferences>
+[is configs.name "Debug"]      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
+[else]      <OptimizeReferences>true</OptimizeReferences>
 [end]    </Link>
 [else][is config_type "DynamicLibrary"]    <Link>
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-[if-any def_file]      <ModuleDefinitionFile>[def_file]</ModuleDefinitionFile>
+[is configs.name "Debug"]      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
+[end][if-any def_file]      <ModuleDefinitionFile>[def_file]</ModuleDefinitionFile>
 [end]    </Link>
 [else][is config_type "StaticLibrary"]    <Lib>
       <TargetMachine>[is platforms "X64"]MachineX64[else]MachineX86[end]</TargetMachine>
-    </Lib>
+[is configs.name "Debug"]      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
+[end]    </Lib>
 [end][end][end]  </ItemDefinitionGroup>
 [end][end][if-any target.desc]  <ItemGroup>
     <ResourceCompile Include="..\svn.rc">

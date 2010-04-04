@@ -312,6 +312,8 @@ run_revert(svn_wc__db_t *db,
               reinstall_working = TRUE;
 #endif
 #if 0
+              /* ### try to avoid altering the timestamp if the intended
+                 ### contents are the same as current-contents.  */
               SVN_ERR(svn_wc__text_modified_internal_p(&reinstall_working,
                                                        db, local_abspath,
                                                        FALSE, FALSE,
@@ -324,6 +326,8 @@ run_revert(svn_wc__db_t *db,
         {
           svn_boolean_t use_commit_times;
           apr_finfo_t finfo;
+
+          /* ### this should use OP_FILE_INSTALL.  */
 
           /* Copy from the text base to the working file. The working file
              specifies the params for translation.  */
@@ -933,7 +937,12 @@ svn_wc__wq_add_loggy(svn_wc__db_t *db,
                      const svn_stringbuf_t *log_content,
                      apr_pool_t *scratch_pool)
 {
-  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
+  svn_skel_t *work_item;
+
+  if (log_content == NULL || svn_stringbuf_isempty(log_content))
+    return SVN_NO_ERROR;
+
+  work_item = svn_skel__make_empty_list(scratch_pool);
 
   /* The skel still points at ADM_ABSPATH and LOG_CONTENT, but the skel will
      be serialized just below in the wq_add call.  */
@@ -1263,7 +1272,6 @@ log_do_committed(svn_wc__db_t *db,
   svn_boolean_t set_read_write = FALSE;
   const svn_wc_entry_t *orig_entry;
   svn_boolean_t prop_mods;
-  svn_wc_entry_t tmp_entry;
 
   /*** Perform sanity checking operations ***/
 
@@ -1389,6 +1397,8 @@ log_do_committed(svn_wc__db_t *db,
     {
       svn_boolean_t overwrote_working;
       apr_finfo_t finfo;
+      svn_filesize_t translated_size;
+      apr_time_t last_mod_time;
 
       SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
                                        new_revision, new_date, new_author,
@@ -1425,12 +1435,12 @@ log_do_committed(svn_wc__db_t *db,
 
       /* We will compute and modify the size and timestamp */
 
-      tmp_entry.working_size = finfo.size;
-
-      /* ### svn_wc__db_op_set_last_mod_time()  */
+      translated_size = finfo.size;
 
       if (overwrote_working)
-        tmp_entry.text_time = finfo.mtime;
+        {
+          last_mod_time = finfo.mtime;
+        }
       else
         {
           /* The working copy file hasn't been overwritten, meaning
@@ -1477,15 +1487,12 @@ log_do_committed(svn_wc__db_t *db,
             }
           /* If they are the same, use the working file's timestamp,
              else use the base file's timestamp. */
-          tmp_entry.text_time = modified ? basef_finfo.mtime : finfo.mtime;
+          last_mod_time = modified ? basef_finfo.mtime : finfo.mtime;
         }
 
-      return svn_error_return(svn_wc__entry_modify2(
+      return svn_error_return(svn_wc__db_global_record_fileinfo(
                                 db, local_abspath,
-                                svn_node_unknown, FALSE,
-                                &tmp_entry,
-                                SVN_WC__ENTRY_MODIFY_WORKING_SIZE
-                                | SVN_WC__ENTRY_MODIFY_TEXT_TIME,
+                                translated_size, last_mod_time,
                                 pool));
     }
 
@@ -1516,6 +1523,7 @@ log_do_committed(svn_wc__db_t *db,
   /* Make sure our entry exists in the parent. */
   {
     const svn_wc_entry_t *dir_entry;
+    svn_wc_entry_t tmp_entry;
 
     /* Check if we have a valid record in our parent */
     SVN_ERR(svn_wc__get_entry(&dir_entry, db, local_abspath,
@@ -1917,6 +1925,7 @@ run_file_install(svn_wc__db_t *db,
                  apr_pool_t *scratch_pool)
 {
   const svn_skel_t *arg1 = work_item->children->next;
+  const svn_skel_t *arg4 = arg1->next->next->next;
   const char *local_abspath;
   svn_boolean_t use_commit_times;
   svn_boolean_t record_fileinfo;
@@ -1933,10 +1942,22 @@ run_file_install(svn_wc__db_t *db,
   use_commit_times = svn_skel__parse_int(arg1->next, scratch_pool) != 0;
   record_fileinfo = svn_skel__parse_int(arg1->next->next, scratch_pool) != 0;
 
-  /* Get the pristine contents (from WORKING or BASE, as appropriate).  */
-  SVN_ERR(svn_wc__get_pristine_contents(&src_stream, db, local_abspath,
-                                        scratch_pool, scratch_pool));
-  SVN_ERR_ASSERT(src_stream != NULL);
+  if (arg4 == NULL)
+    {
+      /* Get the pristine contents (from WORKING or BASE, as appropriate).  */
+      SVN_ERR(svn_wc__get_pristine_contents(&src_stream, db, local_abspath,
+                                            scratch_pool, scratch_pool));
+      SVN_ERR_ASSERT(src_stream != NULL);
+    }
+  else
+    {
+      const char *source_abspath;
+
+      /* Use the provided path for the source.  */
+      source_abspath = apr_pstrmemdup(scratch_pool, arg4->data, arg4->len);
+      SVN_ERR(svn_stream_open_readonly(&src_stream, source_abspath,
+                                       scratch_pool, scratch_pool));
+    }
 
   SVN_ERR(svn_wc__get_special(&special, db, local_abspath, scratch_pool));
   if (special)
@@ -2021,15 +2042,14 @@ run_file_install(svn_wc__db_t *db,
                                               scratch_pool));
     }
 
+  /* ### this should happen before we rename the file into place.  */
   if (record_fileinfo)
     {
-      /* ### ugh. switch this over to some new wc_db APIs.  */
-
-      svn_wc_entry_t tmp_entry;
+      apr_time_t last_mod_time;
       apr_finfo_t finfo;
 
       /* loggy_set_entry_timestamp_from_wc()  */
-      SVN_ERR(svn_io_file_affected_time(&tmp_entry.text_time,
+      SVN_ERR(svn_io_file_affected_time(&last_mod_time,
                                         local_abspath,
                                         scratch_pool));
 
@@ -2037,14 +2057,17 @@ run_file_install(svn_wc__db_t *db,
       SVN_ERR(svn_io_stat(&finfo, local_abspath,
                           APR_FINFO_MIN | APR_FINFO_LINK,
                           scratch_pool));
-      tmp_entry.working_size = finfo.size;
 
-      SVN_ERR(svn_wc__entry_modify2(db, local_abspath,
-                                    svn_node_unknown, FALSE,
-                                    &tmp_entry,
-                                    SVN_WC__ENTRY_MODIFY_TEXT_TIME
-                                      | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
-                                    scratch_pool));
+      SVN_ERR(svn_wc__db_global_record_fileinfo(db, local_abspath,
+                                                finfo.size, last_mod_time,
+                                                scratch_pool));
+
+      /* ### there used to be a call to entry_modify2() here, to set the
+         ### TRANSLATED_SIZE and LAST_MOD_TIME values. that function elided
+         ### copyfrom information that snuck into the database. it should
+         ### not be there in the first place, but we can manually get rid
+         ### of the erroneous, inheritable copyfrom data.  */
+      SVN_ERR(svn_wc__db_temp_elide_copyfrom(db, local_abspath, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -2055,12 +2078,19 @@ svn_error_t *
 svn_wc__wq_build_file_install(const svn_skel_t **work_item,
                               svn_wc__db_t *db,
                               const char *local_abspath,
+                              const char *source_abspath,
                               svn_boolean_t use_commit_times,
                               svn_boolean_t record_fileinfo,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
   svn_skel_t *build_item = svn_skel__make_empty_list(result_pool);
+
+  /* If a SOURCE_ABSPATH was provided, then put it into the skel. If this
+     value is not provided, then the file's pristine contents will be used.  */
+  if (source_abspath != NULL)
+    svn_skel__prepend_str(apr_pstrdup(result_pool, source_abspath),
+                          build_item, result_pool);
 
   svn_skel__prepend_int(record_fileinfo, build_item, result_pool);
   svn_skel__prepend_int(use_commit_times, build_item, result_pool);

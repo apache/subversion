@@ -1235,10 +1235,29 @@ svn_stream_copy(svn_stream_t *from,
 
 
 /** Set @a *same to TRUE if @a stream1 and @a stream2 have the same
- * contents, else set it to FALSE.  Use @a pool for temporary allocations.
+ * contents, else set it to FALSE.
+ *
+ * Both streams will be closed before this function returns (regardless of
+ * the result, or any possible error).
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_stream_contents_same2(svn_boolean_t *same,
+                          svn_stream_t *stream1,
+                          svn_stream_t *stream2,
+                          apr_pool_t *pool);
+
+
+/**
+ * Same as svn_stream_contents_same2(), but the streams will not be closed.
  *
  * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_stream_contents_same(svn_boolean_t *same,
                          svn_stream_t *stream1,

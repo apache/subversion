@@ -790,6 +790,92 @@ def propset_revert_noerror(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+def props_only_file_update(sbox):
+  "retranslation occurs on a props-only update"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  content = ["This is the file 'iota'.\n",
+             "$Author$\n",
+             ]
+  content_expanded = ["This is the file 'iota'.\n",
+                      "$Author: jrandom $\n",
+                      ]
+
+  # Create r2 with iota's contents and svn:keywords modified
+  open(iota_path, 'w').writelines(content)
+  svntest.main.run_svn(None, 'propset', 'svn:keywords', 'Author', iota_path)
+
+  expected_output = wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  # Create r3 that drops svn:keywords
+
+  # put the content back to its untranslated form
+  open(iota_path, 'w').writelines(content)
+
+  svntest.main.run_svn(None, 'propset', 'svn:keywords', 'Id', iota_path)
+
+#  expected_output = wc.State(wc_dir, {
+#    'iota' : Item(verb='Sending'),
+#    })
+
+  expected_status.tweak('iota', wc_rev=3)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  # Now, go back to r2. iota should have the Author keyword expanded.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=''.join(content_expanded))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None, None, expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        False,
+                                        wc_dir, '-r', '2')
+
+  # Update to r3. this should retranslate iota, dropping the keyword expansion
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=''.join(content))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None, expected_disk, expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        False,
+                                        wc_dir)
+
+  # We used to leave some temporary files around. Make sure that we don't.
+  temps = os.listdir(os.path.join(wc_dir, '.svn', 'tmp'))
+  temps.remove('prop-base')
+  temps.remove('props')
+  temps.remove('text-base')
+  if temps:
+    print('Temporary files leftover: %s' % (', '.join(temps),))
+    raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -807,6 +893,7 @@ test_list = [ None,
               copy_propset_commit,
               propset_commit_checkout_nocrash,
               propset_revert_noerror,
+              props_only_file_update,
              ]
 
 if __name__ == '__main__':

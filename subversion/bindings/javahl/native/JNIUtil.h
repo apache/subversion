@@ -28,6 +28,7 @@
 #define JNIUTIL_H
 
 #include <list>
+#include <vector>
 #include "Pool.h"
 struct apr_pool_t;
 struct svn_error;
@@ -143,6 +144,8 @@ class JNIUtil
   static void assembleErrorMessage(svn_error_t *err, int depth,
                                    apr_status_t parent_apr_err,
                                    std::string &buffer);
+  static void putErrorsInTrace(svn_error_t *err,
+                               std::vector<jobject> &stackTrace);
   /**
    * Set the appropriate global or thread-local flag that an exception
    * has been thrown to @a flag.

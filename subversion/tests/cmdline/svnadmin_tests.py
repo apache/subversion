@@ -1106,6 +1106,95 @@ def drop_mergeinfo_outside_of_dump_stream(sbox):
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
+#----------------------------------------------------------------------
+# Even *more* testing for issue #3020 'Reflect dropped/renumbered
+# revisions in svn:mergeinfo data during svnadmin load'
+#
+# Filtering revsions from mergeinfo in a load stream that refers to
+# history outside of the stream is all well and good if the load
+# is a partial dump loaded in one shot...but if a repository's full
+# history is dumped incrementally and each incremental dump is loaded,
+# well then, *any* filtering done then is removing valid mergeinfo...
+#
+# ...and currently we do exactly that, as this test demonstrates.
+#
+# Note: If a repository is *partially* dumped in a sequence of incremental
+# dumps then possibly some mergeinfo should be filtered on the load, but
+# not *all* mergeinfo, which is what we are doing in that case too.
+def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
+  "don't filter mergeinfo revs from incremental dump"
+
+  # Create an empty repos.
+  test_create(sbox)
+
+  # Load the test repository to the first repos in a single load.
+  #
+  # Note: The test repository 'mergeinfo_included_full.dump' is the full
+  # repos diagramed in the test drop_mergeinfo_outside_of_dump_stream.
+  dumpfile1 = svntest.main.file_read(
+    os.path.join(os.path.dirname(sys.argv[0]),
+                 'svnadmin_tests_data',
+                 'mergeinfo_included_full.dump'))
+  load_and_verify_dumpstream(sbox, [], [], None, dumpfile1, '--ignore-uuid')
+
+  # Check that the mergeinfo is as expected.
+  url = sbox.repo_url + '/branches/'
+  expected_output = svntest.verify.UnorderedOutput([
+    url + "B1 - /branches/B2:11-12\n",
+    "/trunk:6,9\n",
+    url + "B2 - /trunk:9\n",
+    url + "B1/B/E - /branches/B2/B/E:11-12\n",
+    "/trunk/B/E:5-6,8-9\n"])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url)  
+
+  # Now incrementally dump that repository into three dump files:
+  dump_file_r1_10 = svntest.main.temp_dir + "-r1-10.dump"
+  exit_code, output, errput = svntest.main.run_svnadmin(
+    'dump', sbox.repo_dir, '-r1:10')
+  dump_fp = open(dump_file_r1_10, 'wb')
+  dump_fp.writelines(output)
+  dump_fp.close()
+
+  dump_file_r11_13 = svntest.main.temp_dir + "-r11-13.dump"
+  exit_code, output, errput = svntest.main.run_svnadmin(
+    'dump', sbox.repo_dir, '--incremental', '-r11:13')
+  dump_fp = open(dump_file_r11_13, 'wb')
+  dump_fp.writelines(output)
+  dump_fp.close()
+
+  dump_file_r14_15 = svntest.main.temp_dir + "-r14-15.dump"
+  exit_code, output, errput = svntest.main.run_svnadmin(
+    'dump', sbox.repo_dir, '--incremental', '-r14:15')
+  dump_fp = open(dump_file_r14_15, 'wb')
+  dump_fp.writelines(output)
+  dump_fp.close()
+
+  # Blow away the current repos and create an empty one in its place.
+  test_create(sbox)
+
+  # Load the three incremental dump files in sequence.
+  load_and_verify_dumpstream(sbox, [], [], None,
+                             svntest.main.file_read(dump_file_r1_10),
+                             '--ignore-uuid')
+  load_and_verify_dumpstream(sbox, [], [], None,
+                             svntest.main.file_read(dump_file_r11_13),
+                             '--ignore-uuid')
+  load_and_verify_dumpstream(sbox, [], [], None,
+                             svntest.main.file_read(dump_file_r14_15),
+                             '--ignore-uuid')
+
+  # Check the mergeinfo, we use the same expected output as before,
+  # as it (duh!) should be exactly the same as when we loaded the
+  # repos in one shot.
+  #
+  # Currently this test is set as XFail, because the mergeinfo filtering
+  # logic in load is removing valid mergeinfo.
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url)
+
 ########################################################################
 # Run the tests
 
@@ -1134,6 +1223,7 @@ test_list = [ None,
               SkipUnless(verify_with_invalid_revprops,
                          svntest.main.is_fs_type_fsfs),
               drop_mergeinfo_outside_of_dump_stream,
+              XFail(dont_drop_valid_mergeinfo_during_incremental_loads),
              ]
 
 if __name__ == '__main__':

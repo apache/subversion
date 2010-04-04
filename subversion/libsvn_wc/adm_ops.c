@@ -1526,7 +1526,11 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                                 pool);
 
           /* Make sure this new directory has an admistrative subdirectory
-             created inside of it */
+             created inside of it.
+
+             This creates a BASE_NODE for an added directory, really
+             it should create a WORKING_NODE.  It gets removed by the
+             next modify2 call. */
           SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
                                               new_url, parent_entry->repos,
                                               parent_entry->uuid, 0,
@@ -1537,11 +1541,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
           /* When we are called with the copyfrom arguments set and with
              the admin directory already in existence, then the dir will
              contain the copyfrom settings.  So we need to pass the
-             copyfrom arguments to the ensure call.
-
-             This creates a BASE_NODE for an added directory, really
-             it should create a WORKING_NODE.  It gets removed by the
-             next modify2 call. */
+             copyfrom arguments to the ensure call. */
           SVN_ERR(svn_wc__internal_ensure_adm(db, local_abspath,
                                               copyfrom_url,
                                               parent_entry->repos,
@@ -1584,14 +1584,15 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
          This deletes the erroneous BASE_NODE for added directories and
          adds a WORKING_NODE. */
       modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
       tmp_entry.schedule = is_replace
                            ? svn_wc_schedule_replace
                            : svn_wc_schedule_add;
-      tmp_entry.incomplete = FALSE;
       SVN_ERR(svn_wc__entry_modify2(db, local_abspath, svn_node_dir,
                                     FALSE /* parent_stub */,
                                     &tmp_entry, modify_flags, pool));
+
+      SVN_ERR(svn_wc__db_temp_op_set_working_incomplete(
+                db, local_abspath, FALSE, pool));
 
       if (copyfrom_url)
         {
