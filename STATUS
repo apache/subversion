@@ -137,6 +137,18 @@ Candidate changes:
    Votes:
      +1: pburba, rhuijben (via IRC)
 
+ * r879762
+   Merge a missing piece of r879762 from
+   ^/subversion/branches/issue-3242-dev,
+   which was not properly backported to the
+   ^/subversion/branches/1.6.x-issue-6242-partial branch in r916089.
+   Justification:
+     Fixes three failing JavaHL tests and addresses a bug with the svn
+     mergeinfo subcommand when targeting URLs with inherited mergeinfo,
+     see http://svn.haxx.se/dev/archive-2010-04/0054.shtml.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
