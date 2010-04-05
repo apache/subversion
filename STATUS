@@ -146,6 +146,8 @@ Candidate changes:
      Fixes three failing JavaHL tests and addresses a bug with the svn
      mergeinfo subcommand when targeting URLs with inherited mergeinfo,
      see http://svn.haxx.se/dev/archive-2010-04/0054.shtml.
+   Branch:
+     ^/subversion/branches/1.6.x-issue-3242-partial-v2
    Votes:
      +1: pburba
 
