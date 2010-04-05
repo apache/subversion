@@ -221,6 +221,10 @@ def non_inheritable_mergeinfo(sbox):
                                            D_COPY_path,
                                            '--show-revs', 'eligible')
 
+# Test for -R option with svn mergeinfo subcommand.
+#
+# Test for issue #3242 'Subversion demands unnecessary access to parent
+# directories of operations'
 def recursive_mergeinfo(sbox):
   "test svn mergeinfo -R"
 
@@ -357,10 +361,22 @@ def recursive_mergeinfo(sbox):
                                            '--show-revs', 'merged',
                                            '--depth', 'infinity')
 
+  # A couple tests of problems found with initial issue #3242 fixes.
+  # We should be able to check for the merged revs from a URL to a URL
+  # when the latter has explicit mergeinfo...
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''), ['6'],
+    sbox.repo_url + '/A2/D/H',
+    sbox.repo_url + '/A_COPY/D/H',
+    '--show-revs', 'merged')
+  # ...and when the latter has inherited mergeinfo.
+  svntest.actions.run_and_verify_mergeinfo(
+    adjust_error_for_server_version(''), ['6'],
+    sbox.repo_url + '/A2/D/H/omega',
+    sbox.repo_url + '/A_COPY/D/H/omega',
+    '--show-revs', 'merged')
+  
 # Test for issue #3180 'svn mergeinfo ignores peg rev for WC target'.
-#
-# Test for issue #3242 'Subversion demands unnecessary access to parent
-# directories of operations'
 def mergeinfo_on_pegged_wc_path(sbox):
   "svn mergeinfo on pegged working copy target"
 
@@ -460,21 +476,6 @@ def mergeinfo_on_pegged_wc_path(sbox):
   svntest.actions.run_and_verify_mergeinfo(
     adjust_error_for_server_version(''),
     ['4', '5'], A_path, A_COPY_path + '@PREV', '--show-revs', 'eligible')
-
-  # A couple tests of problems found with initial issue #3242 fixes.
-  # We should be able to check for the merged revs from a URL to a URL
-  # when the latter has explicit mergeinfo...
-  svntest.actions.run_and_verify_mergeinfo(
-    adjust_error_for_server_version(''), ['6'],
-    sbox.repo_url + 'A2/D/H',
-    sbox.repo_url + 'A_COPY/D/H',
-    '--show-revs', 'merged')
-  # ...and when the latter has inherited mergeinfo.
-  svntest.actions.run_and_verify_mergeinfo(
-    adjust_error_for_server_version(''), ['6'],
-    sbox.repo_url + 'A2/D/H/omega',
-    sbox.repo_url + 'A_COPY/D/H/omega',
-    '--show-revs', 'merged')
 
 ########################################################################
 # Run the tests
