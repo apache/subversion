@@ -947,12 +947,11 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
 }
 
 
-/* If the server does not support Merge Tracking then return an error with
-   the code SVN_ERR_UNSUPPORTED_FEATURE.  Otherwise, if INCLUDE_DESCENDANTS
-   is false then get the explicit or inherited mergeinfo for PATH_OR_URL
-   @PEG_REVISION and put it in *TARGET_MERGEINFO, keyed to the repository
-   root-relative path of PATH_OR_URL.  If INCLUDE_DESCENDANTS is true then
-   also get the explicit mergeinfo on any subtrees under PATH_OR_URL.
+/* Set *MERGEINFO_CATALOG to the explicit or inherited mergeinfo for
+   PATH_OR_URL@PEG_REVISION.  If INCLUDE_DESCENDANTS is true, also
+   store in *MERGEINFO_CATALOG the explicit mergeinfo on any subtrees
+   under PATH_OR_URL.  Key all mergeinfo in *MERGEINFO_CATALOG on
+   repository relpaths.
 
    If no mergeinfo is found then set *MERGEINFO_CATALOG to NULL.
 
@@ -960,7 +959,10 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
    PATH_OR_URL.
 
    Allocate *MERGEINFO_CATALOG and all its contents in RESULT_POOL.  Use
-   SCRATCH_POOL for all temporary allocations.  */
+   SCRATCH_POOL for all temporary allocations.
+
+   Return SVN_ERR_UNSUPPORTED_FEATURE if the server does not support
+   Merge Tracking.  */
 static svn_error_t *
 get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
               const char **repos_root,
