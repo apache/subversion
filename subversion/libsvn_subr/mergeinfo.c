@@ -1679,11 +1679,13 @@ svn_mergeinfo__remove_empty_rangelists(svn_mergeinfo_t mergeinfo,
 svn_error_t *
 svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
                                           svn_mergeinfo_catalog_t in_catalog,
-                                          const char *prefix,
+                                          const char *prefix_path,
                                           apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  size_t prefix_len = strlen(prefix);
+  size_t prefix_len = strlen(prefix_path);
+
+  SVN_ERR_ASSERT(prefix_path[0] == '/');
 
   *out_catalog = apr_hash_make(pool);
 
@@ -1692,12 +1694,21 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
       const char *original_path = svn__apr_hash_index_key(hi);
       apr_ssize_t klen = svn__apr_hash_index_klen(hi);
       svn_mergeinfo_t value = svn__apr_hash_index_val(hi);
+      apr_ssize_t padding = 0;
 
       SVN_ERR_ASSERT(klen >= prefix_len);
-      SVN_ERR_ASSERT(strncmp(original_path, prefix, prefix_len) == 0);
+      SVN_ERR_ASSERT(svn_uri_is_ancestor(prefix_path, original_path));
 
-      apr_hash_set(*out_catalog, original_path + prefix_len,
-                   klen-prefix_len, value);
+      /* If the ORIGINAL_PATH doesn't match the PREFIX_PATH exactly
+         and we're not simply removing a single leading slash (such as
+         when PREFIX_PATH is "/"), we advance our string offset by an
+         extra character (to get past the directory separator that
+         follows the prefix).  */
+      if ((strcmp(original_path, prefix_path) != 0) && (prefix_len != 1))
+        padding = 1;
+
+      apr_hash_set(*out_catalog, original_path + prefix_len + padding,
+                   klen - prefix_len - padding, value);
     }
 
   return SVN_NO_ERROR;
