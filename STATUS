@@ -202,12 +202,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r880461
-   Fix an obscure bug in ra_serf mergeinfo report handling which causes 
-   valid mergeinfo in the response to be ignored.
-   Justification:
-     Without this fix, the ra_serf implementation of svn_ra_get_mergeinfo()
-     will only work when called with non-empty relative paths.
-   Votes:
-     +1: cmpilato, julianfoad, philip
