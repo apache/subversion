@@ -79,7 +79,8 @@ Candidate changes:
 
  * r878590, r878607, r878625, r878626, r878627
    In trunk we optimized the common case of 'find-and-replace with same uri'
-   of proxied content thanks to issue 3445.
+   of proxied content thanks to issue 3445 "WebDAV proxy code munging user
+   data".
    r878590 is just a change that adds FIXME marker to code comment. We take it
    to avoid spurious conflicts with other revisions.
    r878607 Special cases no-op find and replace.
@@ -93,6 +94,13 @@ Candidate changes:
         without conflict.
    Votes:
      +1: kameshj
+     -0: julianfoad (seem to be multiple changes here for different reasons -
+           at least issue '3445 and an optimization and an information leak;
+           r878607 log msg says it fixes bugs but it's not clear what bugs;
+           don't know how to tell whether justification 1 is significant;
+           justifications don't seem to refer to issue #3445. Please can we
+           separate these changes and clearly describe each one? And update
+           the r878607 log msg.)
 
  * r880461
    Fix an obscure bug in ra_serf mergeinfo report handling which causes 
@@ -104,7 +112,9 @@ Candidate changes:
      +1: cmpilato, julianfoad
 
  * r916286, r917512
-   This backport depends on the r878590 group only for the conflict free port.
+   ???
+   Notes:
+     This backport depends on the r878590 group only for the conflict free port.
    Justification:
      Vague commit error when server has been configured with <Location /svn/>
      and write through proxy.
@@ -112,8 +122,10 @@ Candidate changes:
      +1: kameshj
 
  * r917523
-   This backport depends on the r878590 and r916286 groups only for the
-   conflict free port.
+   ???
+   Notes:
+     This backport depends on the r878590 and r916286 groups only for the
+     conflict free port.
    Justification:
      If the configured slave url has the *encodable* characters *write through*
      is not happening rather commit happens in slave itself.
