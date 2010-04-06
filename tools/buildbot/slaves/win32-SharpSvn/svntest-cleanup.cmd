@@ -13,6 +13,7 @@ IF NOT EXIST "imports\" (
 IF NOT EXIST build\imports.done (
   copy /y imports\dev-default.build default.build
   nant build %NANTARGS%
+  del release\bin\*svn*
   IF NOT ERRORLEVEL 1 (
     echo. > build\imports.done
   )
