@@ -841,6 +841,92 @@ def patch_strip1(sbox):
                                        1, # dry-run
                                        '-p1')
 
+def patch_no_index_line(sbox):
+  "patch with no index lines"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  gamma_contents = [
+    "\n",
+    "Another line before\n",
+    "A third line before\n",
+    "This is the file 'gamma'.\n",
+    "A line after\n",
+    "Another line after\n",
+    "A third line after\n",
+  ]
+
+  svntest.main.file_write(gamma_path, ''.join(gamma_contents))
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma'  : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/gamma', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  unidiff_patch = [
+    "--- A/D/gamma\t(revision 1)\n",
+    "+++ A/D/gamma\t(working copy)\n",
+    "@@ -1,7 +1,7 @@\n",
+    " \n",
+    " Another line before\n",
+    " A third line before\n",
+    "-This is the file 'gamma'.\n",
+    "+It is the file 'gamma'.\n",
+    " A line after\n",
+    " Another line after\n",
+    " A third line after\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+Some more bytes\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  gamma_contents = [
+    "\n",
+    "Another line before\n",
+    "A third line before\n",
+    "It is the file 'gamma'.\n",
+    "A line after\n",
+    "Another line after\n",
+    "A third line after\n",
+  ]
+  iota_contents = [
+    "This is the file 'iota'.\n",
+    "Some more bytes\n",
+  ]
+  expected_output = [
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/gamma', contents=''.join(gamma_contents))
+  expected_disk.tweak('iota', contents=''.join(iota_contents))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/gamma', status='M ', wc_rev=2)
+  expected_status.tweak('iota', status='M ', wc_rev=1)
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 def patch_add_new_dir(sbox):
   "patch with missing dirs"
 
@@ -2187,6 +2273,7 @@ test_list = [ None,
               patch_offset,
               patch_chopped_leading_spaces,
               patch_strip1,
+              patch_no_index_line,
               patch_add_new_dir,
               patch_reject,
               patch_keywords,

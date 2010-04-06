@@ -281,6 +281,7 @@ parse_next_hunk(svn_hunk_t **hunk,
   svn_stream_t *original_text;
   svn_stream_t *modified_text;
   svn_linenum_t original_lines;
+  svn_linenum_t modified_lines;
   svn_linenum_t leading_context;
   svn_linenum_t trailing_context;
   svn_boolean_t changed_line_seen;
@@ -354,16 +355,18 @@ parse_next_hunk(svn_hunk_t **hunk,
 
           c = line->data[0];
           /* Tolerate chopped leading spaces on empty lines. */
-          if (original_lines > 0 && (c == ' ' || (! eof && line->len == 0)))
+          if (original_lines > 0 && modified_lines > 0 &&
+              (c == ' ' || (! eof && line->len == 0)))
             {
               hunk_seen = TRUE;
               original_lines--;
+              modified_lines--;
               if (changed_line_seen)
                 trailing_context++;
               else
                 leading_context++;
             }
-          else if (c == add || c == del)
+          else if (original_lines > 0 && c == del)
             {
               hunk_seen = TRUE;
               changed_line_seen = TRUE;
@@ -373,8 +376,19 @@ parse_next_hunk(svn_hunk_t **hunk,
               if (trailing_context > 0)
                 trailing_context = 0;
 
-              if (original_lines > 0 && c == del)
-                original_lines--;
+              original_lines--;
+            }
+          else if (modified_lines > 0 && c == add)
+            {
+              hunk_seen = TRUE;
+              changed_line_seen = TRUE;
+
+              /* A hunk may have context in the middle. We only want the
+                 last lines of context. */
+              if (trailing_context > 0)
+                trailing_context = 0;
+
+              modified_lines--;
             }
           else
             {
@@ -395,7 +409,10 @@ parse_next_hunk(svn_hunk_t **hunk,
               in_hunk = parse_hunk_header(line->data, *hunk, reverse,
                                           iterpool);
               if (in_hunk)
-                original_lines = (*hunk)->original_length;
+                {
+                  original_lines = (*hunk)->original_length;
+                  modified_lines = (*hunk)->modified_length;
+                }
             }
           else if (starts_with(line->data, minus))
             /* This could be a header of another patch. Bail out. */
