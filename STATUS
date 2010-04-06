@@ -102,15 +102,6 @@ Candidate changes:
            separate these changes and clearly describe each one? And update
            the r878607 log msg.)
 
- * r880461
-   Fix an obscure bug in ra_serf mergeinfo report handling which causes 
-   valid mergeinfo in the response to be ignored.
-   Justification:
-     Without this fix, the ra_serf implementation of svn_ra_get_mergeinfo()
-     will only work when called with non-empty relative paths.
-   Votes:
-     +1: cmpilato, julianfoad
-
  * r916286, r917512
    ???
    Notes:
@@ -214,3 +205,12 @@ Approved changes:
      Resolves a FAIL in 'make check FS_TYPE=bdb'.
    Votes:
      +1: danielsh, julianfoad, stsp
+
+ * r880461
+   Fix an obscure bug in ra_serf mergeinfo report handling which causes 
+   valid mergeinfo in the response to be ignored.
+   Justification:
+     Without this fix, the ra_serf implementation of svn_ra_get_mergeinfo()
+     will only work when called with non-empty relative paths.
+   Votes:
+     +1: cmpilato, julianfoad, philip
