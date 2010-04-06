@@ -120,13 +120,6 @@ Candidate changes:
    Votes:
      +1: kameshj
  
- * r906587
-   Make a fsfs-specific test skip on BDB.
-   Justification:
-     Resolves a FAIL in 'make check FS_TYPE=bdb'.
-   Votes:
-     +1: danielsh, julianfoad
-
  * r877014
    On Windows, treat a path containing invalid characters as a non-existing
    path (svn_node_none) rather than raising an error.
@@ -202,3 +195,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r906587
+   Make a fsfs-specific test skip on BDB.
+   Justification:
+     Resolves a FAIL in 'make check FS_TYPE=bdb'.
+   Votes:
+     +1: danielsh, julianfoad, stsp
