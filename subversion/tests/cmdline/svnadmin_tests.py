@@ -976,7 +976,8 @@ test_list = [ None,
               SkipUnless(fsfs_recover_handle_missing_revs_or_revprops_file,
                          svntest.main.is_fs_type_fsfs),
               create_in_repo_subdir,
-              verify_with_invalid_revprops,
+              SkipUnless(verify_with_invalid_revprops,
+                         svntest.main.is_fs_type_fsfs),
              ]
 
 if __name__ == '__main__':

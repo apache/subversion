@@ -203,13 +203,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r906587
-   Make a fsfs-specific test skip on BDB.
-   Justification:
-     Resolves a FAIL in 'make check FS_TYPE=bdb'.
-   Votes:
-     +1: danielsh, julianfoad, stsp
-
  * r880461
    Fix an obscure bug in ra_serf mergeinfo report handling which causes 
    valid mergeinfo in the response to be ignored.
