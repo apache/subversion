@@ -9622,6 +9622,118 @@ svn_client_merge_reintegrate(const char *source,
 
 
 
+static svn_error_t *
+merge_peg_locked(const char *source,
+                 const apr_array_header_t *ranges_to_merge,
+                 const svn_opt_revision_t *peg_revision,
+                 const char *target_abspath,
+                 svn_depth_t depth,
+                 svn_boolean_t ignore_ancestry,
+                 svn_boolean_t force,
+                 svn_boolean_t record_only,
+                 svn_boolean_t dry_run,
+                 const apr_array_header_t *merge_options,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *scratch_pool)
+{
+  const char *URL;
+  apr_array_header_t *merge_sources;
+  const char *wc_repos_root, *source_repos_root;
+  svn_opt_revision_t working_rev;
+  svn_ra_session_t *ra_session;
+  apr_pool_t *sesspool;
+  svn_boolean_t use_sleep = FALSE;
+  svn_error_t *err;
+  svn_boolean_t same_repos;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
+
+  /* Make sure we're dealing with a real URL. */
+  SVN_ERR(svn_client_url_from_path2(&URL, source, ctx,
+                                    scratch_pool, scratch_pool));
+  if (! URL)
+    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                             _("'%s' has no URL"),
+                             svn_dirent_local_style(source, scratch_pool));
+
+  /* Determine the working copy target's repository root URL. */
+  working_rev.kind = svn_opt_revision_working;
+  SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_abspath,
+                                     &working_rev, ctx,
+                                     scratch_pool, scratch_pool));
+
+  /* Open an RA session to our source URL, and determine its root URL. */
+  sesspool = svn_pool_create(scratch_pool);
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL, NULL,
+                                               FALSE, TRUE, ctx, sesspool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root, scratch_pool));
+
+  /* Normalize our merge sources. */
+  SVN_ERR(normalize_merge_sources(&merge_sources, source, URL,
+                                  source_repos_root, peg_revision,
+                                  ranges_to_merge, ra_session, ctx,
+                                  scratch_pool));
+
+  /* Check for same_repos. */
+  if (strcmp(wc_repos_root, source_repos_root) != 0)
+    {
+      const char *source_repos_uuid;
+      const char *wc_repos_uuid;
+
+      SVN_ERR(svn_ra_get_uuid2(ra_session, &source_repos_uuid, scratch_pool));
+      SVN_ERR(svn_client_uuid_from_path2(&wc_repos_uuid, target_abspath,
+                                         ctx, scratch_pool, scratch_pool));
+      same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
+    }
+  else
+    same_repos = TRUE;
+
+  /* We're done with our little RA session. */
+  svn_pool_destroy(sesspool);
+
+  /* Do the real merge!  (We say with confidence that our merge
+     sources are both ancestral and related.) */
+  err = do_merge(NULL, merge_sources, target_abspath,
+                 TRUE, TRUE, same_repos, ignore_ancestry, force, dry_run,
+                 record_only, NULL, FALSE, FALSE, depth, merge_options,
+                 &use_sleep, ctx, scratch_pool);
+
+  if (use_sleep)
+    svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
+
+  if (err)
+    return svn_error_return(err);
+
+  return SVN_NO_ERROR;
+}
+
+struct merge_peg_baton {
+  const char *source;
+  const apr_array_header_t *ranges_to_merge;
+  const svn_opt_revision_t *peg_revision;
+  const char *target_abspath;
+  svn_depth_t depth;
+  svn_boolean_t ignore_ancestry;
+  svn_boolean_t force;
+  svn_boolean_t record_only;
+  svn_boolean_t dry_run;
+  const apr_array_header_t *merge_options;
+  svn_client_ctx_t *ctx;
+};
+
+static svn_error_t *
+merge_peg_cb(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  struct merge_peg_baton *b = baton;
+
+  SVN_ERR(merge_peg_locked(b->source, b->ranges_to_merge, b->peg_revision,
+                           b->target_abspath, b->depth, b->ignore_ancestry,
+                           b->force, b->record_only, b->dry_run,
+                           b->merge_options, b->ctx, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_merge_peg3(const char *source,
                       const apr_array_header_t *ranges_to_merge,
@@ -9636,83 +9748,36 @@ svn_client_merge_peg3(const char *source,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
-  const char *URL;
-  apr_array_header_t *merge_sources;
-  const char *wc_repos_root, *source_repos_root;
-  svn_opt_revision_t working_rev;
-  svn_ra_session_t *ra_session;
-  apr_pool_t *sesspool;
-  svn_boolean_t use_sleep = FALSE;
-  svn_error_t *err;
-  svn_boolean_t same_repos;
-  const char *target_abspath;
+  const char *target_abspath, *lock_abspath;
+  svn_node_kind_t kind;
+  struct merge_peg_baton baton;
 
   /* No ranges to merge?  No problem. */
   if (ranges_to_merge->nelts == 0)
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_wcpath, pool));
-
-  /* Open an admistrative session with the working copy. */
-  SVN_ERR(svn_wc__adm_probe_in_context(&adm_access, ctx->wc_ctx,
-                                       target_abspath,
-                                       (! dry_run), -1, ctx->cancel_func,
-                                       ctx->cancel_baton, pool));
-
-  /* Make sure we're dealing with a real URL. */
-  SVN_ERR(svn_client_url_from_path2(&URL, source, ctx, pool, pool));
-  if (! URL)
-    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("'%s' has no URL"),
-                             svn_dirent_local_style(source, pool));
-
-  /* Determine the working copy target's repository root URL. */
-  working_rev.kind = svn_opt_revision_working;
-  SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_abspath,
-                                     &working_rev, ctx, pool, pool));
-
-  /* Open an RA session to our source URL, and determine its root URL. */
-  sesspool = svn_pool_create(pool);
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, NULL, NULL,
-                                               FALSE, TRUE, ctx, sesspool));
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root, pool));
-
-  /* Normalize our merge sources. */
-  SVN_ERR(normalize_merge_sources(&merge_sources, source, URL,
-                                  source_repos_root, peg_revision,
-                                  ranges_to_merge, ra_session, ctx, pool));
-
-  /* Check for same_repos. */
-  if (strcmp(wc_repos_root, source_repos_root) != 0)
-    {
-      const char *source_repos_uuid;
-      const char *wc_repos_uuid;
-
-      SVN_ERR(svn_ra_get_uuid2(ra_session, &source_repos_uuid, pool));
-      SVN_ERR(svn_client_uuid_from_path2(&wc_repos_uuid, target_abspath,
-                                         ctx, pool, pool));
-      same_repos = (strcmp(wc_repos_uuid, source_repos_uuid) == 0);
-    }
+  SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
+                                pool));
+  if (kind == svn_node_dir)
+    lock_abspath = target_abspath;
   else
-    same_repos = TRUE;
+    lock_abspath = svn_dirent_dirname(target_abspath, pool);
 
-  /* We're done with our little RA session. */
-  svn_pool_destroy(sesspool);
+  baton.source = source;
+  baton.ranges_to_merge = ranges_to_merge;
+  baton.peg_revision = peg_revision;
+  baton.target_abspath = target_abspath;
+  baton.depth = depth;
+  baton.ignore_ancestry = ignore_ancestry;
+  baton.force = force;
+  baton.record_only = record_only;
+  baton.dry_run = dry_run;
+  baton.merge_options = merge_options;
+  baton.ctx = ctx;
 
-  /* Do the real merge!  (We say with confidence that our merge
-     sources are both ancestral and related.) */
-  err = do_merge(NULL, merge_sources, target_abspath,
-                 TRUE, TRUE, same_repos, ignore_ancestry, force, dry_run,
-                 record_only, NULL, FALSE, FALSE, depth, merge_options,
-                 &use_sleep, ctx, pool);
+  SVN_ERR(svn_wc__call_with_write_lock(merge_peg_cb, &baton, ctx->wc_ctx,
+                                       lock_abspath, pool, pool));
 
-  if (use_sleep)
-    svn_io_sleep_for_timestamps(target_wcpath, pool);
-
-  if (err)
-    return svn_error_return(err);
-
-  /* Shutdown the administrative session. */
-  return svn_wc_adm_close2(adm_access, pool);
+  return SVN_NO_ERROR;
 }

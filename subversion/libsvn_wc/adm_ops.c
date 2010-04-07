@@ -1553,7 +1553,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
          only have file locks inside access batons we have to open a new
          access baton for new directories here. svn_wc_add3() handles this
          case when we don't need the access batons for locking. */
-      /* ### This block can be removed after we fully abandon access batons. */
+      /* ### This block can be removed after we fully abandon access batons
+             and centralise the db. */
       if (! exists)
         {
           svn_wc_adm_access_t *adm_access
@@ -1574,6 +1575,13 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                        cancel_func, cancel_baton,
                                        adm_pool));
             }
+          else
+            {
+              /* Lock on parent needs to be propogated into the child db. */
+              SVN_ERR(svn_wc__db_wclock_set(db, local_abspath, 0, pool));
+              SVN_ERR(svn_wc__db_temp_mark_locked(db, local_abspath, pool));
+            }
+
         }
 
       /* We're making the same mods we made above, but this time we'll
