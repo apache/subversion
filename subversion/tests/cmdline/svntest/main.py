@@ -726,6 +726,8 @@ def create_repos(path):
     opts += ("--pre-1.5-compatible",)
   elif server_minor_version < 6:
     opts += ("--pre-1.6-compatible",)
+  elif server_minor_version < 7:
+    opts += ("--pre-1.7-compatible",)
   if fs_type is not None:
     opts += ("--fs-type=" + fs_type,)
   exit_code, stdout, stderr = run_command(svnadmin_binary, 1, 0, "create",
@@ -1345,8 +1347,8 @@ def usage():
         "                 output and ignores all exceptions in the \n"
         "                 run_and_verify* functions. This option is only \n"
         "                 useful during test development!")
-  print(" --server-minor-version  Set the minor version for the server.\n"
-        "                 Supports version 4 or 5.")
+  print(" --server-minor-version  Set the minor version for the server ('4',\n"
+        "                 '5', or '6').")
   print(" --fsfs-sharding Default shard size (for fsfs)\n"
         " --fsfs-packing  Run 'svnadmin pack' automatically")
   print(" --config-file   Configuration file for tests.")
