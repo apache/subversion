@@ -662,9 +662,10 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
       return SVN_NO_ERROR;
     }
 
-  /* Work around a bug in pre-1.7 servers that caused CATALOG's keys
-     to be a mix of absolute and relative paths (when they were all
-     supposed to be relative.  */
+  /* Even though CATALOG's keys are relative to the session URL, some
+     older servers returned some of those keys with leading slashes
+     (for subtree items, when INCLUDE_DESCENDANTS was set).  This code
+     cleans up that mess.  */
   *catalog = apr_hash_make(pool);
   for (hi = apr_hash_first(pool, tmp_catalog); hi; hi = apr_hash_next(hi))
     {
