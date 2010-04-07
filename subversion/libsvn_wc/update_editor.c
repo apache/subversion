@@ -950,7 +950,7 @@ struct file_baton
   const char *temp_pristine_abspath;
 #endif
 
-  /* The checksum for the file located at NEW_TEXT_BASE_PATH. */
+  /* The checksum for the file located at NEW_TEXT_BASE_ABSPATH. */
   svn_checksum_t *md5_actual_checksum;
 
   /* The sha1 checksum of the pristine. */
@@ -4657,7 +4657,7 @@ merge_file(svn_stringbuf_t **log_accum,
   /* Set the returned content state. */
 
   /* This is kind of interesting.  Even if no new text was
-     installed (i.e., new_text_path was null), we could still
+     installed (i.e., NEW_TEXT_ABSPATH was null), we could still
      report a pre-existing conflict state.  Say a file, already
      in a state of textual conflict, receives prop mods during an
      update.  Then we'll notify that it has text conflicts.  This
@@ -4886,7 +4886,7 @@ close_file(void *file_baton,
      which case we want the new entryprops to be in place. */
 
   /* Write log commands to merge REGULAR_PROPS into the existing
-     properties of FB->LOCAL_PATH.  Update *PROP_STATE to reflect
+     properties of FB->LOCAL_ABSPATH.  Update *PROP_STATE to reflect
      the result of the regular prop merge.
 
      BASE_PROPS and WORKING_PROPS are hashes of the base and
