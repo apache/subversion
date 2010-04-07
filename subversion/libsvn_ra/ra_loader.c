@@ -634,6 +634,8 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
 {
   svn_error_t *err;
   int i;
+  apr_hash_index_t *hi;
+  svn_mergeinfo_catalog_t tmp_catalog;
 
   /* Validate path format. */
   for (i = 0; i < paths->nelts; i++)
@@ -650,9 +652,40 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
       return err;
     }
 
-  return session->vtable->get_mergeinfo(session, catalog, paths,
-                                        revision, inherit,
-                                        include_descendants, pool);
+  SVN_ERR(session->vtable->get_mergeinfo(session, &tmp_catalog, paths,
+                                         revision, inherit,
+                                         include_descendants, pool));
+  
+  if (tmp_catalog == NULL)
+    {
+      *catalog = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* Work around a bug in pre-1.7 servers that caused CATALOG's keys
+     to be a mix of absolute and relative paths (when they were all
+     supposed to be relative.  */
+  *catalog = apr_hash_make(pool);
+  for (hi = apr_hash_first(pool, tmp_catalog); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      const char *path;
+
+      apr_hash_this(hi, &key, &klen, &val);
+      path = key;
+      if (path[0] == '/')
+        {
+          apr_hash_set(*catalog, path + 1, klen - 1, val);
+        }
+      else
+        {
+          apr_hash_set(*catalog, path, klen, val);
+        }
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
