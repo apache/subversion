@@ -1038,8 +1038,6 @@ make_file_baton(struct file_baton **f_p,
   f->deleted           = FALSE;
   f->dir_baton         = pb;
 
-  /* No need to initialize f->digest, since we used pcalloc(). */
-
   /* the directory's bump info has one more referer now */
   ++f->bump_info->ref_count;
 
