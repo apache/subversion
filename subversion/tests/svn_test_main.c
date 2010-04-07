@@ -80,7 +80,8 @@ static const apr_getopt_option_t cl_options[] =
   {"verbose",       verbose_opt, 0,
                     N_("print extra information")},
   {"server-minor-version", server_minor_version_opt, 1,
-                    N_("Set the minor version for the server ('4' or '5')")},
+                    N_("set the minor version for the server ('3', '4',\n"
+                       "'5', or '6')")},
   {"quiet",         quiet_opt, 0,
                     N_("print only unexpected results")},
   {0,               0, 0, 0}
@@ -362,7 +363,7 @@ main(int argc, const char *argv[])
                 exit(1);
               }
             if ((opts.server_minor_version < 3)
-                || (opts.server_minor_version > 5))
+                || (opts.server_minor_version > 6))
               {
                 fprintf(stderr, "FAIL: Invalid minor version given\n");
                 exit(1);
