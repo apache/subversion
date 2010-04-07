@@ -829,7 +829,7 @@ read_entries_new(apr_hash_t **result_entries,
                                            db,
                                            entry_abspath,
                                            result_pool, iterpool));
-          SVN_DBG(("entry: work_status=%d  cmt_rev=%ld  relpath='%s'\n", work_status, entry->cmt_rev, original_repos_relpath));
+
           if (!SVN_IS_VALID_REVNUM(entry->cmt_rev)
               && scanned_original_relpath == NULL)
             {
