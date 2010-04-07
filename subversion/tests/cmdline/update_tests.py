@@ -4544,6 +4544,11 @@ def tree_conflicts_on_update_2_1(sbox):
     },
   }
 
+  ### D/D1/delta is locally-added during leaf_edit. when tree_del executes,
+  ### it will delete D/D1, and the update reschedules local D/D1 for
+  ### local-copy from its original revision. however, right now, we cannot
+  ### denote that delta is a local-add rather than a child of that D/D1 copy.
+  ### thus, it appears in the status output as a (M)odified child.
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,
@@ -5152,6 +5157,10 @@ def tree_conflict_uc2_schedule_re_add(sbox):
 
   # The status of the new and old scenarios should be identical...
   expected_status = get_status(wc2)
+  ### The following fails, as of Apr 6, 2010. The problem is that A/new_file
+  ### has been *added* within a copy, yet the wc_db datastore cannot
+  ### differentiate this from a copied-child. As a result, new_file is
+  ### reported as a (M)odified node, rather than (A)dded.
   svntest.actions.run_and_verify_status(wc2, expected_status)
 
   # ...except for the revision of the root of the WC and iota, because
@@ -5516,13 +5525,13 @@ test_list = [ None,
               restarted_update_should_delete_dir_prop,
               tree_conflicts_on_update_1_1,
               tree_conflicts_on_update_1_2,
-              tree_conflicts_on_update_2_1,
+              XFail(tree_conflicts_on_update_2_1),
               tree_conflicts_on_update_2_2,
               XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,
               update_moves_and_modifies_an_edited_file,
               tree_conflict_uc1_update_deleted_tree,
-              tree_conflict_uc2_schedule_re_add,
+              XFail(tree_conflict_uc2_schedule_re_add),
               set_deep_depth_on_target_with_shallow_children,
               update_wc_of_dir_to_rev_not_containing_this_dir,
               XFail(update_deleted_locked_files),

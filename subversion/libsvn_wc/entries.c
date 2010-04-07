@@ -727,6 +727,8 @@ read_entries_new(apr_hash_t **result_entries,
                || status == svn_wc__db_status_obstructed_add)
         {
           svn_wc__db_status_t work_status;
+          const char *op_root_abspath;
+          const char *scanned_original_relpath;
           svn_revnum_t original_revision;
 
           /* For child nodes, pick up the parent's revision.  */
@@ -817,17 +819,19 @@ read_entries_new(apr_hash_t **result_entries,
             }
 
           SVN_ERR(svn_wc__db_scan_addition(&work_status,
-                                           NULL,
+                                           &op_root_abspath,
                                            &repos_relpath,
                                            &entry->repos,
                                            &entry->uuid,
-                                           NULL, NULL, NULL, &original_revision,
+                                           &scanned_original_relpath,
+                                           NULL, NULL, /* original_root|uuid */
+                                           &original_revision,
                                            db,
                                            entry_abspath,
                                            result_pool, iterpool));
-
+          SVN_DBG(("entry: work_status=%d  cmt_rev=%ld  relpath='%s'\n", work_status, entry->cmt_rev, original_repos_relpath));
           if (!SVN_IS_VALID_REVNUM(entry->cmt_rev)
-              && original_repos_relpath == NULL)
+              && scanned_original_relpath == NULL)
             {
               /* There is NOT a last-changed revision (last-changed date and
                  author may be unknown, but we can always check the rev).
@@ -850,106 +854,146 @@ read_entries_new(apr_hash_t **result_entries,
 
               /* Copied nodes need to mirror their copyfrom_rev, if they
                  don't have a revision of their own already. */
-              if (!SVN_IS_VALID_REVNUM(entry->revision))
+              if (!SVN_IS_VALID_REVNUM(entry->revision)
+                  || entry->revision == 0 /* added */)
                 entry->revision = original_revision;
             }
 
           /* Does this node have copyfrom_* information?  */
-          if (original_repos_relpath != NULL)
+          if (scanned_original_relpath != NULL)
             {
-              const char *parent_abspath;
-              svn_boolean_t set_copyfrom = TRUE;
-              svn_error_t *err;
-              const char *op_root_abspath;
-              const char *parent_repos_relpath;
-              const char *parent_root_url;
+              svn_boolean_t is_copied_child;
+              svn_boolean_t is_mixed_rev = FALSE;
 
               SVN_ERR_ASSERT(work_status == svn_wc__db_status_copied);
 
-              /* When we insert entries into the database, we will construct
-                 additional copyfrom records for mixed-revision copies. The
-                 old entries would simply record the different revision in
-                 the entry->revision field. That is not available within
-                 wc-ng, so additional copies are made (see the logic inside
-                 write_entry()). However, when reading these back *out* of
-                 the database, the additional copies look like new "Added"
-                 nodes rather than a simple mixed-rev working copy.
+              /* If this node inherits copyfrom information from an
+                 ancestor node, then it must be a copied child.  */
+              is_copied_child = (original_repos_relpath == NULL);
 
-                 That would be a behavior change if we did not compensate.
-                 If there is copyfrom information for this node, then the
-                 code below looks at the parent to detect if it *also* has
-                 copyfrom information, and if the copyfrom_url would align
-                 properly. If it *does*, then we omit storing copyfrom_url
-                 and copyfrom_rev (ie. inherit the copyfrom info like a
-                 normal child), and update entry->revision with the
-                 copyfrom_rev in order to (re)create the mixed-rev copied
-                 subtree that was originally presented for storage.  */
-
-              /* Get the copyfrom information from our parent.
-
-                 Note that the parent could be added/copied/moved-here. There
-                 is no way for it to be deleted/moved-away and have *this*
-                 node appear as copied.  */
-              parent_abspath = svn_dirent_dirname(entry_abspath, iterpool);
-              err = svn_wc__db_scan_addition(NULL,
-                                             &op_root_abspath,
-                                             NULL, NULL, NULL,
-                                             &parent_repos_relpath,
-                                             &parent_root_url,
-                                             NULL, NULL,
-                                             db,
-                                             parent_abspath,
-                                             iterpool, iterpool);
-              if (err)
+              /* If this node has copyfrom information on it, then it may
+                 be an actual copy-root, or it could be participating in
+                 a mixed-revision copied tree. So if we don't already know
+                 this is a copied child, then we need to look for this
+                 mixed-revision situation.  */
+              if (!is_copied_child)
                 {
-                  if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-                    return svn_error_return(err);
-                  svn_error_clear(err);
-                }
-              else if (parent_root_url != NULL
-                       && strcmp(original_root_url, parent_root_url) == 0)
-                {
-                  const char *relpath_to_entry = svn_dirent_is_child(
-                    op_root_abspath, entry_abspath, NULL);
-                  const char *entry_repos_relpath = svn_relpath_join(
-                    parent_repos_relpath, relpath_to_entry, iterpool);
+                  const char *parent_abspath;
+                  svn_error_t *err;
+                  const char *parent_repos_relpath;
+                  const char *parent_root_url;
 
-                  /* The copyfrom repos roots matched.
+                  /* When we insert entries into the database, we will
+                     construct additional copyfrom records for mixed-revision
+                     copies. The old entries would simply record the different
+                     revision in the entry->revision field. That is not
+                     available within wc-ng, so additional copies are made
+                     (see the logic inside write_entry()). However, when
+                     reading these back *out* of the database, the additional
+                     copies look like new "Added" nodes rather than a simple
+                     mixed-rev working copy.
 
-                     Now we look to see if the copyfrom path of the parent
-                     would align with our own path. If so, then it means
-                     this copyfrom was spontaneously created and inserted
-                     for mixed-rev purposes and can be eliminated without
-                     changing the semantics of a mixed-rev copied subtree.
+                     That would be a behavior change if we did not compensate.
+                     If there is copyfrom information for this node, then the
+                     code below looks at the parent to detect if it *also* has
+                     copyfrom information, and if the copyfrom_url would align
+                     properly. If it *does*, then we omit storing copyfrom_url
+                     and copyfrom_rev (ie. inherit the copyfrom info like a
+                     normal child), and update entry->revision with the
+                     copyfrom_rev in order to (re)create the mixed-rev copied
+                     subtree that was originally presented for storage.  */
 
-                     See notes/api-errata/wc003.txt for some additional
-                     detail, and potential issues.  */
-                  if (strcmp(entry_repos_relpath, original_repos_relpath) == 0)
+                  /* Get the copyfrom information from our parent.
+
+                     Note that the parent could be added/copied/moved-here.
+                     There is no way for it to be deleted/moved-away and
+                     have *this* node appear as copied.  */
+                  parent_abspath = svn_dirent_dirname(entry_abspath, iterpool);
+                  err = svn_wc__db_scan_addition(NULL,
+                                                 &op_root_abspath,
+                                                 NULL, NULL, NULL,
+                                                 &parent_repos_relpath,
+                                                 &parent_root_url,
+                                                 NULL, NULL,
+                                                 db,
+                                                 parent_abspath,
+                                                 iterpool, iterpool);
+                  if (err)
                     {
-                      /* Don't set the copyfrom_url and clear out the
-                         copyfrom_rev. Thus, this node becomes a child
-                         of a copied subtree (rather than its own root).  */
-                      set_copyfrom = FALSE;
-                      entry->copyfrom_rev = SVN_INVALID_REVNUM;
+                      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+                        return svn_error_return(err);
+                      svn_error_clear(err);
+                    }
+                  else if (parent_root_url != NULL
+                           && strcmp(original_root_url, parent_root_url) == 0)
+                    {
+                      const char *relpath_to_entry = svn_dirent_is_child(
+                        op_root_abspath, entry_abspath, NULL);
+                      const char *entry_repos_relpath = svn_relpath_join(
+                        parent_repos_relpath, relpath_to_entry, iterpool);
 
-                      /* Children in a copied subtree are schedule normal
-                         since we don't plan to actually *do* anything with
-                         them. Their operation is implied by ancestors.  */
-                      entry->schedule = svn_wc_schedule_normal;
+                      /* The copyfrom repos roots matched.
 
-                      /* And *finally* we turn this entry into the mixed
-                         revision node that it was intended to be. This
-                         node's revision is taken from the copyfrom record
-                         that we spontaneously constructed.  */
-                      entry->revision = original_revision;
+                         Now we look to see if the copyfrom path of the parent
+                         would align with our own path. If so, then it means
+                         this copyfrom was spontaneously created and inserted
+                         for mixed-rev purposes and can be eliminated without
+                         changing the semantics of a mixed-rev copied subtree.
+
+                         See notes/api-errata/wc003.txt for some additional
+                         detail, and potential issues.  */
+                      if (strcmp(entry_repos_relpath,
+                                 original_repos_relpath) == 0)
+                        {
+                          is_copied_child = TRUE;
+                          is_mixed_rev = TRUE;
+                        }
                     }
                 }
 
-              if (set_copyfrom)
-                entry->copyfrom_url =
-                  svn_path_url_add_component2(original_root_url,
-                                              original_repos_relpath,
-                                              result_pool);
+              if (is_copied_child)
+                {
+                  /* We won't be settig the  copyfrom_url, yet need to
+                     clear out the copyfrom_rev. Thus, this node becomes a
+                     child of a copied subtree (rather than its own root).  */
+                  entry->copyfrom_rev = SVN_INVALID_REVNUM;
+
+                  /* Children in a copied subtree are schedule normal
+                     since we don't plan to actually *do* anything with
+                     them. Their operation is implied by ancestors.  */
+                  entry->schedule = svn_wc_schedule_normal;
+
+                  /* And *finally* we turn this entry into the mixed
+                     revision node that it was intended to be. This
+                     node's revision is taken from the copyfrom record
+                     that we spontaneously constructed.  */
+                  if (is_mixed_rev)
+                    entry->revision = original_revision;
+                }
+              else if (original_repos_relpath != NULL)
+                {
+                  entry->copyfrom_url =
+                    svn_path_url_add_component2(original_root_url,
+                                                original_repos_relpath,
+                                                result_pool);
+                }
+              else
+                {
+                  /* NOTE: if original_repos_relpath == NULL, then the
+                     second call to scan_addition() will not have occurred.
+                     Thus, this use of OP_ROOT_ABSPATH still contains the
+                     original value where we fetched a value for
+                     SCANNED_REPOS_RELPATH.  */
+                  const char *relpath_to_entry = svn_dirent_is_child(
+                    op_root_abspath, entry_abspath, NULL);
+                  const char *entry_repos_relpath = svn_relpath_join(
+                    scanned_original_relpath, relpath_to_entry, iterpool);
+
+                  entry->copyfrom_url =
+                    svn_path_url_add_component2(original_root_url,
+                                                entry_repos_relpath,
+                                                result_pool);
+                }
             }
         }
       else if (status == svn_wc__db_status_not_present)
