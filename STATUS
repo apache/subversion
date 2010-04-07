@@ -137,7 +137,7 @@ Candidate changes:
          going to cause problems elsewhere, see
          http://svn.haxx.se/dev/archive-2010-04/0089.shtml)
 
- * r931209, r931211
+ * r931209, r931211, r931392
    Fixes related to the partial resolution of issue #3242 already backported
    here.
    Justification:
@@ -151,6 +151,7 @@ Candidate changes:
      r931211 is the backport of changes required to ensure that the client
        queries the correct URL when looking up mergeinfo in certain cases
        (primarily 'svn mergeinfo URL ...')
+     r931392 fixes a comment.
    Votes:
      +1: cmpilato
 
