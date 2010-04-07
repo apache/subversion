@@ -939,7 +939,7 @@ struct file_baton
 
   /* The path to the current text base, if any.
      This gets set if there are file content changes. */
-  const char *text_base_path;
+  const char *text_base_abspath;
 
   /* The path to the incoming text base (that is, to a text-base-file-
      in-progress in the tmp area).  This gets set if there are file
@@ -958,14 +958,14 @@ struct file_baton
 
   /* If this file was added with history, this is the path to a copy
      of the text base of the copyfrom file (in the temporary area). */
-  const char *copied_text_base;
+  const char *copied_text_base_abspath;
 
   /* If this file was added with history, this is the MD5 checksum of the
-     text base (see copied_text_base). May be NULL if unknown. */
+     text base (see copied_text_base_abspath). May be NULL if unknown. */
   svn_checksum_t *md5_copied_base_checksum;
 
   /* If this file was added with history, this is the SHA-1 checksum of
-     the text base (see copied_text_base). May be NULL if unknown. */
+     the text base (see copied_text_base_abspath). May be NULL if unknown. */
   svn_checksum_t *sha1_copied_base_checksum;
 
   /* If this file was added with history, and the copyfrom had local
@@ -3433,7 +3433,8 @@ add_file_with_history(const char *path,
     SVN_ERR(err);
 
   /* Open the text base for writing (this will get us a temporary file).  */
-  SVN_ERR(svn_wc__open_writable_base(&copied_stream, &tfb->copied_text_base,
+  SVN_ERR(svn_wc__open_writable_base(&copied_stream,
+                                     &tfb->copied_text_base_abspath,
                                      db, pb->local_abspath,
                                      pool, pool));
 #ifdef SVN_EXPERIMENTAL
@@ -3991,7 +3992,7 @@ apply_textdelta(void *file_baton,
      text base hasn't been corrupted, and that its checksum
      matches the expected base checksum. */
 
-  SVN_ERR(choose_base_paths(&fb->text_base_path,
+  SVN_ERR(choose_base_paths(&fb->text_base_abspath,
                             &checksum, &replaced,
                             fb->edit_baton->db, fb->local_abspath,
                             fb->pool, pool));
@@ -4042,8 +4043,8 @@ apply_textdelta(void *file_baton,
     }
   else
     {
-      if (fb->copied_text_base)
-        SVN_ERR(svn_stream_open_readonly(&source, fb->copied_text_base,
+      if (fb->copied_text_base_abspath)
+        SVN_ERR(svn_stream_open_readonly(&source, fb->copied_text_base_abspath,
                                          handler_pool, handler_pool));
       else
         source = svn_stream_empty(handler_pool);
@@ -4495,10 +4496,10 @@ merge_file(svn_stringbuf_t **log_accum,
                                              pool, pool));
                   delete_left = TRUE;
                 }
-              else if (fb->copied_text_base)
-                merge_left = fb->copied_text_base;
+              else if (fb->copied_text_base_abspath)
+                merge_left = fb->copied_text_base_abspath;
               else
-                merge_left = fb->text_base_path;
+                merge_left = fb->text_base_abspath;
 
               /* Merge the changes from the old textbase to the new
                  textbase into the file we're updating.
@@ -4606,7 +4607,7 @@ merge_file(svn_stringbuf_t **log_accum,
   if (new_text_base_abspath)
     {
       SVN_ERR(install_text_base(log_accum, pb->local_abspath,
-                                new_text_base_abspath, fb->text_base_path,
+                                new_text_base_abspath, fb->text_base_abspath,
                                 pool, pool));
       tmp_entry.checksum = svn_checksum_to_cstring(actual_checksum, pool);
       flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
@@ -4784,21 +4785,19 @@ close_file(void *file_baton,
   /* Was this an add-with-history, with no apply_textdelta? */
   if (fb->added_with_history && ! fb->received_textdelta)
     {
-      SVN_ERR_ASSERT(! fb->text_base_path && ! fb->new_text_base_abspath
-                     && fb->copied_text_base);
+      SVN_ERR_ASSERT(! fb->text_base_abspath && ! fb->new_text_base_abspath
+                     && fb->copied_text_base_abspath);
 
       /* Set up the base paths like apply_textdelta does. */
-      SVN_ERR(choose_base_paths(&fb->text_base_path,
+      SVN_ERR(choose_base_paths(&fb->text_base_abspath,
                                 NULL, NULL,
                                 eb->db, fb->local_abspath,
                                 fb->pool, pool));
 
       md5_actual_checksum = fb->md5_copied_base_checksum;
       sha1_actual_checksum = fb->sha1_copied_base_checksum;
-      new_base_abspath = fb->copied_text_base;
-      if (new_base_abspath)
-        SVN_ERR(svn_dirent_get_absolute(&new_base_abspath, new_base_abspath,
-                                        pool));
+      new_base_abspath = fb->copied_text_base_abspath;
+      SVN_ERR_ASSERT(! new_base_abspath || svn_dirent_is_absolute(new_base_abspath));
     }
   else
     {
@@ -4967,12 +4966,12 @@ close_file(void *file_baton,
     }
 
   /* Clean up any temporary files.  */
-  if (fb->copied_text_base)
+  if (fb->copied_text_base_abspath)
     {
       const svn_skel_t *work_item;
 
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                           eb->db, fb->copied_text_base,
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
+                                           fb->copied_text_base_abspath,
                                            pool, pool));
       SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
                                 work_item, pool));
