@@ -92,7 +92,10 @@ dnl   now generating errors instead of silently ignoring
 dnl   them.  Only .7 and later can guarantee repository
 dnl   integrity with FSFS.
 
-APR_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
+dnl APR 1.4.x is currently broken on OS X; see APR issue 48476 for
+dnl the details.
+
+APR_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\.[0-3]\."]
 APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
 
 SVN_LIB_APR($APR_VER_REGEXES)

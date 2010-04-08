@@ -334,7 +334,7 @@ def textual_merges_galore(sbox):
   other_rho_text = ""
   for x in range(1,10):
     other_rho_text = other_rho_text + 'Unobtrusive line ' + repr(x) + ' in rho\n'
-  current_other_rho_text = svntest.main.file_read(other_rho_path)
+  current_other_rho_text = open(other_rho_path).read()
   svntest.main.file_write(other_rho_path,
                           other_rho_text + current_other_rho_text)
 
@@ -897,6 +897,9 @@ def merge_catches_nonexistent_target(sbox):
     'A/D/Q/tau'     : Item(status='  ', wc_rev=2),
     'A/D/Q/newfile' : Item(status='  ', wc_rev=2),
     })
+  ### right now, we cannot denote that Q/newfile is a local-add rather than
+  ### a child of the A/D/Q copy. thus, it appears in the status output as a
+  ### (M)odified child.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -1547,8 +1550,7 @@ def merge_binary_file(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a binary file to the project
-  theta_contents = svntest.main.file_read(
-    os.path.join(sys.path[0], "theta.bin"), 'rb')
+  theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
   # Write PNG file data into 'A/theta'.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
   svntest.main.file_write(theta_path, theta_contents, 'wb')
@@ -1639,8 +1641,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
                                      "-m", "Creating copy-of-A")
 
   # Add a binary file to the WC.
-  theta_contents = svntest.main.file_read(
-    os.path.join(sys.path[0], "theta.bin"), 'rb')
+  theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
   # Write PNG file data into 'A/theta'.
   A_path = os.path.join(wc_dir, 'A')
   theta_path = os.path.join(wc_dir, 'A', 'theta')
@@ -2292,8 +2293,7 @@ def merge_binary_with_common_ancestry(sbox):
   svntest.main.run_svn(None, 'mkdir', I_path)
 
   # Add a binary file to the common ancestry path
-  theta_contents = svntest.main.file_read(
-    os.path.join(sys.path[0], "theta.bin"), 'rb')
+  theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
   theta_I_path = os.path.join(I_path, 'theta')
   svntest.main.file_write(theta_I_path, theta_contents)
   svntest.main.run_svn(None, 'add', theta_I_path)
@@ -18820,7 +18820,7 @@ test_list = [ None,
               merge_with_implicit_target_using_r,
               merge_with_implicit_target_using_c,
               merge_with_implicit_target_and_revs,
-              SkipUnless(merge_catches_nonexistent_target,
+              SkipUnless(XFail(merge_catches_nonexistent_target),
                          server_has_mergeinfo),
               SkipUnless(merge_tree_deleted_in_target,
                          server_has_mergeinfo),

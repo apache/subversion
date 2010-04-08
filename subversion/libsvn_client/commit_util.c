@@ -1412,7 +1412,8 @@ do_item_commit(void **dir_baton,
                                  parent_baton, pool);
 
       if (err)
-        return fixup_out_of_date_error(path, item->kind, err);
+        return svn_error_return(fixup_out_of_date_error(path, item->kind,
+                                                        err));
     }
 
   /* If this item is supposed to be added, do so. */
@@ -1471,7 +1472,8 @@ do_item_commit(void **dir_baton,
                                       file_pool, &file_baton);
 
               if (err)
-                return fixup_out_of_date_error(path, kind, err);
+                return svn_error_return(fixup_out_of_date_error(path, kind,
+                                                                err));
             }
         }
       else
@@ -1502,7 +1504,7 @@ do_item_commit(void **dir_baton,
               (kind == svn_node_dir) ? *dir_baton : file_baton, pool);
 
       if (err)
-        return fixup_out_of_date_error(path, kind, err);
+        return svn_error_return(fixup_out_of_date_error(path, kind, err));
 
       SVN_ERR(svn_wc_transmit_prop_deltas2(
                 ctx->wc_ctx, local_abspath, editor,
@@ -1548,7 +1550,8 @@ do_item_commit(void **dir_baton,
                                     file_pool, &file_baton);
 
           if (err)
-            return fixup_out_of_date_error(path, item->kind, err);
+            return svn_error_return(fixup_out_of_date_error(path, item->kind,
+                                                            err));
         }
 
       /* Add this file mod to the FILE_MODS hash. */

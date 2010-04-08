@@ -371,8 +371,8 @@ parse_next_hunk(svn_hunk_t **hunk,
               hunk_seen = TRUE;
               changed_line_seen = TRUE;
 
-              /* A hunk may have context in the middle. We only want the
-                 last lines of context. */
+              /* A hunk may have context in the middle. We only want
+                 trailing lines of context. */
               if (trailing_context > 0)
                 trailing_context = 0;
 
@@ -383,8 +383,8 @@ parse_next_hunk(svn_hunk_t **hunk,
               hunk_seen = TRUE;
               changed_line_seen = TRUE;
 
-              /* A hunk may have context in the middle. We only want the
-                 last lines of context. */
+              /* A hunk may have context in the middle. We only want
+                 trailing lines of context. */
               if (trailing_context > 0)
                 trailing_context = 0;
 

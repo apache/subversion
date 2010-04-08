@@ -206,10 +206,10 @@ test_args_to_target_array(apr_pool_t *pool)
 
 
 /* A helper function for test_patch().
- * It compares a patched or reject file against expected content.
- * It also deletes the file if the check was successful. */
+ * It compares a patched or reject file against expected content using the
+ *  specified EOL. It also deletes the file if the check was successful. */
 static svn_error_t *
-check_patch_result(const char *path, const char **expected_lines,
+check_patch_result(const char *path, const char **expected_lines, const char *eol,
                    int num_expected_lines, apr_pool_t *pool)
 {
   svn_stream_t *stream;
@@ -226,7 +226,7 @@ check_patch_result(const char *path, const char **expected_lines,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_stream_readline(stream, &line, APR_EOL_STR, &eof, pool));
+      SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
       if (i < num_expected_lines)
         if (strcmp(expected_lines[i++], line->data) != 0)
           return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -357,14 +357,14 @@ test_patch(const svn_test_opts_t *opts,
   key = "A/D/gamma";
   patched_tempfile_path = apr_hash_get(patched_tempfiles, key,
                                        APR_HASH_KEY_STRING);
-  SVN_ERR(check_patch_result(patched_tempfile_path, expected_gamma,
+  SVN_ERR(check_patch_result(patched_tempfile_path, expected_gamma, "\n",
                              EXPECTED_GAMMA_LINES, pool));
   SVN_ERR_ASSERT(apr_hash_count(reject_tempfiles) == 1);
   key = "A/D/gamma";
   reject_tempfile_path = apr_hash_get(reject_tempfiles, key,
                                      APR_HASH_KEY_STRING);
   SVN_ERR(check_patch_result(reject_tempfile_path, expected_gamma_reject,
-                             EXPECTED_GAMMA_REJECT_LINES, pool));
+                             APR_EOL_STR, EXPECTED_GAMMA_REJECT_LINES, pool));
 
   return SVN_NO_ERROR;
 }
