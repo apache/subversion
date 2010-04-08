@@ -3856,7 +3856,7 @@ open_file(const char *path,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               eb->db, fb->local_abspath, FALSE, subpool));
+                               eb->db, fb->local_abspath, subpool, subpool));
 
   /* Is this path a conflict victim? */
   SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
