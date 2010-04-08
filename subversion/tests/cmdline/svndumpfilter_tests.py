@@ -74,7 +74,7 @@ def reflect_dropped_renumbered_revs(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'with_merges.dump')
-  dumpfile = svntest.main.file_read(dumpfile_location)
+  dumpfile = open(dumpfile_location).read()
 
   filtered_out = filter_and_return_output(dumpfile, "include",
                                           "trunk", "branch1",
@@ -124,7 +124,7 @@ def svndumpfilter_loses_mergeinfo(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'with_merges.dump')
-  dumpfile = svntest.main.file_read(dumpfile_location)
+  dumpfile = open(dumpfile_location).read()
 
   filtered_out = filter_and_return_output(dumpfile, "include",
                                           "trunk", "branch1", "--quiet")
@@ -203,7 +203,7 @@ def dumpfilter_with_targets(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'greek_tree.dump')
-  dumpfile = svntest.main.file_read(dumpfile_location)
+  dumpfile = open(dumpfile_location).read()
 
   (fd, targets_file) = tempfile.mkstemp(dir=svntest.main.temp_dir)
   try:
@@ -226,7 +226,7 @@ def dumpfilter_with_patterns(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'greek_tree.dump')
-  dumpfile = svntest.main.file_read(dumpfile_location)
+  dumpfile = open(dumpfile_location).read()
   _simple_dumpfilter_test(sbox, dumpfile,
                           'exclude', '--pattern', '/A/D/[GH]*', '/A/[B]/E*')
 

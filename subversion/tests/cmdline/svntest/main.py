@@ -693,25 +693,11 @@ def file_write(path, contents, mode='w'):
   which is (w)rite by default."""
   open(path, mode).write(contents)
 
-# For reading the contents of a file
-def file_read(path, mode = 'r'):
-  """Return the contents of the file at PATH, opening file using MODE,
-  which is (r)ead by default."""
-  fp = open(path, mode)
-  contents = fp.read()
-  fp.close()
-  return contents
-
 # For replacing parts of contents in an existing file, with new content.
 def file_substitute(path, contents, new_contents):
   """Replace the CONTENTS in the file at PATH using the NEW_CONTENTS"""
-  fp = open(path, 'r')
-  fcontent = fp.read()
-  fp.close()
-  fcontent = fcontent.replace(contents, new_contents)
-  fp = open(path, 'w')
-  fp.write(fcontent)
-  fp.close()
+  fcontent = open(path, 'r').replace(contents, new_contents)
+  open(path, 'w').write(fcontent)
 
 # For creating blank new repositories
 def create_repos(path):
@@ -770,7 +756,7 @@ def create_repos(path):
 
       # read it
       format_file_path = get_fsfs_format_file_path(path)
-      contents = file_read(format_file_path, 'rb')
+      contents = open(format_file_path, 'rb').read()
 
       # tweak it
       new_contents = "".join([transform_line(line) + "\n"
@@ -878,7 +864,7 @@ def canonicalize_url(input):
     return input
 
 
-def create_python_hook_script (hook_path, hook_script_code):
+def create_python_hook_script(hook_path, hook_script_code):
   """Create a Python hook script at HOOK_PATH with the specified
      HOOK_SCRIPT_CODE."""
 
@@ -886,14 +872,14 @@ def create_python_hook_script (hook_path, hook_script_code):
     # Use an absolute path since the working directory is not guaranteed
     hook_path = os.path.abspath(hook_path)
     # Fill the python file.
-    file_write ("%s.py" % hook_path, hook_script_code)
+    file_write("%s.py" % hook_path, hook_script_code)
     # Fill the batch wrapper file.
-    file_append ("%s.bat" % hook_path,
-                 "@\"%s\" %s.py %%*\n" % (sys.executable, hook_path))
+    file_append("%s.bat" % hook_path,
+                "@\"%s\" %s.py %%*\n" % (sys.executable, hook_path))
   else:
     # For all other platforms
-    file_write (hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
-    os.chmod (hook_path, 0755)
+    file_write(hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
+    os.chmod(hook_path, 0755)
 
 def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
   "Create a restrictive authz file ( no anynomous access )."

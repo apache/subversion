@@ -287,7 +287,7 @@ def run_and_verify_dump(repo_dir):
 def load_repo(sbox, dumpfile_path = None, dump_str = None):
   "Loads the dumpfile into sbox"
   if not dump_str:
-    dump_str = main.file_read(dumpfile_path, "rb")
+    dump_str = open(dumpfile_path, "rb").read()
 
   # Create a virgin repos and working copy
   main.safe_rmtree(sbox.repo_dir, 1)

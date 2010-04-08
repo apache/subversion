@@ -573,7 +573,7 @@ def eol_change_is_text_mod(sbox):
                                      'ci', '-m', 'log msg', foo_path)
 
   # check 2: do the files have the right contents now?
-  contents = svntest.main.file_read(foo_path, 'rb')
+  contents = open(foo_path, 'rb').read()
   if svntest.main.windows:
     if contents != "1\n2\n3\n4\n5\n6\n7\n8\n9\n":
       raise svntest.Failure
@@ -583,7 +583,7 @@ def eol_change_is_text_mod(sbox):
 
   foo_base_path = os.path.join(wc_dir, svntest.main.get_admin_name(),
                                'text-base', 'foo.svn-base')
-  base_contents = svntest.main.file_read(foo_base_path, 'rb')
+  base_contents = open(foo_base_path, 'rb').read()
   if contents != base_contents:
     raise svntest.Failure
 
@@ -759,7 +759,7 @@ def propset_commit_checkout_nocrash(sbox):
                                      sbox.repo_url,
                                      other_wc_dir)
 
-  mu_other_contents = svntest.main.file_read(mu_other_path)
+  mu_other_contents = open(mu_other_path).read()
   if mu_other_contents != "This is the file 'mu'.\n$Rev: 3 $":
     print("'%s' does not have the expected contents" % mu_other_path)
     raise svntest.Failure
