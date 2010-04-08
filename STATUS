@@ -131,11 +131,7 @@ Candidate changes:
      Windows, which has been failing over ra_local since r923779 (the
      reintegration of the 1.6.x-issue-3242-partial branch).
    Votes:
-     +1: rhuijben
-     -0: pburba (I haven't found any problems, but I can't say with confidence
-         that the changes this makes to svn_io_check_path()'s behavior are not
-         going to cause problems elsewhere, see
-         http://svn.haxx.se/dev/archive-2010-04/0089.shtml) (without r931568)
+     +1: rhuijben, pburba
 
  * r931209, r931211, r931392
    Fixes related to the partial resolution of issue #3242 already backported
