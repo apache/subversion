@@ -4257,6 +4257,7 @@ install_text_base(svn_stringbuf_t **log_accum,
 static svn_error_t *
 merge_file(svn_stringbuf_t **log_accum,
            svn_boolean_t *install_pristine,
+           const char **install_from,
            svn_wc_notify_state_t *content_state,
            const svn_wc_entry_t *entry,
            struct file_baton *fb,
@@ -4297,6 +4298,7 @@ merge_file(svn_stringbuf_t **log_accum,
 #endif
 
   *install_pristine = FALSE;
+  *install_from = NULL;
 
   /* Start by splitting the file path, getting an access baton for the parent,
      and an entry for the file if any. */
@@ -4422,18 +4424,24 @@ merge_file(svn_stringbuf_t **log_accum,
                  even if the file is not modified compared to the (non-revert)
                  text-base. */
 
-              /* ### don't do the new-style install just yet. it appears
-                 ### to break most of the externals_tests.  */
-#if 0
               *install_pristine = TRUE;
-#else
-              SVN_ERR(svn_wc__loggy_copy(log_accum,
-                                         pb->local_abspath,
-                                         new_text_base_abspath,
-                                         fb->local_abspath, pool, pool));
-              SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
-                                      pool);
-#endif
+
+              /* ### sheesh. for file externals, there is a WORKING_NODE
+                 ### row (during this transitional state), which means the
+                 ### node is reported as "replaced". further, this means
+                 ### that the text base will be dropped into the "revert
+                 ### base". even after everything stabilizes, the file
+                 ### external's base will continue to reside in the revert
+                 ### base, but the rest of libsvn_wc appears to compensate
+                 ### for this fact (even tho it is schedule_normal!!).
+                 ### in any case, let's do the working copy file install
+                 ### from the revert base for file externals.  */
+              if (entry && entry->file_external_path)
+                {
+                  SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_replace);
+                  SVN_ERR(svn_wc__text_revert_path(install_from, eb->db,
+                                                   fb->local_abspath, pool));
+                }
             }
         }
       else   /* working file or obstruction is locally modified... */
@@ -4777,6 +4785,7 @@ close_file(void *file_baton,
   apr_array_header_t *regular_props;
   const svn_wc_entry_t *entry;
   svn_boolean_t install_pristine;
+  const char *install_from;
 
   if (fb->skip_this)
     {
@@ -4950,7 +4959,7 @@ close_file(void *file_baton,
                                         pool));
 
   /* Do the hard work. This will queue some additional work.  */
-  SVN_ERR(merge_file(&delayed_log_accum, &install_pristine,
+  SVN_ERR(merge_file(&delayed_log_accum, &install_pristine, &install_from,
                      &content_state, entry,
                      fb, new_base_abspath, md5_actual_checksum,
                      pool));
@@ -4979,7 +4988,7 @@ close_file(void *file_baton,
       SVN_ERR(svn_wc__wq_build_file_install(&work_item,
                                             eb->db,
                                             fb->local_abspath,
-                                            NULL,
+                                            install_from,
                                             eb->use_commit_times,
                                             TRUE /* record_fileinfo */,
                                             pool, pool));
@@ -4988,6 +4997,21 @@ close_file(void *file_baton,
     }
 
   /* Clean up any temporary files.  */
+#if 0
+  /* ### can't really use this now. INSTALL_FROM might refer to the
+     ### revert-base for file externals. (sigh)  once that is fixed,
+     ### then this will be handy for other cases.  */
+  if (install_from != NULL)
+    {
+      const svn_skel_t *work_item;
+
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
+                                           install_from,
+                                           pool, pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
+                                work_item, pool));
+    }
+#endif
   if (fb->copied_text_base_abspath)
     {
       const svn_skel_t *work_item;
