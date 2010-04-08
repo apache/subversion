@@ -415,6 +415,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
  *
  * @a pool is used only for local processing, it is not used for the batons.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
                     svn_wc_adm_access_t *associated,
@@ -428,6 +429,7 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
  * svn_wc_adm_retrieve() with @a path replaced by the parent directory of
  * @a path.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
                           svn_wc_adm_access_t *associated,
@@ -512,6 +514,7 @@ svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
  *
  * @since New in 1.6
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_close2(svn_wc_adm_access_t *adm_access,
                   apr_pool_t *scratch_pool);
@@ -527,10 +530,12 @@ svn_error_t *
 svn_wc_adm_close(svn_wc_adm_access_t *adm_access);
 
 /** Return the path used to open the access baton @a adm_access */
+SVN_DEPRECATED
 const char *
 svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access);
 
 /** Return the pool used by access baton @a adm_access */
+SVN_DEPRECATED
 apr_pool_t *
 svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access);
 
@@ -5036,7 +5041,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
  * @since New in 1.6.
  * @deprecated Provided for compatibility with the 1.6 API.
  */
-SVN_DEPRECATED svn_error_t *
+SVN_DEPRECATED
+svn_error_t *
 svn_wc_crawl_revisions4(const char *path,
                         svn_wc_adm_access_t *adm_access,
                         const svn_ra_reporter3_t *reporter,
@@ -5058,6 +5064,7 @@ svn_wc_crawl_revisions4(const char *path,
  *
  * @deprecated Provided for compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_crawl_revisions3(const char *path,
                         svn_wc_adm_access_t *adm_access,
@@ -6966,6 +6973,7 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
  * @since New in 1.4.
  * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_transmit_text_deltas2(const char **tempfile,
                              unsigned char digest[],
