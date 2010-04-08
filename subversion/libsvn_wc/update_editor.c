@@ -3149,13 +3149,10 @@ absent_directory(const char *path,
 /* Set *TEE_OUTPUT_STREAM to a writable stream that copies its data to both
    OUTPUT_STREAM and a new WC-NG pristine temp file corresponding to (DB,
    LOCAL_ABSPATH). Set *NEW_PRISTINE_TMP_ABSPATH to the path of that file.
-   Arrange that, on stream closure, *NEW_PRISTINE_SHA1_CHECKSUM will be set
-   to the SHA-1 checksum of that file.
  */
 static svn_error_t *
 get_pristine_tee_stream(svn_stream_t **tee_output_stream,
                         const char **new_pristine_tmp_abspath,
-                        svn_checksum_t **new_pristine_sha1_checksum,
                         svn_wc__db_t *db,
                         const char *local_abspath,
                         svn_stream_t *output_stream,
@@ -3171,10 +3168,6 @@ get_pristine_tee_stream(svn_stream_t **tee_output_stream,
   SVN_ERR(svn_stream_open_unique(&pristine_temp, new_pristine_tmp_abspath,
                                  pristine_tempdir, svn_io_file_del_none,
                                  result_pool, scratch_pool));
-  pristine_temp = svn_stream_checksummed2(pristine_temp, NULL,
-                                          new_pristine_sha1_checksum,
-                                          svn_checksum_sha1, TRUE,
-                                          result_pool);
 
   *tee_output_stream = svn_stream_tee(output_stream, pristine_temp,
                                       result_pool);
@@ -3436,23 +3429,19 @@ add_file_with_history(const char *path,
   /* Open the text base for writing (this will get us a temporary file).  */
   SVN_ERR(svn_wc__open_writable_base(&copied_stream,
                                      &tfb->copied_text_base_abspath,
+  /* Compute an MD5 checksum for the stream as we write stuff into it.
+     ### this is temporary. in many cases, we already *know* the checksum
+     ### since it is a copy. */
+                                     &tfb->copied_text_base_md5_checksum,
+                                     &tfb->copied_text_base_sha1_checksum,
                                      db, pb->local_abspath,
                                      pool, pool));
 #ifdef SVN_EXPERIMENTAL
   /* Copy the 'copied_stream' into a WC-NG pristine temp file as well. */
   SVN_ERR(get_pristine_tee_stream(&copied_stream, &tfb->new_pristine_tmp_abspath,
-                                  &tfb->copied_text_base_sha1_checksum, db,
-                                  tfb->local_abspath, copied_stream,
+                                  db, tfb->local_abspath, copied_stream,
                                   pool, subpool));
 #endif
-
-  /* Compute a checksum for the stream as we write stuff into it.
-     ### this is temporary. in many cases, we already *know* the checksum
-     ### since it is a copy. */
-  copied_stream = svn_stream_checksummed2(
-                                copied_stream,
-                                NULL, &tfb->copied_text_base_md5_checksum,
-                                svn_checksum_md5, FALSE, pool);
 
   if (src_local_abspath != NULL) /* Found a file to copy */
     {
@@ -4072,6 +4061,7 @@ apply_textdelta(void *file_baton,
 
   /* Open the text base for writing (this will get us a temporary file).  */
   err = svn_wc__open_writable_base(&target, &hb->new_text_base_tmp_abspath,
+                                   NULL, &hb->new_text_base_sha1_checksum,
                                    fb->edit_baton->db, fb->local_abspath,
                                    handler_pool, pool);
   if (err)
@@ -4084,7 +4074,6 @@ apply_textdelta(void *file_baton,
   /* Copy the 'target' stream into a WC-NG pristine temp file as well.
      ###: This is currently tee'd for compat. */
   SVN_ERR(get_pristine_tee_stream(&target, &hb->new_pristine_tmp_abspath,
-                                  &hb->new_text_base_sha1_checksum,
                                   fb->edit_baton->db, fb->local_abspath,
                                   target, handler_pool, pool));
 #endif
@@ -5931,11 +5920,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
      can refer to it. Compute its checksum as we copy. */
   SVN_ERR(svn_wc__open_writable_base(&tmp_base_contents,
                                      &tmp_text_base_abspath,
+                                     &base_checksum, NULL,
                                      wc_ctx->db, local_abspath,
                                      pool, pool));
-  new_base_contents = svn_stream_checksummed2(new_base_contents,
-                                              &base_checksum, NULL,
-                                              svn_checksum_md5, TRUE, pool);
   SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
                            cancel_func, cancel_baton,
                            pool));
