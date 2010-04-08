@@ -2604,6 +2604,9 @@ def diff_in_renamed_folder(sbox):
       'A/D/C' : Item(verb='Adding'),
       'A/D/C/kappa' : Item(verb='Adding'),
   })
+  ### right now, we cannot denote that kappa is a local-add rather than a
+  ### child of the A/D/C copy. thus, it appears in the status output as a
+  ### (M)odified child.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         None, None, wc_dir)
 
@@ -3134,7 +3137,7 @@ test_list = [ None,
               diff_weird_author,
               diff_ignore_whitespace,
               diff_ignore_eolstyle,
-              diff_in_renamed_folder,
+              XFail(diff_in_renamed_folder),
               diff_with_depth,
               diff_ignore_eolstyle_empty_lines,
               diff_backward_repos_wc_copy,

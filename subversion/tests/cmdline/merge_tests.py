@@ -897,6 +897,9 @@ def merge_catches_nonexistent_target(sbox):
     'A/D/Q/tau'     : Item(status='  ', wc_rev=2),
     'A/D/Q/newfile' : Item(status='  ', wc_rev=2),
     })
+  ### right now, we cannot denote that Q/newfile is a local-add rather than
+  ### a child of the A/D/Q copy. thus, it appears in the status output as a
+  ### (M)odified child.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -18820,7 +18823,7 @@ test_list = [ None,
               merge_with_implicit_target_using_r,
               merge_with_implicit_target_using_c,
               merge_with_implicit_target_and_revs,
-              SkipUnless(merge_catches_nonexistent_target,
+              SkipUnless(XFail(merge_catches_nonexistent_target),
                          server_has_mergeinfo),
               SkipUnless(merge_tree_deleted_in_target,
                          server_has_mergeinfo),
