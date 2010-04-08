@@ -1351,22 +1351,13 @@ add_target_to_hash_keyed_by_parent_dir(apr_hash_t *targets_to_be_deleted,
  * subdir than B. That means that the path with the most subdirs is placed
  * first. */
 static int
-sort_compare_nr_of_path_elements(const svn_sort__item_t *a, 
-                                 const svn_sort__item_t *b)
+sort_compare_path_component_count(const svn_sort__item_t *a, 
+                                  const svn_sort__item_t *b)
 {
-  const char *astr, *bstr;
-  int n_a = 0, n_b = 0, i;
-  
-  astr = a->key;
-  bstr = b->key;
+  apr_size_t n_a = 0, n_b = 0;
 
-  for (i = 0; i < a->klen; i++)
-    if (astr[i] == '/')
-      n_a++;
-
-  for (i = 0; i < b->klen; i++)
-    if (bstr[i] == '/')
-      n_b++;
+  n_a = svn_path_component_count(a->key);
+  n_b = svn_path_component_count(b->key);
 
   if (n_a > n_b)
     return -1;
@@ -1409,7 +1400,7 @@ condense_deleted_targets(apr_array_header_t **targets, svn_wc_context_t
   /* ... Then we sort the keys to allow us to detect when multiple subdirs
    * should be deleted. */
   sorted_keys = svn_sort__hash(targets_to_be_deleted,
-                               sort_compare_nr_of_path_elements,
+                               sort_compare_path_component_count,
                                scratch_pool);
 
   /* For each directory that contains targets to be deleted determine if the
@@ -1459,7 +1450,7 @@ condense_deleted_targets(apr_array_header_t **targets, svn_wc_context_t
            * path, we're guarenteed that it will be inserted later. We do
            * the sort and just continue our iteration. */
           sorted_keys = svn_sort__hash(targets_to_be_deleted,
-                                       sort_compare_nr_of_path_elements,
+                                       sort_compare_path_component_count,
                                        scratch_pool);
         }
       else
