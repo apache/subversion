@@ -303,9 +303,7 @@ def checkout_with_externals(sbox):
                           "This is the file 'omega'.\n"),
                          (os.path.join(wc_dir, "A", "B", "gamma"),
                           "This is the file 'gamma'.\n")):
-    fp = open(path, 'r')
-    lines = fp.readlines()
-    if not ((len(lines) == 1) and (lines[0] == contents)):
+    if open(path).read() != contents:
       raise svntest.Failure("Unexpected contents for rev 1 of " + path)
 
 #----------------------------------------------------------------------
@@ -566,14 +564,11 @@ def update_receive_change_under_external(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   external_gamma_path = os.path.join(wc_dir, 'A', 'D', 'exdir_A', 'D', 'gamma')
-  fp = open(external_gamma_path, 'r')
-  lines = fp.readlines()
-  if not ((len(lines) == 2)
-          and (lines[0] == "This is the file 'gamma'.\n")
-          and (lines[1] == "New text in other gamma.\n")):
+  contents = open(external_gamma_path).read()
+  if contents != ("This is the file 'gamma'.\n"
+                  "New text in other gamma.\n"):
     raise svntest.Failure("Unexpected contents for externally modified " +
                           external_gamma_path)
-  fp.close()
 
   # Commit more modifications
   other_rho_path = os.path.join(other_wc_dir, 'A', 'D', 'G', 'rho')
@@ -594,14 +589,11 @@ def update_receive_change_under_external(sbox):
                                      'up', os.path.join(wc_dir, "A", "C"))
 
   external_rho_path = os.path.join(wc_dir, 'A', 'C', 'exdir_G', 'rho')
-  fp = open(external_rho_path, 'r')
-  lines = fp.readlines()
-  if not ((len(lines) == 2)
-          and (lines[0] == "This is the file 'rho'.\n")
-          and (lines[1] == "New text in other rho.\n")):
+  contents = open(external_rho_path).read()
+  if contents != ("This is the file 'rho'.\n"
+                  "New text in other rho.\n"):
     raise svntest.Failure("Unexpected contents for externally modified " +
                           external_rho_path)
-  fp.close()
 
 #----------------------------------------------------------------------
 
@@ -745,18 +737,15 @@ def export_with_externals(sbox):
 
   # Pick some files, make sure their contents are as expected.
   exdir_G_pi_path = os.path.join(wc_dir, "A", "C", "exdir_G", "pi")
-  fp = open(exdir_G_pi_path, 'r')
-  lines = fp.readlines()
-  if not ((len(lines) == 2) \
-          and (lines[0] == "This is the file 'pi'.\n") \
-          and (lines[1] == "Added to pi in revision 3.\n")):
+  contents = open(exdir_G_pi_path).read()
+  if contents != ("This is the file 'pi'.\n"
+                  "Added to pi in revision 3.\n"):
     raise svntest.Failure("Unexpected contents for rev 1 of " +
                           exdir_G_pi_path)
 
   exdir_H_omega_path = os.path.join(wc_dir, "A", "C", "exdir_H", "omega")
-  fp = open(exdir_H_omega_path, 'r')
-  lines = fp.readlines()
-  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n")):
+  contents = open(exdir_H_omega_path).read()
+  if contents != "This is the file 'omega'.\n":
     raise svntest.Failure("Unexpected contents for rev 1 of " +
                           exdir_H_omega_path)
 
@@ -842,13 +831,10 @@ def external_with_peg_and_op_revision(sbox):
                                      'up', wc_dir)
 
   external_chi_path = os.path.join(wc_dir, 'A', 'D', 'exdir_A', 'H', 'chi')
-  fp = open(external_chi_path, 'r')
-  lines = fp.readlines()
-  if not ((len(lines) == 1)
-          and (lines[0] == "This is the file 'chi'.\n")):
+  contents = open(external_chi_path).read()
+  if contents != "This is the file 'chi'.\n":
     raise svntest.Failure("Unexpected contents for externally modified " +
                           external_chi_path)
-  fp.close()
 
 #----------------------------------------------------------------------
 
@@ -882,9 +868,8 @@ def new_style_externals(sbox):
 
   for dir_name in ["exdir_H", "exdir_I"]:
     exdir_X_omega_path = os.path.join(wc_dir, "A", "C", dir_name, "omega")
-    fp = open(exdir_X_omega_path, 'r')
-    lines = fp.readlines()
-    if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n")):
+    contents = open(exdir_X_omega_path).read()
+    if contents != "This is the file 'omega'.\n":
       raise svntest.Failure("Unexpected contents for rev 1 of " +
                             exdir_X_omega_path)
 
@@ -1114,14 +1099,10 @@ def can_place_file_external_into_dir_external(sbox):
                                      repo_url, wc_dir)
 
   beta1_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
-  f = open(beta1_path)
-  beta1_contents = f.read()
-  f.close()
+  beta1_contents = open(beta1_path).read()
 
   beta2_path = os.path.join(wc_dir, 'A', 'D-copy', 'G', 'beta')
-  f = open(beta2_path)
-  beta2_contents = f.read()
-  f.close()
+  beta2_contents = open(beta2_path).read()
 
   if beta1_contents != beta2_contents:
       raise svntest.Failure("Contents of '%s' and '%s' do not match" %
