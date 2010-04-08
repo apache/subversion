@@ -63,6 +63,10 @@
 #define OP_FILE_REMOVE "file-remove"
 
 
+/* For work queue debugging. Generates output about its operation.  */
+/* #define DEBUG_WORK_QUEUE */
+
+
 struct work_item_dispatch {
   const char *name;
   svn_error_t *(*func)(svn_wc__db_t *db,
@@ -2179,6 +2183,10 @@ svn_wc__wq_run(svn_wc__db_t *db,
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
+#ifdef DEBUG_WORK_QUEUE
+  SVN_DBG(("wq_run: wri='%s'\n", wri_abspath));
+#endif
+
   while (TRUE)
     {
       svn_wc__db_kind_t kind;
@@ -2211,6 +2219,10 @@ svn_wc__wq_run(svn_wc__db_t *db,
         {
           if (svn_skel__matches_atom(work_item->children, scan->name))
             {
+
+#ifdef DEBUG_WORK_QUEUE
+              SVN_DBG(("wq_run:   operation='%s'\n", scan->name));
+#endif
               SVN_ERR((*scan->func)(db, work_item,
                                     cancel_func, cancel_baton,
                                     iterpool));
