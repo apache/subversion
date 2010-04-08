@@ -476,6 +476,12 @@ svn_wc__node_is_status_added(svn_boolean_t *is_added,
  * Get the base revision of @a local_abspath using @a wc_ctx.  If
  * @a local_abspath is not in the working copy, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND.
+ *
+ * In @a *base_revision, return the revision of the revert-base, i.e. the
+ * revision that this node was checked out at or last updated/switched to,
+ * regardless of any uncommitted changes (delete, replace and/or
+ * copy-here/move-here).  For a locally added/copied/moved-here node that is
+ * not part of a replace, return @c SVN_INVALID_REVNUM.
  */
 svn_error_t *
 svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
