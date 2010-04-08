@@ -4228,6 +4228,9 @@ install_text_base(svn_stringbuf_t **log_accum,
  * prepared (see below) to join version control, fully install a
  * new revision of the file.
  *
+ * ### transitional: installation of the working file will be handled
+ * ### by the *INSTALL_PRISTINE flag.
+ *
  * By "install", we mean: create a new text-base and prop-base, merge
  * any textual and property changes into the working file, and finally
  * update all metadata so that the working copy believes it has a new
@@ -4241,8 +4244,7 @@ install_text_base(svn_stringbuf_t **log_accum,
  * this file, and removed after a successful run of the generated log
  * commands.
  *
- * Set *CONTENT_STATE, *PROP_STATE and *LOCK_STATE to the state of the
- * contents, properties and repository lock, respectively, after the
+ * Set *CONTENT_STATE to the state of the contents after the
  * installation.  If an error is returned, the value of these three
  * variables is undefined.
  *
@@ -4254,6 +4256,7 @@ install_text_base(svn_stringbuf_t **log_accum,
  */
 static svn_error_t *
 merge_file(svn_stringbuf_t **log_accum,
+           svn_boolean_t *install_pristine,
            svn_wc_notify_state_t *content_state,
            const svn_wc_entry_t *entry,
            struct file_baton *fb,
@@ -4292,6 +4295,8 @@ merge_file(svn_stringbuf_t **log_accum,
   /* ### this will break update_tests 43. see comment in close_file()  */
   SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
 #endif
+
+  *install_pristine = FALSE;
 
   /* Start by splitting the file path, getting an access baton for the parent,
      and an entry for the file if any. */
@@ -4416,12 +4421,19 @@ merge_file(svn_stringbuf_t **log_accum,
                  For replaced files, though, we want to merge in the changes
                  even if the file is not modified compared to the (non-revert)
                  text-base. */
+
+              /* ### don't do the new-style install just yet. it appears
+                 ### to break most of the externals_tests.  */
+#if 0
+              *install_pristine = TRUE;
+#else
               SVN_ERR(svn_wc__loggy_copy(log_accum,
                                          pb->local_abspath,
                                          new_text_base_abspath,
                                          fb->local_abspath, pool, pool));
               SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
                                       pool);
+#endif
             }
         }
       else   /* working file or obstruction is locally modified... */
@@ -4433,12 +4445,7 @@ merge_file(svn_stringbuf_t **log_accum,
             {
               /* working file is missing?!
                  Just copy the new text-base to the file. */
-              SVN_ERR(svn_wc__loggy_copy(log_accum,
-                                         pb->local_abspath,
-                                         new_text_base_abspath,
-                                         fb->local_abspath, pool, pool));
-              SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
-                                      pool);
+              *install_pristine = TRUE;
             }
           else if (! fb->obstruction_found)
             /* Working file exists and has local mods
@@ -4627,8 +4634,9 @@ merge_file(svn_stringbuf_t **log_accum,
 
   /* Log commands to handle text-timestamp and working-size,
      if the file is - or will be - unmodified and schedule-normal */
-  if (!is_locally_modified &&
-      (fb->adding_file || entry->schedule == svn_wc_schedule_normal))
+  if (!*install_pristine
+      && !is_locally_modified
+      && (fb->adding_file || entry->schedule == svn_wc_schedule_normal))
     {
       /* Adjust working copy file unless this file is an allowed
          obstruction. */
@@ -4768,6 +4776,7 @@ close_file(void *file_baton,
   apr_array_header_t *wc_props;
   apr_array_header_t *regular_props;
   const svn_wc_entry_t *entry;
+  svn_boolean_t install_pristine;
 
   if (fb->skip_this)
     {
@@ -4941,7 +4950,7 @@ close_file(void *file_baton,
                                         pool));
 
   /* Do the hard work. This will queue some additional work.  */
-  SVN_ERR(merge_file(&delayed_log_accum,
+  SVN_ERR(merge_file(&delayed_log_accum, &install_pristine,
                      &content_state, entry,
                      fb, new_base_abspath, md5_actual_checksum,
                      pool));
@@ -4961,6 +4970,21 @@ close_file(void *file_baton,
       SVN_ERR(svn_wc__loggy_maybe_set_readonly(eb->db,
                                                fb->dir_baton->local_abspath,
                                                fb->local_abspath, pool));
+    }
+
+  if (install_pristine)
+    {
+      const svn_skel_t *work_item;
+
+      SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                            eb->db,
+                                            fb->local_abspath,
+                                            NULL,
+                                            eb->use_commit_times,
+                                            TRUE /* record_fileinfo */,
+                                            pool, pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
+                                work_item, pool));
     }
 
   /* Clean up any temporary files.  */
