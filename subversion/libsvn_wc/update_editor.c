@@ -4240,9 +4240,9 @@ install_text_base(svn_stringbuf_t **log_accum,
  * installation.  If an error is returned, the value of these three
  * variables is undefined.
  *
- * ACTUAL_CHECKSUM is the checksum that was computed as we constructed
- * the (new) text base. That was performed during a txdelta apply, or
- * during a copy of an add-with-history.
+ * NEW_TEXT_BASE_MD5_CHECKSUM is the checksum that was computed as we
+ * constructed the (new) text base. That was performed during a txdelta
+ * apply, or during a copy of an add-with-history.
  *
  * POOL is used for all bookkeeping work during the installation.
  */
@@ -4254,7 +4254,7 @@ merge_file(svn_stringbuf_t **log_accum,
            const svn_wc_entry_t *entry,
            struct file_baton *fb,
            const char *new_text_base_tmp_abspath,
-           const svn_checksum_t *actual_checksum,
+           const svn_checksum_t *new_text_base_md5_checksum,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = fb->edit_baton;
@@ -4612,9 +4612,11 @@ merge_file(svn_stringbuf_t **log_accum,
   if (new_text_base_tmp_abspath)
     {
       SVN_ERR(install_text_base(log_accum, pb->local_abspath,
-                                new_text_base_tmp_abspath, fb->text_base_abspath,
+                                new_text_base_tmp_abspath,
+                                fb->text_base_abspath,
                                 pool, pool));
-      tmp_entry.checksum = svn_checksum_to_cstring(actual_checksum, pool);
+      tmp_entry.checksum = svn_checksum_to_cstring(new_text_base_md5_checksum,
+                                                   pool);
       flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
     }
 
@@ -4757,7 +4759,7 @@ construct_base_node(svn_wc__db_t *db,
 /* Mostly a wrapper around merge_file. */
 static svn_error_t *
 close_file(void *file_baton,
-           const char *expected_hex_digest,
+           const char *expected_md5_digest,
            apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
@@ -4765,10 +4767,10 @@ close_file(void *file_baton,
   struct last_change_info *last_change = NULL;
   svn_wc_notify_state_t content_state, prop_state;
   svn_wc_notify_lock_state_t lock_state;
-  svn_checksum_t *expected_checksum = NULL;
-  svn_checksum_t *md5_actual_checksum;
-  svn_checksum_t *sha1_actual_checksum;
-  const char *new_base_abspath;
+  svn_checksum_t *expected_md5_checksum = NULL;
+  svn_checksum_t *new_text_base_md5_checksum;
+  svn_checksum_t *new_text_base_sha1_checksum;
+  const char *new_text_base_abspath;
   apr_hash_t *new_base_props = NULL;
   apr_hash_t *new_actual_props = NULL;
   svn_stringbuf_t *delayed_log_accum = svn_stringbuf_create("", pool);
@@ -4786,9 +4788,9 @@ close_file(void *file_baton,
       return SVN_NO_ERROR;
     }
 
-  if (expected_hex_digest)
-    SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
-                                   expected_hex_digest, pool));
+  if (expected_md5_digest)
+    SVN_ERR(svn_checksum_parse_hex(&expected_md5_checksum, svn_checksum_md5,
+                                   expected_md5_digest, pool));
 
   /* Was this an add-with-history, with no apply_textdelta? */
   if (fb->added_with_history && ! fb->received_textdelta)
@@ -4802,30 +4804,31 @@ close_file(void *file_baton,
                                 eb->db, fb->local_abspath,
                                 fb->pool, pool));
 
-      md5_actual_checksum = fb->copied_text_base_md5_checksum;
-      sha1_actual_checksum = fb->copied_text_base_sha1_checksum;
-      new_base_abspath = fb->copied_text_base_abspath;
-      SVN_ERR_ASSERT(! new_base_abspath || svn_dirent_is_absolute(new_base_abspath));
+      new_text_base_md5_checksum = fb->copied_text_base_md5_checksum;
+      new_text_base_sha1_checksum = fb->copied_text_base_sha1_checksum;
+      new_text_base_abspath = fb->copied_text_base_abspath;
+      SVN_ERR_ASSERT(! new_text_base_abspath
+                     || svn_dirent_is_absolute(new_text_base_abspath));
     }
   else
     {
       /* Pull the actual checksum from the file_baton, computed during
          the application of a text delta. */
-      md5_actual_checksum = fb->new_text_base_md5_checksum;
-      sha1_actual_checksum = fb->new_text_base_sha1_checksum;
-      new_base_abspath = fb->new_text_base_tmp_abspath;
+      new_text_base_md5_checksum = fb->new_text_base_md5_checksum;
+      new_text_base_sha1_checksum = fb->new_text_base_sha1_checksum;
+      new_text_base_abspath = fb->new_text_base_tmp_abspath;
     }
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
-  if (new_base_abspath && expected_checksum
-      && !svn_checksum_match(expected_checksum, md5_actual_checksum))
+  if (new_text_base_abspath && expected_md5_checksum
+      && !svn_checksum_match(expected_md5_checksum, new_text_base_md5_checksum))
     return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
             _("Checksum mismatch for '%s':\n"
               "   expected:  %s\n"
               "     actual:  %s\n"),
             svn_dirent_local_style(fb->local_abspath, pool),
-            expected_hex_digest,
-            svn_checksum_to_cstring_display(md5_actual_checksum, pool));
+            expected_md5_digest,
+            svn_checksum_to_cstring_display(new_text_base_md5_checksum, pool));
 
 #ifdef SVN_EXPERIMENTAL
   /* If we had a text change, drop the pristine into it's proper place. */
@@ -4838,8 +4841,8 @@ close_file(void *file_baton,
      file operations are not side by side. */
   if (fb->new_pristine_tmp_abspath)
     SVN_ERR(svn_wc__db_pristine_install(eb->db, fb->new_pristine_tmp_abspath,
-                                        sha1_actual_checksum,
-                                        md5_actual_checksum, pool));
+                                        new_text_base_sha1_checksum,
+                                        new_text_base_md5_checksum, pool));
 #endif
 
   /* Get a copy of the entry *before* we begin mucking around with the
@@ -4953,7 +4956,7 @@ close_file(void *file_baton,
   /* Do the hard work. This will queue some additional work.  */
   SVN_ERR(merge_file(&delayed_log_accum, &install_pristine, &install_from,
                      &content_state, entry,
-                     fb, new_base_abspath, md5_actual_checksum,
+                     fb, new_text_base_abspath, new_text_base_md5_checksum,
                      pool));
 
   /* Queue all operations.  */
@@ -4963,7 +4966,7 @@ close_file(void *file_baton,
   /* Now that all the state has settled, should we update the readonly
      status of the working file? The LOCK_STATE will signal what we should
      do for this node.  */
-  if (new_base_abspath == NULL
+  if (new_text_base_abspath == NULL
       && lock_state == svn_wc_notify_lock_state_unlocked)
     {
       /* If a lock was removed and we didn't update the text contents, we
