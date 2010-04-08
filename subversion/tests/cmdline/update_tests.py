@@ -83,7 +83,7 @@ def detect_extra_files(node, extra_files):
                                 len(os.sep) :]
         real_path = os.path.join(wc_dir, real_path)
 
-        real_contents = svntest.main.file_read(real_path)
+        real_contents = open(real_path).read()
         if real_contents == contents:
           extra_files.pop(extra_files.index(fdata)) # delete pattern from list
           return
@@ -100,8 +100,7 @@ def update_binary_file(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a binary file to the project.
-  theta_contents = svntest.main.file_read(
-    os.path.join(sys.path[0], "theta.bin"), 'rb')
+  theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
   # Write PNG file data into 'A/theta'.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
   svntest.main.file_write(theta_path, theta_contents, 'wb')
@@ -207,8 +206,7 @@ def update_binary_file_2(sbox):
   wc_dir = sbox.wc_dir
 
   # Suck up contents of a test .png file.
-  theta_contents = svntest.main.file_read(
-    os.path.join(sys.path[0], "theta.bin"), 'rb')
+  theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
 
   # 102400 is svn_txdelta_window_size.  We're going to make sure we
   # have at least 102401 bytes of data in our second binary file (for

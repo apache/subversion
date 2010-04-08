@@ -1177,8 +1177,7 @@ def binary_file_externals(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a binary file A/theta, write PNG file data into it.
-  theta_contents = svntest.main.file_read(
-    os.path.join(sys.path[0], "theta.bin"), 'rb')
+  theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
   theta_path = os.path.join(wc_dir, 'A', 'theta')
   svntest.main.file_write(theta_path, theta_contents, 'wb')
 

@@ -233,10 +233,9 @@ def upgrade_wcprops(sbox):
 def xml_entries_relocate(path, from_url, to_url):
   adm_name = svntest.main.get_admin_name()
   entries = os.path.join(path, adm_name, 'entries')
-  txt = svntest.main.file_read(entries)
-  txt = txt.replace('url="' + from_url, 'url="' + to_url)
+  txt = open(entries).read().replace('url="' + from_url, 'url="' + to_url)
   os.chmod(entries, 0777)
-  svntest.main.file_write(entries, txt)
+  open(entries, 'w').write(txt)
 
   print('Relocated %s' % path)
 
