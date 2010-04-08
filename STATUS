@@ -123,16 +123,6 @@ Candidate changes:
    Votes:
      +1: kameshj
  
- * r877014, r931568
-   On Windows, treat a path containing invalid characters as a non-existing
-   path (svn_node_none) rather than raising an error.
-   Justification:
-     Fixes basic_tests.py 37 'use folders with names like 'c:hi'' on
-     Windows, which has been failing over ra_local since r923779 (the
-     reintegration of the 1.6.x-issue-3242-partial branch).
-   Votes:
-     +1: rhuijben, pburba
-
  * r931209, r931211, r931392
    Fixes related to the partial resolution of issue #3242 already backported
    here.
@@ -216,3 +206,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r877014, r931568
+   On Windows, treat a path containing invalid characters as a non-existing
+   path (svn_node_none) rather than raising an error.
+   Justification:
+     Fixes basic_tests.py 37 'use folders with names like 'c:hi'' on
+     Windows, which has been failing over ra_local since r923779 (the
+     reintegration of the 1.6.x-issue-3242-partial branch).
+   Votes:
+     +1: rhuijben, pburba, cmpilato
