@@ -696,7 +696,7 @@ def file_write(path, contents, mode='w'):
 # For replacing parts of contents in an existing file, with new content.
 def file_substitute(path, contents, new_contents):
   """Replace the CONTENTS in the file at PATH using the NEW_CONTENTS"""
-  fcontent = open(path, 'r').replace(contents, new_contents)
+  fcontent = open(path, 'r').read().replace(contents, new_contents)
   open(path, 'w').write(fcontent)
 
 # For creating blank new repositories
