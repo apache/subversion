@@ -657,20 +657,22 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   int format = SVN_FS_BASE__FORMAT_NUMBER;
   svn_error_t *svn_err;
 
-  /* See if we had an explicitly specified pre-1.5-compatible.  */
-  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                                 APR_HASH_KEY_STRING))
-    format = 3;
-
-  /* See if we had an explicitly specified pre-1.5-compatible.  */
-  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
-                                 APR_HASH_KEY_STRING))
-    format = 2;
-
-  /* See if we had an explicitly specified pre-1.4-compatible.  */
-  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                                 APR_HASH_KEY_STRING))
-    format = 1;
+  /* See if compatibility with older versions was explicitly requested. */
+  if (fs->config)
+    {
+      if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
+                                   APR_HASH_KEY_STRING))
+        format = 1;
+      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
+                                        APR_HASH_KEY_STRING))
+        format = 2;
+      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
+                                        APR_HASH_KEY_STRING))
+        format = 3;
+      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_7_COMPATIBLE,
+                                        APR_HASH_KEY_STRING))
+        format = 4;
+    }
 
   /* Create the environment and databases. */
   svn_err = open_databases(fs, TRUE, format, path, pool);

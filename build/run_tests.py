@@ -125,6 +125,10 @@ class TestHarness:
     self._open_log('rb')
     log_lines = self.log.readlines()
 
+    # Remove \r characters introduced by opening the log as binary
+    if sys.platform == 'win32':
+      log_lines = [x.replace('\r', '') for x in log_lines]
+
     # Print the results, from least interesting to most interesting.
 
     # Helper for Work-In-Progress indications for XFAIL tests.

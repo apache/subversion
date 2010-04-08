@@ -302,11 +302,10 @@ svn_wc__loggy_add_tree_conflict(svn_wc__db_t *db,
                                 apr_pool_t *scratch_pool);
 
 
-/* Extend LOG_ACCUM with log entries to save the current baseprops of PATH
-   as revert props.
+/* Extend LOG_ACCUM with log entries to save the current baseprops of
+   LOCAL_ABSPATH as revert props.
 
-   Makes sure the baseprops are destroyed if DESTROY_BASEPROPS is TRUE,
-   the baseprops are preserved otherwise.
+   Makes sure the baseprops are destroyed.
 */
 svn_error_t *
 svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,

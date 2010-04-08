@@ -947,12 +947,11 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
 }
 
 
-/* If the server does not support Merge Tracking then return an error with
-   the code SVN_ERR_UNSUPPORTED_FEATURE.  Otherwise, if INCLUDE_DESCENDANTS
-   is false then get the explicit or inherited mergeinfo for PATH_OR_URL
-   @PEG_REVISION and put it in *TARGET_MERGEINFO, keyed to the repository
-   root-relative path of PATH_OR_URL.  If INCLUDE_DESCENDANTS is true then
-   also get the explicit mergeinfo on any subtrees under PATH_OR_URL.
+/* Set *MERGEINFO_CATALOG to the explicit or inherited mergeinfo for
+   PATH_OR_URL@PEG_REVISION.  If INCLUDE_DESCENDANTS is true, also
+   store in *MERGEINFO_CATALOG the explicit mergeinfo on any subtrees
+   under PATH_OR_URL.  Key all mergeinfo in *MERGEINFO_CATALOG on
+   repository relpaths.
 
    If no mergeinfo is found then set *MERGEINFO_CATALOG to NULL.
 
@@ -960,7 +959,10 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
    PATH_OR_URL.
 
    Allocate *MERGEINFO_CATALOG and all its contents in RESULT_POOL.  Use
-   SCRATCH_POOL for all temporary allocations.  */
+   SCRATCH_POOL for all temporary allocations.
+
+   Return SVN_ERR_UNSUPPORTED_FEATURE if the server does not support
+   Merge Tracking.  */
 static svn_error_t *
 get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
               const char **repos_root,
@@ -1029,8 +1031,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
 
   if (is_url)
     {
-      const char *repos_rel_path;
-      const char *old_session_url;
+      svn_mergeinfo_catalog_t tmp_catalog;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", scratch_pool));
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, path_or_url,
@@ -1040,21 +1041,43 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
                                               local_abspath, ra_session,
                                               &peg_rev, scratch_pool));
       SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, scratch_pool));
-      SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, ctx->wc_ctx,
-                                                path_or_url, *repos_root,
-                                                FALSE, NULL,
-                                                scratch_pool,
-                                                scratch_pool));
-      SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
-                                                *repos_root, scratch_pool));
-      SVN_ERR(svn_client__get_repos_mergeinfo_catalog(mergeinfo_catalog,
+      SVN_ERR(svn_client__get_repos_mergeinfo_catalog(&tmp_catalog,
                                                       ra_session,
-                                                      repos_rel_path, rev,
+                                                      "", rev,
                                                       svn_mergeinfo_inherited,
                                                       FALSE,
                                                       include_descendants,
                                                       result_pool,
                                                       scratch_pool));
+
+      /* If we're not querying the root of the repository, the catalog
+         we fetched will be keyed on paths relative to the session
+         URL.  But our caller is expecting repository relpaths.  So we
+         do a little dance...  */
+      if (tmp_catalog && (strcmp(path_or_url, *repos_root) != 0))
+        {
+          apr_hash_index_t *hi;
+
+          *mergeinfo_catalog = apr_hash_make(result_pool);
+
+          for (hi = apr_hash_first(scratch_pool, tmp_catalog);
+               hi; hi = apr_hash_next(hi))
+            {
+              /* session-relpath -> repos-url -> repos-relpath */
+              const char *path =
+                svn_path_url_add_component2(path_or_url,
+                                            svn__apr_hash_index_key(hi),
+                                            scratch_pool);
+              SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &path, path,
+                                                       result_pool));
+              apr_hash_set(*mergeinfo_catalog, path, APR_HASH_KEY_STRING,
+                           svn__apr_hash_index_val(hi));
+            }
+        }
+      else
+        {
+          *mergeinfo_catalog = tmp_catalog;
+        }
     }
   else /* ! svn_path_is_url() */
     {

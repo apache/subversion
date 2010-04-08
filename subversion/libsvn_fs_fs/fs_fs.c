@@ -6329,7 +6329,7 @@ svn_fs_fs__create(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   fs->path = apr_pstrdup(pool, path);
-  /* See if we had an explicitly requested pre-1.4- or pre-1.5-compatible.  */
+  /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
       if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
@@ -6341,6 +6341,9 @@ svn_fs_fs__create(svn_fs_t *fs,
       else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
                                         APR_HASH_KEY_STRING))
         format = 3;
+      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_7_COMPATIBLE,
+                                        APR_HASH_KEY_STRING))
+        format = 4;
     }
   ffd->format = format;
 

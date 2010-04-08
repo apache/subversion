@@ -2545,6 +2545,11 @@ def tree_conflicts_on_switch_2_1(sbox):
     },
   }
 
+  ### D/D1/delta is locally-added during leaf_edit. when tree_del executes,
+  ### it will delete D/D1, and the switch reschedules local D/D1 for
+  ### local-copy from its original revision. however, right now, we cannot
+  ### denote that delta is a local-add rather than a child of that D/D1 copy.
+  ### thus, it appears in the status output as a (M)odified child.
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,
@@ -2939,7 +2944,7 @@ test_list = [ None,
               tolerate_local_mods,
               tree_conflicts_on_switch_1_1,
               tree_conflicts_on_switch_1_2,
-              tree_conflicts_on_switch_2_1,
+              XFail(tree_conflicts_on_switch_2_1),
               tree_conflicts_on_switch_2_2,
               tree_conflicts_on_switch_3,
               single_file_relocate,

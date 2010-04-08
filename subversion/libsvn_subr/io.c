@@ -224,6 +224,9 @@ io_check_path(const char *path,
     *kind = svn_node_none;
   else if (APR_STATUS_IS_ENOTDIR(apr_err)
 #ifdef WIN32
+           /* On Windows, APR_STATUS_IS_ENOTDIR includes several kinds of
+            * invalid-pathname error but not this one, so we include it. */
+           /* ### This fix should go into APR. */
            || (APR_TO_OS_ERROR(apr_err) == ERROR_INVALID_NAME)
 #endif
            )

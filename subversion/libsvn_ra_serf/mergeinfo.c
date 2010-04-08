@@ -119,14 +119,18 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
       if (mergeinfo_ctx->curr_info && mergeinfo_ctx->curr_path)
         {
           svn_mergeinfo_t path_mergeinfo;
+          const char *path;
 
           SVN_ERR_ASSERT(mergeinfo_ctx->curr_path->data);
+          path = apr_pstrdup(mergeinfo_ctx->pool,
+                             mergeinfo_ctx->curr_path->data);
           SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo,
                                       mergeinfo_ctx->curr_info->data,
                                       mergeinfo_ctx->pool));
+          /* Correct for naughty servers that send "relative" paths
+             with leading slashes! */
           apr_hash_set(mergeinfo_ctx->result_catalog,
-                       apr_pstrdup(mergeinfo_ctx->pool,
-                                   mergeinfo_ctx->curr_path->data),
+                       path[0] == '/' ? path + 1 : path,
                        APR_HASH_KEY_STRING, path_mergeinfo);
         }
       svn_ra_serf__xml_pop_state(parser);

@@ -1156,7 +1156,10 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
           SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cc",
                                          &path, &to_parse));
           SVN_ERR(svn_mergeinfo_parse(&for_path, to_parse, pool));
-          apr_hash_set(*catalog, path, APR_HASH_KEY_STRING, for_path);
+          /* Correct for naughty servers that send "relative" paths
+             with leading slashes! */
+          apr_hash_set(*catalog, path[0] == '/' ? path + 1 : path,
+                       APR_HASH_KEY_STRING, for_path);
         }
     }
 

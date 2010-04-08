@@ -142,6 +142,9 @@ struct log_runner
 #define LOG_START "<wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n"
 #define LOG_END "</wc-log>\n"
 
+/* For log debugging. Generates output about its operation.  */
+/* #define DEBUG_LOG */
+
 
 
 /*** The XML handlers. ***/
@@ -640,6 +643,10 @@ start_handler(void *userData, const char *eltname, const char **atts)
           svn_dirent_local_style(loggy->adm_abspath, loggy->pool)));
       return;
     }
+
+#ifdef DEBUG_LOG
+  SVN_DBG(("start_handler: name='%s'\n", eltname));
+#endif
 
   /* Dispatch. */
   if (strcmp(eltname, SVN_WC__LOG_MODIFY_ENTRY) == 0) {

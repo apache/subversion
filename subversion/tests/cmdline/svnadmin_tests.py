@@ -625,7 +625,7 @@ def recover_fsfs(sbox):
   svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
 
   # Remember the contents of the db/current file.
-  expected_current_contents = svntest.main.file_read(current_path)
+  expected_current_contents = open(current_path).read()
 
   # Move aside the current file for r3.
   os.rename(os.path.join(sbox.repo_dir, 'db','current'),
@@ -637,7 +637,7 @@ def recover_fsfs(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  actual_current_contents = svntest.main.file_read(current_path)
+  actual_current_contents = open(current_path).read()
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
@@ -651,7 +651,7 @@ def recover_fsfs(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  actual_current_contents = svntest.main.file_read(current_path)
+  actual_current_contents = open(current_path).read()
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
@@ -665,7 +665,7 @@ def recover_fsfs(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  actual_current_contents = svntest.main.file_read(current_path)
+  actual_current_contents = open(current_path).read()
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
@@ -684,7 +684,7 @@ def recover_fsfs(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  actual_current_contents = svntest.main.file_read(current_path)
+  actual_current_contents = open(current_path).read()
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
@@ -700,7 +700,7 @@ def load_with_parent_dir(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
                                    'mergeinfo_included.dump')
-  dumpfile = svntest.main.file_read(dumpfile_location)
+  dumpfile = open(dumpfile_location).read()
 
   # Create 'sample' dir in sbox.repo_url, and load the dump stream there.
   svntest.actions.run_and_verify_svn(None,
@@ -798,7 +798,7 @@ def reflect_dropped_renumbered_revs(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'with_merges.dump')
-  dumpfile = svntest.main.file_read(dumpfile_location)
+  dumpfile = open(dumpfile_location).read()
 
   # Create 'toplevel' dir in sbox.repo_url
   svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 1.\n'],
@@ -1069,17 +1069,15 @@ def drop_mergeinfo_outside_of_dump_stream(sbox):
   #       /Projects/Project-X/trunk:10
 
   # Load the skeleton dump:
-  dumpfile1 = svntest.main.file_read(
-    os.path.join(os.path.dirname(sys.argv[0]),
-                 'svnadmin_tests_data',
-                 'skeleton_repos.dump'))
+  dumpfile1 = open(os.path.join(os.path.dirname(sys.argv[0]),
+                                'svnadmin_tests_data',
+                                'skeleton_repos.dump')).read()
   load_and_verify_dumpstream(sbox, [], [], None, dumpfile1, '--ignore-uuid')
 
   # Load the partial repository with mergeinfo dump:
-  dumpfile2 = svntest.main.file_read(
-    os.path.join(os.path.dirname(sys.argv[0]),
-                 'svnadmin_tests_data',
-                 'mergeinfo_included_partial.dump'))
+  dumpfile2 = open(os.path.join(os.path.dirname(sys.argv[0]),
+                                'svnadmin_tests_data',
+                                'mergeinfo_included_partial.dump')).read()
   load_and_verify_dumpstream(sbox, [], [], None, dumpfile2, '--ignore-uuid',
                              '--parent-dir', '/Projects/Project-X')
 
@@ -1131,10 +1129,9 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   #
   # Note: The test repository 'mergeinfo_included_full.dump' is the full
   # repos diagramed in the test drop_mergeinfo_outside_of_dump_stream.
-  dumpfile1 = svntest.main.file_read(
-    os.path.join(os.path.dirname(sys.argv[0]),
-                 'svnadmin_tests_data',
-                 'mergeinfo_included_full.dump'))
+  dumpfile1 = open(os.path.join(os.path.dirname(sys.argv[0]),
+                                'svnadmin_tests_data',
+                                'mergeinfo_included_full.dump')).read()
   load_and_verify_dumpstream(sbox, [], [], None, dumpfile1, '--ignore-uuid')
 
   # Check that the mergeinfo is as expected.
@@ -1176,13 +1173,13 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
 
   # Load the three incremental dump files in sequence.
   load_and_verify_dumpstream(sbox, [], [], None,
-                             svntest.main.file_read(dump_file_r1_10),
+                             open(dump_file_r1_10).read(),
                              '--ignore-uuid')
   load_and_verify_dumpstream(sbox, [], [], None,
-                             svntest.main.file_read(dump_file_r11_13),
+                             open(dump_file_r11_13).read(),
                              '--ignore-uuid')
   load_and_verify_dumpstream(sbox, [], [], None,
-                             svntest.main.file_read(dump_file_r14_15),
+                             open(dump_file_r14_15).read(),
                              '--ignore-uuid')
 
   # Check the mergeinfo, we use the same expected output as before,

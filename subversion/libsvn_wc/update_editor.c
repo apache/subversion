@@ -372,15 +372,15 @@ struct handler_baton
   struct file_baton *fb;
 
   /* Where we are assembling the new file. */
-  const char *work_abspath;
+  const char *new_text_base_tmp_abspath;
 #ifdef SVN_EXPERIMENTAL
-  /* Where the pristine is before we can copy it into the correct location. */
-  const char *temp_pristine_abspath;
+  /* The WC-NG equivalent of NEW_TEXT_BASE_TMP_ABSPATH. */
+  const char *new_pristine_tmp_abspath;
 #endif
 
-    /* The expected checksum of the text source or NULL if no base
+    /* The expected MD5 checksum of the text source or NULL if no base
      checksum is available */
-  svn_checksum_t *expected_source_checksum;
+  svn_checksum_t *expected_source_md5_checksum;
 
   /* Why two checksums?
      The editor currently provides an md5 which we use to detect corruption
@@ -391,20 +391,21 @@ struct handler_baton
 
   /* The calculated checksum of the text source or NULL if the acual
      checksum is not being calculated */
-  svn_checksum_t *md5_actual_source_checksum;
-
-  /* A calculated SHA-1, which we'll use for eventually writing the
-     pristine. */
-  svn_checksum_t *sha1_actual_checksum;
+  svn_checksum_t *actual_source_md5_checksum;
 
   /* The stream used to calculate the source checksums */
   svn_stream_t *source_checksum_stream;
 
-  /* This is initialized to all zeroes when the baton is created, then
+  /* A calculated MD5 digest of NEW_TEXT_BASE_TMP_ABSPATH.
+     This is initialized to all zeroes when the baton is created, then
      populated with the MD5 digest of the resultant fulltext after the
      last window is handled by the handler returned from
      apply_textdelta(). */
-  unsigned char digest[APR_MD5_DIGESTSIZE];
+  unsigned char new_text_base_md5_digest[APR_MD5_DIGESTSIZE];
+
+  /* A calculated SHA-1 of NEW_PRISTINE_TMP_ABSPATH, which we'll use for
+     eventually writing the pristine. */
+  svn_checksum_t * new_text_base_sha1_checksum;
 };
 
 
@@ -939,34 +940,34 @@ struct file_baton
 
   /* The path to the current text base, if any.
      This gets set if there are file content changes. */
-  const char *text_base_path;
+  const char *text_base_abspath;
 
   /* The path to the incoming text base (that is, to a text-base-file-
      in-progress in the tmp area).  This gets set if there are file
      content changes. */
-  const char *new_text_base_abspath;
+  const char *new_text_base_tmp_abspath;
 #ifdef SVN_EXPERIMENTAL
-  /* Where the pristine is before we can copy it into the correct location. */
-  const char *temp_pristine_abspath;
+  /* The WC-NG equivalent of NEW_TEXT_BASE_TMP_ABSPATH. */
+  const char *new_pristine_tmp_abspath;
 #endif
 
-  /* The checksum for the file located at NEW_TEXT_BASE_PATH. */
-  svn_checksum_t *md5_actual_checksum;
+  /* The MD5 checksum of the incoming text base (pristine text). */
+  svn_checksum_t *new_text_base_md5_checksum;
 
-  /* The sha1 checksum of the pristine. */
-  svn_checksum_t *sha1_actual_checksum;
+  /* The SHA1 checksum of the incoming text base (pristine text). */
+  svn_checksum_t *new_text_base_sha1_checksum;
 
   /* If this file was added with history, this is the path to a copy
      of the text base of the copyfrom file (in the temporary area). */
-  const char *copied_text_base;
+  const char *copied_text_base_abspath;
 
   /* If this file was added with history, this is the MD5 checksum of the
-     text base (see copied_text_base). May be NULL if unknown. */
-  svn_checksum_t *md5_copied_base_checksum;
+     text base (see copied_text_base_abspath). May be NULL if unknown. */
+  svn_checksum_t *copied_text_base_md5_checksum;
 
-  /* If this file was added with history, this is the SHA-1 checksum of
-     the text base (see copied_text_base). May be NULL if unknown. */
-  svn_checksum_t *sha1_copied_base_checksum;
+  /* If this file was added with history, this is the SHA-1 checksum of the
+     text base (see copied_text_base_abspath). May be NULL if unknown. */
+  svn_checksum_t *copied_text_base_sha1_checksum;
 
   /* If this file was added with history, and the copyfrom had local
      mods, this is the path to a copy of the user's version with local
@@ -1038,8 +1039,6 @@ make_file_baton(struct file_baton **f_p,
   f->deleted           = FALSE;
   f->dir_baton         = pb;
 
-  /* No need to initialize f->digest, since we used pcalloc(). */
-
   /* the directory's bump info has one more referer now */
   ++f->bump_info->ref_count;
 
@@ -1061,23 +1060,22 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (window != NULL && !err)
     return SVN_NO_ERROR;
 
-  if (hb->expected_source_checksum)
+  if (hb->expected_source_md5_checksum)
     {
-      /* Close the stream to calculate the final checksum
-         (This also calculates the md5 as well.) */
+      /* Close the stream to calculate HB->actual_source_md5_checksum. */
       svn_error_t *err2 = svn_stream_close(hb->source_checksum_stream);
 
-      if (!err2 && !svn_checksum_match(hb->expected_source_checksum,
-                                       hb->md5_actual_source_checksum))
+      if (!err2 && !svn_checksum_match(hb->expected_source_md5_checksum,
+                                       hb->actual_source_md5_checksum))
         {
           err = svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, err,
                     _("Checksum mismatch while updating '%s':\n"
                       "   expected:  %s\n"
                       "     actual:  %s\n"),
                     svn_dirent_local_style(fb->local_abspath, hb->pool),
-                    svn_checksum_to_cstring(hb->expected_source_checksum,
+                    svn_checksum_to_cstring(hb->expected_source_md5_checksum,
                                             hb->pool),
-                    svn_checksum_to_cstring(hb->md5_actual_source_checksum,
+                    svn_checksum_to_cstring(hb->actual_source_md5_checksum,
                                             hb->pool));
         }
 
@@ -1087,26 +1085,29 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (err)
     {
       /* We failed to apply the delta; clean up the temporary file.  */
-      svn_error_clear(svn_io_remove_file2(hb->work_abspath, TRUE, hb->pool));
+      svn_error_clear(svn_io_remove_file2(hb->new_text_base_tmp_abspath, TRUE,
+                                          hb->pool));
 #ifdef SVN_EXPERIMENTAL
-      svn_error_clear(svn_io_remove_file2(hb->temp_pristine_abspath, TRUE,
+      svn_error_clear(svn_io_remove_file2(hb->new_pristine_tmp_abspath, TRUE,
                                           hb->pool));
 #endif
     }
   else
     {
       /* Tell the file baton about the new text base. */
-      fb->new_text_base_abspath = apr_pstrdup(fb->pool, hb->work_abspath);
+      fb->new_text_base_tmp_abspath = apr_pstrdup(fb->pool,
+                                              hb->new_text_base_tmp_abspath);
 #ifdef SVN_EXPERIMENTAL
-      fb->temp_pristine_abspath = apr_pstrdup(fb->pool,
-                                              hb->temp_pristine_abspath);
+      fb->new_pristine_tmp_abspath = apr_pstrdup(fb->pool,
+                                              hb->new_pristine_tmp_abspath);
 #endif
 
       /* ... and its checksums. */
-      fb->md5_actual_checksum =
-        svn_checksum__from_digest(hb->digest, svn_checksum_md5, fb->pool);
-      fb->sha1_actual_checksum =
-        svn_checksum_dup(hb->sha1_actual_checksum, fb->pool);
+      fb->new_text_base_md5_checksum =
+        svn_checksum__from_digest(hb->new_text_base_md5_digest,
+                                  svn_checksum_md5, fb->pool);
+      fb->new_text_base_sha1_checksum =
+        svn_checksum_dup(hb->new_text_base_sha1_checksum, fb->pool);
     }
 
   svn_pool_destroy(hb->pool);
@@ -3147,14 +3148,11 @@ absent_directory(const char *path,
 #ifdef SVN_EXPERIMENTAL
 /* Set *TEE_OUTPUT_STREAM to a writable stream that copies its data to both
    OUTPUT_STREAM and a new WC-NG pristine temp file corresponding to (DB,
-   LOCAL_ABSPATH). Set *TEMP_PRISTINE_ABSPATH to the path of that file.
-   Arrange that, on stream closure, *ACTUAL_CHECKSUM will be set to the SHA-1
-   checksum of that file.
+   LOCAL_ABSPATH). Set *NEW_PRISTINE_TMP_ABSPATH to the path of that file.
  */
 static svn_error_t *
 get_pristine_tee_stream(svn_stream_t **tee_output_stream,
-                        const char **temp_pristine_abspath,
-                        svn_checksum_t **actual_checksum,
+                        const char **new_pristine_tmp_abspath,
                         svn_wc__db_t *db,
                         const char *local_abspath,
                         svn_stream_t *output_stream,
@@ -3167,13 +3165,9 @@ get_pristine_tee_stream(svn_stream_t **tee_output_stream,
   SVN_ERR(svn_wc__db_pristine_get_tempdir(&pristine_tempdir, db,
                                           local_abspath, scratch_pool,
                                           scratch_pool));
-  SVN_ERR(svn_stream_open_unique(&pristine_temp, temp_pristine_abspath,
+  SVN_ERR(svn_stream_open_unique(&pristine_temp, new_pristine_tmp_abspath,
                                  pristine_tempdir, svn_io_file_del_none,
                                  result_pool, scratch_pool));
-  pristine_temp = svn_stream_checksummed2(pristine_temp, NULL,
-                                          actual_checksum,
-                                          svn_checksum_sha1, TRUE,
-                                          result_pool);
 
   *tee_output_stream = svn_stream_tee(output_stream, pristine_temp,
                                       result_pool);
@@ -3433,24 +3427,21 @@ add_file_with_history(const char *path,
     SVN_ERR(err);
 
   /* Open the text base for writing (this will get us a temporary file).  */
-  SVN_ERR(svn_wc__open_writable_base(&copied_stream, &tfb->copied_text_base,
+  SVN_ERR(svn_wc__open_writable_base(&copied_stream,
+                                     &tfb->copied_text_base_abspath,
+  /* Compute an MD5 checksum for the stream as we write stuff into it.
+     ### this is temporary. in many cases, we already *know* the checksum
+     ### since it is a copy. */
+                                     &tfb->copied_text_base_md5_checksum,
+                                     &tfb->copied_text_base_sha1_checksum,
                                      db, pb->local_abspath,
                                      pool, pool));
 #ifdef SVN_EXPERIMENTAL
   /* Copy the 'copied_stream' into a WC-NG pristine temp file as well. */
-  SVN_ERR(get_pristine_tee_stream(&copied_stream, &tfb->temp_pristine_abspath,
-                                  &tfb->sha1_copied_base_checksum, db,
-                                  tfb->local_abspath, copied_stream,
+  SVN_ERR(get_pristine_tee_stream(&copied_stream, &tfb->new_pristine_tmp_abspath,
+                                  db, tfb->local_abspath, copied_stream,
                                   pool, subpool));
 #endif
-
-  /* Compute a checksum for the stream as we write stuff into it.
-     ### this is temporary. in many cases, we already *know* the checksum
-     ### since it is a copy. */
-  copied_stream = svn_stream_checksummed2(
-                                copied_stream,
-                                NULL, &tfb->md5_copied_base_checksum,
-                                svn_checksum_md5, FALSE, pool);
 
   if (src_local_abspath != NULL) /* Found a file to copy */
     {
@@ -3857,7 +3848,7 @@ open_file(const char *path,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               eb->db, fb->local_abspath, FALSE, subpool));
+                               eb->db, fb->local_abspath, subpool, subpool));
 
   /* Is this path a conflict victim? */
   SVN_ERR(node_already_conflicted(&already_conflicted, eb->db,
@@ -3991,7 +3982,7 @@ apply_textdelta(void *file_baton,
      text base hasn't been corrupted, and that its checksum
      matches the expected base checksum. */
 
-  SVN_ERR(choose_base_paths(&fb->text_base_path,
+  SVN_ERR(choose_base_paths(&fb->text_base_abspath,
                             &checksum, &replaced,
                             fb->edit_baton->db, fb->local_abspath,
                             fb->pool, pool));
@@ -4042,8 +4033,8 @@ apply_textdelta(void *file_baton,
     }
   else
     {
-      if (fb->copied_text_base)
-        SVN_ERR(svn_stream_open_readonly(&source, fb->copied_text_base,
+      if (fb->copied_text_base_abspath)
+        SVN_ERR(svn_stream_open_readonly(&source, fb->copied_text_base_abspath,
                                          handler_pool, handler_pool));
       else
         source = svn_stream_empty(handler_pool);
@@ -4056,21 +4047,21 @@ apply_textdelta(void *file_baton,
   /* Checksum the text base while applying deltas */
   if (checksum)
     {
-      SVN_ERR(svn_checksum_parse_hex(&hb->expected_source_checksum,
+      SVN_ERR(svn_checksum_parse_hex(&hb->expected_source_md5_checksum,
                                      svn_checksum_md5, checksum,
                                      handler_pool));
 
       /* Wrap stream and store reference to allow calculating the md5 */
-      hb->source_checksum_stream =
-                 source = svn_stream_checksummed2(
-                                            source,
-                                            &hb->md5_actual_source_checksum,
-                                            NULL, svn_checksum_md5,
-                                            TRUE, handler_pool);
+      source = svn_stream_checksummed2(source,
+                                       &hb->actual_source_md5_checksum,
+                                       NULL, svn_checksum_md5,
+                                       TRUE, handler_pool);
+      hb->source_checksum_stream = source;
     }
 
   /* Open the text base for writing (this will get us a temporary file).  */
-  err = svn_wc__open_writable_base(&target, &hb->work_abspath,
+  err = svn_wc__open_writable_base(&target, &hb->new_text_base_tmp_abspath,
+                                   NULL, &hb->new_text_base_sha1_checksum,
                                    fb->edit_baton->db, fb->local_abspath,
                                    handler_pool, pool);
   if (err)
@@ -4082,15 +4073,15 @@ apply_textdelta(void *file_baton,
 #ifdef SVN_EXPERIMENTAL
   /* Copy the 'target' stream into a WC-NG pristine temp file as well.
      ###: This is currently tee'd for compat. */
-  SVN_ERR(get_pristine_tee_stream(&target, &hb->temp_pristine_abspath,
-                                  &hb->sha1_actual_checksum,
+  SVN_ERR(get_pristine_tee_stream(&target, &hb->new_pristine_tmp_abspath,
                                   fb->edit_baton->db, fb->local_abspath,
                                   target, handler_pool, pool));
 #endif
 
   /* Prepare to apply the delta.  */
   svn_txdelta_apply(source, target,
-                    hb->digest, hb->work_abspath /* error_info */,
+                    hb->new_text_base_md5_digest,
+                    hb->new_text_base_tmp_abspath /* error_info */,
                     handler_pool,
                     &hb->apply_handler, &hb->apply_baton);
 
@@ -4229,6 +4220,9 @@ install_text_base(svn_stringbuf_t **log_accum,
  * prepared (see below) to join version control, fully install a
  * new revision of the file.
  *
+ * ### transitional: installation of the working file will be handled
+ * ### by the *INSTALL_PRISTINE flag.
+ *
  * By "install", we mean: create a new text-base and prop-base, merge
  * any textual and property changes into the working file, and finally
  * update all metadata so that the working copy believes it has a new
@@ -4236,14 +4230,13 @@ install_text_base(svn_stringbuf_t **log_accum,
  * sensitive to eol translation, keyword substitution, and performing
  * all actions accumulated the parent directory's work queue.
  *
- * If there's a new text base, NEW_TEXT_BASE_ABSPATH must be the full
+ * If there's a new text base, NEW_TEXT_BASE_TMP_ABSPATH must be the full
  * pathname of the new text base, somewhere in the administrative area
  * of the working file.  It will be installed as the new text base for
  * this file, and removed after a successful run of the generated log
  * commands.
  *
- * Set *CONTENT_STATE, *PROP_STATE and *LOCK_STATE to the state of the
- * contents, properties and repository lock, respectively, after the
+ * Set *CONTENT_STATE to the state of the contents after the
  * installation.  If an error is returned, the value of these three
  * variables is undefined.
  *
@@ -4255,10 +4248,12 @@ install_text_base(svn_stringbuf_t **log_accum,
  */
 static svn_error_t *
 merge_file(svn_stringbuf_t **log_accum,
+           svn_boolean_t *install_pristine,
+           const char **install_from,
            svn_wc_notify_state_t *content_state,
            const svn_wc_entry_t *entry,
            struct file_baton *fb,
-           const char *new_text_base_abspath,
+           const char *new_text_base_tmp_abspath,
            const svn_checksum_t *actual_checksum,
            apr_pool_t *pool)
 {
@@ -4276,7 +4271,7 @@ merge_file(svn_stringbuf_t **log_accum,
      things are true:
 
          - The new pristine text of F, if any, is present at
-           NEW_TEXT_BASE_ABSPATH
+           NEW_TEXT_BASE_TMP_ABSPATH
 
          - The .svn/entries file still reflects the old version of F.
 
@@ -4293,6 +4288,9 @@ merge_file(svn_stringbuf_t **log_accum,
   /* ### this will break update_tests 43. see comment in close_file()  */
   SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
 #endif
+
+  *install_pristine = FALSE;
+  *install_from = NULL;
 
   /* Start by splitting the file path, getting an access baton for the parent,
      and an entry for the file if any. */
@@ -4325,8 +4323,8 @@ merge_file(svn_stringbuf_t **log_accum,
          and a working file. Presumably, the working file is modified
          relative to the new pristine.
 
-         The new pristine is in NEW_TEXT_BASE_ABSPATH, which should also
-         be FB->COPIED_TEXT_BASE.  */
+         The new pristine is in NEW_TEXT_BASE_TMP_ABSPATH, which should also
+         be FB->COPIED_TEXT_BASE_ABSPATH.  */
       is_locally_modified = TRUE;
     }
   else if (entry && entry->file_external_path
@@ -4344,14 +4342,14 @@ merge_file(svn_stringbuf_t **log_accum,
                                                FALSE /* compare_textbases */,
                                                pool));
     }
-  else if (new_text_base_abspath)
+  else if (new_text_base_tmp_abspath)
     {
       /* We have a new pristine to install. Is the file modified relative
          to this new pristine?  */
       SVN_ERR(svn_wc__internal_versioned_file_modcheck(&is_locally_modified,
                                                        eb->db,
                                                        fb->local_abspath,
-                                                       new_text_base_abspath,
+                                                       new_text_base_tmp_abspath,
                                                        FALSE, pool));
     }
   else
@@ -4397,7 +4395,7 @@ merge_file(svn_stringbuf_t **log_accum,
    So the first thing we do is figure out where we are in the
    matrix. */
 
-  if (new_text_base_abspath)
+  if (new_text_base_tmp_abspath)
     {
       if (is_replaced)
         {
@@ -4417,12 +4415,25 @@ merge_file(svn_stringbuf_t **log_accum,
                  For replaced files, though, we want to merge in the changes
                  even if the file is not modified compared to the (non-revert)
                  text-base. */
-              SVN_ERR(svn_wc__loggy_copy(log_accum,
-                                         pb->local_abspath,
-                                         new_text_base_abspath,
-                                         fb->local_abspath, pool, pool));
-              SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
-                                      pool);
+
+              *install_pristine = TRUE;
+
+              /* ### sheesh. for file externals, there is a WORKING_NODE
+                 ### row (during this transitional state), which means the
+                 ### node is reported as "replaced". further, this means
+                 ### that the text base will be dropped into the "revert
+                 ### base". even after everything stabilizes, the file
+                 ### external's base will continue to reside in the revert
+                 ### base, but the rest of libsvn_wc appears to compensate
+                 ### for this fact (even tho it is schedule_normal!!).
+                 ### in any case, let's do the working copy file install
+                 ### from the revert base for file externals.  */
+              if (entry && entry->file_external_path)
+                {
+                  SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_replace);
+                  SVN_ERR(svn_wc__text_revert_path(install_from, eb->db,
+                                                   fb->local_abspath, pool));
+                }
             }
         }
       else   /* working file or obstruction is locally modified... */
@@ -4434,12 +4445,7 @@ merge_file(svn_stringbuf_t **log_accum,
             {
               /* working file is missing?!
                  Just copy the new text-base to the file. */
-              SVN_ERR(svn_wc__loggy_copy(log_accum,
-                                         pb->local_abspath,
-                                         new_text_base_abspath,
-                                         fb->local_abspath, pool, pool));
-              SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum,
-                                      pool);
+              *install_pristine = TRUE;
             }
           else if (! fb->obstruction_found)
             /* Working file exists and has local mods
@@ -4495,10 +4501,10 @@ merge_file(svn_stringbuf_t **log_accum,
                                              pool, pool));
                   delete_left = TRUE;
                 }
-              else if (fb->copied_text_base)
-                merge_left = fb->copied_text_base;
+              else if (fb->copied_text_base_abspath)
+                merge_left = fb->copied_text_base_abspath;
               else
-                merge_left = fb->text_base_path;
+                merge_left = fb->text_base_abspath;
 
               /* Merge the changes from the old textbase to the new
                  textbase into the file we're updating.
@@ -4513,7 +4519,7 @@ merge_file(svn_stringbuf_t **log_accum,
                         log_accum, &merge_outcome,
                         eb->db,
                         merge_left, NULL,
-                        new_text_base_abspath, NULL,
+                        new_text_base_tmp_abspath, NULL,
                         fb->local_abspath,
                         fb->copied_working_text,
                         oldrev_str, newrev_str, mine_str,
@@ -4603,10 +4609,10 @@ merge_file(svn_stringbuf_t **log_accum,
     }
 
   /* Deal with installation of the new textbase, if appropriate. */
-  if (new_text_base_abspath)
+  if (new_text_base_tmp_abspath)
     {
       SVN_ERR(install_text_base(log_accum, pb->local_abspath,
-                                new_text_base_abspath, fb->text_base_path,
+                                new_text_base_tmp_abspath, fb->text_base_abspath,
                                 pool, pool));
       tmp_entry.checksum = svn_checksum_to_cstring(actual_checksum, pool);
       flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
@@ -4628,8 +4634,9 @@ merge_file(svn_stringbuf_t **log_accum,
 
   /* Log commands to handle text-timestamp and working-size,
      if the file is - or will be - unmodified and schedule-normal */
-  if (!is_locally_modified &&
-      (fb->adding_file || entry->schedule == svn_wc_schedule_normal))
+  if (!*install_pristine
+      && !is_locally_modified
+      && (fb->adding_file || entry->schedule == svn_wc_schedule_normal))
     {
       /* Adjust working copy file unless this file is an allowed
          obstruction. */
@@ -4639,7 +4646,7 @@ merge_file(svn_stringbuf_t **log_accum,
                   fb->local_abspath, fb->last_changed_date,
                   pool, pool));
 
-      if ((new_text_base_abspath || magic_props_changed)
+      if ((new_text_base_tmp_abspath || magic_props_changed)
           && !fb->deleted)
         {
           /* Adjust entries file to match working file */
@@ -4657,7 +4664,7 @@ merge_file(svn_stringbuf_t **log_accum,
   /* Set the returned content state. */
 
   /* This is kind of interesting.  Even if no new text was
-     installed (i.e., new_text_path was null), we could still
+     installed (i.e., NEW_TEXT_ABSPATH was null), we could still
      report a pre-existing conflict state.  Say a file, already
      in a state of textual conflict, receives prop mods during an
      update.  Then we'll notify that it has text conflicts.  This
@@ -4665,7 +4672,7 @@ merge_file(svn_stringbuf_t **log_accum,
 
   if (merge_outcome == svn_wc_merge_conflict)
     *content_state = svn_wc_notify_state_conflicted;
-  else if (new_text_base_abspath)
+  else if (new_text_base_tmp_abspath)
     {
       if (is_locally_modified)
         *content_state = svn_wc_notify_state_merged;
@@ -4769,6 +4776,8 @@ close_file(void *file_baton,
   apr_array_header_t *wc_props;
   apr_array_header_t *regular_props;
   const svn_wc_entry_t *entry;
+  svn_boolean_t install_pristine;
+  const char *install_from;
 
   if (fb->skip_this)
     {
@@ -4784,29 +4793,27 @@ close_file(void *file_baton,
   /* Was this an add-with-history, with no apply_textdelta? */
   if (fb->added_with_history && ! fb->received_textdelta)
     {
-      SVN_ERR_ASSERT(! fb->text_base_path && ! fb->new_text_base_abspath
-                     && fb->copied_text_base);
+      SVN_ERR_ASSERT(! fb->text_base_abspath && ! fb->new_text_base_tmp_abspath
+                     && fb->copied_text_base_abspath);
 
       /* Set up the base paths like apply_textdelta does. */
-      SVN_ERR(choose_base_paths(&fb->text_base_path,
+      SVN_ERR(choose_base_paths(&fb->text_base_abspath,
                                 NULL, NULL,
                                 eb->db, fb->local_abspath,
                                 fb->pool, pool));
 
-      md5_actual_checksum = fb->md5_copied_base_checksum;
-      sha1_actual_checksum = fb->sha1_copied_base_checksum;
-      new_base_abspath = fb->copied_text_base;
-      if (new_base_abspath)
-        SVN_ERR(svn_dirent_get_absolute(&new_base_abspath, new_base_abspath,
-                                        pool));
+      md5_actual_checksum = fb->copied_text_base_md5_checksum;
+      sha1_actual_checksum = fb->copied_text_base_sha1_checksum;
+      new_base_abspath = fb->copied_text_base_abspath;
+      SVN_ERR_ASSERT(! new_base_abspath || svn_dirent_is_absolute(new_base_abspath));
     }
   else
     {
       /* Pull the actual checksum from the file_baton, computed during
          the application of a text delta. */
-      md5_actual_checksum = fb->md5_actual_checksum;
-      sha1_actual_checksum = fb->sha1_actual_checksum;
-      new_base_abspath = fb->new_text_base_abspath;
+      md5_actual_checksum = fb->new_text_base_md5_checksum;
+      sha1_actual_checksum = fb->new_text_base_sha1_checksum;
+      new_base_abspath = fb->new_text_base_tmp_abspath;
     }
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
@@ -4829,8 +4836,8 @@ close_file(void *file_baton,
      update all the BASE_NODE info to switch the file over and install a wq
      item to update the in-wc file. So in a few cases it is logical that the
      file operations are not side by side. */
-  if (fb->temp_pristine_abspath)
-    SVN_ERR(svn_wc__db_pristine_install(eb->db, fb->temp_pristine_abspath,
+  if (fb->new_pristine_tmp_abspath)
+    SVN_ERR(svn_wc__db_pristine_install(eb->db, fb->new_pristine_tmp_abspath,
                                         sha1_actual_checksum,
                                         md5_actual_checksum, pool));
 #endif
@@ -4886,7 +4893,7 @@ close_file(void *file_baton,
      which case we want the new entryprops to be in place. */
 
   /* Write log commands to merge REGULAR_PROPS into the existing
-     properties of FB->LOCAL_PATH.  Update *PROP_STATE to reflect
+     properties of FB->LOCAL_ABSPATH.  Update *PROP_STATE to reflect
      the result of the regular prop merge.
 
      BASE_PROPS and WORKING_PROPS are hashes of the base and
@@ -4944,7 +4951,7 @@ close_file(void *file_baton,
                                         pool));
 
   /* Do the hard work. This will queue some additional work.  */
-  SVN_ERR(merge_file(&delayed_log_accum,
+  SVN_ERR(merge_file(&delayed_log_accum, &install_pristine, &install_from,
                      &content_state, entry,
                      fb, new_base_abspath, md5_actual_checksum,
                      pool));
@@ -4966,13 +4973,43 @@ close_file(void *file_baton,
                                                fb->local_abspath, pool));
     }
 
-  /* Clean up any temporary files.  */
-  if (fb->copied_text_base)
+  if (install_pristine)
     {
       const svn_skel_t *work_item;
 
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                           eb->db, fb->copied_text_base,
+      SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                            eb->db,
+                                            fb->local_abspath,
+                                            install_from,
+                                            eb->use_commit_times,
+                                            TRUE /* record_fileinfo */,
+                                            pool, pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
+                                work_item, pool));
+    }
+
+  /* Clean up any temporary files.  */
+#if 0
+  /* ### can't really use this now. INSTALL_FROM might refer to the
+     ### revert-base for file externals. (sigh)  once that is fixed,
+     ### then this will be handy for other cases.  */
+  if (install_from != NULL)
+    {
+      const svn_skel_t *work_item;
+
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
+                                           install_from,
+                                           pool, pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
+                                work_item, pool));
+    }
+#endif
+  if (fb->copied_text_base_abspath)
+    {
+      const svn_skel_t *work_item;
+
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
+                                           fb->copied_text_base_abspath,
                                            pool, pool));
       SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
                                 work_item, pool));
@@ -5883,11 +5920,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
      can refer to it. Compute its checksum as we copy. */
   SVN_ERR(svn_wc__open_writable_base(&tmp_base_contents,
                                      &tmp_text_base_abspath,
+                                     &base_checksum, NULL,
                                      wc_ctx->db, local_abspath,
                                      pool, pool));
-  new_base_contents = svn_stream_checksummed2(new_base_contents,
-                                              &base_checksum, NULL,
-                                              svn_checksum_md5, TRUE, pool);
   SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
                            cancel_func, cancel_baton,
                            pool));

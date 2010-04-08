@@ -537,7 +537,7 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_wc__prop_path(&base_prop_abspath, local_abspath, kind,
                             svn_wc__props_base, pool));
 
-  /* If prop base exist, copy it to revert base. */
+  /* If prop base exist, move it to revert base. */
   SVN_ERR(svn_io_check_path(base_prop_abspath, &on_disk, pool));
   if (on_disk == svn_node_file)
     {

@@ -560,14 +560,16 @@ add_parent_dirs(svn_client_ctx_t *ctx,
 
   parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  /* ### Do we need locks here?  Are locks being enforced? 1.6 used to
-         acquire and release locks. */
   SVN_ERR(add_parent_dirs(ctx, parent_abspath, scratch_pool));
   SVN_ERR(svn_wc_add4(ctx->wc_ctx, local_abspath, svn_depth_infinity,
                       NULL, SVN_INVALID_REVNUM,
                       ctx->cancel_func, ctx->cancel_baton,
                       ctx->notify_func2, ctx->notify_baton2,
                       scratch_pool));
+  /* ### New dir gets added with its own per-directory lock which we
+     must release.  This code should be redundant when we move to a
+     single db. */
+  SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
