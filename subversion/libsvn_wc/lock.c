@@ -859,6 +859,7 @@ svn_wc__adm_retrieve_internal2(svn_wc__db_t *db,
 }
 
 
+/* SVN_DEPRECATED */
 svn_error_t *
 svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
                     svn_wc_adm_access_t *associated,
@@ -946,6 +947,7 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
 }
 
 
+/* SVN_DEPRECATED */
 svn_error_t *
 svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
                           svn_wc_adm_access_t *associated,
@@ -988,6 +990,8 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
   return SVN_NO_ERROR;
 }
 
+
+/* SVN_DEPRECATED */
 svn_error_t *
 svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
                       svn_wc_adm_access_t *associated,
@@ -1409,12 +1413,16 @@ do_close(svn_wc_adm_access_t *adm_access,
                                        scratch_pool));
 }
 
+
+/* SVN_DEPRECATED */
 svn_error_t *
 svn_wc_adm_close2(svn_wc_adm_access_t *adm_access, apr_pool_t *scratch_pool)
 {
   return svn_error_return(do_close(adm_access, FALSE, scratch_pool));
 }
 
+
+/* SVN_DEPRECATED */
 svn_boolean_t
 svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access)
 {
@@ -1472,6 +1480,7 @@ svn_wc_locked2(svn_boolean_t *locked_here,
 }
 
 
+/* SVN_DEPRECATED */
 const char *
 svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access)
 {
@@ -1486,6 +1495,7 @@ svn_wc__adm_access_abspath(const svn_wc_adm_access_t *adm_access)
 }
 
 
+/* SVN_DEPRECATED */
 apr_pool_t *
 svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access)
 {
