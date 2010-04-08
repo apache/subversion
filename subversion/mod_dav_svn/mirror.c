@@ -163,9 +163,8 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
 
     /* We are url encoding the current url and the master url
        as incoming(from client) request body has it encoded already. */
-    canonicalized_uri = (char *) svn_path_uri_encode(canonicalized_uri,
-                                                     r->pool);
-    root_dir = (char *) svn_path_uri_encode(root_dir, r->pool);
+    canonicalized_uri = svn_path_uri_encode(canonicalized_uri, r->pool);
+    root_dir = svn_path_uri_encode(root_dir, r->pool);
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
         ctx->remotepath = canonicalized_uri;
@@ -224,7 +223,7 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
     /* Don't filter if we're in a subrequest or we aren't setup to
        proxy anything. */
     master_uri = dav_svn__get_master_uri(r);
-    master_uri = (char *) svn_path_uri_encode(master_uri, r->pool);
+    master_uri = svn_path_uri_encode(master_uri, r->pool);
     if (r->main || !master_uri) {
         ap_remove_output_filter(f);
         return ap_pass_brigade(f->next, bb);
@@ -242,7 +241,7 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
                                                dav_svn__get_root_dir(r), "/",
                                                start_foo, NULL),
                                    r);
-        new_uri = (char *) svn_path_uri_encode(new_uri, r->pool);
+        new_uri = svn_path_uri_encode(new_uri, r->pool);
         apr_table_set(r->headers_out, "Location", new_uri);
     }
     return ap_pass_brigade(f->next, bb);
@@ -286,9 +285,8 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
 
     /* We are url encoding the current url and the master url
        as incoming(from master) request body has it encoded already. */
-    canonicalized_uri = (char *) svn_path_uri_encode(canonicalized_uri,
-                                                     r->pool);
-    root_dir = (char *) svn_path_uri_encode(root_dir, r->pool);
+    canonicalized_uri = svn_path_uri_encode(canonicalized_uri, r->pool);
+    root_dir = svn_path_uri_encode(root_dir, r->pool);
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
         ctx->remotepath = canonicalized_uri;
