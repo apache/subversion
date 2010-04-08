@@ -149,7 +149,7 @@ Candidate changes:
        (primarily 'svn mergeinfo URL ...')
      r931392 fixes a comment.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, pburba
 
 Veto-blocked changes:
 =====================
