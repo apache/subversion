@@ -71,7 +71,7 @@ struct status_baton
 struct status_cache
 {
   const char *path;
-  svn_wc_status2_t *status;
+  svn_wc_status3_t *status;
 };
 
 /* Print conflict stats accumulated in status baton SB.
@@ -140,7 +140,7 @@ print_finish_target_xml(svn_revnum_t repos_rev,
 static svn_error_t *
 print_status_normal_or_xml(void *baton,
                            const char *path,
-                           const svn_wc_status2_t *status,
+                           const svn_wc_status3_t *status,
                            apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
@@ -163,7 +163,7 @@ print_status_normal_or_xml(void *baton,
 static svn_error_t *
 print_status(void *baton,
              const char *path,
-             const svn_wc_status2_t *status,
+             const svn_wc_status3_t *status,
              apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
@@ -178,7 +178,7 @@ print_status(void *baton,
       const char *cl_key = apr_pstrdup(sb->cl_pool, status->entry->changelist);
       struct status_cache *scache = apr_pcalloc(sb->cl_pool, sizeof(*scache));
       scache->path = apr_pstrdup(sb->cl_pool, path);
-      scache->status = svn_wc_dup_status2(status, sb->cl_pool);
+      scache->status = svn_wc_dup_status3(status, sb->cl_pool);
 
       path_array =
         apr_hash_get(sb->cached_changelists, cl_key, APR_HASH_KEY_STRING);

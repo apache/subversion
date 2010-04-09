@@ -4429,7 +4429,7 @@ record_skips(const char *mergeinfo_path,
        hi = apr_hash_next(hi))
     {
       const char *skipped_abspath = svn__apr_hash_index_key(hi);
-      svn_wc_status2_t *status;
+      svn_wc_status3_t *status;
 
       /* Before we override, make sure this is a versioned path, it
          might be an unversioned obstruction. */

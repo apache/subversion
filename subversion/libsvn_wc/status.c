@@ -126,7 +126,7 @@ struct edit_baton
   const apr_array_header_t *ignores;
 
   /* Status item for the path represented by the anchor of the edit. */
-  svn_wc_status2_t *anchor_status;
+  svn_wc_status3_t *anchor_status;
 
   /* Was open_root() called for this edit drive? */
   svn_boolean_t root_opened;
@@ -178,7 +178,7 @@ struct dir_baton
   svn_boolean_t text_changed;
 
   /* Working copy status structures for children of this directory.
-     This hash maps const char * abspaths  to svn_wc_status2_t *
+     This hash maps const char * abspaths  to svn_wc_status3_t *
      status items. */
   apr_hash_t *statii;
 
@@ -188,7 +188,7 @@ struct dir_baton
   /* The URI to this item in the repository. */
   const char *url;
 
-  /* out-of-date info corresponding to ood_* fields in svn_wc_status2_t. */
+  /* out-of-date info corresponding to ood_* fields in svn_wc_status3_t. */
   svn_revnum_t ood_last_cmt_rev;
   apr_time_t ood_last_cmt_date;
   svn_node_kind_t ood_kind;
@@ -230,7 +230,7 @@ struct file_baton
   /* The URI to this item in the repository. */
   const char *url;
 
-  /* out-of-date info corresponding to ood_* fields in svn_wc_status2_t. */
+  /* out-of-date info corresponding to ood_* fields in svn_wc_status3_t. */
   svn_revnum_t ood_last_cmt_rev;
   apr_time_t ood_last_cmt_date;
   svn_node_kind_t ood_kind;
@@ -240,7 +240,7 @@ struct file_baton
 
 /** Code **/
 static svn_error_t *
-internal_status(svn_wc_status2_t **status,
+internal_status(svn_wc_status3_t **status,
                 svn_wc__db_t *db,
                 const char *local_abspath,
                 apr_pool_t *result_pool,
@@ -278,7 +278,7 @@ internal_status(svn_wc_status2_t **status,
    non-NULL, REPOS_ROOT must contain the repository root URL of the entry.
 */
 static svn_error_t *
-assemble_status(svn_wc_status2_t **status,
+assemble_status(svn_wc_status3_t **status,
                 svn_wc__db_t *db,
                 const char *local_abspath,
                 const svn_wc_entry_t *entry,
@@ -292,7 +292,7 @@ assemble_status(svn_wc_status2_t **status,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  svn_wc_status2_t *stat;
+  svn_wc_status3_t *stat;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
   const svn_wc_conflict_description2_t *tree_conflict;
@@ -636,7 +636,7 @@ send_status_structure(const struct walk_status_baton *wb,
                       void *status_baton,
                       apr_pool_t *pool)
 {
-  svn_wc_status2_t *statstruct;
+  svn_wc_status3_t *statstruct;
 
   SVN_ERR(assemble_status(&statstruct, wb->db, local_abspath, entry,
                           parent_entry, path_kind, path_special, get_all,
@@ -763,7 +763,7 @@ send_unversioned_item(const struct walk_status_baton *wb,
                       apr_pool_t *pool)
 {
   svn_boolean_t ignore, is_external;
-  svn_wc_status2_t *status;
+  svn_wc_status3_t *status;
 
   ignore = svn_wc_match_ignore_list(svn_dirent_basename(local_abspath, NULL),
                                     patterns, pool);
@@ -918,7 +918,7 @@ handle_externals(const struct walk_status_baton *wb,
 }
 
 
-/* Send svn_wc_status2_t * structures for the directory LOCAL_ABSPATH and
+/* Send svn_wc_status3_t * structures for the directory LOCAL_ABSPATH and
    for all its entries through STATUS_FUNC/STATUS_BATON, or, if SELECTED
    is non-NULL, only for that directory entry.
 
@@ -1184,14 +1184,14 @@ get_dir_status(const struct walk_status_baton *wb,
 static svn_error_t *
 hash_stash(void *baton,
            const char *path,
-           const svn_wc_status2_t *status,
+           const svn_wc_status3_t *status,
            apr_pool_t *scratch_pool)
 {
   apr_hash_t *stat_hash = baton;
   apr_pool_t *hash_pool = apr_hash_pool_get(stat_hash);
   assert(! apr_hash_get(stat_hash, path, APR_HASH_KEY_STRING));
   apr_hash_set(stat_hash, apr_pstrdup(hash_pool, path),
-               APR_HASH_KEY_STRING, svn_wc_dup_status2(status, hash_pool));
+               APR_HASH_KEY_STRING, svn_wc_dup_status3(status, hash_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1239,7 +1239,7 @@ tweak_statushash(void *baton,
                  svn_lock_t *repos_lock,
                  apr_pool_t *scratch_pool)
 {
-  svn_wc_status2_t *statstruct;
+  svn_wc_status3_t *statstruct;
   apr_pool_t *pool;
   apr_hash_t *statushash;
 
@@ -1363,7 +1363,7 @@ find_dir_url(const struct dir_baton *db, apr_pool_t *pool)
     {
       const char *url;
       struct dir_baton *pb = db->parent_baton;
-      const svn_wc_status2_t *status = apr_hash_get(pb->statii,
+      const svn_wc_status3_t *status = apr_hash_get(pb->statii,
                                                     db->local_abspath,
                                                     APR_HASH_KEY_STRING);
       /* Note that status->entry->url is NULL in the case of a missing
@@ -1394,7 +1394,7 @@ make_dir_baton(void **dir_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d = apr_pcalloc(pool, sizeof(*d));
   const char *local_abspath;
-  const svn_wc_status2_t *status_in_parent;
+  const svn_wc_status3_t *status_in_parent;
 
   SVN_ERR_ASSERT(path || (! pb));
 
@@ -1463,7 +1463,7 @@ make_dir_baton(void **dir_baton,
           || d->depth == svn_depth_immediates)
           )
     {
-      const svn_wc_status2_t *this_dir_status;
+      const svn_wc_status3_t *this_dir_status;
       const apr_array_header_t *ignores = eb->ignores;
 
       SVN_ERR(get_dir_status(&eb->wb, local_abspath,
@@ -1518,7 +1518,7 @@ make_file_baton(struct dir_baton *parent_dir_baton,
 
 
 svn_boolean_t
-svn_wc__is_sendable_status(const svn_wc_status2_t *status,
+svn_wc__is_sendable_status(const svn_wc_status3_t *status,
                            svn_boolean_t no_ignore,
                            svn_boolean_t get_all)
 {
@@ -1590,11 +1590,11 @@ struct status_baton
 static svn_error_t *
 mark_deleted(void *baton,
              const char *local_abspath,
-             const svn_wc_status2_t *status,
+             const svn_wc_status3_t *status,
              apr_pool_t *scratch_pool)
 {
   struct status_baton *sb = baton;
-  svn_wc_status2_t *new_status = svn_wc_dup_status2(status, scratch_pool);
+  svn_wc_status3_t *new_status = svn_wc_dup_status3(status, scratch_pool);
   new_status->repos_text_status = svn_wc_status_deleted;
   return sb->real_status_func(sb->real_status_baton, local_abspath,
                               new_status, scratch_pool);
@@ -1634,7 +1634,7 @@ handle_statii(struct edit_baton *eb,
   for (hi = apr_hash_first(pool, statii); hi; hi = apr_hash_next(hi))
     {
       const char *path = svn__apr_hash_index_key(hi);
-      svn_wc_status2_t *status = svn__apr_hash_index_val(hi);
+      svn_wc_status3_t *status = svn__apr_hash_index_val(hi);
 
       /* Clear the subpool. */
       svn_pool_clear(subpool);
@@ -1880,7 +1880,7 @@ close_directory(void *dir_baton,
   if (pb && ! db->excluded)
     {
       svn_boolean_t was_deleted = FALSE;
-      const svn_wc_status2_t *dir_status;
+      const svn_wc_status3_t *dir_status;
 
       /* See if the directory was deleted or replaced. */
       dir_status = apr_hash_get(pb->statii, db->local_abspath,
@@ -1905,7 +1905,7 @@ close_directory(void *dir_baton,
          target, we should only report the target. */
       if (*eb->target_basename)
         {
-          const svn_wc_status2_t *tgt_status;
+          const svn_wc_status3_t *tgt_status;
 
           tgt_status = apr_hash_get(db->statii, eb->target_abspath,
                                     APR_HASH_KEY_STRING);
@@ -2360,7 +2360,7 @@ svn_wc_get_default_ignores(apr_array_header_t **patterns,
 
 /* */
 static svn_error_t *
-internal_status(svn_wc_status2_t **status,
+internal_status(svn_wc_status3_t **status,
                 svn_wc__db_t *db,
                 const char *local_abspath,
                 apr_pool_t *result_pool,
@@ -2422,7 +2422,7 @@ internal_status(svn_wc_status2_t **status,
 
 
 svn_error_t *
-svn_wc_status3(svn_wc_status2_t **status,
+svn_wc_status3(svn_wc_status3_t **status,
                svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                apr_pool_t *result_pool,
@@ -2433,12 +2433,11 @@ svn_wc_status3(svn_wc_status2_t **status,
                     scratch_pool));
 }
 
-
-svn_wc_status2_t *
-svn_wc_dup_status2(const svn_wc_status2_t *orig_stat,
+svn_wc_status3_t *
+svn_wc_dup_status3(const svn_wc_status3_t *orig_stat,
                    apr_pool_t *pool)
 {
-  svn_wc_status2_t *new_stat = apr_palloc(pool, sizeof(*new_stat));
+  svn_wc_status3_t *new_stat = apr_palloc(pool, sizeof(*new_stat));
 
   /* Shallow copy all members. */
   *new_stat = *orig_stat;

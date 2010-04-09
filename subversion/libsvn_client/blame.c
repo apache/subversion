@@ -680,7 +680,7 @@ svn_client_blame5(const char *target,
     {
       /* If the local file is modified we have to call the handler on the
          working copy file with keywords unexpanded */
-      svn_wc_status2_t *status;
+      svn_wc_status3_t *status;
 
       SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, target_abspath_or_url, pool,
                              pool));

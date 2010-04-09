@@ -170,7 +170,7 @@ copy_one_versioned_file(const char *from_abspath,
     }
   else
     {
-      svn_wc_status2_t *status;
+      svn_wc_status3_t *status;
 
       /* ### hmm. this isn't always a specialfile. this will simply open
          ### the file readonly if it is a regular file. */
