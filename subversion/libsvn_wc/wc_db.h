@@ -2122,6 +2122,16 @@ svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
                                apr_pool_t *scratch_pool);
 
 
+/* Return the serialized file external info (from BASE) for LOCAL_ABSPATH.
+   Stores NULL into SERIALIZED_FILE_EXTERNAL if this node is NOT a file
+   external. If a BASE node does not exist: SVN_ERR_WC_PATH_NOT_FOUND.  */
+svn_error_t *
+svn_wc__db_temp_get_file_external(const char **serialized_file_external,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
 /* @} */
 
 
