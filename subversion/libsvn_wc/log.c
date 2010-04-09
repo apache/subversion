@@ -206,14 +206,7 @@ log_do_file_cp_and_translate(svn_wc__db_t *db,
       svn_error_clear(err);
     }
 
-  /* ### switch to OP_SYNC_FILE_FLAGS  */
-
-  SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, dest_abspath,
-                                      scratch_pool));
-
-  return svn_error_return(svn_wc__maybe_set_executable(
-                            NULL, db, dest_abspath,
-                            scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 
@@ -729,19 +722,27 @@ svn_wc__loggy_append(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_translated_file(svn_wc__db_t *db,
                               const char *adm_abspath,
-                              const char *dst,
-                              const char *src,
-                              const char *versioned,
+                              const char *dst_abspath,
+                              const char *src_abspath,
+                              const char *versioned_abspath,
                               apr_pool_t *scratch_pool)
 {
   const char *loggy_path1;
   const char *loggy_path2;
   const char *loggy_path3;
   svn_stringbuf_t *buf = NULL;
+  const svn_skel_t *work_item;
 
-  SVN_ERR(loggy_path(&loggy_path1, src, adm_abspath, scratch_pool));
-  SVN_ERR(loggy_path(&loggy_path2, dst, adm_abspath, scratch_pool));
-  SVN_ERR(loggy_path(&loggy_path3, versioned, adm_abspath, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(adm_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_abspath));
+
+  SVN_ERR(loggy_path(&loggy_path1, src_abspath, adm_abspath, scratch_pool));
+  SVN_ERR(loggy_path(&loggy_path2, dst_abspath, adm_abspath, scratch_pool));
+  SVN_ERR(loggy_path(&loggy_path3, versioned_abspath, adm_abspath,
+                     scratch_pool));
+
   svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_self_closing,
                         SVN_WC__LOG_CP_AND_TRANSLATE,
                         SVN_WC__LOG_ATTR_NAME, loggy_path1,

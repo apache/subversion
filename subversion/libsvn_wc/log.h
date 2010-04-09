@@ -90,9 +90,9 @@ svn_wc__loggy_append(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_translated_file(svn_wc__db_t *db,
                               const char *adm_abspath,
-                              const char *dst,
-                              const char *src,
-                              const char *versioned,
+                              const char *dst_abspath,
+                              const char *src_abspath,
+                              const char *versioned_abspath,
                               apr_pool_t *scratch_pool);
 
 /* Insert into DB a work queue instruction to delete the entry
