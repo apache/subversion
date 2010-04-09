@@ -731,7 +731,6 @@ svn_wc__loggy_translated_file(svn_wc__db_t *db,
   const char *loggy_path2;
   const char *loggy_path3;
   svn_stringbuf_t *buf = NULL;
-  const svn_skel_t *work_item;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(adm_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
