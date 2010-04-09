@@ -83,15 +83,6 @@ svn_wc__loggy_append(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 
-/* Queue instructions to copy/translate SRC_ABSPATH to DST_ABSPATH.  */
-svn_error_t *
-svn_wc__loggy_copy(svn_wc__db_t *db,
-                   const char *adm_abspath,
-                   const char *src_abspath,
-                   const char *dst_abspath,
-                   apr_pool_t *scratch_pool);
-
-
 /* Insert into DB a work queue instruction to generate a translated
    file from SRC to DST with translation settings from VERSIONED.
    ADM_ABSPATH is the absolute path for the admin directory for PATH.
