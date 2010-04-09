@@ -807,8 +807,8 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
           && (!info || (!info->start_empty && !info->lock_token))
           && (requested_depth <= wc_depth || t_entry->kind == svn_node_file))
         return SVN_NO_ERROR;
-      else if (distance != -1 || b->ignore_ancestry)
-        related = TRUE;
+
+      related = (distance != -1 || b->ignore_ancestry);
     }
 
   /* If there's a source and it's not related to the target, nuke it. */
