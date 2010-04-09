@@ -506,6 +506,14 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
           SVN_ERR(svn_stream_close(chosen_stream));
           SVN_ERR(svn_wc__loggy_copy(db, adm_abspath,
                                      chosen_path, target_abspath, pool));
+          {
+            const svn_skel_t *work_item;
+
+            SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                                 db, chosen_path,
+                                                 pool, pool));
+            SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, pool));
+          }
           *merge_outcome = svn_wc_merge_merged;
           return SVN_NO_ERROR;
         }
