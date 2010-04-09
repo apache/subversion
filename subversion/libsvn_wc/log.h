@@ -95,11 +95,7 @@ svn_wc__loggy_copy(svn_wc__db_t *db,
 /* Insert into DB a work queue instruction to generate a translated
    file from SRC to DST with translation settings from VERSIONED.
    ADM_ABSPATH is the absolute path for the admin directory for PATH.
-   DST and SRC and VERSIONED are relative to ADM_ABSPATH.
-
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
-*/
+   DST and SRC and VERSIONED are relative to ADM_ABSPATH.  */
 svn_error_t *
 svn_wc__loggy_translated_file(svn_wc__db_t *db,
                               const char *adm_abspath,
@@ -243,14 +239,7 @@ svn_wc__loggy_set_timestamp(svn_stringbuf_t **log_accum,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-/* Like svn_wc__add_tree_conflict(), but append to the log accumulator
- * LOG_ACCUM a command to rewrite the entry field, and do not flush the log.
- * This function is meant to be used in the working copy library where
- * log accumulators are usually readily available.
- *
- * If *LOG_ACCUM is NULL then set *LOG_ACCUM to a new stringbug allocated in
- * POOL, else append to the existing stringbuf there.
- */
+/* */
 svn_error_t *
 svn_wc__loggy_add_tree_conflict(svn_wc__db_t *db,
                                 const char *adm_abspath,
