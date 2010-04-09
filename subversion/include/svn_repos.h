@@ -2115,6 +2115,15 @@ enum svn_repos_load_uuid
   svn_repos_load_uuid_force
 };
 
+/** Callback for providing per revision progress while dumping or verifying
+ *  the repository.
+ *
+ * @since New in 1.7. */
+typedef svn_error_t *(*svn_repos_progress_func_t)(void *baton,
+                                                  svn_revnum_t rev,
+                                                  const char *warning_text,
+                                                  apr_pool_t *scratch_pool);
+
 
 /**
  * Verify the contents of the file system in @a repos.
@@ -2126,12 +2135,31 @@ enum svn_repos_load_uuid
  * revision 0.  If @a end_rev is #SVN_INVALID_REVNUM, then verify
  * through the @c HEAD revision.
  *
+ * For every verified revision call @a progress_func with @a rev set to
+ * the verified revision and @a warning_text @c NULL. For warnings call @a
+ * progress_func with @a warning_text set.
+ *
  * If @a cancel_func is not @c NULL, call it periodically with @a
  * cancel_baton as argument to see if the caller wishes to cancel the
  * verification.
+ */
+svn_error_t *
+svn_repos_verify_fs2(svn_repos_t *repos,
+                     svn_revnum_t start_rev,
+                     svn_revnum_t end_rev,
+                     svn_repos_progress_func_t progress,
+                     void *progress_baton,
+                     svn_cancel_func_t cancel,
+                     void *cancel_baton,
+                     apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_repos_verify_fs2(), but with a feedback_stream instead of
+ * handling feedback via the progress_func handler
  *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_verify_fs(svn_repos_t *repos,
                     svn_stream_t *feedback_stream,
@@ -2140,7 +2168,6 @@ svn_repos_verify_fs(svn_repos_t *repos,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     apr_pool_t *pool);
-
 
 /**
  * Dump the contents of the filesystem within already-open @a repos into
@@ -2165,12 +2192,37 @@ svn_repos_verify_fs(svn_repos_t *repos,
  * be done with full plain text.  A dump with @a use_deltas set cannot
  * be loaded by Subversion 1.0.x.
  *
+ * For every dumped revision call @a progress_func with @a rev set to the
+ * dumped revision and @a warning_text @c NULL. For warnings call @a
+ * progress_func with @a warning_text.
+ *
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the dump.
  *
- * @since New in 1.1.
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_repos_dump_fs3(svn_repos_t *repos,
+                   svn_stream_t *dumpstream,
+                   svn_revnum_t start_rev,
+                   svn_revnum_t end_rev,
+                   svn_boolean_t incremental,
+                   svn_boolean_t use_deltas,
+                   svn_repos_progress_func_t progress_func,
+                   void *progress_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_repos_dump_fs3(), but with a feedback_stream instead of
+ * handling feedback via the progress_func handler
+ *
+ * @since New in 1.1.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_dump_fs2(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
@@ -2182,7 +2234,6 @@ svn_repos_dump_fs2(svn_repos_t *repos,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *pool);
-
 
 /**
  * Similar to svn_repos_dump_fs2(), but with the @a use_deltas
