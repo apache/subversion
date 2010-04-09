@@ -306,8 +306,6 @@ do_lock(svn_lock_t **lock,
   err = lock_from_baton(lock, req, fs_path.data, lrb, pool);
 
  cleanup:
-  svn_ra_neon__request_destroy(req);
-
   /* 405 == Method Not Allowed (Occurs when trying to lock a working
      copy path which no longer exists at HEAD in the repository. */
   if (code == 405)
@@ -317,6 +315,8 @@ do_lock(svn_lock_t **lock,
                               _("Lock request failed: %d %s"),
                               code, req->code_desc);
     }
+  svn_ra_neon__request_destroy(req);
+
   return err;
 }
 
