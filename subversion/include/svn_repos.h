@@ -2142,6 +2142,8 @@ typedef svn_error_t *(*svn_repos_progress_func_t)(void *baton,
  * If @a cancel_func is not @c NULL, call it periodically with @a
  * cancel_baton as argument to see if the caller wishes to cancel the
  * verification.
+ *
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_repos_verify_fs2(svn_repos_t *repos,
@@ -2158,6 +2160,7 @@ svn_repos_verify_fs2(svn_repos_t *repos,
  * handling feedback via the progress_func handler
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
