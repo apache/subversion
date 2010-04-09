@@ -4236,13 +4236,14 @@ install_text_base(svn_stringbuf_t **log_accum,
  * this file, and removed after a successful run of the generated log
  * commands.
  *
+ * NEW_TEXT_BASE_MD5_CHECKSUM and NEW_TEXT_BASE_SHA1_CHECKSUM are the
+ * checksums that were computed as we constructed the (new) text base.
+ * (That was performed during a txdelta apply, or during a copy of an
+ * add-with-history.)
+ *
  * Set *CONTENT_STATE to the state of the contents after the
  * installation.  If an error is returned, the value of these three
  * variables is undefined.
- *
- * NEW_TEXT_BASE_MD5_CHECKSUM is the checksum that was computed as we
- * constructed the (new) text base. That was performed during a txdelta
- * apply, or during a copy of an add-with-history.
  *
  * POOL is used for all bookkeeping work during the installation.
  */
@@ -4255,6 +4256,7 @@ merge_file(svn_stringbuf_t **log_accum,
            struct file_baton *fb,
            const char *new_text_base_tmp_abspath,
            const svn_checksum_t *new_text_base_md5_checksum,
+           const svn_checksum_t *new_text_base_sha1_checksum,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = fb->edit_baton;
@@ -4598,6 +4600,10 @@ merge_file(svn_stringbuf_t **log_accum,
   /* Deal with installation of the new textbase, if appropriate. */
   if (new_text_base_tmp_abspath)
     {
+      /* Move the temp text-base file to its final destination and install
+       * its checksum in the entry.  FB->text_base_path is the appropriate
+       * path: the "revert-base" path if the node is replaced, else the
+       * usual text-base path. */
       SVN_ERR(install_text_base(log_accum, pb->local_abspath,
                                 new_text_base_tmp_abspath,
                                 fb->text_base_abspath,
@@ -4605,6 +4611,16 @@ merge_file(svn_stringbuf_t **log_accum,
       tmp_entry.checksum = svn_checksum_to_cstring(new_text_base_md5_checksum,
                                                    pool);
       flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
+
+#ifdef SVN_EXPERIMENTAL
+      /* Set the 'checksum' column of the file's BASE_NODE row to
+       * NEW_TEXT_BASE_SHA1_CHECKSUM.  The pristine text identified by that
+       * checksum is already in the pristine store. */
+      /* ### This should be done as part of a single "global_update"
+       * operation. */
+      svn_wc__db_temp_set_base_checksum(eb->db, fb->local_abspath,
+                                        new_text_base_sha1_checksum, pool);
+#endif
     }
 
   /* If FB->PATH is locally deleted, but not as part of a replacement
@@ -4944,7 +4960,7 @@ close_file(void *file_baton,
   SVN_ERR(merge_file(&delayed_log_accum, &install_pristine, &install_from,
                      &content_state, entry,
                      fb, new_text_base_abspath, new_text_base_md5_checksum,
-                     pool));
+                     new_text_base_sha1_checksum, pool));
 
   /* Queue all operations.  */
   SVN_WC__FLUSH_LOG_ACCUM(eb->db, fb->dir_baton->local_abspath,

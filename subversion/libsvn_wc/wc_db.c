@@ -7172,3 +7172,28 @@ svn_wc__db_temp_get_file_external(const char **serialized_file_external,
 
   return svn_error_return(svn_sqlite__reset(stmt));
 }
+
+
+svn_error_t *
+svn_wc__db_temp_set_base_checksum(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  const svn_checksum_t *new_sha1_checksum,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  const char *new_sha1_digest;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(new_sha1_checksum->kind == svn_checksum_sha1);
+
+  new_sha1_digest = svn_checksum_serialize(new_sha1_checksum,
+                                           scratch_pool, scratch_pool);
+
+  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
+                                 STMT_UPDATE_BASE_PRISTINE_CHECKSUM,
+                                 scratch_pool));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, new_sha1_digest));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
