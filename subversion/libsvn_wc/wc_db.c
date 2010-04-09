@@ -239,6 +239,12 @@ typedef struct {
   /* for inserting symlinks */
   const char *target;
 
+  /* may need to insert/update ACTUAL to record a conflict  */
+  const svn_skel_t *conflict;
+
+  /* may have work items to queue in this transaction  */
+  const svn_skel_t *work_items;
+
 } insert_base_baton_t;
 
 
@@ -262,6 +268,13 @@ static const svn_token_map_t presence_map[] = {
   { "base-deleted", svn_wc__db_status_base_deleted },
   { NULL }
 };
+
+
+/* Forward declarations  */
+static svn_error_t *
+add_work_items(svn_sqlite__db_t *sdb,
+               const svn_skel_t *skel,
+               apr_pool_t *scratch_pool);
 
 
 /* */
@@ -1332,12 +1345,28 @@ create_repos_id(apr_int64_t *repos_id,
 }
 
 
+/* Initialize the baton with appropriate "blank" values. This allows the
+   insertion function to leave certain columns null.  */
+static void
+blank_ibb(insert_base_baton_t *pibb)
+{
+  memset(pibb, 0, sizeof(*pibb));
+  pibb->revision = SVN_INVALID_REVNUM;
+  pibb->changed_rev = SVN_INVALID_REVNUM;
+  pibb->depth = svn_depth_infinity;
+  pibb->translated_size = SVN_INVALID_FILESIZE;
+}
+
+
 /* */
 static svn_error_t *
 insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   const insert_base_baton_t *pibb = baton;
   svn_sqlite__stmt_t *stmt;
+
+  /* ### we can't handle this right now  */
+  SVN_ERR_ASSERT(pibb->conflict == NULL);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_BASE_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pibb->wc_id, pibb->local_relpath));
@@ -1408,6 +1437,8 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
           SVN_ERR(svn_sqlite__insert(NULL, stmt));
         }
     }
+
+  SVN_ERR(add_work_items(sdb, pibb->work_items, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1703,6 +1734,8 @@ svn_wc__db_init(svn_wc__db_t *db,
   /* The PDH is complete. Stash it into DB.  */
   apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING, pdh);
 
+  blank_ibb(&ibb);
+
   if (initial_rev > 0)
     ibb.status = svn_wc__db_status_incomplete;
   else
@@ -1714,13 +1747,11 @@ svn_wc__db_init(svn_wc__db_t *db,
   ibb.repos_relpath = repos_relpath;
   ibb.revision = initial_rev;
 
-  ibb.props = NULL;
-  ibb.changed_rev = SVN_INVALID_REVNUM;
-  ibb.changed_date = 0;
-  ibb.changed_author = NULL;
-
+  /* ### what about the children?  */
   ibb.children = NULL;
   ibb.depth = depth;
+
+  /* ### no children, conflicts, or work items to install in a txn... */
 
   return svn_error_return(insert_base_node(&ibb, sdb, scratch_pool));
 }
@@ -1739,6 +1770,8 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const char *changed_author,
                               const apr_array_header_t *children,
                               svn_depth_t depth,
+                              const svn_skel_t *conflict,
+                              const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -1763,6 +1796,8 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
                           pdh->wcroot->sdb, scratch_pool));
 
+  blank_ibb(&ibb);
+
   ibb.status = svn_wc__db_status_normal;
   ibb.kind = svn_wc__db_kind_dir;
   ibb.wc_id = pdh->wcroot->wc_id;
@@ -1779,13 +1814,20 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
   ibb.children = children;
   ibb.depth = depth;
 
+  ibb.conflict = conflict;
+  ibb.work_items = work_items;
+
   /* Insert the directory and all its children transactionally.
 
      Note: old children can stick around, even if they are no longer present
      in this directory's revision.  */
-  return svn_sqlite__with_transaction(pdh->wcroot->sdb,
-                                      insert_base_node, &ibb,
-                                      scratch_pool);
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                       insert_base_node, &ibb,
+                                       scratch_pool));
+
+  /* ### worry about flushing child subdirs?  */
+  flush_entries(pdh);
+  return SVN_NO_ERROR;
 }
 
 
@@ -1802,6 +1844,8 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          const char *changed_author,
                          const svn_checksum_t *checksum,
                          svn_filesize_t translated_size,
+                         const svn_skel_t *conflict,
+                         const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -1826,6 +1870,8 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
                           pdh->wcroot->sdb, scratch_pool));
 
+  blank_ibb(&ibb);
+
   ibb.status = svn_wc__db_status_normal;
   ibb.kind = svn_wc__db_kind_file;
   ibb.wc_id = pdh->wcroot->wc_id;
@@ -1842,11 +1888,19 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   ibb.checksum = checksum;
   ibb.translated_size = translated_size;
 
+  ibb.conflict = conflict;
+  ibb.work_items = work_items;
+
   /* ### hmm. if this used to be a directory, we should remove children.
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
 
-  return insert_base_node(&ibb, pdh->wcroot->sdb, scratch_pool);
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                       insert_base_node, &ibb,
+                                       scratch_pool));
+
+  flush_entries(pdh);
+  return SVN_NO_ERROR;
 }
 
 
@@ -1862,6 +1916,8 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             apr_time_t changed_date,
                             const char *changed_author,
                             const char *target,
+                            const svn_skel_t *conflict,
+                            const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -1886,6 +1942,8 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
                           pdh->wcroot->sdb, scratch_pool));
 
+  blank_ibb(&ibb);
+
   ibb.status = svn_wc__db_status_normal;
   ibb.kind = svn_wc__db_kind_symlink;
   ibb.wc_id = pdh->wcroot->wc_id;
@@ -1901,11 +1959,19 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
 
   ibb.target = target;
 
+  ibb.conflict = conflict;
+  ibb.work_items = work_items;
+
   /* ### hmm. if this used to be a directory, we should remove children.
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
 
-  return insert_base_node(&ibb, pdh->wcroot->sdb, scratch_pool);
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                       insert_base_node, &ibb,
+                                       scratch_pool));
+
+  flush_entries(pdh);
+  return SVN_NO_ERROR;
 }
 
 
@@ -1918,6 +1984,8 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                                 svn_revnum_t revision,
                                 svn_wc__db_kind_t kind,
                                 svn_wc__db_status_t status,
+                                const svn_skel_t *conflict,
+                                const svn_skel_t *work_items,
                                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -1942,6 +2010,8 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
   SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
                           pdh->wcroot->sdb, scratch_pool));
 
+  blank_ibb(&ibb);
+
   ibb.status = status;
   ibb.kind = kind;
   ibb.wc_id = pdh->wcroot->wc_id;
@@ -1950,11 +2020,6 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
 
-  ibb.props = NULL;
-  ibb.changed_rev = SVN_INVALID_REVNUM;
-  ibb.changed_date = 0;
-  ibb.changed_author = NULL;
-
   /* Depending upon KIND, any of these might get used. */
   ibb.children = NULL;
   ibb.depth = svn_depth_unknown;
@@ -1962,13 +2027,18 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
   ibb.translated_size = SVN_INVALID_FILESIZE;
   ibb.target = NULL;
 
+  ibb.conflict = conflict;
+  ibb.work_items = work_items;
+
   /* ### hmm. if this used to be a directory, we should remove children.
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
 
-  SVN_ERR(insert_base_node(&ibb, pdh->wcroot->sdb, scratch_pool));
-  flush_entries(pdh);
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                       insert_base_node, &ibb,
+                                       scratch_pool));
 
+  flush_entries(pdh);
   return SVN_NO_ERROR;
 }
 
@@ -2025,7 +2095,10 @@ svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
   ibb.children = NULL;
   ibb.depth = depth;
 
-  return insert_base_node(&ibb, pdh->wcroot->sdb, scratch_pool);
+  /* ### no children, conflicts, or work items to install in a txn... */
+
+  return svn_error_return(insert_base_node(&ibb, pdh->wcroot->sdb,
+                                           scratch_pool));
 }
 
 
@@ -4698,6 +4771,7 @@ struct update_baton {
 svn_error_t *
 svn_wc__db_global_update(svn_wc__db_t *db,
                          const char *local_abspath,
+                         svn_wc__db_kind_t new_kind,
                          const char *new_repos_relpath,
                          svn_revnum_t new_revision,
                          const apr_hash_t *new_props,
@@ -4707,6 +4781,7 @@ svn_wc__db_global_update(svn_wc__db_t *db,
                          const apr_array_header_t *new_children,
                          const svn_checksum_t *new_checksum,
                          const char *new_target,
+                         const apr_hash_t *new_dav_cache,
                          const svn_skel_t *conflict,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool)

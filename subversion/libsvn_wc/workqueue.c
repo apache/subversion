@@ -899,6 +899,7 @@ run_killme(svn_wc__db_t *db,
                 repos_relpath, repos_root_url, repos_uuid,
                 original_revision, svn_wc__db_kind_dir,
                 svn_wc__db_status_not_present,
+                NULL, NULL,
                 scratch_pool));
     }
 
@@ -1079,6 +1080,7 @@ run_deletion_postcommit(svn_wc__db_t *db,
                     repos_relpath, repos_root_url, repos_uuid,
                     new_revision, svn_wc__db_kind_file,
                     svn_wc__db_status_not_present,
+                    NULL, NULL,
                     scratch_pool));
         }
     }

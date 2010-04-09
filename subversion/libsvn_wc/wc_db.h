@@ -411,6 +411,12 @@ svn_wc__db_init(svn_wc__db_t *db,
    This subsystem does not use DEPTH, but it can be recorded here in
    the BASE tree for higher-level code to use.
 
+   If CONFLICT is not NULL, then it describes a conflict for this node. The
+   node will be record as conflicted (in ACTUAL).
+
+   Any work items that are necessary as part of this node construction may
+   be passed in WORK_ITEMS.
+
    All temporary allocations will be made in SCRATCH_POOL.
 */
 svn_error_t *
@@ -426,6 +432,8 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const char *changed_author,
                               const apr_array_header_t *children,
                               svn_depth_t depth,
+                              const svn_skel_t *conflict,
+                              const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool);
 
 
@@ -448,6 +456,12 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
    by its properties) is known, then pass it as TRANSLATED_SIZE. Otherwise,
    pass SVN_INVALID_FILESIZE.
 
+   If CONFLICT is not NULL, then it describes a conflict for this node. The
+   node will be record as conflicted (in ACTUAL).
+
+   Any work items that are necessary as part of this node construction may
+   be passed in WORK_ITEMS.
+
    All temporary allocations will be made in SCRATCH_POOL.
 */
 svn_error_t *
@@ -463,6 +477,8 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          const char *changed_author,
                          const svn_checksum_t *checksum,
                          svn_filesize_t translated_size,
+                         const svn_skel_t *conflict,
+                         const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
 
 
@@ -479,6 +495,12 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
    CHANGED_AUTHOR>.
 
    The target of the symlink is specified by TARGET.
+
+   If CONFLICT is not NULL, then it describes a conflict for this node. The
+   node will be record as conflicted (in ACTUAL).
+
+   Any work items that are necessary as part of this node construction may
+   be passed in WORK_ITEMS.
 
    All temporary allocations will be made in SCRATCH_POOL.
 */
@@ -522,6 +544,8 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             apr_time_t changed_date,
                             const char *changed_author,
                             const char *target,
+                            const svn_skel_t *conflict,
+                            const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
 
 
@@ -538,6 +562,12 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
      svn_wc__db_status_excluded
      svn_wc__db_status_not_present
 
+   If CONFLICT is not NULL, then it describes a conflict for this node. The
+   node will be record as conflicted (in ACTUAL).
+
+   Any work items that are necessary as part of this node construction may
+   be passed in WORK_ITEMS.
+
    All temporary allocations will be made in SCRATCH_POOL.
 */
 svn_error_t *
@@ -549,6 +579,8 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                                 svn_revnum_t revision,
                                 svn_wc__db_kind_t kind,
                                 svn_wc__db_status_t status,
+                                const svn_skel_t *conflict,
+                                const svn_skel_t *work_items,
                                 apr_pool_t *scratch_pool);
 
 
@@ -1491,6 +1523,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_global_update(svn_wc__db_t *db,
                          const char *local_abspath,
+                         svn_wc__db_kind_t new_kind,
                          const char *new_repos_relpath,
                          svn_revnum_t new_revision,
                          const apr_hash_t *new_props,
@@ -1500,6 +1533,7 @@ svn_wc__db_global_update(svn_wc__db_t *db,
                          const apr_array_header_t *new_children,
                          const svn_checksum_t *new_checksum,
                          const char *new_target,
+                         const apr_hash_t *new_dav_cache,
                          const svn_skel_t *conflict,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);

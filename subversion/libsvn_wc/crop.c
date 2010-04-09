@@ -301,6 +301,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
                                           revision,
                                           kind,
                                           svn_wc__db_status_excluded,
+                                          NULL, NULL,
                                           scratch_pool));
 
   if (notify_func)

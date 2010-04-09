@@ -1943,6 +1943,7 @@ revert_entry(svn_depth_t *depth,
                     base_revision,
                     kind,
                     svn_wc__db_status_not_present,
+                    NULL, NULL,
                     pool));
         }
     }
