@@ -542,6 +542,12 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
                                          pool));
             }
 
+#if 0
+          /* ### what should this value be? no caller appears to initialize
+             ### it, so we really SHOULD be setting a value here.  */
+          *merge_outcome = svn_wc_merge_merged;
+#endif
+
           /* Assume conflict remains. */
           return SVN_NO_ERROR;
         }
