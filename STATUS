@@ -188,21 +188,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r931209, r931211, r931392
-   Fixes related to the partial resolution of issue #3242 already backported
-   here.
-   Justification:
-     This fixes, at a minimum, some failing JavaHL tests, but also some
-     brokenness in functionality not fully explored by our test suite.
-   Branch:
-     ^/subversion/branches/1.6.x-3242-partial-fixes
-   Notes:
-     r931209 adds some RA patch-up code for correcting the incorrect data
-       received from the servers when handling the svn_ra_get_mergeinfo() call.
-     r931211 is the backport of changes required to ensure that the client
-       queries the correct URL when looking up mergeinfo in certain cases
-       (primarily 'svn mergeinfo URL ...')
-     r931392 fixes a comment.
-   Votes:
-     +1: cmpilato, pburba, rhuijben
