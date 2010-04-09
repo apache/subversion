@@ -4525,7 +4525,8 @@ merge_file(svn_stringbuf_t **log_accum,
                         fb->local_abspath,
                         fb->copied_working_text,
                         oldrev_str, newrev_str, mine_str,
-                        FALSE, eb->diff3_cmd, NULL, fb->propchanges,
+                        FALSE /* dry_run */,
+                        eb->diff3_cmd, NULL, fb->propchanges,
                         eb->conflict_func, eb->conflict_baton,
                         eb->cancel_func, eb->cancel_baton,
                         pool));
@@ -5855,11 +5856,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                        pool, pool));
             SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
 
-            SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum, db,
-                                                      local_abspath,
-                                                      dir_abspath,
+            SVN_ERR(svn_wc__loggy_revert_props_create(db, local_abspath,
                                                       pool));
-            SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
           }
       }
   }
