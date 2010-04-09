@@ -83,23 +83,12 @@ svn_wc__loggy_append(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 
-/* Extend **LOG_ACCUM with log instructions to copy (and translate!) the
-   file SRC_PATH to DST_PATH, if it exists. If it doesn't and
-   REMOVE_DST_IF_NO_SRC is TRUE the file at DST_PATH will be deleted if any.
-
-   The test for existence is made during this call, not at log running time.
-
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-   SRC_PATH and DST_PATH are relative to ADM_ABSPATH.
-
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
-*/
+/* Queue instructions to copy/translate SRC_ABSPATH to DST_ABSPATH.  */
 svn_error_t *
-svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
+svn_wc__loggy_copy(svn_wc__db_t *db,
                    const char *adm_abspath,
-                   const char *src_path, const char *dst_path,
-                   apr_pool_t *result_pool,
+                   const char *src_abspath,
+                   const char *dst_abspath,
                    apr_pool_t *scratch_pool);
 
 
