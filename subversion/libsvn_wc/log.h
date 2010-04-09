@@ -191,39 +191,6 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                    apr_pool_t *scratch_pool);
 
 
-
-/* Queue instructions to set permissions of PATH to 'executable' if it has
-   the 'executable' property set.
-
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-
-   The property is tested at log run time, within this log instruction.
-
-   Use SCRATCH_POOL for temporary allocations.
-*/
-svn_error_t *
-svn_wc__loggy_maybe_set_executable(svn_wc__db_t *db,
-                                   const char *adm_abspath,
-                                   const char *path,
-                                   apr_pool_t *scratch_pool);
-
-/* Queue instructions to set permissions of PATH to 'readonly' if it has
-   the 'needs-lock' property set and there is no lock for the file in the
-   working copy.
-
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-
-   The tests are made at log run time, within this log instruction.
-
-   Use SCRATCH_POOL for temporary allocations.
-*/
-svn_error_t *
-svn_wc__loggy_maybe_set_readonly(svn_wc__db_t *db,
-                                 const char *adm_abspath,
-                                 const char *path,
-                                 apr_pool_t *scratch_pool);
-
-
 /* Extend **LOG_ACCUM with log instructions to set the timestamp of PATH
    in the entry field with name TIME_PROP.
    TODO ### Huh? There is no 'TIME_PROP' argument.

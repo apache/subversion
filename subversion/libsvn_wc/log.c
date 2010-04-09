@@ -94,14 +94,6 @@
 /* Make file SVN_WC__LOG_ATTR_NAME readonly */
 #define SVN_WC__LOG_READONLY            "readonly"
 
-/* Make file SVN_WC__LOG_ATTR_NAME readonly if needs-lock property is set
-   and there is no lock token for the file in the working copy. */
-#define SVN_WC__LOG_MAYBE_READONLY "maybe-readonly"
-
-/* Make file SVN_WC__LOG_ATTR_NAME executable if the
-   executable property is set. */
-#define SVN_WC__LOG_MAYBE_EXECUTABLE "maybe-executable"
-
 /* Set SVN_WC__LOG_ATTR_NAME to have timestamp SVN_WC__LOG_ATTR_TIMESTAMP. */
 #define SVN_WC__LOG_SET_TIMESTAMP       "set-timestamp"
 
@@ -232,6 +224,8 @@ file_xfer_under_path(svn_wc__db_t *db,
             svn_error_clear(err);
           }
 
+        /* ### switch to OP_SYNC_FILE_FLAGS  */
+
         SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, dest_abspath,
                                             scratch_pool));
 
@@ -322,29 +316,6 @@ log_do_file_readonly(struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
-/* Maybe make file NAME in log's CWD executable */
-static svn_error_t *
-log_do_file_maybe_executable(struct log_runner *loggy,
-                             const char *name)
-{
-  const char *local_abspath
-    = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
-
-  return svn_error_return(svn_wc__maybe_set_executable(
-                                NULL, loggy->db, local_abspath, loggy->pool));
-}
-
-/* Maybe make file NAME in log's CWD readonly */
-static svn_error_t *
-log_do_file_maybe_readonly(struct log_runner *loggy,
-                           const char *name)
-{
-  const char *local_abspath
-    = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
-
-  return svn_wc__maybe_set_read_only(NULL, loggy->db, local_abspath,
-                                     loggy->pool);
-}
 
 /* Set file NAME in log's CWD to timestamp value in ATTS. */
 static svn_error_t *
@@ -669,12 +640,6 @@ start_handler(void *userData, const char *eltname, const char **atts)
   }
   else if (strcmp(eltname, SVN_WC__LOG_READONLY) == 0) {
     err = log_do_file_readonly(loggy, name);
-  }
-  else if (strcmp(eltname, SVN_WC__LOG_MAYBE_READONLY) == 0) {
-    err = log_do_file_maybe_readonly(loggy, name);
-  }
-  else if (strcmp(eltname, SVN_WC__LOG_MAYBE_EXECUTABLE) == 0) {
-    err = log_do_file_maybe_executable(loggy, name);
   }
   else if (strcmp(eltname, SVN_WC__LOG_SET_TIMESTAMP) == 0) {
     err = log_do_file_timestamp(loggy, name, atts);
@@ -1068,48 +1033,6 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                                   result_pool, scratch_pool);
 }
 
-svn_error_t *
-svn_wc__loggy_maybe_set_executable(svn_wc__db_t *db,
-                                   const char *adm_abspath,
-                                   const char *path,
-                                   apr_pool_t *scratch_pool)
-{
-  svn_stringbuf_t *log_accum = NULL;
-  const char *loggy_path1;
-
-  SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
-  svn_xml_make_open_tag(&log_accum,
-                        scratch_pool,
-                        svn_xml_self_closing,
-                        SVN_WC__LOG_MAYBE_EXECUTABLE,
-                        SVN_WC__LOG_ATTR_NAME, loggy_path1,
-                        NULL);
-
-  return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
-                                               scratch_pool));
-}
-
-svn_error_t *
-svn_wc__loggy_maybe_set_readonly(svn_wc__db_t *db,
-                                 const char *adm_abspath,
-                                 const char *path,
-                                 apr_pool_t *scratch_pool)
-{
-  svn_stringbuf_t *log_accum = NULL;
-  const char *loggy_path1;
-
-  SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
-  svn_xml_make_open_tag(&log_accum,
-                        scratch_pool,
-                        svn_xml_self_closing,
-                        SVN_WC__LOG_MAYBE_READONLY,
-                        SVN_WC__LOG_ATTR_NAME,
-                        loggy_path1,
-                        NULL);
-
-  return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
-                                               scratch_pool));
-}
 
 svn_error_t *
 svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
