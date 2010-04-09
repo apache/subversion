@@ -18792,7 +18792,7 @@ def reintegrate_with_subtree_merges(sbox):
     'D/H/omega' : Item("New content"),
     })
   expected_A_skip = wc.State(A_COPY_path, {})
-  svntest.actions.run_and_verify_merge(A_path, None, None,
+  svntest.actions.run_and_verify_svn(A_path, None, None,
                                        sbox.repo_url + '/A_COPY', None,
                                        expected_output,
                                        expected_mergeinfo_output,
@@ -18802,6 +18802,90 @@ def reintegrate_with_subtree_merges(sbox):
                                        expected_A_skip,
                                        None, None, None, None,
                                        None, 1, 1, "--reintegrate")
+
+def foreign_repos_del_and_props(sbox):
+  "merge del and ps variants from a foreign repos"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc2_dir = sbox.add_wc_path('wc2')
+  
+  (r2_path, r2_url) = sbox.add_repo_path('fgn');
+  svntest.main.run_svnadmin('create', r2_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+                                     r2_url, wc2_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                      'svn:eol-style', 'native',
+                                      os.path.join(wc_dir, 'iota'))
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                      os.path.join(wc_dir, 'A/D'),
+                                      os.path.join(wc_dir, 'D'))
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                      os.path.join(wc_dir, 'A/D'),
+                                      os.path.join(wc_dir, 'D/G'))
+
+  new_file = os.path.join(wc_dir, 'new-file')
+  svntest.main.file_write(new_file, 'new-file')
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', new_file)
+  
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                      'svn:eol-style', 'native', new_file)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit', wc_dir,
+                                      '-m', 'changed')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                      sbox.repo_url, wc2_dir,
+                                      '-r', '0:1')
+
+  expected_status = svntest.actions.get_virginal_state(wc2_dir, 0)
+  expected_status.tweak(status='A ')
+  expected_status.add(
+     {
+        ''                  : Item(status='  ', wc_rev='0'),
+     })
+  svntest.actions.run_and_verify_status(wc2_dir, expected_status)
+
+  expected_status = svntest.actions.get_virginal_state(wc2_dir, 1)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit', wc2_dir,
+                                     '-m', 'Merged r1')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                      sbox.repo_url, wc2_dir,
+                                      '-r', '1:2')
+
+  expected_status.tweak('A/D', 'A/D/G', 'A/D/G/rho', 'A/D/G/tau', 'A/D/G/pi',
+                         'A/D/gamma', 'A/D/H', 'A/D/H/psi', 'A/D/H/omega',
+                         'A/D/H/chi', status='D ')
+  expected_status.tweak(wc_rev='1')
+  expected_status.tweak('', wc_rev='0')
+  expected_status.tweak('iota', status=' M')
+  
+  expected_status.add(
+     {
+        'new-file'          : Item(status='A ', wc_rev='0'),
+        'D'                 : Item(status='A ', wc_rev='0'),
+        'D/H'               : Item(status='A ', wc_rev='0'),
+        'D/H/omega'         : Item(status='A ', wc_rev='0'),
+        'D/H/psi'           : Item(status='A ', wc_rev='0'),
+        'D/H/chi'           : Item(status='A ', wc_rev='0'),
+        'D/gamma'           : Item(status='A ', wc_rev='0'),
+     })
+  
+  svntest.actions.run_and_verify_status(wc2_dir, expected_status)
+
+  expected_output = ["Properties on '%s':\n" % (os.path.join(wc2_dir, 'iota')),
+                     "  svn:eol-style\n",
+                     "Properties on '%s':\n" % (os.path.join(wc2_dir, 'new-file')),
+                     "  svn:eol-style\n" ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'proplist',
+                                     os.path.join(wc2_dir, 'iota'),
+                                     os.path.join(wc2_dir, 'new-file'))
 
 ########################################################################
 # Run the tests
@@ -19034,6 +19118,7 @@ test_list = [ None,
               merge_into_wc_for_deleted_branch,
               reintegrate_with_self_referential_mergeinfo,
               reintegrate_with_subtree_merges,
+              foreign_repos_del_and_props
              ]
 
 if __name__ == '__main__':
