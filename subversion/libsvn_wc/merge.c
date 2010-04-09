@@ -416,8 +416,11 @@ save_merge_result(svn_wc__db_t *db,
                                      ".edited",
                                      svn_io_file_del_none,
                                      pool, pool));
-  SVN_ERR(svn_wc__loggy_copy(db, merge_dirpath,
-                             result_target, edited_copy, pool));
+  SVN_ERR(svn_wc__loggy_translated_file(db, merge_dirpath,
+                                        edited_copy,
+                                        result_target,
+                                        target_abspath,
+                                        pool));
 
   return SVN_NO_ERROR;
 }
