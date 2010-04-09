@@ -681,6 +681,7 @@ test_inserting_nodes(apr_pool_t *pool)
             props,
             1, TIME_1a, AUTHOR_1,
             children, svn_depth_infinity,
+            NULL, NULL,
             pool));
 
   /* Replace an incomplete node with a file node. */
@@ -691,6 +692,7 @@ test_inserting_nodes(apr_pool_t *pool)
             props,
             1, TIME_1a, AUTHOR_1,
             checksum, 10,
+            NULL, NULL,
             pool));
 
   /* Create a new symlink node. */
@@ -701,6 +703,7 @@ test_inserting_nodes(apr_pool_t *pool)
             props,
             1, TIME_1a, AUTHOR_1,
             "O-target",
+            NULL, NULL,
             pool));
 
   /* Replace an incomplete node with an absent file node. */
@@ -708,6 +711,7 @@ test_inserting_nodes(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "N/N-b", pool),
             "N/N-b", ROOT_ONE, UUID_ONE, 3,
             svn_wc__db_kind_file, svn_wc__db_status_absent,
+            NULL, NULL,
             pool));
 
   /* Create a new excluded directory node. */
@@ -715,6 +719,7 @@ test_inserting_nodes(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "P", pool),
             "P", ROOT_ONE, UUID_ONE, 3,
             svn_wc__db_kind_dir, svn_wc__db_status_excluded,
+            NULL, NULL,
             pool));
 
   /* Create a new not-present symlink node. */
@@ -722,6 +727,7 @@ test_inserting_nodes(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "Q", pool),
             "Q", ROOT_ONE, UUID_ONE, 3,
             svn_wc__db_kind_symlink, svn_wc__db_status_not_present,
+            NULL, NULL,
             pool));
 
   /* Create a new absent unknown-kind node. */
@@ -729,6 +735,7 @@ test_inserting_nodes(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "R", pool),
             "R", ROOT_ONE, UUID_ONE, 3,
             svn_wc__db_kind_unknown, svn_wc__db_status_absent,
+            NULL, NULL,
             pool));
 
 
@@ -905,12 +912,14 @@ test_pdh(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "sub/A/B", pool),
             "sub/A/B", ROOT_ONE, UUID_ONE, 1,
             svn_wc__db_kind_file, svn_wc__db_status_absent,
+            NULL, NULL,
             pool));
 
   SVN_ERR(svn_wc__db_base_add_absent_node(
             db, svn_dirent_join(local_abspath, "sub/A/B/C/D", pool),
             "sub/A/B/C/D", ROOT_ONE, UUID_ONE, 1,
             svn_wc__db_kind_file, svn_wc__db_status_absent,
+            NULL, NULL,
             pool));
 
   return SVN_NO_ERROR;
