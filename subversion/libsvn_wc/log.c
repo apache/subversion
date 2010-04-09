@@ -138,164 +138,106 @@ struct log_runner
 /* #define DEBUG_LOG */
 
 
-
-/*** The XML handlers. ***/
+/* Helper macro for erroring out while running a logfile.
 
-/* Used by file_xfer_under_path(). */
-enum svn_wc__xfer_action {
-  svn_wc__xfer_mv,
-  svn_wc__xfer_append,
-  svn_wc__xfer_cp_and_translate
-};
+   This is implemented as a macro so that the error created has a useful
+   line number associated with it. */
+#define SIGNAL_ERROR(loggy, err)                                        \
+  svn_xml_signal_bailout(svn_error_createf(                             \
+                           SVN_ERR_WC_BAD_ADM_LOG, err,                 \
+                           _("In directory '%s'"),                      \
+                           svn_dirent_local_style(loggy->adm_abspath,   \
+                                                  loggy->pool)),        \
+                         loggy->parser)
 
 
-/* Perform some sort of copy-related ACTION on NAME and DEST:
-
-      svn_wc__xfer_mv:                 do a copy, then remove NAME.
-      svn_wc__xfer_append:             append contents of NAME to DEST
-      svn_wc__xfer_cp_and_translate:   copy NAME to DEST, doing any eol
-                                       and keyword expansion according to
-                                       the current property vals of VERSIONED
-                                       or, if that's NULL, those of DEST.
-*/
 static svn_error_t *
-file_xfer_under_path(svn_wc__db_t *db,
-                     const char *adm_abspath,
-                     const char *name,
-                     const char *dest,
-                     const char *versioned,
-                     enum svn_wc__xfer_action action,
-                     apr_pool_t *scratch_pool)
+log_do_file_append(const char *from_abspath,
+                   const char *dest_abspath,
+                   apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  const char *from_abspath;
-  const char *dest_abspath;
 
-  from_abspath = svn_dirent_join(adm_abspath, name, scratch_pool);
-  dest_abspath = svn_dirent_join(adm_abspath, dest, scratch_pool);
-
-  switch (action)
+  err = svn_io_append_file(from_abspath, dest_abspath, scratch_pool);
+  if (err)
     {
-    case svn_wc__xfer_append:
-      err = svn_io_append_file(from_abspath, dest_abspath, scratch_pool);
-      if (err)
-        {
-          if (!APR_STATUS_IS_ENOENT(err->apr_err))
-            return svn_error_return(err);
-          svn_error_clear(err);
-        }
-      break;
-
-    case svn_wc__xfer_cp_and_translate:
-      {
-        const char *versioned_abspath;
-        svn_subst_eol_style_t style;
-        const char *eol;
-        apr_hash_t *keywords;
-        svn_boolean_t special;
-
-        if (versioned)
-          versioned_abspath = svn_dirent_join(adm_abspath, versioned,
-                                              scratch_pool);
-        else
-          versioned_abspath = dest_abspath;
-
-          err = svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
-                                      scratch_pool, scratch_pool);
-        if (! err)
-          err = svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL,
-                                     scratch_pool, scratch_pool);
-        if (! err)
-          err = svn_wc__get_special(&special, db, versioned_abspath,
-                                    scratch_pool);
-
-        if (! err)
-          err = svn_subst_copy_and_translate3
-                (from_abspath, dest_abspath,
-                 eol, TRUE,
-                 keywords, TRUE,
-                 special,
-                 scratch_pool);
-
-        if (err)
-          {
-            if (!APR_STATUS_IS_ENOENT(err->apr_err))
-              return svn_error_return(err);
-            svn_error_clear(err);
-          }
-
-        /* ### switch to OP_SYNC_FILE_FLAGS  */
-
-        SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, dest_abspath,
-                                            scratch_pool));
-
-        return svn_error_return(svn_wc__maybe_set_executable(
-                                              NULL, db, dest_abspath,
-                                              scratch_pool));
-      }
-
-    case svn_wc__xfer_mv:
-      err = svn_io_file_rename(from_abspath, dest_abspath, scratch_pool);
-
-      /* If we got an ENOENT, that's ok;  the move has probably
-         already completed in an earlier run of this log.  */
-      if (err)
-        {
-          if (!APR_STATUS_IS_ENOENT(err->apr_err))
-            return svn_error_quick_wrap(err, _("Can't move source to dest"));
-          svn_error_clear(err);
-        }
-      break;
+      if (!APR_STATUS_IS_ENOENT(err->apr_err))
+        return svn_error_return(err);
+      svn_error_clear(err);
     }
 
   return SVN_NO_ERROR;
 }
 
 
-/* Helper macro for erroring out while running a logfile.
-
-   This is implemented as a macro so that the error created has a useful
-   line number associated with it. */
-#define SIGNAL_ERROR(loggy, err)                                   \
-  svn_xml_signal_bailout                                           \
-    (svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,                \
-                       _("In directory '%s'"),                     \
-                       svn_dirent_local_style(loggy->adm_abspath,  \
-                                              loggy->pool)),       \
-     loggy->parser)
-
-
-
-/*** Dispatch on the xml opening tag. ***/
-
-/* */
 static svn_error_t *
-log_do_file_xfer(struct log_runner *loggy,
-                 const char *name,
-                 enum svn_wc__xfer_action action,
-                 const char **atts)
+log_do_file_cp_and_translate(svn_wc__db_t *db,
+                             const char *from_abspath,
+                             const char *dest_abspath,
+                             const char *versioned_abspath,
+                             apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  const char *dest = NULL;
-  const char *versioned;
+  svn_subst_eol_style_t style;
+  const char *eol;
+  apr_hash_t *keywords;
+  svn_boolean_t special;
 
-  /* We have the name (src), and the destination is absolutely required. */
-  dest = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DEST, atts);
-  versioned = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_2, atts);
+  err = svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
+                              scratch_pool, scratch_pool);
+  if (! err)
+    err = svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL,
+                               scratch_pool, scratch_pool);
+  if (! err)
+    err = svn_wc__get_special(&special, db, versioned_abspath,
+                              scratch_pool);
 
-  if (! dest)
-    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                             _("Missing 'dest' attribute in '%s'"),
-                             svn_dirent_local_style(loggy->adm_abspath,
-                                                    loggy->pool));
+  if (! err)
+    err = svn_subst_copy_and_translate3(from_abspath, dest_abspath,
+                                        eol, TRUE /* repair */,
+                                        keywords, TRUE /* expand */,
+                                        special,
+                                        scratch_pool);
 
-  err = file_xfer_under_path(loggy->db, loggy->adm_abspath, name, dest,
-                             versioned, action, loggy->pool);
   if (err)
-    SIGNAL_ERROR(loggy, err);
+    {
+      if (!APR_STATUS_IS_ENOENT(err->apr_err))
+        return svn_error_return(err);
+      svn_error_clear(err);
+    }
+
+  /* ### switch to OP_SYNC_FILE_FLAGS  */
+
+  SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, dest_abspath,
+                                      scratch_pool));
+
+  return svn_error_return(svn_wc__maybe_set_executable(
+                            NULL, db, dest_abspath,
+                            scratch_pool));
+}
+
+
+static svn_error_t *
+log_do_file_move(const char *from_abspath,
+                 const char *dest_abspath,
+                 apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+  err = svn_io_file_rename(from_abspath, dest_abspath, scratch_pool);
+
+  /* If we got an ENOENT, that's ok;  the move has probably
+     already completed in an earlier run of this log.  */
+  if (err)
+    {
+      if (!APR_STATUS_IS_ENOENT(err->apr_err))
+        return svn_error_quick_wrap(err, _("Can't move source to dest"));
+      svn_error_clear(err);
+    }
 
   return SVN_NO_ERROR;
 }
+
 
 /* Make file NAME in log's CWD readonly */
 static svn_error_t *
@@ -603,17 +545,9 @@ start_handler(void *userData, const char *eltname, const char **atts)
 
   if (strcmp(eltname, "wc-log") == 0)   /* ignore expat pacifier */
     return;
-  else if (! name)
-    {
-      SIGNAL_ERROR
-        (loggy, svn_error_createf
-         (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-          _("Log entry missing 'name' attribute (entry '%s' "
-            "for directory '%s')"),
-          eltname,
-          svn_dirent_local_style(loggy->adm_abspath, loggy->pool)));
-      return;
-    }
+
+  /* The NAME attribute should be present.  */
+  SVN_ERR_ASSERT_NO_RETURN(name != NULL);
 
 #ifdef DEBUG_LOG
   SVN_DBG(("start_handler: name='%s'\n", eltname));
@@ -630,13 +564,41 @@ start_handler(void *userData, const char *eltname, const char **atts)
     err = log_do_delete_entry(loggy, name);
   }
   else if (strcmp(eltname, SVN_WC__LOG_MV) == 0) {
-    err = log_do_file_xfer(loggy, name, svn_wc__xfer_mv, atts);
+    const char *dest = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DEST, atts);
+    const char *from_abspath;
+    const char *dest_abspath;
+
+    SVN_ERR_ASSERT_NO_RETURN(dest != NULL);
+    from_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
+    dest_abspath = svn_dirent_join(loggy->adm_abspath, dest, loggy->pool);
+    err = log_do_file_move(from_abspath, dest_abspath, loggy->pool);
   }
   else if (strcmp(eltname, SVN_WC__LOG_CP_AND_TRANSLATE) == 0) {
-    err = log_do_file_xfer(loggy, name, svn_wc__xfer_cp_and_translate, atts);
+    const char *dest = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DEST, atts);
+    const char *versioned = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_2,
+                                                   atts);
+    const char *from_abspath;
+    const char *dest_abspath;
+    const char *versioned_abspath;
+
+    SVN_ERR_ASSERT_NO_RETURN(dest != NULL);
+    SVN_ERR_ASSERT_NO_RETURN(versioned != NULL);
+    from_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
+    dest_abspath = svn_dirent_join(loggy->adm_abspath, dest, loggy->pool);
+    versioned_abspath = svn_dirent_join(loggy->adm_abspath, versioned,
+                                        loggy->pool);
+    err = log_do_file_cp_and_translate(loggy->db, from_abspath, dest_abspath,
+                                       versioned_abspath, loggy->pool);
   }
   else if (strcmp(eltname, SVN_WC__LOG_APPEND) == 0) {
-    err = log_do_file_xfer(loggy, name, svn_wc__xfer_append, atts);
+    const char *dest = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DEST, atts);
+    const char *from_abspath;
+    const char *dest_abspath;
+
+    SVN_ERR_ASSERT_NO_RETURN(dest != NULL);
+    from_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
+    dest_abspath = svn_dirent_join(loggy->adm_abspath, dest, loggy->pool);
+    err = log_do_file_append(from_abspath, dest_abspath, loggy->pool);
   }
   else if (strcmp(eltname, SVN_WC__LOG_READONLY) == 0) {
     err = log_do_file_readonly(loggy, name);
