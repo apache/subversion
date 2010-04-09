@@ -710,48 +710,6 @@ svn_wc__run_xml_log(svn_wc__db_t *db,
 }
 
 
-/*** Log file generation helpers ***/
-
-/* Extend LOG_ACCUM with log operations to do MOVE_COPY_OP to SRC_PATH and
- * DST_PATH.
- *
- * SRC_PATH and DST_PATH are relative to ADM_ABSPATH.
- */
-static svn_error_t *
-loggy_move_copy_internal(svn_stringbuf_t **log_accum,
-                         svn_boolean_t is_move,
-                         const char *adm_abspath,
-                         const char *src_path, const char *dst_path,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
-{
-  svn_node_kind_t kind;
-  const char *src_abspath = svn_dirent_join(adm_abspath, src_path,
-                                            scratch_pool);
-
-  SVN_ERR(svn_io_check_path(src_abspath, &kind, scratch_pool));
-
-  /* Does this file exist? */
-  if (kind != svn_node_none)
-    {
-      svn_xml_make_open_tag(log_accum, result_pool,
-                            svn_xml_self_closing,
-                            is_move
-                              ? SVN_WC__LOG_MV
-                              : SVN_WC__LOG_CP_AND_TRANSLATE,
-                            SVN_WC__LOG_ATTR_NAME,
-                            src_path,
-                            SVN_WC__LOG_ATTR_DEST,
-                            dst_path,
-                            NULL);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-
-
 /* Return the portion of PATH that is relative to the working copy directory
  * ADM_ABSPATH, or SVN_WC_ENTRY_THIS_DIR if PATH is that directory. PATH must
  * not be outside that directory. */
@@ -807,21 +765,45 @@ svn_wc__loggy_append(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
+svn_wc__loggy_copy(svn_wc__db_t *db,
                    const char *adm_abspath,
-                   const char *src_path, const char *dst_path,
-                   apr_pool_t *result_pool,
+                   const char *src_abspath,
+                   const char *dst_abspath,
                    apr_pool_t *scratch_pool)
 {
   const char *loggy_path1;
   const char *loggy_path2;
+  svn_node_kind_t kind;
 
-  SVN_ERR(loggy_path(&loggy_path1, src_path, adm_abspath, scratch_pool));
-  SVN_ERR(loggy_path(&loggy_path2, dst_path, adm_abspath, scratch_pool));
-  return loggy_move_copy_internal(log_accum, FALSE, adm_abspath,
-                                  loggy_path1, loggy_path2,
-                                  result_pool, scratch_pool);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+
+  SVN_ERR(loggy_path(&loggy_path1, src_abspath, adm_abspath, scratch_pool));
+  SVN_ERR(loggy_path(&loggy_path2, dst_abspath, adm_abspath, scratch_pool));
+
+  SVN_ERR(svn_io_check_path(src_abspath, &kind, scratch_pool));
+
+  /* ### idiocy of the old world. the file better exist, if we're asking
+     ### to do some work with it.  */
+  SVN_ERR_ASSERT(kind != svn_node_none);
+
+  {
+    svn_stringbuf_t *log_accum = NULL;
+
+    svn_xml_make_open_tag(&log_accum, scratch_pool,
+                          svn_xml_self_closing,
+                          SVN_WC__LOG_CP_AND_TRANSLATE,
+                          SVN_WC__LOG_ATTR_NAME,
+                          loggy_path1,
+                          SVN_WC__LOG_ATTR_DEST,
+                          loggy_path2,
+                          NULL);
+    SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, scratch_pool));
+  }
+
+  return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_wc__loggy_translated_file(svn_wc__db_t *db,
@@ -1025,12 +1007,29 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
 {
   const char *loggy_path1;
   const char *loggy_path2;
+  svn_node_kind_t kind;
+  const char *src_abspath = svn_dirent_join(adm_abspath, src_path,
+                                            scratch_pool);
 
   SVN_ERR(loggy_path(&loggy_path1, src_path, adm_abspath, scratch_pool));
   SVN_ERR(loggy_path(&loggy_path2, dst_path, adm_abspath, scratch_pool));
-  return loggy_move_copy_internal(log_accum, TRUE, adm_abspath,
-                                  loggy_path1, loggy_path2,
-                                  result_pool, scratch_pool);
+
+  SVN_ERR(svn_io_check_path(src_abspath, &kind, scratch_pool));
+
+  /* ### idiocy of the old world. the file better exist, if we're asking
+     ### to do some work with it.  */
+  SVN_ERR_ASSERT(kind != svn_node_none);
+
+  svn_xml_make_open_tag(log_accum, result_pool,
+                        svn_xml_self_closing,
+                        SVN_WC__LOG_MV,
+                        SVN_WC__LOG_ATTR_NAME,
+                        loggy_path1,
+                        SVN_WC__LOG_ATTR_DEST,
+                        loggy_path2,
+                        NULL);
+
+  return SVN_NO_ERROR;
 }
 
 
