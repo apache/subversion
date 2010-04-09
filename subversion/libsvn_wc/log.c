@@ -765,47 +765,6 @@ svn_wc__loggy_append(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__loggy_copy(svn_wc__db_t *db,
-                   const char *adm_abspath,
-                   const char *src_abspath,
-                   const char *dst_abspath,
-                   apr_pool_t *scratch_pool)
-{
-  const char *loggy_path1;
-  const char *loggy_path2;
-  svn_node_kind_t kind;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
-
-  SVN_ERR(loggy_path(&loggy_path1, src_abspath, adm_abspath, scratch_pool));
-  SVN_ERR(loggy_path(&loggy_path2, dst_abspath, adm_abspath, scratch_pool));
-
-  SVN_ERR(svn_io_check_path(src_abspath, &kind, scratch_pool));
-
-  /* ### idiocy of the old world. the file better exist, if we're asking
-     ### to do some work with it.  */
-  SVN_ERR_ASSERT(kind != svn_node_none);
-
-  {
-    svn_stringbuf_t *log_accum = NULL;
-
-    svn_xml_make_open_tag(&log_accum, scratch_pool,
-                          svn_xml_self_closing,
-                          SVN_WC__LOG_CP_AND_TRANSLATE,
-                          SVN_WC__LOG_ATTR_NAME,
-                          loggy_path1,
-                          SVN_WC__LOG_ATTR_DEST,
-                          loggy_path2,
-                          NULL);
-    SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, scratch_pool));
-  }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_wc__loggy_translated_file(svn_wc__db_t *db,
                               const char *adm_abspath,
                               const char *dst,
