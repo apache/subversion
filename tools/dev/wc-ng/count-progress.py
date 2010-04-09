@@ -78,10 +78,8 @@ def print_report(wcroot):
   print(FMT % ('Total', client_total, wc_total, client_total + wc_total))
 
 
-if __name__ == '__main__':
-  if len(sys.argv) > 1:
-    if '--help' in sys.argv[1:]:
-      print("""\
+def usage():
+  print("""\
 Usage: %s [WCROOT]
        %s --help
 
@@ -90,7 +88,15 @@ items in working copy branch root WCROOT.  If WCROOT is omitted, this
 program will attempt to guess it using the assumption that it is being
 run from within the working copy of interest."""
 % (sys.argv[0], sys.argv[0]))
-      sys.exit(0)
+
+  sys.exit(0)
+
+
+if __name__ == '__main__':
+  if len(sys.argv) > 1:
+    if '--help' in sys.argv[1:]:
+      usage()
+
     print_report(sys.argv[1])
   else:
     cwd = os.path.abspath(os.getcwd())
@@ -101,6 +107,8 @@ run from within the working copy of interest."""
       idx = cwd.rfind(os.sep + 'tools')
       if idx > 0:
         wcroot = cwd[:idx]
+      elif os.path.exists(os.path.join(cwd, 'subversion')):
+        wcroot = cwd
       else:
         print("ERROR: the root of 'trunk' cannot be located -- please provide")
         sys.exit(1)
