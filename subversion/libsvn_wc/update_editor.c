@@ -4583,28 +4583,15 @@ merge_file(svn_stringbuf_t **log_accum,
                     SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
                     pool, pool));
 
-          /* A log command that copies the tmp-text-base and REtranslates
-             it back to the working file.
-             Now, since this is done during the execution of the log file, this
-             retranslation is actually done according to the new props. */
-          SVN_ERR(svn_wc__loggy_copy(log_accum, pb->local_abspath,
-                                     tmptext, fb->local_abspath, pool, pool));
-          SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
-
-          /* Done with the temporary file. Toss it.  */
-          /* ### stupid fucking function sometimes decides NOT to create a
-             ### temp file. but how are we supposed to know?  */
-          if (strcmp(tmptext, fb->local_abspath) != 0)
-          {
-            const svn_skel_t *work_item;
-
-            SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                                 eb->db,
-                                                 tmptext,
-                                                 pool, pool));
-            SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath,
-                                      work_item, pool));
-          }
+          /* We always want to reinstall the working file if the magic
+             properties have changed, or there are any keywords present.
+             Note that TMPTEXT might actually refer to the working file
+             itself (the above function skips a detranslate when not
+             required). This is acceptable, as we will (re)translate
+             according to the new properties into a temporary file (from
+             the working file), and then rename the temp into place. Magic!  */
+          *install_pristine = TRUE;
+          *install_from = tmptext;
         }
     }
 
@@ -4963,6 +4950,29 @@ close_file(void *file_baton,
   SVN_WC__FLUSH_LOG_ACCUM(eb->db, fb->dir_baton->local_abspath,
                           delayed_log_accum, pool);
 
+  if (install_pristine)
+    {
+      svn_boolean_t record_fileinfo;
+      const svn_skel_t *work_item;
+
+      /* If we are installing from the pristine contents, then go ahead and
+         record the fileinfo. That will be the "proper" values. Installing
+         from some random file means the fileinfo does NOT correspond to
+         the pristine (in which case, the fileinfo will be cleared for
+         safety's sake).  */
+      record_fileinfo = install_from == NULL;
+
+      SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                            eb->db,
+                                            fb->local_abspath,
+                                            install_from,
+                                            eb->use_commit_times,
+                                            record_fileinfo,
+                                            pool, pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
+                                work_item, pool));
+    }
+
   /* Now that all the state has settled, should we update the readonly
      status of the working file? The LOCK_STATE will signal what we should
      do for this node.  */
@@ -4976,37 +4986,30 @@ close_file(void *file_baton,
                                                fb->local_abspath, pool));
     }
 
-  if (install_pristine)
-    {
-      const svn_skel_t *work_item;
-
-      SVN_ERR(svn_wc__wq_build_file_install(&work_item,
-                                            eb->db,
-                                            fb->local_abspath,
-                                            install_from,
-                                            eb->use_commit_times,
-                                            TRUE /* record_fileinfo */,
-                                            pool, pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
-                                work_item, pool));
-    }
-
   /* Clean up any temporary files.  */
-#if 0
-  /* ### can't really use this now. INSTALL_FROM might refer to the
-     ### revert-base for file externals. (sigh)  once that is fixed,
-     ### then this will be handy for other cases.  */
-  if (install_from != NULL)
-    {
-      const svn_skel_t *work_item;
 
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
-                                           install_from,
-                                           pool, pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
-                                work_item, pool));
+  /* For the INSTALL_FROM file, be careful that it doesn't refer to the
+     working file, or the revert text base. (sigh)  Hopefully, this will
+     be cleared up in the future.  */
+  if (install_from != NULL
+      && strcmp(install_from, fb->local_abspath) != 0)
+    {
+      const char *revert_base_abspath;
+
+      SVN_ERR(svn_wc__text_revert_path(&revert_base_abspath, eb->db,
+                                       fb->local_abspath, pool));
+      if (strcmp(install_from, revert_base_abspath) != 0)
+        {
+          const svn_skel_t *work_item;
+
+          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
+                                               install_from,
+                                               pool, pool));
+          SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
+                                    work_item, pool));
+        }
     }
-#endif
+
   if (fb->copied_text_base_abspath)
     {
       const svn_skel_t *work_item;
