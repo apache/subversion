@@ -69,6 +69,8 @@ static const enum char_type skel_char_type[256] = {
 
 
 /* ### WTF? since when is number conversion LOCALE DEPENDENT? */
+/* stsp: In C99, various numerical string properties such as decimal point,
+ * thousands separator, and the plus/minus sign are locale dependent. */
 
 /* Converting text to numbers.  */
 
