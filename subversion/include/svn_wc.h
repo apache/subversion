@@ -3582,18 +3582,15 @@ typedef struct svn_wc_status3_t
 
   /** Set to the youngest committed revision, or #SVN_INVALID_REVNUM
    * if not out of date.
-   * @since New in 1.3
    */
   svn_revnum_t ood_last_cmt_rev;
 
   /** Set to the most recent commit date, or @c 0 if not out of date.
-   * @since New in 1.3
    */
   apr_time_t ood_last_cmt_date;
 
   /** Set to the node kind of the youngest commit, or #svn_node_none
    * if not out of date.
-   * @since New in 1.3
    */
   svn_node_kind_t ood_kind;
 
@@ -3602,21 +3599,18 @@ typedef struct svn_wc_status3_t
    * svn:author property has the same behavior as an out-of-date
    * working copy, examine @c ood_last_cmt_rev to determine whether
    * the working copy is out of date.
-   * @since New in 1.3
    */
   const char *ood_last_cmt_author;
 
   /** @} */
 
   /** Non-NULL if the entry is the victim of a tree conflict.
-   * @since New in 1.6
    */
   svn_wc_conflict_description_t *tree_conflict;
 
   /** If the item is a file that was added to the working copy with an
    * svn:externals; if file_external is TRUE, then switched is always
    * FALSE.
-   * @since New in 1.6
    */
   svn_boolean_t file_external;
 
@@ -3624,7 +3618,6 @@ typedef struct svn_wc_status3_t
    * file. This value isn't masked by other working copy statuses.
    * @c pristine_text_status is #svn_wc_status_none if this value was
    * not calculated during the status walk.
-   * @since New in 1.6
    */
   enum svn_wc_status_kind pristine_text_status;
 
@@ -3632,7 +3625,6 @@ typedef struct svn_wc_status3_t
    * the node. This value isn't masked by other working copy statuses.
    * @c pristine_prop_status is #svn_wc_status_none if this value was
    * not calculated during the status walk.
-   * @since New in 1.6
    */
   enum svn_wc_status_kind pristine_prop_status;
 
