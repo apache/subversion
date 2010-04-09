@@ -3119,6 +3119,7 @@ absent_file_or_dir(const char *path,
                                           repos_relpath, repos_root_url,
                                           repos_uuid, *(eb->target_revision),
                                           db_kind, svn_wc__db_status_absent,
+                                          NULL, NULL,
                                           pool));
 
   return SVN_NO_ERROR;
