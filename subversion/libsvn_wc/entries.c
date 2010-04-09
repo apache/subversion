@@ -1059,7 +1059,18 @@ read_entries_new(apr_hash_t **result_entries,
                                                  result_pool);
 
       if (checksum)
-        entry->checksum = svn_checksum_to_cstring(checksum, result_pool);
+        {
+#ifdef SVN_EXPERIMENTAL
+          /* If we get a SHA-1, as expected in WC-NG, convert it to MD-5. */
+          if (checksum->kind == svn_checksum_sha1)
+            SVN_ERR(svn_wc__db_get_pristine_md5(&checksum, db,
+                                                entry_abspath, checksum,
+                                                scratch_pool, scratch_pool));
+#endif
+
+          SVN_ERR_ASSERT(checksum->kind == svn_checksum_md5);
+          entry->checksum = svn_checksum_to_cstring(checksum, result_pool);
+        }
 
       if (conflicted)
         {

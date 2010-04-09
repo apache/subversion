@@ -7197,3 +7197,42 @@ svn_wc__db_temp_set_base_checksum(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__db_get_pristine_md5(const svn_checksum_t **md5_checksum,
+                            svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            const svn_checksum_t *sha1_checksum,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+  SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
+  VERIFY_CHECKSUM_KIND(sha1_checksum);
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_PRISTINE_MD5_CHECKSUM));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    {
+      *md5_checksum = NULL;  /* ### that's not what we want. Report an error
+                                instead. */
+      return svn_error_return(svn_sqlite__reset(stmt));
+    }
+
+  SVN_ERR(svn_sqlite__column_checksum(md5_checksum, stmt, 0, scratch_pool));
+
+  SVN_ERR_ASSERT((*md5_checksum)->kind == svn_checksum_md5);
+  return SVN_NO_ERROR;
+}

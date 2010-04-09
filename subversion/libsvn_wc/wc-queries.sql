@@ -271,6 +271,11 @@ DELETE FROM WORK_QUEUE WHERE id = ?1;
 INSERT OR IGNORE INTO PRISTINE (checksum, md5_checksum, size, refcount)
 VALUES (?1, ?2, ?3, 1);
 
+-- STMT_SELECT_PRISTINE_MD5_CHECKSUM
+SELECT md5_checksum
+FROM pristine
+WHERE checksum = ?1
+
 -- STMT_SELECT_ACTUAL_CONFLICT_VICTIMS
 SELECT local_relpath
 FROM actual_node

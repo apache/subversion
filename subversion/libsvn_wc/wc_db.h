@@ -2142,6 +2142,18 @@ svn_wc__db_temp_set_base_checksum(svn_wc__db_t *db,
                                   const svn_checksum_t *new_sha1_checksum,
                                   apr_pool_t *scratch_pool);
 
+
+/* Set *PRISTINE_MD5_CHECKSUM to the MD-5 checksum of a pristine text
+   identified by its SHA-1 checksum PRISTINE_SHA1_CHECKSUM. Return an error
+   if the pristine text does not exist or its MD5 checksum is not found. */
+svn_error_t *
+svn_wc__db_get_pristine_md5(const svn_checksum_t **pristine_md5_checksum,
+                            svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            const svn_checksum_t *pristine_sha1_checksum,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 /* @} */
 
 
