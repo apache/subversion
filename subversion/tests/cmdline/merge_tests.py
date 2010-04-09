@@ -18792,7 +18792,7 @@ def reintegrate_with_subtree_merges(sbox):
     'D/H/omega' : Item("New content"),
     })
   expected_A_skip = wc.State(A_COPY_path, {})
-  svntest.actions.run_and_verify_svn(A_path, None, None,
+  svntest.actions.run_and_verify_merge(A_path, None, None,
                                        sbox.repo_url + '/A_COPY', None,
                                        expected_output,
                                        expected_mergeinfo_output,
@@ -19118,7 +19118,6 @@ test_list = [ None,
               merge_into_wc_for_deleted_branch,
               reintegrate_with_self_referential_mergeinfo,
               reintegrate_with_subtree_merges,
-              foreign_repos_del_and_props
              ]
 
 if __name__ == '__main__':
