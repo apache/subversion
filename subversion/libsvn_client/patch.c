@@ -219,7 +219,7 @@ resolve_target_path(patch_target_t *target,
                     apr_pool_t *scratch_pool)
 {
   const char *stripped_path;
-  svn_wc_status2_t *status;
+  svn_wc_status3_t *status;
 
   target->canon_path_from_patchfile = svn_dirent_internal_style(
                                         path_from_patchfile, result_pool);

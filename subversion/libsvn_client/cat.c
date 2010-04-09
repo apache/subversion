@@ -97,7 +97,7 @@ cat_local_file(svn_wc_context_t *wc_ctx,
     }
   else
     {
-      svn_wc_status2_t *status;
+      svn_wc_status3_t *status;
 
       SVN_ERR(svn_stream_open_readonly(&input, local_abspath, scratch_pool,
                                        scratch_pool));

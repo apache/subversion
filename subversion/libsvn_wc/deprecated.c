@@ -2230,12 +2230,17 @@ struct status4_wrapper_baton
 static svn_error_t *
 status4_wrapper_func(void *baton,
                      const char *local_abspath,
-                     const svn_wc_status2_t *status,
+                     const svn_wc_status3_t *status,
                      apr_pool_t *scratch_pool)
 {
   struct status4_wrapper_baton *swb = baton;
-  svn_wc_status2_t *dup = svn_wc_dup_status2(status, scratch_pool);
+  svn_wc_status2_t *dup;
   const char *path = local_abspath;
+
+  /* ### This conversion will involve a lot more once we start to actually
+   * ### do some changes in svn_wc_status3_t. We should probably create a
+   * ### specific function for handling the conversion */
+  dup = (svn_wc_status2_t *) svn_wc_dup_status3(status, scratch_pool);
 
   if (swb->anchor_abspath != NULL)
     {
@@ -2468,6 +2473,37 @@ svn_wc_status(svn_wc_status_t **status,
   return SVN_NO_ERROR;
 }
 
+svn_wc_status2_t *
+svn_wc_dup_status2(const svn_wc_status2_t *orig_stat,
+                   apr_pool_t *pool)
+{
+  svn_wc_status2_t *new_stat = apr_palloc(pool, sizeof(*new_stat));
+
+  /* Shallow copy all members. */
+  *new_stat = *orig_stat;
+
+  /* Now go back and dup the deep items into this pool. */
+  if (orig_stat->entry)
+    new_stat->entry = svn_wc_entry_dup(orig_stat->entry, pool);
+
+  if (orig_stat->repos_lock)
+    new_stat->repos_lock = svn_lock_dup(orig_stat->repos_lock, pool);
+
+  if (orig_stat->url)
+    new_stat->url = apr_pstrdup(pool, orig_stat->url);
+
+  if (orig_stat->ood_last_cmt_author)
+    new_stat->ood_last_cmt_author
+      = apr_pstrdup(pool, orig_stat->ood_last_cmt_author);
+
+  if (orig_stat->tree_conflict)
+    new_stat->tree_conflict
+      = svn_wc__conflict_description_dup(orig_stat->tree_conflict, pool);
+
+  /* Return the new hotness. */
+  return new_stat;
+}
+
 svn_wc_status_t *
 svn_wc_dup_status(const svn_wc_status_t *orig_stat,
                   apr_pool_t *pool)
@@ -2515,13 +2551,15 @@ svn_wc_status2(svn_wc_status2_t **status,
 {
   const char *local_abspath;
   svn_wc_context_t *wc_ctx;
+  svn_wc_status3_t *stat3;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  SVN_ERR(svn_wc_status3(status, wc_ctx, local_abspath, pool, pool));
+  SVN_ERR(svn_wc_status3(&stat3, wc_ctx, local_abspath, pool, pool));
+  *status = (svn_wc_status2_t *) stat3;
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }

@@ -1051,7 +1051,7 @@ check_nonrecursive_dir_delete(void *baton, void *this_item, apr_pool_t *pool)
     {
       if (kind == svn_node_dir)
         {
-          svn_wc_status2_t *status;
+          svn_wc_status3_t *status;
 
           /* ### Looking at schedule is probably enough, no need for
                  pristine compare etc. */

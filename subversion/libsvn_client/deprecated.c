@@ -1433,11 +1433,17 @@ struct status4_wrapper_baton
 static svn_error_t *
 status4_wrapper_func(void *baton,
                      const char *path,
-                     const svn_wc_status2_t *status,
+                     const svn_wc_status3_t *status,
                      apr_pool_t *scratch_pool)
 {
   struct status4_wrapper_baton *swb = baton;
-  svn_wc_status2_t *dup = svn_wc_dup_status2(status, scratch_pool);
+  svn_wc_status2_t *dup;
+
+
+  /* ### This conversion will involve a lot more once we start to actually
+   * ### do some changes in svn_wc_status3_t. We should probably create a
+   * ### specific function for handling the conversion */
+  dup = (svn_wc_status2_t *) svn_wc_dup_status3(status, scratch_pool);
 
   return (*swb->old_func)(swb->old_baton, path, dup, scratch_pool);
 }
