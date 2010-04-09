@@ -19118,6 +19118,7 @@ test_list = [ None,
               merge_into_wc_for_deleted_branch,
               reintegrate_with_self_referential_mergeinfo,
               reintegrate_with_subtree_merges,
+              foreign_repos_del_and_props,
              ]
 
 if __name__ == '__main__':
