@@ -644,7 +644,8 @@ send_status_structure(const struct walk_status_baton *wb,
                           pool, pool));
 
   if (statstruct && status_func)
-    return status_func(status_baton, local_abspath, statstruct, pool);
+    return svn_error_return((*status_func)(status_baton, local_abspath,
+                                           statstruct, pool));
 
   return SVN_NO_ERROR;
 }
@@ -783,7 +784,8 @@ send_unversioned_item(const struct walk_status_baton *wb,
   /* If we aren't ignoring it, or if it's an externals path, or it has a lock
      in the repository, pass this entry to the status func. */
   if (no_ignore || (! ignore) || is_external || status->repos_lock)
-    return (status_func)(status_baton, local_abspath, status, pool);
+    return svn_error_return((*status_func)(status_baton, local_abspath, status,
+                                           pool));
 
   return SVN_NO_ERROR;
 }
@@ -2409,9 +2411,13 @@ internal_status(svn_wc_status2_t **status,
         return svn_error_return(err);
     }
 
-  return assemble_status(status, db, local_abspath, entry,
-                         parent_entry, svn_node_unknown, FALSE, /* bogus */
-                         TRUE, FALSE, NULL, NULL, result_pool, scratch_pool);
+  return svn_error_return(assemble_status(status, db, local_abspath, entry,
+                                          parent_entry, svn_node_unknown,
+                                          FALSE /* path_special (bogus) */,
+                                          TRUE /* get_all */,
+                                          FALSE /* is_ignored */,
+                                          NULL, NULL,
+                                          result_pool, scratch_pool));
 }
 
 
