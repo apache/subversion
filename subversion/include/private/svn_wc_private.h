@@ -502,6 +502,18 @@ svn_wc__node_get_lock_token(const char **lock_token,
                             apr_pool_t *scratch_pool);
 
 
+/* Return TRUE in *FILE_EXTERNAL if the node LOCAL_ABSPATH is a file
+   external.
+
+   If the node does not exist in BASE, then SVN_ERR_WC_PATH_NOT_FOUND
+   will be returned.  */
+svn_error_t *
+svn_wc__node_is_file_external(svn_boolean_t *file_external,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
+
+
 /**
  * Recursively acquire write locks for @a local_abspath if
  * @a anchor_abspath is NULL.  If @a anchor_abspath is not NULL then

@@ -198,31 +198,27 @@ fetch_wc_id(apr_int64_t *wc_id, svn_sqlite__db_t *sdb)
    entry.  The entry will be modified in place. */
 static svn_error_t *
 check_file_external(svn_wc_entry_t *entry,
-                    svn_sqlite__db_t *sdb,
-                    apr_pool_t *result_pool)
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
+  const char *serialized;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_SELECT_FILE_EXTERNAL));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                            (apr_uint64_t)1 /* wc_id */,
-                            entry->name));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (!svn_sqlite__column_is_null(stmt, 0))
+  SVN_ERR(svn_wc__db_temp_get_file_external(&serialized,
+                                            db, local_abspath,
+                                            scratch_pool, scratch_pool));
+  if (serialized != NULL)
     {
       SVN_ERR(svn_wc__unserialize_file_external(
                     &entry->file_external_path,
                     &entry->file_external_peg_rev,
                     &entry->file_external_rev,
-                    svn_sqlite__column_text(stmt, 0, NULL),
+                    serialized,
                     result_pool));
-
     }
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1110,7 +1106,8 @@ read_entries_new(apr_hash_t **result_entries,
          ### right now this is ugly, since we have no good way querying
          ### for a file external OR retrieving properties.  ugh.  */
       if (entry->kind == svn_node_file)
-        SVN_ERR(check_file_external(entry, sdb, result_pool));
+        SVN_ERR(check_file_external(entry, db, entry_abspath, result_pool,
+                                    iterpool));
 
       entry->working_size = translated_size;
 
