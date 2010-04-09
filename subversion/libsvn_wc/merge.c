@@ -978,9 +978,16 @@ merge_text_file(svn_stringbuf_t **log_accum,
 
   if (*merge_outcome != svn_wc_merge_unchanged && ! dry_run)
     {
+      const svn_skel_t *work_item;
+
       /* replace TARGET_ABSPATH with the new merged file, expanding. */
-      SVN_ERR(svn_wc__loggy_copy(db, dir_abspath,
-                                 result_target, target_abspath, pool));
+      SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                            db, target_abspath,
+                                            result_target,
+                                            FALSE /* use_commit_times */,
+                                            FALSE /* record_fileinfo */,
+                                            pool, pool));
+      SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1025,6 +1032,7 @@ merge_binary_file(svn_stringbuf_t **log_accum,
     {
       svn_wc_conflict_result_t *result = NULL;
       const svn_wc_conflict_description_t *cdesc;
+      const char *install_from = NULL;
 
       cdesc = setup_text_conflict_desc(left_abspath, right_abspath,
                                        target_abspath,
@@ -1050,19 +1058,15 @@ merge_binary_file(svn_stringbuf_t **log_accum,
              unless the conflict-callback did the merging itself. */
           case svn_wc_conflict_choose_base:
             {
-              SVN_ERR(svn_wc__loggy_copy(db, merge_dirpath,
-                                         left_abspath, target_abspath,
-                                         pool));
+              install_from = left_abspath;
               *merge_outcome = svn_wc_merge_merged;
-              return SVN_NO_ERROR;
+              break;
             }
           case svn_wc_conflict_choose_theirs_full:
             {
-              SVN_ERR(svn_wc__loggy_copy(db, merge_dirpath,
-                                         right_abspath, target_abspath,
-                                         pool));
+              install_from = right_abspath;
               *merge_outcome = svn_wc_merge_merged;
-              return SVN_NO_ERROR;
+              break;
             }
             /* For a binary file, if the response is to use the
                user's file, we do nothing.  We also do nothing if
@@ -1086,12 +1090,9 @@ merge_binary_file(svn_stringbuf_t **log_accum,
                 }
               else
                 {
-                  SVN_ERR(svn_wc__loggy_copy(db, merge_dirpath,
-                                             result->merged_file,
-                                             target_abspath,
-                                             pool));
+                  install_from = result->merged_file;
                   *merge_outcome = svn_wc_merge_merged;
-                  return SVN_NO_ERROR;
+                  break;
                 }
             }
           case svn_wc_conflict_choose_postpone:
@@ -1099,6 +1100,22 @@ merge_binary_file(svn_stringbuf_t **log_accum,
             {
               /* Assume conflict remains, fall through to code below. */
             }
+        }
+
+      if (install_from != NULL)
+        {
+          const svn_skel_t *work_item;
+
+          SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                                db, target_abspath,
+                                                install_from,
+                                                FALSE /* use_commit_times */,
+                                                FALSE /* record_fileinfo */,
+                                                pool, pool));
+          SVN_ERR(svn_wc__db_wq_add(db, merge_dirpath, work_item, pool));
+
+          /* A merge choice was made, so we're done here.  */
+          return SVN_NO_ERROR;
         }
     }
 
