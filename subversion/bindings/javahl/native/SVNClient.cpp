@@ -1693,7 +1693,7 @@ cancel(void *baton)
 static svn_error_t *
 analyze_status(void *baton,
                const char *local_abspath,
-               const svn_wc_status2_t *status,
+               const svn_wc_status3_t *status,
                apr_pool_t *pool)
 {
     struct version_status_baton *sb = (version_status_baton *)baton;
