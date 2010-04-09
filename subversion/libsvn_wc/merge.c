@@ -1269,12 +1269,12 @@ svn_wc__internal_merge(svn_stringbuf_t **log_accum,
      possibly make it read-only. */
   if (! dry_run)
     {
-      SVN_ERR(svn_wc__loggy_maybe_set_executable(db, dir_abspath,
-                                                 target_abspath,
-                                                 pool));
-      SVN_ERR(svn_wc__loggy_maybe_set_readonly(db, dir_abspath,
+      const svn_skel_t *work_item;
+
+      SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db,
                                                target_abspath,
-                                               pool));
+                                               pool, pool));
+      SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
     }
 
   return SVN_NO_ERROR;

@@ -28,6 +28,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_subst.h"
 #include "svn_hash.h"
+#include "svn_io.h"
 
 #include "wc.h"
 #include "wc_db.h"
@@ -61,6 +62,7 @@
 #define OP_DELETE "delete"
 #define OP_FILE_INSTALL "file-install"
 #define OP_FILE_REMOVE "file-remove"
+#define OP_SYNC_FILE_FLAGS "sync-file-flags"
 
 
 /* For work queue debugging. Generates output about its operation.  */
@@ -75,6 +77,24 @@ struct work_item_dispatch {
                        void *cancel_baton,
                        apr_pool_t *scratch_pool);
 };
+
+
+static svn_error_t *
+sync_file_flags(svn_wc__db_t *db,
+                const char *local_abspath,
+                apr_pool_t *scratch_pool)
+{
+  /* ### right now, the maybe_set_* functions will only positively set those
+     ### values. we need to clear them first.  */
+  SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE, scratch_pool));
+  SVN_ERR(svn_io_set_file_executable(local_abspath, FALSE, FALSE,
+                                     scratch_pool));
+
+  SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__maybe_set_executable(NULL, db, local_abspath, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 /* Ripped from the old loggy cp_and_translate operation.
@@ -116,10 +136,8 @@ copy_and_translate(svn_wc__db_t *db,
             scratch_pool));
 
   /* ### this is a problem. DEST_ABSPATH is not necessarily versioned.  */
-  SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, dest_abspath,
-                                      scratch_pool));
-  SVN_ERR(svn_wc__maybe_set_executable(NULL, db, dest_abspath,
-                                       scratch_pool));
+  /* ### actually, for the single caller: it *is* versioned.  */
+  SVN_ERR(sync_file_flags(db, dest_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1198,6 +1216,9 @@ install_committed_file(svn_boolean_t *overwrote_working,
       *overwrote_working = TRUE;
     }
 
+  /* ### should be using OP_SYNC_FILE_FLAGS, or an internal version of
+     ### that here. do we need to set *OVERWROTE_WORKING?  */
+
   if (remove_executable)
     {
       /* No need to chmod -x on a new file: new files don't have it. */
@@ -2025,8 +2046,7 @@ run_file_install(svn_wc__db_t *db,
   SVN_ERR(svn_io_file_rename(dst_abspath, local_abspath, scratch_pool));
 
   /* Tweak the on-disk file according to its properties.  */
-  SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, local_abspath, scratch_pool));
-  SVN_ERR(svn_wc__maybe_set_executable(NULL, db, local_abspath, scratch_pool));
+  SVN_ERR(sync_file_flags(db, local_abspath, scratch_pool));
 
   if (use_commit_times)
     {
@@ -2156,6 +2176,49 @@ svn_wc__wq_build_file_remove(const svn_skel_t **work_item,
 
 /* ------------------------------------------------------------------------ */
 
+/* OP_SYNC_FILE_FLAGS  */
+
+/* Process the OP_SYNC_FILE_FLAGS work item WORK_ITEM.
+ * See svn_wc__wq_build_file_remove() which generates this work item.
+ * Implements (struct work_item_dispatch).func. */
+static svn_error_t *
+run_sync_file_flags(svn_wc__db_t *db,
+                    const svn_skel_t *work_item,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_abspath;
+
+  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+
+  return svn_error_return(sync_file_flags(db, local_abspath, scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__wq_build_sync_file_flags(const svn_skel_t **work_item,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_skel_t *build_item = svn_skel__make_empty_list(result_pool);
+
+  svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
+                        build_item, result_pool);
+  svn_skel__prepend_str(OP_SYNC_FILE_FLAGS, build_item, result_pool);
+
+  /* Done. Assign to the const-ful WORK_ITEM.  */
+  *work_item = build_item;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
   { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
@@ -2168,6 +2231,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_DELETE, run_delete },
   { OP_FILE_INSTALL, run_file_install },
   { OP_FILE_REMOVE, run_file_remove },
+  { OP_SYNC_FILE_FLAGS, run_sync_file_flags },
 
   /* Sentinel.  */
   { NULL }

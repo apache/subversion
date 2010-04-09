@@ -4979,11 +4979,17 @@ close_file(void *file_baton,
   if (new_text_base_abspath == NULL
       && lock_state == svn_wc_notify_lock_state_unlocked)
     {
+      const svn_skel_t *work_item;
+
       /* If a lock was removed and we didn't update the text contents, we
-         might need to set the file read-only. */
-      SVN_ERR(svn_wc__loggy_maybe_set_readonly(eb->db,
-                                               fb->dir_baton->local_abspath,
-                                               fb->local_abspath, pool));
+         might need to set the file read-only.
+
+         Note: this will also update the executable flag, but ... meh.  */
+      SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, eb->db,
+                                               fb->local_abspath,
+                                               pool, pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
+                                work_item, pool));
     }
 
   /* Clean up any temporary files.  */
