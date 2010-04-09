@@ -423,20 +423,8 @@ switch_file_external(const char *path,
       if (err)
         goto cleanup;
 
-      err = svn_wc_add4(ctx->wc_ctx, local_abspath, svn_depth_infinity,
-                        NULL, /* const char *copyfrom_url */
-                        SVN_INVALID_REVNUM, /* svn_revnum_t copyfrom_rev */
-                        ctx->cancel_func, ctx->cancel_baton,
-                        NULL, /* svn_wc_notify_func2_t notify_func */
-                        NULL, /* void *notify_baton */
-                        subpool);
-      if (err)
-        goto cleanup;
-      revert_file = TRUE;
-
-      err = svn_wc__set_file_external_location(ctx->wc_ctx, local_abspath,
-                                               url, peg_revision, revision,
-                                               repos_root_url, subpool);
+      err = svn_wc_register_file_external(ctx->wc_ctx, local_abspath, url,
+                                          peg_revision, revision, subpool);
       if (err)
         goto cleanup;
     }
