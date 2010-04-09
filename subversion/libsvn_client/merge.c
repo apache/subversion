@@ -8604,8 +8604,11 @@ svn_client_merge3(const char *source1,
   baton.merge_options = merge_options;
   baton.ctx = ctx;
 
-  SVN_ERR(svn_wc__call_with_write_lock(merge_cb, &baton, ctx->wc_ctx,
-                                       lock_abspath, pool, pool));
+  if (!dry_run)
+    SVN_ERR(svn_wc__call_with_write_lock(merge_cb, &baton, ctx->wc_ctx,
+                                         lock_abspath, pool, pool));
+  else
+    SVN_ERR(merge_cb(&baton, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -9753,8 +9756,13 @@ svn_client_merge_reintegrate(const char *source,
   baton.merge_options = merge_options;
   baton.ctx = ctx;
 
-  SVN_ERR(svn_wc__call_with_write_lock(merge_reintegrate_cb, &baton,
-                                       ctx->wc_ctx, lock_abspath, pool, pool));
+  if (!dry_run)
+    SVN_ERR(svn_wc__call_with_write_lock(merge_reintegrate_cb, &baton,
+                                         ctx->wc_ctx, lock_abspath,
+                                         pool, pool));
+  else
+    SVN_ERR(merge_reintegrate_cb(&baton, pool, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -9908,8 +9916,11 @@ svn_client_merge_peg3(const char *source,
   baton.merge_options = merge_options;
   baton.ctx = ctx;
 
-  SVN_ERR(svn_wc__call_with_write_lock(merge_peg_cb, &baton, ctx->wc_ctx,
-                                       lock_abspath, pool, pool));
+  if (!dry_run)
+    SVN_ERR(svn_wc__call_with_write_lock(merge_peg_cb, &baton, ctx->wc_ctx,
+                                         lock_abspath, pool, pool));
+  else
+    SVN_ERR(merge_peg_cb(&baton, pool, pool));
 
   return SVN_NO_ERROR;
 }
