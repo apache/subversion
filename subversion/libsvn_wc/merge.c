@@ -771,6 +771,11 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
      up the conflicts before we mark the file 'conflicted' */
   if (!conflict_func)
     {
+      /* Since we're not calling the interactive conflict resolve,
+         (and thus subject to exit within an interim/bogus database
+         state), let's flush out all the work items passed to us.  */
+      SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, *log_accum, pool);
+
       /* If there is no interactive conflict resolution then we are effectively
          postponing conflict resolution. */
       result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
@@ -812,6 +817,10 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
                                     : result_target,
                                   pool));
     }
+
+  /* The above logic should have flushed everything: what was given
+     to us, and anything that we may need to accomplish.  */
+  SVN_ERR_ASSERT(*log_accum == NULL || svn_stringbuf_isempty(*log_accum));
 
   SVN_ERR(eval_conflict_func_result(merge_outcome,
                                     result,
