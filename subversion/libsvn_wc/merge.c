@@ -445,25 +445,24 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
                           svn_diff_file_options_t *options,
                           apr_pool_t *pool)
 {
+  const char *install_from = NULL;
+  svn_boolean_t remove_source = FALSE;
+
   switch (result->choice)
     {
       /* If the callback wants to use one of the fulltexts
          to resolve the conflict, so be it.*/
       case svn_wc_conflict_choose_base:
         {
-          SVN_ERR(svn_wc__loggy_copy(db, adm_abspath,
-                                     left_abspath, target_abspath,
-                                     pool));
+          install_from = left_abspath;
           *merge_outcome = svn_wc_merge_merged;
-          return SVN_NO_ERROR;
+          break;
         }
       case svn_wc_conflict_choose_theirs_full:
         {
-          SVN_ERR(svn_wc__loggy_copy(db, adm_abspath,
-                                     right_abspath, target_abspath,
-                                     pool));
+          install_from = right_abspath;
           *merge_outcome = svn_wc_merge_merged;
-          return SVN_NO_ERROR;
+          break;
         }
       case svn_wc_conflict_choose_mine_full:
         {
@@ -504,18 +503,11 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
                                               style,
                                               pool));
           SVN_ERR(svn_stream_close(chosen_stream));
-          SVN_ERR(svn_wc__loggy_copy(db, adm_abspath,
-                                     chosen_path, target_abspath, pool));
-          {
-            const svn_skel_t *work_item;
 
-            SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                                 db, chosen_path,
-                                                 pool, pool));
-            SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, pool));
-          }
+          install_from = chosen_path;
+          remove_source = TRUE;
           *merge_outcome = svn_wc_merge_merged;
-          return SVN_NO_ERROR;
+          break;
         }
 
         /* For the case of 3-way file merging, we don't
@@ -526,40 +518,59 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
            good to use". */
       case svn_wc_conflict_choose_merged:
         {
-          SVN_ERR(svn_wc__loggy_copy(db, adm_abspath,
-                                     /* Look for callback's own
-                                        merged-file first: */
-                                     result->merged_file
-                                       ? result->merged_file
-                                       : result_target,
-                                     target_abspath,
-                                     pool));
+          /* Look for callback's own merged-file first:  */
+          install_from = (result->merged_file
+                            ? result->merged_file
+                            : result_target);
           *merge_outcome = svn_wc_merge_merged;
-          return SVN_NO_ERROR;
+          break;
         }
       case svn_wc_conflict_choose_postpone:
       default:
         {
-          /* Issue #3354: We need to install the copyfrom_text,
-           * which now carries conflicts, into ACTUAL, by copying
-           * it to the merge target. */
-          if (copyfrom_text)
-            {
-              SVN_ERR(svn_wc__loggy_copy(db, adm_abspath,
-                                         copyfrom_text, target_abspath,
-                                         pool));
-            }
-
 #if 0
           /* ### what should this value be? no caller appears to initialize
              ### it, so we really SHOULD be setting a value here.  */
           *merge_outcome = svn_wc_merge_merged;
 #endif
 
+          /* Issue #3354: We need to install the copyfrom_text,
+           * which now carries conflicts, into ACTUAL, by copying
+           * it to the merge target. */
+          if (copyfrom_text)
+            {
+              install_from = copyfrom_text;
+              break;
+            }
+
           /* Assume conflict remains. */
           return SVN_NO_ERROR;
         }
     }
+
+  SVN_ERR_ASSERT(install_from != NULL);
+
+  {
+    const svn_skel_t *work_item;
+
+    SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                          db, target_abspath,
+                                          install_from,
+                                          FALSE /* use_commit_times */,
+                                          FALSE /* record_fileinfo */,
+                                          pool, pool));
+    SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, pool));
+
+    if (remove_source)
+      {
+        SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                             db, install_from,
+                                             pool, pool));
+        SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, pool));
+      }
+  }
+
+  return SVN_NO_ERROR;
 }
 
 /* Preserve the three pre-merge files, and modify the
