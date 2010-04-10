@@ -6140,12 +6140,7 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
         }
     }
 
-  {
-    apr_array_header_t *victim_array;
-    SVN_ERR(svn_hash_keys(&victim_array, found, result_pool));
-
-    *victims = victim_array;
-  }
+  SVN_ERR(svn_hash_keys((apr_array_header_t **)victims, found, result_pool));
 
   return SVN_NO_ERROR;
 }
