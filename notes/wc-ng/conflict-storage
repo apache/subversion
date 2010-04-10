@@ -86,20 +86,18 @@ For "switch", the skel has the form:
 
 For "merge", the skel has the form:
 
-  ("merge" LEFT_REV RIGHT_REV
-   (LEFT_REPOS_UUID LEFT_REPOS_ROOT_URL LEFT_REPOS_RELPATH LEFT_PEG_REV)
-   (RIGHT_REPOS_UUID RIGHT_REPOS_ROOT_URL RIGHT_REPOS_RELPATH RIGHT_PEG_REV) )
+  ("merge" LEFT_REV RIGHT_REV REPOS_UUID REPOS_ROOT_URL
+   (LEFT_REPOS_RELPATH LEFT_PEG_REV)
+   (RIGHT_REPOS_RELPATH RIGHT_PEG_REV) )
 
   LEFT_REV is the merge-left revision, and RIGHT_REV is the merge-right
     revision of a continuous revision range which was merged (merge tracking
     might split a merge up into multiple merges of continuous revision ranges).
 
-  {LEFT,RIGHT}_REPOS_UUID is the UUID of the repository the {left,right}
-    version of the item comes from, in order to recognize merges from foreign
-    repositories.
+  REPOS_UUID is the UUID of the repository being merged from, in order to
+    recognize merges from foreign repositories.
 
-  {LEFT,RIGHT}_REPOS_ROOT_URL is the repository root URL the {left,right}
-    version of the item comes from.
+  REPOS_ROOT_URL is the repository root URL the repository being merged from.
 
   {LEFT,RIGHT}_REPOS_RELPATH is the path in the repository of the {left,right}
     version of the item.
@@ -181,7 +179,8 @@ The following information is stored if there is a tree conflict on the node:
 
 LOCAL_CHANGE is the local change which conflicted with the
 incoming change during the operation. Possible values are "edit", "add",
-"delete", "rename", "replace", "obstructed", and "missing".
+"delete", "rename", "replace", "obstructed", "missing", and "unversioned"
+(### possibly collapse "unversioned" with "obstructed"?).
 
 NODE_KIND is the {local,incoming} kind of the node involved in the conflict.
 
