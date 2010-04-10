@@ -4192,8 +4192,7 @@ install_text_base(svn_wc__db_t *db,
  * POOL is used for all bookkeeping work during the installation.
  */
 static svn_error_t *
-merge_file(svn_stringbuf_t **log_accum,
-           svn_boolean_t *install_pristine,
+merge_file(svn_boolean_t *install_pristine,
            const char **install_from,
            svn_wc_notify_state_t *content_state,
            const svn_wc_entry_t *entry,
@@ -4227,11 +4226,6 @@ merge_file(svn_stringbuf_t **log_accum,
      the changes received from the repository, preserving any local
      modifications.
   */
-
-#if 0
-  /* ### this will break update_tests 43. see comment in close_file()  */
-  SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
-#endif
 
   *install_pristine = FALSE;
   *install_from = NULL;
@@ -4451,7 +4445,7 @@ merge_file(svn_stringbuf_t **log_accum,
                  ###   in the future, all the state changes should be
                  ###   made atomically.  */
               SVN_ERR(svn_wc__internal_merge(
-                        log_accum, &merge_outcome,
+                        &merge_outcome,
                         eb->db,
                         merge_left, NULL,
                         new_text_base_tmp_abspath, NULL,
@@ -4463,12 +4457,6 @@ merge_file(svn_stringbuf_t **log_accum,
                         eb->conflict_func, eb->conflict_baton,
                         eb->cancel_func, eb->cancel_baton,
                         pool));
-
-              /* svn_wc__internal_merge() should have queued all of
-                 its work (including a bunch of stuff that we pre-loaded
-                 into the log accumulator).  */
-              SVN_ERR_ASSERT(*log_accum == NULL
-                             || svn_stringbuf_isempty(*log_accum));
 
               /* If we created a temporary left merge file, get rid of it. */
               if (delete_left)
@@ -4531,9 +4519,6 @@ merge_file(svn_stringbuf_t **log_accum,
         }
     }
 
-  /* Flush anything that may be residing here.  */
-  SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
-
   /* Deal with installation of the new textbase, if appropriate. */
   if (new_text_base_tmp_abspath)
     {
@@ -4565,11 +4550,13 @@ merge_file(svn_stringbuf_t **log_accum,
       && !is_locally_modified
       && (fb->adding_file || entry->schedule == svn_wc_schedule_normal))
     {
+      svn_stringbuf_t *log_accum = NULL;
+
       /* Adjust working copy file unless this file is an allowed
          obstruction. */
       if (fb->last_changed_date && !fb->obstruction_found)
         SVN_ERR(svn_wc__loggy_set_timestamp(
-                  log_accum, pb->local_abspath,
+                  &log_accum, pb->local_abspath,
                   fb->local_abspath, fb->last_changed_date,
                   pool, pool));
 
@@ -4578,14 +4565,15 @@ merge_file(svn_stringbuf_t **log_accum,
         {
           /* Adjust entries file to match working file */
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(
-                    log_accum, pb->local_abspath,
+                    &log_accum, pb->local_abspath,
                     fb->local_abspath, pool, pool));
         }
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(
-                log_accum, pb->local_abspath,
+                &log_accum, pb->local_abspath,
                 fb->local_abspath, pool, pool));
 
-      SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
+      SVN_ERR(svn_wc__wq_add_loggy(eb->db, pb->local_abspath, log_accum,
+                                   pool));
     }
 
   /* Set the returned content state. */
@@ -4631,7 +4619,6 @@ close_file(void *file_baton,
   const char *new_text_base_abspath;
   apr_hash_t *new_base_props = NULL;
   apr_hash_t *new_actual_props = NULL;
-  svn_stringbuf_t *delayed_log_accum = svn_stringbuf_create("", pool);
   apr_array_header_t *entry_props;
   apr_array_header_t *wc_props;
   apr_array_header_t *regular_props;
@@ -4767,17 +4754,6 @@ close_file(void *file_baton,
                                   TRUE /* force_base_install */,
                                   pool));
 
-#if 0
-  /* ### this breaks update_tests 43. it does a *partial* edit of the
-     ### state. if the user cancels a merge resolution (e.g EOF), then
-     ### the working copy ends up horked.  */
-
-  /* Now that the installation of the props has been queued, flush out
-     anything from the delayed accumulator.  */
-  SVN_WC__FLUSH_LOG_ACCUM(eb->db, fb->dir_baton->local_abspath,
-                          delayed_log_accum, pool);
-#endif
-
   /* This writes a whole bunch of log commands to install wcprops.  */
   /* ### no it doesn't. this immediately modifies them. should probably
      ### occur later, when we know the (new) BASE node exists.  */
@@ -4786,14 +4762,10 @@ close_file(void *file_baton,
                                         pool));
 
   /* Do the hard work. This will queue some additional work.  */
-  SVN_ERR(merge_file(&delayed_log_accum, &install_pristine, &install_from,
+  SVN_ERR(merge_file(&install_pristine, &install_from,
                      &content_state, entry,
                      fb, new_text_base_abspath, new_text_base_md5_checksum,
                      new_text_base_sha1_checksum, pool));
-
-  /* Queue all operations.  */
-  SVN_WC__FLUSH_LOG_ACCUM(eb->db, fb->dir_baton->local_abspath,
-                          delayed_log_accum, pool);
 
   /* Insert/replace the BASE node with all of the new metadata.  */
   {
