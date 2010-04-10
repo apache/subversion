@@ -127,6 +127,11 @@ For "merge", the skel has the form:
 ###   feel right since the rename does not really conflict with the edits.
 ###   The item which is being renamed is not the one which was edited -- it
 ###   just happened to live at the same path at a different time.
+### HKW: Agree with Julian: peg revisions are a part of the UI.  If the
+###   left and right versions of stuff refer to things in the repo, the
+###   repos url, relpath and revision should be sufficient to identify them;
+###   you shouldn't need a peg rev.  If you *do* need additional information,
+###   I suggest thinking about why that is, and how you should represent it.
 
 For "patch", the skel has the form:
 
@@ -176,6 +181,9 @@ empty list indicating the property did not exist in that version, or a
 1-item list containing the particular value.
 
 ### stsp: What's the size limit of a prop value?
+### HKW: In theory, there isn't one.  In practice, we used to caution people
+###   against having too large of props, but I don't know if that is
+###   true anymore.
 
 
 Tree conflicts
