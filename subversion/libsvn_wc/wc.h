@@ -421,8 +421,7 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
    the (loggy) implementation.
 */
 svn_error_t *
-svn_wc__internal_merge(svn_stringbuf_t **log_accum,
-                       enum svn_wc_merge_outcome_t *merge_outcome,
+svn_wc__internal_merge(enum svn_wc_merge_outcome_t *merge_outcome,
                        svn_wc__db_t *db,
                        const char *left_abspath,
                        const svn_wc_conflict_version_t *left_version,

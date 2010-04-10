@@ -392,7 +392,7 @@ do_text_merge_external(svn_boolean_t *contains_conflicts,
  * resolution to the file RESULT_TARGET. The merge result is expected
  * in the same directory as TARGET_ABSPATH the same basename as
  * TARGET_ABSPATH, but followed by ".edited".
- * Use LOG_ACCUM as log accumulator.  DB contains an access baton with
+ * DB contains an access baton with
  * a write lock for the directory containing RESULT_TARGET.
  * Do all allocations in POOL.
  */
@@ -739,8 +739,7 @@ setup_text_conflict_desc(const char *left_abspath,
 
 /* XXX Insane amount of parameters... */
 static svn_error_t*
-maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
-                        svn_wc__db_t *db,
+maybe_resolve_conflicts(svn_wc__db_t *db,
                         const char *left_abspath,
                         const char *right_abspath,
                         const char *target_abspath,
@@ -770,11 +769,6 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
      up the conflicts before we mark the file 'conflicted' */
   if (!conflict_func)
     {
-      /* Since we're not calling the interactive conflict resolve,
-         (and thus subject to exit within an interim/bogus database
-         state), let's flush out all the work items passed to us.  */
-      SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, *log_accum, pool);
-
       /* If there is no interactive conflict resolution then we are effectively
          postponing conflict resolution. */
       result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
@@ -801,11 +795,6 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
                                 NULL, _("Conflict callback violated API:"
                                         " returned no results"));
 
-      /* Now that we're back from the interactive resolver function,
-         we should flush all the work that has been accumulated so far.
-         All work from here, onwards, will be flushed immediately.  */
-      SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, *log_accum, pool);
-
       if (result->save_merged)
         SVN_ERR(save_merge_result(db,
                                   target_abspath,
@@ -816,10 +805,6 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
                                     : result_target,
                                   pool));
     }
-
-  /* The above logic should have flushed everything: what was given
-     to us, and anything that we may need to accomplish.  */
-  SVN_ERR_ASSERT(*log_accum == NULL || svn_stringbuf_isempty(*log_accum));
 
   SVN_ERR(eval_conflict_func_result(merge_outcome,
                                     result,
@@ -856,8 +841,7 @@ maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
 
 /* XXX Insane amount of parameters... */
 static svn_error_t*
-merge_text_file(svn_stringbuf_t **log_accum,
-                enum svn_wc_merge_outcome_t *merge_outcome,
+merge_text_file(enum svn_wc_merge_outcome_t *merge_outcome,
                 svn_wc__db_t *db,
                 const char *left_abspath,
                 const char *right_abspath,
@@ -933,8 +917,7 @@ merge_text_file(svn_stringbuf_t **log_accum,
 
   if (contains_conflicts && ! dry_run)
     {
-      SVN_ERR(maybe_resolve_conflicts(log_accum,
-                                      db,
+      SVN_ERR(maybe_resolve_conflicts(db,
                                       left_abspath,
                                       right_abspath,
                                       target_abspath,
@@ -952,10 +935,6 @@ merge_text_file(svn_stringbuf_t **log_accum,
                                       conflict_func, conflict_baton,
                                       cancel_func, cancel_baton,
                                       pool));
-
-      /* The above function should have flushed everything: what was given
-         to us, and anything that we may need to accomplish.  */
-      SVN_ERR_ASSERT(*log_accum == NULL || svn_stringbuf_isempty(*log_accum));
 
       if (*merge_outcome == svn_wc_merge_merged)
         return SVN_NO_ERROR;
@@ -982,11 +961,6 @@ merge_text_file(svn_stringbuf_t **log_accum,
       *merge_outcome = same ? svn_wc_merge_unchanged : svn_wc_merge_merged;
     }
 
-  /* If we don't call maybe_resolve_conflicts(), there MAY be work items
-     in the accumulator, provided by our caller, to flush out to the queue.
-     Do that now.  */
-  SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, *log_accum, pool);
-
   if (*merge_outcome != svn_wc_merge_unchanged && ! dry_run)
     {
       const svn_skel_t *work_item;
@@ -1007,8 +981,7 @@ merge_text_file(svn_stringbuf_t **log_accum,
 
 /* XXX Insane amount of parameters... */
 static svn_error_t *
-merge_binary_file(svn_stringbuf_t **log_accum,
-                  enum svn_wc_merge_outcome_t *merge_outcome,
+merge_binary_file(enum svn_wc_merge_outcome_t *merge_outcome,
                   svn_wc__db_t *db,
                   const char *left_abspath,
                   const char *right_abspath,
@@ -1057,11 +1030,6 @@ merge_binary_file(svn_stringbuf_t **log_accum,
         return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                 NULL, _("Conflict callback violated API:"
                                         " returned no results"));
-
-      /* Now that we're back from the interactive resolver function,
-         we should flush all the work that has been accumulated so far.
-         All work from here, onwards, will be flushed immediately.  */
-      SVN_WC__FLUSH_LOG_ACCUM(db, merge_dirpath, *log_accum, pool);
 
       switch (result->choice)
         {
@@ -1130,11 +1098,6 @@ merge_binary_file(svn_stringbuf_t **log_accum,
         }
     }
 
-  /* If we don't call the conflict resolver, there MAY be work items
-     in the accumulator, provided by our caller, to flush out to the queue.
-     Do that now.  */
-  SVN_WC__FLUSH_LOG_ACCUM(db, merge_dirpath, *log_accum, pool);
-
   /* reserve names for backups of left and right fulltexts */
   SVN_ERR(svn_io_open_uniquely_named(NULL,
                                      &left_copy,
@@ -1161,6 +1124,7 @@ merge_binary_file(svn_stringbuf_t **log_accum,
     {
       /* Create a .mine file too */
       const char *mine_copy;
+      svn_stringbuf_t *log_accum = NULL;
 
       SVN_ERR(svn_io_open_uniquely_named(NULL,
                                          &mine_copy,
@@ -1169,12 +1133,13 @@ merge_binary_file(svn_stringbuf_t **log_accum,
                                          target_label,
                                          svn_io_file_del_none,
                                          pool, pool));
-      SVN_ERR(svn_wc__loggy_move(log_accum,
+      SVN_ERR(svn_wc__loggy_move(&log_accum,
                                  merge_dirpath,
                                  detranslated_target_abspath,
                                  mine_copy,
                                  pool, pool));
-      SVN_WC__FLUSH_LOG_ACCUM(db, merge_dirpath, *log_accum, pool);
+      SVN_ERR(svn_wc__wq_add_loggy(db, merge_dirpath, log_accum, pool));
+
       mine_copy = svn_dirent_is_child(merge_dirpath,
                                       mine_copy, pool);
       tmp_entry.conflict_wrk = mine_copy;
@@ -1205,8 +1170,7 @@ merge_binary_file(svn_stringbuf_t **log_accum,
 
 /* XXX Insane amount of parameters... */
 svn_error_t *
-svn_wc__internal_merge(svn_stringbuf_t **log_accum,
-                       enum svn_wc_merge_outcome_t *merge_outcome,
+svn_wc__internal_merge(enum svn_wc_merge_outcome_t *merge_outcome,
                        svn_wc__db_t *db,
                        const char *left_abspath,
                        const svn_wc_conflict_version_t *left_version,
@@ -1289,8 +1253,7 @@ svn_wc__internal_merge(svn_stringbuf_t **log_accum,
         /* in dry-run mode, binary files always conflict */
         *merge_outcome = svn_wc_merge_conflict;
       else
-        SVN_ERR(merge_binary_file(log_accum,
-                                  merge_outcome,
+        SVN_ERR(merge_binary_file(merge_outcome,
                                   db,
                                   left_abspath,
                                   right_abspath,
@@ -1309,8 +1272,7 @@ svn_wc__internal_merge(svn_stringbuf_t **log_accum,
                                   pool));
     }
   else
-    SVN_ERR(merge_text_file(log_accum,
-                            merge_outcome,
+    SVN_ERR(merge_text_file(merge_outcome,
                             db,
                             left_abspath,
                             right_abspath,
@@ -1331,11 +1293,6 @@ svn_wc__internal_merge(svn_stringbuf_t **log_accum,
                             cancel_func,
                             cancel_baton,
                             pool));
-
-  /* The above code should have flushed all work to the queue. This will
-     include prior work given to us, and anything else that we may need
-     to queue ourselves.  */
-  SVN_ERR_ASSERT(*log_accum == NULL || svn_stringbuf_isempty(*log_accum));
 
   /* Merging is complete.  Regardless of text or binariness, we might
      need to tweak the executable bit on the new working file, and
@@ -1375,7 +1332,6 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
               void *cancel_baton,
               apr_pool_t *scratch_pool)
 {
-  svn_stringbuf_t *log_accum = NULL;
   const char *dir_abspath = svn_dirent_dirname(target_abspath, scratch_pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(left_abspath));
@@ -1387,7 +1343,7 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
     SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, scratch_pool));
 
   /* Queue all the work.  */
-  SVN_ERR(svn_wc__internal_merge(&log_accum, merge_outcome,
+  SVN_ERR(svn_wc__internal_merge(merge_outcome,
                                  wc_ctx->db,
                                  left_abspath, left_version,
                                  right_abspath, right_version,
@@ -1401,9 +1357,6 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
                                  conflict_func, conflict_baton,
                                  cancel_func, cancel_baton,
                                  scratch_pool));
-
-  /* svn_wc__internal_merge() should have queued all of its work.  */
-  SVN_ERR_ASSERT(log_accum == NULL || svn_stringbuf_isempty(log_accum));
 
   /* If this isn't a dry run, then run the work!  */
   if (!dry_run)
