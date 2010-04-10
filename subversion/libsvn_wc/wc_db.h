@@ -1394,6 +1394,44 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
                           apr_pool_t *scratch_pool);
 
 
+/* Return the kind of the node in DB at LOCAL_ABSPATH. The WORKING tree will
+   be examined first, then the BASE tree. If the node is not present in either
+   tree and ALLOW_MISSING is TRUE, then svn_wc__db_kind_unknown is returned.
+   If the node is missing and ALLOW_MISSING is FALSE, then it will return
+   SVN_ERR_WC_PATH_NOT_FOUND.
+
+   Uses SCRATCH_POOL for temporary allocations.  */
+svn_error_t *
+svn_wc__db_read_kind(svn_wc__db_kind_t *kind,
+                     svn_wc__db_t *db,
+                     const char *local_abspath,
+                     svn_boolean_t allow_missing,
+                     apr_pool_t *scratch_pool);
+
+
+/* An analog to svn_wc__entry_is_hidden().  Set *HIDDEN to TRUE if
+   LOCAL_ABSPATH in DB "is not present, and I haven't scheduled something
+   over the top of it." */
+svn_error_t *
+svn_wc__db_node_hidden(svn_boolean_t *hidden,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool);
+
+
+/* ### changelists. return an array, or an iterator interface? how big
+   ### are these things? are we okay with an in-memory array? examine other
+   ### changelist usage -- we may already assume the list fits in memory.
+*/
+
+
+/* @} */
+
+
+/* @defgroup svn_wc__db_record_  Conflict recording functions
+   @{
+*/
+
 /* Record an update as conflicting operation on LOCAL_ABSPATH in DB.
 
    BASE_REVISION is the revision the node was at before the update.
@@ -1613,38 +1651,6 @@ svn_error_t *
 svn_wc__db_record_obstruction_conflict(svn_wc__db_t *db,
                                        const char *local_abspath,
                                        apr_pool_t *scratch_pool);
-
-
-/* Return the kind of the node in DB at LOCAL_ABSPATH. The WORKING tree will
-   be examined first, then the BASE tree. If the node is not present in either
-   tree and ALLOW_MISSING is TRUE, then svn_wc__db_kind_unknown is returned.
-   If the node is missing and ALLOW_MISSING is FALSE, then it will return
-   SVN_ERR_WC_PATH_NOT_FOUND.
-
-   Uses SCRATCH_POOL for temporary allocations.  */
-svn_error_t *
-svn_wc__db_read_kind(svn_wc__db_kind_t *kind,
-                     svn_wc__db_t *db,
-                     const char *local_abspath,
-                     svn_boolean_t allow_missing,
-                     apr_pool_t *scratch_pool);
-
-
-/* An analog to svn_wc__entry_is_hidden().  Set *HIDDEN to TRUE if
-   LOCAL_ABSPATH in DB "is not present, and I haven't scheduled something
-   over the top of it." */
-svn_error_t *
-svn_wc__db_node_hidden(svn_boolean_t *hidden,
-                       svn_wc__db_t *db,
-                       const char *local_abspath,
-                       apr_pool_t *scratch_pool);
-
-
-/* ### changelists. return an array, or an iterator interface? how big
-   ### are these things? are we okay with an in-memory array? examine other
-   ### changelist usage -- we may already assume the list fits in memory.
-*/
-
 
 /* @} */
 
