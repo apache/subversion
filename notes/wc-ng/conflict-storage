@@ -124,11 +124,15 @@ Text conflicts
 Text conflicts only exist on files. The following skel represents the
 "text" KIND of conflict:
 
-  ("text" LEFT_SHA1 RIGHT_SHA1 MINE_SHA1)
+  ("text" ORIGINAL_SHA1 MINE_SHA1 INCOMING_SHA1)
 
-{LEFT,RIGHT,MINE}_SHA1 are sha1 checksums of the full texts of
-the {left,right,mine} version of the file. File version's content
-can be obtained from the pristine store.
+{ORIGINAL,MINE}_SHA1 are SHA1 checksums of the full texts of
+the {original (BASE), mine (WORKING)} version of the file.
+
+INCOMING_SHA1 is the SHA1 checksum of the incoming version of the file.
+### Need INCOMING_{LEFT,RIGHT}_SHA1 for 4-way merge?
+
+File version's content can be obtained from the pristine store.
 
 ### BH: We need some marker here, but these values must also be stored
 ###     in the older_checksum, left_checksum, right_checksum colums of ACTUAL
@@ -148,11 +152,11 @@ There can be one or more property conflicts on the node, represented
 by one or more "prop" KIND conflicts. Each "prop" conflict has the
 following form:
 
-  ("prop" PROPERTY_NAME ([LEFT_VALUE]) ([RIGHT_VALUE]) ([MINE_VALUE]))
+  ("prop" PROPERTY_NAME ([ORIGINAL_VALUE]) ([MINE_VALUE]) ([INCOMING_VALUE]))
 
 PROPERTY_NAME is the name of the property, such as "svn:eol-style".
 
-Each property value ({LEFT,RIGHT,MINE}_VALUE) is represented as an
+Each property value ({ORIGINAL,MINE,INCOMING}_VALUE) is represented as an
 empty list indicating the property did not exist in that version, or a
 1-item list containing the particular value.
 
@@ -174,24 +178,31 @@ The following information is stored if there is a tree conflict on the node:
 
   ("tree" LOCAL_STATE INCOMING_STATE)
 
-  LOCAL_STATE := (LOCAL_CHANGE NODE_KIND [ORIGINAL_SHA1 MINE_SHA1])
-  INCOMING_STATE := (INCOMING_CHANGE NODE_KIND [INCOMING_SHA1])
+  LOCAL_STATE := (LOCAL_CHANGE ORIGINAL_NODE_KIND MINE_NODE_KIND
+                  [ORIGINAL_SHA1 MINE_SHA1])
+  INCOMING_STATE := (INCOMING_CHANGE INCOMING_NODE_KIND [INCOMING_SHA1])
 
 LOCAL_CHANGE is the local change which conflicted with the
 incoming change during the operation. Possible values are "edit", "add",
 "delete", "rename", "replace", "obstructed", "missing", and "unversioned"
 (### possibly collapse "unversioned" with "obstructed"?).
 
-NODE_KIND is the {local,incoming} kind of the node involved in the conflict.
+ORIGINAL_NODE_KIND is the kind of the node in the BASE tree.
+MINE_NODE_KIND is the kind of the node from the WORKING tree at the
+time the conflict was flagged.
 
 INCOMING_CHANGE is the incoming change which conflicted with the
 local change during the operation. Possible values are "edit", "add",
 "delete", "rename", and "replace".
 
-The *_SHA1 sum fields are only present if NODE_KIND is "file".
+The *_SHA1 sum fields are only present if {ORIGINAL,MINE,INCOMING}_NODE_KIND
+is "file".
+
 ORIGINAL_SHA1 is the SHA1 of the BASE version of the tree conflict victim
 file in the working copy. MINE_SHA1 is the SHA1 of the WORKING version
-of the tree conflict victim file. INCOMING_SHA1 is the SHA1 of the file
+of the tree conflict victim file as of the time the conflict was flagged.
+
+If INCOMING_KIND is "file", INCOMING_SHA1 is the SHA1 of the file
 which the operation was attempting to install in the working copy.
 
 The file version's content can be obtained from the pristine store.
