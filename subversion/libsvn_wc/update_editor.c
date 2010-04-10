@@ -4968,6 +4968,16 @@ close_file(void *file_baton,
   SVN_WC__FLUSH_LOG_ACCUM(eb->db, fb->dir_baton->local_abspath,
                           delayed_log_accum, pool);
 
+  /* ### we may as well run whatever is in the queue right now. this
+     ### starts out with some crap node data  via construct_base_node(),
+     ### so we can't really monkey things up too badly here. all tests
+     ### continue to pass, so this also gives us a better insight into
+     ### doing things more immediately, rather than queuing to run at
+     ### some future point in time.  */
+  SVN_ERR(svn_wc__wq_run(eb->db, fb->dir_baton->local_abspath,
+                         eb->cancel_func, eb->cancel_baton,
+                         pool));
+
   if (install_pristine)
     {
       svn_boolean_t record_fileinfo;
