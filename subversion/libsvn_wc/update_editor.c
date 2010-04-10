@@ -4131,31 +4131,29 @@ change_file_prop(void *file_baton,
 }
 
 
-/* Write loggy commands to install a text base file from the given temporary
+/* Queue operations to install a text base file from the given temporary
  * path TEMP_TEXT_BASE_ABSPATH (which must be in the adm temp area) to the
  * given final text-base path FINAL_TEXT_BASE_ABSPATH (which must be the
  * standard text-base path or revert-base path for the file).
- *
- * Write log instructions to do this into *LOG_ACCUM.  Store all loggy paths
- * as paths relative to ADM_ABSPATH.
- *
- * Allocate *LOG_ACCUM in RESULT_POOL if it is NULL.
  */
 static svn_error_t *
-install_text_base(svn_stringbuf_t **log_accum,
+install_text_base(svn_wc__db_t *db,
                   const char *adm_abspath,
                   const char *temp_text_base_abspath,
                   const char *final_text_base_abspath,
-                  apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__loggy_move(log_accum, adm_abspath,
+  svn_stringbuf_t *log_accum = NULL;
+
+  SVN_ERR(svn_wc__loggy_move(&log_accum, adm_abspath,
                              temp_text_base_abspath, final_text_base_abspath,
-                             result_pool, scratch_pool));
-  SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_abspath,
+                             scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_abspath,
                                      final_text_base_abspath,
-                                     result_pool, scratch_pool));
-  return SVN_NO_ERROR;
+                                     scratch_pool, scratch_pool));
+
+  return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
+                                               scratch_pool));
 }
 
 
@@ -4533,6 +4531,9 @@ merge_file(svn_stringbuf_t **log_accum,
         }
     }
 
+  /* Flush anything that may be residing here.  */
+  SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
+
   /* Deal with installation of the new textbase, if appropriate. */
   if (new_text_base_tmp_abspath)
     {
@@ -4540,10 +4541,10 @@ merge_file(svn_stringbuf_t **log_accum,
        * its checksum in the entry.  FB->text_base_path is the appropriate
        * path: the "revert-base" path if the node is replaced, else the
        * usual text-base path. */
-      SVN_ERR(install_text_base(log_accum, pb->local_abspath,
+      SVN_ERR(install_text_base(eb->db, pb->local_abspath,
                                 new_text_base_tmp_abspath,
                                 fb->text_base_abspath,
-                                pool, pool));
+                                pool));
 
 #ifdef SVN_EXPERIMENTAL
       /* ### this should probably move into close_file.  */
@@ -4557,9 +4558,6 @@ merge_file(svn_stringbuf_t **log_accum,
                                         new_text_base_sha1_checksum, pool);
 #endif
     }
-
-  /* Flush anything that may be residing here.  */
-  SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
 
   /* Log commands to handle text-timestamp and working-size,
      if the file is - or will be - unmodified and schedule-normal */
@@ -5895,10 +5893,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     svn_wc_entry_t tmp_entry;
 
     /* Write out log commands to set up the new text base and its checksum. */
-    SVN_ERR(install_text_base(&log_accum, dir_abspath,
+    SVN_ERR(install_text_base(db, dir_abspath,
                               tmp_text_base_abspath, text_base_abspath,
-                              pool, pool));
-    SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
+                              pool));
 
     tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
 
