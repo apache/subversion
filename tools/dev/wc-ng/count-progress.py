@@ -52,8 +52,10 @@ def count_terms_in(path):
   counts = {}
   for term in TERMS:
     counts[term] = 0
-    for filepath in get_files_in(path):
-      counts[term] += open(filepath).read().count(term)
+  for filepath in get_files_in(path):
+    contents = open(filepath).read()
+    for term in TERMS:
+      counts[term] += contents.count(term)
   return counts
 
 
