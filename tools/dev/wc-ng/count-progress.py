@@ -30,10 +30,9 @@ SKIP = ['deprecated.c',
 TERMS = ['svn_wc_adm_access_t',
          'svn_wc_entry_t',
          'svn_wc__node_',
-         'log_accum',
-         'svn_wc__wq_add_loggy',
          'svn_wc__db_temp_',
          'svn_wc__db_node_hidden',
+         'svn_wc__loggy',
          ]
 
 
