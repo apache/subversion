@@ -402,22 +402,23 @@ save_merge_result(svn_wc__db_t *db,
                   const char *result_target,
                   apr_pool_t *pool)
 {
-  const char *edited_copy;
-  const char *merge_dirpath;
+  const char *edited_copy_abspath;
+  const char *dir_abspath;
   const char *merge_filename;
 
-  svn_dirent_split(target_abspath, &merge_dirpath, &merge_filename, pool);
+  svn_dirent_split(target_abspath, &dir_abspath, &merge_filename, pool);
 
   /* ### Should use preserved-conflict-file-exts. */
+  /* Create the .edited file within this file's DIR_ABSPATH  */
   SVN_ERR(svn_io_open_uniquely_named(NULL,
-                                     &edited_copy,
-                                     merge_dirpath,
+                                     &edited_copy_abspath,
+                                     dir_abspath,
                                      merge_filename,
                                      ".edited",
                                      svn_io_file_del_none,
                                      pool, pool));
-  SVN_ERR(svn_wc__loggy_translated_file(db, merge_dirpath,
-                                        edited_copy,
+  SVN_ERR(svn_wc__loggy_translated_file(db, dir_abspath,
+                                        edited_copy_abspath,
                                         result_target,
                                         target_abspath,
                                         pool));
@@ -593,7 +594,6 @@ preserve_pre_merge_files(svn_wc__db_t *db,
   const char *dir_abspath, *target_name;
   const char *temp_dir;
   svn_wc_entry_t tmp_entry;
-  svn_stringbuf_t *log_accum = NULL;
 
   svn_dirent_split(target_abspath, &dir_abspath, &target_name, pool);
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, target_abspath,
@@ -697,13 +697,12 @@ preserve_pre_merge_files(svn_wc__db_t *db,
 
   /* Mark TARGET_ABSPATH's entry as "Conflicted", and start tracking
      the backup files in the entry as well. */
-  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, dir_abspath,
+  SVN_ERR(svn_wc__loggy_entry_modify(db, dir_abspath,
                                      target_abspath, &tmp_entry,
                                      SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
                                        | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
                                        | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
-                                     pool, pool));
-  SVN_ERR(svn_wc__wq_add_loggy(db, dir_abspath, log_accum, pool));
+                                     pool));
 
   return SVN_NO_ERROR;
 }
@@ -1192,14 +1191,12 @@ merge_binary_file(svn_stringbuf_t **log_accum,
   tmp_entry.conflict_old = left_base;
   tmp_entry.conflict_new = right_base;
   SVN_ERR(svn_wc__loggy_entry_modify(
-            log_accum,
-            merge_dirpath, target_abspath,
+            db, merge_dirpath, target_abspath,
             &tmp_entry,
             SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
               | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
               | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
-            pool, pool));
-  SVN_WC__FLUSH_LOG_ACCUM(db, merge_dirpath, *log_accum, pool);
+            pool));
 
   *merge_outcome = svn_wc_merge_conflict; /* a conflict happened */
 
