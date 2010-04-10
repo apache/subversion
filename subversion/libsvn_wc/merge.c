@@ -1124,7 +1124,6 @@ merge_binary_file(enum svn_wc_merge_outcome_t *merge_outcome,
     {
       /* Create a .mine file too */
       const char *mine_copy;
-      svn_stringbuf_t *log_accum = NULL;
 
       SVN_ERR(svn_io_open_uniquely_named(NULL,
                                          &mine_copy,
@@ -1133,12 +1132,11 @@ merge_binary_file(enum svn_wc_merge_outcome_t *merge_outcome,
                                          target_label,
                                          svn_io_file_del_none,
                                          pool, pool));
-      SVN_ERR(svn_wc__loggy_move(&log_accum,
+      SVN_ERR(svn_wc__loggy_move(db,
                                  merge_dirpath,
                                  detranslated_target_abspath,
                                  mine_copy,
-                                 pool, pool));
-      SVN_ERR(svn_wc__wq_add_loggy(db, merge_dirpath, log_accum, pool));
+                                 pool));
 
       mine_copy = svn_dirent_is_child(merge_dirpath,
                                       mine_copy, pool);
