@@ -1029,6 +1029,11 @@ make_file_baton(struct file_baton **f_p,
                                                     f->local_abspath,
                                                     file_pool, scratch_pool);
 
+  /* ### why the complicated logic above. isn't it always this way?
+     ### file externals are probably special/different?  */
+  if (f->new_relpath == NULL)
+    f->new_relpath = svn_relpath_join(pb->new_relpath, f->name, file_pool);
+
   f->pool              = file_pool;
   f->edit_baton        = pb->edit_baton;
   f->propchanges       = apr_array_make(file_pool, 1, sizeof(svn_prop_t));
@@ -4128,64 +4133,6 @@ change_file_prop(void *file_baton,
 }
 
 
-
-/* Append to LOG_ACCUM, log commands to update the entry for LOCAL_ABSPATH
-   with a NEW_REVISION and a NEW_RELPATH(if non-NULL), making sure
-   the entry refers to a file and has no absent or deleted state.
-   Use POOL for temporary allocations.
-
-   ### REPOS_ROOT must be the current repository root while still using
-       entries here */
-static svn_error_t *
-loggy_tweak_base_node(svn_stringbuf_t **log_accum,
-                      const char *local_abspath,
-                      svn_revnum_t new_revision,
-                      const char *repos_root,
-                      const char *new_relpath,
-                      apr_pool_t *pool)
-{
-  /* Write log entry which will bump the revision number.  Also, just
-     in case we're overwriting an existing phantom 'deleted' or
-     'absent' entry, be sure to remove the hiddenness. */
-  svn_wc_entry_t tmp_entry;
-  apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND
-    | SVN_WC__ENTRY_MODIFY_REVISION
-    | SVN_WC__ENTRY_MODIFY_DELETED
-    | SVN_WC__ENTRY_MODIFY_ABSENT
-    | SVN_WC__ENTRY_MODIFY_TEXT_TIME
-    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE;
-
-
-  tmp_entry.revision = new_revision;
-  tmp_entry.kind = svn_node_file;
-  tmp_entry.deleted = FALSE;
-  tmp_entry.absent = FALSE;
-  /* Indicate the file was locally modified and we didn't get to
-     calculate the true value, but we can't set it to UNKNOWN (-1),
-     because that would indicate absense of this value.
-     If it isn't locally modified,
-     we'll overwrite with the actual value later. */
-  tmp_entry.working_size = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN;
-  /* The same is true for the TEXT_TIME field, except that that doesn't
-     have an explicid 'changed' value, so we set the value to 'undefined'. */
-  tmp_entry.text_time = 0;
-
-  /* Possibly install a *non*-inherited URL in the entry. */
-  if (new_relpath)
-    {
-      tmp_entry.url = svn_path_url_add_component2(repos_root, new_relpath,
-                                                  pool);
-      modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
-    }
-
-  return svn_error_return(
-    svn_wc__loggy_entry_modify(log_accum,
-                               svn_dirent_dirname(local_abspath, pool),
-                               local_abspath, &tmp_entry, modify_flags,
-                               pool, pool));
-}
-
-
 /* Write loggy commands to install a text base file from the given temporary
  * path TEMP_TEXT_BASE_ABSPATH (which must be in the adm temp area) to the
  * given final text-base path FINAL_TEXT_BASE_ABSPATH (which must be the
@@ -4266,8 +4213,6 @@ merge_file(svn_stringbuf_t **log_accum,
   svn_boolean_t is_replaced = FALSE;
   svn_boolean_t magic_props_changed;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
-  svn_wc_entry_t tmp_entry;
-  apr_uint64_t flags = 0;
 
   /*
      When this function is called on file F, we assume the following
@@ -4364,15 +4309,6 @@ merge_file(svn_stringbuf_t **log_accum,
   if (entry && entry->schedule == svn_wc_schedule_replace
       && ! entry->file_external_path)  /* ### EBUG */
     is_replaced = TRUE;
-
-  if (fb->add_existed)
-    {
-      /* Tweak schedule for the file's entry so it is no longer
-         scheduled for addition. */
-      tmp_entry.schedule = svn_wc_schedule_normal;
-      flags |= (SVN_WC__ENTRY_MODIFY_SCHEDULE |
-                SVN_WC__ENTRY_MODIFY_FORCE);
-    }
 
   /* For 'textual' merging, we implement this matrix.
 
@@ -4610,11 +4546,10 @@ merge_file(svn_stringbuf_t **log_accum,
                                 new_text_base_tmp_abspath,
                                 fb->text_base_abspath,
                                 pool, pool));
-      tmp_entry.checksum = svn_checksum_to_cstring(new_text_base_md5_checksum,
-                                                   pool);
-      flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
 
 #ifdef SVN_EXPERIMENTAL
+      /* ### this should probably move into close_file.  */
+
       /* Set the 'checksum' column of the file's BASE_NODE row to
        * NEW_TEXT_BASE_SHA1_CHECKSUM.  The pristine text identified by that
        * checksum is already in the pristine store. */
@@ -4625,18 +4560,7 @@ merge_file(svn_stringbuf_t **log_accum,
 #endif
     }
 
-  /* If FB->PATH is locally deleted, but not as part of a replacement
-     then keep it deleted. */
-  if (fb->deleted && !is_replaced)
-    {
-      tmp_entry.schedule = svn_wc_schedule_delete;
-      flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
-    }
-
-  /* Do the entry modifications we've accumulated. */
-  SVN_ERR(svn_wc__loggy_entry_modify(log_accum, pb->local_abspath,
-                                     fb->local_abspath, &tmp_entry, flags,
-                                     pool, pool));
+  /* Flush anything that may be residing here.  */
   SVN_WC__FLUSH_LOG_ACCUM(eb->db, pb->local_abspath, *log_accum, pool);
 
   /* Log commands to handle text-timestamp and working-size,
@@ -4688,73 +4612,6 @@ merge_file(svn_stringbuf_t **log_accum,
     }
   else
     *content_state = svn_wc_notify_state_unchanged;
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-construct_base_node(svn_wc__db_t *db,
-                    const char *local_abspath,
-                    svn_revnum_t target_revision,
-                    svn_boolean_t resched_normal,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *scratch_pool)
-{
-  /* ### HACK: Before we can set properties, we need a node in
-     the database. This code could be its own WQ item,
-     handling more than just this tweak, but it will
-     be removed soon anyway.
-
-     ### HACK: The loggy stuff checked the preconditions for us,
-     we just make the property code happy here.
-
-     We can also clear entry.deleted here, as we are adding a new
-     BASE_NODE anyway */
-
-  const char *adm_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-  svn_wc_entry_t tmp_entry;
-  svn_stringbuf_t *log_accum = NULL;
-  apr_uint64_t flags = (SVN_WC__ENTRY_MODIFY_KIND
-                        | SVN_WC__ENTRY_MODIFY_REVISION
-                        | SVN_WC__ENTRY_MODIFY_DELETED);
-
-  if (resched_normal)
-    {
-      /* Make sure we have a record in BASE; not in WORKING,
-         or we try to install properties in the wrong place */
-      flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_FORCE;
-      tmp_entry.schedule = svn_wc_schedule_normal;
-    }
-
-  /* ### we can probably just use entry_modify2() rather than adding
-     ### a work item, then running it.  */
-
-  /* Create a very minimalistic file node that will be overridden
-     from the loggy operations we have in the file baton log accumulator */
-
-  tmp_entry.kind = svn_node_file;
-  tmp_entry.revision = target_revision;
-  tmp_entry.deleted = FALSE;
-
-  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
-                                     adm_abspath,
-                                     local_abspath,
-                                     &tmp_entry,
-                                     flags,
-                                     scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath,
-                               log_accum,
-                               scratch_pool));
-
-  /* ### for now, we use the ADM_ABSPATH even tho a WRI_ABSPATH is all that
-     ### is required. BUT: the path must exist, and the file may not.
-     ### the directory certainly does tho...  */
-  SVN_ERR(svn_wc__wq_run(db, adm_abspath,
-                         cancel_func, cancel_baton,
-                         scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -4859,17 +4716,6 @@ close_file(void *file_baton,
                              _("'%s' is not under version control"),
                              svn_dirent_local_style(fb->local_abspath, pool));
 
-  /* add_file() was called, or there was an added node here. Ensure that
-     we have a BASE node to work with.  */
-  if (fb->adding_file || fb->add_existed)
-    {
-      SVN_ERR(construct_base_node(eb->db, fb->local_abspath,
-                                  *eb->target_revision,
-                                  fb->add_existed /* resched_normal */,
-                                  eb->cancel_func, eb->cancel_baton,
-                                  pool));
-    }
-
   /* Gather the changes for each kind of property.  */
   SVN_ERR(svn_categorize_props(fb->propchanges, &entry_props, &wc_props,
                                &regular_props, pool));
@@ -4879,22 +4725,7 @@ close_file(void *file_baton,
                                  eb->db, fb->local_abspath,
                                  entry_props,
                                  pool, pool));
-
-  /* ### Hack: The following block should be an atomic operation (including
-     ### the install loggy install portions of some functions called above */
   SVN_ERR_ASSERT(last_change != NULL);  /* files should always have.. */
-  SVN_ERR(svn_wc__db_temp_op_set_base_last_change(eb->db, fb->local_abspath,
-                                                  last_change->cmt_rev,
-                                                  last_change->cmt_date,
-                                                  last_change->cmt_author,
-                                                  pool));
-
-  /* Set the new revision and URL in the entry and clean up some other
-     fields. This clears DELETED from any prior versioned file with the
-     same name (needed before attempting to install props).  */
-  SVN_ERR(loggy_tweak_base_node(&delayed_log_accum, fb->local_abspath,
-                                *eb->target_revision,
-                                eb->repos_root, fb->new_relpath, pool));
 
   /* Install all kinds of properties.  It is important to do this before
      any file content merging, since that process might expand keywords, in
@@ -4968,8 +4799,92 @@ close_file(void *file_baton,
   SVN_WC__FLUSH_LOG_ACCUM(eb->db, fb->dir_baton->local_abspath,
                           delayed_log_accum, pool);
 
+  /* Insert/replace the BASE node with all of the new metadata.  */
+  {
+    const svn_checksum_t *new_checksum = new_text_base_md5_checksum;
+
+    /* If we don't have a NEW checksum, then the base must not have changed.
+       Just carry over the old checksum.  */
+    if (new_checksum == NULL)
+      {
+        SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
+                                         NULL, NULL, NULL,
+                                         NULL, NULL, NULL,
+                                         NULL, NULL,
+                                         &new_checksum, NULL, NULL, NULL,
+                                         eb->db, fb->local_abspath,
+                                         pool, pool));
+      }
+
+    SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
+                                     fb->new_relpath,
+                                     eb->repos_root, eb->repos_uuid,
+                                     *eb->target_revision,
+                                     new_base_props,
+                                     last_change->cmt_rev,
+                                     last_change->cmt_date,
+                                     last_change->cmt_author,
+                                     new_checksum,
+                                     SVN_INVALID_FILESIZE,
+                                     NULL, NULL,
+                                     pool));
+
+    /* ### ugh. deal with preserving the file external value in the database.
+       ### there is no official API, so we do it this way. maybe we should
+       ### have a temp API into wc_db.  */
+    if (entry && entry->file_external_path)
+      {
+        svn_wc_entry_t tmp_entry;
+
+        tmp_entry.file_external_path = entry->file_external_path;
+        tmp_entry.file_external_peg_rev = entry->file_external_peg_rev;
+        tmp_entry.file_external_rev = entry->file_external_rev;
+        SVN_ERR(svn_wc__entry_modify2(eb->db, fb->local_abspath,
+                                      svn_node_file, FALSE /* parent_stub */,
+                                      &tmp_entry,
+                                      SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL,
+                                      pool));
+      }
+  }
+
+  /* Deal with the WORKING tree, based on updates to the BASE tree.  */
+
+  /* An ancestor was locally-deleted. This file is being added within
+     that tree. We need to schedule this file for deletion.  */
+  if (fb->dir_baton->in_deleted_and_tree_conflicted_subtree && fb->adding_file)
+    {
+      /* ### temporary hack. we should simply write a WORKING_NODE.  */
+
+      svn_wc_entry_t tmp_entry;
+
+      tmp_entry.schedule = svn_wc_schedule_delete;
+      SVN_ERR(svn_wc__entry_modify2(eb->db, fb->local_abspath,
+                                    svn_node_file, FALSE /* parent_stub */,
+                                    &tmp_entry, SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                                    pool));
+    }
+
+  /* This file was locally-added. This file is now being added by the
+     update. We can toss the local-add, turning this into a local-edit.  */
+  if (fb->add_existed && fb->adding_file)
+    {
+      /* ### temporary hack. we should simply delete the WORKING_NODE.  */
+
+      svn_wc_entry_t tmp_entry;
+
+      /* ### we need to use FORCE to ensure transition to normal. otherwise,
+         ### it would remain in the added state.  */
+      tmp_entry.schedule = svn_wc_schedule_normal;
+      SVN_ERR(svn_wc__entry_modify2(eb->db, fb->local_abspath,
+                                    svn_node_file, FALSE /* parent_stub */,
+                                    &tmp_entry,
+                                    SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                      | SVN_WC__ENTRY_MODIFY_FORCE,
+                                    pool));
+    }
+
   /* ### we may as well run whatever is in the queue right now. this
-     ### starts out with some crap node data  via construct_base_node(),
+     ### starts out with some crap node data via construct_base_node(),
      ### so we can't really monkey things up too badly here. all tests
      ### continue to pass, so this also gives us a better insight into
      ### doing things more immediately, rather than queuing to run at
