@@ -2166,7 +2166,6 @@ do_entry_deletion(struct edit_baton *eb,
   if (strcmp(local_abspath, eb->target_abspath) == 0)
     {
       svn_wc_entry_t tmp_entry;
-      svn_stringbuf_t *log_accum = NULL;
 
       tmp_entry.revision = *(eb->target_revision);
       /* ### Why not URL as well? This might be a switch. ... */
@@ -2178,14 +2177,13 @@ do_entry_deletion(struct edit_baton *eb,
 
       tmp_entry.deleted = TRUE;
 
-      SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+      SVN_ERR(svn_wc__loggy_entry_modify(eb->db,
                                dir_abspath, local_abspath,
                                &tmp_entry,
                                SVN_WC__ENTRY_MODIFY_REVISION
                                | SVN_WC__ENTRY_MODIFY_KIND
                                | SVN_WC__ENTRY_MODIFY_DELETED,
-                               pool, pool));
-      SVN_ERR(svn_wc__wq_add_loggy(eb->db, dir_abspath, log_accum, pool));
+                               pool));
 
       eb->target_deleted = TRUE;
     }
@@ -5689,7 +5687,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   svn_stream_t *tmp_base_contents;
   const char *text_base_abspath;
   const char *temp_dir_abspath;
-  svn_stringbuf_t *log_accum;
+  svn_stringbuf_t *log_accum = NULL;
   struct last_change_info *last_change = NULL;
   svn_error_t *err;
   const char *source_abspath = NULL;
@@ -5722,10 +5720,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                  " root than '%s'"),
                                  copyfrom_url, repos_root);
   }
-
-  /* Accumulate log commands in this buffer until we're ready to close
-     and run the log.  */
-  log_accum = svn_stringbuf_create("", pool);
 
   /* If we're replacing the file then we need to save the destination file's
      original text base and prop base before replacing it. This allows us to
@@ -5811,10 +5805,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
           | SVN_WC__ENTRY_MODIFY_COPIED;
       }
 
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, dir_abspath,
+    SVN_ERR(svn_wc__loggy_entry_modify(db, dir_abspath,
                                        local_abspath, &tmp_entry,
-                                       modify_flags, pool, pool));
-    SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
+                                       modify_flags, pool));
   }
 
   /* ### Clear working node status in preparation for writing a new node. */
@@ -5832,13 +5825,12 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
        have an explicid 'changed' value, so we set the value to 'undefined'. */
     tmp_entry.text_time = 0;
 
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, dir_abspath,
+    SVN_ERR(svn_wc__loggy_entry_modify(db, dir_abspath,
                                        local_abspath,  &tmp_entry,
                                        SVN_WC__ENTRY_MODIFY_KIND
                                          | SVN_WC__ENTRY_MODIFY_TEXT_TIME
                                          | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
-                                       pool, pool));
-    SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
+                                       pool));
   }
 
   /* Categorize the base properties. */
@@ -5910,11 +5902,10 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
     tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
 
-    SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, dir_abspath,
+    SVN_ERR(svn_wc__loggy_entry_modify(db, dir_abspath,
                                        local_abspath, &tmp_entry,
                                        SVN_WC__ENTRY_MODIFY_CHECKSUM,
-                                       pool, pool));
-    SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
+                                       pool));
   }
 
   /* ### HACK: The following code should be performed in the same transaction as the install */

@@ -1745,16 +1745,13 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
       /* Mark entry as "conflicted" with a particular .prej file. */
       {
-        svn_stringbuf_t *log_accum = NULL;
         svn_wc_entry_t entry;
 
         entry.prejfile = svn_dirent_is_child(adm_abspath, reject_path, NULL);
-        SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_abspath,
+        SVN_ERR(svn_wc__loggy_entry_modify(db, adm_abspath,
                                            local_abspath, &entry,
                                            SVN_WC__ENTRY_MODIFY_PREJFILE,
-                                           scratch_pool, scratch_pool));
-        SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
-                                     scratch_pool));
+                                           scratch_pool));
       }
 
     } /* if (reject_tmp_fp) */

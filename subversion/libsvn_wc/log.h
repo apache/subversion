@@ -121,24 +121,23 @@ svn_wc__loggy_delete_lock(svn_wc__db_t *db,
                           apr_pool_t *scratch_pool);
 
 
-/* Extend **LOG_ACCUM with commands to modify the entry associated with PATH
+/* Queue operations to modify the entry associated with PATH
    in ADM_ABSPATH according to the flags specified in MODIFY_FLAGS, based on
    the values supplied in *ENTRY.
+
    ADM_ABSPATH is the absolute path for the admin directory for PATH.
 
    The flags in MODIFY_FLAGS are to be taken from the svn_wc__entry_modify()
    parameter by the same name.
 
-   Allocate *LOG_ACCUM in RESULT_POOL if it is NULL. Use SCRATCH_POOL for
-   temporary allocations.
+   Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
-svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
+svn_wc__loggy_entry_modify(svn_wc__db_t *db,
                            const char *adm_abspath,
                            const char *path,
                            const svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
-                           apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
 

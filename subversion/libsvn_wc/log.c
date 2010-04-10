@@ -793,14 +793,14 @@ svn_wc__loggy_delete_lock(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
+svn_wc__loggy_entry_modify(svn_wc__db_t *db,
                            const char *adm_abspath,
                            const char *path,
                            const svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
-                           apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
+  svn_stringbuf_t *log_accum = NULL;
   const char *loggy_path1;
   apr_hash_t *prop_hash = apr_hash_make(scratch_pool);
   static const char *kind_str[] =
@@ -910,12 +910,12 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
   apr_hash_set(prop_hash, SVN_WC__LOG_ATTR_NAME,
                APR_HASH_KEY_STRING, loggy_path1);
 
-  svn_xml_make_open_tag_hash(log_accum, result_pool,
+  svn_xml_make_open_tag_hash(&log_accum, scratch_pool,
                              svn_xml_self_closing,
                              SVN_WC__LOG_MODIFY_ENTRY,
                              prop_hash);
-
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
+                                               scratch_pool));
 }
 
 
