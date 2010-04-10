@@ -10,7 +10,10 @@ are inside), or NULL (meaning no conflict is present).
 
 The conflict skel has the form:
 
-  ((KIND OPERATION KIND-SPECIFIC) (KIND OPERATION KIND-SPECIFIC) ...)
+  (OPERATION (KIND KIND-SPECIFIC) (KIND KIND-SPECIFIC) ...)
+
+OPERATION indicates the operation which caused the conflict(s) and is
+detailed below.
 
 KIND indicates the kind of conflict description that follows and is one
 of:
@@ -21,28 +24,17 @@ of:
   "prop" - meaning a "normal" property conflict, with left/right/mine full
     values saved;
   "tree" - meaning a tree conflict;
-  "reject" - meaning a text conflict for a single hunk of text, with the source
-    being a patch file (rather than left/right full texts), and with a
-    "reject" file being saved (?);
+  "reject" - meaning a text conflict for a single hunk of unidiff text,
+    with the source being a patch file (rather than left/right full texts),
+    and with a "reject" file being saved containing the unidiff text;
   "obstructed" - meaning ### TODO
-
-OPERATION indicates the operation which caused the conflict and is
-detailed below.
 
 KIND-SPECIFIC is specific to each KIND, and is detailed below.
 
 There are restrictions on what mixture of conflicts can meaningfully be
 recorded - e.g. there must not be two "text" nor one "text" and one
-"reject".  These restrictions are implied but not spelled out here.
-
-
-### stsp: need conflict data format version info inside skel, too?
-###   or do we bump the entire wc.db format number if we need to tweak
-###   this?
-###
-### gstein sez: the KIND can become "text-2" or somesuch if we need to
-###   radically alter the kind-specific data. but we can easily append
-###   information to the skel without much problem.
+"reject".  These restrictions are implied by the nature of operations
+creating the conflicts but not spelled out here.
 
 If the 'conflict_data' column is not NULL, then at least one
 KIND of conflict skel must exist, describing the conflict(s).
@@ -62,8 +54,8 @@ Operation skel
 
 Meaning:  The Operation skel indicates what kind of operation was being
 performed that resulted in a conflict, including the format and content
-(or reference to content) of the diff that was being applied to this
-node.
+(or reference to content) of the conflicting change that was being
+applied to this node.
 
 The OPERATION skel has the following form:
 
@@ -74,7 +66,7 @@ NAME is one of:
   "update" - meaning a 3-way merge as in "svn update";
   "switch" - meaning a 3-way merge as in "svn switch";
   "merge" - meaning a 3(4?)-way merge as in "svn merge";
-  "patch" - meaning application of a context-diff, as in "svn patch".
+  "patch" - meaning application of a unidiff patch, as in "svn patch".
 
 OPERATION-SPECIFIC is as follows:
 
@@ -151,7 +143,7 @@ Text conflicts
 Text conflicts only exist on files. The following skel represents the
 "text" KIND of conflict:
 
-  ("text" OPERATION LEFT_SHA1 RIGHT_SHA1 MINE_SHA1)
+  ("text" LEFT_SHA1 RIGHT_SHA1 MINE_SHA1)
 
 {LEFT,RIGHT,MINE}_SHA1 are sha1 checksums of the full texts of
 the {left,right,mine} version of the file. File version's content
@@ -175,14 +167,15 @@ There can be one or more property conflicts on the node, represented
 by one or more "prop" KIND conflicts. Each "prop" conflict has the
 following form:
 
-  ("prop" OPERATION
-   PROPERTY_NAME ([LEFT_VALUE]) ([RIGHT_VALUE]) ([MINE_VALUE]))
+  ("prop" PROPERTY_NAME ([LEFT_VALUE]) ([RIGHT_VALUE]) ([MINE_VALUE]))
 
 PROPERTY_NAME is the name of the property, such as "svn:eol-style".
 
 Each property value ({LEFT,RIGHT,MINE}_VALUE) is represented as an
 empty list indicating the property did not exist in that version, or a
 1-item list containing the particular value.
+
+### stsp: What's the size limit of a prop value?
 
 
 Tree conflicts
@@ -191,11 +184,11 @@ Tree conflicts
 Tree conflicts exist on files or directories.
 
 ### JAF: And symlinks, I presume - or, if not, why not?
+### stsp: Symlinks are resolved before retreiving conflict information.,
 
 The following information is stored if there is a tree conflict on the node:
 
-  ("tree" OPERATION
-    INCOMING_CHANGE LOCAL_CHANGE
+  ("tree" INCOMING_CHANGE LOCAL_CHANGE
     LEFT_NODE_KIND RIGHT_NODE_KIND
     LEFT_SHA1 RIGHT_SHA1 MINE_SHA1)
 
@@ -223,14 +216,24 @@ content can be obtained from the pristine store.
 
 ### gstein suggests:
 ###
-###   ("tree" OPERATION LOCAL_STATE INCOMING_STATE)
+###   ("tree" LOCAL_STATE INCOMING_STATE)
 ###
 ###   LOCAL_STATE := (LOCAL_CHANGE NODE_KIND [ORIGINAL_SHA1 MINE_SHA1])
 ###   INCOMING_STATE := (INCOMING_CHANGE NODE_KIND [INCOMING_SHA1])
 ###
 ### this groups the data better, and has nice (optional) placeholders
 ### for the SHA1 values when NODE_KIND is "file"
-
+###
+### stsp: Let's use LEFT/RIGHT/MINE to keep the terminology consistent
+###  with text conflicts. Note how this changes the grouping of SHA1
+###  items, I don't quite understand why you grouped them differently:
+###
+###   ("tree" LOCAL_STATE INCOMING_STATE)
+###
+###   LOCAL_STATE := (LOCAL_CHANGE NODE_KIND [MINE_SHA1])
+###   INCOMING_STATE := (INCOMING_CHANGE NODE_KIND [LEFT_SHA1 RIGHT_SHA1])
+###
+###
 
 (Unversioned) Obstructions
 --------------------------
@@ -242,7 +245,7 @@ the BASE_NODE table.
 There is no particular data which needs to be recorded for an
 obstruction. Thus, the "obstructed" conflict skel has the form:
 
-  ("obstructed" OPERATION)
+  ("obstructed")
 
 
 Reject conflicts
@@ -253,8 +256,7 @@ is the failure to find a match for a hunk's context in the patch target.
 There can be one or more reject conflicts on a node. Each "reject" conflict
 has the following form:
 
-  ("reject" OPERATION
-    HUNK_ORIGINAL_OFFSET HUNK_ORIGINAL_LEN
+  ("reject" HUNK_ORIGINAL_OFFSET HUNK_ORIGINAL_LEN
     HUNK_MODIFIED_OFFSET HUNK_MODIFIED_LENGTH
     REJECT_DIFF_SHA1)
 
