@@ -104,34 +104,12 @@ For "merge", the skel has the form:
   {LEFT,RIGHT}_REPOS_RELPATH is the path in the repository of the {left,right}
     version of the item.
 
-  {LEFT,RIGHT}_PEG_REV is the peg revision of the {left,right} version
-    of the item.
-
-### JAF: Don't want both "rev" and "peg-rev" separately: that's recording too
-###   much UI.  Just have the revision in which to find the repos-relpath.
-### stsp: Peg revs aren't just UI. You need them to uniquely identify an item
-###   in the repository history. Here's an example for why we need them:
-###   Say I'm doing a merge of range rA-rB, and within this range,
-###   file foo.c is replaced in rN, and later renamed to bar.c in rM.
-###   Of course, A < N < M < B.
-###   (Note: The following highly depends on how editorv2 drivers will be
-###    implemented, so I may be off-track here.)
-###   During the merge with editorv2, the replace and rename result in the
-###   addition of foo.c@N (replacing foo.c@A), and the move of foo.c@N
-###   to bar.c. Let's say foo.c@A has edits local to the merge target.
-###   I'd like flag a edit/replaced tree conflict, and record foo.c@rA as
-###   the 'left' version of the conflicting item, and foo.c@rN as the 'right'
-###   version. Recording foo.c@B is wrong because foo.c does not exist at
-###   that revision, so being able to record just two revisions won't work.
-###   We could also record bar.c@B as the 'right' version, but this doesn't
-###   feel right since the rename does not really conflict with the edits.
-###   The item which is being renamed is not the one which was edited -- it
-###   just happened to live at the same path at a different time.
-### HKW: Agree with Julian: peg revisions are a part of the UI.  If the
-###   left and right versions of stuff refer to things in the repo, the
-###   repos url, relpath and revision should be sufficient to identify them;
-###   you shouldn't need a peg rev.  If you *do* need additional information,
-###   I suggest thinking about why that is, and how you should represent it.
+  {LEFT,RIGHT}_CONFLICT_REV is the revision in which to find the
+    {left,right} version of the item which caused the conflict.
+    These are usually LEFT_REV or RIGHT_REV, but in some cases they
+    may differ (a simple example is if a file was replaced in revision rX
+    somewhere between LEFT_REV and RIGHT_REV, and the conflict is due to
+    events which happened between LEFT_REV and rX).
 
 For "patch", the skel has the form:
 
