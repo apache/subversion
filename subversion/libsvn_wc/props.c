@@ -483,7 +483,6 @@ svn_wc__loggy_revert_props_create(svn_wc__db_t *db,
   const char *revert_prop_abspath;
   const char *base_prop_abspath;
   svn_node_kind_t on_disk;
-  svn_stringbuf_t *log_accum = NULL;
 
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
 
@@ -504,9 +503,9 @@ svn_wc__loggy_revert_props_create(svn_wc__db_t *db,
   SVN_ERR(svn_io_check_path(base_prop_abspath, &on_disk, scratch_pool));
   if (on_disk == svn_node_file)
     {
-      SVN_ERR(svn_wc__loggy_move(&log_accum, adm_abspath,
+      SVN_ERR(svn_wc__loggy_move(db, adm_abspath,
                                  base_prop_abspath, revert_prop_abspath,
-                                 scratch_pool, scratch_pool));
+                                 scratch_pool));
     }
   else if (on_disk == svn_node_none)
     {
@@ -527,17 +526,15 @@ svn_wc__loggy_revert_props_create(svn_wc__db_t *db,
       SVN_ERR(svn_stream_close(stream));
 
       /* Write a log entry to move tmp file to the destination.  */
-      SVN_ERR(svn_wc__loggy_move(&log_accum, adm_abspath,
+      SVN_ERR(svn_wc__loggy_move(db, adm_abspath,
                                  prop_tmp_abspath, revert_prop_abspath,
-                                 scratch_pool, scratch_pool));
+                                 scratch_pool));
 
       /* And make the destination read-only.  */
-      SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_abspath,
+      SVN_ERR(svn_wc__loggy_set_readonly(db, adm_abspath,
                                          revert_prop_abspath,
-                                         scratch_pool, scratch_pool));
+                                         scratch_pool));
     }
-
-  SVN_ERR(svn_wc__wq_add_loggy(db, adm_abspath, log_accum, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -683,8 +680,6 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
       SVN_ERR(svn_wc__install_props(wc_ctx->db, local_abspath,
                                     new_base_props, new_actual_props,
                                     base_merge, FALSE, pool));
-
-      /* ### add_loggy takes a DIR, but wq_run is a simple WRI_ABSPATH  */
 
       SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
                              cancel_func, cancel_baton,

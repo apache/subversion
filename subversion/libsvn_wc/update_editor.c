@@ -4143,17 +4143,14 @@ install_text_base(svn_wc__db_t *db,
                   const char *final_text_base_abspath,
                   apr_pool_t *scratch_pool)
 {
-  svn_stringbuf_t *log_accum = NULL;
-
-  SVN_ERR(svn_wc__loggy_move(&log_accum, adm_abspath,
+  SVN_ERR(svn_wc__loggy_move(db, adm_abspath,
                              temp_text_base_abspath, final_text_base_abspath,
-                             scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_abspath,
+                             scratch_pool));
+  SVN_ERR(svn_wc__loggy_set_readonly(db, adm_abspath,
                                      final_text_base_abspath,
-                                     scratch_pool, scratch_pool));
+                                     scratch_pool));
 
-  return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
-                                               scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 
@@ -4550,30 +4547,25 @@ merge_file(svn_boolean_t *install_pristine,
       && !is_locally_modified
       && (fb->adding_file || entry->schedule == svn_wc_schedule_normal))
     {
-      svn_stringbuf_t *log_accum = NULL;
-
       /* Adjust working copy file unless this file is an allowed
          obstruction. */
       if (fb->last_changed_date && !fb->obstruction_found)
         SVN_ERR(svn_wc__loggy_set_timestamp(
-                  &log_accum, pb->local_abspath,
+                  eb->db, pb->local_abspath,
                   fb->local_abspath, fb->last_changed_date,
-                  pool, pool));
+                  pool));
 
       if ((new_text_base_tmp_abspath || magic_props_changed)
           && !fb->deleted)
         {
           /* Adjust entries file to match working file */
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(
-                    &log_accum, pb->local_abspath,
-                    fb->local_abspath, pool, pool));
+                    eb->db, pb->local_abspath,
+                    fb->local_abspath, pool));
         }
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(
-                &log_accum, pb->local_abspath,
-                fb->local_abspath, pool, pool));
-
-      SVN_ERR(svn_wc__wq_add_loggy(eb->db, pb->local_abspath, log_accum,
-                                   pool));
+                eb->db, pb->local_abspath,
+                fb->local_abspath, pool));
     }
 
   /* Set the returned content state. */
@@ -5657,7 +5649,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   svn_stream_t *tmp_base_contents;
   const char *text_base_abspath;
   const char *temp_dir_abspath;
-  svn_stringbuf_t *log_accum = NULL;
   struct last_change_info *last_change = NULL;
   svn_error_t *err;
   const char *source_abspath = NULL;
@@ -5741,10 +5732,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
             SVN_ERR(svn_wc__text_revert_path(&dst_rtext, db, local_abspath,
                                              pool));
 
-            SVN_ERR(svn_wc__loggy_move(&log_accum, dir_abspath,
+            SVN_ERR(svn_wc__loggy_move(db, dir_abspath,
                                        text_base_abspath, dst_rtext,
-                                       pool, pool));
-            SVN_WC__FLUSH_LOG_ACCUM(db, dir_abspath, log_accum, pool);
+                                       pool));
 
             SVN_ERR(svn_wc__loggy_revert_props_create(db, local_abspath,
                                                       pool));
