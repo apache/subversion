@@ -188,22 +188,28 @@ Tree conflicts exist on files or directories.
 
 The following information is stored if there is a tree conflict on the node:
 
-  ("tree" INCOMING_CHANGE LOCAL_CHANGE
-    LEFT_NODE_KIND RIGHT_NODE_KIND
-    LEFT_SHA1 RIGHT_SHA1 MINE_SHA1)
+  ("tree" LOCAL_STATE INCOMING_STATE)
 
-INCOMING_CHANGE is the incoming change which conflicted with the
-local change during the operation. Possible values are "edit", "add",
-"delete", "rename", and "replace".
+  LOCAL_STATE := (LOCAL_CHANGE NODE_KIND [ORIGINAL_SHA1 MINE_SHA1])
+  INCOMING_STATE := (INCOMING_CHANGE NODE_KIND [INCOMING_SHA1])
 
 LOCAL_CHANGE is the local change which conflicted with the
 incoming change during the operation. Possible values are "edit", "add",
 "delete", "rename", "replace", "obstructed", and "missing".
 
-If the {left,right,mine} version of the item is a file and the content
-of that file is known, {LEFT,RIGHT,MINE}_SHA1 is the sha1 checksum of the
-full text of the {left,right,mine} version of the file. The file version's
-content can be obtained from the pristine store.
+NODE_KIND is the {local,incoming} kind of the node involved in the conflict.
+
+INCOMING_CHANGE is the incoming change which conflicted with the
+local change during the operation. Possible values are "edit", "add",
+"delete", "rename", and "replace".
+
+The *_SHA1 sum fields are only present if NODE_KIND is "file".
+ORIGINAL_SHA1 is the SHA1 of the BASE version of the tree conflict victim
+file in the working copy. MINE_SHA1 is the SHA1 of the WORKING version
+of the tree conflict victim file. INCOMING_SHA1 is the SHA1 of the file
+which the operation was attempting to install in the working copy.
+
+The file version's content can be obtained from the pristine store.
 
 ### BH: We need to duplicate the sha1 values in the older_checksum,
 ###     left_checksum, right_checksum columns of ACTUAL
@@ -214,26 +220,6 @@ content can be obtained from the pristine store.
 ###     (We should keep the history of the node valid via replace vs update)
 ### stsp: I don't really understand your question. Can you be more specific?
 
-### gstein suggests:
-###
-###   ("tree" LOCAL_STATE INCOMING_STATE)
-###
-###   LOCAL_STATE := (LOCAL_CHANGE NODE_KIND [ORIGINAL_SHA1 MINE_SHA1])
-###   INCOMING_STATE := (INCOMING_CHANGE NODE_KIND [INCOMING_SHA1])
-###
-### this groups the data better, and has nice (optional) placeholders
-### for the SHA1 values when NODE_KIND is "file"
-###
-### stsp: Let's use LEFT/RIGHT/MINE to keep the terminology consistent
-###  with text conflicts. Note how this changes the grouping of SHA1
-###  items, I don't quite understand why you grouped them differently:
-###
-###   ("tree" LOCAL_STATE INCOMING_STATE)
-###
-###   LOCAL_STATE := (LOCAL_CHANGE NODE_KIND [MINE_SHA1])
-###   INCOMING_STATE := (INCOMING_CHANGE NODE_KIND [LEFT_SHA1 RIGHT_SHA1])
-###
-###
 
 (Unversioned) Obstructions
 --------------------------
