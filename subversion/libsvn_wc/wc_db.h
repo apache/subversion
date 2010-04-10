@@ -1395,16 +1395,17 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
 
 
 /* Record an update as conflicting operation on LOCAL_ABSPATH in DB.
- *
- * BASE_REVISION is the revision the node was at before the update.
- * TARGET_REVISION is the revision being updated to.
- *
- * This function may return an error (### which one?) if recording
- * an update operation conflicts with the current status of the node
- * (e.g. if the node is already conflicted due to a previous operation,
- * additional conflicting operations currently cannot be recorded).
- *
- * Do temporary allocations in SCRATCH_POOL. */
+
+   BASE_REVISION is the revision the node was at before the update.
+   TARGET_REVISION is the revision being updated to.
+
+   This function may return an error (### which one?) if recording
+   an update operation conflicts with the current status of the node
+   (e.g. if the node is already conflicted due to a previous operation,
+   additional conflicting operations currently cannot be recorded).
+
+   Do temporary allocations in SCRATCH_POOL.
+*/
 svn_error_t *
 svn_wc__db_record_conflicting_update_op(svn_wc__db_t *db,
                                         const char *local_abspath,
@@ -1412,19 +1413,21 @@ svn_wc__db_record_conflicting_update_op(svn_wc__db_t *db,
                                         svn_revnum_t target_revision,
                                         apr_pool_t *scratch_pool);
 
+
 /* Record a switch as conflicting operation on LOCAL_ABSPATH in DB.
- *
- * BASE_REVISION is the revision the node was at before the switch.
- * TARGET_REVISION is the revision being switched to.
- * REPOS_RELPATH is the path being switched to, relative to the
- * repository root.
- *
- * This function may return an error (### which one?) if recording
- * a switch operation conflicts with the current status of the node
- * (e.g. if the node is already conflicted due to a previous operation,
- * additional conflicting operations currently cannot be recorded).
- *
- * Do temporary allocations in SCRATCH_POOL. */
+
+   BASE_REVISION is the revision the node was at before the switch.
+   TARGET_REVISION is the revision being switched to.
+   REPOS_RELPATH is the path being switched to, relative to the
+   repository root.
+
+   This function may return an error (### which one?) if recording
+   a switch operation conflicts with the current status of the node
+   (e.g. if the node is already conflicted due to a previous operation,
+   additional conflicting operations currently cannot be recorded).
+
+   Do temporary allocations in SCRATCH_POOL.
+*/
 svn_error_t *
 svn_wc__db_record_conflicting_switch_op(svn_wc__db_t *db,
                                         const char *local_abspath,
@@ -1433,149 +1436,164 @@ svn_wc__db_record_conflicting_switch_op(svn_wc__db_t *db,
                                         const char *repos_relpath,
                                         apr_pool_t *scratch_pool);
 
+
 /* Record a merge as conflicting operation on LOCAL_ABSPATH in DB.
- *
- * REPOS_UUID is the UUID of the repository accessed via REPOS_URL.
- *
- * LEFT_REPOS_RELPATH and RIGHT_REPOS_RELPATH paths to the merge-left
- * and merge-right merge sources, relative to REPOS_URL
- *
- * LEFT_REVISION is the merge-left revision.
- * RIGHT_REVISION is the merge-right revision.
- *
- * This function may return an error (### which one?) if recording
- * an update operation conflicts with the current status of the node
- * (e.g. if the node is already conflicted due to a previous operation,
- * additional conflicting operations currently cannot be recorded).
- *
- * Do temporary allocations in SCRATCH_POOL. */
+
+   REPOS_UUID is the UUID of the repository accessed via REPOS_ROOT_URL.
+
+   LEFT_REPOS_RELPATH and RIGHT_REPOS_RELPATH paths to the merge-left
+   and merge-right merge sources, relative to REPOS_URL
+
+   LEFT_REVISION is the merge-left revision.
+   RIGHT_REVISION is the merge-right revision.
+
+   This function may return an error (### which one?) if recording
+   an update operation conflicts with the current status of the node
+   (e.g. if the node is already conflicted due to a previous operation,
+   additional conflicting operations currently cannot be recorded).
+
+   Do temporary allocations in SCRATCH_POOL.
+*/
 svn_error_t *
 svn_wc__db_record_conflicting_merge_op(svn_wc__db_t *db,
                                        const char *local_abspath,
                                        const char *repos_uuid,
-                                       const char *repos_url,
+                                       const char *repos_root_url,
                                        svn_revnum_t left_revision,
                                        const char *left_repos_relpath,
                                        svn_revnum_t right_revision,
                                        const char *right_repos_relpath,
                                        apr_pool_t *scratch_pool);
 
+
 /* Record patch as conflicting operation on LOCAL_ABSPATH in DB.
- *
- * PATCH_SOURCE_LABEL is a string identifying the patch source in
- * some way, for display purposes. It is usually the absolute path
- * to the patch file, or a token such as "<stdin>" if the patch source
- * is not a file.
- *
- * Do temporary allocations in SCRATCH_POOL. */
+
+   PATCH_SOURCE_LABEL is a string identifying the patch source in
+   some way, for display purposes. It is usually the absolute path
+   to the patch file, or a token such as "<stdin>" if the patch source
+   is not a file.
+
+   Do temporary allocations in SCRATCH_POOL.
+*/
 svn_error_t *
 svn_wc__db_record_conflicting_patch_op(svn_wc__db_t *db,
                                        const char *local_abspath,
                                        const char *patch_source_label,
                                        apr_pool_t *scratch_pool);
 
+
 /* Record a text conflict on LOCAL_ABSPATH in DB.
- *
- * All checksums passed should be suitable for retreiving conflicted
- * versions of the file from the pristine store.
- *
- * ORIGINAL_CHECKSUM is the checksum of the BASE version of the conflicted
- * file (without local modifications).
- * MINE_CHECKSUM is the checksum of the WORKING version of the conflicted
- * file as of the time the conflicting operation was run (i.e. including
- * local modifications).
- * INCOMING_CHECKSUM is the checksum of the incoming file causing the
- * conflict. ### is this needed for update? what about merge?
- *
- * It is an error (### which one?) if no conflicting operation has been
- * recorded on LOCAL_ABSPATH before calling this function.
- * It is an error (### which one?) if the node already has a text conflict
- * recorded.
- *
- * Do temporary allocations in SCRATCH_POOL. */
+
+   All checksums passed should be suitable for retreiving conflicted
+   versions of the file from the pristine store.
+
+   ORIGINAL_CHECKSUM is the checksum of the BASE version of the conflicted
+   file (without local modifications).
+   MINE_CHECKSUM is the checksum of the WORKING version of the conflicted
+   file as of the time the conflicting operation was run (i.e. including
+   local modifications).
+   INCOMING_CHECKSUM is the checksum of the incoming file causing the
+   conflict. ### is this needed for update? what about merge?
+
+   It is an error (### which one?) if no conflicting operation has been
+   recorded on LOCAL_ABSPATH before calling this function.
+   It is an error (### which one?) if the node already has a text conflict
+   recorded.
+
+   Do temporary allocations in SCRATCH_POOL.
+*/
 svn_error_t *
 svn_wc__db_record_text_conflict(svn_wc__db_t *db,
                                 const char *local_abspath,
-                                svn_checksum_t *original_checksum,
-                                svn_checksum_t *mine_checksum,
-                                svn_checksum_t *incoming_checksum,
+                                const svn_checksum_t *original_checksum,
+                                const svn_checksum_t *mine_checksum,
+                                const svn_checksum_t *incoming_checksum,
                                 apr_pool_t *scratch_pool);
 
+
 /* Record a property conflict on LOCAL_ABSPATH in DB.
- *
- * PROP_NAME is the name of the conflicted property.
- *
- * ORIGINAL_VALUE is a stream of the property's value at the BASE revision.
- * MINE_VALUE is a stream of the property's value in WORKING (BASE + local
- * modifications).  INCOMING_VALUE is a stream of the incoming property
- * value brought in by the operation. ### Is this enough? What about merge?
- *
- * It is an error (### which one?) if no conflicting operation has been
- * recorded on LOCAL_ABSPATH before calling this function.
- * It is an error (### which one?) if the node already has a propery
- * conflict recorded for PROP_NAME.
- *
- * Do temporary allocations in SCRATCH_POOL. */
+
+   PROP_NAME is the name of the conflicted property.
+
+   ORIGINAL_VALUE is a stream of the property's value at the BASE revision.
+   MINE_VALUE is a stream of the property's value in WORKING (BASE + local
+   modifications).  INCOMING_VALUE is a stream of the incoming property
+   value brought in by the operation. ### Is this enough? What about merge?
+
+   ORIGINAL/MINE/INCOMING_VALUE may be NULL, indicating no value was
+   present.
+
+   It is an error (### which one?) if no conflicting operation has been
+   recorded on LOCAL_ABSPATH before calling this function.
+   It is an error (### which one?) if the node already has a propery
+   conflict recorded for PROP_NAME.
+
+   Do temporary allocations in SCRATCH_POOL.
+*/
 svn_error_t *
 svn_wc__db_record_prop_conflict(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 const char *prop_name,
-                                svn_stream_t *original_value,
-                                svn_stream_t *mine_value,
-                                svn_stream_t *incoming_value,
+                                const svn_string_t *original_value,
+                                const svn_string_t *mine_value,
+                                const svn_string_t *incoming_value,
                                 apr_pool_t *scratch_pool);
 
+
 /* Record a tree conflict on LOCAL_ABSPATH in DB.
- *
- * LOCAL_CHANGE is the local tree change made to the node.
- * ORIGINAL_LOCAL_KIND is the kind of the local node in BASE.
- * If ORIGINAL_LOCAL_KIND is svn_node_file, ORIGINAL_CHECKSUM is the checksum
- * for the BASE of the file, for retrieval from the pristine store.
- *
- * MINE_LOCAL_KIND is the kind of the local node in WORKING at the
- * time the conflict was flagged.
- * If MINE_LOCAL_KIND is svn_node_file, ORIGINAL_CHECKSUM is the checksum
- * of the WORKING version of the file at the time the conflict was flagged,
- * for retrieval from the pristine store.
- *
- * INCOMING_KIND is the kind of the incoming node.
- * If INCOMING_KIND is svn_node_file, INCOMING_CHECKSUM is the checksum
- * of the INCOMING version of the file, for retrieval from the pristine store.
- *
- * It is an error (### which one?) if no conflicting operation has been
- * recorded on LOCAL_ABSPATH before calling this function.
- * It is an error (### which one?) if the node already has a tree conflict
- * recorded.
- *
- * Do temporary allocations in SCRATCH_POOL. */
+
+   LOCAL_CHANGE is the local tree change made to the node.
+   ORIGINAL_LOCAL_KIND is the kind of the local node in BASE.
+   If ORIGINAL_LOCAL_KIND is svn_node_file, ORIGINAL_CHECKSUM is the checksum
+   for the BASE of the file, for retrieval from the pristine store.
+
+   MINE_LOCAL_KIND is the kind of the local node in WORKING at the
+   time the conflict was flagged.
+   If MINE_LOCAL_KIND is svn_node_file, ORIGINAL_CHECKSUM is the checksum
+   of the WORKING version of the file at the time the conflict was flagged,
+   for retrieval from the pristine store.
+
+   INCOMING_KIND is the kind of the incoming node.
+   If INCOMING_KIND is svn_node_file, INCOMING_CHECKSUM is the checksum
+   of the INCOMING version of the file, for retrieval from the pristine store.
+
+   It is an error (### which one?) if no conflicting operation has been
+   recorded on LOCAL_ABSPATH before calling this function.
+   It is an error (### which one?) if the node already has a tree conflict
+   recorded.
+
+   Do temporary allocations in SCRATCH_POOL.
+*/
 svn_error_t *
 svn_wc__db_record_tree_conflict(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 svn_wc_conflict_reason_t local_change,
-                                svn_node_kind_t original_local_kind,
-                                svn_checksum_t *original_checksum,
-                                svn_node_kind_t mine_local_kind,
-                                svn_checksum_t *mine_checksum,
+                                svn_wc__db_kind_t original_local_kind,
+                                const svn_checksum_t *original_checksum,
+                                svn_wc__db_kind_t mine_local_kind,
+                                const svn_checksum_t *mine_checksum,
                                 svn_wc_conflict_action_t incoming_change,
-                                svn_node_kind_t incoming_kind,
-                                svn_checksum_t *incoming_checksum,
+                                svn_wc__db_kind_t incoming_kind,
+                                const svn_checksum_t *incoming_checksum,
                                 apr_pool_t *scratch_pool);
 
+
 /* Record a reject conflict on LOCAL_ABSPATH in DB.
- *
- * HUNK_ORIGINAL_OFFSET, HUNK_ORIGINAL_LENGTH, HUNK_MODIFIED_OFFSET,
- * and HUNK_MODIFIED_LENGTH is hunk-header data identifying the hunk
- * which was rejected.
- *
- * REJECT_DIFF_CHECKSUM is the checksum of the text of the rejected
- * diff, for retrieval from the pristine store.
- *
- * It is an error (### which one?) if no conflicting operation has been
- * recorded on LOCAL_ABSPATH before calling this function.
- * It is an error (### which one?) if the node already has a reject conflict
- * recorded for this hunk.
- *
- * Do temporary allocations in SCRATCH_POOL. */
+
+   HUNK_ORIGINAL_OFFSET, HUNK_ORIGINAL_LENGTH, HUNK_MODIFIED_OFFSET,
+   and HUNK_MODIFIED_LENGTH is hunk-header data identifying the hunk
+   which was rejected.
+
+   REJECT_DIFF_CHECKSUM is the checksum of the text of the rejected
+   diff, for retrieval from the pristine store.
+
+   It is an error (### which one?) if no conflicting operation has been
+   recorded on LOCAL_ABSPATH before calling this function.
+   It is an error (### which one?) if the node already has a reject conflict
+   recorded for this hunk.
+
+   Do temporary allocations in SCRATCH_POOL.
+*/
 svn_error_t *
 svn_wc__db_record_reject_conflict(svn_wc__db_t *db,
                                   const char *local_abspath,
@@ -1583,12 +1601,14 @@ svn_wc__db_record_reject_conflict(svn_wc__db_t *db,
                                   svn_linenum_t hunk_original_length,
                                   svn_linenum_t hunk_modified_offset,
                                   svn_linenum_t hunk_modified_length,
-                                  svn_checksum_t *reject_diff_checksum,
+                                  const svn_checksum_t *reject_diff_checksum,
                                   apr_pool_t *scratch_pool);
 
+
 /* Record a obstruction conflict on LOCAL_ABSPATH in DB.
- *
- * Do temporary allocations in SCRATCH_POOL. */
+
+   Do temporary allocations in SCRATCH_POOL.
+*/
 svn_error_t *
 svn_wc__db_record_obstruction_conflict(svn_wc__db_t *db,
                                        const char *local_abspath,
@@ -2098,11 +2118,11 @@ svn_wc__db_wq_completed(svn_wc__db_t *db,
 
 
 /* Note: LEVELS_TO_LOCK is here strictly for backward compat.  The access
- * batons still have the notion of 'levels to lock' and we need to ensure
- * that they still function correctly, even in the new world.  'levels to
- * lock' should not be exposed through the wc-ng APIs at all: users either
- * get to lock the entire tree (rooted at some subdir, of course), or none.
- */
+   batons still have the notion of 'levels to lock' and we need to ensure
+   that they still function correctly, even in the new world.  'levels to
+   lock' should not be exposed through the wc-ng APIs at all: users either
+   get to lock the entire tree (rooted at some subdir, of course), or none.
+*/
 svn_error_t *
 svn_wc__db_wclock_set(svn_wc__db_t *db,
                       const char *local_abspath,
