@@ -774,6 +774,8 @@ svn_editor_add_absent(svn_editor_t *editor,
  * Set or change properties on the existing node at @a relpath.
  * ### TODO @todo Does this send *all* properties, always?
  * ### TODO @todo What is REVISION for?
+ * ### what about "entry props"? will these still be handled via
+ * ### the general prop function?
  *
  * @a complete must be FALSE if and only if
  * - @a relpath is a file and an svn_editor_set_text() call will follow on
