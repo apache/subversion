@@ -77,6 +77,14 @@ To record an "update" operation, the skel has the form:
   BASE_REV is the base revision prior to the update.
   TARGET_REV is the revision being updated to.
 
+### sbutler: What about mixed-revision working copies?  Let's record
+### the equivalent of svn_wc_revision_status_t, plus the target rev: 
+###
+###   ("update" MIN_REV MAX_REV SWITCHED MODIFIED TARGET_REV)
+###
+### Otherwise, the user may get the mistaken impression that the local
+### tree is entirely at the URL and revision of the victim dir.
+
 For "switch", the skel has the form:
 
   ("switch" BASE_REV TARGET_REV REPOS_RELPATH)
