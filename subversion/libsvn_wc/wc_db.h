@@ -1428,83 +1428,69 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
 /* @} */
 
 
-/* @defgroup svn_wc__db_record_  Conflict recording functions
+/* @defgroup svn_wc__db_conflict_skel_  Conflict skel manipulation functions
    @{
 */
 
-/* Record an update as conflicting operation on LOCAL_ABSPATH in DB.
+/* Return a new conflict skel, allocated in RESULT_POOL. */
+svn_skel_t *
+svn_wc__db_conflict_skel_new(apr_pool_t *result_pool);
 
+/* Set 'update' as the conflicting operation in CONFLICT_SKEL.
+   Allocate data stored in the skel in RESULT_POOL.
+ 
    BASE_REVISION is the revision the node was at before the update.
    TARGET_REVISION is the revision being updated to.
-
-   This function may return an error (### which one?) if recording
-   an update operation conflicts with the current status of the node
-   (e.g. if the node is already conflicted due to a previous operation,
-   additional conflicting operations currently cannot be recorded).
-
-   Do temporary allocations in SCRATCH_POOL.
-*/
+ 
+   Do temporary allocations in SCRATCH_POOL. */
 svn_error_t *
-svn_wc__db_record_conflicting_update_op(svn_wc__db_t *db,
-                                        const char *local_abspath,
-                                        svn_revnum_t base_revision,
-                                        svn_revnum_t target_revision,
-                                        apr_pool_t *scratch_pool);
+svn_wc__db_conflict_skel_set_op_update(svn_skel_t *conflict_skel,
+                                       svn_revnum_t base_revision,
+                                       svn_revnum_t target_revision,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
 
-
-/* Record a switch as conflicting operation on LOCAL_ABSPATH in DB.
+/* Set 'switch' as the conflicting operation in CONFLICT_SKEL.
+   Allocate data stored in the skel in RESULT_POOL.
 
    BASE_REVISION is the revision the node was at before the switch.
    TARGET_REVISION is the revision being switched to.
    REPOS_RELPATH is the path being switched to, relative to the
    repository root.
 
-   This function may return an error (### which one?) if recording
-   a switch operation conflicts with the current status of the node
-   (e.g. if the node is already conflicted due to a previous operation,
-   additional conflicting operations currently cannot be recorded).
-
-   Do temporary allocations in SCRATCH_POOL.
-*/
+   Do temporary allocations in SCRATCH_POOL. */
 svn_error_t *
-svn_wc__db_record_conflicting_switch_op(svn_wc__db_t *db,
-                                        const char *local_abspath,
-                                        svn_revnum_t base_revision,
-                                        svn_revnum_t target_revision,
-                                        const char *repos_relpath,
-                                        apr_pool_t *scratch_pool);
+svn_wc__db_conflict_skel_set_op_switch(svn_skel_t *conflict_skel,
+                                       svn_revnum_t base_revision,
+                                       svn_revnum_t target_revision,
+                                       const char *repos_relpath,
+                                       apr_pool_t *scratch_pool);
 
-
-/* Record a merge as conflicting operation on LOCAL_ABSPATH in DB.
+/* Set 'merge' as conflicting operation in CONFLICT_SKEL.
+   Allocate data stored in the skel in RESULT_POOL.
 
    REPOS_UUID is the UUID of the repository accessed via REPOS_ROOT_URL.
-
+  
    LEFT_REPOS_RELPATH and RIGHT_REPOS_RELPATH paths to the merge-left
    and merge-right merge sources, relative to REPOS_URL
 
    LEFT_REVISION is the merge-left revision.
    RIGHT_REVISION is the merge-right revision.
 
-   This function may return an error (### which one?) if recording
-   an update operation conflicts with the current status of the node
-   (e.g. if the node is already conflicted due to a previous operation,
-   additional conflicting operations currently cannot be recorded).
-
-   Do temporary allocations in SCRATCH_POOL.
-*/
+   Do temporary allocations in SCRATCH_POOL. */
 svn_error_t *
-svn_wc__db_record_conflicting_merge_op(svn_wc__db_t *db,
-                                       const char *local_abspath,
-                                       const char *repos_uuid,
-                                       const char *repos_root_url,
-                                       svn_revnum_t left_revision,
-                                       const char *left_repos_relpath,
-                                       svn_revnum_t right_revision,
-                                       const char *right_repos_relpath,
-                                       apr_pool_t *scratch_pool);
+svn_wc__db_conflict_skel_set_op_merge(svn_skel_t *conflict_skel,
+                                      const char *repos_uuid,
+                                      const char *repos_root_url,
+                                      svn_revnum_t left_revision,
+                                      const char *left_repos_relpath,
+                                      svn_revnum_t right_revision,
+                                      const char *right_repos_relpath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
 
-
-/* Record patch as conflicting operation on LOCAL_ABSPATH in DB.
+/* Set 'patch' as the conflicting operation in CONFLICT_SKEL.
+   Allocate data stored in the skel in RESULT_POOL.
 
    PATCH_SOURCE_LABEL is a string identifying the patch source in
    some way, for display purposes. It is usually the absolute path
@@ -1514,13 +1500,14 @@ svn_wc__db_record_conflicting_merge_op(svn_wc__db_t *db,
    Do temporary allocations in SCRATCH_POOL.
 */
 svn_error_t *
-svn_wc__db_record_conflicting_patch_op(svn_wc__db_t *db,
-                                       const char *local_abspath,
-                                       const char *patch_source_label,
-                                       apr_pool_t *scratch_pool);
+svn_wc__db_conflict_skel_set_op_patch(svn_skel_t *conflict_skel,
+                                      const char *patch_source_label,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
 
 
-/* Record a text conflict on LOCAL_ABSPATH in DB.
+/* Add a text conflict to CONFLICT_SKEL.
+   Allocate data stored in the skel in RESULT_POOL.
 
    All checksums passed should be suitable for retreiving conflicted
    versions of the file from the pristine store.
@@ -1534,22 +1521,23 @@ svn_wc__db_record_conflicting_patch_op(svn_wc__db_t *db,
    conflict. ### is this needed for update? what about merge?
 
    It is an error (### which one?) if no conflicting operation has been
-   recorded on LOCAL_ABSPATH before calling this function.
-   It is an error (### which one?) if the node already has a text conflict
-   recorded.
+   set on CONFLICT_SKEL before calling this function.
+   It is an error (### which one?) if CONFLICT_SKEL already contains
+   a text conflict.
 
    Do temporary allocations in SCRATCH_POOL.
 */
 svn_error_t *
-svn_wc__db_record_text_conflict(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const svn_checksum_t *original_checksum,
-                                const svn_checksum_t *mine_checksum,
-                                const svn_checksum_t *incoming_checksum,
-                                apr_pool_t *scratch_pool);
+svn_wc__db_conflict_skel_add_text_conflict(
+  svn_skel_t *conflict_skel,
+  const svn_checksum_t *original_checksum,
+  const svn_checksum_t *mine_checksum,
+  const svn_checksum_t *incoming_checksum,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
 
 
-/* Record a property conflict on LOCAL_ABSPATH in DB.
+/* Add a property conflict to CONFLICT_SKEL.
 
    PROP_NAME is the name of the conflicted property.
 
@@ -1562,23 +1550,25 @@ svn_wc__db_record_text_conflict(svn_wc__db_t *db,
    present.
 
    It is an error (### which one?) if no conflicting operation has been
-   recorded on LOCAL_ABSPATH before calling this function.
-   It is an error (### which one?) if the node already has a propery
-   conflict recorded for PROP_NAME.
+   set on CONFLICT_SKEL before calling this function.
+   It is an error (### which one?) if CONFLICT_SKEL already cotains
+   a propery conflict for PROP_NAME.
 
    Do temporary allocations in SCRATCH_POOL.
 */
 svn_error_t *
-svn_wc__db_record_prop_conflict(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const char *prop_name,
-                                const svn_string_t *original_value,
-                                const svn_string_t *mine_value,
-                                const svn_string_t *incoming_value,
-                                apr_pool_t *scratch_pool);
+svn_wc__db_conflict_skel_add_prop_conflict(
+  svn_skel_t *skel,
+  const char *prop_name,
+  const svn_string_t *original_value,
+  const svn_string_t *mine_value,
+  const svn_string_t *incoming_value,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
 
 
-/* Record a tree conflict on LOCAL_ABSPATH in DB.
+/* Add a tree conflict to CONFLICT_SKEL.
+   Allocate data stored in the skel in RESULT_POOL.
 
    LOCAL_CHANGE is the local tree change made to the node.
    ORIGINAL_LOCAL_KIND is the kind of the local node in BASE.
@@ -1596,27 +1586,29 @@ svn_wc__db_record_prop_conflict(svn_wc__db_t *db,
    of the INCOMING version of the file, for retrieval from the pristine store.
 
    It is an error (### which one?) if no conflicting operation has been
-   recorded on LOCAL_ABSPATH before calling this function.
-   It is an error (### which one?) if the node already has a tree conflict
-   recorded.
+   set on CONFLICT_SKEL before calling this function.
+   It is an error (### which one?) if CONFLICT_SKEL already contains
+   a tree conflict.
 
    Do temporary allocations in SCRATCH_POOL.
 */
 svn_error_t *
-svn_wc__db_record_tree_conflict(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                svn_wc_conflict_reason_t local_change,
-                                svn_wc__db_kind_t original_local_kind,
-                                const svn_checksum_t *original_checksum,
-                                svn_wc__db_kind_t mine_local_kind,
-                                const svn_checksum_t *mine_checksum,
-                                svn_wc_conflict_action_t incoming_change,
-                                svn_wc__db_kind_t incoming_kind,
-                                const svn_checksum_t *incoming_checksum,
-                                apr_pool_t *scratch_pool);
+svn_wc__db_conflict_skel_add_tree_conflict(
+  svn_skel_t *skel,
+  svn_wc_conflict_reason_t local_change,
+  svn_wc__db_kind_t original_local_kind,
+  const svn_checksum_t *original_checksum,
+  svn_wc__db_kind_t mine_local_kind,
+  const svn_checksum_t *mine_checksum,
+  svn_wc_conflict_action_t incoming_change,
+  svn_wc__db_kind_t incoming_kind,
+  const svn_checksum_t *incoming_checksum,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
 
 
-/* Record a reject conflict on LOCAL_ABSPATH in DB.
+/* Add a reject conflict to CONFLICT_SKEL.
+   Allocate data stored in the skel in RESULT_POOL.
 
    HUNK_ORIGINAL_OFFSET, HUNK_ORIGINAL_LENGTH, HUNK_MODIFIED_OFFSET,
    and HUNK_MODIFIED_LENGTH is hunk-header data identifying the hunk
@@ -1626,31 +1618,38 @@ svn_wc__db_record_tree_conflict(svn_wc__db_t *db,
    diff, for retrieval from the pristine store.
 
    It is an error (### which one?) if no conflicting operation has been
-   recorded on LOCAL_ABSPATH before calling this function.
-   It is an error (### which one?) if the node already has a reject conflict
-   recorded for this hunk.
+   set on CONFLICT_SKEL before calling this function.
+   It is an error (### which one?) if CONFLICT_SKEL already contains
+   a reject conflict for the hunk.
 
    Do temporary allocations in SCRATCH_POOL.
 */
 svn_error_t *
-svn_wc__db_record_reject_conflict(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  svn_linenum_t hunk_original_offset,
-                                  svn_linenum_t hunk_original_length,
-                                  svn_linenum_t hunk_modified_offset,
-                                  svn_linenum_t hunk_modified_length,
-                                  const svn_checksum_t *reject_diff_checksum,
-                                  apr_pool_t *scratch_pool);
+svn_wc__db_conflict_skel_add_reject_conflict(
+  svn_skel_t *conflict_skel,
+  svn_linenum_t hunk_original_offset,
+  svn_linenum_t hunk_original_length,
+  svn_linenum_t hunk_modified_offset,
+  svn_linenum_t hunk_modified_length,
+  const svn_checksum_t *reject_diff_checksum,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
 
 
-/* Record a obstruction conflict on LOCAL_ABSPATH in DB.
+/* Add an obstruction conflict to CONFLICT_SKEL.
+   Allocate data stored in the skel in RESULT_POOL.
+
+   It is an error (### which one?) if no conflicting operation has been
+   set on CONFLICT_SKEL before calling this function.
+   It is an error (### which one?) if CONFLICT_SKEL already contains
+   an obstruction.
 
    Do temporary allocations in SCRATCH_POOL.
 */
 svn_error_t *
-svn_wc__db_record_obstruction_conflict(svn_wc__db_t *db,
-                                       const char *local_abspath,
-                                       apr_pool_t *scratch_pool);
+svn_wc__db_conflict_skel_add_obstruction(svn_skel_t *conflict_skel,
+                                         apr_pool_t *scratch_pool);
+
 
 /* @} */
 
