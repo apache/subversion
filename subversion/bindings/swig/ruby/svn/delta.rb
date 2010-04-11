@@ -73,7 +73,7 @@ module Svn
       result = Delta.txdelta_apply_wrapper(source, target, error_info)
       handler, handler_baton = result
       handler.baton = handler_baton
-      handler
+      [handler,nil]
     end
 
     def parse_svndiff(error_on_early_close=true, &handler)
