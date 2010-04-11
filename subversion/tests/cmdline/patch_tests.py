@@ -1004,7 +1004,7 @@ def patch_add_new_dir(sbox):
                                        1, # check-props
                                        1) # dry-run
 def patch_remove_empty_dir(sbox):
-  "delete the dir if all children is deleted"
+  "patch deleting all children of a directory"
 
   sbox.build()
   wc_dir = sbox.wc_dir
