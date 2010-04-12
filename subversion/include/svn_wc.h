@@ -3530,6 +3530,8 @@ enum svn_wc_status_kind
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type.
+ *
+ * @since New in 1.7.
  */
 typedef struct svn_wc_status3_t
 {
@@ -3797,7 +3799,7 @@ svn_wc_dup_status3(const svn_wc_status3_t *orig_stat,
                    apr_pool_t *pool);
 
 /**
- * Same as svn_wc_dup_status2(), but for older svn_wc_status_t structures.
+ * Same as svn_wc_dup_status3(), but for older svn_wc_status_t structures.
  *
  * @since New in 1.2
  * @deprecated Provided for backward compatibility with the 1.6 API.
