@@ -2556,7 +2556,7 @@ svn_wc_status2(svn_wc_status2_t **status,
                                          pool));
 
   SVN_ERR(svn_wc_status3(&stat3, wc_ctx, local_abspath, pool, pool));
-  *status = (svn_wc_status2_t *) stat3;
+  *status = svn_wc__status2_from_3(stat3, pool);
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
