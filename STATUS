@@ -131,10 +131,12 @@ Candidate changes:
    Votes:
 
  * r933194
-   Fix for issue 2753 
+   Fix for issue #2753
    SVNListParentPath feature doesn't work when svn authz is used.
    Justification:
      This issue is waiting for resolution for more than 3 years.
+   Votes:
+     -1: cmpilato (pending results of related security discussion)
 
 Veto-blocked changes:
 =====================
