@@ -2111,15 +2111,6 @@ svn_wc__db_temp_op_set_working_incomplete(svn_wc__db_t *db,
                                           apr_pool_t *scratch_pool);
 
 
-/* Update changed information in BASE_NODE with the supplied values */
-svn_error_t *
-svn_wc__db_temp_op_set_base_last_change(svn_wc__db_t *db,
-                                        const char *local_abspath,
-                                        svn_revnum_t changed_rev,
-                                        apr_time_t changed_date,
-                                        const char *changed_author,
-                                        apr_pool_t *scratch_pool);
-
 /* Update changed information in WORKING_NODE with the supplied values */
 svn_error_t *
 svn_wc__db_temp_op_set_working_last_change(svn_wc__db_t *db,
@@ -2134,7 +2125,7 @@ svn_wc__db_temp_op_set_working_last_change(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
                                           const char *local_abspath,
-                                          const char* new_repos_relpath,
+                                          const char *new_repos_relpath,
                                           svn_revnum_t new_rev,
                                           apr_pool_t *scratch_pool);
 
