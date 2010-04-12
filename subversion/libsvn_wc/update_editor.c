@@ -544,12 +544,13 @@ cleanup_dir_baton_child(void *dir_baton)
 
 /* Return a new dir_baton to represent NAME (a subdirectory of
    PARENT_BATON).  If PATH is NULL, this is the root directory of the
-   edit. */
+   edit. ADDING should be TRUE if we are adding this directory.  */
 static svn_error_t *
 make_dir_baton(struct dir_baton **d_p,
                const char *path,
                struct edit_baton *eb,
                struct dir_baton *pb,
+               svn_boolean_t adding,
                apr_pool_t *scratch_pool)
 {
   apr_pool_t *dir_pool;
@@ -584,26 +585,38 @@ make_dir_baton(struct dir_baton **d_p,
   /* Figure out the new_relpath for this directory. */
   if (eb->switch_relpath)
     {
-      /* Switches are, shall we say, complex.  If this directory is
-         the root directory (it has no parent), then it either gets
-         the SWITCH_URL for its own (if it is both anchor and target)
-         or the parent of the SWITCH_URL (if it is anchor, but there's
-         another target). */
-      if (! pb)
+      /* Handle switches... */
+
+      if (pb == NULL)
         {
-          if (! *eb->target_basename) /* anchor is also target */
-            d->new_relpath = apr_pstrdup(dir_pool, eb->switch_relpath);
+          if (*eb->target_basename == '\0')
+            {
+              /* No parent baton and target_basename=="" means that we are
+                 the target of the switch. Thus, our NEW_RELPATH will be
+                 the SWITCH_RELPATH.  */
+              d->new_relpath = eb->switch_relpath;
+            }
           else
-            d->new_relpath = svn_relpath_dirname(eb->switch_relpath, dir_pool);
+            {
+              /* This node is NOT the target of the switch (one of our
+                 children is the target); therefore, it must already exist.
+                 Get its old REPOS_RELPATH, as it won't be changing.  */
+              SVN_ERR(svn_wc__db_scan_base_repos(&d->new_relpath, NULL, NULL,
+                                                 eb->db, d->local_abspath,
+                                                 dir_pool, scratch_pool));
+            }
         }
-      /* Else this directory is *not* the root (has a parent).  If it
-         is the target (there is a target, and this directory has no
-         grandparent), then it gets the SWITCH_URL for its own.
-         Otherwise, it gets a child of its parent's URL. */
       else
         {
-          if (*eb->target_basename && (! pb->parent_baton))
-            d->new_relpath = apr_pstrdup(dir_pool, eb->switch_relpath);
+          /* This directory is *not* the root (has a parent). If there is
+             no grandparent, then we may have anchored at the parent,
+             and self is the target. If we match the target, then set
+             NEW_RELPATH to the SWITCH_RELPATH.
+
+             Otherwise, we simply extend NEW_RELPATH from the parent.  */
+          if (pb->parent_baton == NULL
+              && strcmp(eb->target_basename, d->name) == 0)
+            d->new_relpath = eb->switch_relpath;
           else
             d->new_relpath = svn_relpath_join(pb->new_relpath, d->name,
                                               dir_pool);
@@ -611,13 +624,22 @@ make_dir_baton(struct dir_baton **d_p,
     }
   else  /* must be an update */
     {
-      /* updates are the odds ones.  if we're updating a path already
-         present on disk, we use its original URL.  otherwise, we'll
-         telescope based on its parent's URL. */
-      d->new_relpath = node_get_relpath_ignore_errors(eb->db, d->local_abspath,
-                                                      dir_pool, scratch_pool);
-      if ((! d->new_relpath) && pb)
-        d->new_relpath = svn_relpath_join(pb->new_relpath, d->name, dir_pool);
+      /* If we are adding the node, then simply extend the parent's
+         relpath for our own.  */
+      if (adding)
+        {
+          SVN_ERR_ASSERT(pb != NULL);
+          d->new_relpath = svn_relpath_join(pb->new_relpath, d->name,
+                                            dir_pool);
+        }
+      else
+        {
+          /* Get the original REPOS_RELPATH. An update will not be
+             changing its value.  */
+          SVN_ERR(svn_wc__db_scan_base_repos(&d->new_relpath, NULL, NULL,
+                                             eb->db, d->local_abspath,
+                                             dir_pool, scratch_pool));
+        }
     }
 
   /* the bump information lives in the edit pool */
@@ -1323,7 +1345,7 @@ open_root(void *edit_baton,
      edit run. */
   eb->root_opened = TRUE;
 
-  SVN_ERR(make_dir_baton(&db, NULL, eb, NULL, pool));
+  SVN_ERR(make_dir_baton(&db, NULL, eb, NULL, FALSE, pool));
   *dir_baton = db;
 
   SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, db->local_abspath, TRUE, pool));
@@ -2322,7 +2344,7 @@ add_directory(const char *path,
                                svn_dirent_local_style(path, pool));
     }
 
-  SVN_ERR(make_dir_baton(&db, path, eb, pb, pool));
+  SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
   *child_baton = db;
 
   if (pb->skip_descendants)
@@ -2673,7 +2695,7 @@ open_directory(const char *path,
   svn_wc_conflict_description2_t *tree_conflict = NULL;
   svn_wc__db_status_t status, base_status;
 
-  SVN_ERR(make_dir_baton(&db, path, eb, pb, pool));
+  SVN_ERR(make_dir_baton(&db, path, eb, pb, FALSE, pool));
   *child_baton = db;
 
   /* We should have a write lock on every directory touched.  */
@@ -3007,18 +3029,65 @@ close_directory(void *dir_baton,
         }
     }
 
+  /* If this directory is merely an anchor for a targeted child, then we
+     should not be updating the node at all.  */
+  if (db->parent_baton == NULL
+      && *eb->target_basename != '\0')
+    {
+      /* And we should not have received any changes!  */
+      SVN_ERR_ASSERT(db->propchanges->nelts == 0);
+      /* ... which also implies LAST_CHANGE == NULL,
+         and NEW_BASE_PROPS == NULL.  */
+    }
+  else
+    {
+      svn_depth_t depth;
+      svn_revnum_t changed_rev;
+      apr_time_t changed_date;
+      const char *changed_author;
+
+      /* ### we know a base node already exists. it was created in
+         ### open_directory or add_directory.  let's just preserve the
+         ### existing depth value, and possibly changed_*.  */
+      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       &changed_rev,
+                                       &changed_date,
+                                       &changed_author,
+                                       NULL, &depth, NULL, NULL, NULL, NULL,
+                                       eb->db, db->local_abspath,
+                                       pool, pool));
+
+      /* If we received any changed_* values, then use them.  */
+      if (last_change)
+        {
+          changed_rev = last_change->cmt_rev;
+          changed_date = last_change->cmt_date;
+          changed_author = last_change->cmt_author;
+        }
+
+      /* ### the props thing below is probably wrong. example: maybe we
+         ### didn't get any updates, so the props should be unchanged.  */
+
+      SVN_ERR(svn_wc__db_base_add_directory(
+                eb->db, db->local_abspath,
+                db->new_relpath,
+                eb->repos_root, eb->repos_uuid,
+                *eb->target_revision,
+                new_base_props ? new_base_props : apr_hash_make(pool),
+                changed_rev, changed_date, changed_author,
+                NULL /* children */,
+                depth,
+                NULL /* conflict */,
+                NULL /* work_items */,
+                pool));
+    }
+
   /* Queue some items to install the properties.  */
   if (new_base_props || new_actual_props)
     SVN_ERR(svn_wc__install_props(eb->db, db->local_abspath,
                                   new_base_props, new_actual_props,
                                   TRUE /* write_base_props */, TRUE, pool));
-
-  if (last_change)
-    SVN_ERR(svn_wc__db_temp_op_set_base_last_change(eb->db, db->local_abspath,
-                                                    last_change->cmt_rev,
-                                                    last_change->cmt_date,
-                                                    last_change->cmt_author,
-                                                    pool));
 
   /* Process all of the queued work items for this directory.  */
   SVN_ERR(svn_wc__wq_run(eb->db, db->local_abspath,
