@@ -2838,30 +2838,6 @@ externals_prop_changed(const apr_array_header_t *propchanges)
   return NULL;
 }
 
-/* This implements the svn_iter_apr_hash_cb_t callback interface.
- *
- * Add a property named KEY ('const char *') to a list of properties
- * to be deleted.  BATON is the list: an 'apr_array_header_t *'
- * representing propchanges (the same type as found in struct dir_baton
- * and struct file_baton).
- *
- * Ignore KLEN, VAL, and POOL.
- */
-static svn_error_t *
-add_prop_deletion(void *baton, const void *key,
-                  apr_ssize_t klen, void *val,
-                  apr_pool_t *pool)
-{
-  apr_array_header_t *propchanges = baton;
-  const char *name = key;
-  svn_prop_t *prop = apr_array_push(propchanges);
-
-  /* Add the deletion of NAME to PROPCHANGES. */
-  prop->name = name;
-  prop->value = NULL;
-
-  return SVN_NO_ERROR;
-}
 
 /* Create in POOL a name->value hash from PROP_LIST, and return it. */
 static apr_hash_t *
@@ -2920,6 +2896,7 @@ close_directory(void *dir_baton,
       int i;
       apr_hash_t *props_to_delete;
       svn_wc__db_kind_t kind;
+      apr_hash_index_t *hi;
 
       SVN_ERR(svn_wc__db_read_kind(&kind, eb->db,
                                    db->local_abspath, TRUE, pool));
@@ -2935,8 +2912,9 @@ close_directory(void *dir_baton,
                                      pool, pool));
         }
 
-      /* Calculate which base props weren't also in the incoming
-         propchanges. */
+      /* In a copy of the BASE props, remove every property that we see an
+         incoming change for. The remaining unmentioned properties are those
+         which need to be deleted.  */
       props_to_delete = apr_hash_copy(pool, base_props);
       for (i = 0; i < regular_props->nelts; i++)
         {
@@ -2946,9 +2924,18 @@ close_directory(void *dir_baton,
                        APR_HASH_KEY_STRING, NULL);
         }
 
-      /* Add these props to the incoming propchanges. */
-      SVN_ERR(svn_iter_apr_hash(NULL, props_to_delete, add_prop_deletion,
-                                regular_props, pool));
+      /* Add these props to the incoming propchanges (in regular_props).  */
+      for (hi = apr_hash_first(pool, props_to_delete);
+           hi != NULL;
+           hi = apr_hash_next(hi))
+        {
+          const char *propname = svn__apr_hash_index_key(hi);
+          svn_prop_t *prop = apr_array_push(regular_props);
+
+          /* Record a deletion for PROPNAME.  */
+          prop->name = propname;
+          prop->value = NULL;
+        }
     }
 
   /* If this directory has property changes stored up, now is the time
