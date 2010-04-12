@@ -7254,13 +7254,17 @@ svn_wc__db_get_pristine_md5(const svn_checksum_t **md5_checksum,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     {
-      *md5_checksum = NULL;  /* ### that's not what we want. Report an error
-                                instead. */
-      return svn_error_return(svn_sqlite__reset(stmt));
+      *md5_checksum = NULL;
+      SVN_ERR(svn_sqlite__reset(stmt));
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                               _("The pristine text with checksum '%s' was "
+                                 "not found"),
+                               svn_checksum_to_cstring_display(sha1_checksum,
+                                                               scratch_pool));
     }
 
   SVN_ERR(svn_sqlite__column_checksum(md5_checksum, stmt, 0, scratch_pool));
 
   SVN_ERR_ASSERT((*md5_checksum)->kind == svn_checksum_md5);
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_sqlite__reset(stmt));
 }
