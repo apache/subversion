@@ -18811,7 +18811,7 @@ def foreign_repos_del_and_props(sbox):
   wc2_dir = sbox.add_wc_path('wc2')
   
   (r2_path, r2_url) = sbox.add_repo_path('fgn');
-  svntest.main.run_svnadmin('create', r2_path)
+  svntest.main.create_repos(r2_path)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
                                      r2_url, wc2_dir)
