@@ -122,13 +122,6 @@ Candidate changes:
      is not happening rather commit happens in slave itself.
    Votes:
      +1: kameshj
-
- * r876245, r932942
-   Make the swib-rb tests pass.  We *think* this may be related to a memory
-   bug somewhere, since it is only evident on a couple of platforms.
-   Justification:
-     Fixes ruby binding tests on a couple of platforms.  Needed for release.
-   Votes:
  
 Veto-blocked changes:
 =====================

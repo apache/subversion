@@ -1060,12 +1060,11 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %apply unsigned char digest[ANY] { unsigned char *digest };
 
 #ifdef SWIGRUBY
-/*
- * Skip the md5sum
- * FIXME: Wrap the md5sum
+/* FIXME: This typemap doesn't work, because svn_txdelta_apply saves
+ *        away this local pointer to be used later. When the pointer
+ *        is finally used, we get memory corruption / segfaults.
  */
-%typemap(in, numinputs=0) unsigned char *result_digest
-  "$1 = NULL;";
+%apply unsigned char digest[ANY] { unsigned char *result_digest };
 #endif
 
 #ifdef SWIGPYTHON

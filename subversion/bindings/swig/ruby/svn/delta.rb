@@ -52,9 +52,9 @@ module Svn
 
     def apply(source, target, error_info=nil)
       result = Delta.txdelta_apply_wrapper(source, target, error_info)
-      handler, handler_baton = result
+      digest, handler, handler_baton = result
       handler.baton = handler_baton
-      [handler,nil]
+      [handler, digest]
     end
 
     def parse_svndiff(error_on_early_close=true, &handler)
