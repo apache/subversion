@@ -46,6 +46,11 @@ SkipUnless = svntest.testcase.SkipUnless
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
 
+def make_patch_path(sbox, name='my.patch'):
+  dir = sbox.add_wc_path('patches')
+  os.mkdir(dir)
+  return os.path.abspath(os.path.join(dir, name))
+
 ########################################################################
 #Tests
 
@@ -55,8 +60,7 @@ def patch(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   mu_contents = [
@@ -226,9 +230,7 @@ def patch_absolute_paths(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  dir = os.path.abspath(svntest.main.temp_dir)
-  (fd, patch_file_path) = tempfile.mkstemp(dir=dir)
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
 
   os.chdir(wc_dir)
 
@@ -291,8 +293,7 @@ def patch_offset(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   iota_path = os.path.join(wc_dir, 'iota')
 
@@ -505,8 +506,7 @@ def patch_chopped_leading_spaces(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   mu_contents = [
@@ -676,8 +676,7 @@ def patch_strip1(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   mu_contents = [
@@ -847,7 +846,7 @@ def patch_no_index_line(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   iota_path = os.path.join(wc_dir, 'iota')
 
@@ -933,8 +932,7 @@ def patch_add_new_dir(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
 
   # The first diff is adding 'new' with two missing dirs. The second is
   # adding 'new' with one missing dir to a 'A' that is locally deleted
@@ -1022,8 +1020,7 @@ def patch_reject(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
 
   # Apply patch
 
@@ -1096,8 +1093,7 @@ def patch_keywords(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
 
   # Apply patch
 
@@ -1142,8 +1138,7 @@ def patch_with_fuzz(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
@@ -1283,8 +1278,7 @@ def patch_reverse(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   mu_contents = [
@@ -1454,8 +1448,7 @@ def patch_no_svn_eol_style(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   if os.name == 'nt':
@@ -1558,8 +1551,7 @@ def patch_with_svn_eol_style(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
 
@@ -1673,8 +1665,7 @@ def patch_with_svn_eol_style_uncommitted(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
 
@@ -1782,8 +1773,7 @@ def patch_with_include_patterns(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   mu_contents = [
@@ -1941,8 +1931,7 @@ def patch_with_exclude_patterns(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   mu_contents = [
@@ -2102,8 +2091,7 @@ def patch_with_include_exclude_patterns(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  (fd, patch_file_path) = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))
-  os.close(fd)
+  patch_file_path = make_patch_path(sbox)
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   mu_contents = [
