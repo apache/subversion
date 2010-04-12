@@ -7210,6 +7210,7 @@ svn_wc__db_temp_set_base_checksum(svn_wc__db_t *db,
 {
   svn_sqlite__stmt_t *stmt;
   const char *new_sha1_digest;
+  int affected;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(new_sha1_checksum->kind == svn_checksum_sha1);
@@ -7221,7 +7222,23 @@ svn_wc__db_temp_set_base_checksum(svn_wc__db_t *db,
                                  STMT_UPDATE_BASE_PRISTINE_CHECKSUM,
                                  scratch_pool));
   SVN_ERR(svn_sqlite__bind_text(stmt, 3, new_sha1_digest));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__update(&affected, stmt));
+  SVN_ERR_ASSERT(affected <= 1);
+
+  if (affected != 1)
+    {
+      /* If affected == 0, we need to know whether this is because the checksum
+       * was already the same (OK) or because the row was not found (error). */
+      /* ### For now, assume the caller intends either changing the checksum
+         or setting one where there wasn't one before, not setting the same
+         value again. */
+      printf("## '%s': checksum not changed to '%s'\n", local_abspath,
+             svn_checksum_to_cstring_display(new_sha1_checksum, scratch_pool));
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                               _("'%s' has no BASE_NODE"),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -7254,9 +7271,8 @@ svn_wc__db_get_pristine_md5(const svn_checksum_t **md5_checksum,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     {
-      *md5_checksum = NULL;
       SVN_ERR(svn_sqlite__reset(stmt));
-      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+      return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
                                _("The pristine text with checksum '%s' was "
                                  "not found"),
                                svn_checksum_to_cstring_display(sha1_checksum,
