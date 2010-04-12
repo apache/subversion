@@ -7223,17 +7223,10 @@ svn_wc__db_temp_set_base_checksum(svn_wc__db_t *db,
                                  scratch_pool));
   SVN_ERR(svn_sqlite__bind_text(stmt, 3, new_sha1_digest));
   SVN_ERR(svn_sqlite__update(&affected, stmt));
-  SVN_ERR_ASSERT(affected <= 1);
 
   if (affected != 1)
     {
-      /* If affected == 0, we need to know whether this is because the checksum
-       * was already the same (OK) or because the row was not found (error). */
-      /* ### For now, assume the caller intends either changing the checksum
-         or setting one where there wasn't one before, not setting the same
-         value again. */
-      printf("## '%s': checksum not changed to '%s'\n", local_abspath,
-             svn_checksum_to_cstring_display(new_sha1_checksum, scratch_pool));
+      SVN_ERR_ASSERT(affected == 0);
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("'%s' has no BASE_NODE"),
                                svn_dirent_local_style(local_abspath,
