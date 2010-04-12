@@ -2237,10 +2237,7 @@ status4_wrapper_func(void *baton,
   svn_wc_status2_t *dup;
   const char *path = local_abspath;
 
-  /* ### This conversion will involve a lot more once we start to actually
-   * ### do some changes in svn_wc_status3_t. We should probably create a
-   * ### specific function for handling the conversion */
-  dup = (svn_wc_status2_t *) svn_wc_dup_status3(status, scratch_pool);
+  dup = svn_wc__status2_from_3(status, scratch_pool);
 
   if (swb->anchor_abspath != NULL)
     {
