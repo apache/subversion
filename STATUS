@@ -130,6 +130,12 @@ Candidate changes:
      Fixes ruby binding tests on a couple of platforms.  Needed for release.
    Votes:
 
+ * r933194
+   Fix for issue 2753 
+   SVNListParentPath feature doesn't work when svn authz is used.
+   Justification:
+     This issue is waiting for resolution for more than 3 years.
+
 Veto-blocked changes:
 =====================
 
