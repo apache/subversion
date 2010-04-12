@@ -66,6 +66,9 @@ create_authz_svn_dir_config(apr_pool_t *p, char *d)
   authz_svn_config_rec *conf = apr_pcalloc(p, sizeof(*conf));
   conf->base_path = d;
 
+  if (d)
+    conf->base_path = svn_uri_canonicalize(d, p);
+
   /* By default keep the fortress secure */
   conf->authoritative = 1;
   conf->anonymous = 1;
@@ -210,6 +213,7 @@ req_check_access(request_rec *r,
   svn_authz_t *access_conf = NULL;
   svn_error_t *svn_err;
   char errbuf[256];
+  const char *canonicalized_uri;
   const char *username_to_authorize = get_username_to_authorize(r, conf);
 
   switch (r->method_number)
@@ -247,6 +251,22 @@ req_check_access(request_rec *r,
         /* Require most strict access for unknown methods */
         authz_svn_type |= svn_authz_write | svn_authz_recursive;
         break;
+    }
+
+  canonicalized_uri = svn_uri_canonicalize(r->uri, r->pool);
+  if (strcmp(canonicalized_uri, conf->base_path) == 0)
+    {
+      /* Do no access control when conf->base_path(as configured in <Location>)
+       * and given uri are same. The reason for such relaxation of access
+       * control is "This module is meant to control access inside the
+       * repository path, in this case inside PATH is empty and hence
+       * dav_svn_split_uri fails saying no repository name present".
+       * One may ask it will allow access to '/' inside the repository if
+       * repository is served via SVNPath instead of SVNParentPath.
+       * It does not, The other methods(PROPFIND, MKACTIVITY) for
+       * accomplishing the operation takes care of making a request to
+       * proper URL */
+      return OK;
     }
 
   dav_err = dav_svn_split_uri(r,
@@ -554,7 +574,7 @@ access_checker(request_rec *r)
 {
   authz_svn_config_rec *conf = ap_get_module_config(r->per_dir_config,
                                                     &authz_svn_module);
-  const char *repos_path;
+  const char *repos_path = NULL;
   const char *dest_repos_path = NULL;
   int status;
 
@@ -611,7 +631,7 @@ check_user_id(request_rec *r)
 {
   authz_svn_config_rec *conf = ap_get_module_config(r->per_dir_config,
                                                     &authz_svn_module);
-  const char *repos_path;
+  const char *repos_path = NULL;
   const char *dest_repos_path = NULL;
   int status;
 
@@ -639,7 +659,7 @@ auth_checker(request_rec *r)
 {
   authz_svn_config_rec *conf = ap_get_module_config(r->per_dir_config,
                                                     &authz_svn_module);
-  const char *repos_path;
+  const char *repos_path = NULL;
   const char *dest_repos_path = NULL;
   int status;
 
