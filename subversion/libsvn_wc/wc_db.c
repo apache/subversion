@@ -551,7 +551,7 @@ fetch_repos_info(const char **repos_root_url,
   SVN_ERR(svn_sqlite__bindf(stmt, "i", repos_id));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, svn_sqlite__reset(stmt),
                              _("No REPOSITORY table entry for id '%ld'"),
                              (long int)repos_id);
 
@@ -815,7 +815,7 @@ fetch_wc_id(apr_int64_t *wc_id,
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WCROOT_NULL));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, svn_sqlite__reset(stmt),
                              _("Missing a row in WCROOT."));
 
   SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 0));
@@ -2489,13 +2489,10 @@ svn_wc__db_base_get_dav_cache(apr_hash_t **props,
                                  STMT_SELECT_BASE_DAV_CACHE, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
-    {
-      SVN_ERR(svn_sqlite__reset(stmt));
-      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                               _("The node '%s' was not found."),
-                               svn_dirent_local_style(local_abspath,
-                                                      scratch_pool));
-    }
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, svn_sqlite__reset(stmt),
+                             _("The node '%s' was not found."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   SVN_ERR(svn_sqlite__column_properties(props, stmt, 0, result_pool,
                                         scratch_pool));
@@ -5107,15 +5104,12 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
       if (!have_row)
         {
           if (current_abspath == local_abspath)
-            {
-              svn_error_clear(svn_sqlite__reset(stmt));
-
-              /* ### maybe we should return a usage error instead?  */
-              return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                       _("The node '%s' was not found."),
-                                       svn_dirent_local_style(local_abspath,
-                                                              scratch_pool));
-            }
+            /* ### maybe we should return a usage error instead?  */
+            return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
+                                     svn_sqlite__reset(stmt),
+                                     _("The node '%s' was not found."),
+                                     svn_dirent_local_style(local_abspath,
+                                                            scratch_pool));
           SVN_ERR(svn_sqlite__reset(stmt));
 
           /* We just fell off the top of the WORKING tree. If we haven't
@@ -5144,13 +5138,11 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 
           /* The starting node should exist normally.  */
           if (presence != svn_wc__db_status_normal)
-            {
-              svn_error_clear(svn_sqlite__reset(stmt));
-              return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
-                                       _("Expected node '%s' to be added."),
-                                       svn_dirent_local_style(local_abspath,
-                                                              scratch_pool));
-            }
+            return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+                                     svn_sqlite__reset(stmt),
+                                     _("Expected node '%s' to be added."),
+                                     svn_dirent_local_style(local_abspath,
+                                                            scratch_pool));
 
           /* Provide the default status; we'll override as appropriate. */
           if (status)
@@ -5299,14 +5291,11 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
         {
           /* There better be a row for the starting node!  */
           if (current_abspath == local_abspath)
-            {
-              svn_error_clear(svn_sqlite__reset(stmt));
-
-              return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                       _("The node '%s' was not found."),
-                                       svn_dirent_local_style(local_abspath,
-                                                              scratch_pool));
-            }
+            return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
+                                     svn_sqlite__reset(stmt),
+                                     _("The node '%s' was not found."),
+                                     svn_dirent_local_style(local_abspath,
+                                                            scratch_pool));
 
           /* There are no values, so go ahead and reset the stmt now.  */
           SVN_ERR(svn_sqlite__reset(stmt));
@@ -5353,7 +5342,8 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
       if (current_abspath == local_abspath
           && work_presence != svn_wc__db_status_not_present
           && work_presence != svn_wc__db_status_base_deleted)
-        return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+        return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+                                 svn_sqlite__reset(stmt),
                                  _("Expected node '%s' to be deleted."),
                                  svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
@@ -5508,7 +5498,7 @@ svn_wc__db_upgrade_get_repos_id(apr_int64_t *repos_id,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
+    return svn_error_createf(SVN_ERR_WC_DB_ERROR, svn_sqlite__reset(stmt),
                              _("Repository '%s' not found in the database"),
                              repos_root_url);
 
@@ -7263,14 +7253,11 @@ svn_wc__db_get_pristine_md5(const svn_checksum_t **md5_checksum,
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
-    {
-      SVN_ERR(svn_sqlite__reset(stmt));
-      return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
-                               _("The pristine text with checksum '%s' was "
-                                 "not found"),
-                               svn_checksum_to_cstring_display(sha1_checksum,
-                                                               scratch_pool));
-    }
+    return svn_error_createf(SVN_ERR_WC_DB_ERROR, svn_sqlite__reset(stmt),
+                             _("The pristine text with checksum '%s' was "
+                               "not found"),
+                             svn_checksum_to_cstring_display(sha1_checksum,
+                                                             scratch_pool));
 
   SVN_ERR(svn_sqlite__column_checksum(md5_checksum, stmt, 0, scratch_pool));
 
