@@ -126,6 +126,7 @@ class SvnDeltaTest < Test::Unit::TestCase
     apply_result = StringIO.new("")
 
     handler, digest = Svn::Delta.apply(apply_source, apply_result)
+    assert_nil(digest)
     handler.send(stream)
     apply_result.rewind
     assert_equal(target_text, apply_result.read)
