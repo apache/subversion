@@ -147,6 +147,33 @@ class Sandbox:
     "Returns True when build() has been called on this instance."
     return self._is_built
 
+  def simple_commit(self, target_dir=None):
+    if target_dir is None:
+      target_dir = self.wc_dir
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'commit',
+                                       '-m', svntest.main.make_log_msg(),
+                                       target_dir)
+
+  def simple_rm(self, *targets):
+    if len(targets) == 1 and is_url(targets[0]):
+      targets = ('-m', svntests.main.make_log_msg(), targets[0])
+    svntest.actions.run_and_verify_svn(None, None, [], 'rm', *targets)
+
+  def simple_mkdir(self, *targets):
+    if len(targets) == 1 and is_url(targets[0]):
+      targets = ('-m', svntests.main.make_log_msg(), targets[0])
+    svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', *targets)
+
+
+def is_url(target):
+  return (target.startswith('^/')
+          or target.startswith('file://')
+          or target.startswith('http://')
+          or target.startswith('https://')
+          or target.startswith('svn://')
+          or target.startswith('svn+ssh://'))
+
 
 _deferred_test_paths = []
 
