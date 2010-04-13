@@ -267,6 +267,10 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
                                  entry_abspath,
                                  result_pool,
                                  scratch_pool);
+#ifdef SVN_EXPERIMENTAL
+  /* ### *checksum is originally MD-5 but will later be SHA-1... */
+#endif
+
   if (err)
     {
       const char *work_del_abspath;
@@ -2440,6 +2444,10 @@ write_one_entry_cb(void *baton,
                                            scratch_pool);
 
       err = svn_sqlite__column_checksum(&base_checksum, stmt, 5, scratch_pool);
+#ifdef SVN_EXPERIMENTAL
+      /* ### base_checksum is originally MD-5 but will later be SHA-1... */
+#endif
+
       SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
     }
   else
