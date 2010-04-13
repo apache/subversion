@@ -377,10 +377,6 @@ SELECT 0 FROM BASE_NODE WHERE wc_id = ?1 AND local_relpath = ?2
 UNION
 SELECT 1 FROM WORKING_NODE WHERE wc_id = ?1 AND local_relpath = ?2;
 
--- STMT_UPDATE_BASE_PRISTINE_CHECKSUM
-update base_node set checksum = ?3
-where wc_id = ?1 and local_relpath = ?2;
-
 
 /* ------------------------------------------------------------------------- */
 
