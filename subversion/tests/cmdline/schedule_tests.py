@@ -70,7 +70,7 @@ def add_files(sbox):
   svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
   svntest.main.file_append(epsilon_path, "This is the file 'epsilon'.")
 
-  svntest.main.run_svn(None, 'add', delta_path, zeta_path, epsilon_path)
+  sbox.simple_add(delta_path, zeta_path, epsilon_path)
 
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -99,7 +99,7 @@ def add_directories(sbox):
   os.mkdir(Y_path)
   os.mkdir(Z_path)
 
-  svntest.main.run_svn(None, 'add', X_path, Y_path, Z_path)
+  sbox.simple_add(X_path, Y_path, Z_path)
 
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -149,7 +149,7 @@ def nested_adds(sbox):
   svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
 
   # Finally, let's try adding our new files and directories
-  svntest.main.run_svn(None, 'add', X_path, Y_path, Z_path)
+  sbox.simple_add(X_path, Y_path, Z_path)
 
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -186,7 +186,7 @@ def add_executable(sbox):
     open(fileName, "w")
 
     os.chmod(fileName, perm)
-    svntest.main.run_svn(None, 'add', fileName)
+    sbox.simple_add(fileName)
     svntest.actions.run_and_verify_svn(None, expected_out, [],
                                        'propget', "svn:executable", fileName)
 
@@ -214,7 +214,7 @@ def delete_files(sbox):
   rho_path = sbox.ospath('A/D/G/rho')
   omega_path = sbox.ospath('A/D/H/omega')
 
-  svntest.main.run_svn(None, 'del', iota_path, mu_path, rho_path, omega_path)
+  sbox.simple_rm(iota_path, mu_path, rho_path, omega_path)
 
   # Make sure the deletes show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -242,7 +242,7 @@ def delete_dirs(sbox):
   psi_path   = sbox.ospath('A/D/H/psi')
 
   # Now, delete (recursively) the directories.
-  svntest.main.run_svn(None, 'del', E_path, F_path, H_path)
+  sbox.simple_rm(E_path, F_path, H_path)
 
   # Make sure the deletes show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -429,8 +429,8 @@ def unschedule_missing_added(sbox):
 
   svntest.main.file_append(file1_path, "This is the file 'file1'.")
   svntest.main.file_append(file2_path, "This is the file 'file2'.")
-  svntest.main.run_svn(None, 'add', file1_path, file2_path)
-  svntest.main.run_svn(None, 'mkdir', dir1_path, dir2_path)
+  sbox.simple_add(file1_path, file2_path)
+  sbox.simple_mkdir(dir1_path, dir2_path)
 
   # Make sure the 4 adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -450,9 +450,11 @@ def unschedule_missing_added(sbox):
   svntest.main.safe_rmtree(dir2_path)
 
   # Unschedule the additions, using 'svn rm' and 'svn revert'.
+  # FILE1_PATH will throw an error. DIR1_PATH will not since the stub is
+  # still available in the parent directory.
   svntest.main.run_svn(svntest.verify.AnyOutput, 'rm', file1_path)
-  svntest.main.run_svn(svntest.verify.AnyOutput, 'rm', dir1_path)
-  svntest.main.run_svn(None, 'revert', file2_path, dir2_path)
+  sbox.simple_rm(dir1_path)
+  sbox.simple_revert(file2_path, dir2_path)
 
   # 'svn st' should now show absolutely zero local mods.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -512,12 +514,12 @@ def revert_inside_newly_added_dir(sbox):
 
   # Schedule a new directory for addition
   os.mkdir('foo')
-  svntest.main.run_svn(None, 'add', 'foo')
+  sbox.simple_add('foo')
 
   # Now change into the newly added directory, revert and make sure
   # no error is output.
   os.chdir('foo')
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '.')
+  sbox.simple_revert('.')
 
 #----------------------------------------------------------------------
 # Regression test for issue #1609:
