@@ -2006,7 +2006,6 @@ svn_error_t *
 svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
                                  const char *local_abspath,
                                  svn_depth_t depth,
-                                 svn_boolean_t flush_entry_cache,
                                  apr_pool_t *scratch_pool);
 
 /* Performs a non-recursive delete on local_abspath, just like a

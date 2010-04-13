@@ -817,8 +817,10 @@ complete_directory(struct edit_baton *eb,
               || (strcmp(local_abspath, eb->target_abspath) == 0
                   && eb->requested_depth > depth))
             {
-              SVN_ERR(svn_wc__set_depth(eb->db, local_abspath,
-                                        eb->requested_depth, iterpool));
+              SVN_ERR(svn_wc__db_temp_op_set_dir_depth(eb->db,
+                                                       local_abspath,
+                                                       eb->requested_depth,
+                                                       iterpool));
             }
         }
     }
