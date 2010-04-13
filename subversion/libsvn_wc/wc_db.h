@@ -2160,16 +2160,6 @@ svn_wc__db_temp_get_file_external(const char **serialized_file_external,
                                   apr_pool_t *scratch_pool);
 
 
-/* Set the pristine text SHA-1 checksum for the BASE_NODE of LOCAL_ABSPATH
-   to NEW_SHA1_CHECKSUM.  The pristine text identified by NEW_SHA1_CHECKSUM
-   must already be in the pristine store. */
-svn_error_t *
-svn_wc__db_temp_set_base_checksum(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  const svn_checksum_t *new_sha1_checksum,
-                                  apr_pool_t *scratch_pool);
-
-
 /* Remove a stray "subdir" record in the BASE_NODE table.  */
 svn_error_t *
 svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,

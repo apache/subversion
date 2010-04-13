@@ -7193,40 +7193,6 @@ svn_wc__db_temp_get_file_external(const char **serialized_file_external,
 
 
 svn_error_t *
-svn_wc__db_temp_set_base_checksum(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  const svn_checksum_t *new_sha1_checksum,
-                                  apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  const char *new_sha1_digest;
-  int affected;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(new_sha1_checksum->kind == svn_checksum_sha1);
-
-  new_sha1_digest = svn_checksum_serialize(new_sha1_checksum,
-                                           scratch_pool, scratch_pool);
-
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_UPDATE_BASE_PRISTINE_CHECKSUM,
-                                 scratch_pool));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 3, new_sha1_digest));
-  SVN_ERR(svn_sqlite__update(&affected, stmt));
-
-  if (affected != 1)
-    {
-      SVN_ERR_ASSERT(affected == 0);
-      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                               _("'%s' has no BASE_NODE"),
-                               svn_dirent_local_style(local_abspath,
-                                                      scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_wc__db_get_pristine_md5(const svn_checksum_t **md5_checksum,
                             svn_wc__db_t *db,
                             const char *wri_abspath,

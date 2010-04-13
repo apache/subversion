@@ -4610,20 +4610,6 @@ merge_file(svn_boolean_t *install_pristine,
                                 new_text_base_tmp_abspath,
                                 fb->text_base_abspath,
                                 pool));
-
-#ifdef SVN_EXPERIMENTAL
-      /* ### this should probably move into close_file.  */
-
-      /* Set the 'checksum' column of the file's BASE_NODE row to
-       * NEW_TEXT_BASE_SHA1_CHECKSUM.  The pristine text identified by that
-       * checksum is already in the pristine store. */
-      /* ### This should be done as part of a single "global_update"
-       * operation. It's no good doing it here, as the BASE_NODE for
-       * LOCAL_ABSPATH doesn't (always?) even exist at this point. */
-      SVN_ERR(svn_wc__db_temp_set_base_checksum(eb->db, fb->local_abspath,
-                                                new_text_base_sha1_checksum,
-                                                pool));
-#endif
     }
 
   /* Log commands to handle text-timestamp and working-size,
@@ -4846,7 +4832,14 @@ close_file(void *file_baton,
 
   /* Insert/replace the BASE node with all of the new metadata.  */
   {
+#ifdef SVN_EXPERIMENTAL
+      /* Set the 'checksum' column of the file's BASE_NODE row to
+       * NEW_TEXT_BASE_SHA1_CHECKSUM.  The pristine text identified by that
+       * checksum is already in the pristine store. */
+    const svn_checksum_t *new_checksum = new_text_base_sha1_checksum;
+#else
     const svn_checksum_t *new_checksum = new_text_base_md5_checksum;
+#endif
 
     /* If we don't have a NEW checksum, then the base must not have changed.
        Just carry over the old checksum.  */
