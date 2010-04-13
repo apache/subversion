@@ -987,6 +987,34 @@ def merge_notify_line(revstart=None, revend=None, same_URL=True,
              % (from_foreign_phrase, revstart, revend)
 
 
+def make_log_msg():
+  "Conjure up a log message based on the calling test."
+
+  for idx in range(1, 100):
+    frame = sys._getframe(idx)
+
+    # If this frame isn't from a function in *_tests.py, then skip it.
+    filename = frame.f_code.co_filename
+    if not filename.endswith('_tests.py'):
+      continue
+
+    # There should be a test_list in this module.
+    test_list = frame.f_globals.get('test_list')
+    if test_list is None:
+      continue
+
+    # If the function is not in the test_list, then skip it.
+    func_name = frame.f_code.co_name
+    func_ob = frame.f_globals.get(func_name)
+    if func_ob not in test_list:
+      continue
+
+    # Make the log message look like a line from a traceback.
+    # Well...close. We use single quotes to avoid interfering with the
+    # double-quote quoting performed on Windows
+    return "File '%s', line %d, in %s" % (filename, frame.f_lineno, func_name)
+
+
 ######################################################################
 # Functions which check the test configuration
 # (useful for conditional XFails)

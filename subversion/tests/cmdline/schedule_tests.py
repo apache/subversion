@@ -476,7 +476,7 @@ def delete_missing(sbox):
   svntest.main.safe_rmtree(H_path)
 
   # Now schedule them for deletion anyway, and make sure no error is output.
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', mu_path, H_path)
+  sbox.simple_rm(mu_path, H_path)
 
   # Commit the deletions.
   expected_output = svntest.wc.State(wc_dir, {
@@ -515,8 +515,7 @@ def revert_inside_newly_added_dir(sbox):
   # Now change into the newly added directory, revert and make sure
   # no error is output.
   os.chdir('foo')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'revert', '.')
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '.')
 
 #----------------------------------------------------------------------
 # Regression test for issue #1609:
@@ -539,11 +538,10 @@ def status_add_deleted_directory(sbox):
   # svn mkdir wc/foo
 
   A_path = os.path.join(wc_dir, 'A')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', A_path)
+  sbox.simple_rm(A_path)
   svntest.main.safe_rmtree(A_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'log msg', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', A_path)
+  sbox.simple_commit()
+  sbox.simple_mkdir(A_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status = svntest.wc.State(wc_dir,
