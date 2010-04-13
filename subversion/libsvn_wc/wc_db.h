@@ -2170,6 +2170,13 @@ svn_wc__db_temp_set_base_checksum(svn_wc__db_t *db,
                                   apr_pool_t *scratch_pool);
 
 
+/* Remove a stray "subdir" record in the BASE_NODE table.  */
+svn_error_t *
+svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     apr_pool_t *scratch_pool);
+
+
 /* Set *PRISTINE_MD5_CHECKSUM to the MD-5 checksum of a pristine text
    identified by its SHA-1 checksum PRISTINE_SHA1_CHECKSUM. Return an error
    if the pristine text does not exist or its MD5 checksum is not found. */
