@@ -4852,6 +4852,10 @@ close_file(void *file_baton,
                                          &new_checksum, NULL, NULL, NULL,
                                          eb->db, fb->local_abspath,
                                          pool, pool));
+#ifdef SVN_EXPERIMENTAL
+        /* ### new_checksum is originally MD-5 but will later be SHA-1... */
+#endif
+
       }
 
     SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
