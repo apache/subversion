@@ -3296,21 +3296,56 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
 }
 
 
+static svn_error_t *
+update_depth_values(svn_wc__db_pdh_t *pdh,
+                    const char *local_relpath,
+                    svn_depth_t depth)
+{
+  svn_boolean_t excluded = (depth == svn_depth_exclude);
+  svn_sqlite__stmt_t *stmt;
+
+  /* Flush any entries before we start monkeying the database.  */
+  flush_entries(pdh);
+
+  /* Parent stubs have only two depth options: excluded, or infinity.  */
+  if (*local_relpath != '\0' && !excluded)
+    depth = svn_depth_infinity;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    excluded
+                                      ? STMT_UPDATE_BASE_EXCLUDED
+                                      : STMT_UPDATE_BASE_DEPTH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  if (!excluded)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    excluded
+                                      ? STMT_UPDATE_WORKING_EXCLUDED
+                                      : STMT_UPDATE_WORKING_DEPTH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  if (!excluded)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
                                  const char *local_abspath,
                                  svn_depth_t depth,
-                                 svn_boolean_t flush_entry_cache,
-                                 apr_pool_t *scratch_pool)
+                                  apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
-  svn_sqlite__stmt_t *stmt;
-  const char *current_relpath;
+  const char *local_relpath;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath) &&
-                 depth >= svn_depth_empty && depth <= svn_depth_infinity);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(depth >= svn_depth_empty && depth <= svn_depth_infinity);
 
-  SVN_ERR(parse_local_abspath(&pdh, &current_relpath, db, local_abspath,
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
@@ -3318,38 +3353,29 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
   /* ### We set depth on working and base to match entry behavior.
          Maybe these should be separated later? */
 
-  if (flush_entry_cache)
-    flush_entries(pdh);
+  SVN_ERR(update_depth_values(pdh, local_relpath, depth));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_UPDATE_BASE_DEPTH));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, current_relpath));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_UPDATE_WORKING_DEPTH));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, current_relpath));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  /* Check if we should also set depth in the parent db */
-  if (flush_entry_cache && strcmp(current_relpath, "") == 0)
+  /* If we're in the subdir, then navigate to the parent to set its
+     depth value.  */
+  if (*local_relpath == '\0')
     {
       svn_error_t *err;
 
       err = navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
                                scratch_pool);
-      if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+      if (err)
         {
+          if (err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+            return svn_error_return(err);
+
           /* No parent to update */
           svn_error_clear(err);
           return SVN_NO_ERROR;
         }
-      else
-        SVN_ERR(err);
 
-      flush_entries(pdh);
+      /* Get the stub name, and update the depth.  */
+      local_relpath = svn_dirent_basename(local_abspath, scratch_pool);
+      SVN_ERR(update_depth_values(pdh, local_relpath, depth));
     }
 
   return SVN_NO_ERROR;

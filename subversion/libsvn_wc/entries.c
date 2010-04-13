@@ -1605,65 +1605,6 @@ svn_wc_entries_read(apr_hash_t **entries,
 }
 
 
-svn_error_t *
-svn_wc__set_depth(svn_wc__db_t *db,
-                  const char *local_dir_abspath,
-                  svn_depth_t depth,
-                  apr_pool_t *scratch_pool)
-{
-  const char *parent_abspath;
-  const char *base_name;
-  svn_wc_adm_access_t *adm_access;
-  svn_wc_entry_t *entry;
-
-  SVN_ERR_ASSERT(depth >= svn_depth_empty && depth <= svn_depth_infinity);
-
-  svn_dirent_split(local_dir_abspath, &parent_abspath, &base_name,
-                   scratch_pool);
-
-  /* Update the entry cache */
-  adm_access = svn_wc__adm_retrieve_internal2(db, parent_abspath,
-                                              scratch_pool);
-
-  /* Update parent? */
-  if (adm_access != NULL)
-    {
-      apr_hash_t *entries = svn_wc__adm_access_entries(adm_access);
-
-      entry = (entries != NULL)
-                       ? apr_hash_get(entries, base_name, APR_HASH_KEY_STRING)
-                       : NULL;
-
-      if (entry != NULL)
-        {
-          /* The entries in the parent stub only store excluded vs infinity. */
-          entry->depth = (depth == svn_depth_exclude) ? svn_depth_exclude
-                                                      : svn_depth_infinity;
-        }
-    }
-
-   /* Fetch the entries for the directory, and write our depth there. */
-  adm_access = svn_wc__adm_retrieve_internal2(db, local_dir_abspath,
-                                              scratch_pool);
-  if (adm_access != NULL)
-    {
-      apr_hash_t *entries = svn_wc__adm_access_entries(adm_access);
-
-      entry = (entries != NULL)
-                       ? apr_hash_get(entries, "", APR_HASH_KEY_STRING)
-                       : NULL;
-
-      if (entry != NULL)
-        entry->depth = depth;
-    }
-
-  return svn_error_return(svn_wc__db_temp_op_set_dir_depth(db,
-                                                           local_dir_abspath,
-                                                           depth,
-                                                           FALSE,
-                                                           scratch_pool));
-}
-
 /* */
 static svn_error_t *
 insert_base_node(svn_sqlite__db_t *sdb,

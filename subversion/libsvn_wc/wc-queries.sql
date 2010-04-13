@@ -232,12 +232,20 @@ delete from actual_node
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_UPDATE_BASE_DEPTH
-update base_node set depth = ?3
-where wc_id = ?1 and local_relpath = ?2;
+UPDATE BASE_NODE SET depth = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_UPDATE_WORKING_DEPTH
-update working_node set depth = ?3
-where wc_id = ?1 and local_relpath = ?2;
+UPDATE WORKING_NODE SET depth = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_BASE_EXCLUDED
+UPDATE BASE_NODE SET presence = 'excluded', depth = 'infinity'
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_WORKING_EXCLUDED
+UPDATE WORKING_NODE SET presence = 'excluded', depth = 'infinity'
+WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_UPDATE_BASE_PRESENCE
 update base_node set presence= ?3
