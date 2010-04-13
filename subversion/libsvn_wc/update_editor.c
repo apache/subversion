@@ -728,9 +728,10 @@ complete_directory(struct edit_baton *eb,
 
   /* If this is the root directory and there is a target, we can't
      mark this directory complete. */
-  if (is_root_dir && *eb->target_basename)
+  if (is_root_dir && *eb->target_basename != '\0')
     {
-      /* Before we can finish, we may need to clear the exclude flag for
+      /* ### obsolete comment?
+         Before we can finish, we may need to clear the exclude flag for
          target. Also give a chance to the target that is explicitly pulled
          in. */
       svn_wc__db_kind_t kind;
@@ -739,28 +740,41 @@ complete_directory(struct edit_baton *eb,
 
       SVN_ERR_ASSERT(strcmp(local_abspath, eb->anchor_abspath) == 0);
 
-      err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 eb->db, eb->target_abspath, pool, pool);
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      /* Note: we are fetching information about the *target*, not self.
+         There is no guarantee that the target has a BASE node. Two examples:
+
+           1. the node was present, but the update deleted it
+           2. the node was not present in BASE, but locally-added, and the
+              update did not create a new BASE node "under" the local-add.
+
+         If there is no BASE node for the target, then we certainly don't
+         have to worry about removing it.  */
+      err = svn_wc__db_base_get_info(&status, &kind, NULL,
+                                     NULL, NULL, NULL,
+                                     NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL,
+                                     eb->db, eb->target_abspath,
+                                     pool, pool);
+      if (err)
         {
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+            return svn_error_return(err);
+
           svn_error_clear(err);
           return SVN_NO_ERROR;
         }
-      else if (err)
-        return svn_error_return(err);
 
       if (status == svn_wc__db_status_excluded)
         {
-          /* There is a small chance that the target is gone in the
+          /* ### obsolete comment?
+             There is a small chance that the target is gone in the
              repository.  If so, we should get rid of the entry now. */
 
           if (kind == svn_wc__db_kind_dir &&
               svn_wc__adm_missing(eb->db, eb->target_abspath, pool))
             {
-              /* Still passing NULL for THEIR_URL. A case where THEIR_URL
+              /* ### obsolete comment?
+               * Still passing NULL for THEIR_URL. A case where THEIR_URL
                * is needed in this call is rare or even non-existant.
                * ### TODO: Construct a proper THEIR_URL anyway. See also
                * NULL handling code in do_entry_deletion(). */
@@ -772,77 +786,68 @@ complete_directory(struct edit_baton *eb,
       return SVN_NO_ERROR;
     }
 
+  iterpool = svn_pool_create(pool);
+
   /* Mark THIS_DIR complete. */
   SVN_ERR(svn_wc__db_temp_op_set_base_incomplete(eb->db, local_abspath, FALSE,
-                                                 pool));
+                                                 iterpool));
 
   if (eb->depth_is_sticky)
     {
       svn_depth_t depth;
 
-      /* ### We should specifically check BASE_NODE here and then only remove
+      /* ### obsolete comment?
+         ### We should specifically check BASE_NODE here and then only remove
              the BASE_NODE if there is a WORKING_NODE. */
 
-      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, &depth, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   eb->db, local_abspath, pool, pool));
-
+      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, &depth, NULL, NULL, NULL, NULL,
+                                       eb->db, local_abspath,
+                                       iterpool, iterpool));
 
       if (depth != eb->requested_depth)
-      {
-        /* After a depth upgrade the entry must reflect the new depth.
-           Upgrading to infinity changes the depth of *all* directories,
-           upgrading to something else only changes the target. */
+        {
+          /* After a depth upgrade the entry must reflect the new depth.
+             Upgrading to infinity changes the depth of *all* directories,
+             upgrading to something else only changes the target. */
 
-        if ((eb->requested_depth == svn_depth_infinity)
-             || ((strcmp(local_abspath, eb->target_abspath) == 0)
-                 && eb->requested_depth > depth))
-          {
-            SVN_ERR(svn_wc__set_depth(eb->db, local_abspath,
-                                      eb->requested_depth, pool));
-          }
-      }
+          if (eb->requested_depth == svn_depth_infinity
+              || (strcmp(local_abspath, eb->target_abspath) == 0
+                  && eb->requested_depth > depth))
+            {
+              SVN_ERR(svn_wc__set_depth(eb->db, local_abspath,
+                                        eb->requested_depth, iterpool));
+            }
+        }
     }
 
   /* Remove any deleted or missing entries. */
-  iterpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_wc__db_read_children(&children, eb->db, local_abspath, pool,
-                                   iterpool));
+  SVN_ERR(svn_wc__db_base_get_children(&children, eb->db, local_abspath,
+                                       pool, iterpool));
   for (i = 0; i < children->nelts; i++)
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
       const char *node_abspath;
-      svn_wc__db_status_t status, base_status;
+      svn_wc__db_status_t status;
       svn_wc__db_kind_t kind;
-      svn_depth_t depth;
       svn_revnum_t revnum;
-      svn_boolean_t base_shadowed;
 
       svn_pool_clear(iterpool);
 
       node_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-      SVN_ERR(svn_wc__db_read_info(&status, &kind, &revnum, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, &depth, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, &base_shadowed, NULL, NULL,
-                                   eb->db, node_abspath, iterpool, iterpool));
+      SVN_ERR(svn_wc__db_base_get_info(&status, &kind, &revnum,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       eb->db, node_abspath,
+                                       iterpool, iterpool));
 
-      if (base_shadowed)
-        {
-          SVN_ERR(svn_wc__db_base_get_info(&base_status, &kind, &revnum, NULL,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, NULL,
-                                           eb->db, node_abspath,
-                                           iterpool, iterpool));
-        }
-      else
-        base_status = status;
-
-      /* Any entry still marked as deleted (and not schedule add) can now
+      /* ### obsolete comment?
+         Any entry still marked as deleted (and not schedule add) can now
          be removed -- if it wasn't undeleted by the update, then it
          shouldn't stay in the updated working set.  Schedule add items
          should remain.
@@ -852,19 +857,15 @@ complete_directory(struct edit_baton *eb,
          number different from the target revision of the update means the
          update never mentioned the item, so the entry should be
          removed. */
-      if (base_status == svn_wc__db_status_not_present ||
-          (base_status == svn_wc__db_status_absent
-               && (revnum != *(eb->target_revision))))
+      if (status == svn_wc__db_status_not_present
+          || (status == svn_wc__db_status_absent
+              && revnum != *eb->target_revision))
         {
-          if (status != svn_wc__db_status_added)
-            SVN_ERR(svn_wc__entry_remove(eb->db, node_abspath, iterpool));
-          else
-            SVN_ERR(svn_wc__db_base_remove(eb->db, node_abspath, iterpool));
+          SVN_ERR(svn_wc__db_base_remove(eb->db, node_abspath, iterpool));
         }
       else if (kind == svn_wc__db_kind_dir
                && svn_wc__adm_missing(eb->db, node_abspath, iterpool)
-               && base_status != svn_wc__db_status_absent
-               && status != svn_wc__db_status_added)
+               && status != svn_wc__db_status_absent)
         {
           SVN_ERR(svn_wc__entry_remove(eb->db, node_abspath, iterpool));
 
