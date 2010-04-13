@@ -147,7 +147,13 @@ class Sandbox:
     "Returns True when build() has been called on this instance."
     return self._is_built
 
+  def ospath(self, relpath, wc_dir=None):
+    if wc_dir is None:
+      wc_dir = self.wc_dir
+    return os.path.join(wc_dir, svntest.wc.to_ospath(relpath))
+
   def simple_commit(self, target_dir=None):
+    assert not self.read_only
     if target_dir is None:
       target_dir = self.wc_dir
     svntest.actions.run_and_verify_svn(None, None, [],
@@ -157,11 +163,13 @@ class Sandbox:
 
   def simple_rm(self, *targets):
     if len(targets) == 1 and is_url(targets[0]):
+      assert not self.read_only
       targets = ('-m', svntests.main.make_log_msg(), targets[0])
     svntest.actions.run_and_verify_svn(None, None, [], 'rm', *targets)
 
   def simple_mkdir(self, *targets):
     if len(targets) == 1 and is_url(targets[0]):
+      assert not self.read_only
       targets = ('-m', svntests.main.make_log_msg(), targets[0])
     svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', *targets)
 
