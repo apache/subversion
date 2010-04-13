@@ -156,22 +156,34 @@ class Sandbox:
     assert not self.read_only
     if target_dir is None:
       target_dir = self.wc_dir
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'commit',
-                                       '-m', svntest.main.make_log_msg(),
-                                       target_dir)
+    svntest.main.run_svn(False, 'commit',
+                         '-m', svntest.main.make_log_msg(),
+                         target_dir)
 
   def simple_rm(self, *targets):
+    assert len(targets) > 0
     if len(targets) == 1 and is_url(targets[0]):
       assert not self.read_only
       targets = ('-m', svntests.main.make_log_msg(), targets[0])
-    svntest.actions.run_and_verify_svn(None, None, [], 'rm', *targets)
+    svntest.main.run_svn(False, 'rm', *targets)
 
   def simple_mkdir(self, *targets):
+    assert len(targets) > 0
     if len(targets) == 1 and is_url(targets[0]):
       assert not self.read_only
       targets = ('-m', svntests.main.make_log_msg(), targets[0])
-    svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', *targets)
+    svntest.main.run_svn(False, 'mkdir', *targets)
+
+  def simple_add(self, *targets):
+    assert len(targets) > 0
+    if len(targets) == 1 and is_url(targets[0]):
+      assert not self.read_only
+      targets = ('-m', svntests.main.make_log_msg(), targets[0])
+    svntest.main.run_svn(False, 'add', *targets)
+
+  def simple_revert(self, *targets):
+    assert len(targets) > 0
+    svntest.main.run_svn(False, 'revert', *targets)
 
 
 def is_url(target):
