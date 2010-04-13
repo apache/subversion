@@ -834,17 +834,46 @@ complete_directory(struct edit_baton *eb,
       svn_wc__db_status_t status;
       svn_wc__db_kind_t kind;
       svn_revnum_t revnum;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
       node_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-      SVN_ERR(svn_wc__db_base_get_info(&status, &kind, &revnum,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       eb->db, node_abspath,
-                                       iterpool, iterpool));
+      /* ### there is an edge case that we can run into right now: this
+         ### dir can have a "subdir" node in the BASE_NODE, but the
+         ### actual subdir does NOT have a record.
+         ###
+         ### in particular, copy_tests 21 and schedule_tests 10 can create
+         ### this situation. in short: the subdir is rm'd on the disk, and
+         ### a deletion of that directory is committed. a local-add then
+         ### reintroduces the directory and metadata (within WORKING).
+         ### before or after an update, the parent dir has the "subdir"
+         ### BASE_NODE and it is missing in the child. asking for the BASE
+         ### won't return status_obstructed since there is a true subdir
+         ### there now.
+         ###
+         ### at some point in the control flow, we should have removed
+         ### the "subdir" record. maybe there is a good place to remove
+         ### that record (or wait for single-dir). for now, we can correct
+         ### it when we detect it.  */
+      err = svn_wc__db_base_get_info(&status, &kind, &revnum,
+                                     NULL, NULL, NULL,
+                                     NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL,
+                                     eb->db, node_abspath,
+                                     iterpool, iterpool);
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+            return svn_error_return(err);
+
+          svn_error_clear(err);
+
+          SVN_ERR(svn_wc__db_temp_remove_subdir_record(eb->db, node_abspath,
+                                                       iterpool));
+          continue;
+        }
 
       /* ### obsolete comment?
          Any entry still marked as deleted (and not schedule add) can now

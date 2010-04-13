@@ -7264,3 +7264,35 @@ svn_wc__db_get_pristine_md5(const svn_checksum_t **md5_checksum,
   SVN_ERR_ASSERT((*md5_checksum)->kind == svn_checksum_md5);
   return svn_error_return(svn_sqlite__reset(stmt));
 }
+
+
+svn_error_t *
+svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     apr_pool_t *scratch_pool)
+{
+  const char *parent_abspath;
+  const char *name;
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  svn_dirent_split(local_abspath, &parent_abspath, &name, scratch_pool);
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+  
+  SVN_ERR_ASSERT(*local_relpath == '\0');
+
+  /* Delete the NAME row from BASE_NODE.  */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_DELETE_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, name));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
