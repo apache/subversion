@@ -41,12 +41,15 @@ struct walk_baton
 };
 
 /* An svn_wc__node_found_func_t callback function for analyzing the wc
- * status of LOCAL_ABSPATH. Since it can be invoked for a lot of paths in
- * a wc but some data , i.e. if the wc is switched or has modifications, is
+ * status of LOCAL_ABSPATH.  Update the status information in BATON->result.
+ * BATON is a 'struct walk_baton'.
+ *
+ * Implementation note: Since it can be invoked for a lot of paths in
+ * a wc but some data, i.e. if the wc is switched or has modifications, is
  * expensive to calculate, we optimize by checking if those values are
- * already set before runnning the db operations. The found status
- * information is stored in BATON. Temporary allocations are made in
- * SCRATCH_POOL. */
+ * already set before runnning the db operations.
+ *
+ * Temporary allocations are made in SCRATCH_POOL. */
 static svn_error_t *
 analyze_status(const char *local_abspath,
                void *baton,
