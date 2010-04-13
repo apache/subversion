@@ -621,16 +621,16 @@ svn_wc__upgrade_sdb(int *result_format,
                     apr_pool_t *scratch_pool);
 
 
-/* Checks whether a node is a working copy root or switched.
+/* Check whether a node is a working copy root or switched.
  *
- * If LOCAL_ABSPATH is the root of a working copy set WC_ROOT to TRUE,
+ * If LOCAL_ABSPATH is the root of a working copy, set *WC_ROOT to TRUE,
  * otherwise to FALSE.
  *
- * If LOCAL_ABSPATH is switched against its parent in the same working copy
- * set *SWITCHED to TRUE, otherwise to FALSE. SWITCHED can be set to NULL
- * if the result is not important.
+ * If KIND is not null, set *KIND to the node type of LOCAL_ABSPATH.
  *
- * If KIND is not null *KIND is set to the node type of LOCAL_ABSPATH
+ * If LOCAL_ABSPATH is switched against its parent in the same working copy
+ * set *SWITCHED to TRUE, otherwise to FALSE.  SWITCHED can be NULL
+ * if the result is not important.
  *
  * Use SCRATCH_POOL for temporary allocations.
  */
