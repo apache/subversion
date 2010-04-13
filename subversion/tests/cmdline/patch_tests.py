@@ -1003,7 +1003,7 @@ def patch_add_new_dir(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1) # dry-run
-def patch_remove_empty_dir(sbox):
+def patch_remove_empty_dirs(sbox):
   "patch deleting all children of a directory"
 
   sbox.build()
@@ -1068,9 +1068,9 @@ def patch_remove_empty_dir(sbox):
   os.remove(os.path.join(wc_dir, 'A', 'D', 'H', 'chi'))
 
   expected_output = [
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B'),
     'D         %s\n' % os.path.join(wc_dir, 'A', 'D', 'H', 'psi'),
     'D         %s\n' % os.path.join(wc_dir, 'A', 'D', 'H', 'omega'),
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'B'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
@@ -2376,7 +2376,7 @@ test_list = [ None,
               patch_strip1,
               patch_no_index_line,
               patch_add_new_dir,
-              patch_remove_empty_dir,
+              patch_remove_empty_dirs,
               patch_reject,
               patch_keywords,
               patch_with_fuzz,
