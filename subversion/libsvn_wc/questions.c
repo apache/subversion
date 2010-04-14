@@ -80,8 +80,8 @@
 
 
 /* Set *MODIFIED_P to TRUE if (after translation) VERSIONED_FILE_ABSPATH
- * differs from BASE_FILE_ABSPATH, else to FALSE if not.  Also verify that
- * BASE_FILE_ABSPATH matches the stored checksum for VERSIONED_FILE_ABSPATH,
+ * differs from PRISTINE_STREAM, else to FALSE if not.  Also verify that
+ * PRISTINE_STREAM matches the stored checksum for VERSIONED_FILE_ABSPATH,
  * if verify_checksum is TRUE. If checksum does not match, return the error
  * SVN_ERR_WC_CORRUPT_TEXT_BASE.
  *
