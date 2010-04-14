@@ -991,7 +991,8 @@ svn_sqlite__hotcopy(const char *src_path,
                              NULL, 0, NULL, scratch_pool, scratch_pool));
     backup = sqlite3_backup_init(dst_db->db3, "main", src_db->db3, "main");
     if (!backup)
-      return SVN_NO_ERROR;
+      return svn_error_createf(SVN_ERR_SQLITE_ERROR, NULL,
+                               _("SQLite hotcopy failed for %s"), src_path);
     do
       {
         /* Pages are usually 1024 byte (SQLite docs). On my laptop
