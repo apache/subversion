@@ -1812,8 +1812,9 @@ properties_same_p(svn_boolean_t *same,
   return SVN_NO_ERROR;
 }
 
-/* Compare the file OLDER (together with its normal properties in
- * ORIGINAL_PROPS which may also contain WC props and entry props) and MINE.
+/* Compare the file OLDER_ABSPATH (together with its normal properties in
+ * ORIGINAL_PROPS which may also contain WC props and entry props) with the
+ * versioned file MINE_ABSPATH (together with its versioned properties).
  * Set *SAME to true if they are the same or false if they differ, ignoring
  * the "svn:mergeinfo" property, and ignoring differences in keyword
  * expansion and end-of-line style. */
