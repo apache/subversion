@@ -129,6 +129,7 @@ Candidate changes:
    Justification:
      Fixes ruby binding tests on a couple of platforms.  Needed for release.
    Votes:
+     +1: joeswatosh, cmpilato
 
  * r933194
    Fix for issue #2753
