@@ -28,7 +28,8 @@
 #include "svn_io.h"
 #include "svn_dirent_uri.h"
 #include "svn_checksum.h"
-#include "sqlite.h"
+
+#include "internal_statements.h"
 
 #include "private/svn_sqlite.h"
 #include "svn_private_config.h"
@@ -49,7 +50,8 @@
   #include <sqlite3.h>
 #endif
 
-SQLITE_SQL_DECLARE_STATEMENTS(statements);
+INTERNAL_STATEMENTS_SQL_DECLARE_STATEMENTS(internal_statements);
+
 
 #ifdef SQLITE3_DEBUG
 /* An sqlite query execution callback. */
@@ -143,7 +145,7 @@ svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
 
   *stmt = db->prepared_stmts[stmt_idx];
 
-  if ((*stmt)->needs_reset);
+  if ((*stmt)->needs_reset)
     return svn_error_return(svn_sqlite__reset(*stmt));
 
   return SVN_NO_ERROR;
@@ -984,7 +986,8 @@ svn_sqlite__hotcopy(const char *src_path,
      experimental) and the copy would be done in chunks with the lock
      released between chunks. */
   SVN_ERR(svn_sqlite__open(&db, src_path, svn_sqlite__mode_readonly,
-                           statements, 0, NULL, scratch_pool, scratch_pool));
+                           internal_statements, 0, NULL,
+                           scratch_pool, scratch_pool));
   SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_DUMMY_SELECT_FOR_BACKUP));
   SVN_ERR(svn_sqlite__step_row(stmt));
   SVN_ERR(svn_io_copy_file(src_path, dst_path, TRUE, scratch_pool));
