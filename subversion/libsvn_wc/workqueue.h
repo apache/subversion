@@ -95,6 +95,17 @@ svn_wc__wq_build_file_remove(const svn_skel_t **work_item,
                              apr_pool_t *scratch_pool);
 
 
+/* Build a work item (returned in *WORK_ITEM) that will synchronize the
+   target node's readonly and executable flags with the values defined
+   by its properties and lock status.  */
+svn_error_t *
+svn_wc__wq_build_sync_file_flags(const svn_skel_t **work_item,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+
 /* Record a work item to revert LOCAL_ABSPATH.  */
 svn_error_t *
 svn_wc__wq_add_revert(svn_boolean_t *will_revert,

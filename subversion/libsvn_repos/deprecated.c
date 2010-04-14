@@ -428,6 +428,95 @@ svn_repos_dump_fs(svn_repos_t *repos,
                             cancel_baton, pool);
 }
 
+/* Baton for repos_progress_handler */
+struct progress_baton
+{
+  svn_boolean_t dumping;
+  svn_stream_t *feedback_stream;
+};
+
+/* Implementation of svn_repos_progress_func_t to wrap the output to a
+   response stream for svn_repos_dump_fs2() and svn_repos_verify_fs() */
+static svn_error_t *
+repos_progress_handler(void * baton,
+                       svn_revnum_t revision,
+                       const char *warning_text,
+                       apr_pool_t *scratch_pool)
+{
+  struct progress_baton *pb = baton;
+
+  if (warning_text != NULL)
+    {
+      apr_size_t len = strlen(warning_text);
+      SVN_ERR(svn_stream_write(pb->feedback_stream, warning_text, &len));
+    }
+  else
+    SVN_ERR(svn_stream_printf(pb->feedback_stream, scratch_pool,
+                              pb->dumping
+                              ? _("* Dumped revision %ld.\n")
+                              : _("* Verified revision %ld.\n"),
+                              revision));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_dump_fs2(svn_repos_t *repos,
+                   svn_stream_t *stream,
+                   svn_stream_t *feedback_stream,
+                   svn_revnum_t start_rev,
+                   svn_revnum_t end_rev,
+                   svn_boolean_t incremental,
+                   svn_boolean_t use_deltas,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  struct progress_baton pb;
+  pb.dumping = (stream != NULL); /* Show verify messages if stream is NULL */
+  pb.feedback_stream = feedback_stream;
+
+  return svn_error_return(svn_repos_dump_fs3(repos,
+                                             stream,
+                                             start_rev,
+                                             end_rev,
+                                             incremental,
+                                             use_deltas,
+                                             feedback_stream
+                                               ? repos_progress_handler
+                                               : NULL,
+                                             &pb,
+                                             cancel_func,
+                                             cancel_baton,
+                                             pool));
+}
+
+svn_error_t *
+svn_repos_verify_fs(svn_repos_t *repos,
+                    svn_stream_t *feedback_stream,
+                    svn_revnum_t start_rev,
+                    svn_revnum_t end_rev,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *pool)
+{
+  struct progress_baton pb;
+  pb.dumping = FALSE;
+  pb.feedback_stream = feedback_stream;
+
+  return svn_error_return(svn_repos_verify_fs2(repos,
+                                               start_rev,
+                                               end_rev,
+                                               feedback_stream
+                                                 ? repos_progress_handler
+                                                 : NULL,
+                                               &pb,
+                                               cancel_func,
+                                               cancel_baton,
+                                               pool));
+}
+
 /*** From load.c ***/
 static svn_repos_parser_fns_t *
 fns_from_fns2(const svn_repos_parse_fns2_t *fns2,

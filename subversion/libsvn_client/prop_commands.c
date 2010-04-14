@@ -1195,15 +1195,8 @@ svn_client_proplist3(const char *path_or_url,
       else
         SVN_ERR(err);
 
-      if ((revision->kind == svn_opt_revision_committed)
-          || (revision->kind == svn_opt_revision_base))
-        {
-          pristine = TRUE;
-        }
-      else  /* must be the working revision */
-        {
-          pristine = FALSE;
-        }
+      pristine = ((revision->kind == svn_opt_revision_committed)
+                    || (revision->kind == svn_opt_revision_base));
 
       if (changelists && changelists->nelts)
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,

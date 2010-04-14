@@ -421,8 +421,7 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
    the (loggy) implementation.
 */
 svn_error_t *
-svn_wc__internal_merge(svn_stringbuf_t **log_accum,
-                       enum svn_wc_merge_outcome_t *merge_outcome,
+svn_wc__internal_merge(enum svn_wc_merge_outcome_t *merge_outcome,
                        svn_wc__db_t *db,
                        const char *left_abspath,
                        const svn_wc_conflict_version_t *left_version,
@@ -602,6 +601,13 @@ svn_wc__internal_node_get_url(const char **url,
                               apr_pool_t *scratch_pool);
 
 
+svn_error_t *
+svn_wc__internal_is_file_external(svn_boolean_t *file_external,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *scratch_pool);
+
+
 /* Upgrade the wc sqlite database given in SDB for the wc located at
    WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.
    After the upgrade is complete (to as far as the automatic upgrade will
@@ -615,16 +621,16 @@ svn_wc__upgrade_sdb(int *result_format,
                     apr_pool_t *scratch_pool);
 
 
-/* Checks whether a node is a working copy root or switched.
+/* Check whether a node is a working copy root or switched.
  *
- * If LOCAL_ABSPATH is the root of a working copy set WC_ROOT to TRUE,
+ * If LOCAL_ABSPATH is the root of a working copy, set *WC_ROOT to TRUE,
  * otherwise to FALSE.
  *
- * If LOCAL_ABSPATH is switched against its parent in the same working copy
- * set *SWITCHED to TRUE, otherwise to FALSE. SWITCHED can be set to NULL
- * if the result is not important.
+ * If KIND is not null, set *KIND to the node type of LOCAL_ABSPATH.
  *
- * If KIND is not null *KIND is set to the node type of LOCAL_ABSPATH
+ * If LOCAL_ABSPATH is switched against its parent in the same working copy
+ * set *SWITCHED to TRUE, otherwise to FALSE.  SWITCHED can be NULL
+ * if the result is not important.
  *
  * Use SCRATCH_POOL for temporary allocations.
  */

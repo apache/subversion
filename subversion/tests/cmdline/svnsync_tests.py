@@ -39,7 +39,7 @@ Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
-
+Wimp = svntest.testcase.Wimp
 
 ######################################################################
 # Helper routines
@@ -791,8 +791,9 @@ test_list = [ None,
               detect_meddling,
               Skip(basic_authz, svntest.main.is_ra_type_file),
               Skip(copy_from_unreadable_dir, svntest.main.is_ra_type_file),
-              Skip(copy_with_mod_from_unreadable_dir,
-                   svntest.main.is_ra_type_file),
+              Wimp("Needs local add below copy support in WC-NG",
+                   Skip(copy_with_mod_from_unreadable_dir,
+                        svntest.main.is_ra_type_file)),
               Skip(copy_with_mod_from_unreadable_dir_and_copy,
                    svntest.main.is_ra_type_file),
               url_encoding,

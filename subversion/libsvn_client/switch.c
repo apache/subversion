@@ -301,13 +301,9 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                    local_abspath, pool, pool);
   if (err && err->apr_err != SVN_ERR_WC_LOCKED)
     return svn_error_return(err);
-  else if (err)
-    {
-      svn_error_clear(err);
-      acquired_lock = FALSE;
-    }
-  else
-    acquired_lock = TRUE;
+
+  acquired_lock = (err == SVN_NO_ERROR);
+  svn_error_clear(err);
 
   err1 = switch_internal(result_rev, path, local_abspath, anchor_abspath,
                          switch_url, peg_revision, revision,

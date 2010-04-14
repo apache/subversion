@@ -130,7 +130,7 @@ svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
  * svn_wc_get_status_editor4().
  */
 svn_boolean_t
-svn_wc__is_sendable_status(const svn_wc_status2_t *status,
+svn_wc__is_sendable_status(const svn_wc_status3_t *status,
                            svn_boolean_t no_ignore,
                            svn_boolean_t get_all);
 
@@ -288,6 +288,14 @@ svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
 svn_wc_conflict_description2_t *
 svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
                   apr_pool_t *result_pool);
+
+/*
+ * Convert from svn_wc_status3_t to svn_wc_status2_t.
+ * Allocate the result in RESULT_POOL.
+ */
+svn_wc_status2_t *
+svn_wc__status2_from_3(const svn_wc_status3_t *status, 
+                       apr_pool_t *result_pool);
 
 
 /**
@@ -476,6 +484,12 @@ svn_wc__node_is_status_added(svn_boolean_t *is_added,
  * Get the base revision of @a local_abspath using @a wc_ctx.  If
  * @a local_abspath is not in the working copy, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND.
+ *
+ * In @a *base_revision, return the revision of the revert-base, i.e. the
+ * revision that this node was checked out at or last updated/switched to,
+ * regardless of any uncommitted changes (delete, replace and/or
+ * copy-here/move-here).  For a locally added/copied/moved-here node that is
+ * not part of a replace, return @c SVN_INVALID_REVNUM.
  */
 svn_error_t *
 svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
@@ -494,6 +508,18 @@ svn_wc__node_get_lock_token(const char **lock_token,
                             const char *local_abspath,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
+
+
+/* Return TRUE in *FILE_EXTERNAL if the node LOCAL_ABSPATH is a file
+   external.
+
+   If the node does not exist in BASE, then SVN_ERR_WC_PATH_NOT_FOUND
+   will be returned.  */
+svn_error_t *
+svn_wc__node_is_file_external(svn_boolean_t *file_external,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
 
 
 /**
