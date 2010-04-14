@@ -137,10 +137,8 @@ compare_and_verify(svn_boolean_t *modified_p,
                                        NULL, NULL,
                                        db, versioned_file_abspath,
                                        scratch_pool, scratch_pool));
-
-#ifdef SVN_EXPERIMENTAL
-          /* ### node_checksum is originally MD-5 but will later be SHA-1... */
-#endif
+          /* ### SVN_EXPERIMENTAL_PRISTINE:
+             node_checksum is originally MD-5 but will later be SHA-1... */
 
           if (node_checksum)
             pristine_stream = svn_stream_checksummed2(pristine_stream,
