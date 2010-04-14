@@ -1498,6 +1498,14 @@ svn_fs_fs__hotcopy(const char *src_path,
   /* Copy the config. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_CONFIG, pool));
 
+  /* Copy the rep cache before copying the rev files to make sure all
+     cached references will be present in the copy. */
+  src_subdir = svn_dirent_join(src_path, REP_CACHE_DB_NAME, pool);
+  dst_subdir = svn_dirent_join(dst_path, REP_CACHE_DB_NAME, pool);
+  SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
+  if (kind == svn_node_file)
+    SVN_ERR(svn_sqlite__hotcopy(src_subdir, dst_subdir, pool));
+
   /* Copy the min unpacked rev, and read its value. */
   if (format >= SVN_FS_FS__MIN_PACKED_FORMAT)
     {
@@ -1657,12 +1665,6 @@ svn_fs_fs__hotcopy(const char *src_path,
     SVN_ERR(svn_io_copy_dir_recursively(src_subdir, dst_path,
                                         PATH_NODE_ORIGINS_DIR, TRUE, NULL,
                                         NULL, pool));
-
-  /* Now copy the rep cache. */
-  src_subdir = svn_dirent_join(src_path, REP_CACHE_DB_NAME, pool);
-  SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
-  if (kind == svn_node_file)
-    SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, REP_CACHE_DB_NAME, pool));
 
   /* Copy the txn-current file. */
   if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)

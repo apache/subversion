@@ -310,6 +310,12 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
                              void *cb_baton, apr_pool_t *scratch_pool);
 
 
+/* Hotcopy an SQLite database from SRC_PATH to DST_PATH. */
+svn_error_t *
+svn_sqlite__hotcopy(const char *src_path,
+                    const char *dst_path,
+                    apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
