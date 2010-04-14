@@ -826,11 +826,7 @@ def props_only_file_update(sbox):
   # put the content back to its untranslated form
   open(iota_path, 'w').writelines(content)
 
-  svntest.main.run_svn(None, 'propset', 'svn:keywords', 'Id', iota_path)
-
-#  expected_output = wc.State(wc_dir, {
-#    'iota' : Item(verb='Sending'),
-#    })
+  svntest.main.run_svn(None, 'propdel', 'svn:keywords', iota_path)
 
   expected_status.tweak('iota', wc_rev=3)
 
@@ -853,6 +849,9 @@ def props_only_file_update(sbox):
                                         False,
                                         wc_dir, '-r', '2')
 
+  if open(iota_path).read() != ''.join(content_expanded):
+    raise svntest.Failure("$Author$ is not expanded in 'iota'")
+
   # Update to r3. this should retranslate iota, dropping the keyword expansion
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota', contents=''.join(content))
@@ -865,6 +864,9 @@ def props_only_file_update(sbox):
                                         None, None, None, None,
                                         False,
                                         wc_dir)
+
+  if open(iota_path).read() != ''.join(content):
+    raise svntest.Failure("$Author$ is not contracted in 'iota'")
 
   # We used to leave some temporary files around. Make sure that we don't.
   temps = os.listdir(os.path.join(wc_dir, '.svn', 'tmp'))

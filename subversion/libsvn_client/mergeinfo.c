@@ -787,10 +787,7 @@ should_elide_mergeinfo(svn_boolean_t *elides,
       /* Empty mergeinfo elides to empty mergeinfo or to "nothing",
          i.e. it isn't overriding any parent. Otherwise it doesn't
          elide. */
-      if (!parent_mergeinfo || apr_hash_count(parent_mergeinfo) == 0)
-        *elides = TRUE;
-      else
-        *elides = FALSE;
+      *elides = (!parent_mergeinfo || apr_hash_count(parent_mergeinfo) == 0);
     }
   else if (!parent_mergeinfo || apr_hash_count(parent_mergeinfo) == 0)
     {

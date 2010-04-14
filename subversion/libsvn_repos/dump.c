@@ -180,7 +180,8 @@ struct edit_baton
   svn_stream_t *stream;
 
   /* Send feedback here, if non-NULL */
-  svn_stream_t *feedback_stream;
+  svn_repos_progress_func_t progress_func;
+  void *progress_baton;
 
   /* The fs revision root, so we can read the contents of paths. */
   svn_fs_root_t *fs_root;
@@ -416,15 +417,21 @@ dump_node(struct edit_baton *eb,
         }
       else
         {
-          if (!eb->verify && cmp_rev < eb->oldest_dumped_rev)
-            SVN_ERR(svn_stream_printf
-                    (eb->feedback_stream, pool,
+          if (!eb->verify && cmp_rev < eb->oldest_dumped_rev
+              && eb->progress_func)
+            {
+              const char *warning = apr_psprintf(
+                     pool,
                      _("WARNING: Referencing data in revision %ld,"
                        " which is older than the oldest\n"
                        "WARNING: dumped revision (%ld).  Loading this dump"
                        " into an empty repository\n"
                        "WARNING: will fail.\n"),
-                     cmp_rev, eb->oldest_dumped_rev));
+                     cmp_rev, eb->oldest_dumped_rev);
+
+              SVN_ERR(eb->progress_func(eb->progress_baton,
+                                        eb->oldest_dumped_rev, warning, pool));
+            }
 
           SVN_ERR(svn_stream_printf(eb->stream, pool,
                                     SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV
@@ -845,7 +852,8 @@ get_dump_editor(const svn_delta_editor_t **editor,
                 svn_revnum_t to_rev,
                 const char *root_path,
                 svn_stream_t *stream,
-                svn_stream_t *feedback_stream,
+                svn_repos_progress_func_t progress_func,
+                void *progress_baton,
                 svn_revnum_t oldest_dumped_rev,
                 svn_boolean_t use_deltas,
                 svn_boolean_t verify,
@@ -859,7 +867,8 @@ get_dump_editor(const svn_delta_editor_t **editor,
 
   /* Set up the edit baton. */
   eb->stream = stream;
-  eb->feedback_stream = feedback_stream;
+  eb->progress_func = progress_func;
+  eb->progress_baton = progress_baton;
   eb->oldest_dumped_rev = oldest_dumped_rev;
   eb->bufsize = sizeof(eb->buffer);
   eb->path = apr_pstrdup(pool, root_path);
@@ -953,13 +962,14 @@ write_revision_record(svn_stream_t *stream,
 
 /* The main dumper. */
 svn_error_t *
-svn_repos_dump_fs2(svn_repos_t *repos,
+svn_repos_dump_fs3(svn_repos_t *repos,
                    svn_stream_t *stream,
-                   svn_stream_t *feedback_stream,
                    svn_revnum_t start_rev,
                    svn_revnum_t end_rev,
                    svn_boolean_t incremental,
                    svn_boolean_t use_deltas,
+                   svn_repos_progress_func_t progress_func,
+                   void *progress_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *pool)
@@ -972,7 +982,6 @@ svn_repos_dump_fs2(svn_repos_t *repos,
   svn_revnum_t youngest;
   const char *uuid;
   int version;
-  svn_boolean_t dumping = (stream != NULL);
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -984,8 +993,6 @@ svn_repos_dump_fs2(svn_repos_t *repos,
     end_rev = youngest;
   if (! stream)
     stream = svn_stream_empty(pool);
-  if (! feedback_stream)
-    feedback_stream = svn_stream_empty(pool);
 
   /* Validate the revisions. */
   if (start_rev > end_rev)
@@ -1068,8 +1075,8 @@ svn_repos_dump_fs2(svn_repos_t *repos,
          non-incremental dump. */
       use_deltas_for_rev = use_deltas && (incremental || i != start_rev);
       SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton, fs, to_rev,
-                              "/", stream, feedback_stream, start_rev,
-                              use_deltas_for_rev, FALSE, subpool));
+                              "/", stream, progress_func, progress_baton,
+                              start_rev, use_deltas_for_rev, FALSE, subpool));
 
       /* Drive the editor in one way or another. */
       SVN_ERR(svn_fs_revision_root(&to_root, fs, to_rev, subpool));
@@ -1100,11 +1107,8 @@ svn_repos_dump_fs2(svn_repos_t *repos,
         }
 
     loop_end:
-      SVN_ERR(svn_stream_printf(feedback_stream, pool,
-                                dumping
-                                ? _("* Dumped revision %ld.\n")
-                                : _("* Verified revision %ld.\n"),
-                                to_rev));
+      if (progress_func)
+        SVN_ERR(progress_func(progress_baton, to_rev, NULL, subpool));
     }
 
   svn_pool_destroy(subpool);
@@ -1176,13 +1180,14 @@ verify_close_directory(void *dir_baton,
 }
 
 svn_error_t *
-svn_repos_verify_fs(svn_repos_t *repos,
-                    svn_stream_t *feedback_stream,
-                    svn_revnum_t start_rev,
-                    svn_revnum_t end_rev,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *pool)
+svn_repos_verify_fs2(svn_repos_t *repos,
+                     svn_revnum_t start_rev,
+                     svn_revnum_t end_rev,
+                     svn_repos_progress_func_t progress_func,
+                     void *progress_baton,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *pool)
 {
   svn_fs_t *fs = svn_repos_fs(repos);
   svn_revnum_t youngest;
@@ -1197,8 +1202,6 @@ svn_repos_verify_fs(svn_repos_t *repos,
     start_rev = 0;
   if (! SVN_IS_VALID_REVNUM(end_rev))
     end_rev = youngest;
-  if (! feedback_stream)
-    feedback_stream = svn_stream_empty(pool);
 
   /* Validate the revisions. */
   if (start_rev > end_rev)
@@ -1226,7 +1229,8 @@ svn_repos_verify_fs(svn_repos_t *repos,
       /* Get cancellable dump editor, but with our close_directory handler. */
       SVN_ERR(get_dump_editor((const svn_delta_editor_t **)&dump_editor,
                               &dump_edit_baton, fs, rev, "",
-                              svn_stream_empty(pool), feedback_stream,
+                              svn_stream_empty(pool), 
+                              progress_func, progress_baton,
                               start_rev,
                               FALSE, TRUE, /* use_deltas, verify */
                               iterpool));
@@ -1242,9 +1246,9 @@ svn_repos_verify_fs(svn_repos_t *repos,
                                 cancel_editor, cancel_edit_baton,
                                 NULL, NULL, iterpool));
       SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, iterpool));
-      SVN_ERR(svn_stream_printf(feedback_stream, iterpool,
-                                _("* Verified revision %ld.\n"),
-                                rev));
+
+      if (progress_func)
+        SVN_ERR(progress_func(progress_baton, rev, NULL, iterpool));
     }
 
   svn_pool_destroy(iterpool);

@@ -377,6 +377,10 @@ process_committed_leaf(svn_wc__db_t *db,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
+#ifdef SVN_EXPERIMENTAL
+  /* ### copied_checksum is originally MD-5 but will later be SHA-1... */
+#endif
+
   if (kind == svn_wc__db_kind_dir)
     adm_abspath = local_abspath;
   else
@@ -1673,6 +1677,32 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_register_file_external(svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              const char *external_url,
+                              const svn_opt_revision_t *external_peg_rev,
+                              const svn_opt_revision_t *external_rev,
+                              apr_pool_t *scratch_pool)
+{
+  svn_wc__db_t *db = wc_ctx->db;
+  const char *parent_abspath, *base_name, *repos_root_url;
+
+  svn_dirent_split(local_abspath, &parent_abspath, &base_name, scratch_pool);
+
+  SVN_ERR(svn_wc_add4(wc_ctx, local_abspath, svn_depth_infinity,
+                      NULL, SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL,
+                      scratch_pool));
+  SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root_url, NULL, db,
+                                     parent_abspath, scratch_pool,
+                                     scratch_pool));
+  SVN_ERR(svn_wc__set_file_external_location(wc_ctx, local_abspath,
+                                             external_url, external_peg_rev,
+                                             external_rev, repos_root_url,
+                                             scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 
 /* Thoughts on Reversion.
 
@@ -1917,6 +1947,7 @@ revert_entry(svn_depth_t *depth,
                     base_revision,
                     kind,
                     svn_wc__db_status_not_present,
+                    NULL, NULL,
                     pool));
         }
     }
@@ -2304,14 +2335,44 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
   /* ### TODO 1.7: use pristine store instead of this block: */
   {
     const char *text_base;
+    svn_error_t *err;
 
     SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
                                    scratch_pool));
     SVN_ERR_ASSERT(text_base != NULL);
 
-    return svn_error_return(svn_stream_open_readonly(contents, text_base,
-                                                     result_pool,
-                                                     scratch_pool));
+    /* ### now for some ugly hackiness. right now, file externals will
+       ### sometimes put their pristine contents into the revert base,
+       ### because they think they're *replaced* nodes, rather than
+       ### simple BASE nodes. watch out for this scenario, and
+       ### compensate appropriately.  */
+    err = svn_stream_open_readonly(contents, text_base,
+                                   result_pool, scratch_pool);
+    if (err)
+      {
+        svn_boolean_t file_external;
+
+        if (!APR_STATUS_IS_ENOENT(err->apr_err))
+          return svn_error_return(err);
+
+        SVN_ERR(svn_wc__internal_is_file_external(&file_external,
+                                                  db, local_abspath,
+                                                  scratch_pool));
+        if (!file_external)
+          return svn_error_return(err);
+
+        svn_error_clear(err);
+
+        SVN_ERR(svn_wc__text_revert_path(&text_base, db, local_abspath,
+                                         scratch_pool));
+        SVN_ERR_ASSERT(text_base != NULL);
+
+        return svn_error_return(svn_stream_open_readonly(contents,
+                                                         text_base,
+                                                         result_pool,
+                                                         scratch_pool));
+      }
+    return SVN_NO_ERROR;
   }
 }
 

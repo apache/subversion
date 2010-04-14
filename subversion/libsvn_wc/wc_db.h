@@ -411,6 +411,12 @@ svn_wc__db_init(svn_wc__db_t *db,
    This subsystem does not use DEPTH, but it can be recorded here in
    the BASE tree for higher-level code to use.
 
+   If CONFLICT is not NULL, then it describes a conflict for this node. The
+   node will be record as conflicted (in ACTUAL).
+
+   Any work items that are necessary as part of this node construction may
+   be passed in WORK_ITEMS.
+
    All temporary allocations will be made in SCRATCH_POOL.
 */
 svn_error_t *
@@ -426,6 +432,8 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const char *changed_author,
                               const apr_array_header_t *children,
                               svn_depth_t depth,
+                              const svn_skel_t *conflict,
+                              const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool);
 
 
@@ -448,6 +456,12 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
    by its properties) is known, then pass it as TRANSLATED_SIZE. Otherwise,
    pass SVN_INVALID_FILESIZE.
 
+   If CONFLICT is not NULL, then it describes a conflict for this node. The
+   node will be record as conflicted (in ACTUAL).
+
+   Any work items that are necessary as part of this node construction may
+   be passed in WORK_ITEMS.
+
    All temporary allocations will be made in SCRATCH_POOL.
 */
 svn_error_t *
@@ -463,6 +477,8 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          const char *changed_author,
                          const svn_checksum_t *checksum,
                          svn_filesize_t translated_size,
+                         const svn_skel_t *conflict,
+                         const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
 
 
@@ -479,6 +495,12 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
    CHANGED_AUTHOR>.
 
    The target of the symlink is specified by TARGET.
+
+   If CONFLICT is not NULL, then it describes a conflict for this node. The
+   node will be record as conflicted (in ACTUAL).
+
+   Any work items that are necessary as part of this node construction may
+   be passed in WORK_ITEMS.
 
    All temporary allocations will be made in SCRATCH_POOL.
 */
@@ -522,6 +544,8 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             apr_time_t changed_date,
                             const char *changed_author,
                             const char *target,
+                            const svn_skel_t *conflict,
+                            const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
 
 
@@ -538,6 +562,12 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
      svn_wc__db_status_excluded
      svn_wc__db_status_not_present
 
+   If CONFLICT is not NULL, then it describes a conflict for this node. The
+   node will be record as conflicted (in ACTUAL).
+
+   Any work items that are necessary as part of this node construction may
+   be passed in WORK_ITEMS.
+
    All temporary allocations will be made in SCRATCH_POOL.
 */
 svn_error_t *
@@ -549,6 +579,8 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                                 svn_revnum_t revision,
                                 svn_wc__db_kind_t kind,
                                 svn_wc__db_status_t status,
+                                const svn_skel_t *conflict,
+                                const svn_skel_t *work_items,
                                 apr_pool_t *scratch_pool);
 
 
@@ -1336,6 +1368,7 @@ svn_wc__db_read_children(const apr_array_header_t **children,
 
    Allocate *VICTIMS in RESULT_POOL and do temporary allocations in
    SCRATCH_POOL */
+/* ### This function will probably be removed. */
 svn_error_t *
 svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
                                  svn_wc__db_t *db,
@@ -1352,6 +1385,7 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
    SCRATCH_POOL */
 /* ### Currently there can be just one property conflict recorded
        per victim */
+/*  ### This function will probably be removed. */
 svn_error_t *
 svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
                           svn_wc__db_t *db,
@@ -1491,6 +1525,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_global_update(svn_wc__db_t *db,
                          const char *local_abspath,
+                         svn_wc__db_kind_t new_kind,
                          const char *new_repos_relpath,
                          svn_revnum_t new_revision,
                          const apr_hash_t *new_props,
@@ -1500,6 +1535,7 @@ svn_wc__db_global_update(svn_wc__db_t *db,
                          const apr_array_header_t *new_children,
                          const svn_checksum_t *new_checksum,
                          const char *new_target,
+                         const apr_hash_t *new_dav_cache,
                          const svn_skel_t *conflict,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
@@ -1861,11 +1897,11 @@ svn_wc__db_wq_completed(svn_wc__db_t *db,
 
 
 /* Note: LEVELS_TO_LOCK is here strictly for backward compat.  The access
- * batons still have the notion of 'levels to lock' and we need to ensure
- * that they still function correctly, even in the new world.  'levels to
- * lock' should not be exposed through the wc-ng APIs at all: users either
- * get to lock the entire tree (rooted at some subdir, of course), or none.
- */
+   batons still have the notion of 'levels to lock' and we need to ensure
+   that they still function correctly, even in the new world.  'levels to
+   lock' should not be exposed through the wc-ng APIs at all: users either
+   get to lock the entire tree (rooted at some subdir, of course), or none.
+*/
 svn_error_t *
 svn_wc__db_wclock_set(svn_wc__db_t *db,
                       const char *local_abspath,
@@ -1970,7 +2006,6 @@ svn_error_t *
 svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
                                  const char *local_abspath,
                                  svn_depth_t depth,
-                                 svn_boolean_t flush_entry_cache,
                                  apr_pool_t *scratch_pool);
 
 /* Performs a non-recursive delete on local_abspath, just like a
@@ -2075,15 +2110,6 @@ svn_wc__db_temp_op_set_working_incomplete(svn_wc__db_t *db,
                                           apr_pool_t *scratch_pool);
 
 
-/* Update changed information in BASE_NODE with the supplied values */
-svn_error_t *
-svn_wc__db_temp_op_set_base_last_change(svn_wc__db_t *db,
-                                        const char *local_abspath,
-                                        svn_revnum_t changed_rev,
-                                        apr_time_t changed_date,
-                                        const char *changed_author,
-                                        apr_pool_t *scratch_pool);
-
 /* Update changed information in WORKING_NODE with the supplied values */
 svn_error_t *
 svn_wc__db_temp_op_set_working_last_change(svn_wc__db_t *db,
@@ -2098,7 +2124,7 @@ svn_wc__db_temp_op_set_working_last_change(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
                                           const char *local_abspath,
-                                          const char* new_repos_relpath,
+                                          const char *new_repos_relpath,
                                           svn_revnum_t new_rev,
                                           apr_pool_t *scratch_pool);
 
@@ -2121,6 +2147,35 @@ svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
                                const char *local_abspath,
                                apr_pool_t *scratch_pool);
 
+
+/* Return the serialized file external info (from BASE) for LOCAL_ABSPATH.
+   Stores NULL into SERIALIZED_FILE_EXTERNAL if this node is NOT a file
+   external. If a BASE node does not exist: SVN_ERR_WC_PATH_NOT_FOUND.  */
+svn_error_t *
+svn_wc__db_temp_get_file_external(const char **serialized_file_external,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
+
+/* Remove a stray "subdir" record in the BASE_NODE table.  */
+svn_error_t *
+svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     apr_pool_t *scratch_pool);
+
+
+/* Set *PRISTINE_MD5_CHECKSUM to the MD-5 checksum of a pristine text
+   identified by its SHA-1 checksum PRISTINE_SHA1_CHECKSUM. Return an error
+   if the pristine text does not exist or its MD5 checksum is not found. */
+svn_error_t *
+svn_wc__db_get_pristine_md5(const svn_checksum_t **pristine_md5_checksum,
+                            svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            const svn_checksum_t *pristine_sha1_checksum,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* @} */
 

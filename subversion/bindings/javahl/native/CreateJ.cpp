@@ -431,7 +431,7 @@ CreateJ::Lock(const svn_lock_t *lock)
 }
 
 jobject
-CreateJ::Status(const char *local_abspath, const svn_wc_status2_t *status)
+CreateJ::Status(const char *local_abspath, const svn_wc_status3_t *status)
 {
   JNIEnv *env = JNIUtil::getEnv();
 

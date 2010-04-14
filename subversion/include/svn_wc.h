@@ -415,6 +415,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
  *
  * @a pool is used only for local processing, it is not used for the batons.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
                     svn_wc_adm_access_t *associated,
@@ -428,6 +429,7 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
  * svn_wc_adm_retrieve() with @a path replaced by the parent directory of
  * @a path.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
                           svn_wc_adm_access_t *associated,
@@ -512,6 +514,7 @@ svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
  *
  * @since New in 1.6
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_close2(svn_wc_adm_access_t *adm_access,
                   apr_pool_t *scratch_pool);
@@ -527,10 +530,12 @@ svn_error_t *
 svn_wc_adm_close(svn_wc_adm_access_t *adm_access);
 
 /** Return the path used to open the access baton @a adm_access */
+SVN_DEPRECATED
 const char *
 svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access);
 
 /** Return the pool used by access baton @a adm_access */
+SVN_DEPRECATED
 apr_pool_t *
 svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access);
 
@@ -3526,7 +3531,114 @@ enum svn_wc_status_kind
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type.
  *
+ * @since New in 1.7.
+ */
+typedef struct svn_wc_status3_t
+{
+  /** Can be @c NULL if not under version control. */
+  const svn_wc_entry_t *entry;
+
+  /** The status of the entry itself, including its text if it is a file. */
+  enum svn_wc_status_kind text_status;
+
+  /** The status of the entry's properties. */
+  enum svn_wc_status_kind prop_status;
+
+  /** a directory can be 'locked' if a working copy update was interrupted. */
+  svn_boolean_t locked;
+
+  /** a file or directory can be 'copied' if it's scheduled for
+   * addition-with-history (or part of a subtree that is scheduled as such.).
+   */
+  svn_boolean_t copied;
+
+  /** a file or directory can be 'switched' if the switch command has been
+   * used.  If this is TRUE, then file_external will be FALSE.
+   */
+  svn_boolean_t switched;
+
+  /** The entry's text status in the repository. */
+  enum svn_wc_status_kind repos_text_status;
+
+  /** The entry's property status in the repository. */
+  enum svn_wc_status_kind repos_prop_status;
+
+  /** The entry's lock in the repository, if any. */
+  svn_lock_t *repos_lock;
+
+  /** Set to the URI (actual or expected) of the item.
+   * @since New in 1.3
+   */
+  const char *url;
+
+  /**
+   * @defgroup svn_wc_status_ood WC out-of-date info from the repository
+   * @{
+   *
+   * When the working copy item is out-of-date compared to the
+   * repository, the following fields represent the state of the
+   * youngest revision of the item in the repository.  If the working
+   * copy is not out of date, the fields are initialized as described
+   * below.
+   */
+
+  /** Set to the youngest committed revision, or #SVN_INVALID_REVNUM
+   * if not out of date.
+   */
+  svn_revnum_t ood_last_cmt_rev;
+
+  /** Set to the most recent commit date, or @c 0 if not out of date.
+   */
+  apr_time_t ood_last_cmt_date;
+
+  /** Set to the node kind of the youngest commit, or #svn_node_none
+   * if not out of date.
+   */
+  svn_node_kind_t ood_kind;
+
+  /** Set to the user name of the youngest commit, or @c NULL if not
+   * out of date or non-existent.  Because a non-existent @c
+   * svn:author property has the same behavior as an out-of-date
+   * working copy, examine @c ood_last_cmt_rev to determine whether
+   * the working copy is out of date.
+   */
+  const char *ood_last_cmt_author;
+
+  /** @} */
+
+  /** Non-NULL if the entry is the victim of a tree conflict.
+   */
+  svn_wc_conflict_description_t *tree_conflict;
+
+  /** If the item is a file that was added to the working copy with an
+   * svn:externals; if file_external is TRUE, then switched is always
+   * FALSE.
+   */
+  svn_boolean_t file_external;
+
+  /** The actual status of the text compared to the pristine base of the
+   * file. This value isn't masked by other working copy statuses.
+   * @c pristine_text_status is #svn_wc_status_none if this value was
+   * not calculated during the status walk.
+   */
+  enum svn_wc_status_kind pristine_text_status;
+
+  /** The actual status of the properties compared to the pristine base of
+   * the node. This value isn't masked by other working copy statuses.
+   * @c pristine_prop_status is #svn_wc_status_none if this value was
+   * not calculated during the status walk.
+   */
+  enum svn_wc_status_kind pristine_prop_status;
+
+  /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
+} svn_wc_status3_t;
+
+/**
+ * ### The diffs are not yet known.
+ * Same as svn_wc_status3_t, but without ...
+ *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 typedef struct svn_wc_status2_t
 {
@@ -3676,13 +3788,23 @@ typedef struct svn_wc_status_t
 } svn_wc_status_t;
 
 
-
 /**
  * Return a deep copy of the @a orig_stat status structure, allocated
  * in @a pool.
  *
- * @since New in 1.2.
+ * @since New in 1.7.
  */
+svn_wc_status3_t *
+svn_wc_dup_status3(const svn_wc_status3_t *orig_stat,
+                   apr_pool_t *pool);
+
+/**
+ * Same as svn_wc_dup_status3(), but for older svn_wc_status_t structures.
+ *
+ * @since New in 1.2
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_wc_status2_t *
 svn_wc_dup_status2(const svn_wc_status2_t *orig_stat,
                    apr_pool_t *pool);
@@ -3727,7 +3849,7 @@ svn_wc_dup_status(const svn_wc_status_t *orig_stat,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_wc_status3(svn_wc_status2_t **status,
+svn_wc_status3(svn_wc_status3_t **status,
                svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                apr_pool_t *result_pool,
@@ -3779,7 +3901,7 @@ svn_wc_status(svn_wc_status_t **status,
  */
 typedef svn_error_t *(*svn_wc_status_func4_t)(void *baton,
                                               const char *local_abspath,
-                                              const svn_wc_status2_t *status,
+                                              const svn_wc_status3_t *status,
                                               apr_pool_t *scratch_pool);
 
 /**
@@ -3816,7 +3938,7 @@ typedef void (*svn_wc_status_func_t)(void *baton,
 
 /**
  * Walk the working copy status of @a local_abspath using @a wc_ctx, by
- * creating #svn_wc_status2_t structures and sending these through
+ * creating #svn_wc_status3_t structures and sending these through
  * @a status_func / @a status_baton.
  *
  *  * Assuming the target is a directory, then:
@@ -3876,7 +3998,7 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
 
 /**
  * Set @a *editor and @a *edit_baton to an editor that generates
- * #svn_wc_status2_t structures and sends them through @a status_func /
+ * #svn_wc_status3_t structures and sends them through @a status_func /
  * @a status_baton.  @a anchor_abspath is a working copy directory
  * directory which will be used as the root of our editor.  If @a
  * target_basename is not "", it represents a node in the @a anchor_abspath
@@ -4260,6 +4382,22 @@ svn_wc_delete(const char *path,
               void *notify_baton,
               apr_pool_t *pool);
 
+/**
+ * Register @a local_abspath as a new file external aimed at
+ * @a external_url, @a external_peg_rev, and @a external_rev.
+ *
+ * If not @c NULL, @a external_peg_rev and @a external_rev must each
+ * be of kind @c svn_opt_revision_number or @c svn_opt_revision_head.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_register_file_external(svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              const char *external_url,
+                              const svn_opt_revision_t *external_peg_rev,
+                              const svn_opt_revision_t *external_rev,
+                              apr_pool_t *scratch_pool);
 
 /**
  * Put @a local_abspath under version control by adding an entry in its
@@ -5036,7 +5174,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
  * @since New in 1.6.
  * @deprecated Provided for compatibility with the 1.6 API.
  */
-SVN_DEPRECATED svn_error_t *
+SVN_DEPRECATED
+svn_error_t *
 svn_wc_crawl_revisions4(const char *path,
                         svn_wc_adm_access_t *adm_access,
                         const svn_ra_reporter3_t *reporter,
@@ -5058,6 +5197,7 @@ svn_wc_crawl_revisions4(const char *path,
  *
  * @deprecated Provided for compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_crawl_revisions3(const char *path,
                         svn_wc_adm_access_t *adm_access,
@@ -6966,6 +7106,7 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
  * @since New in 1.4.
  * @deprecated Provided for backwards compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_transmit_text_deltas2(const char **tempfile,
                              unsigned char digest[],

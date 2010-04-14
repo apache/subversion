@@ -789,9 +789,12 @@ def create_repos(path):
 def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
 
+  # Save any previous value of SVN_DBG_QUIET
+  saved_quiet = os.environ.get('SVN_DBG_QUIET')
+  os.environ['SVN_DBG_QUIET'] = 'y'
+
   # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that
   # the displayed CMDs can be run by hand
-  os.environ['SVN_DBG_QUIET'] = 'y'
   create_repos(dst_path)
   dump_args = ['dump', src_path]
   load_args = ['load', dst_path]
@@ -825,7 +828,10 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   load_out.close()
   load_err.close()
 
-  del os.environ['SVN_DBG_QUIET']
+  if saved_quiet is None:
+    del os.environ['SVN_DBG_QUIET']
+  else:
+    os.environ['SVN_DBG_QUIET'] = saved_quiet
 
   dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0
@@ -979,6 +985,34 @@ def merge_notify_line(revstart=None, revend=None, same_URL=True,
     else:
       return "--- Merging %sr%ld through r%ld into '.+':\n" \
              % (from_foreign_phrase, revstart, revend)
+
+
+def make_log_msg():
+  "Conjure up a log message based on the calling test."
+
+  for idx in range(1, 100):
+    frame = sys._getframe(idx)
+
+    # If this frame isn't from a function in *_tests.py, then skip it.
+    filename = frame.f_code.co_filename
+    if not filename.endswith('_tests.py'):
+      continue
+
+    # There should be a test_list in this module.
+    test_list = frame.f_globals.get('test_list')
+    if test_list is None:
+      continue
+
+    # If the function is not in the test_list, then skip it.
+    func_name = frame.f_code.co_name
+    func_ob = frame.f_globals.get(func_name)
+    if func_ob not in test_list:
+      continue
+
+    # Make the log message look like a line from a traceback.
+    # Well...close. We use single quotes to avoid interfering with the
+    # double-quote quoting performed on Windows
+    return "File '%s', line %d, in %s" % (filename, frame.f_lineno, func_name)
 
 
 ######################################################################

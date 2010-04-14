@@ -50,7 +50,7 @@
 static svn_error_t *
 find_undeletables(void *baton,
                   const char *path,
-                  const svn_wc_status2_t *status,
+                  const svn_wc_status3_t *status,
                   apr_pool_t *pool)
 {
   /* Check for error-ful states. */

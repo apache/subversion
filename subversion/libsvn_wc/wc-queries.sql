@@ -232,12 +232,20 @@ delete from actual_node
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_UPDATE_BASE_DEPTH
-update base_node set depth = ?3
-where wc_id = ?1 and local_relpath = ?2;
+UPDATE BASE_NODE SET depth = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_UPDATE_WORKING_DEPTH
-update working_node set depth = ?3
-where wc_id = ?1 and local_relpath = ?2;
+UPDATE WORKING_NODE SET depth = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_BASE_EXCLUDED
+UPDATE BASE_NODE SET presence = 'excluded', depth = 'infinity'
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_WORKING_EXCLUDED
+UPDATE WORKING_NODE SET presence = 'excluded', depth = 'infinity'
+WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_UPDATE_BASE_PRESENCE
 update base_node set presence= ?3
@@ -270,6 +278,11 @@ DELETE FROM WORK_QUEUE WHERE id = ?1;
 -- STMT_INSERT_PRISTINE
 INSERT OR IGNORE INTO PRISTINE (checksum, md5_checksum, size, refcount)
 VALUES (?1, ?2, ?3, 1);
+
+-- STMT_SELECT_PRISTINE_MD5_CHECKSUM
+SELECT md5_checksum
+FROM pristine
+WHERE checksum = ?1
 
 -- STMT_SELECT_ACTUAL_CONFLICT_VICTIMS
 SELECT local_relpath
@@ -424,13 +437,10 @@ where wc_id = ?1 and local_relpath = ?2;
 update base_node set file_external = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
--- STMT_UPDATE_BASE_LAST_CHANGE
-update base_node set changed_rev = ?3, changed_date = ?4, changed_author = ?5
-where wc_id = ?1 and local_relpath = ?2;
-
 -- STMT_UPDATE_WORKING_LAST_CHANGE
 update working_node set changed_rev = ?3, changed_date = ?4, changed_author = ?5
 where wc_id = ?1 and local_relpath = ?2;
+
 
 /* ------------------------------------------------------------------------- */
 

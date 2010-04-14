@@ -198,31 +198,27 @@ fetch_wc_id(apr_int64_t *wc_id, svn_sqlite__db_t *sdb)
    entry.  The entry will be modified in place. */
 static svn_error_t *
 check_file_external(svn_wc_entry_t *entry,
-                    svn_sqlite__db_t *sdb,
-                    apr_pool_t *result_pool)
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
+  const char *serialized;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_SELECT_FILE_EXTERNAL));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                            (apr_uint64_t)1 /* wc_id */,
-                            entry->name));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (!svn_sqlite__column_is_null(stmt, 0))
+  SVN_ERR(svn_wc__db_temp_get_file_external(&serialized,
+                                            db, local_abspath,
+                                            scratch_pool, scratch_pool));
+  if (serialized != NULL)
     {
       SVN_ERR(svn_wc__unserialize_file_external(
                     &entry->file_external_path,
                     &entry->file_external_peg_rev,
                     &entry->file_external_rev,
-                    svn_sqlite__column_text(stmt, 0, NULL),
+                    serialized,
                     result_pool));
-
     }
 
-  return svn_error_return(svn_sqlite__reset(stmt));
+  return SVN_NO_ERROR;
 }
 
 
@@ -271,6 +267,10 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
                                  entry_abspath,
                                  result_pool,
                                  scratch_pool);
+#ifdef SVN_EXPERIMENTAL
+  /* ### *checksum is originally MD-5 but will later be SHA-1... */
+#endif
+
   if (err)
     {
       const char *work_del_abspath;
@@ -1063,7 +1063,18 @@ read_entries_new(apr_hash_t **result_entries,
                                                  result_pool);
 
       if (checksum)
-        entry->checksum = svn_checksum_to_cstring(checksum, result_pool);
+        {
+#ifdef SVN_EXPERIMENTAL
+          /* If we get a SHA-1, as expected in WC-NG, convert it to MD-5. */
+          if (checksum->kind == svn_checksum_sha1)
+            SVN_ERR(svn_wc__db_get_pristine_md5(&checksum, db,
+                                                entry_abspath, checksum,
+                                                scratch_pool, scratch_pool));
+#endif
+
+          SVN_ERR_ASSERT(checksum->kind == svn_checksum_md5);
+          entry->checksum = svn_checksum_to_cstring(checksum, result_pool);
+        }
 
       if (conflicted)
         {
@@ -1110,7 +1121,8 @@ read_entries_new(apr_hash_t **result_entries,
          ### right now this is ugly, since we have no good way querying
          ### for a file external OR retrieving properties.  ugh.  */
       if (entry->kind == svn_node_file)
-        SVN_ERR(check_file_external(entry, sdb, result_pool));
+        SVN_ERR(check_file_external(entry, db, entry_abspath, result_pool,
+                                    iterpool));
 
       entry->working_size = translated_size;
 
@@ -1592,65 +1604,6 @@ svn_wc_entries_read(apr_hash_t **entries,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__set_depth(svn_wc__db_t *db,
-                  const char *local_dir_abspath,
-                  svn_depth_t depth,
-                  apr_pool_t *scratch_pool)
-{
-  const char *parent_abspath;
-  const char *base_name;
-  svn_wc_adm_access_t *adm_access;
-  svn_wc_entry_t *entry;
-
-  SVN_ERR_ASSERT(depth >= svn_depth_empty && depth <= svn_depth_infinity);
-
-  svn_dirent_split(local_dir_abspath, &parent_abspath, &base_name,
-                   scratch_pool);
-
-  /* Update the entry cache */
-  adm_access = svn_wc__adm_retrieve_internal2(db, parent_abspath,
-                                              scratch_pool);
-
-  /* Update parent? */
-  if (adm_access != NULL)
-    {
-      apr_hash_t *entries = svn_wc__adm_access_entries(adm_access);
-
-      entry = (entries != NULL)
-                       ? apr_hash_get(entries, base_name, APR_HASH_KEY_STRING)
-                       : NULL;
-
-      if (entry != NULL)
-        {
-          /* The entries in the parent stub only store excluded vs infinity. */
-          entry->depth = (depth == svn_depth_exclude) ? svn_depth_exclude
-                                                      : svn_depth_infinity;
-        }
-    }
-
-   /* Fetch the entries for the directory, and write our depth there. */
-  adm_access = svn_wc__adm_retrieve_internal2(db, local_dir_abspath,
-                                              scratch_pool);
-  if (adm_access != NULL)
-    {
-      apr_hash_t *entries = svn_wc__adm_access_entries(adm_access);
-
-      entry = (entries != NULL)
-                       ? apr_hash_get(entries, "", APR_HASH_KEY_STRING)
-                       : NULL;
-
-      if (entry != NULL)
-        entry->depth = depth;
-    }
-
-  return svn_error_return(svn_wc__db_temp_op_set_dir_depth(db,
-                                                           local_dir_abspath,
-                                                           depth,
-                                                           FALSE,
-                                                           scratch_pool));
-}
 
 /* */
 static svn_error_t *
@@ -2432,6 +2385,10 @@ write_one_entry_cb(void *baton,
                                            scratch_pool);
 
       err = svn_sqlite__column_checksum(&base_checksum, stmt, 5, scratch_pool);
+#ifdef SVN_EXPERIMENTAL
+      /* ### base_checksum is originally MD-5 but will later be SHA-1... */
+#endif
+
       SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
     }
   else

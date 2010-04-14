@@ -62,7 +62,7 @@ generate_status_code(enum svn_wc_status_kind status)
 /* Return the single character representation of the switched column
    status. */
 static char
-generate_switch_column_code(const svn_wc_status2_t *status)
+generate_switch_column_code(const svn_wc_status3_t *status)
 {
   if (status->switched)
     return 'S';
@@ -104,7 +104,7 @@ print_status(const char *path,
              svn_boolean_t detailed,
              svn_boolean_t show_last_committed,
              svn_boolean_t repos_locks,
-             const svn_wc_status2_t *status,
+             const svn_wc_status3_t *status,
              unsigned int *text_conflicts,
              unsigned int *prop_conflicts,
              unsigned int *tree_conflicts,
@@ -249,7 +249,7 @@ print_status(const char *path,
 
 svn_error_t *
 svn_cl__print_status_xml(const char *path,
-                         const svn_wc_status2_t *status,
+                         const svn_wc_status3_t *status,
                          apr_pool_t *pool)
 {
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
@@ -369,7 +369,7 @@ svn_cl__print_status_xml(const char *path,
 /* Called by status-cmd.c */
 svn_error_t *
 svn_cl__print_status(const char *path,
-                     const svn_wc_status2_t *status,
+                     const svn_wc_status3_t *status,
                      svn_boolean_t detailed,
                      svn_boolean_t show_last_committed,
                      svn_boolean_t skip_unrecognized,

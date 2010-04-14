@@ -62,15 +62,15 @@ def add_files(sbox):
   wc_dir = sbox.wc_dir
 
   # Create some files, then schedule them for addition
-  delta_path = os.path.join(wc_dir, 'delta')
-  zeta_path = os.path.join(wc_dir, 'A', 'B', 'zeta')
-  epsilon_path = os.path.join(wc_dir, 'A', 'D', 'G', 'epsilon')
+  delta_path = sbox.ospath('delta')
+  zeta_path = sbox.ospath('A/B/zeta')
+  epsilon_path = sbox.ospath('A/D/G/epsilon')
 
   svntest.main.file_append(delta_path, "This is the file 'delta'.")
   svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
   svntest.main.file_append(epsilon_path, "This is the file 'epsilon'.")
 
-  svntest.main.run_svn(None, 'add', delta_path, zeta_path, epsilon_path)
+  sbox.simple_add(delta_path, zeta_path, epsilon_path)
 
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -91,15 +91,15 @@ def add_directories(sbox):
   wc_dir = sbox.wc_dir
 
   # Create some directories, then schedule them for addition
-  X_path = os.path.join(wc_dir, 'X')
-  Y_path = os.path.join(wc_dir, 'A', 'C', 'Y')
-  Z_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
+  X_path = sbox.ospath('X')
+  Y_path = sbox.ospath('A/C/Y')
+  Z_path = sbox.ospath('A/D/H/Z')
 
   os.mkdir(X_path)
   os.mkdir(Y_path)
   os.mkdir(Z_path)
 
-  svntest.main.run_svn(None, 'add', X_path, Y_path, Z_path)
+  sbox.simple_add(X_path, Y_path, Z_path)
 
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -120,9 +120,9 @@ def nested_adds(sbox):
   wc_dir = sbox.wc_dir
 
   # Create some directories then schedule them for addition
-  X_path = os.path.join(wc_dir, 'X')
-  Y_path = os.path.join(wc_dir, 'A', 'C', 'Y')
-  Z_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
+  X_path = sbox.ospath('X')
+  Y_path = sbox.ospath('A/C/Y')
+  Z_path = sbox.ospath('A/D/H/Z')
 
   os.mkdir(X_path)
   os.mkdir(Y_path)
@@ -130,18 +130,18 @@ def nested_adds(sbox):
 
   # Now, create some files and directories to put into our newly added
   # directories
-  P_path = os.path.join(X_path, 'P')
-  Q_path = os.path.join(Y_path, 'Q')
-  R_path = os.path.join(Z_path, 'R')
+  P_path = sbox.ospath('X/P')
+  Q_path = sbox.ospath('A/C/Y/Q')
+  R_path = sbox.ospath('A/D/H/Z/R')
 
   os.mkdir(P_path)
   os.mkdir(Q_path)
   os.mkdir(R_path)
 
-  delta_path = os.path.join(X_path, 'delta')
-  epsilon_path = os.path.join(Y_path, 'epsilon')
-  upsilon_path = os.path.join(Y_path, 'upsilon')
-  zeta_path = os.path.join(Z_path, 'zeta')
+  delta_path = sbox.ospath('X/delta')
+  epsilon_path = sbox.ospath('A/C/Y/epsilon')
+  upsilon_path = sbox.ospath('A/C/Y/upsilon')
+  zeta_path = sbox.ospath('A/D/H/Z/zeta')
 
   svntest.main.file_append(delta_path, "This is the file 'delta'.")
   svntest.main.file_append(epsilon_path, "This is the file 'epsilon'.")
@@ -149,7 +149,7 @@ def nested_adds(sbox):
   svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
 
   # Finally, let's try adding our new files and directories
-  svntest.main.run_svn(None, 'add', X_path, Y_path, Z_path)
+  sbox.simple_add(X_path, Y_path, Z_path)
 
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -176,15 +176,17 @@ def add_executable(sbox):
   sbox.build(read_only = True)
 
   def runTest(wc_dir, fileName, perm, executable):
-    fileName = os.path.join(wc_dir, fileName)
+    fileName = sbox.ospath(fileName)
     if executable:
       expected_out = ["*\n"]
     else:
       expected_out = []
-    f = open(fileName,"w")
-    f.close()
-    os.chmod(fileName,perm)
-    svntest.main.run_svn(None, 'add', fileName)
+
+    # create an empty file
+    open(fileName, "w")
+
+    os.chmod(fileName, perm)
+    sbox.simple_add(fileName)
     svntest.actions.run_and_verify_svn(None, expected_out, [],
                                        'propget', "svn:executable", fileName)
 
@@ -207,12 +209,12 @@ def delete_files(sbox):
   wc_dir = sbox.wc_dir
 
   # Schedule some files for deletion
-  iota_path = os.path.join(wc_dir, 'iota')
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  iota_path = sbox.ospath('iota')
+  mu_path = sbox.ospath('A/mu')
+  rho_path = sbox.ospath('A/D/G/rho')
+  omega_path = sbox.ospath('A/D/H/omega')
 
-  svntest.main.run_svn(None, 'del', iota_path, mu_path, rho_path, omega_path)
+  sbox.simple_rm(iota_path, mu_path, rho_path, omega_path)
 
   # Make sure the deletes show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -230,17 +232,17 @@ def delete_dirs(sbox):
   wc_dir = sbox.wc_dir
 
   # Schedule some directories for deletion (this is recursive!)
-  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
-  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
-  alpha_path = os.path.join(E_path, 'alpha')
-  beta_path  = os.path.join(E_path, 'beta')
-  chi_path   = os.path.join(H_path, 'chi')
-  omega_path = os.path.join(H_path, 'omega')
-  psi_path   = os.path.join(H_path, 'psi')
+  E_path = sbox.ospath('A/B/E')
+  F_path = sbox.ospath('A/B/F')
+  H_path = sbox.ospath('A/D/H')
+  alpha_path = sbox.ospath('A/B/E/alpha')
+  beta_path  = sbox.ospath('A/B/E/beta')
+  chi_path   = sbox.ospath('A/D/H/chi')
+  omega_path = sbox.ospath('A/D/H/omega')
+  psi_path   = sbox.ospath('A/D/H/psi')
 
   # Now, delete (recursively) the directories.
-  svntest.main.run_svn(None, 'del', E_path, F_path, H_path)
+  sbox.simple_rm(E_path, F_path, H_path)
 
   # Make sure the deletes show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -279,9 +281,9 @@ def revert_add_files(sbox):
   wc_dir = sbox.wc_dir
 
   # Revert our changes recursively from wc_dir.
-  delta_path = os.path.join(wc_dir, 'delta')
-  zeta_path = os.path.join(wc_dir, 'A', 'B', 'zeta')
-  epsilon_path = os.path.join(wc_dir, 'A', 'D', 'G', 'epsilon')
+  delta_path = sbox.ospath('delta')
+  zeta_path = sbox.ospath('A/B/zeta')
+  epsilon_path = sbox.ospath('A/D/G/epsilon')
   files = [delta_path, zeta_path, epsilon_path]
 
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
@@ -299,9 +301,9 @@ def revert_add_directories(sbox):
   wc_dir = sbox.wc_dir
 
   # Revert our changes recursively from wc_dir.
-  X_path = os.path.join(wc_dir, 'X')
-  Y_path = os.path.join(wc_dir, 'A', 'C', 'Y')
-  Z_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
+  X_path = sbox.ospath('X')
+  Y_path = sbox.ospath('A/C/Y')
+  Z_path = sbox.ospath('A/D/H/Z')
   files = [X_path, Y_path, Z_path]
 
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
@@ -319,9 +321,9 @@ def revert_nested_adds(sbox):
   wc_dir = sbox.wc_dir
 
   # Revert our changes recursively from wc_dir.
-  X_path = os.path.join(wc_dir, 'X')
-  Y_path = os.path.join(wc_dir, 'A', 'C', 'Y')
-  Z_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
+  X_path = sbox.ospath('X')
+  Y_path = sbox.ospath('A/C/Y')
+  Z_path = sbox.ospath('A/D/H/Z')
   files = [X_path, Y_path, Z_path]
 
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
@@ -338,11 +340,11 @@ def revert_add_executable(sbox):
   add_executable(sbox)
   wc_dir = sbox.wc_dir
 
-  all_path = os.path.join(wc_dir, 'all_exe')
-  none_path = os.path.join(wc_dir, 'none_exe')
-  user_path = os.path.join(wc_dir, 'user_exe')
-  group_path = os.path.join(wc_dir, 'group_exe')
-  other_path = os.path.join(wc_dir, 'other_exe')
+  all_path = sbox.ospath('all_exe')
+  none_path = sbox.ospath('none_exe')
+  user_path = sbox.ospath('user_exe')
+  group_path = sbox.ospath('group_exe')
+  other_path = sbox.ospath('other_exe')
   files = [all_path, none_path, user_path, group_path, other_path]
 
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
@@ -360,10 +362,10 @@ def revert_delete_files(sbox):
   wc_dir = sbox.wc_dir
 
   # Revert our changes recursively from wc_dir.
-  iota_path = os.path.join(wc_dir, 'iota')
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  iota_path = sbox.ospath('iota')
+  mu_path = sbox.ospath('A/mu')
+  rho_path = sbox.ospath('A/D/G/rho')
+  omega_path = sbox.ospath('A/D/H/omega')
   files = [iota_path, mu_path, omega_path, rho_path]
 
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
@@ -381,14 +383,14 @@ def revert_delete_dirs(sbox):
   wc_dir = sbox.wc_dir
 
   # Revert our changes recursively from wc_dir.
-  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
-  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
-  alpha_path = os.path.join(E_path, 'alpha')
-  beta_path  = os.path.join(E_path, 'beta')
-  chi_path   = os.path.join(H_path, 'chi')
-  omega_path = os.path.join(H_path, 'omega')
-  psi_path   = os.path.join(H_path, 'psi')
+  E_path = sbox.ospath('A/B/E')
+  F_path = sbox.ospath('A/B/F')
+  H_path = sbox.ospath('A/D/H')
+  alpha_path = sbox.ospath('A/B/E/alpha')
+  beta_path  = sbox.ospath('A/B/E/beta')
+  chi_path   = sbox.ospath('A/D/H/chi')
+  omega_path = sbox.ospath('A/D/H/omega')
+  psi_path   = sbox.ospath('A/D/H/psi')
   files = [E_path, F_path, H_path,
            alpha_path, beta_path, chi_path, omega_path, psi_path]
 
@@ -420,15 +422,15 @@ def unschedule_missing_added(sbox):
   wc_dir = sbox.wc_dir
 
   # Create some files and dirs, then schedule them for addition
-  file1_path = os.path.join(wc_dir, 'file1')
-  file2_path = os.path.join(wc_dir, 'file2')
-  dir1_path = os.path.join(wc_dir, 'dir1')
-  dir2_path = os.path.join(wc_dir, 'dir2')
+  file1_path = sbox.ospath('file1')
+  file2_path = sbox.ospath('file2')
+  dir1_path = sbox.ospath('dir1')
+  dir2_path = sbox.ospath('dir2')
 
   svntest.main.file_append(file1_path, "This is the file 'file1'.")
   svntest.main.file_append(file2_path, "This is the file 'file2'.")
-  svntest.main.run_svn(None, 'add', file1_path, file2_path)
-  svntest.main.run_svn(None, 'mkdir', dir1_path, dir2_path)
+  sbox.simple_add(file1_path, file2_path)
+  sbox.simple_mkdir(dir1_path, dir2_path)
 
   # Make sure the 4 adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -448,9 +450,11 @@ def unschedule_missing_added(sbox):
   svntest.main.safe_rmtree(dir2_path)
 
   # Unschedule the additions, using 'svn rm' and 'svn revert'.
+  # FILE1_PATH will throw an error. DIR1_PATH will not since the stub is
+  # still available in the parent directory.
   svntest.main.run_svn(svntest.verify.AnyOutput, 'rm', file1_path)
-  svntest.main.run_svn(svntest.verify.AnyOutput, 'rm', dir1_path)
-  svntest.main.run_svn(None, 'revert', file2_path, dir2_path)
+  sbox.simple_rm(dir1_path)
+  sbox.simple_revert(file2_path, dir2_path)
 
   # 'svn st' should now show absolutely zero local mods.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -468,15 +472,15 @@ def delete_missing(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  mu_path = sbox.ospath('A/mu')
+  H_path = sbox.ospath('A/D/H')
 
   # Manually remove a file and a directory.
   os.remove(mu_path)
   svntest.main.safe_rmtree(H_path)
 
   # Now schedule them for deletion anyway, and make sure no error is output.
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', mu_path, H_path)
+  sbox.simple_rm(mu_path, H_path)
 
   # Commit the deletions.
   expected_output = svntest.wc.State(wc_dir, {
@@ -510,13 +514,12 @@ def revert_inside_newly_added_dir(sbox):
 
   # Schedule a new directory for addition
   os.mkdir('foo')
-  svntest.main.run_svn(None, 'add', 'foo')
+  sbox.simple_add('foo')
 
   # Now change into the newly added directory, revert and make sure
   # no error is output.
   os.chdir('foo')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'revert', '.')
+  sbox.simple_revert('.')
 
 #----------------------------------------------------------------------
 # Regression test for issue #1609:
@@ -538,12 +541,13 @@ def status_add_deleted_directory(sbox):
   # svn ci wc -m r2
   # svn mkdir wc/foo
 
-  A_path = os.path.join(wc_dir, 'A')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', A_path)
+  A_path = sbox.ospath('A')
+
+  sbox.simple_rm(A_path)
   svntest.main.safe_rmtree(A_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'log msg', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', A_path)
+  sbox.simple_commit()
+
+  sbox.simple_mkdir(A_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status = svntest.wc.State(wc_dir,
@@ -573,9 +577,9 @@ def add_recursive_already_versioned(sbox):
     return 1
 
   # Create some files, then schedule them for addition
-  delta_path = os.path.join(wc_dir, 'delta')
-  zeta_path = os.path.join(wc_dir, 'A', 'B', 'zeta')
-  epsilon_path = os.path.join(wc_dir, 'A', 'D', 'G', 'epsilon')
+  delta_path = sbox.ospath('delta')
+  zeta_path = sbox.ospath('A/B/zeta')
+  epsilon_path = sbox.ospath('A/D/G/epsilon')
 
   svntest.main.file_append(delta_path, "This is the file 'delta'.")
   svntest.main.file_append(zeta_path, "This is the file 'zeta'.")

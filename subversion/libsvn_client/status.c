@@ -68,7 +68,7 @@ struct status_baton
 static svn_error_t *
 tweak_status(void *baton,
              const char *local_abspath,
-             const svn_wc_status2_t *status,
+             const svn_wc_status3_t *status,
              apr_pool_t *scratch_pool)
 {
   struct status_baton *sb = baton;
@@ -79,7 +79,7 @@ tweak_status(void *baton,
      through here. */
   if (sb->deleted_in_repos)
     {
-      svn_wc_status2_t *new_status = svn_wc_dup_status2(status, scratch_pool);
+      svn_wc_status3_t *new_status = svn_wc_dup_status3(status, scratch_pool);
       new_status->repos_text_status = svn_wc_status_deleted;
       status = new_status;
     }
