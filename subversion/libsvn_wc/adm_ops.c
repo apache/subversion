@@ -376,10 +376,8 @@ process_committed_leaf(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
-
-#ifdef SVN_EXPERIMENTAL
-  /* ### copied_checksum is originally MD-5 but will later be SHA-1... */
-#endif
+  /* ### SVN_EXPERIMENTAL_PRISTINE:
+     copied_checksum is originally MD-5 but will later be SHA-1... */
 
   if (kind == svn_wc__db_kind_dir)
     adm_abspath = local_abspath;

@@ -1118,10 +1118,8 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                    NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
-
-#ifdef SVN_EXPERIMENTAL
-      /* ### expected_checksum is originally MD-5 but will later be SHA-1... */
-#endif
+      /* ### SVN_EXPERIMENTAL_PRISTINE:
+         expected_checksum is originally MD-5 but will later be SHA-1... */
 
       /* ### We want expected_checksum to ALWAYS be present, but on old
          ### working copies maybe it won't be (unclear?). If it is there,

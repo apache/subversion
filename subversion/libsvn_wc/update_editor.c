@@ -373,10 +373,9 @@ struct handler_baton
 
   /* Where we are assembling the new file. */
   const char *new_text_base_tmp_abspath;
-#ifdef SVN_EXPERIMENTAL
-  /* The WC-NG equivalent of NEW_TEXT_BASE_TMP_ABSPATH. */
+  /* ### SVN_EXPERIMENTAL_PRISTINE:
+     The WC-NG equivalent of NEW_TEXT_BASE_TMP_ABSPATH. */
   const char *new_pristine_tmp_abspath;
-#endif
 
     /* The expected MD5 checksum of the text source or NULL if no base
      checksum is available */
@@ -1000,10 +999,9 @@ struct file_baton
      in-progress in the tmp area).  This gets set if there are file
      content changes. */
   const char *new_text_base_tmp_abspath;
-#ifdef SVN_EXPERIMENTAL
-  /* The WC-NG equivalent of NEW_TEXT_BASE_TMP_ABSPATH. */
+  /* ### SVN_EXPERIMENTAL_PRISTINE:
+     The WC-NG equivalent of NEW_TEXT_BASE_TMP_ABSPATH. */
   const char *new_pristine_tmp_abspath;
-#endif
 
   /* The MD5 checksum of the incoming text base (pristine text). */
   svn_checksum_t *new_text_base_md5_checksum;
@@ -1146,20 +1144,18 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       /* We failed to apply the delta; clean up the temporary file.  */
       svn_error_clear(svn_io_remove_file2(hb->new_text_base_tmp_abspath, TRUE,
                                           hb->pool));
-#ifdef SVN_EXPERIMENTAL
+      /* ### SVN_EXPERIMENTAL_PRISTINE: */
       svn_error_clear(svn_io_remove_file2(hb->new_pristine_tmp_abspath, TRUE,
                                           hb->pool));
-#endif
     }
   else
     {
       /* Tell the file baton about the new text base. */
       fb->new_text_base_tmp_abspath = apr_pstrdup(fb->pool,
                                               hb->new_text_base_tmp_abspath);
-#ifdef SVN_EXPERIMENTAL
+      /* ### SVN_EXPERIMENTAL_PRISTINE: */
       fb->new_pristine_tmp_abspath = apr_pstrdup(fb->pool,
                                               hb->new_pristine_tmp_abspath);
-#endif
 
       /* ... and its checksums. */
       fb->new_text_base_md5_checksum =
@@ -3234,7 +3230,7 @@ absent_directory(const char *path,
 }
 
 
-#ifdef SVN_EXPERIMENTAL
+/* ### SVN_EXPERIMENTAL_PRISTINE: */
 /* Set *TEE_OUTPUT_STREAM to a writable stream that copies its data to both
    OUTPUT_STREAM and a new WC-NG pristine temp file corresponding to (DB,
    LOCAL_ABSPATH). Set *NEW_PRISTINE_TMP_ABSPATH to the path of that file.
@@ -3263,7 +3259,6 @@ get_pristine_tee_stream(svn_stream_t **tee_output_stream,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 
 /* Beginning at DIR_ABSPATH (from repository with uuid DIR_REPOS_UUID and
@@ -3525,12 +3520,12 @@ add_file_with_history(const char *path,
                                      &tfb->copied_text_base_sha1_checksum,
                                      db, pb->local_abspath,
                                      pool, pool));
-#ifdef SVN_EXPERIMENTAL
-  /* Copy the 'copied_stream' into a WC-NG pristine temp file as well. */
+  /* ### SVN_EXPERIMENTAL_PRISTINE:
+     Copy the 'copied_stream' into a WC-NG pristine temp file as well.
+     This is currently tee'd for compat. */
   SVN_ERR(get_pristine_tee_stream(&copied_stream, &tfb->new_pristine_tmp_abspath,
                                   db, tfb->local_abspath, copied_stream,
                                   pool, subpool));
-#endif
 
   if (src_local_abspath != NULL) /* Found a file to copy */
     {
@@ -4159,13 +4154,12 @@ apply_textdelta(void *file_baton,
       return svn_error_return(err);
     }
 
-#ifdef SVN_EXPERIMENTAL
-  /* Copy the 'target' stream into a WC-NG pristine temp file as well.
-     ###: This is currently tee'd for compat. */
+  /* ### SVN_EXPERIMENTAL_PRISTINE:
+     Copy the 'target' stream into a WC-NG pristine temp file as well.
+     This is currently tee'd for compat. */
   SVN_ERR(get_pristine_tee_stream(&target, &hb->new_pristine_tmp_abspath,
                                   fb->edit_baton->db, fb->local_abspath,
                                   target, handler_pool, pool));
-#endif
 
   /* Prepare to apply the delta.  */
   svn_txdelta_apply(source, target,
@@ -4740,8 +4734,10 @@ close_file(void *file_baton,
             expected_md5_digest,
             svn_checksum_to_cstring_display(new_text_base_md5_checksum, pool));
 
-#ifdef SVN_EXPERIMENTAL
+#ifdef SVN_EXPERIMENTAL_PRISTINE
   /* If we had a text change, drop the pristine into it's proper place. */
+  /* ### Caution: there is as yet no code to ever remove these pristine
+     files when they are superseded. */
   /* The WC-1 equivalent code is in merge_file(). Shouldn't they be together?
      Bert said: In 1.0 the install of the .svn-base has to be done in loggy/wq
      (or it can break your wc), while with the new pristine the file can and
@@ -4753,6 +4749,12 @@ close_file(void *file_baton,
     SVN_ERR(svn_wc__db_pristine_install(eb->db, fb->new_pristine_tmp_abspath,
                                         new_text_base_sha1_checksum,
                                         new_text_base_md5_checksum, pool));
+#else
+  /* ### We're compiling without experimental support for the new pristine
+     store. Nevertheless, we have created a temp file with this end in mind.
+     Delete it now so it doesn't fill up the poor developer's disk. */
+  if (fb->new_pristine_tmp_abspath)
+    SVN_ERR(svn_io_remove_file2(fb->new_pristine_tmp_abspath, FALSE, pool));
 #endif
 
   /* Get a copy of the entry *before* we begin mucking around with the
@@ -4834,7 +4836,7 @@ close_file(void *file_baton,
 
   /* Insert/replace the BASE node with all of the new metadata.  */
   {
-#ifdef SVN_EXPERIMENTAL
+#ifdef SVN_EXPERIMENTAL_PRISTINE
       /* Set the 'checksum' column of the file's BASE_NODE row to
        * NEW_TEXT_BASE_SHA1_CHECKSUM.  The pristine text identified by that
        * checksum is already in the pristine store. */
@@ -4854,10 +4856,8 @@ close_file(void *file_baton,
                                          &new_checksum, NULL, NULL, NULL,
                                          eb->db, fb->local_abspath,
                                          pool, pool));
-#ifdef SVN_EXPERIMENTAL
-        /* ### new_checksum is originally MD-5 but will later be SHA-1... */
-#endif
-
+        /* ### SVN_EXPERIMENTAL_PRISTINE:
+           new_checksum is originally MD-5 but will later be SHA-1... */
       }
 
     SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
