@@ -1067,7 +1067,7 @@ read_entries_new(apr_hash_t **result_entries,
           /* SVN_EXPERIMENTAL_PRISTINE:
              If we got a SHA-1, get the corresponding MD-5. */
           if (checksum->kind != svn_checksum_md5)
-            SVN_ERR(svn_wc__db_get_pristine_md5(&checksum, db,
+            SVN_ERR(svn_wc__db_pristine_get_md5(&checksum, db,
                                                 entry_abspath, checksum,
                                                 scratch_pool, scratch_pool));
 

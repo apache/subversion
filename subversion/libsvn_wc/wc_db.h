@@ -848,6 +848,18 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool);
 
 
+/* Set *PRISTINE_MD5_CHECKSUM to the MD-5 checksum of a pristine text
+   identified by its SHA-1 checksum PRISTINE_SHA1_CHECKSUM. Return an error
+   if the pristine text does not exist or its MD5 checksum is not found. */
+svn_error_t *
+svn_wc__db_pristine_get_md5(const svn_checksum_t **pristine_md5_checksum,
+                            svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            const svn_checksum_t *pristine_sha1_checksum,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
 /* ### check for presence, according to the given mode (on how hard we
    ### should examine things)
 */
@@ -2165,17 +2177,6 @@ svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
                                      const char *local_abspath,
                                      apr_pool_t *scratch_pool);
 
-
-/* Set *PRISTINE_MD5_CHECKSUM to the MD-5 checksum of a pristine text
-   identified by its SHA-1 checksum PRISTINE_SHA1_CHECKSUM. Return an error
-   if the pristine text does not exist or its MD5 checksum is not found. */
-svn_error_t *
-svn_wc__db_get_pristine_md5(const svn_checksum_t **pristine_md5_checksum,
-                            svn_wc__db_t *db,
-                            const char *wri_abspath,
-                            const svn_checksum_t *pristine_sha1_checksum,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
 
 /* @} */
 
