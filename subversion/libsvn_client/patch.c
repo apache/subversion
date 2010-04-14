@@ -1430,7 +1430,7 @@ struct status_baton
 static svn_error_t *
 find_existing_children(void *baton,
                        const char *abspath,
-                       const svn_wc_status2_t *status,
+                       const svn_wc_status3_t *status,
                        apr_pool_t *pool)
 {
   struct status_baton *btn = baton;
