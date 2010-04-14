@@ -4856,8 +4856,9 @@ close_file(void *file_baton,
                                          &new_checksum, NULL, NULL, NULL,
                                          eb->db, fb->local_abspath,
                                          pool, pool));
-        /* ### SVN_EXPERIMENTAL_PRISTINE:
-           new_checksum is originally MD-5 but will later be SHA-1... */
+        /* SVN_EXPERIMENTAL_PRISTINE:
+           new_checksum is originally MD-5 but will later be SHA-1.  That's
+           OK here because we just read it and write it back. */
       }
 
     SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
