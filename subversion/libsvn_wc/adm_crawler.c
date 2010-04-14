@@ -1054,7 +1054,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 {
   svn_txdelta_window_handler_t handler;
   void *wh_baton;
-  const svn_checksum_t *expected_checksum;
+  const svn_checksum_t *expected_md5_checksum;
   svn_checksum_t *verify_checksum = NULL;  /* calc'd MD5 of BASE_STREAM */
   svn_checksum_t *local_checksum;  /* calc'd MD5 of LOCAL_STREAM */
   svn_error_t *err;
@@ -1112,16 +1112,22 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                    NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    NULL, NULL,
-                                   &expected_checksum, NULL,
+                                   &expected_md5_checksum, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
-      /* ### SVN_EXPERIMENTAL_PRISTINE:
-         expected_checksum is originally MD-5 but will later be SHA-1... */
+      /* SVN_EXPERIMENTAL_PRISTINE:
+         If we got a SHA-1, get the corresponding MD-5. */
+      if (expected_md5_checksum
+          && expected_md5_checksum->kind != svn_checksum_md5)
+        SVN_ERR(svn_wc__db_get_pristine_md5(&expected_md5_checksum,
+                                            db, local_abspath,
+                                            expected_md5_checksum,
+                                            scratch_pool, scratch_pool));
 
-      /* ### We want expected_checksum to ALWAYS be present, but on old
+      /* ### We want expected_md5_checksum to ALWAYS be present, but on old
          working copies maybe it won't be (unclear?).  If it is there,
          then we can pass it to apply_textdelta() as required, and later on
          we can use it as an expected value to verify against.  Therefore
@@ -1133,7 +1139,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
          calculate it a second time during the later reading of the stream
          for the purpose of verification, and will leave VERIFY_CHECKSUM as
          NULL. */
-      if (expected_checksum)
+      if (expected_md5_checksum)
         {
           /* Arrange to set VERIFY_CHECKSUM to the MD5 of what is *actually*
              found when the base stream is read. */
@@ -1161,14 +1167,14 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
           /* Closing this will cause a full read/checksum. */
           SVN_ERR(svn_stream_close(p_stream));
 
-          expected_checksum = p_checksum;
+          expected_md5_checksum = p_checksum;
         }
     }
   else
     {
       /* Send a fulltext. */
       base_stream = svn_stream_empty(scratch_pool);
-      expected_checksum = NULL;
+      expected_md5_checksum = NULL;
     }
 
   /* Tell the editor that we're about to apply a textdelta to the
@@ -1177,11 +1183,11 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
     /* apply_textdelta() is working against a base with this checksum */
     const char *base_digest_hex = NULL;
 
-    if (expected_checksum)
-      /* ### Why '..._display()'?  expected_checksum should never be all-
+    if (expected_md5_checksum)
+      /* ### Why '..._display()'?  expected_md5_checksum should never be all-
        * zero, but if it is, we would want to pass NULL not an all-zero
        * digest to apply_textdelta(), wouldn't we? */
-      base_digest_hex = svn_checksum_to_cstring_display(expected_checksum,
+      base_digest_hex = svn_checksum_to_cstring_display(expected_md5_checksum,
                                                         scratch_pool);
 
     SVN_ERR(editor->apply_textdelta(file_baton, base_digest_hex, scratch_pool,
@@ -1210,8 +1216,8 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 
   /* If we have an error, it may be caused by a corrupt text base.
      Check the checksum and discard `err' if they don't match. */
-  if (expected_checksum && verify_checksum
-      && !svn_checksum_match(expected_checksum, verify_checksum))
+  if (expected_md5_checksum && verify_checksum
+      && !svn_checksum_match(expected_md5_checksum, verify_checksum))
     {
       /* The entry checksum does not match the actual text
          base checksum.  Extreme badness. Of course,
@@ -1242,7 +1248,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                         "   expected:  %s\n"
                         "     actual:  %s\n"),
                       svn_dirent_local_style(text_base, scratch_pool),
-                      svn_checksum_to_cstring_display(expected_checksum,
+                      svn_checksum_to_cstring_display(expected_md5_checksum,
                                                       scratch_pool),
                       svn_checksum_to_cstring_display(verify_checksum,
                                                       scratch_pool));
