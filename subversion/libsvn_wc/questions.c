@@ -85,6 +85,11 @@
  * if verify_checksum is TRUE. If checksum does not match, return the error
  * SVN_ERR_WC_CORRUPT_TEXT_BASE.
  *
+ * If COMPARE_TEXTBASES is true, translate VERSIONED_FILE_ABSPATH to
+ * repository-normal form and compare the result with PRISTINE_STREAM; if
+ * false, translate PRISTINE_STREAM to working-copy form and compare the
+ * result with VERSIONED_FILE_ABSPATH.
+ *
  * PRISTINE_STREAM will be closed before a successful return.
  *
  * DB is a wc_db; use SCRATCH_POOL for temporary allocation.
