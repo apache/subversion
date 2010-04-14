@@ -1072,7 +1072,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
    * *TEMPFILE to the path to it. */
   if (tempfile)
     {
-      apr_file_t *tempbasefile;
+      svn_stream_t *tempstream;
 
       SVN_ERR(svn_wc__text_base_path(tempfile, db, local_abspath, TRUE,
                                      scratch_pool));
@@ -1081,19 +1081,14 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
          administrative tmp area because a) we need to detranslate eol
          and keywords anyway, and b) after the commit, we're going to
          copy the tmp file to become the new text base anyway. */
-      SVN_ERR(svn_io_file_open(&tempbasefile, *tempfile,
-                               APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
-                               result_pool));
+      SVN_ERR(svn_stream_open_writable(&tempstream, *tempfile,
+                                       result_pool, scratch_pool));
 
       /* Wrap the translated stream with a new stream that writes the
          translated contents into the new text base file as we read from it.
          Note that the new text base file will be closed when the new stream
          is closed. */
-      local_stream
-        = copying_stream(local_stream,
-                         svn_stream_from_aprfile2(tempbasefile, FALSE,
-                                                  scratch_pool),
-                         scratch_pool);
+      local_stream = copying_stream(local_stream, tempstream, scratch_pool);
     }
 
   /* Set BASE_STREAM to a stream providing the base (source) content for the
