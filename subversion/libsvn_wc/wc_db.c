@@ -7219,7 +7219,7 @@ svn_wc__db_temp_get_file_external(const char **serialized_file_external,
 
 
 svn_error_t *
-svn_wc__db_get_pristine_md5(const svn_checksum_t **md5_checksum,
+svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
                             svn_wc__db_t *db,
                             const char *wri_abspath,
                             const svn_checksum_t *sha1_checksum,
@@ -7251,9 +7251,9 @@ svn_wc__db_get_pristine_md5(const svn_checksum_t **md5_checksum,
                              svn_checksum_to_cstring_display(sha1_checksum,
                                                              scratch_pool));
 
-  SVN_ERR(svn_sqlite__column_checksum(md5_checksum, stmt, 0, scratch_pool));
-
+  SVN_ERR(svn_sqlite__column_checksum(md5_checksum, stmt, 0, result_pool));
   SVN_ERR_ASSERT((*md5_checksum)->kind == svn_checksum_md5);
+
   return svn_error_return(svn_sqlite__reset(stmt));
 }
 

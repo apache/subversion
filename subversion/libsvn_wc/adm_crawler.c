@@ -1122,7 +1122,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
          If we got a SHA-1, get the corresponding MD-5. */
       if (expected_md5_checksum
           && expected_md5_checksum->kind != svn_checksum_md5)
-        SVN_ERR(svn_wc__db_get_pristine_md5(&expected_md5_checksum,
+        SVN_ERR(svn_wc__db_pristine_get_md5(&expected_md5_checksum,
                                             db, local_abspath,
                                             expected_md5_checksum,
                                             scratch_pool, scratch_pool));
