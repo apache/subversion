@@ -28,6 +28,7 @@
 #include "svn_io.h"
 #include "svn_dirent_uri.h"
 #include "svn_checksum.h"
+#include "sqlite.h"
 
 #include "private/svn_sqlite.h"
 #include "svn_private_config.h"
@@ -47,6 +48,8 @@
 #else
   #include <sqlite3.h>
 #endif
+
+SQLITE_SQL_DECLARE_STATEMENTS(statements);
 
 #ifdef SQLITE3_DEBUG
 /* An sqlite query execution callback. */
@@ -963,4 +966,29 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
     }
 
   return svn_error_return(exec_sql(db, "COMMIT TRANSACTION;"));
+}
+
+svn_error_t *
+svn_sqlite__hotcopy(const char *src_path,
+                    const char *dst_path,
+                    apr_pool_t *scratch_pool)
+{
+  svn_sqlite__db_t *db;
+  svn_sqlite__stmt_t *stmt;
+
+  /* The SELECT takes a shared lock in the source database which
+     blocks writers and so ensures that the database won't change
+     during the copy.
+
+     We could use the SQLite backup interface (from 3.6.11 and still
+     experimental) and the copy would be done in chunks with the lock
+     released between chunks. */
+  SVN_ERR(svn_sqlite__open(&db, src_path, svn_sqlite__mode_readonly,
+                           statements, 0, NULL, scratch_pool, scratch_pool));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_DUMMY_SELECT_FOR_BACKUP));
+  SVN_ERR(svn_sqlite__step_row(stmt));
+  SVN_ERR(svn_io_copy_file(src_path, dst_path, TRUE, scratch_pool));
+  SVN_ERR(svn_sqlite__close(db));
+
+  return SVN_NO_ERROR;
 }
