@@ -1605,8 +1605,11 @@ svn_fs_fs__hotcopy(const char *src_path,
   /* Copy the packed revprop db. */
   if (format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
     {
-      SVN_ERR(svn_io_dir_file_copy(src_subdir, dst_subdir, PATH_REVPROPS_DB,
-                                   pool));
+      const char *src_file = svn_dirent_join(src_subdir, PATH_REVPROPS_DB,
+                                             pool);
+      const char *dst_file = svn_dirent_join(dst_subdir, PATH_REVPROPS_DB,
+                                             pool);
+      SVN_ERR(svn_sqlite__hotcopy(src_file, dst_file, pool));
     }
 
   for (rev = min_unpacked_revprop; rev <= youngest; rev++)
