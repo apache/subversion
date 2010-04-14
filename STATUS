@@ -123,14 +123,6 @@ Candidate changes:
    Votes:
      +1: kameshj
 
- * r876245, r932942
-   Make the swib-rb tests pass.  We *think* this may be related to a memory
-   bug somewhere, since it is only evident on a couple of platforms.
-   Justification:
-     Fixes ruby binding tests on a couple of platforms.  Needed for release.
-   Votes:
-     +1: joeswatosh, cmpilato
-
  * r933194
    Fix for issue #2753
    SVNListParentPath feature doesn't work when svn authz is used.
@@ -216,3 +208,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r876245, r932942
+   Make the swib-rb tests pass.  We *think* this may be related to a memory
+   bug somewhere, since it is only evident on a couple of platforms.
+   Justification:
+     Fixes ruby binding tests on a couple of platforms.  Needed for release.
+   Votes:
+     +1: joeswatosh, cmpilato
