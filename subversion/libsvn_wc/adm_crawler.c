@@ -1054,8 +1054,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 {
   svn_txdelta_window_handler_t handler;
   void *wh_baton;
-  const char *base_digest_hex;
-  const svn_checksum_t *expected_checksum = NULL;
+  const svn_checksum_t *expected_checksum;
   svn_checksum_t *verify_checksum = NULL;  /* calc'd MD5 of BASE_STREAM */
   svn_checksum_t *local_checksum;  /* calc'd MD5 of LOCAL_STREAM */
   svn_error_t *err;
@@ -1099,7 +1098,6 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 
   /* Set BASE_STREAM to a stream providing the base (source) content for the
    * delta, which may be an empty stream;
-   * set BASE_DIGEST_HEX to its expected MD5 hex digest (or NULL);
    * set EXPECTED_CHECKSUM to its stored (or possibly calculated) MD5 checksum;
    * and (usually) arrange for its VERIFY_CHECKSUM to be calculated later. */
   if (! fulltext)
@@ -1165,25 +1163,30 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 
           expected_checksum = p_checksum;
         }
-
-      /* apply_textdelta() is working against a base with this checksum */
-      /* ### Why '..._display()'?  expected_checksum should never be all-
-       * zero, but if it is, we would want to pass NULL not an all-zero
-       * digest to apply_textdelta(), wouldn't we? */
-      base_digest_hex = svn_checksum_to_cstring_display(expected_checksum,
-                                                        scratch_pool);
     }
   else
     {
       /* Send a fulltext. */
       base_stream = svn_stream_empty(scratch_pool);
-      base_digest_hex = NULL;
+      expected_checksum = NULL;
     }
 
   /* Tell the editor that we're about to apply a textdelta to the
      file baton; the editor returns to us a window consumer and baton.  */
-  SVN_ERR(editor->apply_textdelta(file_baton, base_digest_hex, scratch_pool,
-                                  &handler, &wh_baton));
+  {
+    /* apply_textdelta() is working against a base with this checksum */
+    const char *base_digest_hex = NULL;
+
+    if (expected_checksum)
+      /* ### Why '..._display()'?  expected_checksum should never be all-
+       * zero, but if it is, we would want to pass NULL not an all-zero
+       * digest to apply_textdelta(), wouldn't we? */
+      base_digest_hex = svn_checksum_to_cstring_display(expected_checksum,
+                                                        scratch_pool);
+
+    SVN_ERR(editor->apply_textdelta(file_baton, base_digest_hex, scratch_pool,
+                                    &handler, &wh_baton));
+  }
 
   /* Run diff processing, throwing windows at the handler. */
   err = svn_txdelta_run(base_stream, local_stream,
