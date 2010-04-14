@@ -1056,11 +1056,11 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
   void *wh_baton;
   const char *base_digest_hex;
   const svn_checksum_t *expected_checksum = NULL;
-  svn_checksum_t *verify_checksum = NULL;
-  svn_checksum_t *local_checksum;
+  svn_checksum_t *verify_checksum = NULL;  /* calc'd MD5 of BASE_STREAM */
+  svn_checksum_t *local_checksum;  /* calc'd MD5 of LOCAL_STREAM */
   svn_error_t *err;
-  svn_stream_t *base_stream;
-  svn_stream_t *local_stream;
+  svn_stream_t *base_stream;  /* delta source */
+  svn_stream_t *local_stream;  /* delta target: LOCAL_ABSPATH transl. to NF */
 
   /* Translated input */
   SVN_ERR(svn_wc__internal_translated_stream(&local_stream, db,
@@ -1073,19 +1073,16 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
    * *TEMPFILE to the path to it. */
   if (tempfile)
     {
-      const char *tmp_base;
       apr_file_t *tempbasefile;
 
-      SVN_ERR(svn_wc__text_base_path(&tmp_base, db, local_abspath, TRUE,
+      SVN_ERR(svn_wc__text_base_path(tempfile, db, local_abspath, TRUE,
                                      scratch_pool));
-
-      *tempfile = tmp_base;
 
       /* Make an untranslated copy of the working file in the
          administrative tmp area because a) we need to detranslate eol
          and keywords anyway, and b) after the commit, we're going to
          copy the tmp file to become the new text base anyway. */
-      SVN_ERR(svn_io_file_open(&tempbasefile, tmp_base,
+      SVN_ERR(svn_io_file_open(&tempbasefile, *tempfile,
                                APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
                                result_pool));
 
@@ -1100,6 +1097,11 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                          scratch_pool);
     }
 
+  /* Set BASE_STREAM to a stream providing the base (source) content for the
+   * delta, which may be an empty stream;
+   * set BASE_DIGEST_HEX to its expected MD5 hex digest (or NULL);
+   * set EXPECTED_CHECKSUM to its stored (or possibly calculated) MD5 checksum;
+   * and (usually) arrange for its VERIFY_CHECKSUM to be calculated later. */
   if (! fulltext)
     {
       /* Compute delta against the pristine contents */
@@ -1122,12 +1124,21 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
          expected_checksum is originally MD-5 but will later be SHA-1... */
 
       /* ### We want expected_checksum to ALWAYS be present, but on old
-         ### working copies maybe it won't be (unclear?). If it is there,
-         ### then we can use it as an expected value. If it is NOT there,
-         ### then we must compute it for the apply_textdelta() call. */
+         working copies maybe it won't be (unclear?).  If it is there,
+         then we can pass it to apply_textdelta() as required, and later on
+         we can use it as an expected value to verify against.  Therefore
+         we prepare now to calculate (during the later reading of the base
+         stream) the actual checksum of the base stream as VERIFY_CHECKSUM.
+
+         If the base checksum was NOT recorded, then we must compute it NOW
+         for the apply_textdelta() call.  In this case, we won't bother to
+         calculate it a second time during the later reading of the stream
+         for the purpose of verification, and will leave VERIFY_CHECKSUM as
+         NULL. */
       if (expected_checksum)
         {
-          /* Compute a checksum for what is *actually* found */
+          /* Arrange to set VERIFY_CHECKSUM to the MD5 of what is *actually*
+             found when the base stream is read. */
           base_stream = svn_stream_checksummed2(base_stream, &verify_checksum,
                                                 NULL, svn_checksum_md5, TRUE,
                                                 scratch_pool);
@@ -1137,6 +1148,8 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
           svn_stream_t *p_stream;
           svn_checksum_t *p_checksum;
 
+          /* Set EXPECTED_CHECKSUM to the MD5 checksum of the existing
+           * pristine text, by reading the text and calculating it. */
           /* ### we should ALREADY have the checksum for pristine. */
           SVN_ERR(svn_wc__get_pristine_contents(&p_stream, db, local_abspath,
                                                 scratch_pool, scratch_pool));
@@ -1154,6 +1167,9 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
         }
 
       /* apply_textdelta() is working against a base with this checksum */
+      /* ### Why '..._display()'?  expected_checksum should never be all-
+       * zero, but if it is, we would want to pass NULL not an all-zero
+       * digest to apply_textdelta(), wouldn't we? */
       base_digest_hex = svn_checksum_to_cstring_display(expected_checksum,
                                                         scratch_pool);
     }
