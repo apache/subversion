@@ -975,23 +975,55 @@ svn_sqlite__hotcopy(const char *src_path,
                     const char *dst_path,
                     apr_pool_t *scratch_pool)
 {
-  svn_sqlite__db_t *db;
-  svn_sqlite__stmt_t *stmt;
+  svn_sqlite__db_t *src_db;
 
-  /* The SELECT takes a shared lock in the source database which
-     blocks writers and so ensures that the database won't change
-     during the copy.
-
-     We could use the SQLite backup interface (from 3.6.11 and still
-     experimental) and the copy would be done in chunks with the lock
-     released between chunks. */
-  SVN_ERR(svn_sqlite__open(&db, src_path, svn_sqlite__mode_readonly,
+  SVN_ERR(svn_sqlite__open(&src_db, src_path, svn_sqlite__mode_readonly,
                            internal_statements, 0, NULL,
                            scratch_pool, scratch_pool));
-  SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_DUMMY_SELECT_FOR_BACKUP));
-  SVN_ERR(svn_sqlite__step_row(stmt));
-  SVN_ERR(svn_io_copy_file(src_path, dst_path, TRUE, scratch_pool));
-  SVN_ERR(svn_sqlite__close(db));
+
+#if SQLITE_VERSION_AT_LEAST(3,6,11)
+  {
+    svn_sqlite__db_t *dst_db;
+    sqlite3_backup *backup;
+    int rc1, rc2;
+
+    SVN_ERR(svn_sqlite__open(&dst_db, dst_path, svn_sqlite__mode_rwcreate,
+                             NULL, 0, NULL, scratch_pool, scratch_pool));
+    backup = sqlite3_backup_init(dst_db->db3, "main", src_db->db3, "main");
+    if (!backup)
+      return SVN_NO_ERROR;
+    do
+      {
+        /* Pages are usually 1024 byte (SQLite docs). On my laptop
+           copying gets faster as the number of pages is increased up
+           to about 64, beyond that speed levels off.  Lets put the
+           number of pages an order of magnitude higher, this is still
+           likely to be a fraction of large databases. */
+        rc1 = sqlite3_backup_step(backup, 1024);
+        if (rc1 == SQLITE_BUSY || rc1 == SQLITE_LOCKED)
+          sqlite3_sleep(25);
+      }
+    while (rc1 == SQLITE_OK || rc1 == SQLITE_BUSY || rc1 == SQLITE_LOCKED);
+    rc2 = sqlite3_backup_finish(backup);
+    if (rc1 != SQLITE_DONE)
+      SQLITE_ERR(rc1, dst_db);
+    SQLITE_ERR(rc2, dst_db);
+    SVN_ERR(svn_sqlite__close(dst_db));
+  }
+#else
+  {
+    svn_sqlite__stmt_t *stmt;
+    /* The SELECT takes a shared lock in the source database which
+       blocks writers and so ensures that the database won't change
+       during the copy. */
+    SVN_ERR(svn_sqlite__get_statement(&stmt, src_db,
+                                      STMT_DUMMY_SELECT_FOR_BACKUP));
+    SVN_ERR(svn_sqlite__step_row(stmt));
+    SVN_ERR(svn_io_copy_file(src_path, dst_path, TRUE, scratch_pool));
+  }
+#endif
+
+  SVN_ERR(svn_sqlite__close(src_db));
 
   return SVN_NO_ERROR;
 }
