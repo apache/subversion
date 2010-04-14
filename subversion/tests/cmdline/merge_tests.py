@@ -18719,10 +18719,11 @@ def reintegrate_with_subtree_merges(sbox):
                                      'Merge everything from A to A_COPY',
                                      wc_dir)
 
-  # Now update the WC and try to reintegrate.  Currently this fails because
-  # while we really have merged everything from A to A_COPY, the naive
-  # interpretation of the mergeinfo on A_COPY doesn't reflect this which
-  # previously caused the test to fail with this error:
+  # Now update the WC and try to reintegrate.  Since we really have merged
+  # everything from A to A_COPY, even though it was done via subtree merges,
+  # the reintegrate should succeed.  Previously it failed because the naive
+  # interpretation of the mergeinfo on A_COPY didn't reflect that it was 
+  # fully synced with A, resulting in this error:
   #
   #    svn merge ^/A_COPY A --reintegrate
   #    ..\..\..\subversion\svn\merge-cmd.c:358: (apr_err=195016)
