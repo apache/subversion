@@ -1001,6 +1001,12 @@ svn_sqlite__hotcopy(const char *src_path,
            number of pages an order of magnitude higher, this is still
            likely to be a fraction of large databases. */
         rc1 = sqlite3_backup_step(backup, 1024);
+
+        /* Should we sleep on SQLITE_OK?  That would make copying a
+           large database take much longer.  When we do sleep how,
+           long should we sleep?  Should the sleep get longer if we
+           keep getting BUSY/LOCKED?  I have no real reason for
+           choosing 25. */
         if (rc1 == SQLITE_BUSY || rc1 == SQLITE_LOCKED)
           sqlite3_sleep(25);
       }
