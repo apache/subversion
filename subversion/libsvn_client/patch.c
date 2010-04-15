@@ -36,6 +36,7 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_props.h"
+#include "svn_sorts.h"
 #include "svn_subst.h"
 #include "svn_wc.h"
 #include "client.h"
@@ -156,6 +157,10 @@ typedef struct {
 
   /* True if the target's parent directory exists. */
   svn_boolean_t parent_dir_exists;
+
+  /* True if the target's parent directory is being deleted
+   * as a result of the patching process. */
+  svn_boolean_t parent_dir_deleted;
 
   /* The keywords of the target. */
   apr_hash_t *keywords;
@@ -515,6 +520,7 @@ init_patch_target(patch_target_t **patch_target,
   target->had_rejects = FALSE;
   target->deleted = FALSE;
   target->eof = FALSE;
+  target->parent_dir_deleted = FALSE;
   target->pool = result_pool;
   target->lines = apr_array_make(result_pool, 0,
                                  sizeof(svn_stream_mark_t *));
@@ -1273,7 +1279,7 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
 {
   if (target->deleted)
     {
-      if (! dry_run)
+      if (! dry_run && ! target->parent_dir_deleted)
         {
           /* Schedule the target for deletion.  Suppress
            * notification, we'll do it manually in a minute.
@@ -1441,6 +1447,290 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
   return SVN_NO_ERROR;
 }
 
+/* Baton for find_existing_children() */
+struct status_baton
+{
+  apr_array_header_t *existing_targets;
+  const char *parent_path;
+  apr_pool_t *result_pool;
+};
+
+/* Implements svn_wc_status_func4_t. */
+static svn_error_t *
+find_existing_children(void *baton,
+                       const char *abspath,
+                       const svn_wc_status3_t *status,
+                       apr_pool_t *pool)
+{
+  struct status_baton *btn = baton;
+
+  if (status->text_status != svn_wc_status_none
+      && status->text_status != svn_wc_status_deleted
+      && strcmp(abspath, btn->parent_path))
+    {
+      APR_ARRAY_PUSH(btn->existing_targets, 
+                     const char *) = apr_pstrdup(btn->result_pool,
+                                                 abspath);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Indicate in *EMPTY whether the directory at LOCAL_ABSPATH has any
+ * versioned or unversioned children. Consider any DELETED_TARGETS,
+ * as well as paths listed in DELETED_ABSPATHS_LIST (which may be NULL)
+ * as already deleted. Use WC_CTX as the working copy context.
+ * Do temporary allocations in SCRATCH_POOL. */
+static svn_error_t *
+check_dir_empty(svn_boolean_t *empty, const char *local_abspath,
+                svn_wc_context_t *wc_ctx, 
+                apr_array_header_t *deleted_targets,
+                apr_array_header_t *deleted_abspath_list,
+                apr_pool_t *scratch_pool)
+{
+  struct status_baton btn;
+  svn_opt_revision_t revision;
+  svn_error_t *err;
+  int i;
+
+  btn.existing_targets = apr_array_make(scratch_pool, 0, 
+                                        sizeof(patch_target_t *));
+  btn.parent_path = local_abspath;
+  btn.result_pool = scratch_pool;
+  revision.kind = svn_opt_revision_unspecified;
+
+  err = svn_wc_walk_status(wc_ctx, local_abspath, svn_depth_immediates,
+                           TRUE, TRUE, TRUE, NULL, find_existing_children,
+                           &btn, NULL, NULL, NULL, NULL, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+        {
+          /* The patch has deleted the entire working copy. */
+          svn_error_clear(err);
+          *empty = FALSE;
+          return SVN_NO_ERROR;
+        }
+      else
+        svn_error_return(err);
+    }
+
+  *empty = TRUE;
+
+  /* Do we delete all targets? */
+  for (i = 0; i < btn.existing_targets->nelts; i++)
+    {
+      int j;
+      const char *found;
+      svn_boolean_t deleted;
+
+      deleted = FALSE;
+      found = APR_ARRAY_IDX(btn.existing_targets, i, const char *);
+
+      for (j = 0; j < deleted_targets->nelts; j++)
+        {
+          patch_target_t *target;
+
+          target = APR_ARRAY_IDX(deleted_targets, j, patch_target_t *);
+          if (! svn_path_compare_paths(found, target->abs_path))
+           {
+              deleted = TRUE;
+              break;
+           }
+        }
+      if (! deleted && deleted_abspath_list)
+        {
+          for (j = 0; j < deleted_abspath_list->nelts; j++)
+            {
+              const char *abspath;
+
+              abspath = APR_ARRAY_IDX(deleted_abspath_list, j, const char *);
+              if (! svn_path_compare_paths(found, abspath))
+               {
+                  deleted = TRUE;
+                  break;
+               }
+            }
+        }
+      if (! deleted)
+        {
+          *empty = FALSE;
+          break;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Push a copy of EMPTY_DIR, allocated in RESULT_POOL, onto the EMPTY_DIRS
+ * array if no directory matching EMPTY_DIR is already in the array. */
+static void
+push_if_unique(apr_array_header_t *empty_dirs, const char *empty_dir,
+               apr_pool_t *result_pool)
+{
+  svn_boolean_t is_unique;
+  int i;
+
+  is_unique = TRUE;
+  for (i = 0; i < empty_dirs->nelts; i++)
+    {
+      const char *empty_dir2;
+
+      empty_dir2 = APR_ARRAY_IDX(empty_dirs, i, const char *);
+      if (strcmp(empty_dir, empty_dir2) == 0)
+        {
+          is_unique = FALSE;
+          break;
+        }
+    }
+
+  if (is_unique)
+    APR_ARRAY_PUSH(empty_dirs, const char *) = apr_pstrdup(result_pool,
+                                                           empty_dir);
+}
+
+/* Delete all directories from the working copy which are left empty
+ * by deleted TARGETS. Use client context CTX.
+ * If DRY_RUN is TRUE, do not modify the working copy.
+ * Do temporary allocations in SCRATCH_POOL. */
+static svn_error_t *
+delete_empty_dirs(apr_array_header_t *targets, svn_client_ctx_t *ctx,
+                  svn_boolean_t dry_run, apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *empty_dirs;
+  apr_array_header_t *deleted_targets;
+  apr_pool_t *iterpool;
+  svn_boolean_t again;
+  int i;
+
+  /* Get a list of all deleted targets. */
+  deleted_targets = apr_array_make(scratch_pool, 0, sizeof(patch_target_t *));
+  for (i = 0; i < targets->nelts; i++)
+    {
+      patch_target_t *target;
+
+      target = APR_ARRAY_IDX(targets, i, patch_target_t *);
+      if (target->deleted)
+        APR_ARRAY_PUSH(deleted_targets, patch_target_t *) = target;
+    }
+
+  /* We have nothing to do if there aren't any deleted targets. */
+  if (deleted_targets->nelts == 0)
+    return SVN_NO_ERROR;
+
+  /* Look for empty parent directories of deleted targets. */
+  empty_dirs = apr_array_make(scratch_pool, 0, sizeof(const char *));
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < targets->nelts; i++)
+    {
+      svn_boolean_t parent_empty;
+      patch_target_t *target;
+      const char *parent;
+
+      svn_pool_clear(iterpool);
+
+      target = APR_ARRAY_IDX(targets, i, patch_target_t *);
+      parent = svn_dirent_dirname(target->abs_path, iterpool);
+      SVN_ERR(check_dir_empty(&parent_empty, parent, ctx->wc_ctx,
+                              deleted_targets, NULL, iterpool));
+      if (parent_empty)
+        {
+          APR_ARRAY_PUSH(empty_dirs, const char *) =
+            apr_pstrdup(scratch_pool, parent);
+        }
+    }
+
+  /* We have nothing to do if there aren't any empty directories. */
+  if (empty_dirs->nelts == 0)
+    {
+      svn_pool_destroy(iterpool);
+      return SVN_NO_ERROR;
+    }
+
+  /* Determine the minimal set of empty directories we need to delete. */
+  do
+    {
+      apr_array_header_t *empty_dirs_copy;
+
+      svn_pool_clear(iterpool);
+
+      /* Rebuild the empty dirs list, replacing empty dirs which have
+       * an empty parent with their parent. */
+      again = FALSE;
+      empty_dirs_copy = apr_array_copy(iterpool, empty_dirs);
+      apr_array_clear(empty_dirs);
+      for (i = 0; i < empty_dirs_copy->nelts; i++)
+        {
+          svn_boolean_t parent_empty;
+          const char *empty_dir;
+          const char *parent;
+
+          empty_dir = APR_ARRAY_IDX(empty_dirs_copy, i, const char *);
+          parent = svn_dirent_dirname(empty_dir, iterpool);
+          SVN_ERR(check_dir_empty(&parent_empty, parent, ctx->wc_ctx,
+                                  deleted_targets, empty_dirs_copy,
+                                  iterpool));
+          if (parent_empty)
+            {
+              again = TRUE;
+              push_if_unique(empty_dirs, parent, scratch_pool);
+            }
+          else
+            push_if_unique(empty_dirs, empty_dir, scratch_pool);
+        }
+    }
+  while (again);
+
+  /* Mark all children of empty parent directories. */
+  for (i = 0; i < targets->nelts ; i++)
+    {
+      patch_target_t *target;
+      int j;
+
+      target = APR_ARRAY_IDX(targets, i, patch_target_t *);
+      for (j = 0; j < empty_dirs->nelts; j++)
+        {
+          const char *empty_dir;
+
+          empty_dir = APR_ARRAY_IDX(empty_dirs, j, const char *);
+          if (svn_dirent_is_ancestor(empty_dir, target->abs_path))
+            {
+              target->parent_dir_deleted = TRUE;
+              break;
+            }
+        }
+    }
+
+  /* Finally, delete empty directories. */
+  for (i = 0; i < empty_dirs->nelts; i++)
+    {
+      const char *empty_dir;
+
+      svn_pool_clear(iterpool);
+
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
+      empty_dir = APR_ARRAY_IDX(empty_dirs, i, const char *);
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify;
+
+          notify = svn_wc_create_notify(empty_dir, svn_wc_notify_delete,
+                                        iterpool);
+          (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
+        }
+      if (! dry_run)
+        SVN_ERR(svn_wc_delete4(ctx->wc_ctx, empty_dir, FALSE, FALSE,
+                               NULL, NULL, /* suppress cancellation */
+                               NULL, NULL, /* suppress notification */
+                               iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Baton for apply_patches(). */
 typedef struct {
   /* The path to the patch file. */
@@ -1540,6 +1830,9 @@ apply_patches(void *baton,
     }
   while (patch);
 
+  /* Delete directories which are empty after patching, if any. */
+  SVN_ERR(delete_empty_dirs(targets, btn->ctx, btn->dry_run, scratch_pool));
+
   /* Install patched targets into the working copy. */
   for (i = 0; i < targets->nelts; i++)
     {
@@ -1554,8 +1847,10 @@ apply_patches(void *baton,
       if (! target->skipped)
         SVN_ERR(install_patched_target(target, btn->abs_wc_path,
                                        btn->ctx, btn->dry_run, iterpool));
-      SVN_ERR(send_patch_notification(target, btn->ctx, iterpool));
-      SVN_ERR(svn_diff_close_patch(target->patch));
+      if (! target->parent_dir_deleted)
+        SVN_ERR(send_patch_notification(target, btn->ctx, iterpool));
+      if (target->patch)
+        SVN_ERR(svn_diff_close_patch(target->patch));
     }
 
   SVN_ERR(svn_io_file_close(patch_file, iterpool));

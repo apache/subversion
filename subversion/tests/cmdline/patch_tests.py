@@ -1001,6 +1001,107 @@ def patch_add_new_dir(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1) # dry-run
+def patch_remove_empty_dirs(sbox):
+  "patch deleting all children of a directory"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  patch_file_path = make_patch_path(sbox)
+
+  # Contents of B:
+  # A/B/lamba
+  # A/B/F
+  # A/B/E/{alpha,beta}
+  # Before patching we've deleted F, which means that B is empty after patching and 
+  # should be removed.
+  #
+  # Contents of H:
+  # A/D/H/{chi,psi,omega}
+  # Before patching, chi has been removed by a non-svn operation which means it has
+  # status missing. The patch deletes the other two files but should not delete H.
+
+  unidiff_patch = [
+    "Index: psi\n",
+    "===================================================================\n",
+    "--- A/D/H/psi\t(revision 0)\n",
+    "+++ A/D/H/psi\t(revision 0)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'psi'.\n",
+    "Index: omega\n",
+    "===================================================================\n",
+    "--- A/D/H/omega\t(revision 0)\n",
+    "+++ A/D/H/omega\t(revision 0)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'omega'.\n",
+    "Index: lambda\n",
+    "===================================================================\n",
+    "--- A/B/lambda\t(revision 0)\n",
+    "+++ A/B/lambda\t(revision 0)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'lambda'.\n",
+    "Index: alpha\n",
+    "===================================================================\n",
+    "--- A/B/E/alpha\t(revision 0)\n",
+    "+++ A/B/E/alpha\t(revision 0)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'alpha'.\n",
+    "Index: beta\n",
+    "===================================================================\n",
+    "--- A/B/E/beta\t(revision 0)\n",
+    "+++ A/B/E/beta\t(revision 0)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'beta'.\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  svntest.actions.run_and_verify_svn("Deleting F failed", None, [],
+                                     'rm', F_path)
+  svntest.actions.run_and_verify_svn("Update failed", None, [],
+                                     'up', wc_dir)
+
+  # We should be able to handle one path beeing missing.
+  os.remove(os.path.join(wc_dir, 'A', 'D', 'H', 'chi'))
+
+  expected_output = [
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'D', 'H', 'psi'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'D', 'H', 'omega'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/H/chi')
+  expected_disk.remove('A/D/H/psi')
+  expected_disk.remove('A/D/H/omega')
+  expected_disk.remove('A/B/lambda')
+  expected_disk.remove('A/B/E/alpha')
+  expected_disk.remove('A/B/E/beta')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'A/D/H/chi' : Item(status='! ', wc_rev=1)})
+  expected_status.add({'A/D/H/omega' : Item(status='D ', wc_rev=1)})
+  expected_status.add({'A/D/H/psi' : Item(status='D ', wc_rev=1)})
+  expected_status.add({'A/B' : Item(status='D ', wc_rev=1)})
+  expected_status.add({'A/B/E' : Item(status='D ', wc_rev=1)})
+  expected_status.add({'A/B/E/beta' : Item(status='D ', wc_rev=1)})
+  expected_status.add({'A/B/E/alpha' : Item(status='D ', wc_rev=1)})
+  expected_status.add({'A/B/lambda' : Item(status='D ', wc_rev=1)})
+  expected_status.add({'A/B/F' : Item(status='D ', wc_rev=1)})
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, 
+                                       os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
 
 def patch_reject(sbox):
   "patch which is rejected"
@@ -2397,6 +2498,7 @@ test_list = [ None,
               patch_strip1,
               patch_no_index_line,
               patch_add_new_dir,
+              patch_remove_empty_dirs,
               patch_reject,
               patch_keywords,
               patch_with_fuzz,
