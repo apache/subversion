@@ -11026,27 +11026,119 @@ def reintegrate_fail_on_switched_wc(sbox):
     ".*Cannot reintegrate into a working copy with a switched subtree.*",
     None, None, None, None, True, False, '--reintegrate')
 
-def reintegrate_fail_on_shallow_wc(sbox):
-  "merge --reintegrate should fail in shallow wc"
+
+# Test for issue #3603 'allow reintegrate merges into WCs with
+# missing subtrees'.
+def reintegrate_on_shallow_wc(sbox):
+  "merge --reintegrate in shallow wc"
+
+  # Create a standard greek tree, branch A to A_COPY in r2.
   sbox.build()
   wc_dir = sbox.wc_dir
-  expected_disk, expected_status = set_up_branch(sbox)
-  A_path = os.path.join(wc_dir, "A")
-  G_path = os.path.join(A_path, "D", "G")
-  # Our default checkout doesn't have any subdirs at non-infinite
-  # depth, so we'll have to create one the old-fashioned way: remove a
-  # tree, then "update" it back into existence at a shallower depth.
-  svntest.main.safe_rmtree(G_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'update', G_path,
-                                     '--depth=files')
-  # Even though everything is actually present (as G has no subdirs
-  # anyway), the reintegration should fail, because G's depth is other
-  # than infinity.
-  svntest.actions.run_and_verify_merge(
-    A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
-    None, None, None,
-    ".*Cannot reintegrate into a working copy not.*at infinite depth.*",
-    None, None, None, None, True, False, '--reintegrate')
+  expected_disk, expected_status = set_up_branch(sbox, branch_only = True)
+
+  # Some paths we'll care about
+  A_path         = os.path.join(wc_dir, "A")
+  A_D_path       = os.path.join(wc_dir, "A", "D")
+  mu_COPY_path   = os.path.join(wc_dir, "A_COPY", "mu")
+  psi_COPY_path  = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
+  A_COPY_path    = os.path.join(wc_dir, "A_COPY")
+
+  # r3 - Make a change on the A_COPY branch that will be
+  # reintegrated back to A.
+  svntest.main.file_write(mu_COPY_path, "branch work")
+  svntest.main.run_svn(None, 'commit', '-m',
+                       'Some work on the A_COPY branch', wc_dir)
+
+  # First try a reintegrate where the target WC has a shallow subtree
+  # that is not affected by the reintegrate.  In this case we set the
+  # depth of A/D to empty.  Since the only change made on the branch
+  # since the branch point is to A_COPY/mu, the reintegrate should
+  # simply work and update A/mu with the branch's contents.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--set-depth', 'empty', A_D_path)
+  expected_output = wc.State(A_path, {
+    'mu' : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(A_path, {
+    '' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_path, {
+    })
+  expected_A_status = wc.State(A_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='M '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '), # Don't expect anything under D,
+                                     # its depth is empty!
+    })
+  expected_A_status.tweak(wc_rev=3)
+  expected_A_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A_COPY:2-3'}),
+    'B'         : Item(),
+    'mu'        : Item("branch work"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(), # Don't expect anything under D, its depth is empty!
+    })
+  expected_A_skip = wc.State(A_COPY_path, {})
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + '/A_COPY', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_A_disk,
+                                       expected_A_status,
+                                       expected_A_skip,
+                                       None, None, None, None,
+                                       None, 1, 1, "--reintegrate")
+
+  # Now revert the reintegrate and make a second change on the
+  # branch in r4, but this time change a subtree that corresponds
+  # to the missing (shallow) portion of the source.  The reintegrate
+  # should still succeed, albeit with a tree-conflict.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+  svntest.main.file_write(psi_COPY_path, "more branch work")
+  svntest.main.run_svn(None, 'commit', '-m',
+                       'Some more work on the A_COPY branch', wc_dir)
+  # Reuse the same expectations as the prior merge, except that...
+  #
+  # ...a tree conflict occurs...
+  expected_output.add({
+      'D/H' : Item(status='  ', treeconflict='C')
+      })
+  expected_A_status.add({
+      'D/H' : Item(status='! ', treeconflict='C')
+      })
+  # ...non-inheritable mergeinfo is set on the root of the missing subtree...
+  expected_mergeinfo_output.add({
+      'D' : Item(status=' U')
+      })
+  expected_A_status.tweak('D', status=' M')
+  expected_A_disk.tweak('D', props={SVN_PROP_MERGEINFO : '/A_COPY/D:2-4*'})
+  # ...the mergeinfo on the target root includes the latest rev on the branch.
+  expected_A_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A_COPY:2-4'})
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + '/A_COPY', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_A_disk,
+                                       expected_A_status,
+                                       expected_A_skip,
+                                       None, None, None, None,
+                                       None, 1, 1, "--reintegrate")
 
 def reintegrate_fail_on_stale_source(sbox):
   "merge --reintegrate should fail on stale source"
@@ -19033,7 +19125,7 @@ test_list = [ None,
               reintegrate_fail_on_modified_wc,
               reintegrate_fail_on_mixed_rev_wc,
               reintegrate_fail_on_switched_wc,
-              reintegrate_fail_on_shallow_wc,
+              reintegrate_on_shallow_wc,
               SkipUnless(reintegrate_fail_on_stale_source,
                          server_has_mergeinfo),
               SkipUnless(dont_add_mergeinfo_from_own_history,
