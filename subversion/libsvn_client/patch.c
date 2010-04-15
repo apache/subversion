@@ -617,7 +617,8 @@ seek_to_line(patch_target_t *target, svn_linenum_t line,
 
 /* Indicate in *MATCHED whether the original text of HUNK matches the patch
  * TARGET at its current line. Lines within FUZZ lines of the start or end
- * of HUNK will always match. When this function returns, neither
+ * of HUNK will always match. If IGNORE_WHiTESPACES is set, we ignore
+ * whitespaces when doing the matching. When this function returns, neither
  * TARGET->CURRENT_LINE nor the file offset in the target file will have
  * changed. HUNK->ORIGINAL_TEXT will be reset.  Do temporary allocations in
  * POOL. */
@@ -718,6 +719,7 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
  * return the line number at which the first match occured in *MATCHED_LINE.
  * If the hunk matched multiple times, and MATCH_FIRST is FALSE,
  * return the line number at which the last match occured in *MATCHED_LINE.
+ * If IGNORE_WHiTESPACES is set, ignore whitespaces during the matching.
  * Do all allocations in POOL. */
 static svn_error_t *
 scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
@@ -778,8 +780,9 @@ scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
  * and return an appropriate hunk_info object in *HI, allocated from
  * RESULT_POOL. Use fuzz factor FUZZ. Set HI->FUZZ to FUZZ. If no correct
  * line can be determined, set HI->REJECTED to TRUE.
- * When this function returns, neither TARGET->CURRENT_LINE nor the file
- * offset in the target file will have changed.
+ * IGNORE_WHiTESPACES tells whether whitespaces should be considered when
+ * matching. When this function returns, neither TARGET->CURRENT_LINE nor
+ * the file offset in the target file will have changed.
  * Do temporary allocations in POOL. */
 static svn_error_t *
 get_hunk_info(hunk_info_t **hi, patch_target_t *target,
@@ -1124,6 +1127,8 @@ send_patch_notification(const patch_target_t *target,
  * If PATCHED_TEMPFILES or REJECT_TEMPFILES are not NULL, add the path
  * to temporary patched/reject files to them, keyed by the target's path
  * as parsed from the patch file (after canonicalization).
+ * IGNORE_WHiTESPACES tells whether whitespaces should be considered when
+ * doing the matching.
  * Do temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
 apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,

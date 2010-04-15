@@ -4886,6 +4886,9 @@ svn_client_info(const char *path_or_url,
  * of the patching process, e.g. for display purposes, without actually
  * modifying the working copy.
  *
+ * If @a ignore_whitespaces is TRUE, allow patches to be applied if they
+ * only differ from the target by whitespaces.
+ *
  * If @a ctx->notify_func2 is non-NULL, invoke @a ctx->notify_func2 with
  * @a ctx->notify_baton2 as patching progresses.
  *
