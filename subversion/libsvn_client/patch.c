@@ -623,15 +623,15 @@ seek_to_line(patch_target_t *target, svn_linenum_t line,
 
 /* Indicate in *MATCHED whether the original text of HUNK matches the patch
  * TARGET at its current line. Lines within FUZZ lines of the start or end
- * of HUNK will always match. If IGNORE_WHiTESPACES is set, we ignore
- * whitespaces when doing the matching. When this function returns, neither
+ * of HUNK will always match. If IGNORE_WHITESPACE is set, we ignore
+ * whitespace when doing the matching. When this function returns, neither
  * TARGET->CURRENT_LINE nor the file offset in the target file will have
  * changed. HUNK->ORIGINAL_TEXT will be reset.  Do temporary allocations in
  * POOL. */
 static svn_error_t *
 match_hunk(svn_boolean_t *matched, patch_target_t *target,
            const svn_hunk_t *hunk, int fuzz, 
-           svn_boolean_t ignore_whitespaces, apr_pool_t *pool)
+           svn_boolean_t ignore_whitespace, apr_pool_t *pool)
 {
   svn_stringbuf_t *hunk_line;
   const char *target_line;
@@ -677,7 +677,7 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
             lines_matched = TRUE;
           else
             {
-              if (ignore_whitespaces)
+              if (ignore_whitespace)
                 {
                   char *stripped_hunk_line = apr_pstrdup(pool,
                                                          hunk_line_translated);
@@ -725,14 +725,14 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
  * return the line number at which the first match occured in *MATCHED_LINE.
  * If the hunk matched multiple times, and MATCH_FIRST is FALSE,
  * return the line number at which the last match occured in *MATCHED_LINE.
- * If IGNORE_WHiTESPACES is set, ignore whitespaces during the matching.
+ * If IGNORE_WHITESPACE is set, ignore whitespace during the matching.
  * Call cancel CANCEL_FUNC with baton CANCEL_BATON to trigger cancellation.
  * Do all allocations in POOL. */
 static svn_error_t *
 scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
                const svn_hunk_t *hunk, svn_boolean_t match_first,
                svn_linenum_t upper_line, int fuzz, 
-               svn_boolean_t ignore_whitespaces,
+               svn_boolean_t ignore_whitespace,
                svn_cancel_func_t cancel_func, void *cancel_baton,
                apr_pool_t *pool)
 {
@@ -751,7 +751,7 @@ scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
       if (cancel_func)
         SVN_ERR((cancel_func)(cancel_baton));
 
-      SVN_ERR(match_hunk(&matched, target, hunk, fuzz, ignore_whitespaces,
+      SVN_ERR(match_hunk(&matched, target, hunk, fuzz, ignore_whitespace,
                          iterpool));
       if (matched)
         {
@@ -791,7 +791,7 @@ scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
  * and return an appropriate hunk_info object in *HI, allocated from
  * RESULT_POOL. Use fuzz factor FUZZ. Set HI->FUZZ to FUZZ. If no correct
  * line can be determined, set HI->REJECTED to TRUE.
- * IGNORE_WHiTESPACES tells whether whitespaces should be considered when
+ * IGNORE_WHITESPACE tells whether whitespace should be considered when
  * matching. When this function returns, neither TARGET->CURRENT_LINE nor
  * the file offset in the target file will have changed.
  * Call cancel CANCEL_FUNC with baton CANCEL_BATON to trigger cancellation.
@@ -799,7 +799,7 @@ scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
 static svn_error_t *
 get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               const svn_hunk_t *hunk, int fuzz, 
-              svn_boolean_t ignore_whitespaces,
+              svn_boolean_t ignore_whitespace,
               svn_cancel_func_t cancel_func, void *cancel_baton,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
@@ -831,7 +831,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
       else
         SVN_ERR(scan_for_match(&matched_line, target, hunk, TRUE,
                                hunk->original_start + 1, fuzz,
-                               ignore_whitespaces,
+                               ignore_whitespace,
                                cancel_func, cancel_baton,
                                scratch_pool));
 
@@ -844,7 +844,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
            * where the hunk matches. */
           SVN_ERR(scan_for_match(&matched_line, target, hunk, FALSE,
                                  hunk->original_start, fuzz,
-                                 ignore_whitespaces,
+                                 ignore_whitespace,
                                  cancel_func, cancel_baton,
                                  scratch_pool));
 
@@ -855,7 +855,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               /* Scan forward towards the end of the file and look
                * for a line where the hunk matches. */
               SVN_ERR(scan_for_match(&matched_line, target, hunk, TRUE, 0,
-                                     fuzz, ignore_whitespaces,
+                                     fuzz, ignore_whitespace,
                                      cancel_func, cancel_baton,
                                      scratch_pool));
             }
@@ -1145,7 +1145,7 @@ send_patch_notification(const patch_target_t *target,
  * If PATCHED_TEMPFILES or REJECT_TEMPFILES are not NULL, add the path
  * to temporary patched/reject files to them, keyed by the target's path
  * as parsed from the patch file (after canonicalization).
- * IGNORE_WHiTESPACES tells whether whitespaces should be considered when
+ * IGNORE_WHITESPACE tells whether whitespace should be considered when
  * doing the matching.
  * Call cancel CANCEL_FUNC with baton CANCEL_BATON to trigger cancellation.
  * Do temporary allocations in SCRATCH_POOL. */
@@ -1157,7 +1157,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                 const apr_array_header_t *exclude_patterns,
                 apr_hash_t *patched_tempfiles,
                 apr_hash_t *reject_tempfiles,
-                svn_boolean_t ignore_whitespaces,
+                svn_boolean_t ignore_whitespace,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 apr_pool_t *result_pool, apr_pool_t *scratch_pool)
@@ -1198,7 +1198,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       do
         {
           SVN_ERR(get_hunk_info(&hi, target, hunk, fuzz,
-                                ignore_whitespaces,
+                                ignore_whitespace,
                                 cancel_func, cancel_baton,
                                 result_pool, iterpool));
           fuzz++;
@@ -1792,9 +1792,9 @@ typedef struct {
   /* Mapping patch target path -> path to tempfile with rejected hunks. */
   apr_hash_t *reject_tempfiles;
 
-  /* Indicates whether we should ignore whitespaces when matching context
+  /* Indicates whether we should ignore whitespace when matching context
    * lines */
-  svn_boolean_t ignore_whitespaces;
+  svn_boolean_t ignore_whitespace;
 
 
   /* The client context. */
@@ -1842,7 +1842,7 @@ apply_patches(void *baton,
         SVN_ERR(btn->ctx->cancel_func(btn->ctx->cancel_baton));
 
       SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
-                                        btn->reverse, btn->ignore_whitespaces,
+                                        btn->reverse, btn->ignore_whitespace,
                                         scratch_pool, iterpool));
       if (patch)
         {
@@ -1852,7 +1852,7 @@ apply_patches(void *baton,
                                   btn->ctx->wc_ctx, btn->strip_count,
                                   btn->include_patterns, btn->exclude_patterns,
                                   btn->patched_tempfiles, btn->reject_tempfiles,
-                                  btn->ignore_whitespaces,
+                                  btn->ignore_whitespace,
                                   btn->ctx->cancel_func,
                                   btn->ctx->cancel_baton,
                                   result_pool, iterpool));
@@ -1904,7 +1904,7 @@ svn_client_patch(const char *abs_patch_path,
                  const apr_array_header_t *exclude_patterns,
                  apr_hash_t **patched_tempfiles,
                  apr_hash_t **reject_tempfiles,
-                 svn_boolean_t ignore_whitespaces,
+                 svn_boolean_t ignore_whitespace,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
@@ -1923,7 +1923,7 @@ svn_client_patch(const char *abs_patch_path,
   baton.reverse = reverse;
   baton.include_patterns = include_patterns;
   baton.exclude_patterns = exclude_patterns;
-  baton.ignore_whitespaces = ignore_whitespaces;
+  baton.ignore_whitespace = ignore_whitespace;
 
  if (patched_tempfiles)
     {
