@@ -30,6 +30,7 @@
 
 #include "svn_fs.h"
 #include "svn_config.h"
+#include "private/svn_atomic.h"
 #include "private/svn_cache.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
@@ -244,6 +245,9 @@ typedef struct
 
   /* The sqlite database used for rep caching. */
   svn_sqlite__db_t *rep_cache_db;
+
+  /* Thread-safe boolean */
+  svn_atomic_t rep_cache_db_opened;
 
    /* The sqlite database used for revprops. */
    svn_sqlite__db_t *revprop_db;
