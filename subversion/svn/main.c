@@ -119,6 +119,7 @@ typedef enum {
   opt_reverse_diff,
   opt_include_pattern,
   opt_exclude_pattern,
+  opt_ignore_whitespaces,
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -379,6 +380,10 @@ const apr_getopt_option_t svn_cl__options[] =
                        "See also the --include-pattern option.\n"
                        "                             "
                        "[alias: --ep]")},
+  {"ignore-whitespaces", opt_ignore_whitespaces, 0,
+                       N_("don't take whitespaces into account when,\n"
+                       "                             "
+                       "determining where a patch should be applied")},
   /* Long-opt Aliases
    *
    * These have NULL desriptions, but an option code that matches some
@@ -847,7 +852,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  do not agree with.\n"
      ),
     {'q', opt_dry_run, 'p', opt_reverse_diff, opt_include_pattern,
-     opt_exclude_pattern} },
+     opt_exclude_pattern, opt_ignore_whitespaces} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1774,6 +1779,9 @@ main(int argc, const char *argv[])
                                                       sizeof (const char *));
         APR_ARRAY_PUSH(opt_state.exclude_patterns, const char *) = opt_arg;
         break;
+      case opt_ignore_whitespaces:
+          opt_state.ignore_whitespaces = TRUE;
+          break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
