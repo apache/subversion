@@ -85,9 +85,11 @@
  * if verify_checksum is TRUE. If checksum does not match, return the error
  * SVN_ERR_WC_CORRUPT_TEXT_BASE.
  *
- * If COMPARE_TEXTBASES is true, translate VERSIONED_FILE_ABSPATH to
- * repository-normal form and compare the result with PRISTINE_STREAM; if
- * false, translate PRISTINE_STREAM to working-copy form and compare the
+ * If COMPARE_TEXTBASES is true, translate VERSIONED_FILE_ABSPATH's EOL
+ * style and keywords to repository-normal form according to its properties,
+ * and compare the result with PRISTINE_STREAM.  If COMPARE_TEXTBASES is
+ * false, translate PRISTINE_STREAM's EOL style and keywords to working-copy
+ * form according to VERSIONED_FILE_ABSPATH's properties, and compare the
  * result with VERSIONED_FILE_ABSPATH.
  *
  * PRISTINE_STREAM will be closed before a successful return.
@@ -172,17 +174,19 @@ compare_and_verify(svn_boolean_t *modified_p,
                        && eol_style != svn_subst_eol_style_none)
                 return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
 
-              /* Wrap file stream to detranslate into normal form. */
+              /* Wrap file stream to detranslate into normal form,
+               * "repairing" the EOL style if it is inconsistent. */
               v_stream = svn_subst_stream_translated(v_stream,
                                                      eol_str,
-                                                     TRUE,
+                                                     TRUE /* repair */,
                                                      keywords,
                                                      FALSE /* expand */,
                                                      scratch_pool);
             }
           else if (need_translation)
             {
-              /* Wrap base stream to translate into working copy form. */
+              /* Wrap base stream to translate into working copy form, and
+               * arrange to throw an error if its EOL style is inconsistent. */
               pristine_stream = svn_subst_stream_translated(pristine_stream,
                                                             eol_str, FALSE,
                                                             keywords, TRUE,

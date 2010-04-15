@@ -361,9 +361,12 @@ void svn_wc__compat_call_notify_func(void *baton,
  * the text base is much longer than the working file, every byte of
  * the text base will still be examined.)
  *
- * If COMPARE_TEXTBASES is true, the comparison will be between a
- * detranslated version of *LOCAL_ABSPATH and the text base, otherwise, a
- * translated version of the text base and *LOCAL_ABSPATH will be compared.
+ * If COMPARE_TEXTBASES is true, translate LOCAL_ABSPATH's EOL
+ * style and keywords to repository-normal form according to its properties,
+ * and compare the result with the text base.  If COMPARE_TEXTBASES is
+ * false, translate the text base's EOL style and keywords to working-copy
+ * form according to LOCAL_ABSPATH's properties, and compare the
+ * result with LOCAL_ABSPATH.
  *
  * If LOCAL_ABSPATH does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
@@ -490,9 +493,11 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
 /* Similar to svn_wc__versioned_file_modcheck(), but with a wc_db parameter
  * instead of a wc_context.
  *
- * If COMPARE_TEXTBASES is true, translate VERSIONED_FILE_ABSPATH to
- * repository-normal form and compare the result with BASE_FILE_ABSPATH; if
- * false, translate BASE_FILE_ABSPATH to working-copy form and compare the
+ * If COMPARE_TEXTBASES is true, translate VERSIONED_FILE_ABSPATH's EOL
+ * style and keywords to repository-normal form according to its properties,
+ * and compare the result with BASE_FILE_ABSPATH.  If COMPARE_TEXTBASES is
+ * false, translate BASE_FILE_ABSPATH's EOL style and keywords to working-copy
+ * form according to VERSIONED_FILE_ABSPATH's properties, and compare the
  * result with VERSIONED_FILE_ABSPATH.
  */
 svn_error_t *
