@@ -67,6 +67,19 @@ Candidate changes:
    Votes:
      +1: rhuijben, steveking
 
+ * r879966, r879971
+   Reduce the lifetime of the rep-sharing database handles in FSFS to avoid
+   having writers blocking readers, and update that database outside the
+   general FSFS write lock.  This address issue #3506.
+   Justification:
+     The performance problems and outright failures of the current code
+     are hurting the ASF repository, and presumably other high-concurrency
+     repositories, too, when large commits occur.
+   Notes:
+     Does not cleanly merge.  Backport branch needed (but as-yet uncreated).
+   Votes:
+     +0: cmpilato
+
  * r898048
    Extend the Windows only, crypto api verification of server certificates
    to check for certificate revocation. Also simplify the code by making
