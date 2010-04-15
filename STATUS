@@ -196,15 +196,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r933299
-   More issue #3242 fixes, this time covering updates which make use
-   of the copyfrom info introduced in Subversion 1.5.0 as part of
-   issue #503.
-   Justification:
-     Issue #3242 has been one of the painful for Subversion users
-     since its regressive introduction in Subversion 1.5.
-   Branch:
-     ^/subversion/branches/1.6.x-r933299
-   Votes:
-     +1: cmpilato, pburba, rhuijben

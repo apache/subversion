@@ -44,7 +44,7 @@
 struct ff_baton
 {
   svn_client_ctx_t *ctx;       /* client context used to open ra session */
-  const char *repos_root;      /* the root of the ra session */
+  const char *repos_root;      /* repository root URL */
   svn_ra_session_t *session;   /* the secondary ra session itself */
   apr_pool_t *pool;            /* the pool where the ra session is allocated */
 };
@@ -63,14 +63,22 @@ file_fetcher(void *baton,
              apr_pool_t *pool)
 {
   struct ff_baton *ffb = (struct ff_baton *)baton;
+  const char *dirpath, *base_name, *session_url, *old_session_url;
 
-  if (! ffb->session)
-    SVN_ERR(svn_client__open_ra_session_internal(&(ffb->session),
-                                                 ffb->repos_root,
+  svn_path_split(path, &dirpath, &base_name, pool);
+  session_url = svn_path_url_add_component2(ffb->repos_root, 
+                                            dirpath, pool);
+
+  if (ffb->session)
+    SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ffb->session,
+                                              session_url, ffb->pool));
+  else
+    SVN_ERR(svn_client__open_ra_session_internal(&(ffb->session), session_url,
                                                  NULL, NULL, NULL,
                                                  FALSE, TRUE,
                                                  ffb->ctx, ffb->pool));
-  return svn_ra_get_file(ffb->session, path, revision, stream,
+
+  return svn_ra_get_file(ffb->session, base_name, revision, stream,
                          fetched_rev, props, pool);
 }
 
