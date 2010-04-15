@@ -858,6 +858,8 @@ typedef struct svn_patch_t {
  * Return the next @a *patch in @a patch_file.
  * If no patch can be found, set @a *patch to NULL.
  * If @a reverse is TRUE, invert the patch while parsing it.
+ * If @a ignore_whitespaces is TRUE, allow patches with no leading
+ * whitespaces to be parsed.
  * Allocate results in @a result_pool.
  * Use @a scratch_pool for all other allocations.
  * 

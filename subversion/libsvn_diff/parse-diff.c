@@ -260,9 +260,10 @@ reverse_diff_transformer(svn_stringbuf_t **buf,
 
 /* Return the next *HUNK from a PATCH, using STREAM to read data
  * from the patch file. If no hunk can be found, set *HUNK to NULL.
- * If REVERSE is TRUE, invert the hunk while parsing it.
- * Allocate results in RESULT_POOL.
- * Use SCRATCH_POOL for all other allocations. */
+ * If REVERSE is TRUE, invert the hunk while parsing it. If
+ * IGNORE_WHiTESPACES is TRUE, let lines without leading spaces be
+ * recognized as context lines.  Allocate results in RESULT_POOL.  Use
+ * SCRATCH_POOL for all other allocations. */
 static svn_error_t *
 parse_next_hunk(svn_hunk_t **hunk,
                 svn_patch_t *patch,
