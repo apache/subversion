@@ -75,8 +75,8 @@ Candidate changes:
      The performance problems and outright failures of the current code
      are hurting the ASF repository, and presumably other high-concurrency
      repositories, too, when large commits occur.
-   Notes:
-     Does not cleanly merge.  Backport branch needed (but as-yet uncreated).
+   Branch:
+     1.6.x-issue3506
    Votes:
      +0: cmpilato, danielsh
 
