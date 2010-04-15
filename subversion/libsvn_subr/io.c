@@ -628,7 +628,7 @@ static const char *temp_dir;
 
 /* Helper function to initialize temp dir. Passed to svn_atomic__init_once */
 static svn_error_t *
-init_temp_dir(apr_pool_t *scratch_pool)
+init_temp_dir(void *baton, apr_pool_t *scratch_pool)
 {
   /* Global pool for the temp path */
   apr_pool_t *global_pool = svn_pool_create(NULL);
@@ -653,7 +653,8 @@ svn_error_t *
 svn_io_temp_dir(const char **dir,
                 apr_pool_t *pool)
 {
-  SVN_ERR(svn_atomic__init_once(&temp_dir_init_state, init_temp_dir, pool));
+  SVN_ERR(svn_atomic__init_once(&temp_dir_init_state,
+                                init_temp_dir, NULL, pool));
 
   *dir = apr_pstrdup(pool, temp_dir);
 

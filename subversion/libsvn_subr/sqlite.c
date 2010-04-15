@@ -673,7 +673,7 @@ static volatile svn_atomic_t sqlite_init_state;
    manner. */
 /* Don't call this function directly!  Use svn_atomic__init_once(). */
 static svn_error_t *
-init_sqlite(apr_pool_t *pool)
+init_sqlite(void *baton, apr_pool_t *pool)
 {
   if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER)
     {
@@ -824,7 +824,8 @@ svn_sqlite__get_schema_version(int *version,
 {
   svn_sqlite__db_t db;
 
-  SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
+  SVN_ERR(svn_atomic__init_once(&sqlite_init_state,
+                                init_sqlite, NULL, scratch_pool));
   SVN_ERR(internal_open(&db.db3, path, svn_sqlite__mode_readonly,
                         scratch_pool));
   SVN_ERR(svn_sqlite__read_schema_version(version, &db, scratch_pool));
@@ -879,7 +880,8 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_atomic__init_once(&sqlite_init_state, init_sqlite, scratch_pool));
+  SVN_ERR(svn_atomic__init_once(&sqlite_init_state,
+                                init_sqlite, NULL, scratch_pool));
 
   *db = apr_pcalloc(result_pool, sizeof(**db));
 
