@@ -350,7 +350,7 @@ test_patch(const svn_test_opts_t *opts,
   /* Apply the patch. */
   SVN_ERR(svn_client_patch(patch_file_path, wc_path, FALSE, 0, FALSE,
                            NULL, NULL, &patched_tempfiles, &reject_tempfiles,
-                           ctx, pool, pool));
+                           FALSE, ctx, pool, pool));
   SVN_ERR(svn_io_file_close(patch_file, pool));
 
   SVN_ERR_ASSERT(apr_hash_count(patched_tempfiles) == 1);

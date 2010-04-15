@@ -80,10 +80,17 @@
 
 
 /* Set *MODIFIED_P to TRUE if (after translation) VERSIONED_FILE_ABSPATH
- * differs from BASE_FILE_ABSPATH, else to FALSE if not.  Also verify that
- * BASE_FILE_ABSPATH matches the stored checksum for VERSIONED_FILE_ABSPATH,
+ * differs from PRISTINE_STREAM, else to FALSE if not.  Also verify that
+ * PRISTINE_STREAM matches the stored checksum for VERSIONED_FILE_ABSPATH,
  * if verify_checksum is TRUE. If checksum does not match, return the error
  * SVN_ERR_WC_CORRUPT_TEXT_BASE.
+ *
+ * If COMPARE_TEXTBASES is true, translate VERSIONED_FILE_ABSPATH's EOL
+ * style and keywords to repository-normal form according to its properties,
+ * and compare the result with PRISTINE_STREAM.  If COMPARE_TEXTBASES is
+ * false, translate PRISTINE_STREAM's EOL style and keywords to working-copy
+ * form according to VERSIONED_FILE_ABSPATH's properties, and compare the
+ * result with VERSIONED_FILE_ABSPATH.
  *
  * PRISTINE_STREAM will be closed before a successful return.
  *
@@ -137,15 +144,15 @@ compare_and_verify(svn_boolean_t *modified_p,
                                        NULL, NULL,
                                        db, versioned_file_abspath,
                                        scratch_pool, scratch_pool));
-
-#ifdef SVN_EXPERIMENTAL
-          /* ### node_checksum is originally MD-5 but will later be SHA-1... */
-#endif
+          /* SVN_EXPERIMENTAL_PRISTINE:
+             node_checksum is originally MD-5 but will later be SHA-1.  To
+             allow for this, we calculate CHECKSUM as the same kind so that
+             we can compare them. */
 
           if (node_checksum)
             pristine_stream = svn_stream_checksummed2(pristine_stream,
                                                       &checksum, NULL,
-                                                      svn_checksum_md5, TRUE,
+                                                      node_checksum->kind, TRUE,
                                                       scratch_pool);
         }
 
@@ -167,17 +174,19 @@ compare_and_verify(svn_boolean_t *modified_p,
                        && eol_style != svn_subst_eol_style_none)
                 return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
 
-              /* Wrap file stream to detranslate into normal form. */
+              /* Wrap file stream to detranslate into normal form,
+               * "repairing" the EOL style if it is inconsistent. */
               v_stream = svn_subst_stream_translated(v_stream,
                                                      eol_str,
-                                                     TRUE,
+                                                     TRUE /* repair */,
                                                      keywords,
                                                      FALSE /* expand */,
                                                      scratch_pool);
             }
           else if (need_translation)
             {
-              /* Wrap base stream to translate into working copy form. */
+              /* Wrap base stream to translate into working copy form, and
+               * arrange to throw an error if its EOL style is inconsistent. */
               pristine_stream = svn_subst_stream_translated(pristine_stream,
                                                             eol_str, FALSE,
                                                             keywords, TRUE,

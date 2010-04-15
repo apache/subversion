@@ -866,6 +866,7 @@ svn_error_t *
 svn_diff_parse_next_patch(svn_patch_t **patch,
                           apr_file_t *patch_file,
                           svn_boolean_t reverse,
+                          svn_boolean_t ignore_whitespaces,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
