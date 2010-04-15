@@ -8615,9 +8615,9 @@ svn_client_merge3(const char *source1,
 }
 
 
-/* If TARGET_WCPATH does not reflect a single-revision,
-   svn_depth_infinity, pristine, unswitched working copy -- in other
-   words, a subtree found in a single revision -- raise
+/* If TARGET_WCPATH does not reflect a single-revision, pristine,
+   unswitched working copy -- in other words, a subtree found in a
+   single revision (although sparse checkouts are permitted) -- raise
    SVN_ERR_CLIENT_NOT_READY_TO_MERGE. */
 static svn_error_t *
 ensure_wc_reflects_repository_subtree(const char *target_abspath,
@@ -8635,11 +8635,6 @@ ensure_wc_reflects_repository_subtree(const char *target_abspath,
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                             _("Cannot reintegrate into a working copy "
                               "with a switched subtree"));
-
-  if (wc_stat->sparse_checkout)
-    return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            _("Cannot reintegrate into a working copy "
-                              "not entirely at infinite depth"));
 
   if (wc_stat->modified)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
