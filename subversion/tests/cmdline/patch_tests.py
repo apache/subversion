@@ -1007,7 +1007,7 @@ def patch_remove_empty_dirs(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   
-  patch_file_path = tempfile.mkstemp(dir=os.path.abspath(svntest.main.temp_dir))[1]
+  patch_file_path = make_patch_path(sbox)
 
   # Contents of B:
   # A/B/lamba
