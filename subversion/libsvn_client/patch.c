@@ -726,12 +726,14 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
  * If the hunk matched multiple times, and MATCH_FIRST is FALSE,
  * return the line number at which the last match occured in *MATCHED_LINE.
  * If IGNORE_WHiTESPACES is set, ignore whitespaces during the matching.
+ * Call cancel CANCEL_FUNC with baton CANCEL_BATON to trigger cancellation.
  * Do all allocations in POOL. */
 static svn_error_t *
 scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
                const svn_hunk_t *hunk, svn_boolean_t match_first,
                svn_linenum_t upper_line, int fuzz, 
                svn_boolean_t ignore_whitespaces,
+               svn_cancel_func_t cancel_func, void *cancel_baton,
                apr_pool_t *pool)
 {
   apr_pool_t *iterpool;
@@ -745,6 +747,9 @@ scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
       int i;
 
       svn_pool_clear(iterpool);
+
+      if (cancel_func)
+        SVN_ERR((cancel_func)(cancel_baton));
 
       SVN_ERR(match_hunk(&matched, target, hunk, fuzz, ignore_whitespaces,
                          iterpool));
@@ -789,12 +794,14 @@ scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
  * IGNORE_WHiTESPACES tells whether whitespaces should be considered when
  * matching. When this function returns, neither TARGET->CURRENT_LINE nor
  * the file offset in the target file will have changed.
+ * Call cancel CANCEL_FUNC with baton CANCEL_BATON to trigger cancellation.
  * Do temporary allocations in POOL. */
 static svn_error_t *
 get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               const svn_hunk_t *hunk, int fuzz, 
-              svn_boolean_t ignore_whitespaces, apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
+              svn_boolean_t ignore_whitespaces,
+              svn_cancel_func_t cancel_func, void *cancel_baton,
+              apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   svn_linenum_t matched_line;
 
@@ -824,7 +831,9 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
       else
         SVN_ERR(scan_for_match(&matched_line, target, hunk, TRUE,
                                hunk->original_start + 1, fuzz,
-                               ignore_whitespaces, scratch_pool));
+                               ignore_whitespaces,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
 
       if (matched_line != hunk->original_start)
         {
@@ -835,7 +844,9 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
            * where the hunk matches. */
           SVN_ERR(scan_for_match(&matched_line, target, hunk, FALSE,
                                  hunk->original_start, fuzz,
-                                 ignore_whitespaces, scratch_pool));
+                                 ignore_whitespaces,
+                                 cancel_func, cancel_baton,
+                                 scratch_pool));
 
           /* In tie-break situations, we arbitrarily prefer early matches
            * to save us from scanning the rest of the file. */
@@ -845,6 +856,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
                * for a line where the hunk matches. */
               SVN_ERR(scan_for_match(&matched_line, target, hunk, TRUE, 0,
                                      fuzz, ignore_whitespaces,
+                                     cancel_func, cancel_baton,
                                      scratch_pool));
             }
         }
@@ -1135,6 +1147,7 @@ send_patch_notification(const patch_target_t *target,
  * as parsed from the patch file (after canonicalization).
  * IGNORE_WHiTESPACES tells whether whitespaces should be considered when
  * doing the matching.
+ * Call cancel CANCEL_FUNC with baton CANCEL_BATON to trigger cancellation.
  * Do temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
 apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
@@ -1145,6 +1158,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                 apr_hash_t *patched_tempfiles,
                 apr_hash_t *reject_tempfiles,
                 svn_boolean_t ignore_whitespaces,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
                 apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *target;
@@ -1173,6 +1188,9 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
       svn_pool_clear(iterpool);
 
+      if (cancel_func)
+        SVN_ERR((cancel_func)(cancel_baton));
+
       hunk = APR_ARRAY_IDX(patch->hunks, i, svn_hunk_t *);
 
       /* Determine the line the hunk should be applied at.
@@ -1180,7 +1198,9 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       do
         {
           SVN_ERR(get_hunk_info(&hi, target, hunk, fuzz,
-                                ignore_whitespaces, result_pool, iterpool));
+                                ignore_whitespaces,
+                                cancel_func, cancel_baton,
+                                result_pool, iterpool));
           fuzz++;
         }
       while (hi->rejected && fuzz <= MAX_FUZZ);
@@ -1282,8 +1302,10 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
       if (! dry_run && ! target->parent_dir_deleted)
         {
           /* Schedule the target for deletion.  Suppress
-           * notification, we'll do it manually in a minute.
-           * Also suppress cancellation. */
+           * notification, we'll do it manually in a minute
+           * because we also need to notify during dry-run.
+           * Also suppress cancellation, because we'd rather
+           * notify about what we did before aborting. */
           SVN_ERR(svn_wc_delete4(ctx->wc_ctx, target->abs_path,
                                  FALSE /* keep_local */, FALSE,
                                  NULL, NULL, NULL, NULL, pool));
@@ -1394,13 +1416,16 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                   else
                     {
                       /* Create the missing component and add it
-                       * to version control. Suppress cancellation. */
+                       * to version control. Allow cancellation since we
+                       * have not modified the working copy yet for this
+                       * target. */
                       SVN_ERR(svn_io_dir_make(abs_path, APR_OS_DEFAULT,
                                               iterpool));
                       SVN_ERR(svn_wc_add4(ctx->wc_ctx, abs_path,
                                           svn_depth_infinity,
                                           NULL, SVN_INVALID_REVNUM,
-                                          NULL, NULL,
+                                          ctx->cancel_func,
+                                          ctx->cancel_baton,
                                           ctx->notify_func2,
                                           ctx->notify_baton2,
                                           iterpool));
@@ -1419,8 +1444,9 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
             {
               /* The target file didn't exist previously,
                * so add it to version control.
-               * Suppress notification, we'll do that later.
-               * Also suppress cancellation. */
+               * Suppress notification, we'll do that later (and also
+               * during dry-run). Also suppress cancellation because
+               * we'd rather notify about what we did before aborting. */
               SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->abs_path,
                                   svn_depth_infinity,
                                   NULL, SVN_INVALID_REVNUM,
@@ -1629,6 +1655,9 @@ delete_empty_dirs(apr_array_header_t *targets, svn_client_ctx_t *ctx,
 
       svn_pool_clear(iterpool);
 
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
       target = APR_ARRAY_IDX(targets, i, patch_target_t *);
       parent = svn_dirent_dirname(target->abs_path, iterpool);
       SVN_ERR(check_dir_empty(&parent_empty, parent, ctx->wc_ctx,
@@ -1653,6 +1682,9 @@ delete_empty_dirs(apr_array_header_t *targets, svn_client_ctx_t *ctx,
       apr_array_header_t *empty_dirs_copy;
 
       svn_pool_clear(iterpool);
+
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
       /* Rebuild the empty dirs list, replacing empty dirs which have
        * an empty parent with their parent. */
@@ -1722,8 +1754,8 @@ delete_empty_dirs(apr_array_header_t *targets, svn_client_ctx_t *ctx,
         }
       if (! dry_run)
         SVN_ERR(svn_wc_delete4(ctx->wc_ctx, empty_dir, FALSE, FALSE,
-                               NULL, NULL, /* suppress cancellation */
-                               NULL, NULL, /* suppress notification */
+                               ctx->cancel_func, ctx->cancel_baton,
+                               NULL, NULL, /* no duplicate notification */
                                iterpool));
     }
   svn_pool_destroy(iterpool);
@@ -1821,6 +1853,8 @@ apply_patches(void *baton,
                                   btn->include_patterns, btn->exclude_patterns,
                                   btn->patched_tempfiles, btn->reject_tempfiles,
                                   btn->ignore_whitespaces,
+                                  btn->ctx->cancel_func,
+                                  btn->ctx->cancel_baton,
                                   result_pool, iterpool));
           if (target->filtered)
             SVN_ERR(svn_diff_close_patch(patch));
