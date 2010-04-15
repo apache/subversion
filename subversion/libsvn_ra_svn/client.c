@@ -453,6 +453,7 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
   conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
   err = svn_error_wrap_apr(status, _("Error in child process: %s"), desc);
   svn_error_clear(svn_ra_svn_write_cmd_failure(conn, pool, err));
+  svn_error_clear(err);
   svn_error_clear(svn_ra_svn_flush(conn, pool));
 }
 

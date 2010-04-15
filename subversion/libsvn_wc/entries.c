@@ -267,9 +267,9 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
                                  entry_abspath,
                                  result_pool,
                                  scratch_pool);
-#ifdef SVN_EXPERIMENTAL
-  /* ### *checksum is originally MD-5 but will later be SHA-1... */
-#endif
+  /* SVN_EXPERIMENTAL_PRISTINE:
+     *checksum is originally MD-5 but will later be SHA-1.  That's OK here -
+     we are just returning what is stored. */
 
   if (err)
     {
@@ -1064,13 +1064,12 @@ read_entries_new(apr_hash_t **result_entries,
 
       if (checksum)
         {
-#ifdef SVN_EXPERIMENTAL
-          /* If we get a SHA-1, as expected in WC-NG, convert it to MD-5. */
-          if (checksum->kind == svn_checksum_sha1)
-            SVN_ERR(svn_wc__db_get_pristine_md5(&checksum, db,
+          /* SVN_EXPERIMENTAL_PRISTINE:
+             If we got a SHA-1, get the corresponding MD-5. */
+          if (checksum->kind != svn_checksum_md5)
+            SVN_ERR(svn_wc__db_pristine_get_md5(&checksum, db,
                                                 entry_abspath, checksum,
                                                 scratch_pool, scratch_pool));
-#endif
 
           SVN_ERR_ASSERT(checksum->kind == svn_checksum_md5);
           entry->checksum = svn_checksum_to_cstring(checksum, result_pool);
@@ -2385,9 +2384,9 @@ write_one_entry_cb(void *baton,
                                            scratch_pool);
 
       err = svn_sqlite__column_checksum(&base_checksum, stmt, 5, scratch_pool);
-#ifdef SVN_EXPERIMENTAL
-      /* ### base_checksum is originally MD-5 but will later be SHA-1... */
-#endif
+      /* ### SVN_EXPERIMENTAL_PRISTINE:
+         base_checksum is originally MD-5 but will later be SHA-1.  The
+         base_checksum is not yet handled by this function. */
 
       SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
     }

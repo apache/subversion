@@ -110,8 +110,7 @@ svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
  * for VERSIONED_FILE_ABSPATH's eol and keyword properties, but leaves
  * BASE_FILE_ABSPATH alone (as though BASE_FILE_ABSPATH were a text-base file,
  * which it usually is, only sometimes we're calling this on incoming
- * temporary text-bases).  If COMPARE_TEXTBASES is false, a clean copy of the
- * versioned file is compared to VERSIONED_FILE_ABSPATH.
+ * temporary text-bases).
  *
  * If an error is returned, the effect on *MODIFIED_P is undefined.
  *
