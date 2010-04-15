@@ -4906,6 +4906,7 @@ svn_client_patch(const char *abs_patch_path,
                  const apr_array_header_t *exclude_patterns,
                  apr_hash_t **patched_tempfiles,
                  apr_hash_t **reject_tempfiles,
+                 svn_boolean_t ignore_whitespaces,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool);

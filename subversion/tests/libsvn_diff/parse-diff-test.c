@@ -64,6 +64,7 @@ test_parse_unidiff(apr_pool_t *pool)
   apr_size_t len;
   const char *fname = "test_parse_unidiff.patch";
   svn_boolean_t reverse;
+  svn_boolean_t ignore_whitespaces;
   int i;
   apr_pool_t *iterpool;
 
@@ -81,6 +82,7 @@ test_parse_unidiff(apr_pool_t *pool)
                              "Cannot write to '%s'", fname);
 
   reverse = FALSE;
+  ignore_whitespaces = FALSE;
   iterpool = svn_pool_create(pool);
   for (i = 0; i < 2; i++)
     {
@@ -101,7 +103,8 @@ test_parse_unidiff(apr_pool_t *pool)
       /* We have two patches with one hunk each.
        * Parse the first patch. */
       SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, reverse,
-                                        iterpool, iterpool));
+                                        ignore_whitespaces, iterpool, 
+                                        iterpool));
       SVN_ERR_ASSERT(patch);
       SVN_ERR_ASSERT(! strcmp(patch->old_filename, "A/C/gamma"));
       SVN_ERR_ASSERT(! strcmp(patch->new_filename, "A/C/gamma"));
@@ -143,7 +146,8 @@ test_parse_unidiff(apr_pool_t *pool)
       SVN_ERR_ASSERT(buf->len == 0);
 
       /* Parse the second patch. */
-      SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, reverse, pool, pool));
+      SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, reverse, 
+                                        ignore_whitespaces, pool, pool));
       SVN_ERR_ASSERT(patch);
       if (reverse)
         {

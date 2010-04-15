@@ -623,7 +623,8 @@ seek_to_line(patch_target_t *target, svn_linenum_t line,
  * POOL. */
 static svn_error_t *
 match_hunk(svn_boolean_t *matched, patch_target_t *target,
-           const svn_hunk_t *hunk, int fuzz, apr_pool_t *pool)
+           const svn_hunk_t *hunk, int fuzz, 
+           svn_boolean_t ignore_whitespaces, apr_pool_t *pool)
 {
   svn_stringbuf_t *hunk_line;
   const char *target_line;
@@ -668,7 +669,22 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
                    hunk->trailing_context > fuzz)
             lines_matched = TRUE;
           else
-            lines_matched = ! strcmp(hunk_line_translated, target_line);
+            {
+              if (ignore_whitespaces)
+                {
+                  char *stripped_hunk_line = apr_pstrdup(pool,
+                                                         hunk_line_translated);
+                  char *stripped_target_line = apr_pstrdup(pool, target_line);
+
+                  apr_collapse_spaces(stripped_hunk_line,
+                                      hunk_line_translated);
+                  apr_collapse_spaces(stripped_target_line, target_line);
+                  lines_matched = ! strcmp(stripped_hunk_line,
+                                           stripped_target_line);
+                }
+              else 
+                lines_matched = ! strcmp(hunk_line_translated, target_line);
+            }
         }
     }
   while (lines_matched && ! (hunk_eof || target->eof));
@@ -706,7 +722,9 @@ match_hunk(svn_boolean_t *matched, patch_target_t *target,
 static svn_error_t *
 scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
                const svn_hunk_t *hunk, svn_boolean_t match_first,
-               svn_linenum_t upper_line, int fuzz, apr_pool_t *pool)
+               svn_linenum_t upper_line, int fuzz, 
+               svn_boolean_t ignore_whitespaces,
+               apr_pool_t *pool)
 {
   apr_pool_t *iterpool;
 
@@ -720,7 +738,8 @@ scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(match_hunk(&matched, target, hunk, fuzz, iterpool));
+      SVN_ERR(match_hunk(&matched, target, hunk, fuzz, ignore_whitespaces,
+                         iterpool));
       if (matched)
         {
           svn_boolean_t taken = FALSE;
@@ -764,7 +783,8 @@ scan_for_match(svn_linenum_t *matched_line, patch_target_t *target,
  * Do temporary allocations in POOL. */
 static svn_error_t *
 get_hunk_info(hunk_info_t **hi, patch_target_t *target,
-              const svn_hunk_t *hunk, int fuzz, apr_pool_t *result_pool,
+              const svn_hunk_t *hunk, int fuzz, 
+              svn_boolean_t ignore_whitespaces, apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
   svn_linenum_t matched_line;
@@ -794,7 +814,8 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
         }
       else
         SVN_ERR(scan_for_match(&matched_line, target, hunk, TRUE,
-                               hunk->original_start + 1, fuzz, scratch_pool));
+                               hunk->original_start + 1, fuzz,
+                               ignore_whitespaces, scratch_pool));
 
       if (matched_line != hunk->original_start)
         {
@@ -804,7 +825,8 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
           /* Scan forward towards the hunk's line and look for a line
            * where the hunk matches. */
           SVN_ERR(scan_for_match(&matched_line, target, hunk, FALSE,
-                                 hunk->original_start, fuzz, scratch_pool));
+                                 hunk->original_start, fuzz,
+                                 ignore_whitespaces, scratch_pool));
 
           /* In tie-break situations, we arbitrarily prefer early matches
            * to save us from scanning the rest of the file. */
@@ -813,7 +835,8 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               /* Scan forward towards the end of the file and look
                * for a line where the hunk matches. */
               SVN_ERR(scan_for_match(&matched_line, target, hunk, TRUE, 0,
-                                     fuzz, scratch_pool));
+                                     fuzz, ignore_whitespaces,
+                                     scratch_pool));
             }
         }
 
@@ -1110,6 +1133,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                 const apr_array_header_t *exclude_patterns,
                 apr_hash_t *patched_tempfiles,
                 apr_hash_t *reject_tempfiles,
+                svn_boolean_t ignore_whitespaces,
                 apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *target;
@@ -1145,7 +1169,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       do
         {
           SVN_ERR(get_hunk_info(&hi, target, hunk, fuzz,
-                                result_pool, iterpool));
+                                ignore_whitespaces, result_pool, iterpool));
           fuzz++;
         }
       while (hi->rejected && fuzz <= MAX_FUZZ);
@@ -1441,6 +1465,10 @@ typedef struct {
   /* Mapping patch target path -> path to tempfile with rejected hunks. */
   apr_hash_t *reject_tempfiles;
 
+  /* Indicates whether we should ignore whitespaces when matching context
+   * lines */
+  svn_boolean_t ignore_whitespaces;
+
 
   /* The client context. */
   svn_client_ctx_t *ctx;
@@ -1487,7 +1515,8 @@ apply_patches(void *baton,
         SVN_ERR(btn->ctx->cancel_func(btn->ctx->cancel_baton));
 
       SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
-                                        btn->reverse, scratch_pool, iterpool));
+                                        btn->reverse, btn->ignore_whitespaces,
+                                        scratch_pool, iterpool));
       if (patch)
         {
           patch_target_t *target;
@@ -1496,6 +1525,7 @@ apply_patches(void *baton,
                                   btn->ctx->wc_ctx, btn->strip_count,
                                   btn->include_patterns, btn->exclude_patterns,
                                   btn->patched_tempfiles, btn->reject_tempfiles,
+                                  btn->ignore_whitespaces,
                                   result_pool, iterpool));
           if (target->filtered)
             SVN_ERR(svn_diff_close_patch(patch));
@@ -1540,6 +1570,7 @@ svn_client_patch(const char *abs_patch_path,
                  const apr_array_header_t *exclude_patterns,
                  apr_hash_t **patched_tempfiles,
                  apr_hash_t **reject_tempfiles,
+                 svn_boolean_t ignore_whitespaces,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
@@ -1558,7 +1589,9 @@ svn_client_patch(const char *abs_patch_path,
   baton.reverse = reverse;
   baton.include_patterns = include_patterns;
   baton.exclude_patterns = exclude_patterns;
-  if (patched_tempfiles)
+  baton.ignore_whitespaces = ignore_whitespaces;
+
+ if (patched_tempfiles)
     {
       (*patched_tempfiles) = apr_hash_make(result_pool);
       baton.patched_tempfiles = (*patched_tempfiles);
