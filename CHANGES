@@ -1,6 +1,6 @@
-Version 1.6.10
-(02 Apr 2010, from /branches/1.6.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.6.10
+Version 1.6.11
+(19 Apr 2010, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.11
 
  User-visible changes:
   * fix for repositories mounted via NFS (issue #3501)
@@ -16,6 +16,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.10
   * update relative externals during a switch (issue #3390)
   * fix 'merge --reintegrate' with self-referential mergeinfo (r892050, -85)
   * improve wc-ng working copy detection (r929382)
+  * improve handling of mergeinfo when using serf (r880461)
   * fixed: 'svnlook plist --revprop' with '-t TXN_NAME' (r917640, -8211)
   * fixed: file external from URL cannot overwrite existing item (issue #3552)
   * fixed: potential memory error in 'svn status' (r923674, -9)
@@ -27,6 +28,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.10
   * on Windows, don't ignore move operation error codes (r896915)
   * more precise reporting of errors occuring with sqlite init (r927323, -8)
   * ensure rangelist APIs are commutative (r923389, -91)
+
+
+Version 1.6.10
+(Not released, see changes for 1.6.11.)
 
 
 Version 1.6.9
