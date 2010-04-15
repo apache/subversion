@@ -29,7 +29,7 @@ extern "C" {
 
 #define REP_CACHE_DB_NAME        "rep-cache.db"
 
-/* Open (and create, if needed) the rep cache database associated with FS.
+/* Open and create, if needed, the rep cache database associated with FS.
    Use POOL for temporary allocations. */
 svn_error_t *
 svn_fs_fs__open_rep_cache(svn_fs_t *fs,
