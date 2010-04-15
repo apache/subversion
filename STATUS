@@ -78,7 +78,20 @@ Candidate changes:
    Notes:
      Does not cleanly merge.  Backport branch needed (but as-yet uncreated).
    Votes:
-     +0: cmpilato
+     +0: cmpilato, danielsh
+
+ * r934599, r934603
+   Fix a concurrency issue in the FSFS rep-cache code.  This indirectly
+   concerns issue #3506.
+   Justification:
+     Opening the DB twice (and overwriting the handle) is undesired.
+   Notes:
+     r934599 updates the svn_atomic__init_once() interface.
+     r934603 is the actual fix.
+   Notes:
+     Depends on the r879966 group, which does not merge cleanly.
+   Votes:
+     +0: danielsh
 
  * r898048
    Extend the Windows only, crypto api verification of server certificates
