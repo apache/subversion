@@ -91,7 +91,7 @@ Candidate changes:
    Notes:
      Depends on the r879966 group, which does not merge cleanly.
    Votes:
-     +0: danielsh
+     +1: danielsh
 
  * r898048
    Extend the Windows only, crypto api verification of server certificates
