@@ -811,7 +811,10 @@ typedef enum {
 } svn_wc__db_checkmode_t;
 
 
-/* ### @a contents may NOT be NULL. */
+/* Set *CONTENTS to a readable stream that will yield the pristine text
+   identified by CHECKSUM (### which should/must be its SHA-1 checksum?).
+
+   Allocate the stream in RESULT_POOL. */
 svn_error_t *
 svn_wc__db_pristine_read(svn_stream_t **contents,
                          svn_wc__db_t *db,
@@ -821,9 +824,13 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
                          apr_pool_t *scratch_pool);
 
 
-/* ### get a tempdir to drop files for later installation. */
-/* ### dlr: Why is a less specific temp dir insufficient?
-   ###  bh: See svn_wc__db_pristine_install() */
+/* Set *TEMP_DIR_ABSPATH to a directory in which the caller should create
+   a uniquely named file for later installation as a pristine text file.
+
+   The directory is guaranteed to be one that svn_wc__db_pristine_install()
+   can use: specifically, one from which it can atomically move the file.
+
+   Allocate *TEMP_DIR_ABSPATH in RESULT_POOL. */
 svn_error_t *
 svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
                                 svn_wc__db_t *db,
@@ -832,12 +839,9 @@ svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
                                 apr_pool_t *scratch_pool);
 
 
-/* ### Given file TEMPFILE_ABSPATH sitting in a tempdir (specified by
-   ### _get_tempdir),
-   ### install the sucker into the pristine datastore for the given checksum.
-   ### This is used for files where we don't know the checksum ahead of
-   ### time, so we drop it into a temp area first, computing the checksum
-   ### as we write it there.
+/* Install the file TEMPFILE_ABSPATH (which is sitting in a directory given by
+   svn_wc__db_pristine_get_tempdir()) into the pristine data store, to be
+   identified by the SHA-1 checksum of its contents, SHA1_CHECKSUM.
 
    ### the md5_checksum parameter is temporary. */
 svn_error_t *
@@ -850,7 +854,9 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
 
 /* Set *PRISTINE_MD5_CHECKSUM to the MD-5 checksum of a pristine text
    identified by its SHA-1 checksum PRISTINE_SHA1_CHECKSUM. Return an error
-   if the pristine text does not exist or its MD5 checksum is not found. */
+   if the pristine text does not exist or its MD5 checksum is not found.
+
+   Allocate *PRISTINE_MD5_CHECKSUM in RESULT_POOL. */
 svn_error_t *
 svn_wc__db_pristine_get_md5(const svn_checksum_t **pristine_md5_checksum,
                             svn_wc__db_t *db,
