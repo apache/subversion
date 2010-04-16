@@ -1,4 +1,4 @@
-/* fs-helpers.c --- tests for the filesystem
+/* svn_test_fs.h --- test helpers for the filesystem
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_TEST__FS_HELPERS_H
-#define SVN_TEST__FS_HELPERS_H
+#ifndef SVN_TEST_FS_H
+#define SVN_TEST_FS_H
 
 #include <apr_pools.h>
 #include "svn_error.h"
@@ -82,8 +82,8 @@ svn_test__current_directory_url(const char **url,
                                 apr_pool_t *pool);
 
 /* Read all data from a generic read STREAM, and return it in STRING.
-   Allocate the svn_stringbuf_t in APRPOOL.  (All data in STRING will be
-   dup'ed from STREAM using APRPOOL too.) */
+   Allocate the svn_stringbuf_t in POOL.  (All data in STRING will be
+   dup'ed from STREAM using POOL too.) */
 svn_error_t *
 svn_test__stream_to_string(svn_stringbuf_t **string,
                            svn_stream_t *stream,
@@ -132,7 +132,7 @@ svn_test__tree_t;
 /* Given a transaction or revision root (ROOT), check to see if the
    tree that grows from that root has all the path entries, and only
    those entries, passed in the array ENTRIES (which is an array of
-   NUM_ENTRIES tree_test_entry_t's).  */
+   NUM_ENTRIES svn_test__tree_entry_t's).  */
 svn_error_t *
 svn_test__validate_tree(svn_fs_root_t *root,
                         svn_test__tree_entry_t *entries,
@@ -194,4 +194,4 @@ svn_test__create_blame_repository(svn_repos_t **out_repos,
 }
 #endif /* __cplusplus */
 
-#endif  /* SVN_TEST__FS_HELPERS_H */
+#endif  /* SVN_TEST_FS_H */

@@ -1,4 +1,4 @@
-/* fs-helpers.c --- tests for the filesystem
+/* svn_test_fs.c --- test helpers for the filesystem
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
