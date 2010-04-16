@@ -435,6 +435,11 @@ class Httpd:
     # Create httpd config file
     fp = open(self.httpd_config, 'w')
 
+    # Limit the number of threads (default = 64)
+    fp.write('<IfModule mpm_winnt.c>\n')
+    fp.write('ThreadsPerChild 16\n')
+    fp.write('</IfModule>\n')
+
     # Global Environment
     fp.write('ServerRoot   ' + self._quote(self.root) + '\n')
     fp.write('DocumentRoot ' + self._quote(self.root) + '\n')
