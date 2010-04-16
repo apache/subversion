@@ -76,7 +76,7 @@ Candidate changes:
      are hurting the ASF repository, and presumably other high-concurrency
      repositories, too, when large commits occur.
    Branch:
-     1.6.x-issue3506
+     ^/subversion/branches/1.6.x-issue3506
    Votes:
      +0: cmpilato, danielsh
 
