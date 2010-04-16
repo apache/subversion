@@ -85,6 +85,9 @@ def generate_output(good_sigs):
             sys.stderr.write("UNABLE TO GET FINGERPRINT FOR %s" % id)
             sys.exit(1)
 
+        gpg_output = "\n".join([ l for l in gpg_output.splitlines()
+                                                     if l[0:7] != 'Warning' ])
+
         fp = fp_pattern.match(gpg_output).groups()
         print("   %s [%s] with fingerprint:" % (fp[3], fp[0]))
         print("   %s" % fp[1])
