@@ -1197,6 +1197,7 @@ diff_wc_wc(const char *path1,
            apr_pool_t *pool)
 {
   const char *abspath1;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path1));
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
@@ -1215,9 +1216,22 @@ diff_wc_wc(const char *path1,
           "and its working files are supported at this time")));
 
   /* Resolve named revisions to real numbers. */
-  SVN_ERR(svn_client__get_revision_number(&callback_baton->revnum1, NULL,
-                                          ctx->wc_ctx, abspath1, NULL,
-                                          revision1, pool));
+  err = svn_client__get_revision_number(&callback_baton->revnum1, NULL,
+                                        ctx->wc_ctx, abspath1, NULL,
+                                        revision1, pool);
+
+  /* In case of an added node, we have no base rev, and we show a revision
+   * number of 0. Note that this code is currently always asking for
+   * svn_opt_revision_base.
+   * ### TODO: get rid of this 0 for added nodes. */
+  if (err && (err->apr_err == SVN_ERR_CLIENT_BAD_REVISION))
+    {
+      svn_error_clear(err);
+      callback_baton->revnum1 = 0;
+    }
+  else
+    SVN_ERR(err);
+
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
   SVN_ERR(svn_wc_diff6(ctx->wc_ctx,

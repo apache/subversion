@@ -849,6 +849,7 @@ svn_client_propget3(apr_hash_t **props,
       svn_boolean_t pristine;
       const char *local_abspath;
       svn_error_t *err;
+      svn_boolean_t added;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
 
@@ -868,9 +869,17 @@ svn_client_propget3(apr_hash_t **props,
       else
         SVN_ERR(err);
 
-      SVN_ERR(svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
-                                              local_abspath, NULL, revision,
-                                              pool));
+      /* Get the actual_revnum; added nodes have no revision yet, and we
+       * return the mock-up revision of 0.
+       * ### TODO: get rid of this 0. */
+      SVN_ERR(svn_wc__node_is_status_added(&added, ctx->wc_ctx, local_abspath,
+                                           pool));
+      if (added)
+        revnum = 0;
+      else
+        SVN_ERR(svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
+                                                local_abspath, NULL, revision,
+                                                pool));
 
       /* If FALSE, we must want the working revision. */
       pristine = (revision->kind == svn_opt_revision_committed
