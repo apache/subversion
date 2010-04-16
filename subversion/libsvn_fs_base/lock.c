@@ -85,7 +85,6 @@ txn_body_lock(void *baton, trail_t *trail)
   struct lock_args *args = baton;
   svn_node_kind_t kind = svn_node_file;
   svn_lock_t *existing_lock;
-  const char *fs_username;
   svn_lock_t *lock;
 
   SVN_ERR(svn_fs_base__get_path_kind(&kind, args->path, trail, trail->pool));
@@ -114,8 +113,6 @@ txn_body_lock(void *baton, trail_t *trail)
   /* There better be a username attached to the fs. */
   if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
     return SVN_FS__ERR_NO_USER(trail->fs);
-  else
-    fs_username = trail->fs->access_ctx->username; /* for convenience */
 
   /* Is the caller attempting to lock an out-of-date working file? */
   if (SVN_IS_VALID_REVNUM(args->current_rev))

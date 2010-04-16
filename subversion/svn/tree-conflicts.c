@@ -99,8 +99,7 @@ svn_cl__get_human_readable_tree_conflict_description(
   const svn_wc_conflict_description_t *conflict,
   apr_pool_t *pool)
 {
-  const char *victim_name, *action, *reason, *operation;
-  victim_name = svn_dirent_basename(conflict->path, pool);
+  const char *action, *reason, *operation;
   reason = reason_str(conflict);
   action = action_str(conflict);
   operation = svn_cl__operation_str_human_readable(conflict->operation, pool);

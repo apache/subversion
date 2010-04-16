@@ -2222,7 +2222,6 @@ merge_dir_deleted(const char *local_dir_abspath,
   merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
-  const char *parent_path;
   svn_error_t *err;
   const char *local_abspath;
   svn_boolean_t is_versioned;
@@ -2310,7 +2309,6 @@ merge_dir_deleted(const char *local_dir_abspath,
                notes/tree-conflicts/detection.txt.
              */
 
-            parent_path = svn_dirent_dirname(path, subpool);
             /* Passing NULL for the notify_func and notify_baton because
                repos_diff.c:delete_entry() will do it for us. */
             err = svn_client__wc_delete(path, merge_b->force,
@@ -4152,7 +4150,6 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
           int j;
           svn_revnum_t start, end;
           svn_boolean_t proper_subset = FALSE;
-          svn_boolean_t equals = FALSE;
           svn_boolean_t overlaps_or_adjoins = FALSE;
 
           /* If this is a reverse merge reorder CHILD->REMAINING_RANGES
@@ -4174,7 +4171,6 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                 }
               else if ((gap_start == start) && (end == gap_end))
                 {
-                  equals = TRUE;
                   break;
                 }
               else if (gap_start <= end && start <= gap_end)  /* intersect */
@@ -4760,7 +4756,6 @@ drive_merge_report_editor(const char *target_abspath,
             APR_ARRAY_IDX(children_with_mergeinfo, i,
                           svn_client__merge_path_t *);
           int parent_index;
-          svn_boolean_t nearest_parent_is_target;
 
           SVN_ERR_ASSERT(child);
           if (child->absent)
@@ -4771,9 +4766,6 @@ drive_merge_report_editor(const char *target_abspath,
                                                FALSE, child->abspath);
           parent = APR_ARRAY_IDX(children_with_mergeinfo, parent_index,
                                  svn_client__merge_path_t *);
-
-          /* Note if the child's parent is the merge target. */
-          nearest_parent_is_target = (parent_index == 0);
 
           /* If a subtree needs the same range applied as its nearest parent
              with mergeinfo or neither the subtree nor this parent need
@@ -5922,12 +5914,10 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
   svn_revnum_t oldest_requested = SVN_INVALID_REVNUM;
   svn_revnum_t youngest_requested = SVN_INVALID_REVNUM;
   svn_revnum_t trim_revision = SVN_INVALID_REVNUM;
-  svn_opt_revision_t youngest_opt_rev;
   apr_array_header_t *merge_range_ts, *segments;
   const char *source_abspath_or_url;
   apr_pool_t *subpool;
   int i;
-  youngest_opt_rev.kind = svn_opt_revision_head;
 
   if(!svn_path_is_url(source))
     SVN_ERR(svn_dirent_get_absolute(&source_abspath_or_url, source, pool));

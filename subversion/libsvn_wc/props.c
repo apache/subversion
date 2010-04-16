@@ -1586,7 +1586,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       const char *propname;
       svn_string_t *conflict = NULL;
       const svn_prop_t *incoming_change;
-      const svn_string_t *from_val, *to_val, *working_val, *base_val;
+      const svn_string_t *from_val, *to_val, *base_val;
       svn_boolean_t is_normal;
 
       svn_pool_clear(iterpool);
@@ -1599,7 +1599,6 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
         ? svn_string_dup(incoming_change->value, result_pool) : NULL;
       from_val = apr_hash_get(server_baseprops, propname, APR_HASH_KEY_STRING);
 
-      working_val = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
       base_val = apr_hash_get(base_props, propname, APR_HASH_KEY_STRING);
 
       if (base_merge)

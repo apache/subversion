@@ -308,7 +308,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
 {
   struct blocks blocks;
   struct adler32 rolling;
-  apr_size_t sz, lo, hi, pending_insert_start = 0, pending_insert_len = 0;
+  apr_size_t sz, lo, pending_insert_start = 0, pending_insert_len = 0;
 
   /* If the size of the target is smaller than the match blocksize, just
      insert the entire target.  */
@@ -324,7 +324,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
 
   /* Initialize our rolling checksum.  */
   init_adler32(&rolling, b, MATCH_BLOCKSIZE);
-  for (sz = bsize, lo = 0, hi = MATCH_BLOCKSIZE; lo < sz;)
+  for (sz = bsize, lo = 0; lo < sz;)
     {
       apr_size_t apos = 0;
       apr_size_t alen = 1;
@@ -362,7 +362,6 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
             adler32_in(&rolling, b[next + MATCH_BLOCKSIZE]);
         }
       lo = next;
-      hi = lo + MATCH_BLOCKSIZE;
     }
 
   /* If we still have an insert pending at the end, throw it in.  */

@@ -305,7 +305,6 @@ svn_diff_diff3(svn_diff_t **diff,
     apr_off_t modified_sync;
     apr_off_t latest_sync;
     apr_off_t common_length;
-    apr_off_t original_length;
     apr_off_t modified_length;
     apr_off_t latest_length;
     svn_boolean_t is_modified;
@@ -407,7 +406,6 @@ svn_diff_diff3(svn_diff_t **diff,
 
         if (is_modified || is_latest)
           {
-            original_length = original_sync - original_start;
             modified_length = modified_sync - modified_start;
             latest_length = latest_sync - latest_start;
 

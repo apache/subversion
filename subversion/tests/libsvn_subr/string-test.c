@@ -219,7 +219,6 @@ test10(apr_pool_t *pool)
 {
   svn_stringbuf_t *s, *t;
   size_t len_1 = 0;
-  size_t len_2 = 0;
   size_t block_len_1 = 0;
   size_t block_len_2 = 0;
 
@@ -229,7 +228,6 @@ test10(apr_pool_t *pool)
 
   t = svn_stringbuf_create(", plus a string more than twice as long", pool);
   svn_stringbuf_appendstr(s, t);
-  len_2       = (s->len);
   block_len_2 = (s->blocksize);
 
   /* Test that:

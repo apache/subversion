@@ -1327,13 +1327,7 @@ dav_svn__update_report(const dav_resource *resource,
   /* Try to deduce what sort of client command is being run, then
      make this guess available to apache's logging subsystem. */
   {
-    const char *action, *spath, *log_depth;
-
-    if (requested_depth == svn_depth_unknown)
-      log_depth = "";
-    else
-      log_depth = apr_pstrcat(resource->pool, " depth=",
-                              svn_depth_to_word(requested_depth), NULL);
+    const char *action, *spath;
 
     if (target)
       spath = svn_path_join(src_path, target, resource->pool);

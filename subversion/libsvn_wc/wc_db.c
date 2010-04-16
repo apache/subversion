@@ -4447,8 +4447,6 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   svn_boolean_t have_act;
   svn_string_t prop_blob = { 0 };
   const char *changelist = NULL;
-  svn_wc__db_status_t base_presence;
-  svn_wc__db_status_t work_presence;
   const char *parent_relpath;
   svn_wc__db_status_t new_presence;
   svn_wc__db_kind_t new_kind;
@@ -4477,12 +4475,6 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   /* There should be something to commit!  */
   /* ### not true. we could simply have text changes. how to assert?
      SVN_ERR_ASSERT(have_work || have_act);  */
-
-  /* These presence values will direct the commit process.  */
-  if (have_base)
-    base_presence = svn_sqlite__column_token(stmt_base, 2, presence_map);
-  if (have_work)
-    work_presence = svn_sqlite__column_token(stmt_work, 0, presence_map);
 
   /* Figure out the new node's kind. It will be whatever is in WORKING_NODE,
      or there will be a BASE_NODE that has it.  */
