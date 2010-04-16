@@ -660,7 +660,6 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
   struct fr_log_message_baton lmb;
   struct rev *rev;
   apr_hash_t *last_props;
-  const char *last_path;
   svn_stream_t *last_stream;
   apr_pool_t *currpool, *lastpool;
 
@@ -705,7 +704,6 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
 
   /* We want the first txdelta to be against the empty file. */
   last_props = apr_hash_make(lastpool);
-  last_path = NULL;
   last_stream = svn_stream_empty(lastpool);
 
   /* Walk the revision list in chronological order, downloading each fulltext,

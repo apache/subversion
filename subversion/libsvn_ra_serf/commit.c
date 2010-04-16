@@ -1749,8 +1749,6 @@ apply_textdelta(void *file_baton,
                 void **handler_baton)
 {
   file_context_t *ctx = file_baton;
-  const svn_ra_callbacks2_t *wc_callbacks;
-  void *wc_callback_baton;
 
   /* Store the stream in a temporary file; we'll give it to serf when we
    * close this file.
@@ -1760,8 +1758,6 @@ apply_textdelta(void *file_baton,
    * that returns EAGAIN until we receive the done call?  But, when
    * would we run through the serf context?  Grr.
    */
-  wc_callbacks = ctx->commit->session->wc_callbacks;
-  wc_callback_baton = ctx->commit->session->wc_callback_baton;
 
   SVN_ERR(svn_io_open_unique_file3(&ctx->svndiff, NULL, NULL,
                                    svn_io_file_del_on_pool_cleanup,

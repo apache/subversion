@@ -664,7 +664,6 @@ open_path(parent_path_t **parent_path_p,
           apr_pool_t *pool)
 {
   svn_fs_t *fs = root->fs;
-  const svn_fs_id_t *id;
   dag_node_t *here; /* The directory we're currently looking at.  */
   parent_path_t *parent_path; /* The path from HERE up to the root.  */
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
@@ -674,7 +673,6 @@ open_path(parent_path_t **parent_path_p,
   /* Make a parent_path item for the root node, using its own current
      copy id.  */
   SVN_ERR(root_node(&here, root, trail, pool));
-  id = svn_fs_base__dag_get_id(here);
   parent_path = make_parent_path(here, 0, 0, pool);
   parent_path->copy_inherit = copy_id_inherit_self;
 

@@ -1516,7 +1516,6 @@ check_dir_empty(svn_boolean_t *empty, const char *local_abspath,
                 apr_pool_t *scratch_pool)
 {
   struct status_baton btn;
-  svn_opt_revision_t revision;
   svn_error_t *err;
   int i;
 
@@ -1524,7 +1523,6 @@ check_dir_empty(svn_boolean_t *empty, const char *local_abspath,
                                         sizeof(patch_target_t *));
   btn.parent_path = local_abspath;
   btn.result_pool = scratch_pool;
-  revision.kind = svn_opt_revision_unspecified;
 
   err = svn_wc_walk_status(wc_ctx, local_abspath, svn_depth_immediates,
                            TRUE, TRUE, TRUE, NULL, find_existing_children,

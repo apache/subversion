@@ -1354,16 +1354,12 @@ log_do_committed(svn_wc__db_t *db,
           const char *child_abspath;
           svn_wc__db_kind_t kind;
           svn_wc__db_status_t status;
-          svn_boolean_t is_file;
 
           apr_pool_clear(iterpool);
           child_abspath = svn_dirent_join(local_abspath, child_name, iterpool);
 
           SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, TRUE,
                                        iterpool));
-
-          is_file = (kind == svn_wc__db_kind_file ||
-                     kind == svn_wc__db_kind_symlink);
 
           SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,

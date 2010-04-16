@@ -426,9 +426,6 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
     apr_hash_t *props, *base_props;
     svn_stream_t *base_contents;
     svn_stream_t *contents;
-    svn_boolean_t src_exists;
-
-    src_exists = TRUE;
 
     /* Are we moving or copying a file that is already moved or copied
        but not committed? */
@@ -480,8 +477,6 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
           if (err && APR_STATUS_IS_ENOENT(err->apr_err))
             {
               svn_error_clear(err);
-
-              src_exists = FALSE;
 
               err = svn_wc__get_pristine_contents(&contents, db, src_abspath,
                                                   scratch_pool, scratch_pool);

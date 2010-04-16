@@ -228,7 +228,7 @@ static svn_error_t *
 test_stream_range(apr_pool_t *pool)
 {
   static const char *file_data[3] = {"Before", "Now", "After"};
-  const char *before, *now, *after;
+  const char *before, *now;
   char buf[14 + 1] = {0}; /* Enough to hold file data + '\0' */
   static const char *fname = "test_stream_range.txt";
   apr_off_t start, end;
@@ -257,7 +257,6 @@ test_stream_range(apr_pool_t *pool)
     /* Create a stream to read from a range of the file. */
     before = file_data[0];
     now = file_data[1];
-    after = file_data[2];
 
     start = strlen(before);
     end = start + strlen(now);

@@ -589,7 +589,6 @@ open_path(parent_path_t **parent_path_p,
           apr_pool_t *pool)
 {
   svn_fs_t *fs = root->fs;
-  const svn_fs_id_t *id;
   dag_node_t *here; /* The directory we're currently looking at.  */
   parent_path_t *parent_path; /* The path from HERE up to the root.  */
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
@@ -599,7 +598,6 @@ open_path(parent_path_t **parent_path_p,
   /* Make a parent_path item for the root node, using its own current
      copy id.  */
   SVN_ERR(root_node(&here, root, pool));
-  id = svn_fs_fs__dag_get_id(here);
   parent_path = make_parent_path(here, 0, 0, pool);
   parent_path->copy_inherit = copy_id_inherit_self;
 
@@ -1573,11 +1571,8 @@ merge_changes(dag_node_t *ancestor_node,
               apr_pool_t *pool)
 {
   dag_node_t *txn_root_node;
-  const svn_fs_id_t *source_id;
   svn_fs_t *fs = txn->fs;
   const char *txn_id = txn->id;
-
-  source_id = svn_fs_fs__dag_get_id(source_node);
 
   SVN_ERR(svn_fs_fs__dag_txn_root(&txn_root_node, fs, txn_id, pool));
 
@@ -3134,7 +3129,6 @@ history_prev(void *baton, apr_pool_t *pool)
   parent_path_t *parent_path;
   dag_node_t *node;
   svn_fs_root_t *root;
-  const svn_fs_id_t *node_id;
   svn_boolean_t reported = fhd->is_interesting;
   svn_boolean_t retry = FALSE;
   svn_revnum_t copyroot_rev;
@@ -3163,7 +3157,6 @@ history_prev(void *baton, apr_pool_t *pool)
      goodies.  */
   SVN_ERR(open_path(&parent_path, root, path, 0, NULL, pool));
   node = parent_path->node;
-  node_id = svn_fs_fs__dag_get_id(node);
   commit_path = svn_fs_fs__dag_get_created_path(node);
   SVN_ERR(svn_fs_fs__dag_get_revision(&commit_rev, node, pool));
 
@@ -3200,7 +3193,6 @@ history_prev(void *baton, apr_pool_t *pool)
           /* Replace NODE and friends with the information from its
              predecessor. */
           SVN_ERR(svn_fs_fs__dag_get_node(&node, fs, pred_id, pool));
-          node_id = svn_fs_fs__dag_get_id(node);
           commit_path = svn_fs_fs__dag_get_created_path(node);
           SVN_ERR(svn_fs_fs__dag_get_revision(&commit_rev, node, pool));
         }

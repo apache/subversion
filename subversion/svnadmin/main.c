@@ -1238,7 +1238,6 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   apr_array_header_t *targets;
   svn_repos_t *repos;
   const char *fs_path = "/";
-  svn_fs_t *fs;
   apr_hash_t *locks;
   apr_hash_index_t *hi;
 
@@ -1252,7 +1251,6 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     fs_path = APR_ARRAY_IDX(targets, 0, const char *);
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
-  fs = svn_repos_fs(repos);
 
   /* Fetch all locks on or below the root directory. */
   SVN_ERR(svn_repos_fs_get_locks(&locks, repos, fs_path, NULL, NULL, pool));
