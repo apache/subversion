@@ -26,7 +26,9 @@
 
 svn_error_t*
 svn_atomic__init_once(volatile svn_atomic_t *global_status,
-                      svn_error_t *(*init_func)(apr_pool_t*), apr_pool_t* pool)
+                      svn_error_t *(*init_func)(void*,apr_pool_t*),
+                      void *baton,
+                      apr_pool_t* pool)
 {
   /* !! Don't use localizable strings in this function, because these
      !! might cause deadlocks. This function can be used to initialize
@@ -41,7 +43,7 @@ svn_atomic__init_once(volatile svn_atomic_t *global_status,
 
   if (status == SVN_ATOMIC_UNINITIALIZED)
     {
-      svn_error_t *err = init_func(pool);
+      svn_error_t *err = init_func(baton, pool);
       if (err)
         {
 #if APR_HAS_THREADS
