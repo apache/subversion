@@ -776,6 +776,7 @@ start-httpd: httpd-conf
 
 stop-httpd:
 	$(HTTPD_STOP_CMD)
+	sleep 3
 
 start-svnserve: $(SVN_OBJDIR)/.compiled
 	$(SVNSERVE_START_CMD)
