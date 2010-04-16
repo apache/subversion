@@ -90,6 +90,9 @@ Candidate changes:
      r934603 is the actual fix.
    Notes:
      Depends on the r879966 group, which does not merge cleanly.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3506-init_once
+     (based on ^/subversion/branches/1.6.x-issue3506)
    Votes:
      +1: danielsh
 
