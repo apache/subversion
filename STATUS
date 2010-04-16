@@ -78,7 +78,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-issue3506
    Votes:
-     +0: cmpilato, danielsh
+     +1: danielsh
+     +0: cmpilato
 
  * r934599, r934603
    Fix a concurrency issue in the FSFS rep-cache code.  This indirectly
