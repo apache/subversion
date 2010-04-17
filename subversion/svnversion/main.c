@@ -290,6 +290,16 @@ main(int argc, const char *argv[])
       return EXIT_FAILURE;
     }
 
+  if (! SVN_IS_VALID_REVNUM(res->min_rev))
+    {
+      /* Local uncommitted modifications, no revision info was found. */
+      SVN_INT_ERR(svn_cmdline_printf(pool, _("Uncommitted local addition, "
+                                             "copy or move%s"),
+                                             no_newline ? "" : "\n"));
+      svn_pool_destroy(pool);
+      return EXIT_SUCCESS;
+    }
+
   /* Build compact '123[:456]M?S?' string. */
   SVN_INT_ERR(svn_cmdline_printf(pool, "%ld", res->min_rev));
   if (res->min_rev != res->max_rev)
