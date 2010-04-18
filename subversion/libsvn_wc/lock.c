@@ -185,7 +185,7 @@ pool_cleanup_locked(void *p)
 
       /* If there is no ADM area, then we definitely have no work items
          or physical locks to worry about. Bail out.  */
-      if (!svn_wc__adm_area_exists(lock, lock->pool))
+      if (!svn_wc__adm_area_exists(lock->abspath, lock->pool))
         return APR_SUCCESS;
 
       /* Creating a subpool is safe within a pool cleanup, as long as
@@ -521,7 +521,7 @@ close_single(svn_wc_adm_access_t *adm_access,
                                                       scratch_pool);
           if (err)
             {
-              if (svn_wc__adm_area_exists(adm_access, scratch_pool))
+              if (svn_wc__adm_area_exists(adm_access->abspath, scratch_pool))
                 return err;
               svn_error_clear(err);
             }
