@@ -104,7 +104,6 @@ copy_one_versioned_file(const char *from_abspath,
                         svn_boolean_t ignore_keywords,
                         apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
   apr_hash_t *kw = NULL;
   svn_subst_eol_style_t style;
   apr_hash_t *props;
@@ -116,23 +115,15 @@ copy_one_versioned_file(const char *from_abspath,
   svn_stream_t *dst_stream;
   const char *dst_tmp;
   svn_error_t *err;
+  svn_boolean_t is_deleted;
 
-  err = svn_wc__get_entry_versioned(&entry, wc_ctx, from_abspath,
-                                    svn_node_file, FALSE, FALSE,
-                                    scratch_pool, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      entry = NULL;
-    }
-  else if (err)
-    return svn_error_return(err);
+  SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, wc_ctx, from_abspath,
+                                         scratch_pool));
 
   /* Don't export 'deleted' files and directories unless it's a
      revision other than WORKING.  These files and directories
      don't really exist in WORKING. */
-  if (revision->kind == svn_opt_revision_working
-      && entry->schedule == svn_wc_schedule_delete)
+  if (revision->kind == svn_opt_revision_working && is_deleted)
     return SVN_NO_ERROR;
 
   if (revision->kind != svn_opt_revision_working)
@@ -226,6 +217,7 @@ copy_one_versioned_file(const char *from_abspath,
     {
       svn_revnum_t changed_rev;
       const char *suffix;
+      const char *url;
       const char *author;
 
       SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, NULL, &author,
@@ -246,10 +238,13 @@ copy_one_versioned_file(const char *from_abspath,
           suffix = "";
         }
 
+      SVN_ERR(svn_wc__node_get_url(&url, wc_ctx, from_abspath, 
+                                   scratch_pool, scratch_pool));
+
       SVN_ERR(svn_subst_build_keywords2
               (&kw, keywords->data,
                apr_psprintf(scratch_pool, "%ld%s", changed_rev, suffix),
-               entry->url, tm, author, scratch_pool));
+               url, tm, author, scratch_pool));
     }
 
   /* For atomicity, we translate to a tmp file and then rename the tmp file
