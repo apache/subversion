@@ -48,7 +48,7 @@ const char *svn_wc__adm_child(const char *path,
                               apr_pool_t *result_pool);
 
 /* Return TRUE if the administrative area exists for this directory. */
-svn_boolean_t svn_wc__adm_area_exists(const svn_wc_adm_access_t *adm_access,
+svn_boolean_t svn_wc__adm_area_exists(const char *adm_abspath,
                                       apr_pool_t *pool);
 
 
