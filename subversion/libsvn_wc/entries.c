@@ -1757,6 +1757,8 @@ insert_working_node(svn_sqlite__db_t *sdb,
 
   SVN_ERR(svn_sqlite__bind_int64(stmt, 19, working_node->keep_local));
 
+  /* ### we should bind 'symlink_target' (20) as appropriate.  */
+
   /* Execute and reset the insert clause. */
   return svn_error_return(svn_sqlite__insert(NULL, stmt));
 }

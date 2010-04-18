@@ -248,6 +248,39 @@ typedef struct {
 } insert_base_baton_t;
 
 
+typedef struct {
+  /* common to all insertions into WORKING */
+  svn_wc__db_status_t presence;
+  svn_wc__db_kind_t kind;
+  apr_int64_t wc_id;
+  const char *local_relpath;
+
+  /* common to all "normal" presence insertions */
+  const apr_hash_t *props;
+  svn_revnum_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
+  apr_int64_t original_repos_id;
+  const char *original_repos_relpath;
+  svn_revnum_t original_revnum;
+  svn_boolean_t moved_here;
+
+  /* for inserting directories */
+  const apr_array_header_t *children;
+  svn_depth_t depth;
+
+  /* for inserting (copied/moved-here) files */
+  const svn_checksum_t *checksum;
+
+  /* for inserting symlinks */
+  const char *target;
+
+  /* may have work items to queue in this transaction  */
+  const svn_skel_t *work_items;
+
+} insert_working_baton_t;
+
+
 static const svn_token_map_t kind_map[] = {
   { "file", svn_wc__db_kind_file },
   { "dir", svn_wc__db_kind_dir },
@@ -1381,8 +1414,8 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
      bind the appropriate parent_relpath. */
   if (*pibb->local_relpath != '\0')
     SVN_ERR(svn_sqlite__bind_text(stmt, 5,
-                                  svn_dirent_dirname(pibb->local_relpath,
-                                                     scratch_pool)));
+                                  svn_relpath_dirname(pibb->local_relpath,
+                                                      scratch_pool)));
 
   SVN_ERR(svn_sqlite__bind_token(stmt, 6, presence_map, pibb->status));
   SVN_ERR(svn_sqlite__bind_token(stmt, 7, kind_map, pibb->kind));
@@ -1410,6 +1443,7 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
     }
   else if (pibb->kind == svn_wc__db_kind_symlink)
     {
+      /* Note: incomplete nodes may have a NULL target.  */
       if (pibb->target)
         SVN_ERR(svn_sqlite__bind_text(stmt, 16, pibb->target));
     }
@@ -1439,6 +1473,119 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
     }
 
   SVN_ERR(add_work_items(sdb, pibb->work_items, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static void
+blank_iwb(insert_working_baton_t *piwb)
+{
+  memset(piwb, 0, sizeof(*piwb));
+  piwb->changed_rev = SVN_INVALID_REVNUM;
+  piwb->depth = svn_depth_infinity;
+
+  /* ORIGINAL_REPOS_ID and ORIGINAL_REVNUM could use some kind of "nil"
+     value, but... meh. We'll avoid them if ORIGINAL_REPOS_RELPATH==NULL.  */
+}
+
+
+/* */
+static svn_error_t *
+insert_working_node(void *baton,
+                    svn_sqlite__db_t *sdb,
+                    apr_pool_t *scratch_pool)
+{
+  const insert_working_baton_t *piwb = baton;
+  const char *parent_relpath;
+  svn_sqlite__stmt_t *stmt;
+
+  /* We cannot insert a WORKING_NODE row at the wcroot.  */
+  /* ### actually, with per-dir DB, we can... */
+#if 0
+  SVN_ERR_ASSERT(*piwb->local_relpath != '\0');
+#endif
+  if (*piwb->local_relpath == '\0')
+    parent_relpath = NULL;
+  else
+    parent_relpath = svn_relpath_dirname(piwb->local_relpath, scratch_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isstt",
+                            piwb->wc_id, piwb->local_relpath,
+                            parent_relpath,
+                            presence_map, piwb->presence,
+                            kind_map, piwb->kind));
+
+  if (piwb->original_repos_relpath != NULL)
+    {
+      SVN_ERR_ASSERT(piwb->original_repos_id > 0);
+      SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(piwb->original_revnum));
+
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 6, piwb->original_repos_id));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 7, piwb->original_repos_relpath));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 8, piwb->original_revnum));
+    }
+
+  /* Do not bind 'moved_here' (9), nor 'moved_to' (10).  */
+
+  /* 'checksum' (11) is bound below.  */
+
+  /* Do not bind 'translated_size' (12).  */
+
+  if (SVN_IS_VALID_REVNUM(piwb->changed_rev))
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 13, piwb->changed_rev));
+  if (piwb->changed_date)
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 14, piwb->changed_date));
+  if (piwb->changed_author)
+    SVN_ERR(svn_sqlite__bind_text(stmt, 15, piwb->changed_author));
+
+  if (piwb->kind == svn_wc__db_kind_dir)
+    {
+      SVN_ERR(svn_sqlite__bind_text(stmt, 16, svn_depth_to_word(piwb->depth)));
+    }
+  else if (piwb->kind == svn_wc__db_kind_file)
+    {
+      SVN_ERR(svn_sqlite__bind_checksum(stmt, 11, piwb->checksum,
+                                        scratch_pool));
+    }
+  else if (piwb->kind == svn_wc__db_kind_symlink)
+    {
+      SVN_ERR_ASSERT(piwb->target != NULL);
+
+      SVN_ERR(svn_sqlite__bind_text(stmt, 20, piwb->target));
+    }
+
+  /* Do not bind 'last_mod_time' (17).  */
+
+  SVN_ERR(svn_sqlite__bind_properties(stmt, 18, piwb->props, scratch_pool));
+
+  /* Do not bind 'keep_local' (19).  */
+
+  SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+  if (piwb->kind == svn_wc__db_kind_dir && piwb->children)
+    {
+      int i;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_INSERT_WORKING_NODE_INCOMPLETE));
+
+      for (i = piwb->children->nelts; i--; )
+        {
+          const char *name = APR_ARRAY_IDX(piwb->children, i, const char *);
+
+          SVN_ERR(svn_sqlite__bindf(stmt, "iss",
+                                    piwb->wc_id,
+                                    svn_relpath_join(piwb->local_relpath,
+                                                     name,
+                                                     scratch_pool),
+                                    piwb->local_relpath));
+          SVN_ERR(svn_sqlite__insert(NULL, stmt));
+        }
+    }
+
+  SVN_ERR(add_work_items(sdb, piwb->work_items, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2715,22 +2862,95 @@ svn_wc__db_op_copy_url(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_add_directory(svn_wc__db_t *db,
                             const char *local_abspath,
+                            const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  insert_working_baton_t iwb;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  blank_iwb(&iwb);
+
+  iwb.presence = svn_wc__db_status_normal;
+  iwb.kind = svn_wc__db_kind_dir;
+  iwb.wc_id = pdh->wcroot->wc_id;
+  iwb.local_relpath = local_relpath;
+
+  iwb.work_items = work_items;
+
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                       insert_working_node, &iwb,
+                                       scratch_pool));
+  flush_entries(pdh);
+
+  /* Add a parent stub.  */
+  {
+    svn_error_t *err;
+
+    err = navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                             scratch_pool);
+    if (err)
+      {
+        /* Prolly fell off teh top of the wcroot. Just call it a day.  */
+        svn_error_clear(err);
+        return SVN_NO_ERROR;
+      }
+
+    blank_iwb(&iwb);
+
+    iwb.presence = svn_wc__db_status_normal;
+    iwb.kind = svn_wc__db_kind_subdir;
+    iwb.wc_id = pdh->wcroot->wc_id;
+    iwb.local_relpath = svn_dirent_basename(local_abspath, scratch_pool);
+
+    /* No children or work items, so a txn is not needed.  */
+    SVN_ERR(insert_working_node(&iwb, pdh->wcroot->sdb, scratch_pool));
+    flush_entries(pdh);
+  }
+
+  return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
 svn_wc__db_op_add_file(svn_wc__db_t *db,
                        const char *local_abspath,
+                       const svn_skel_t *work_items,
                        apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  insert_working_baton_t iwb;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  blank_iwb(&iwb);
+
+  iwb.presence = svn_wc__db_status_normal;
+  iwb.kind = svn_wc__db_kind_file;
+  iwb.wc_id = pdh->wcroot->wc_id;
+  iwb.local_relpath = local_relpath;
+
+  iwb.work_items = work_items;
+
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                       insert_working_node, &iwb,
+                                       scratch_pool));
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2738,13 +2958,40 @@ svn_error_t *
 svn_wc__db_op_add_symlink(svn_wc__db_t *db,
                           const char *local_abspath,
                           const char *target,
+                          const svn_skel_t *work_items,
                           apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  insert_working_baton_t iwb;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(target != NULL);
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  blank_iwb(&iwb);
+
+  iwb.presence = svn_wc__db_status_normal;
+  iwb.kind = svn_wc__db_kind_symlink;
+  iwb.wc_id = pdh->wcroot->wc_id;
+  iwb.local_relpath = local_relpath;
+
+  iwb.target = target;
+
+  iwb.work_items = work_items;
+
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                       insert_working_node, &iwb,
+                                       scratch_pool));
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
 }
+
 
 struct set_props_baton
 {
