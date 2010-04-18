@@ -5073,11 +5073,13 @@ close_edit(void *edit_baton,
      do_entry_deletion() will take care of the necessary steps.  */
   if ((*eb->target_basename) &&
       svn_wc__adm_missing(eb->db, eb->target_abspath, pool))
-    /* Still passing NULL for THEIR_URL. A case where THEIR_URL
-     * is needed in this call is rare or even non-existant.
-     * ### TODO: Construct a proper THEIR_URL anyway. See also
-     * NULL handling code in do_entry_deletion(). */
-    SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL, FALSE, pool));
+    {
+      /* Still passing NULL for THEIR_URL. A case where THEIR_URL
+       * is needed in this call is rare or even non-existant.
+       * ### TODO: Construct a proper THEIR_URL anyway. See also
+       * NULL handling code in do_entry_deletion(). */
+      SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL, FALSE, pool));
+    }
 
   /* The editor didn't even open the root; we have to take care of
      some cleanup stuffs. */
@@ -5113,7 +5115,6 @@ close_edit(void *edit_baton,
         switch_url = svn_path_url_add_component2(eb->repos_root,
                                                  eb->switch_relpath, eb->pool);
 
-
       SVN_ERR(svn_wc__do_update_cleanup(eb->db, eb->target_abspath,
                                         eb->requested_depth,
                                         switch_url,
@@ -5121,7 +5122,7 @@ close_edit(void *edit_baton,
                                         *(eb->target_revision),
                                         eb->notify_func,
                                         eb->notify_baton,
-                                        TRUE, eb->skipped_trees,
+                                        eb->skipped_trees,
                                         eb->pool));
     }
 
