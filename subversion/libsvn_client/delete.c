@@ -85,7 +85,7 @@ svn_client__can_delete(const char *path,
                        apr_pool_t *pool)
 {
   svn_opt_revision_t revision;
-  const svn_wc_entry_t *entry;
+  svn_boolean_t file_external;
   const char* local_abspath;
 
   revision.kind = svn_opt_revision_unspecified;
@@ -96,10 +96,10 @@ svn_client__can_delete(const char *path,
      implemented as a switched file and it would delete the file the
      file external is switched to, which is not the behavior the user
      would probably want. */
-  SVN_ERR(svn_wc__maybe_get_entry(&entry, ctx->wc_ctx, local_abspath,
-                                  svn_node_unknown, FALSE, FALSE, pool, pool));
+  SVN_ERR(svn_wc__node_is_file_external(&file_external, ctx->wc_ctx,
+                                        local_abspath, pool));
 
-  if (entry != NULL && entry->file_external_path)
+  if (file_external)
     return svn_error_createf(SVN_ERR_WC_CANNOT_DELETE_FILE_EXTERNAL, NULL,
                              _("Cannot remove the file external at '%s'; "
                                "please propedit or propdel the svn:externals "
