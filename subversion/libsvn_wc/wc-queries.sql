@@ -82,6 +82,11 @@ insert or ignore into base_node (
   wc_id, local_relpath, parent_relpath, presence, kind, revnum)
 values (?1, ?2, ?3, 'incomplete', 'unknown', ?5);
 
+-- STMT_INSERT_WORKING_NODE_INCOMPLETE
+INSERT OR IGNORE INTO BASE_NODE (
+  wc_id, local_relpath, parent_relpath, presence, kind)
+VALUES (?1, ?2, ?3, 'incomplete', 'unknown');
+
 -- STMT_SELECT_BASE_NODE_CHILDREN
 select local_relpath from base_node
 where wc_id = ?1 and parent_relpath = ?2;
@@ -405,9 +410,9 @@ insert or replace into working_node (
   copyfrom_repos_id,
   copyfrom_repos_path, copyfrom_revnum, moved_here, moved_to, checksum,
   translated_size, changed_rev, changed_date, changed_author, depth,
-  last_mod_time, properties, keep_local)
+  last_mod_time, properties, keep_local, symlink_target)
 values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
-  ?15, ?16, ?17, ?18, ?19);
+  ?15, ?16, ?17, ?18, ?19, ?20);
 
 -- STMT_INSERT_ACTUAL_NODE
 insert or replace into actual_node (

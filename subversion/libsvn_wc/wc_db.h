@@ -952,25 +952,31 @@ svn_wc__db_op_copy_url(svn_wc__db_t *db,
 /* ### add a new versioned directory. a list of children is NOT passed
    ### since they are added in future, distinct calls to db_op_add_*.
    ### this is freshly added, so it has no properties.  */
+/* ### do we need a CONFLICTS param?  */
 svn_error_t *
 svn_wc__db_op_add_directory(svn_wc__db_t *db,
                             const char *local_abspath,
+                            const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
 
 
 /* ### as a new file, there are no properties. this file has no "pristine"
    ### contents, so a checksum [reference] is not required.  */
+/* ### do we need a CONFLICTS param?  */
 svn_error_t *
 svn_wc__db_op_add_file(svn_wc__db_t *db,
                        const char *local_abspath,
+                       const svn_skel_t *work_items,
                        apr_pool_t *scratch_pool);
 
 
 /* ### newly added symlinks have no properties.  */
+/* ### do we need a CONFLICTS param?  */
 svn_error_t *
 svn_wc__db_op_add_symlink(svn_wc__db_t *db,
                           const char *local_abspath,
                           const char *target,
+                          const svn_skel_t *work_items,
                           apr_pool_t *scratch_pool);
 
 
@@ -2095,6 +2101,9 @@ svn_wc__db_temp_get_sdb(svn_sqlite__db_t **sdb,
                         apr_pool_t *scratch_pool);
 
 
+/* Return a directory in *TEMP_DIR_ABSPATH that is suitable for temporary
+   files which may need to be moved (atomically and same-device) into the
+   working copy indicated by WRI_ABSPATH.  */
 svn_error_t *
 svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
                                svn_wc__db_t *db,
