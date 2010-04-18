@@ -741,13 +741,13 @@ svn_wc_add3(const char *path,
   /* Make sure the caller gets the new access baton in the set. */
   if (svn_wc__adm_retrieve_internal2(wc_db, local_abspath, pool) == NULL)
     {
-      svn_node_kind_t kind;
-      svn_wc_adm_access_t *adm_access;
+      svn_wc__db_kind_t kind;
 
-      SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, local_abspath, FALSE, pool));
-
-      if (kind == svn_node_dir)
+      SVN_ERR(svn_wc__db_read_kind(&kind, wc_db, local_abspath, FALSE, pool));
+      if (kind == svn_wc__db_kind_dir)
         {
+          svn_wc_adm_access_t *adm_access;
+
           /* Open the access baton in adm_access' pool to give it the same
              lifetime */
           SVN_ERR(svn_wc_adm_open3(&adm_access, parent_access, path, TRUE,
@@ -1044,17 +1044,14 @@ svn_wc_get_ancestry(char **url,
                     apr_pool_t *pool)
 {
   const char *local_abspath;
-  svn_wc_context_t *wc_ctx;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
-                                         svn_wc__adm_get_db(adm_access),
-                                         pool));
 
-  SVN_ERR(svn_wc_get_ancestry2((const char **)url, rev, wc_ctx, local_abspath,
-                               pool, pool));
-
-  return svn_error_return(svn_wc_context_destroy(wc_ctx));
+  return svn_error_return(svn_wc__internal_get_ancestry(
+                            (const char **)url, rev,
+                            svn_wc__adm_get_db(adm_access),
+                            local_abspath,
+                            pool, pool));
 }
 
 svn_error_t *
