@@ -360,8 +360,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
             }
           else
             {
-              /* We want to pull in the excluded target. So, report it as deleted,
-                 and server will respond properly. */
+              /* We want to pull in the excluded target. So, report it as
+                 deleted, and server will respond properly. */
               if (! report_everything)
                 SVN_ERR(reporter->delete_path(report_baton,
                                               this_path, iterpool));
@@ -424,10 +424,10 @@ report_revisions_and_depths(svn_wc__db_t *db,
           else
             missing = TRUE;
 
-          /* If a node is still missing from disk here, we have no way to recreate
-             it locally, so report as missing and move along.  Again, don't bother
-             if we're reporting everything, because the dir is already missing on
-             the server. */
+          /* If a node is still missing from disk here, we have no way to
+             recreate it locally, so report as missing and move along.
+             Again, don't bother if we're reporting everything, because the
+             dir is already missing on the server. */
           if (missing && wrk_kind == svn_wc__db_kind_dir
                && (depth > svn_depth_files || depth == svn_depth_unknown))
             {
@@ -450,7 +450,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
           const char *childname = svn_uri_is_child(dir_repos_relpath,
                                                    this_repos_relpath, NULL);
 
-          if (!childname || strcmp(childname, child) != 0)
+          if (childname == NULL
+              || strcmp(svn_path_uri_decode(childname, iterpool), child) != 0)
             this_switched = TRUE;
           else
             this_switched = FALSE;
