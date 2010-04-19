@@ -1091,7 +1091,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   void *edit_baton;
   svn_ra_session_t *ra_session;
   const char *log_msg;
-  const char *base_dir;
+  const char *base_abspath;
   const char *base_url;
   const char *target;
   apr_array_header_t *rel_targets;
@@ -1103,7 +1103,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
   svn_error_t *bump_err = SVN_NO_ERROR, *cleanup_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
-  const char *current_dir = "";
+  const char *current_abspath;
   const char *notify_prefix;
   int i;
 
@@ -1118,45 +1118,38 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
     }
 
   /* Condense the target list. */
-  SVN_ERR(svn_dirent_condense_targets(&base_dir, &rel_targets, targets,
+  SVN_ERR(svn_dirent_condense_targets(&base_abspath, &rel_targets, targets,
                                       depth == svn_depth_infinity,
                                       pool, pool));
 
   /* No targets means nothing to commit, so just return. */
-  if (! base_dir)
+  if (base_abspath == NULL)
     goto cleanup;
+  SVN_ERR_ASSERT(rel_targets != NULL);
 
-  /* If we calculated only a base_dir and no relative targets, this
+  /* If we calculated only a base and no relative targets, this
      must mean that we are being asked to commit (effectively) a
      single path. */
-  if ((! rel_targets) || (! rel_targets->nelts))
+  if (rel_targets->nelts == 0)
     {
-      const char *parent_dir, *name;
+      const char *name;
 
-      SVN_ERR(svn_wc_get_actual_target2(&parent_dir, &name, ctx->wc_ctx,
-                                        base_dir, pool, pool));
-      if (*name)
-        {
-          svn_node_kind_t kind;
+      /* Recompute our base directory, and push the resulting name (which
+         may be "") into the list of relative targets.  */
+      SVN_ERR(svn_wc_get_actual_target2(&base_abspath, &name, ctx->wc_ctx,
+                                        base_abspath, pool, pool));
 
-          /* Our new "grandfather directory" is the parent directory
-             of the former one. */
-          base_dir = apr_pstrdup(pool, parent_dir);
-
-          /* Make the array if it wasn't already created. */
-          if (! rel_targets)
-            rel_targets = apr_array_make(pool, targets->nelts, sizeof(name));
-
-          /* Now, push this name as a relative path to our new
-             base directory. */
-          APR_ARRAY_PUSH(rel_targets, const char *) = name;
-
-          target = svn_dirent_join(base_dir, name, pool);
-          SVN_ERR(svn_io_check_path(target, &kind, pool));
-        }
+      APR_ARRAY_PUSH(rel_targets, const char *) = name;
     }
 
-  SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, base_dir, pool, pool));
+  /* Determine prefix to strip from the commit notify messages */
+  SVN_ERR(svn_dirent_get_absolute(&current_abspath, "", pool));
+  notify_prefix = svn_dirent_get_longest_ancestor(current_abspath,
+                                                  base_abspath,
+                                                  pool);
+
+  SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, base_abspath,
+                                     pool, pool));
 
   /* One day we might support committing from multiple working copies, but
      we don't yet.  This check ensures that we don't silently commit a
@@ -1177,7 +1170,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   /* Crawl the working copy for commit items. */
   if ((cmt_err = svn_client__harvest_committables(&committables,
                                                   &lock_tokens,
-                                                  base_dir,
+                                                  base_abspath,
                                                   rel_targets,
                                                   depth,
                                                   ! keep_locks,
@@ -1202,7 +1195,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
      revision with no changes. */
   {
     svn_boolean_t not_found_changed_path = TRUE;
-
 
     cmt_err = svn_iter_apr_array(&not_found_changed_path,
                                  commit_items,
@@ -1238,20 +1230,13 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   if ((cmt_err = get_ra_editor(&ra_session,
                                &editor, &edit_baton, ctx,
-                               base_url, base_dir, log_msg,
+                               base_url, base_abspath, log_msg,
                                commit_items, revprop_table, commit_info_p,
                                TRUE, lock_tokens, keep_locks, pool)))
     goto cleanup;
 
   /* Make a note that we have a commit-in-progress. */
   commit_in_progress = TRUE;
-
-  if ((cmt_err = svn_dirent_get_absolute(&current_dir,
-                                         current_dir, pool)))
-    goto cleanup;
-
-  /* Determine prefix to strip from the commit notify messages */
-  notify_prefix = svn_dirent_get_longest_ancestor(current_dir, base_dir, pool);
 
   /* Perform the commit. */
   cmt_err = svn_client__do_commit(base_url, commit_items, editor, edit_baton,
@@ -1291,7 +1276,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
     }
 
   /* Sleep to ensure timestamp integrity. */
-  svn_io_sleep_for_timestamps(base_dir, pool);
+  svn_io_sleep_for_timestamps(base_abspath, pool);
 
  cleanup:
   /* Abort the commit if it is still in progress. */
@@ -1305,7 +1290,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
      clean-up. */
   if (! bump_err)
     {
-      unlock_err = svn_wc__release_write_lock(ctx->wc_ctx, base_dir, pool);
+      unlock_err = svn_wc__release_write_lock(ctx->wc_ctx, base_abspath, pool);
 
       if (! unlock_err)
         cleanup_err = remove_tmpfiles(tempfiles, pool);

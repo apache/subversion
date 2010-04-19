@@ -922,7 +922,7 @@ validate_dangler(void *baton,
 svn_error_t *
 svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_hash_t **lock_tokens,
-                                 const char *dir_abspath,
+                                 const char *base_abspath,
                                  const apr_array_header_t *targets,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
@@ -958,7 +958,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
    */
   apr_hash_t *danglers = apr_hash_make(pool);
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(base_abspath));
 
   /* Create the COMMITTABLES hash. */
   *committables = apr_hash_make(pool);
@@ -979,20 +979,16 @@ svn_client__harvest_committables(apr_hash_t **committables,
 
       svn_pool_clear(iterpool);
 
-      /* Add the relative portion of our full path (if there are no
-         relative paths, TARGET will just be PARENT_ADM for a single
-         iteration). */
-      if (targets->nelts)
-        target_abspath = svn_dirent_join(dir_abspath,
-                                         APR_ARRAY_IDX(targets, i,
-                                         const char *),
-                                         iterpool);
-      else
-        target_abspath = dir_abspath;
+      /* Add the relative portion to the base abspath.  */
+      target_abspath = svn_dirent_join(base_abspath,
+                                       APR_ARRAY_IDX(targets, i, const char *),
+                                       iterpool);
 
       /* No entry?  This TARGET isn't even under version control! */
       err = svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
-                                        svn_node_unknown, FALSE, FALSE,
+                                        svn_node_unknown,
+                                        FALSE /* show_hidden */,
+                                        FALSE /* need_parent_stub */,
                                         iterpool, iterpool);
       /* If a target of the commit is a tree-conflicted node that
        * has no entry (e.g. locally deleted), issue a proper tree-
