@@ -23,12 +23,14 @@
 # run_tests.py - run the tests in the regression test suite.
 #
 
-'''usage: python run_tests.py [--url=<base-url>] [--fs-type=<fs-type>]
-                    [--verbose] [--cleanup] [--enable-sasl] [--parallel]
-                    [--http-library=<http-library>]
-                    [--config-file=<file>]
-                    [--server-minor-version=<version>] <abs_srcdir> <abs_builddir>
-                    <prog ...>
+'''usage: python run_tests.py
+            [--verbose] [--log-to-stdout] [--cleanup] [--parallel]
+            [--url=<base-url>] [--http-library=<http-library>] [--enable-sasl]
+            [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
+            [--server-minor-version=<version>]
+            [--config-file=<file>]
+            <abs_srcdir> <abs_builddir>
+            <prog ...>
 
 The optional flags and the first two parameters are passed unchanged
 to the TestHarness constructor.  All other parameters are names of
