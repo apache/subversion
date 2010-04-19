@@ -160,6 +160,13 @@ Candidate changes:
    Votes:
      -1: cmpilato (pending results of related security discussion)
 
+ * r935631
+   Fix one of the sanity checks in the 'svn merge --reintegrate' logic.
+   Justification:
+     Sanity checks should themselves be sane.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
