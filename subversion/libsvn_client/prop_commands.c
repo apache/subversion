@@ -518,11 +518,46 @@ pristine_or_working_props(apr_hash_t **props,
                           apr_pool_t *scratch_pool)
 {
   if (pristine)
-    return svn_wc_get_prop_diffs2(NULL, props, wc_ctx, local_abspath,
-                                  result_pool, scratch_pool);
-  else
-    return svn_wc_prop_list2(props, wc_ctx, local_abspath, result_pool,
-                             scratch_pool);
+    {
+      /* ### right now, we're not entirely sure that get_pristine_props
+         ### will return NULL for the added case. let's double-check.  */
+      {
+        svn_boolean_t added;
+
+        /* ### oops. but this doesn't handle the copied case, which DOES
+           ### have properties.  */
+        SVN_ERR(svn_wc__node_is_status_added(&added, wc_ctx, local_abspath,
+                                             scratch_pool));
+        if (added)
+          {
+            *props = NULL;
+            return SVN_NO_ERROR;
+          }
+      }
+
+      return svn_error_return(svn_wc_get_pristine_props(props,
+                                                        wc_ctx,
+                                                        local_abspath,
+                                                        result_pool,
+                                                        scratch_pool));
+    }
+
+  /* ### until svn_wc_prop_list2() returns a NULL value for locally-deleted
+     ### nodes, then let's check manually.  */
+  {
+    svn_boolean_t deleted;
+
+    SVN_ERR(svn_wc__node_is_status_deleted(&deleted, wc_ctx, local_abspath,
+                                           scratch_pool));
+    if (deleted)
+      {
+        *props = NULL;
+        return SVN_NO_ERROR;
+      }
+  }
+
+  return svn_error_return(svn_wc_prop_list2(props, wc_ctx, local_abspath,
+                                            result_pool, scratch_pool));
 }
 
 
@@ -539,19 +574,21 @@ pristine_or_working_propval(const svn_string_t **propval,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  if (pristine)
-    {
-      apr_hash_t *pristine_props;
+  apr_hash_t *props;
 
-      SVN_ERR(svn_wc_get_prop_diffs2(NULL, &pristine_props, wc_ctx,
-                                    local_abspath, result_pool, scratch_pool));
-      *propval = apr_hash_get(pristine_props, propname, APR_HASH_KEY_STRING);
-    }
-  else  /* get the working revision */
+  *propval = NULL;
+
+  SVN_ERR(pristine_or_working_props(&props, wc_ctx, local_abspath, pristine,
+                                    scratch_pool, scratch_pool));
+  if (props != NULL)
     {
-      SVN_ERR(svn_wc_prop_get2(propval, wc_ctx, local_abspath, propname,
-                               result_pool, scratch_pool));
+      const svn_string_t *value = apr_hash_get(props,
+                                               propname, APR_HASH_KEY_STRING);
+      if (value)
+        *propval = svn_string_dup(value, result_pool);
     }
+  /* ### should we throw an error if this node is defined to have
+     ### no properties? (ie. props==NULL)  */
 
   return SVN_NO_ERROR;
 }
@@ -1109,36 +1146,20 @@ proplist_walk_cb(const char *local_abspath,
                  apr_pool_t *scratch_pool)
 {
   struct proplist_walk_baton *wb = walk_baton;
-  apr_hash_t *hash;
+  apr_hash_t *props;
   const char *path;
-
-  /* Ignore the entry if it does not exist at the time of interest. */
-  if (wb->pristine)
-    {
-      svn_boolean_t added;
-
-      SVN_ERR(svn_wc__node_is_status_added(&added, wb->wc_ctx, local_abspath,
-                                           scratch_pool));
-      if (added)
-        return SVN_NO_ERROR;
-    }
-  else
-    {
-      svn_boolean_t deleted;
-
-      SVN_ERR(svn_wc__node_is_status_deleted(&deleted, wb->wc_ctx,
-                                             local_abspath, scratch_pool));
-      if (deleted)
-        return SVN_NO_ERROR;
-    }
 
   /* If our entry doesn't pass changelist filtering, get outta here. */
   if (! svn_wc__changelist_match(wb->wc_ctx, local_abspath,
                                  wb->changelist_hash, scratch_pool))
     return SVN_NO_ERROR;
 
-  SVN_ERR(pristine_or_working_props(&hash, wb->wc_ctx, local_abspath,
+  SVN_ERR(pristine_or_working_props(&props, wb->wc_ctx, local_abspath,
                                     wb->pristine, scratch_pool, scratch_pool));
+
+  /* Bail if this node is defined to have no properties.  */
+  if (props == NULL)
+    return SVN_NO_ERROR;
 
   if (wb->anchor && wb->anchor_abspath)
     {
@@ -1150,7 +1171,7 @@ proplist_walk_cb(const char *local_abspath,
   else
     path = local_abspath;
 
-  return call_receiver(path, hash, wb->receiver, wb->receiver_baton,
+  return call_receiver(path, props, wb->receiver, wb->receiver_baton,
                        scratch_pool);
 }
 

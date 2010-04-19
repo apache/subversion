@@ -1763,11 +1763,21 @@ def rm_of_replaced_file(sbox):
   svntest.tree.compare_trees("disk", actual_disk_tree,
                              expected_disk.old_tree())
 
-  # Remove the copy. Properties should go back to mu's original props.
+  # Remove the copy. This should leave the original locally-deleted mu,
+  # which should have no properties.
   svntest.main.run_svn(None, 'rm', '--force', mu_path)
 
   exit_code, output, errput = svntest.main.run_svn(None,
                                                    'proplist', '-v', mu_path)
+  if output or errput:
+    raise svntest.Failure('no output/errors expected')
+  svntest.verify.verify_exit_code(None, exit_code, 0)
+
+  # Run it again, but ask for the pristine properties, which should
+  # be mu's original props.
+  exit_code, output, errput = svntest.main.run_svn(None,
+                                                   'proplist', '-v',
+                                                   mu_path + '@base')
   expected_output = svntest.verify.UnorderedRegexOutput([
       'Properties on',
       '  yellow',
