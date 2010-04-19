@@ -758,6 +758,32 @@ split_mergeinfo_on_revision(svn_mergeinfo_t *younger_mergeinfo,
 }
 
 
+/* Make a copy of PROPCHANGES (array of svn_prop_t) into *TRIMMED_PROPCHANGES,
+   omitting any svn:mergeinfo changes.  */
+static svn_error_t *
+omit_mergeinfo_changes(apr_array_header_t **trimmed_propchanges,
+                       const apr_array_header_t *propchanges,
+                       apr_pool_t *result_pool)
+{
+  int i;
+
+  *trimmed_propchanges = apr_array_make(result_pool,
+                                        propchanges->nelts,
+                                        sizeof(svn_prop_t));
+
+  for (i = 0; i < propchanges->nelts; ++i)
+    {
+      const svn_prop_t *change = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
+
+      /* If this property is not svn:mergeinfo, then copy it.  */
+      if (strcmp(change->name, SVN_PROP_MERGEINFO) != 0)
+        APR_ARRAY_PUSH(*trimmed_propchanges, svn_prop_t) = *change;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Helper for merge_props_changed().
 
    *PROPS is an array of svn_prop_t structures representing regular properties
@@ -794,22 +820,32 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   svn_boolean_t is_added;
   svn_revnum_t base_revision;
 
+  /* Issue #3383: We don't want mergeinfo from a foreign repos.
+
+     If this is a merge from a foreign repository we must strip all
+     incoming mergeinfo (including mergeinfo deletions).  Otherwise if
+     this property isn't mergeinfo or is NULL valued (i.e. prop removal)
+     or empty mergeinfo it does not require any special handling.  There
+     is nothing to filter out of empty mergeinfo and the concept of
+     filtering doesn't apply if we are trying to remove mergeinfo
+     entirely.  */
+  if (! merge_b->same_repos)
+    return svn_error_return(omit_mergeinfo_changes(props, *props, pool));
+
   /* If we aren't honoring mergeinfo and this is a merge from the
      same repository, then get outta here.  If this is a reintegrate
      merge or a merge from a foreign repository we still need to
      filter regardless of whether we are honoring mergeinfo or not. */
   mergeinfo_behavior(&honor_mergeinfo, NULL, merge_b);
   if (! honor_mergeinfo
-      && merge_b->same_repos
       && ! merge_b->reintegrate_merge)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__node_is_status_added(&is_added, merge_b->ctx->wc_ctx,
-                                       local_abspath, pool));
-
   /* If this is a merge from the same repository and PATH itself has been
      added there is no need to filter. */
-  if (merge_b->same_repos && is_added)
+  SVN_ERR(svn_wc__node_is_status_added(&is_added, merge_b->ctx->wc_ctx,
+                                       local_abspath, pool));
+  if (is_added)
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__node_get_base_rev(&base_revision, merge_b->ctx->wc_ctx,
@@ -826,20 +862,6 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
       svn_mergeinfo_t filtered_younger_mergeinfo = NULL;
       const char *target_url;
       const char *old_url = NULL;
-
-      /* If this is a merge from a foreign repository we must strip all
-         incoming mergeinfo (including mergeinfo deletions).  Otherwise if
-         this property isn't mergeinfo or is NULL valued (i.e. prop removal)
-         or empty mergeinfo it does not require any special handling.  There
-         is nothing to filter out of empty mergeinfo and the concept of
-         filtering doesn't apply if we are trying to remove mergeinfo
-         entirely. */
-      if ((strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
-          && (! merge_b->same_repos))
-        {
-          /* Issue #3383: We don't want mergeinfo from a foreign repos. */
-          continue;
-        }
 
       if ((strcmp(prop->name, SVN_PROP_MERGEINFO) != 0)
           || (! prop->value)       /* Removal of mergeinfo */
