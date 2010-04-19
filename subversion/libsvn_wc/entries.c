@@ -323,8 +323,7 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
         svn_dirent_is_child(parent_abspath,
                             entry_abspath,
                             NULL),
-        /* ### should be result_pool? */
-        scratch_pool);
+        result_pool);
     }
   else
     {
