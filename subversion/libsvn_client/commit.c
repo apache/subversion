@@ -948,7 +948,6 @@ static svn_error_t *
 post_process_commit_item(void *baton, void *this_item, apr_pool_t *pool)
 {
   struct post_commit_baton *btn = baton;
-  apr_pool_t *subpool = btn->qpool;
 
   svn_client_commit_item3_t *item =
     *(svn_client_commit_item3_t **)this_item;
@@ -987,7 +986,7 @@ post_process_commit_item(void *baton, void *this_item, apr_pool_t *pool)
                                  apr_hash_get(btn->checksums,
                                               item->path,
                                               APR_HASH_KEY_STRING),
-                                 subpool);
+                                 btn->qpool);
 }
 
 
