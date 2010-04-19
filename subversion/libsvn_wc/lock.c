@@ -561,9 +561,6 @@ svn_wc__adm_available(svn_boolean_t *available,
   svn_wc__db_status_t status;
   svn_depth_t depth;
 
-  *available = TRUE;
-  if (obstructed)
-    *obstructed = FALSE;
   if (kind)
     *kind = svn_wc__db_kind_unknown;
 
@@ -573,21 +570,18 @@ svn_wc__adm_available(svn_boolean_t *available,
                                NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
-  if (status == svn_wc__db_status_obstructed ||
-      status == svn_wc__db_status_obstructed_add ||
-      status == svn_wc__db_status_obstructed_delete)
-    {
-      *available = FALSE;
-      if (obstructed)
-        *obstructed = TRUE;
-    }
-  else if (status == svn_wc__db_status_absent ||
-           status == svn_wc__db_status_excluded ||
-           status == svn_wc__db_status_not_present ||
-           depth == svn_depth_exclude)
-    {
-      *available = FALSE;
-    }
+  if (obstructed)
+    *obstructed = (status == svn_wc__db_status_obstructed ||
+                   status == svn_wc__db_status_obstructed_add ||
+                   status == svn_wc__db_status_obstructed_delete);
+
+  *available = !(status == svn_wc__db_status_obstructed ||
+                 status == svn_wc__db_status_obstructed_add ||
+                 status == svn_wc__db_status_obstructed_delete ||
+                 status == svn_wc__db_status_absent ||
+                 status == svn_wc__db_status_excluded ||
+                 status == svn_wc__db_status_not_present ||
+                 depth == svn_depth_exclude);
 
   return SVN_NO_ERROR;
 }
