@@ -145,7 +145,7 @@
  * string.  The elements of CHILDREN_WITH_MERGINFO should never be NULL.
  *
  * For clarification on mergeinfo aware vs. mergeinfo unaware merges, see
- * the doc string for honor_mergeinfo().
+ * the doc string for HONOR_MERGEINFO().
  */
 
 /*-----------------------------------------------------------------------*/
@@ -319,6 +319,23 @@ typedef struct merge_cmd_baton_t {
      or do_file_merge() in do_merge(). */
   apr_pool_t *pool;
 } merge_cmd_baton_t;
+
+
+/* If the merge source server is is capable of merge tracking, the left-side
+   merge source is an ancestor of the right-side (or vice-versa), the merge
+   source repository is the same repository as the MERGE_B->TARGET_ABSPATH, and
+   ancestry is being considered then return TRUE.  */
+#define HONOR_MERGEINFO(merge_b) ((merge_b)->mergeinfo_capable      \
+                                  && (merge_b)->sources_ancestral   \
+                                  && (merge_b)->same_repos          \
+                                  && (! (merge_b)->ignore_ancestry))
+
+
+/* If HONOR_MERGEINFO is TRUE and the merge is not a dry run
+   then return TRUE.  */
+#define RECORD_MERGEINFO(merge_b) (HONOR_MERGEINFO(merge_b) \
+                                   && !(merge_b)->dry_run)
+
 
 apr_hash_t *
 svn_client__dry_run_deletions(void *merge_cmd_baton)
@@ -639,35 +656,6 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
-/* Set *HONOR_MERGEINFO and *RECORD_MERGEINFO (if non-NULL) based on the
-   merge being performed as described in MERGE_B.
-
-   If the merge source server is is capable of merge tracking, the left-side
-   merge source is an ancestor of the right-side (or vice-versa), the merge
-   source repository is the same repository as the MERGE_B->TARGET_ABSPATH, and
-   ancestry is being considered then set *HONOR_MERGEINFO to true, otherwise
-   set it to false.
-
-   If *HONOR_MERGEINFO is set to TRUE and the merge is not a dry run then set
-   *RECORD_MERGEINFO to true, otherwise set it to false.
-   **/
-static APR_INLINE void
-mergeinfo_behavior(svn_boolean_t *honor_mergeinfo_p,
-                   svn_boolean_t *record_mergeinfo_p,
-                   merge_cmd_baton_t *merge_b)
-{
-  svn_boolean_t honor_mergeinfo = (merge_b->mergeinfo_capable
-                                   && merge_b->sources_ancestral
-                                   && merge_b->same_repos
-                                   && (! merge_b->ignore_ancestry));
-
-  if (honor_mergeinfo_p)
-    *honor_mergeinfo_p = honor_mergeinfo;
-
-  if (record_mergeinfo_p)
-    *record_mergeinfo_p = (honor_mergeinfo && (! merge_b->dry_run));
-}
-
 
 /* Helper for filter_self_referential_mergeinfo()
 
@@ -787,33 +775,41 @@ omit_mergeinfo_changes(apr_array_header_t **trimmed_propchanges,
 /* Helper for merge_props_changed().
 
    *PROPS is an array of svn_prop_t structures representing regular properties
-   to be added to the working copy LOCAL_ABSPATH.  MERGE_B is cascaded from
-   the argument of the same name in merge_props_changed().
+   to be added to the working copy LOCAL_ABSPATH.
 
-   If mergeinfo is not being honored, MERGE_B->SAME_REPOS is true, and
-   MERGE_B->REINTEGRATE_MERGE is FALSE do nothing.  Otherwise, if
-   MERGE_B->SAME_REPOS is false, then filter out all mergeinfo
-   property additions (Issue #3383) from *PROPS.  If MERGE_B->SAME_REPOS is
+   HONOR_MERGEINFO determines whether mergeinfo will be honored by this
+   function (when applicable).
+
+   If mergeinfo is not being honored, SAME_REPOS is true, and
+   REINTEGRATE_MERGE is FALSE do nothing.  Otherwise, if
+   SAME_REPOS is false, then filter out all mergeinfo
+   property additions (Issue #3383) from *PROPS.  If SAME_REPOS is
    true then filter out mergeinfo property additions to LOCAL_ABSPATH when
    those additions refer to the same line of history as LOCAL_ABSPATH as
    described below.
 
-   If mergeinfo is being honored and MERGE_B->SAME_REPOS is true
+   If mergeinfo is being honored and SAME_REPOS is true
    then examine the added mergeinfo, looking at each range (or single rev)
    of each source path.  If a source_path/range refers to the same line of
    history as LOCAL_ABSPATH (pegged at its base revision), then filter out
    that range.  If the entire rangelist for a given path is filtered then
    filter out the path as well.
 
+   Use RA_SESSION for any communication to the repository, and CTX for any
+   further client operations.
+
    If any filtering occurs, set outgoing *PROPS to a shallow copy (allocated
    in POOL) of incoming *PROPS minus the filtered mergeinfo. */
 static svn_error_t*
 filter_self_referential_mergeinfo(apr_array_header_t **props,
                                   const char *local_abspath,
-                                  merge_cmd_baton_t *merge_b,
+                                  svn_boolean_t honor_mergeinfo,
+                                  svn_boolean_t same_repos,
+                                  svn_boolean_t reintegrate_merge,
+                                  svn_ra_session_t *ra_session,
+                                  svn_client_ctx_t *ctx,
                                   apr_pool_t *pool)
 {
-  svn_boolean_t honor_mergeinfo;
   apr_array_header_t *adjusted_props;
   int i;
   apr_pool_t *iterpool;
@@ -829,26 +825,25 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
      is nothing to filter out of empty mergeinfo and the concept of
      filtering doesn't apply if we are trying to remove mergeinfo
      entirely.  */
-  if (! merge_b->same_repos)
+  if (! same_repos)
     return svn_error_return(omit_mergeinfo_changes(props, *props, pool));
 
   /* If we aren't honoring mergeinfo and this is a merge from the
      same repository, then get outta here.  If this is a reintegrate
      merge or a merge from a foreign repository we still need to
      filter regardless of whether we are honoring mergeinfo or not. */
-  mergeinfo_behavior(&honor_mergeinfo, NULL, merge_b);
   if (! honor_mergeinfo
-      && ! merge_b->reintegrate_merge)
+      && ! reintegrate_merge)
     return SVN_NO_ERROR;
 
   /* If this is a merge from the same repository and PATH itself has been
      added there is no need to filter. */
-  SVN_ERR(svn_wc__node_is_status_added(&is_added, merge_b->ctx->wc_ctx,
+  SVN_ERR(svn_wc__node_is_status_added(&is_added, ctx->wc_ctx,
                                        local_abspath, pool));
   if (is_added)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__node_get_base_rev(&base_revision, merge_b->ctx->wc_ctx,
+  SVN_ERR(svn_wc__node_get_base_rev(&base_revision, ctx->wc_ctx,
                                     local_abspath, pool));
 
   adjusted_props = apr_array_make(pool, (*props)->nelts, sizeof(svn_prop_t));
@@ -875,9 +870,9 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
       /* Temporarily reparent our RA session to the merge
          target's URL. */
       SVN_ERR(svn_client_url_from_path2(&target_url, local_abspath,
-                                        merge_b->ctx, pool, pool));
+                                        ctx, pool, pool));
       SVN_ERR(svn_client__ensure_ra_session_url(&old_url,
-                                                merge_b->ra_session2,
+                                                ra_session,
                                                 target_url, pool));
 
       /* Parse the incoming mergeinfo to allow easier manipulation. */
@@ -918,7 +913,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
           apr_hash_index_t *hi;
           const char *merge_source_root_url;
 
-          SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session2,
+          SVN_ERR(svn_ra_get_repos_root2(ra_session,
                                          &merge_source_root_url, pool));
 
           for (hi = apr_hash_first(pool, younger_mergeinfo);
@@ -964,12 +959,12 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                                                     &start_revision,
                                                     NULL,
                                                     NULL,
-                                                    merge_b->ra_session2,
+                                                    ra_session,
                                                     target_url,
                                                     &peg_rev,
                                                     &rev1_opt,
                                                     &rev2_opt,
-                                                    merge_b->ctx,
+                                                    ctx,
                                                     pool);
                   if (err)
                     {
@@ -1051,8 +1046,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
             local_abspath, &peg_rev,
             base_revision,
             SVN_INVALID_REVNUM,
-            merge_b->ra_session2,
-            merge_b->ctx,
+            ra_session,
+            ctx,
             pool));
 
           /* Remove PATH's implicit mergeinfo from the incoming mergeinfo. */
@@ -1061,10 +1056,10 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                                         mergeinfo, TRUE, pool, iterpool));
         }
 
-      /* If we reparented MERGE_B->RA_SESSION2 above, put it back
+      /* If we reparented RA_SESSION above, put it back
          to the original URL. */
       if (old_url)
-        SVN_ERR(svn_ra_reparent(merge_b->ra_session2, old_url, pool));
+        SVN_ERR(svn_ra_reparent(ra_session, old_url, pool));
 
       /* Combine whatever older and younger filtered mergeinfo exists
          into filtered_mergeinfo. */
@@ -1170,8 +1165,14 @@ merge_props_changed(const char *local_dir_abspath,
       /* If this is a forward merge then don't add new mergeinfo to
          PATH that is already part of PATH's own history. */
       if (merge_b->merge_source.rev1 < merge_b->merge_source.rev2)
-        SVN_ERR(filter_self_referential_mergeinfo(&props, local_abspath,
-                                                  merge_b, subpool));
+        SVN_ERR(filter_self_referential_mergeinfo(&props,
+                                                  local_abspath,
+                                                  HONOR_MERGEINFO(merge_b),
+                                                  merge_b->same_repos,
+                                                  merge_b->reintegrate_merge,
+                                                  merge_b->ra_session2,
+                                                  merge_b->ctx,
+                                                  subpool));
 
       err = svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath, NULL, NULL,
                                 original_props, props, FALSE, merge_b->dry_run,
@@ -4599,7 +4600,7 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
    into TARGET_ABSPATH and drive it.
 
    If mergeinfo is not being honored based on MERGE_B, see the doc string for
-   mergeinfo_behavior() for how this is determined, then ignore
+   HONOR_MERGEINFO() for how this is determined, then ignore
    CHILDREN_WITH_MERGEINFO and merge the diff between URL1@REVISION1 and
    URL2@REVISION2 to TARGET_ABSPATH.
 
@@ -4678,7 +4679,7 @@ drive_merge_report_editor(const char *target_abspath,
   const char *old_sess2_url;
   svn_boolean_t is_rollback = revision1 > revision2;
 
-  mergeinfo_behavior(&honor_mergeinfo, NULL, merge_b);
+  honor_mergeinfo = HONOR_MERGEINFO(merge_b);
 
   /* Start with a safe default starting revision for the editor and the
      merge target. */
@@ -6278,7 +6279,8 @@ do_file_merge(const char *url1,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
 
-  mergeinfo_behavior(&honor_mergeinfo, &record_mergeinfo, merge_b);
+  honor_mergeinfo = HONOR_MERGEINFO(merge_b);
+  record_mergeinfo = RECORD_MERGEINFO(merge_b);
 
   /* Note that this is a single-file merge. */
   notify_b->is_single_file_merge = TRUE;
@@ -6829,7 +6831,7 @@ do_mergeinfo_unaware_dir_merge(const char *url1,
    NOTIFY_B->CHILDREN_WITH_MERGEINFO -- see the global comment
    'THE CHILDREN_WITH_MERGEINFO ARRAY'.  Obviously this should only
    be called if recording mergeinfo -- see doc string for
-   mergeinfo_behavior().
+   RECORD_MERGEINFO().
 
    DEPTH, NOTIFY_B, MERGE_B, and SQUELCH_MERGEINFO_NOTIFICATIONS are all
    cascaded from do_directory_merge's arguments of the same names.
@@ -7555,7 +7557,8 @@ do_directory_merge(const char *url1,
   svn_boolean_t honor_mergeinfo, record_mergeinfo;
   svn_boolean_t same_urls = (strcmp(url1, url2) == 0);
 
-  mergeinfo_behavior(&honor_mergeinfo, &record_mergeinfo, merge_b);
+  honor_mergeinfo = HONOR_MERGEINFO(merge_b);
+  record_mergeinfo = RECORD_MERGEINFO(merge_b);
 
   /* Initialize NOTIFY_B->CHILDREN_WITH_MERGEINFO. See the comment
      'THE CHILDREN_WITH_MERGEINFO ARRAY' at the start of this file. */
@@ -7878,7 +7881,7 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
 
 /* Drive a merge of MERGE_SOURCES into working copy path TARGET_ABSPATH
    and possibly record mergeinfo describing the merge -- see
-   mergeinfo_behavior().
+   RECORD_MERGEINFO().
 
    If MODIFIED_SUBTREES is not NULL and SOURCES_ANCESTRAL or
    REINTEGRATE_MERGE is true, then set *MODIFIED_SUBTREES to a hash
