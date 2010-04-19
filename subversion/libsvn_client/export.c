@@ -156,8 +156,8 @@ copy_one_versioned_file(const char *from_abspath,
       if (source == NULL)
         return SVN_NO_ERROR;
 
-      SVN_ERR(svn_wc_get_prop_diffs2(NULL, &props, wc_ctx, from_abspath,
-                                     scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc_get_pristine_props(&props, wc_ctx, from_abspath,
+                                        scratch_pool, scratch_pool));
     }
   else
     {

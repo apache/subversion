@@ -86,14 +86,13 @@ cat_local_file(svn_wc_context_t *wc_ctx,
     {
       SVN_ERR(svn_wc_get_pristine_contents2(&input, wc_ctx, local_abspath,
                                             scratch_pool, scratch_pool));
-
       if (input == NULL)
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                  _("'%s' has no base revision until it is committed"),
                  svn_dirent_local_style(local_abspath, scratch_pool));
 
-      SVN_ERR(svn_wc_get_prop_diffs2(NULL, &props, wc_ctx, local_abspath,
-                                     scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc_get_pristine_props(&props, wc_ctx, local_abspath,
+                                        scratch_pool, scratch_pool));
     }
   else
     {

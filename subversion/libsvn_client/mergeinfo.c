@@ -597,10 +597,10 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
 
           /* Check to see if we have local modifications which removed all of
              TARGET_WCPATH's pristine mergeinfo.  If that is the case then
-             TARGET_WCPATH effetively has no mergeinfo. */
-          SVN_ERR(svn_wc_get_prop_diffs2(NULL, &original_props, ctx->wc_ctx,
-                                         local_abspath, result_pool,
-                                         scratch_pool));
+             TARGET_WCPATH effectively has no mergeinfo. */
+          SVN_ERR(svn_wc_get_pristine_props(&original_props,
+                                            ctx->wc_ctx, local_abspath,
+                                            result_pool, scratch_pool));
           if (!apr_hash_get(original_props, SVN_PROP_MERGEINFO,
                             APR_HASH_KEY_STRING))
             {
