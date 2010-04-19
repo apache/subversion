@@ -176,9 +176,6 @@ class Sandbox:
 
   def simple_add(self, *targets):
     assert len(targets) > 0
-    if len(targets) == 1 and is_url(targets[0]):
-      assert not self.read_only
-      targets = ('-m', svntests.main.make_log_msg(), targets[0])
     svntest.main.run_svn(False, 'add', *targets)
 
   def simple_revert(self, *targets):
