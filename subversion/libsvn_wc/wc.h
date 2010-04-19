@@ -653,21 +653,6 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool);
 
-/* Gets the relative path REL_PATH as used by the access batons in WC_CTX,
- * by looking at open access batons of LOCAL_ABSPATH and its parents.
- * Perform temporary allocations in SCRATCH_POOL and return the result in
- * RESULT_POOL.
- *
- * Sets REL_PATH to a copy of LOCAL_ABSPATH when no access batons for this
- * node or any of its parents are found
- */
-svn_error_t *
-svn_wc__temp_get_relpath(const char **rel_path,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

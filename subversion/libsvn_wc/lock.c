@@ -1542,44 +1542,6 @@ svn_wc__adm_missing(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__temp_get_relpath(const char **rel_path,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
-{
-  const char *suffix = "";
-  const char *abspath = local_abspath;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  while (TRUE)
-  {
-    svn_wc_adm_access_t *adm_access =
-        svn_wc__adm_retrieve_internal2(db, abspath, scratch_pool);
-
-    if (adm_access != NULL)
-      {
-        *rel_path = svn_dirent_join(svn_wc_adm_access_path(adm_access),
-                                    suffix, result_pool);
-        return SVN_NO_ERROR;
-      }
-
-    if (svn_dirent_is_root(abspath, strlen(abspath)))
-      {
-        /* Not found, so no problem calling it abspath */
-        *rel_path = apr_pstrdup(result_pool, local_abspath);
-        return SVN_NO_ERROR;
-      }
-
-    suffix = svn_dirent_join(suffix, svn_dirent_basename(local_abspath, NULL),
-                             scratch_pool);
-    abspath = svn_dirent_dirname(abspath, scratch_pool);
-  }
-}
-
-
-svn_error_t *
 svn_wc__acquire_write_lock(const char **anchor_abspath,
                            svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
