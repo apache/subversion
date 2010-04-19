@@ -214,40 +214,7 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
                             const char *local_abspath,
                             apr_pool_t *scratch_pool);
 
-/** Like svn_wc_adm_open3() but with a svn_wc_ctx_t* instead of an associated
- * baton.
- *
- * ### BH: This function is not for public consumption. New code should either
- *         use the deprecated access battons or the new wc contexts but not
- *         both. Too bad the WC-NG conversion is not done yet.
- */
-svn_error_t *
-svn_wc__adm_open_in_context(svn_wc_adm_access_t **adm_access,
-                            svn_wc_context_t *wc_ctx,
-                            const char *path,
-                            svn_boolean_t write_lock,
-                            int levels_to_lock,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            apr_pool_t *pool);
 
-/** Like svn_wc_adm_probe_open3(), but with a svn_wc_context_t * instead of
- * an associated baton.
- *
- * ### See usage note to svn_wc__adm_open_in_context(), above.
- */
-svn_error_t *
-svn_wc__adm_probe_in_context(svn_wc_adm_access_t **adm_access,
-                             svn_wc_context_t *wc_ctx,
-                             const char *path,
-                             svn_boolean_t write_lock,
-                             int levels_to_lock,
-                             svn_cancel_func_t cancel_func,
-                             void *cancel_baton,
-                             apr_pool_t *pool);
-
-
-
 /**
  * The following are temporary APIs to aid in the transition from wc-1 to
  * wc-ng.  Use them for new development now, but they may be disappearing
@@ -258,17 +225,6 @@ svn_wc__adm_probe_in_context(svn_wc_adm_access_t **adm_access,
 typedef svn_error_t *(*svn_wc__node_found_func_t)(const char *local_abspath,
                                                   void *walk_baton,
                                                   apr_pool_t *scratch_pool);
-
-/**
- * Retrieve an @a adm_access for @a path from the @a wc_ctx.
- * If the @a adm_access for @a local_abspath is not found, this
- * function sets @a *adm_acess to NULL and does not return an error.
- */
-svn_error_t *
-svn_wc__adm_retrieve_from_context(svn_wc_adm_access_t **adm_access,
-                                  svn_wc_context_t *wc_ctx,
-                                  const char *local_abspath,
-                                  apr_pool_t *pool);
 
 
 /*
