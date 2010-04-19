@@ -5687,6 +5687,38 @@ svn_wc_prop_list(apr_hash_t **props,
                  apr_pool_t *pool);
 
 
+/** Return the set of "pristine" properties for @a local_abspath.
+ *
+ * If the node is locally-added, then @a *props will be set to NULL since
+ * there are no pristine properties. Note: if this addition is replacing a
+ * previously-deleted node, then the replaced node's properties are not
+ * available until the addition is reverted.
+ *
+ * If the node has been copied (from another node in the repository), then
+ * the pristine properties will correspond to those original properties.
+ *
+ * If the node is locally-deleted, these properties will correspond to
+ * the BASE node's properties, as checked-out from the repository. Note: if
+ * this deletion is a child of a copy, then the pristine properties will
+ * correspond to that copy's properties, not any potential BASE node. The
+ * BASE node's properties will not be accessible until the copy is reverted.
+ *
+ * Nodes that are incomplete, excluded, absent, or not present at the
+ * node's revision will return NULL in @props.
+ *
+ * @a props will be allocated in @a result_pool, and all temporary
+ * allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_get_pristine_props(apr_hash_t **props,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+                          
+
 /** Set @a *value to the value of property @a name for @a path, allocating
  * @a *value in @a pool.  If no such prop, set @a *value to @c NULL.
  * @a name may be a regular or wc property; if it is an entry property,
