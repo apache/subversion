@@ -930,8 +930,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool)
 {
-  int i = 0;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_t *changelist_hash = NULL;
 
   /* It's possible that one of the named targets has a parent that is
@@ -971,13 +971,13 @@ svn_client__harvest_committables(apr_hash_t **committables,
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
 
-  do
+  for (i = 0; i < targets->nelts; ++i)
     {
       const svn_wc_entry_t *entry;
       const char *target_abspath;
       svn_error_t *err;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
       /* Add the relative portion of our full path (if there are no
          relative paths, TARGET will just be PARENT_ADM for a single
@@ -986,14 +986,14 @@ svn_client__harvest_committables(apr_hash_t **committables,
         target_abspath = svn_dirent_join(dir_abspath,
                                          APR_ARRAY_IDX(targets, i,
                                          const char *),
-                                         subpool);
+                                         iterpool);
       else
         target_abspath = dir_abspath;
 
       /* No entry?  This TARGET isn't even under version control! */
       err = svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
                                         svn_node_unknown, FALSE, FALSE,
-                                        subpool, subpool);
+                                        iterpool, iterpool);
       /* If a target of the commit is a tree-conflicted node that
        * has no entry (e.g. locally deleted), issue a proper tree-
        * conflicts error instead of a "not under version control". */
@@ -1001,7 +1001,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
         {
           const svn_wc_conflict_description2_t *conflict;
           svn_wc__get_tree_conflict(&conflict, ctx->wc_ctx, target_abspath,
-                                    pool, subpool);
+                                    pool, iterpool);
           if (conflict != NULL)
             {
               svn_error_clear(err);
@@ -1024,11 +1024,11 @@ svn_client__harvest_committables(apr_hash_t **committables,
           || (entry->schedule == svn_wc_schedule_replace))
         {
           const char *parent_abspath = svn_dirent_dirname(target_abspath,
-                                                          subpool);
+                                                          iterpool);
           svn_boolean_t is_added;
 
           err = svn_wc__node_is_status_added(&is_added, ctx->wc_ctx,
-                                             parent_abspath, subpool);
+                                             parent_abspath, iterpool);
           if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
             {
               svn_error_clear(err);
@@ -1041,10 +1041,11 @@ svn_client__harvest_committables(apr_hash_t **committables,
 
           if (is_added)
             {
-              /* Copy the parent and target into pool; subpool
+              /* Copy the parent and target into pool; iterpool
                  lasts only for this loop iteration, and we check
                  danglers after the loop is over. */
-              apr_hash_set(danglers, svn_dirent_dirname(target_abspath, pool),
+              apr_hash_set(danglers,
+                           apr_pstrdup(pool, parent_abspath),
                            APR_HASH_KEY_STRING,
                            apr_pstrdup(pool, target_abspath));
             }
@@ -1068,24 +1069,21 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                                (entry->kind == svn_node_dir
                                                 ? target_abspath
                                                 : svn_dirent_dirname(
-                                                    target_abspath, subpool)),
-                                               subpool));
+                                                    target_abspath, iterpool)),
+                                               iterpool));
 
       SVN_ERR(harvest_committables(*committables, *lock_tokens, target_abspath,
                                    entry->url, NULL,
                                    entry, NULL, FALSE, FALSE, depth,
                                    just_locked, changelist_hash,
-                                   ctx, subpool));
-
-      i++;
+                                   ctx, iterpool));
     }
-  while (i < targets->nelts);
 
   /* Make sure that every path in danglers is part of the commit. */
   SVN_ERR(svn_iter_apr_hash(NULL,
                             danglers, validate_dangler, *committables, pool));
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -2010,9 +2008,9 @@ svn_client__get_log_msg(const char **log_msg,
          function.  Convert the commit_items list to the appropriate
          type, and forward call to it. */
       svn_error_t *err;
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *scratch_pool = svn_pool_create(pool);
       apr_array_header_t *old_commit_items =
-        apr_array_make(subpool, commit_items->nelts, sizeof(void*));
+        apr_array_make(scratch_pool, commit_items->nelts, sizeof(void*));
 
       int i;
       for (i = 0; i < commit_items->nelts; i++)
@@ -2023,7 +2021,7 @@ svn_client__get_log_msg(const char **log_msg,
           if (ctx->log_msg_func2)
             {
               svn_client_commit_item2_t *old_item =
-                apr_pcalloc(subpool, sizeof(*old_item));
+                apr_pcalloc(scratch_pool, sizeof(*old_item));
 
               old_item->path = item->path;
               old_item->kind = item->kind;
@@ -2040,7 +2038,7 @@ svn_client__get_log_msg(const char **log_msg,
           else /* ctx->log_msg_func */
             {
               svn_client_commit_item_t *old_item =
-                apr_pcalloc(subpool, sizeof(*old_item));
+                apr_pcalloc(scratch_pool, sizeof(*old_item));
 
               old_item->path = item->path;
               old_item->kind = item->kind;
@@ -2064,7 +2062,7 @@ svn_client__get_log_msg(const char **log_msg,
       else
         err = (*ctx->log_msg_func)(log_msg, tmp_file, old_commit_items,
                                    ctx->log_msg_baton, pool);
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(scratch_pool);
       return err;
     }
   else
