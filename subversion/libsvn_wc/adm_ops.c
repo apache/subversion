@@ -1866,18 +1866,6 @@ revert_entry(svn_depth_t *depth,
         }
       else if (kind == svn_wc__db_kind_dir)
         {
-          const char *path;
-          SVN_ERR(svn_wc__temp_get_relpath(&path, db, local_abspath,
-                                           pool, pool));
-
-          /* We are trying to revert the current directory which is
-             scheduled for addition. This is supposed to fail (Issue #854) */
-          if (path[0] == '\0')
-            return svn_error_create(SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-                                    _("Cannot revert addition of current "
-                                      "directory; please try again from the "
-                                      "parent directory"));
-
           /* We don't need to check for excluded item, since we won't fall
              into this code path in that case. */
 
@@ -1996,10 +1984,7 @@ revert_internal(svn_wc__db_t *db,
   svn_wc__db_kind_t db_kind;
   svn_boolean_t unversioned;
   const svn_wc_conflict_description2_t *tree_conflict;
-  const char *path;
   svn_error_t *err;
-
-  SVN_ERR(svn_wc__temp_get_relpath(&path, db, local_abspath, pool, pool));
 
   /* Check cancellation here, so recursive calls get checked early. */
   if (cancel_func)
@@ -2029,7 +2014,8 @@ revert_internal(svn_wc__db_t *db,
                                            pool, pool));
   if (unversioned && tree_conflict == NULL)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("Cannot revert unversioned item '%s'"), path);
+                             _("Cannot revert unversioned item '%s'"),
+                             local_abspath);
 
   /* Safeguard 1.5:  is this a missing versioned directory? */
   SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, pool));

@@ -5176,10 +5176,6 @@ make_editor(svn_revnum_t *target_revision,
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(edit_pool);
   const svn_delta_editor_t *inner_editor;
   const char *repos_root, *repos_uuid;
-  const char *anchor;
-
-  SVN_ERR(svn_wc__temp_get_relpath(&anchor, wc_ctx->db, anchor_abspath,
-                                   result_pool, scratch_pool));
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -5282,7 +5278,7 @@ make_editor(svn_revnum_t *target_revision,
                                                 &inner_baton,
                                                 inner_editor,
                                                 inner_baton,
-                                                anchor,
+                                                anchor_abspath,
                                                 target_basename,
                                                 wc_ctx->db,
                                                 result_pool));
