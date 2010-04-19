@@ -153,7 +153,7 @@ svn_iter_apr_array(svn_boolean_t *completed,
 
       svn_pool_clear(iterpool);
 
-      err = (*func)(baton, item, pool);
+      err = (*func)(baton, item, iterpool);
     }
 
   if (completed)

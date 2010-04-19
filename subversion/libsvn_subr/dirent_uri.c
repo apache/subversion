@@ -1817,6 +1817,7 @@ svn_dirent_condense_targets(const char **pcommon,
   /* Early exit when there's only one dirent to work on. */
   if (targets->nelts == 1)
     {
+      *pcommon = apr_pstrdup(result_pool, *pcommon);
       if (pcondensed_targets)
         *pcondensed_targets = apr_array_make(result_pool, 0,
                                              sizeof(const char *));
