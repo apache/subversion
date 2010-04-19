@@ -1801,6 +1801,25 @@ svn_wc_prop_list2(apr_hash_t **props,
                        result_pool, scratch_pool));
 }
 
+
+svn_error_t *
+svn_wc_get_pristine_props(apr_hash_t **props,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  /* ### we should check the node's status and ensure that we are getting
+     ### exactly the properties (or NULL) that the docstring states.  */
+
+  return svn_error_return(
+    svn_wc__load_props(props, NULL, wc_ctx->db, local_abspath,
+                       result_pool, scratch_pool));
+}
+
+
 svn_error_t *
 svn_wc_prop_get2(const svn_string_t **value,
                  svn_wc_context_t *wc_ctx,
