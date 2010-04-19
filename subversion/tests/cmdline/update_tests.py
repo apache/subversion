@@ -4951,13 +4951,12 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
   """
 
   A = os.path.join(wc_dir, 'A')
-  A_url = sbox.repo_url + '/A'
 
   def modify_dir(dir):
     """Make some set of local modifications to an existing tree:
     A prop change, add a child, delete a child, change a child."""
-    run_and_verify_svn(None, AnyOutput, [],
-                       'propset', 'p', 'v', dir)
+    run_and_verify_svn(None, AnyOutput, [], 'propset', 'p', 'v', dir)
+
     path = os.path.join(dir, 'new_file')
     svntest.main.file_write(path, "This is the file 'new_file'.\n")
     svntest.actions.run_and_verify_svn(None, None, [], 'add', path)
