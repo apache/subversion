@@ -1999,7 +1999,7 @@ revert_internal(svn_wc__db_t *db,
   if (unversioned && tree_conflict == NULL)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("Cannot revert unversioned item '%s'"),
-                             local_abspath);
+                             svn_dirent_local_style(local_abspath, pool));
 
   /* Safeguard 1.5:  is this a missing versioned directory? */
   SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, pool));
