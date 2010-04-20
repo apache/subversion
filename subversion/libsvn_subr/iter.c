@@ -182,11 +182,12 @@ svn_iter__break(void)
   return &internal_break_error;
 }
 
-/* APR isn't fully constified, and apr_hash_this does not expect a const
- * hash index parameter. However, it does not modify the hash index,
- * and in Subversion we're trying to be const-correct.
- * So these functions all take const hash indices, and we cast the const
- * away when passing them down to APR to avoid compiler warnings. */
+/* Note about the type casts:  apr_hash_this() does not expect a const hash
+ * index pointer even though it does not modify the hash index.  In
+ * Subversion we're trying to be const-correct, so these functions all take
+ * a const hash index and we cast away the const when passing it down to
+ * APR.  (A compiler may warn about casting away 'const', but at least this
+ * cast is explicit and gathered in one place.) */
 
 const void *svn__apr_hash_index_key(const apr_hash_index_t *hi)
 {
