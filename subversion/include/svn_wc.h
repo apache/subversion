@@ -5689,8 +5689,12 @@ svn_wc_prop_list(apr_hash_t **props,
 
 /** Return the set of "pristine" properties for @a local_abspath.
  *
+ * There are node states where properties do not make sense. For these
+ * cases, NULL will be returned in @a *props. Otherwise, a hash table
+ * will always be returned (but may be empty, indicating no properties).
+ *
  * If the node is locally-added, then @a *props will be set to NULL since
- * there are no pristine properties. Note: if this addition is replacing a
+ * pristine properties are undefined. Note: if this addition is replacing a
  * previously-deleted node, then the replaced node's properties are not
  * available until the addition is reverted.
  *
@@ -5705,6 +5709,13 @@ svn_wc_prop_list(apr_hash_t **props,
  *
  * Nodes that are incomplete, excluded, absent, or not present at the
  * node's revision will return NULL in @props.
+ *
+ * If the node is not versioned, SVN_ERR_WC_PATH_NOT_FOUND will be returned.
+ *
+ * ### until we get to single-db: if the node has been marked for deletion,
+ * ### is a directory, and the directory is missing on disk, then the
+ * ### pristine properties will not be available; SVN_ERR_PROPERTY_NOT_FOUND
+ * ### will be returned.
  *
  * @a props will be allocated in @a result_pool, and all temporary
  * allocations will be performed in @a scratch_pool.

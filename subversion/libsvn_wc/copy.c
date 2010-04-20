@@ -56,8 +56,8 @@ copy_props(svn_wc__db_t *db,
   apr_hash_t *props;
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_wc__load_props(NULL, &props, db, src_abspath,
-                             scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__get_actual_props(&props, db, src_abspath,
+                                   scratch_pool, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
     {
       const char *propname = svn__apr_hash_index_key(hi);
@@ -444,8 +444,10 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
       }
 
     /* Load source base and working props. */
-    SVN_ERR(svn_wc__load_props(&base_props, &props, db,
-                               src_abspath, scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__get_pristine_props(&base_props, db, src_abspath,
+                                       scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__get_actual_props(&props, db, src_abspath,
+                                     scratch_pool, scratch_pool));
 
     /* Copy working copy file to temporary location */
     {
