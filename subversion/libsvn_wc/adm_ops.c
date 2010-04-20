@@ -2330,14 +2330,10 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 
         svn_error_clear(err);
 
-        SVN_ERR(svn_wc__text_revert_path(&text_base, db, local_abspath,
-                                         scratch_pool));
-        SVN_ERR_ASSERT(text_base != NULL);
-
-        return svn_error_return(svn_stream_open_readonly(contents,
-                                                         text_base,
-                                                         result_pool,
-                                                         scratch_pool));
+        return svn_error_return(svn_wc__get_revert_contents(contents,
+                                                            db, local_abspath,
+                                                            result_pool,
+                                                            scratch_pool));
       }
     return SVN_NO_ERROR;
   }
