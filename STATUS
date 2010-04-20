@@ -157,8 +157,10 @@ Candidate changes:
    SVNListParentPath feature doesn't work when svn authz is used.
    Justification:
      This issue is waiting for resolution for more than 3 years.
+   Notes:
+     See security discussion at http://svn.haxx.se/dev/archive-2010-04/0275.shtml
    Votes:
-     -1: cmpilato (pending results of related security discussion)
+     -1: cmpilato (pending results of aforemented security discussion)
 
  * r935631
    Fix one of the sanity checks in the 'svn merge --reintegrate' logic.
