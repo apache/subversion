@@ -879,7 +879,13 @@ open_db(svn_sqlite__db_t **sdb,
 
 /* For a given LOCAL_ABSPATH, figure out what sqlite database (PDH) to
    use and the RELPATH within that wcroot.  If a sqlite database needs
-   to be opened, then use SMODE for it. */
+   to be opened, then use SMODE for it.
+
+   *LOCAL_RELPATH will be allocated within RESULT_POOL. Temporary allocations
+   will be made in SCRATCH_POOL.
+
+   Certain internal structures will be allocated in DB->STATE_POOL.
+*/
 static svn_error_t *
 parse_local_abspath(svn_wc__db_pdh_t **pdh,
                     const char **local_relpath,
@@ -6193,32 +6199,36 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__db_temp_get_sdb(svn_sqlite__db_t **sdb,
-                        svn_wc__db_t *db,
-                        const char *dir_abspath,
-                        svn_boolean_t always_open,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
+svn_wc__db_temp_borrow_sdb(svn_sqlite__db_t **sdb,
+                           svn_wc__db_t *db,
+                           const char *local_dir_abspath,
+                           svn_wc__db_openmode_t mode,
+                           apr_pool_t *scratch_pool)
 {
-  if (!always_open)
-    {
-      svn_wc__db_pdh_t *pdh;
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__mode_t smode;
 
-      pdh = get_or_create_pdh(db, dir_abspath, FALSE, scratch_pool);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
 
-      if (pdh != NULL &&
-          pdh->wcroot != NULL &&
-          pdh->wcroot->sdb != NULL &&
-          strcmp(pdh->wcroot->abspath, dir_abspath) == 0)
-        {
-          *sdb = pdh->wcroot->sdb;
-          return SVN_NO_ERROR;
-        }
-    }
+  if (mode == svn_wc__db_openmode_readonly)
+    smode = svn_sqlite__mode_readonly;
+  else
+    smode = svn_sqlite__mode_readwrite;
 
-  return svn_error_return(open_db(sdb, dir_abspath, SDB_FILE,
-                                  svn_sqlite__mode_readwrite,
-                                  result_pool, scratch_pool));
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath,
+                              db, local_dir_abspath, smode,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  /* We better be looking at the proper wcroot for this directory.
+     If we ended up with a stub, then the subdirectory (and its SDB!)
+     are missing.  */
+  SVN_ERR_ASSERT(*local_relpath == '\0');
+
+  *sdb = pdh->wcroot->sdb;
+
+  return SVN_NO_ERROR;
 }
 
 

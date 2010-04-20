@@ -509,42 +509,33 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
 }
 
 
-/* Read entries for PATH/LOCAL_ABSPATH from DB (wc-1 or wc-ng). The entries
-   will be allocated in RESULT_POOL, with temporary allocations in
-   SCRATCH_POOL. The entries are returned in RESULT_ENTRIES.  */
+/* Read one entry from wc_db. It will be allocated in RESULT_POOL and
+   returned in *NEW_ENTRY.
+
+   DIR_ABSPATH is the name of the directory to read this entry from, and
+   it will be named NAME (use "" for "this dir").
+
+   DB specifies the wc_db database, and WC_ID specifies which working copy
+   this information is being read from.
+
+   If this node is "this dir", then PARENT_ENTRY should be NULL. Otherwise,
+   it should refer to the entry for the child's parent directory.
+
+   Temporary allocations are made in SCRATCH_POOL.  */
 static svn_error_t *
-read_entries_new(apr_hash_t **result_entries,
-                 svn_wc__db_t *db,
-                 const char *local_abspath,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
+read_one_entry(const svn_wc_entry_t **new_entry,
+               svn_wc__db_t *db,
+               apr_uint64_t wc_id,
+               const char *dir_abspath,
+               const char *name,
+               const svn_wc_entry_t *parent_entry,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
-  svn_sqlite__db_t *sdb;
-  apr_hash_t *entries;
-  const apr_array_header_t *children;
-  apr_pool_t *handle_pool = svn_pool_create(scratch_pool);
-  apr_pool_t *iterpool = svn_pool_create(handle_pool);
-  int i;
-  const svn_wc_entry_t *parent_entry = NULL;
-  apr_uint64_t wc_id = 1;  /* ### hacky. should remove.  */
+  /* Rename some parameters.  */
+  const char *local_abspath = dir_abspath;
+  apr_pool_t *iterpool = scratch_pool;
 
-  entries = apr_hash_make(result_pool);
-
-  /* ### need database to determine: incomplete, ACTUAL info.  */
-  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, db, local_abspath, FALSE,
-                                  handle_pool, iterpool));
-
-  SVN_ERR(svn_wc__db_read_children(&children, db,
-                                   local_abspath,
-                                   result_pool, iterpool));
-
-  /* HACK: Push the directory at the end of a constant array */
-  APR_ARRAY_PUSH((apr_array_header_t *)children, const char *) = "";
-
-  /* Note that this loop order causes "this dir" to be processed first.
-     This is necessary because we may need to access the directory's
-     entry during processing of "added" nodes.  */
-  for (i = children->nelts; i--; )
     {
       svn_wc__db_kind_t kind;
       svn_wc__db_status_t status;
@@ -559,13 +550,7 @@ read_entries_new(apr_hash_t **result_entries,
       svn_boolean_t conflicted;
       svn_boolean_t base_shadowed;
 
-      svn_pool_clear(iterpool);
-
-      entry->name = APR_ARRAY_IDX(children, i, const char *);
-
-      /* If we're on THIS_DIR, then set up PARENT_ENTRY for later use.  */
-      if (*entry->name == '\0')
-        parent_entry = entry;
+      entry->name = name;
 
       entry_abspath = svn_dirent_join(local_abspath, entry->name, iterpool);
 
@@ -661,7 +646,13 @@ read_entries_new(apr_hash_t **result_entries,
              instead.  */
           if (kind == svn_wc__db_kind_dir)
             {
+                svn_sqlite__db_t *sdb;
                 svn_sqlite__stmt_t *stmt;
+
+                SVN_ERR(svn_wc__db_temp_borrow_sdb(
+                          &sdb, db, local_abspath,
+                          svn_wc__db_openmode_readonly,
+                          iterpool));
 
                 SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                                   STMT_SELECT_NOT_PRESENT));
@@ -1020,9 +1011,8 @@ read_entries_new(apr_hash_t **result_entries,
         }
       else
         {
-          /* ### We aren't using this status. Yet.  */
-          SVN_ERR_ASSERT(status == svn_wc__db_status_excluded);
-          continue;
+          /* ### we should have handled all possible status values.  */
+          SVN_ERR_MALFUNCTION();
         }
 
       /* ### higher levels want repos information about deleted nodes, even
@@ -1124,10 +1114,56 @@ read_entries_new(apr_hash_t **result_entries,
 
       entry->working_size = translated_size;
 
+      *new_entry = entry;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Read entries for PATH/LOCAL_ABSPATH from DB. The entries
+   will be allocated in RESULT_POOL, with temporary allocations in
+   SCRATCH_POOL. The entries are returned in RESULT_ENTRIES.  */
+static svn_error_t *
+read_entries_new(apr_hash_t **result_entries,
+                 svn_wc__db_t *db,
+                 const char *local_abspath,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  apr_hash_t *entries;
+  const apr_array_header_t *children;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  int i;
+  const svn_wc_entry_t *parent_entry;
+  apr_uint64_t wc_id = 1;  /* ### hacky. should remove.  */
+
+  entries = apr_hash_make(result_pool);
+
+  SVN_ERR(read_one_entry(&parent_entry, db, wc_id, local_abspath,
+                         "" /* name */,
+                         NULL /* parent_entry */,
+                         result_pool, iterpool));
+  apr_hash_set(entries, "", APR_HASH_KEY_STRING, parent_entry);
+
+  /* Use result_pool so that the child names (used by reference, rather
+     than copied) appear in result_pool.  */
+  SVN_ERR(svn_wc__db_read_children(&children, db,
+                                   local_abspath,
+                                   result_pool, iterpool));
+  for (i = children->nelts; i--; )
+    {
+      const char *name = APR_ARRAY_IDX(children, i, const char *);
+      const svn_wc_entry_t *entry;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(read_one_entry(&entry,
+                             db, wc_id, local_abspath, name, parent_entry,
+                             result_pool, iterpool));
       apr_hash_set(entries, entry->name, APR_HASH_KEY_STRING, entry);
     }
 
-  svn_pool_destroy(handle_pool);
+  svn_pool_destroy(iterpool);
 
   *result_entries = entries;
 
@@ -2476,8 +2512,9 @@ write_one_entry(svn_wc__db_t *db,
   svn_sqlite__db_t *sdb;
 
   /* ### need the SDB so we can jam rows directly into it.  */
-  SVN_ERR(svn_wc__db_temp_get_sdb(&sdb, db, local_abspath, FALSE,
-                                  scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_temp_borrow_sdb(&sdb, db, local_abspath,
+                                     svn_wc__db_openmode_readwrite,
+                                     scratch_pool));
   woeb.db = db;
   woeb.local_abspath = local_abspath;
   woeb.this_dir = this_dir;
