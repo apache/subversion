@@ -323,25 +323,6 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
 }
 
 
-/* */
-static svn_error_t *
-process_deletion_postcommit(svn_wc__db_t *db,
-                            const char *adm_abspath,
-                            const char *local_abspath,
-                            svn_revnum_t new_revision,
-                            svn_boolean_t no_unlock,
-                            apr_pool_t *scratch_pool)
-{
-#ifdef NOT_NEEDED_NOW__CALLER_DOES_THIS
-  SVN_ERR(svn_wc__write_check(db, adm_abspath, scratch_pool));
-#endif
-
-  return svn_error_return(svn_wc__wq_add_deletion_postcommit(
-                            db, local_abspath, new_revision, no_unlock,
-                            scratch_pool));
-}
-
-
 /* CHECKSUM is the checksum of the new text base for LOCAL_ABSPATH, and must
  * be provided if there is one, else NULL. */
 static svn_error_t *
@@ -387,9 +368,8 @@ process_committed_leaf(svn_wc__db_t *db,
   if (status == svn_wc__db_status_deleted
       || status == svn_wc__db_status_obstructed_delete)
     {
-      return svn_error_return(process_deletion_postcommit(
-                                db, adm_abspath, local_abspath,
-                                new_revnum, no_unlock,
+      return svn_error_return(svn_wc__wq_add_deletion_postcommit(
+                                db, local_abspath, new_revnum, no_unlock,
                                 scratch_pool));
     }
 
