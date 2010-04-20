@@ -38,6 +38,8 @@
 #include "svn_io.h"                     /* for svn_io_stat() */
 #include "svn_ctype.h"
 
+#include "dirent_uri.h"
+
 
 /* The canonical empty path.  Can this be changed?  Well, change the empty
    test below and the path library will work, not so sure about the fs/wc
@@ -673,7 +675,7 @@ svn_path_is_url(const char *path)
 
       alphanum | mark | ":" | "@" | "&" | "=" | "+" | "$" | ","
 */
-static const char uri_char_validity[256] = {
+const char svn_uri__char_validity[256] = {
   0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
   0, 1, 0, 0, 1, 0, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
@@ -732,7 +734,7 @@ svn_path_is_uri_safe(const char *path)
             }
           return FALSE;
         }
-      else if (! uri_char_validity[((unsigned char)path[i])])
+      else if (! svn_uri__char_validity[((unsigned char)path[i])])
         {
           return FALSE;
         }
@@ -802,7 +804,7 @@ svn_path_uri_encode(const char *path, apr_pool_t *pool)
 {
   const char *ret;
 
-  ret = uri_escape(path, uri_char_validity, pool);
+  ret = uri_escape(path, svn_uri__char_validity, pool);
 
   /* Our interface guarantees a copy. */
   if (ret == path)
@@ -921,7 +923,7 @@ svn_path_url_add_component2(const char *url,
                             apr_pool_t *pool)
 {
   /* = svn_path_uri_encode() but without always copying */
-  component = uri_escape(component, uri_char_validity, pool);
+  component = uri_escape(component, svn_uri__char_validity, pool);
 
   return svn_path_join(url, component, pool);
 }

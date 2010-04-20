@@ -465,6 +465,11 @@ svn_relpath_canonicalize(const char *uri,
  * separator characters, and possibly other semantically inoperative
  * transformations.
  *
+ * If @a uri starts with a schema, this function also normalizes the
+ * escaping of the path component by unescaping characters that don't
+ * need escaping and escaping characters that do need escaping but
+ * weren't.
+ *
  * This functions supports URLs.
  *
  * The returned uri may be statically allocated or allocated from @a pool.
