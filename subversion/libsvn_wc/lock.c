@@ -1675,14 +1675,18 @@ svn_wc__release_write_lock(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, wc_ctx->db, local_abspath,
                               scratch_pool, scratch_pool));
   if (work_item)
-    return SVN_NO_ERROR;
+    {
+      /* Do not release locks (here or below) if there is work to do.  */
+      return SVN_NO_ERROR;
+    }
 
   /* We need to recursively remove locks (see comment in
      svn_wc__acquire_write_lock(). */
 
-  SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
-                                   scratch_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
+
+  SVN_ERR(svn_wc__db_read_children(&children, wc_ctx->db, local_abspath,
+                                   scratch_pool, iterpool));
   for (i = 0; i < children->nelts; i ++)
     {
       const char *child_relpath = APR_ARRAY_IDX(children, i, const char *);
