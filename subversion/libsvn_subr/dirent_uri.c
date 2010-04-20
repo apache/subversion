@@ -152,7 +152,7 @@ canonicalize_to_lower(char c)
   else
     return c - 'A' + 'a';
 }
-#if defined(WIN32) || defined(__CYGWIN__)
+
 /* Locale insensitive toupper() for converting parts of dirents and urls
    while canonicalizing */
 static char
@@ -163,7 +163,6 @@ canonicalize_to_upper(char c)
   else
     return c - 'a' + 'A';
 }
-#endif
 
 /* Calculates the length of the dirent absolute or non absolute root in
    DIRENT, return 0 if dirent is not rooted  */
