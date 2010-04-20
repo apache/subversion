@@ -151,6 +151,85 @@ load_props(apr_hash_t **hash,
 }
 
 
+static svn_error_t *
+load_pristine_props(apr_hash_t **props,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  /* NOTE: svn_wc__props_base really means "pristine" props, which may
+     come from BASE or WORKING.  */
+  SVN_ERR(load_props(props, db, local_abspath, svn_wc__props_base,
+                     result_pool));
+
+#ifdef TEST_DB_PROPS
+  {
+    apr_hash_t *db_base_props;
+
+    SVN_ERR(svn_wc__db_read_pristine_props(&db_base_props, db,
+                                           local_abspath,
+                                           scratch_pool, scratch_pool));
+    SVN_ERR_ASSERT(db_base_props != NULL);
+
+    if (*props != NULL)
+      {
+        apr_array_header_t *diffs;
+
+        SVN_ERR(svn_prop_diffs(&diffs, *props, db_base_props, scratch_pool));
+        SVN_ERR_ASSERT(diffs->nelts == 0);
+      }
+    else
+      {
+        /* If the propfile is missing, then we should see empty props
+           in the database.  */
+        SVN_ERR_ASSERT(apr_hash_count(db_base_props) == 0);
+      }
+  }
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+load_actual_props(apr_hash_t **props,
+                  svn_wc__db_t *db,
+                  const char *local_abspath,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  /* NOTE: svn_wc__props_working really means ACTUAL.  */
+  SVN_ERR(load_props(props, db, local_abspath, svn_wc__props_working,
+                     result_pool));
+
+  /* It is possible that we'll get NULL back, meaning "no props file".
+     For this case, just use the pristine properties. This is very
+     different from an empty file, which means "all props deleted".  */
+  if (*props == NULL)
+    SVN_ERR(load_pristine_props(props, db, local_abspath,
+                                result_pool, scratch_pool));
+
+#ifdef TEST_DB_PROPS
+  {
+    apr_hash_t *db_props;
+    apr_array_header_t *diffs;
+
+    SVN_ERR_ASSERT(*props != NULL);
+
+    SVN_ERR(svn_wc__db_read_props(&db_props, db, local_abspath,
+                                  scratch_pool, scratch_pool));
+    SVN_ERR_ASSERT(db_props != NULL);
+
+    SVN_ERR(svn_prop_diffs(&diffs, *props, db_props, scratch_pool));
+    SVN_ERR_ASSERT(diffs->nelts == 0);
+  }
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Opens reject temporary stream for FULL_PATH in the appropriate tmp space. */
 static svn_error_t *
 open_reject_tmp_stream(svn_stream_t **stream,
@@ -221,92 +300,6 @@ get_existing_prop_reject_file(const char **reject_file,
   return SVN_NO_ERROR;
 }
 
-/*---------------------------------------------------------------------*/
-
-
-
-/*** Loading regular properties. ***/
-static svn_error_t *
-load_all_props(apr_hash_t **base_props_p,
-               apr_hash_t **props_p,
-               svn_wc__db_t *db,
-               const char *local_abspath,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool)
-{
-  apr_hash_t *base_props = NULL; /* Silence uninitialized warning. */
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  /* We will need the base props if the user requested them, or we need
-     them if no (working) prop mods have occurred. */
-  if (base_props_p != NULL || props_p != NULL)
-    {
-      SVN_ERR(load_props(&base_props, db, local_abspath, svn_wc__props_base,
-                         result_pool));
-
-      if (base_props_p)
-        *base_props_p = base_props;
-
-#ifdef TEST_DB_PROPS
-      {
-        apr_hash_t *db_base_props;
-
-        SVN_ERR(svn_wc__db_read_pristine_props(&db_base_props, db,
-                                               local_abspath,
-                                               scratch_pool, scratch_pool));
-        SVN_ERR_ASSERT(db_base_props != NULL);
-
-        if (base_props != NULL)
-          {
-            apr_array_header_t *diffs;
-
-            SVN_ERR(svn_prop_diffs(&diffs, base_props, db_base_props,
-                                   scratch_pool));
-            SVN_ERR_ASSERT(diffs->nelts == 0);
-          }
-        else
-          {
-            /* If the propfile is missing, then we should see empty props
-               in the database.  */
-            SVN_ERR_ASSERT(apr_hash_count(db_base_props) == 0);
-          }
-      }
-#endif
-    }
-
-  if (props_p)
-    {
-      SVN_ERR(load_props(props_p, db, local_abspath, svn_wc__props_working,
-                         result_pool));
-
-      /* If the WORKING props are not present, then no modifications have
-         occurred. Simply return a copy of the BASE props.
-
-         Note that the WORKING props might be present, but simply empty,
-         signifying that all BASE props have been deleted. */
-      if (*props_p == NULL)
-        *props_p = apr_hash_copy(result_pool, base_props);
-
-#ifdef TEST_DB_PROPS
-      {
-        apr_hash_t *db_props;
-        apr_array_header_t *diffs;
-
-        SVN_ERR_ASSERT(*props_p != NULL);
-
-        SVN_ERR(svn_wc__db_read_props(&db_props, db, local_abspath,
-                                      scratch_pool, scratch_pool));
-        SVN_ERR_ASSERT(db_props != NULL);
-
-        SVN_ERR(svn_prop_diffs(&diffs, *props_p, db_props, scratch_pool));
-        SVN_ERR_ASSERT(diffs->nelts == 0);
-      }
-#endif
-    }
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_wc__load_revert_props(apr_hash_t **revert_props_p,
@@ -1561,10 +1554,14 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
         }
       else
         {
-          SVN_ERR(load_all_props(base_props ? NULL : &base_props,
-                                 working_props ? NULL : &working_props,
-                                 db, local_abspath,
-                                 result_pool, scratch_pool));
+          if (base_props == NULL)
+            SVN_ERR(load_pristine_props(&base_props,
+                                        db, local_abspath,
+                                        result_pool, scratch_pool));
+          if (working_props == NULL)
+            SVN_ERR(load_actual_props(&working_props,
+                                      db, local_abspath,
+                                      result_pool, scratch_pool));
         }
     }
   if (!server_baseprops)
@@ -1799,8 +1796,8 @@ svn_wc__get_actual_props(apr_hash_t **props,
   /* ### perform some state checking. for example, locally-deleted nodes
      ### should not have any ACTUAL props.  */
 
-  return svn_error_return(load_all_props(NULL, props, db, local_abspath,
-                                         result_pool, scratch_pool));
+  return svn_error_return(load_actual_props(props, db, local_abspath,
+                                            result_pool, scratch_pool));
 }
 
 
@@ -1873,8 +1870,8 @@ svn_wc__get_pristine_props(apr_hash_t **props,
 
   /* status: normal, moved_here, copied, deleted  */
 
-  return svn_error_return(load_all_props(props, NULL, db, local_abspath,
-                                         result_pool, scratch_pool));
+  return svn_error_return(load_pristine_props(props, db, local_abspath,
+                                              result_pool, scratch_pool));
 }
 
 
@@ -2204,9 +2201,12 @@ svn_wc__internal_propset(svn_wc__db_t *db,
       /* If not, we'll set the file to read-only at commit time. */
     }
 
-  SVN_ERR_W(load_all_props(&base_prophash, &prophash, db,
-                           local_abspath, scratch_pool, scratch_pool),
-            _("Failed to load properties from disk"));
+  SVN_ERR_W(load_pristine_props(&base_prophash, db, local_abspath,
+                                scratch_pool, scratch_pool),
+            _("Failed to load pristine properties"));
+  SVN_ERR_W(load_actual_props(&prophash, db, local_abspath,
+                              scratch_pool, scratch_pool),
+            _("Failed to load current properties"));
 
   /* If we're changing this file's list of expanded keywords, then
    * we'll need to invalidate its text timestamp, since keyword
@@ -2448,13 +2448,19 @@ svn_wc__has_props(svn_boolean_t *has_props,
                   const char *local_abspath,
                   apr_pool_t *scratch_pool)
 {
-  apr_hash_t *base_props;
-  apr_hash_t *working_props;
+  apr_hash_t *props;
 
-  SVN_ERR(load_all_props(&base_props, &working_props,
-                         db, local_abspath, scratch_pool, scratch_pool));
-  *has_props =
-        ((apr_hash_count(base_props) + apr_hash_count(working_props)) > 0);
+  SVN_ERR(load_pristine_props(&props, db, local_abspath,
+                              scratch_pool, scratch_pool));
+  if (apr_hash_count(props))
+    {
+      *has_props = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(load_actual_props(&props, db, local_abspath,
+                            scratch_pool, scratch_pool));
+  *has_props = (apr_hash_count(props) > 0);
 
   return SVN_NO_ERROR;
 }
@@ -2540,18 +2546,25 @@ svn_wc__internal_propdiff(apr_array_header_t **propchanges,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  apr_hash_t *baseprops, *props;
+  apr_hash_t *baseprops;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(load_all_props(&baseprops, propchanges ? &props : NULL,
-                         db, local_abspath, result_pool, scratch_pool));
+  SVN_ERR(load_pristine_props(&baseprops, db, local_abspath,
+                              result_pool, scratch_pool));
 
   if (original_props != NULL)
     *original_props = baseprops;
 
   if (propchanges != NULL)
-    SVN_ERR(svn_prop_diffs(propchanges, props, baseprops, result_pool));
+    {
+      apr_hash_t *actual_props;
+
+      SVN_ERR(load_actual_props(&actual_props, db, local_abspath,
+                                result_pool, scratch_pool));
+      SVN_ERR(svn_prop_diffs(propchanges, actual_props, baseprops,
+                             result_pool));
+    }
 
   return SVN_NO_ERROR;
 }
