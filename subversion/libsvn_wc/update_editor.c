@@ -991,7 +991,7 @@ struct file_baton
      within a locally deleted tree. */
   svn_boolean_t deleted;
 
-  /* The path to the current text base, if any.
+  /* The path to the current (### "current" means what?) text base, if any.
      This gets set if there are file content changes. */
   const char *text_base_abspath;
 
@@ -3985,14 +3985,17 @@ open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* For the given LOCAL_ABSPATH, set *OLD_TEXT_BASE_ABSPATH to the permanent
-   text-base path, or (if the entry is replaced with history) to the permanent
+/* For the given LOCAL_ABSPATH, set *OLD_TEXT_BASE_ABSPATH to the path of
+   the text-base file it should revert to: that is the (permanent)
+   text-base path, or (if the entry is replaced with history) the (permanent)
    revert-base path.
 
    If REPLACED_P is non-NULL, set *REPLACED_P to whether or not the
    entry is replaced (which also implies whether or not it needs to
    use the revert base).  If CHECKSUM_P is non-NULL and the path
-   already has an entry, set *CHECKSUM_P to the entry's checksum.
+   already has an entry, set *CHECKSUM_P to the entry's checksum, which
+   means the checksum of the base of the possibly-replacement text, not
+   necessarily the checksum of the *OLD_TEXT_BASE_ABSPATH text.
 
    Use SCRATCH_POOL for temporary allocation and for *CHECKSUM_P (if
    applicable), but allocate OLD_TEXT_BASE_ABSPATH in RESULT_POOL. */
@@ -4259,8 +4262,7 @@ install_text_base(svn_wc__db_t *db,
  * add-with-history.)
  *
  * Set *CONTENT_STATE to the state of the contents after the
- * installation.  If an error is returned, the value of these three
- * variables is undefined.
+ * installation.
  *
  * POOL is used for all bookkeeping work during the installation.
  */
@@ -5933,7 +5935,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   {
     svn_wc_entry_t tmp_entry;
 
-    /* Write out log commands to set up the new text base and its checksum. */
+    /* Write out log commands to set up the new text base and its checksum.
+       (Install it as the normal text base, not the 'revert base'.) */
     SVN_ERR(install_text_base(db, dir_abspath,
                               tmp_text_base_abspath, text_base_abspath,
                               pool));
