@@ -559,9 +559,9 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
 
       if (need_extra > 0)
         {
-          apr_size_t pre_schema_size = (apr_size_t)schema_data - (apr_size_t)canon;
+          apr_size_t pre_schema_size = (apr_size_t)(schema_data - canon);
 
-          dst = apr_palloc(pool, (apr_size_t)src - (apr_size_t)canon + need_extra + 1);
+          dst = apr_palloc(pool, (apr_size_t)(src - canon) + need_extra + 1);
           memcpy(dst, canon, pre_schema_size);
           canon = dst;
 
