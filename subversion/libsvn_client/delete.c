@@ -227,8 +227,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
                                 &kind, subpool));
       if (kind == svn_node_none)
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                                 "URL '%s' does not exist",
-                                 svn_dirent_local_style(item_url, pool));
+                                 "URL '%s' does not exist", item_url);
     }
   svn_pool_destroy(subpool);
 
