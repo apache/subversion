@@ -28,11 +28,14 @@
 #include <ctype.h>
 
 #include <apr_uri.h>
+#include <apr_lib.h>
 
 #include "svn_private_config.h"
 #include "svn_string.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+
+#include "dirent_uri.h"
 
 /* The canonical empty path.  Can this be changed?  Well, change the empty
    test below and the path library will work, not so sure about the fs/wc
@@ -54,7 +57,7 @@ typedef enum {
   type_relpath
 } path_type_t;
 
-
+ 
 /**** Internal implementation functions *****/
 
 /* Return an internal-style new path based on PATH, allocated in POOL.
@@ -344,6 +347,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
   apr_size_t schemelen = 0;
   apr_size_t canon_segments = 0;
   svn_boolean_t url = FALSE;
+  char *schema_data = NULL;
 
   /* "" is already canonical, so just return it; note that later code
      depends on path not being zero-length.  */
@@ -408,6 +412,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
             {
               src++;
               dst++;
+              schema_data = dst;
             }
 
           canon_segments = 1;
@@ -526,6 +531,97 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
         }
     }
 #endif /* WIN32 or Cygwin */
+
+  /* Check the normalization of characters in a uri */
+  if (schema_data)
+    {
+      int need_extra = 0;
+      src = schema_data;
+
+      while (*src)
+        {
+          switch (*src)
+            {
+              case '/':
+                break;
+              case '%':
+                if (!apr_isxdigit(*(src+1)) || !apr_isxdigit(*(src+2)))
+                  need_extra += 2;
+                else
+                  src += 2;
+                break;
+              default:
+                if (!svn_uri__char_validity[(unsigned char)*src])
+                  need_extra += 2;
+                break;
+            }
+          src++;
+        }
+
+      if (need_extra > 0)
+        {
+          apr_size_t pre_schema_size = (apr_uintptr_t)schema_data - (apr_uintptr_t)canon;
+
+          dst = apr_palloc(pool, (apr_uintptr_t)src - (apr_uintptr_t)canon + need_extra + 1);
+          memcpy(dst, canon, pre_schema_size);
+          canon = dst;
+
+          dst += pre_schema_size;
+        }
+      else
+        dst = schema_data;
+
+      src = schema_data;
+
+      while (*src)
+        {
+          switch (*src)
+            {
+              case '/':
+                *(dst++) = '/';
+                break;
+              case '%':
+                if (!apr_isxdigit(*(src+1)) || !apr_isxdigit(*(src+2)))
+                  {
+                    *(dst++) = '%';
+                    *(dst++) = '2';
+                    *(dst++) = '5';
+                  }
+                else
+                  {
+                    char digitz[3];
+                    int val;
+
+                    digitz[0] = *(++src);
+                    digitz[1] = *(++src);
+                    digitz[2] = 0;
+
+                    val = (int)strtol(digitz, NULL, 16);
+
+                    if (svn_uri__char_validity[(unsigned char)val])
+                      *(dst++) = (char)val;
+                    else
+                      {
+                        *(dst++) = '%';
+                        *(dst++) = canonicalize_to_upper(digitz[0]);
+                        *(dst++) = canonicalize_to_upper(digitz[1]);
+                      }
+                  }
+                break;
+              default:
+                if (!svn_uri__char_validity[(unsigned char)*src])
+                  {
+                    apr_snprintf(dst, 4, "%%%02X", (unsigned char)*src);
+                    dst += 3;
+                  }
+                else
+                  *(dst++) = *src;
+                break;
+            }
+          src++;
+        }
+      *dst = '\0';
+    }
 
   return canon;
 }
@@ -1687,6 +1783,7 @@ svn_boolean_t
 svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
 {
   const char *ptr = uri, *seg = uri;
+  const char *schema_data = NULL;
 
   /* URI is canonical if it has:
    *  - no '.' segments
@@ -1737,6 +1834,8 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
                 return FALSE;
               ptr++;
             }
+
+          schema_data = ptr;
         }
       else
         {
@@ -1747,7 +1846,7 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
     }
 
 #if defined(WIN32) || defined(__CYGWIN__)
-  if (*ptr == '/')
+  if (schema_data && *ptr == '/')
     {
       /* If this is a file url, ptr now points to the third '/' in
          file:///C:/path. Check that if we have such a URL the drive
@@ -1780,8 +1879,43 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
         ptr++;
       seg = ptr;
 
+
       while (*ptr && (*ptr != '/'))
         ptr++;
+    }
+
+  if (schema_data)
+    {
+      ptr = schema_data;
+
+      while (*ptr)
+        {
+          if (*ptr == '%')
+            {
+              char digitz[3];
+              int val;
+
+              /* Can't use apr_isxdigit() because lower case letters are
+                 not in our canonical format */
+              if (((*(ptr+1) < '0' || (*ptr+1) > '9')) 
+                  && (*(ptr+1) < 'A' || (*ptr+1) > 'F'))
+                return FALSE;
+              else if (((*(ptr+2) < '0' || (*ptr+2) > '9')) 
+                  && (*(ptr+2) < 'A' || (*ptr+2) > 'F'))
+                return FALSE;
+
+              digitz[0] = *(++ptr);
+              digitz[1] = *(++ptr);
+              digitz[2] = '\0';
+              val = (int)strtol(digitz, NULL, 16);
+
+              if (svn_uri__char_validity[val])
+                return FALSE; /* Should not have been escaped */
+            }
+          else if (*ptr != '/' && !svn_uri__char_validity[(unsigned char)*ptr])
+            return FALSE; /* Character should have been escaped */
+          ptr++;
+        }
     }
 
   return TRUE;

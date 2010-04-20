@@ -137,7 +137,10 @@ def pathname2url(path):
   """Convert the pathname PATH from the local syntax for a path to the form
   used in the path component of a URL. This does not produce a complete URL.
   The return value will already be quoted using the quote() function."""
-  return urllib_parse_quote(path.replace('\\', '/'))
+
+  # Don't leave ':' in file://C%3A/ escaped as our canonicalization
+  # rules will replace this with a ':' on input.
+  return urllib_parse_quote(path.replace('\\', '/')).replace('%3A', ':')
 
 # This function mimics the Python 2.3 urllib function of the same name.
 def url2pathname(path):

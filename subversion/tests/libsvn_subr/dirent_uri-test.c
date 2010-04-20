@@ -958,6 +958,11 @@ test_uri_canonicalize(apr_pool_t *pool)
     { "http://server////",     "http://server" },
     { "http://server/file//",  "http://server/file" },
     { "http://server//.//f//", "http://server/f" },
+    { "s://d/%KK",             "s://d/%25KK" }, /* Make bad escapings safe */
+    { "s://d/c%3A",            "s://d/c:" },
+    { "s://d/c#",              "s://d/c%23" }, /* Escape schema separator */
+    { "s://d/c($) .+?",        "s://d/c($)%20.+%3F" }, /* Test special chars */
+    { "file:///C%3a/temp",     "file:///C:/temp" },
 #if defined(WIN32) || defined(__CYGWIN__)
     { "file:///c:/temp/repos", "file:///C:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
@@ -1254,6 +1259,9 @@ test_uri_is_canonical(apr_pool_t *pool)
     { "//server/share",         FALSE }, /* Only valid as dirent */
     { "//server",               FALSE },
     { "//",                     FALSE },
+    { "file:///folder/c#",      FALSE }, /* # needs escaping */
+    { "file:///fld/with space", FALSE }, /* # needs escaping */
+    { "file:///fld/c%23",       TRUE }, /* Properly escaped C# */
 #if defined(WIN32) || defined(__CYGWIN__)
     { "file:///c:/temp/repos", FALSE },
     { "file:///c:/temp/REPOS", FALSE },

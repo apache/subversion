@@ -189,16 +189,11 @@ read_url(const char **result,
 {
   SVN_ERR(read_str(result, buf, end, pool));
 
-  /* If the wc format is <10 canonicalize the url, */
+  /* Always canonicalize the url, as we have stricter canonicalization rules
+     in 1.7+ then before */
   if (*result && **result)
-    {
-      if (wc_format < SVN_WC__CHANGED_CANONICAL_URLS)
-        *result = svn_uri_canonicalize(*result, pool);
-      else if (! svn_uri_is_canonical(*result, pool))
-        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                                 _("Entry contains non-canonical path '%s'"),
-                                 *result);
-    }
+    *result = svn_uri_canonicalize(*result, pool);
+
   return SVN_NO_ERROR;
 }
 
