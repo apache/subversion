@@ -169,6 +169,16 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r935992, r935996
+   Makes it possible to delete paths directly from the repository that contain
+   characters that need escaping in an uri.
+   Justification:
+     svn rm URL should just work on 'http://server/path/with%20space'
+   Notes: r935992 is a test for this issue and r935996 fixes the issue and
+     extends the testcase a bit.
+   Votes:
+     +1 rhuijben
+
 Veto-blocked changes:
 =====================
 
