@@ -560,8 +560,8 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, target_wcpath,
                                   scratch_pool));
-  SVN_ERR(svn_wc__node_is_status_added(&is_added, ctx->wc_ctx,
-                                       local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, local_abspath,
+                                scratch_pool));
   SVN_ERR(svn_wc__node_get_repos_info(&repos_root, NULL,
                                       ctx->wc_ctx, local_abspath, FALSE,
                                       scratch_pool, scratch_pool));

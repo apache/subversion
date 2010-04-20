@@ -893,8 +893,7 @@ svn_client_propget3(apr_hash_t **props,
       /* Get the actual_revnum; added nodes have no revision yet, and we
        * return the mock-up revision of 0.
        * ### TODO: get rid of this 0. */
-      SVN_ERR(svn_wc__node_is_status_added(&added, ctx->wc_ctx, local_abspath,
-                                           pool));
+      SVN_ERR(svn_wc__node_is_added(&added, ctx->wc_ctx, local_abspath, pool));
       if (added)
         revnum = 0;
       else

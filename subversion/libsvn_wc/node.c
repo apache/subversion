@@ -570,10 +570,10 @@ svn_wc__node_is_status_present(svn_boolean_t *is_present,
 }
 
 svn_error_t *
-svn_wc__node_is_status_added(svn_boolean_t *is_added,
-                             svn_wc_context_t *wc_ctx,
-                             const char *local_abspath,
-                             apr_pool_t *scratch_pool)
+svn_wc__node_is_added(svn_boolean_t *is_added,
+                      svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
 
@@ -584,7 +584,8 @@ svn_wc__node_is_status_added(svn_boolean_t *is_added,
                                NULL, NULL,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
-  *is_added = (status == svn_wc__db_status_added);
+  *is_added = (status == svn_wc__db_status_added
+               || status == svn_wc__db_status_obstructed_add);
 
   return SVN_NO_ERROR;
 }
