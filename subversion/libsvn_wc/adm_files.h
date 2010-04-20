@@ -82,7 +82,8 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 
 
 
-/* Set *CONTENTS to a readonly stream on the LOCAL_ABSPATH's revert file. */
+/* Set *CONTENTS to a readonly stream on the LOCAL_ABSPATH's revert file.
+ * Return an error if it doesn't have a revert file. */
 svn_error_t *
 svn_wc__get_revert_contents(svn_stream_t **contents,
                             svn_wc__db_t *db,
