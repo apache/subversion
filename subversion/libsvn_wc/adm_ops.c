@@ -1189,8 +1189,8 @@ mark_item_copied(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
                                          scratch_pool, scratch_pool));
   tmp_entry.copied = TRUE;
-  SVN_ERR(svn_wc__entry_modify2(db, local_abspath, kind, FALSE, &tmp_entry,
-                                SVN_WC__ENTRY_MODIFY_COPIED, scratch_pool));
+  SVN_ERR(svn_wc__entry_modify(db, local_abspath, kind, &tmp_entry,
+                               SVN_WC__ENTRY_MODIFY_COPIED, scratch_pool));
 
   /* Reinstall the pristine properties on WORKING */
   SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath, props,
@@ -1493,9 +1493,14 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
     }
 
   if (modify_flags)
-    SVN_ERR(svn_wc__entry_modify2(db, local_abspath, kind,
-                                  kind == svn_node_dir /* parent_stub */,
-                                  &tmp_entry, modify_flags, pool));
+    {
+      if (kind == svn_node_dir)
+        SVN_ERR(svn_wc__entry_modify_stub(db, local_abspath,
+                                          &tmp_entry, modify_flags, pool));
+      else
+        SVN_ERR(svn_wc__entry_modify(db, local_abspath, kind,
+                                     &tmp_entry, modify_flags, pool));
+    }
 
   /* If this is a replacement without history, we need to reset the
      properties for PATH. */
@@ -1581,9 +1586,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
           tmp_entry.schedule = is_replace
             ? svn_wc_schedule_replace
             : svn_wc_schedule_add;
-          SVN_ERR(svn_wc__entry_modify2(db, local_abspath, svn_node_dir,
-                                        FALSE /* parent_stub */,
-                                        &tmp_entry, modify_flags, pool));
+          SVN_ERR(svn_wc__entry_modify(db, local_abspath, svn_node_dir,
+                                       &tmp_entry, modify_flags, pool));
         }
 
       SVN_ERR(svn_wc__db_temp_op_set_working_incomplete(
@@ -2750,10 +2754,10 @@ svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
       entry.file_external_rev.kind = svn_opt_revision_unspecified;
     }
 
-  SVN_ERR(svn_wc__entry_modify2(wc_ctx->db, local_abspath,
-                                svn_node_unknown, FALSE,
-                                &entry, SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL,
-                                scratch_pool));
+  SVN_ERR(svn_wc__entry_modify(wc_ctx->db, local_abspath,
+                               svn_node_unknown,
+                               &entry, SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL,
+                               scratch_pool));
 
   return SVN_NO_ERROR;
 }

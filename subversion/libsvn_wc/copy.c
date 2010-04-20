@@ -658,8 +658,8 @@ post_copy_cleanup(svn_wc__db_t *db,
               flags |= SVN_WC__ENTRY_MODIFY_KIND;
             }
 
-          SVN_ERR(svn_wc__entry_modify2(db, child_abspath, svn_node_unknown,
-                                        FALSE, &tmp_entry, flags, iterpool));
+          SVN_ERR(svn_wc__entry_modify(db, child_abspath, svn_node_unknown,
+                                       &tmp_entry, flags, iterpool));
         }
 
       /* Remove lock stuffs. */
@@ -782,9 +782,9 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
            will cause  svn_wc_add4() below to fail.  Set the URL to the
            URL of the first copy for now to prevent this. */
         tmp_entry.url = apr_pstrdup(scratch_pool, copyfrom_url);
-        SVN_ERR(svn_wc__entry_modify2(db, dst_abspath, svn_node_dir, FALSE,
-                                      &tmp_entry, SVN_WC__ENTRY_MODIFY_URL,
-                                      scratch_pool));
+        SVN_ERR(svn_wc__entry_modify(db, dst_abspath, svn_node_dir,
+                                     &tmp_entry, SVN_WC__ENTRY_MODIFY_URL,
+                                     scratch_pool));
       }
     else
       {

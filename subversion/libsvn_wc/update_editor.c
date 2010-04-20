@@ -2205,36 +2205,27 @@ do_entry_deletion(struct edit_baton *eb,
     }
 
   /* Issue a loggy command to delete the entry from version control and to
-   * delete it from disk if unmodified, but leave any modified files on disk
-   * unversioned. */
-  SVN_ERR(svn_wc__loggy_delete_entry(eb->db, dir_abspath, local_abspath,
-                                     pool));
+     delete it from disk if unmodified, but leave any modified files on disk
+     unversioned.
 
-  /* If the thing being deleted is the *target* of this update, then
+     If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that the parent can give
      accurate reports about itself in the future. */
-  if (strcmp(local_abspath, eb->target_abspath) == 0)
+  if (strcmp(local_abspath, eb->target_abspath) != 0)
     {
-      svn_wc_entry_t tmp_entry;
-
-      tmp_entry.revision = *(eb->target_revision);
-      /* ### Why not URL as well? This might be a switch. ... */
-      /* tmp_entry.url = *(eb->target_url) or db->new_URL ? */
-      if (kind == svn_wc__db_kind_dir)
-        tmp_entry.kind = svn_node_dir;
-      else /* kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink*/
-        tmp_entry.kind = svn_node_file;
-
-      tmp_entry.deleted = TRUE;
-
-      SVN_ERR(svn_wc__loggy_entry_modify(eb->db,
-                               dir_abspath, local_abspath,
-                               &tmp_entry,
-                               SVN_WC__ENTRY_MODIFY_REVISION
-                               | SVN_WC__ENTRY_MODIFY_KIND
-                               | SVN_WC__ENTRY_MODIFY_DELETED,
-                               pool));
-
+      /* Delete, and do not leave a not-present node.  */
+      SVN_ERR(svn_wc__loggy_delete_entry(eb->db, dir_abspath, local_abspath,
+                                         SVN_INVALID_REVNUM,
+                                         svn_wc__db_kind_unknown,
+                                         pool));
+    }
+  else
+    {
+      /* Delete, leaving a not-present node.  */
+      SVN_ERR(svn_wc__loggy_delete_entry(eb->db, dir_abspath, local_abspath,
+                                         *eb->target_revision,
+                                         kind,
+                                         pool));
       eb->target_deleted = TRUE;
     }
 
@@ -2639,9 +2630,8 @@ add_directory(const char *path,
             SVN_WC__ENTRY_MODIFY_FORCE;
         }
 
-      SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath,
-                                    svn_node_dir, TRUE,
-                                    &tmp_entry, modify_flags, pool));
+      SVN_ERR(svn_wc__entry_modify_stub(eb->db, db->local_abspath,
+                                        &tmp_entry, modify_flags, pool));
 
       if (db->add_existed)
         {
@@ -2662,9 +2652,9 @@ add_directory(const char *path,
               modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
             }
 
-          SVN_ERR(svn_wc__entry_modify2(eb->db, db->local_abspath,
-                                        svn_node_dir, FALSE,
-                                        &tmp_entry, modify_flags, pool));
+          SVN_ERR(svn_wc__entry_modify(eb->db, db->local_abspath,
+                                       svn_node_dir,
+                                       &tmp_entry, modify_flags, pool));
         }
     }
 
@@ -4891,11 +4881,11 @@ close_file(void *file_baton,
         tmp_entry.file_external_path = entry->file_external_path;
         tmp_entry.file_external_peg_rev = entry->file_external_peg_rev;
         tmp_entry.file_external_rev = entry->file_external_rev;
-        SVN_ERR(svn_wc__entry_modify2(eb->db, fb->local_abspath,
-                                      svn_node_file, FALSE /* parent_stub */,
-                                      &tmp_entry,
-                                      SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL,
-                                      pool));
+        SVN_ERR(svn_wc__entry_modify(eb->db, fb->local_abspath,
+                                     svn_node_file,
+                                     &tmp_entry,
+                                     SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL,
+                                     pool));
       }
   }
 
@@ -4910,10 +4900,10 @@ close_file(void *file_baton,
       svn_wc_entry_t tmp_entry;
 
       tmp_entry.schedule = svn_wc_schedule_delete;
-      SVN_ERR(svn_wc__entry_modify2(eb->db, fb->local_abspath,
-                                    svn_node_file, FALSE /* parent_stub */,
-                                    &tmp_entry, SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                                    pool));
+      SVN_ERR(svn_wc__entry_modify(eb->db, fb->local_abspath,
+                                   svn_node_file,
+                                   &tmp_entry, SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                                   pool));
     }
 
   /* This file was locally-added. This file is now being added by the
@@ -4927,12 +4917,12 @@ close_file(void *file_baton,
       /* ### we need to use FORCE to ensure transition to normal. otherwise,
          ### it would remain in the added state.  */
       tmp_entry.schedule = svn_wc_schedule_normal;
-      SVN_ERR(svn_wc__entry_modify2(eb->db, fb->local_abspath,
-                                    svn_node_file, FALSE /* parent_stub */,
-                                    &tmp_entry,
-                                    SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                      | SVN_WC__ENTRY_MODIFY_FORCE,
-                                    pool));
+      SVN_ERR(svn_wc__entry_modify(eb->db, fb->local_abspath,
+                                   svn_node_file,
+                                   &tmp_entry,
+                                   SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                     | SVN_WC__ENTRY_MODIFY_FORCE,
+                                   pool));
     }
 
   /* ### we may as well run whatever is in the queue right now. this

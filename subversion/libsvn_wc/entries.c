@@ -2910,14 +2910,14 @@ fold_scheduling(svn_boolean_t *skip_schedule_change,
 
 
 
-svn_error_t *
-svn_wc__entry_modify2(svn_wc__db_t *db,
-                      const char *local_abspath,
-                      svn_node_kind_t kind,
-                      svn_boolean_t parent_stub,
-                      svn_wc_entry_t *entry,
-                      apr_uint64_t modify_flags,
-                      apr_pool_t *scratch_pool)
+static svn_error_t *
+entry_modify(svn_wc__db_t *db,
+             const char *local_abspath,
+             svn_node_kind_t kind,
+             svn_boolean_t parent_stub,
+             svn_wc_entry_t *entry,
+             apr_uint64_t modify_flags,
+             apr_pool_t *scratch_pool)
 {
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
   svn_error_t *err;
@@ -3006,6 +3006,32 @@ svn_wc__entry_modify2(svn_wc__db_t *db,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__entry_modify(svn_wc__db_t *db,
+                     const char *local_abspath,
+                     svn_node_kind_t kind,
+                     svn_wc_entry_t *entry,
+                     apr_uint64_t modify_flags,
+                     apr_pool_t *scratch_pool)
+{
+  return svn_error_return(entry_modify(db, local_abspath, kind, FALSE,
+                                       entry, modify_flags, scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__entry_modify_stub(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          svn_wc_entry_t *entry,
+                          apr_uint64_t modify_flags,
+                          apr_pool_t *scratch_pool)
+{
+  return svn_error_return(entry_modify(db, local_abspath,
+                                       svn_node_dir, TRUE,
+                                       entry, modify_flags, scratch_pool));
 }
 
 
@@ -3120,8 +3146,13 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
     }
   else if (modify_flags)
     {
-      SVN_ERR(svn_wc__entry_modify2(db, local_abspath, entry->kind, parent_stub,
-                                    &tmp_entry, modify_flags, scratch_pool));
+      if (entry->kind == svn_node_dir && parent_stub)
+        SVN_ERR(svn_wc__entry_modify_stub(db, local_abspath,
+                                          &tmp_entry, modify_flags,
+                                          scratch_pool));
+      else
+        SVN_ERR(svn_wc__entry_modify(db, local_abspath, entry->kind,
+                                     &tmp_entry, modify_flags, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -3383,12 +3414,12 @@ svn_wc__temp_mark_missing_not_present(const char *local_abspath,
       tmp_entry.deleted = TRUE;
       tmp_entry.schedule = svn_wc_schedule_normal;
 
-      SVN_ERR(svn_wc__entry_modify2(wc_ctx->db, local_abspath,
-                                    svn_node_dir, TRUE, &tmp_entry,
-                                    (SVN_WC__ENTRY_MODIFY_DELETED
-                                     | SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                     | SVN_WC__ENTRY_MODIFY_FORCE),
-                                    scratch_pool));
+      SVN_ERR(svn_wc__entry_modify_stub(wc_ctx->db, local_abspath,
+                                        &tmp_entry,
+                                        (SVN_WC__ENTRY_MODIFY_DELETED
+                                         | SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                         | SVN_WC__ENTRY_MODIFY_FORCE),
+                                        scratch_pool));
       return SVN_NO_ERROR;
     }
 

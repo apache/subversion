@@ -78,12 +78,16 @@ svn_wc__loggy_translated_file(svn_wc__db_t *db,
    associated with PATH from the entries file.
    ADM_ABSPATH is the absolute path for the access baton for PATH.
 
+   ### REVISION and KIND
+
    Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
 svn_wc__loggy_delete_entry(svn_wc__db_t *db,
                            const char *adm_abspath,
                            const char *path,
+                           svn_revnum_t revision,
+                           svn_wc__db_kind_t kind,
                            apr_pool_t *scratch_pool);
 
 

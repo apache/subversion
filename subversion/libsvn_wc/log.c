@@ -367,18 +367,10 @@ log_do_modify_entry(struct log_runner *loggy,
   if (valuestr && strcmp(valuestr, "true") == 0)
     modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
 
-  /* Now write the new entry out. Note that we want to always operate
-     on the stub if name is not THIS_DIR. This loggy function is intended
-     to operate on the data in ADM_ABSPATH, so we do NOT want to reach
-     down into a subdir. For entry_modify2(), it is okay to set PARENT_STUB
-     to TRUE for files (kind errors are not raised).  */
-  err = svn_wc__entry_modify2(loggy->db,
-                              svn_dirent_join(loggy->adm_abspath,
-                                              name,
-                                              loggy->pool),
-                              svn_node_unknown,
-                              *name != '\0' /* parent_stub */,
-                              entry, modify_flags, loggy->pool);
+  /* ### this function never needs to modify a parent stub.
+     ### NOTE: this call to entry_modify MAY create a new node.  */
+  err = svn_wc__entry_modify(loggy->db, local_abspath, svn_node_unknown,
+                             entry, modify_flags, loggy->pool);
   if (err)
     return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
                              _("Error modifying entry for '%s'"), name);
@@ -409,30 +401,25 @@ log_do_delete_lock(struct log_runner *loggy,
 /* Ben sez:  this log command is (at the moment) only executed by the
    update editor.  It attempts to forcefully remove working data. */
 /* Delete a node from version control, and from disk if unmodified.
- * NAME is the name of the file or directory to be deleted, which is a child
- * of the directory represented by LOGGY->adm_access. If it is unversioned,
+ * LOCAL_ABSPATH is the name of the file or directory to be deleted.
+ * If it is unversioned,
  * do nothing and return no error. Otherwise, delete its WC entry and, if
  * the working version is unmodified, delete it from disk. */
 static svn_error_t *
-log_do_delete_entry(struct log_runner *loggy, const char *name)
+basic_delete_entry(svn_wc__db_t *db,
+                   const char *local_abspath,
+                   apr_pool_t *scratch_pool)
 {
-  const char *local_abspath;
   svn_wc__db_kind_t kind;
   svn_boolean_t hidden;
   svn_error_t *err;
 
-  local_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
-
   /* Figure out if 'name' is a dir or a file */
-  SVN_ERR(svn_wc__db_read_kind(&kind, loggy->db, local_abspath, TRUE,
-                               loggy->pool));
-
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
   if (kind == svn_wc__db_kind_unknown)
     return SVN_NO_ERROR; /* Already gone */
 
-  SVN_ERR(svn_wc__db_node_hidden(&hidden, loggy->db, local_abspath,
-                                 loggy->pool));
-
+  SVN_ERR(svn_wc__db_node_hidden(&hidden, db, local_abspath, scratch_pool));
   if (hidden)
     return SVN_NO_ERROR;
 
@@ -450,8 +437,8 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
                                       NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                       NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                       NULL, NULL, NULL, NULL,
-                                      loggy->db, local_abspath,
-                                      loggy->pool, loggy->pool));
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
       if (status == svn_wc__db_status_obstructed ||
           status == svn_wc__db_status_obstructed_add ||
           status == svn_wc__db_status_obstructed_delete)
@@ -465,20 +452,19 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
           */
           if (status != svn_wc__db_status_obstructed_add)
             {
-              SVN_ERR(svn_wc__entry_remove(loggy->db, local_abspath,
-                                           loggy->pool));
+              SVN_ERR(svn_wc__entry_remove(db, local_abspath, scratch_pool));
 
               return SVN_NO_ERROR;
             }
         }
     }
 
-  err = svn_wc__internal_remove_from_revision_control(loggy->db,
+  err = svn_wc__internal_remove_from_revision_control(db,
                                                       local_abspath,
                                                       TRUE, /* destroy */
                                                       FALSE, /* instant_error*/
                                                       NULL, NULL,
-                                                      loggy->pool);
+                                                      scratch_pool);
 
   if (err && err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
     {
@@ -491,6 +477,48 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
     }
 }
 
+
+static svn_error_t *
+log_do_delete_entry(struct log_runner *loggy,
+                    const char *name,
+                    svn_revnum_t revision,
+                    svn_node_kind_t kind)
+{
+  const char *local_abspath;
+
+  local_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
+
+  SVN_ERR(basic_delete_entry(loggy->db, local_abspath, loggy->pool));
+
+  if (SVN_IS_VALID_REVNUM(revision))
+    {
+      svn_wc_entry_t tmp_entry;
+
+      tmp_entry.revision = revision;
+      tmp_entry.kind = kind;
+      tmp_entry.deleted = TRUE;
+
+      if (kind == svn_node_dir)
+        SVN_ERR(svn_wc__entry_modify_stub(loggy->db,
+                                          local_abspath,
+                                          &tmp_entry,
+                                          SVN_WC__ENTRY_MODIFY_REVISION
+                                            | SVN_WC__ENTRY_MODIFY_KIND
+                                            | SVN_WC__ENTRY_MODIFY_DELETED,
+                                          loggy->pool));
+      else
+        SVN_ERR(svn_wc__entry_modify(loggy->db,
+                                     local_abspath,
+                                     svn_node_file,
+                                     &tmp_entry,
+                                     SVN_WC__ENTRY_MODIFY_REVISION
+                                       | SVN_WC__ENTRY_MODIFY_KIND
+                                       | SVN_WC__ENTRY_MODIFY_DELETED,
+                                     loggy->pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* */
 static svn_error_t *
@@ -554,7 +582,18 @@ start_handler(void *userData, const char *eltname, const char **atts)
     err = log_do_delete_lock(loggy, name);
   }
   else if (strcmp(eltname, SVN_WC__LOG_DELETE_ENTRY) == 0) {
-    err = log_do_delete_entry(loggy, name);
+    const char *attr;
+    svn_revnum_t revision;
+    svn_node_kind_t kind;
+
+    attr = svn_xml_get_attr_value(SVN_WC__ENTRY_ATTR_REVISION, atts);
+    revision = SVN_STR_TO_REV(attr);
+    attr = svn_xml_get_attr_value(SVN_WC__ENTRY_ATTR_KIND, atts);
+    if (strcmp(attr, "dir") == 0)
+      kind = svn_node_dir;
+    else
+      kind = svn_node_file;
+    err = log_do_delete_entry(loggy, name, revision, kind);
   }
   else if (strcmp(eltname, SVN_WC__LOG_MV) == 0) {
     const char *dest = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DEST, atts);
@@ -758,6 +797,8 @@ svn_error_t *
 svn_wc__loggy_delete_entry(svn_wc__db_t *db,
                            const char *adm_abspath,
                            const char *path,
+                           svn_revnum_t revision,
+                           svn_wc__db_kind_t kind,
                            apr_pool_t *scratch_pool)
 {
   const char *loggy_path1;
@@ -766,7 +807,12 @@ svn_wc__loggy_delete_entry(svn_wc__db_t *db,
   SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
   svn_xml_make_open_tag(&log_accum, scratch_pool, svn_xml_self_closing,
                         SVN_WC__LOG_DELETE_ENTRY,
-                        SVN_WC__LOG_ATTR_NAME, loggy_path1,
+                        SVN_WC__LOG_ATTR_NAME,
+                        loggy_path1,
+                        SVN_WC__ENTRY_ATTR_REVISION,
+                        apr_psprintf(scratch_pool, "%ld", revision),
+                        SVN_WC__ENTRY_ATTR_KIND,
+                        kind == svn_wc__db_kind_dir ? "dir" : "file",
                         NULL);
 
   return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
