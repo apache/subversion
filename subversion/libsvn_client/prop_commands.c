@@ -519,22 +519,6 @@ pristine_or_working_props(apr_hash_t **props,
 {
   if (pristine)
     {
-      /* ### right now, we're not entirely sure that get_pristine_props
-         ### will return NULL for the added case. let's double-check.  */
-      {
-        svn_boolean_t added;
-
-        /* ### oops. but this doesn't handle the copied case, which DOES
-           ### have properties.  */
-        SVN_ERR(svn_wc__node_is_status_added(&added, wc_ctx, local_abspath,
-                                             scratch_pool));
-        if (added)
-          {
-            *props = NULL;
-            return SVN_NO_ERROR;
-          }
-      }
-
       return svn_error_return(svn_wc_get_pristine_props(props,
                                                         wc_ctx,
                                                         local_abspath,
