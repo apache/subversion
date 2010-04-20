@@ -471,9 +471,9 @@ run_revert(svn_wc__db_t *db,
       node_kind = svn_node_file;
     }
 
-  SVN_ERR(svn_wc__entry_modify2(db, local_abspath, node_kind, FALSE,
-                                &tmp_entry, modify_flags,
-                                scratch_pool));
+  SVN_ERR(svn_wc__entry_modify(db, local_abspath, node_kind,
+                               &tmp_entry, modify_flags,
+                               scratch_pool));
 
   /* ### need to revert some bits in the parent stub. sigh.  */
   if (kind == svn_wc__db_kind_dir)
@@ -493,9 +493,9 @@ run_revert(svn_wc__db_t *db,
           tmp_entry.copyfrom_url = NULL;
           tmp_entry.copyfrom_rev = SVN_INVALID_REVNUM;
           tmp_entry.schedule = svn_wc_schedule_normal;
-          SVN_ERR(svn_wc__entry_modify2(db, local_abspath, svn_node_dir, TRUE,
-                                        &tmp_entry, modify_flags,
-                                        scratch_pool));
+          SVN_ERR(svn_wc__entry_modify_stub(db, local_abspath,
+                                            &tmp_entry, modify_flags,
+                                            scratch_pool));
         }
     }
 
@@ -1035,11 +1035,11 @@ run_deletion_postcommit(svn_wc__db_t *db,
              the directory can also place a 'deleted' dir entry in the
              parent. */
           tmp_entry.revision = new_revision;
-          SVN_ERR(svn_wc__entry_modify2(db, local_abspath,
-                                        svn_node_dir, FALSE,
-                                        &tmp_entry,
-                                        SVN_WC__ENTRY_MODIFY_REVISION,
-                                        scratch_pool));
+          SVN_ERR(svn_wc__entry_modify(db, local_abspath,
+                                       svn_node_dir,
+                                       &tmp_entry,
+                                       SVN_WC__ENTRY_MODIFY_REVISION,
+                                       scratch_pool));
 
           SVN_ERR(svn_wc__db_temp_determine_keep_local(&keep_local, db,
                                                        local_abspath,
@@ -1562,13 +1562,13 @@ log_do_committed(svn_wc__db_t *db,
 
            If this fails for you in the transition to one DB phase, please
            run svn cleanup one level higher. */
-    err = svn_wc__entry_modify2(db, local_abspath, svn_node_dir,
-                                TRUE, &tmp_entry,
-                                (SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                 | SVN_WC__ENTRY_MODIFY_COPIED
-                                 | SVN_WC__ENTRY_MODIFY_DELETED
-                                 | SVN_WC__ENTRY_MODIFY_FORCE),
-                                pool);
+    err = svn_wc__entry_modify_stub(db, local_abspath,
+                                    &tmp_entry,
+                                    (SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                     | SVN_WC__ENTRY_MODIFY_COPIED
+                                     | SVN_WC__ENTRY_MODIFY_DELETED
+                                     | SVN_WC__ENTRY_MODIFY_FORCE),
+                                    pool);
     if (err != NULL)
       return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
                                _("Error modifying entry of '%s'"), "");
@@ -2087,7 +2087,7 @@ run_file_install(svn_wc__db_t *db,
                                                 finfo.size, last_mod_time,
                                                 scratch_pool));
 
-      /* ### there used to be a call to entry_modify2() here, to set the
+      /* ### there used to be a call to entry_modify() above, to set the
          ### TRANSLATED_SIZE and LAST_MOD_TIME values. that function elided
          ### copyfrom information that snuck into the database. it should
          ### not be there in the first place, but we can manually get rid

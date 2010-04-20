@@ -144,28 +144,23 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
    of the node.
 
    Perform all allocations in SCRATCH_POOL.
-
-   -----
-
-   A cross between svn_wc__get_entry() and svn_wc__entry_modify().
-
-   If PARENT_STUB is TRUE, then this function will modify a directory's
-   stub entry in the parent. If PARENT_STUB is FALSE, then it will operate
-   on a directory's real entry.
-
-   PARENT_STUB must be FALSE if KIND==FILE.
-
-   If KIND is svn_kind_unknown, then PARENT_STUB is interpreted based on
-   what is found on disk.  */
+*/
 svn_error_t *
-svn_wc__entry_modify2(svn_wc__db_t *db,
+svn_wc__entry_modify(svn_wc__db_t *db,
                       const char *local_abspath,
                       svn_node_kind_t kind,
-                      svn_boolean_t parent_stub,
                       svn_wc_entry_t *entry,
                       apr_uint64_t modify_flags,
                       apr_pool_t *scratch_pool);
 
+
+/* Like svn_wc__entry_modify(), but modifies the "parent stub".  */
+svn_error_t *
+svn_wc__entry_modify_stub(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          svn_wc_entry_t *entry,
+                          apr_uint64_t modify_flags,
+                          apr_pool_t *scratch_pool);
 
 /* Remove LOCAL_ABSPATH from DB, unconditionally.
 
