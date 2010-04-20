@@ -2483,13 +2483,19 @@ def delete_from_url_with_spaces(sbox):
   
   sbox.build()
   sbox.simple_mkdir(os.path.join(sbox.wc_dir, 'Dir With Spaces'))
+  sbox.simple_mkdir(os.path.join(sbox.wc_dir, 'Dir With'))
+  sbox.simple_mkdir(os.path.join(sbox.wc_dir, 'Dir With/Spaces'))
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                       'ci', sbox.wc_dir, '-m', 'Added dir')
   
-  # This fails on 1.6.11 and trunk with an escaping error.
+  # This fails on 1.6.11 with an escaping error.
   svntest.actions.run_and_verify_svn(None, None, [],
                                       'rm', sbox.repo_url + '/Dir%20With%20Spaces',
+                                      '-m', 'Deleted')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                      'rm', sbox.repo_url + '/Dir%20With/Spaces',
                                       '-m', 'Deleted')
 
 #----------------------------------------------------------------------
@@ -2548,7 +2554,7 @@ test_list = [ None,
               basic_auth_test,
               basic_add_svn_format_file,
               basic_mkdir_mix_targets,
-              XFail(delete_from_url_with_spaces),
+              delete_from_url_with_spaces,
              ]
 
 if __name__ == '__main__':
