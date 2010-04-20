@@ -2935,9 +2935,12 @@ close_directory(void *dir_baton,
         }
       else
         {
-          SVN_ERR(svn_wc__load_props(&base_props, &working_props,
-                                     eb->db, db->local_abspath,
-                                     pool, pool));
+          SVN_ERR(svn_wc__get_pristine_props(&base_props,
+                                             eb->db, db->local_abspath,
+                                             pool, pool));
+          SVN_ERR(svn_wc__get_actual_props(&working_props,
+                                           eb->db, db->local_abspath,
+                                           pool, pool));
         }
 
       /* In a copy of the BASE props, remove every property that we see an
@@ -3562,8 +3565,12 @@ add_file_with_history(const char *path,
            * This assert wants to verify that there are no such callers. */
           SVN_ERR_ASSERT(source_text_base != NULL);
           
-          SVN_ERR(svn_wc__load_props(&base_props, &working_props, db,
-                                     src_local_abspath, pool, subpool));
+          SVN_ERR(svn_wc__get_pristine_props(&base_props,
+                                             db, src_local_abspath,
+                                             pool, subpool));
+          SVN_ERR(svn_wc__get_actual_props(&working_props,
+                                           db, src_local_abspath,
+                                           pool, subpool));
         }
 
       SVN_ERR(svn_stream_copy3(source_text_base, copied_stream,

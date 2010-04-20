@@ -460,16 +460,15 @@ get_base_mimetype(const char **mimetype,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  apr_hash_t *props = NULL;
+  apr_hash_t *props;
 
-  if (baseprops == NULL)
-    baseprops = &props;
+  SVN_ERR(svn_wc__get_pristine_props(&props, db, local_abspath,
+                                     result_pool, scratch_pool));
 
-  if (*baseprops == NULL)
-    SVN_ERR(svn_wc__internal_propdiff(NULL, baseprops, db, local_abspath,
-                                      result_pool, scratch_pool));
+  if (baseprops != NULL)
+    *baseprops = props;
 
-  *mimetype = get_prop_mimetype(*baseprops);
+  *mimetype = get_prop_mimetype(props);
 
   return SVN_NO_ERROR;
 }
@@ -490,16 +489,15 @@ get_working_mimetype(const char **mimetype,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  apr_hash_t *props = NULL;
+  apr_hash_t *props;
 
-  if (workingprops == NULL)
-    workingprops = &props;
+  SVN_ERR(svn_wc__get_actual_props(&props, db, local_abspath,
+                                   result_pool, scratch_pool));
 
-  if (*workingprops == NULL)
-    SVN_ERR(svn_wc__load_props(NULL, workingprops, db, local_abspath,
-                               result_pool, scratch_pool));
+  if (workingprops != NULL)
+    *workingprops = props;
 
-  *mimetype = get_prop_mimetype(*workingprops);
+  *mimetype = get_prop_mimetype(props);
 
   return SVN_NO_ERROR;
 }
@@ -640,8 +638,8 @@ file_diff(struct dir_baton *db,
     }
   else
     {
-      SVN_ERR(svn_wc__internal_propdiff(NULL, &baseprops, eb->db,
-                                        local_abspath, pool, pool));
+      SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db,
+                                         local_abspath, pool, pool));
     }
 
   SVN_ERR(svn_wc__internal_is_replaced(&replaced, eb->db, local_abspath,
@@ -740,8 +738,28 @@ file_diff(struct dir_baton *db,
           const char *working_mimetype;
 
           /* Get svn:mime-type for both base and working file. */
-          SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
-                                    local_abspath, pool, pool));
+          if (replaced
+              && eb->ignore_ancestry)
+            {
+              /* We don't want the normal pristine properties (which are
+                 from the WORKING tree). We want the pristines associated
+                 with the BASE tree, which are saved as "revert" props.  */
+              SVN_ERR(svn_wc__load_revert_props(&baseprops,
+                                                eb->db, local_abspath,
+                                                pool, pool));
+              base_mimetype = get_prop_mimetype(baseprops);
+            }
+          else
+            {
+              /* We can only fetch the BASE props if the node has not
+                 been replaced, or it was copied/moved here.  */
+              SVN_ERR_ASSERT(!replaced
+                             || status == svn_wc__db_status_copied
+                             || status == svn_wc__db_status_moved_here);
+
+              SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
+                                        local_abspath, pool, pool));
+            }
           SVN_ERR(get_working_mimetype(&working_mimetype, NULL, local_abspath,
                                        eb->db, pool, pool));
 
@@ -1049,11 +1067,11 @@ report_wc_directory_as_added(struct dir_baton *db,
                                         eb->changelist_hash, pool))
     {
       if (eb->use_text_base)
-        SVN_ERR(svn_wc__internal_propdiff(NULL, &wcprops, eb->db, dir_abspath,
-                                          pool, pool));
+        SVN_ERR(svn_wc__get_pristine_props(&wcprops, eb->db, dir_abspath,
+                                           pool, pool));
       else
-        SVN_ERR(svn_wc__load_props(NULL, &wcprops, eb->db, dir_abspath,
-                                   pool, pool));
+        SVN_ERR(svn_wc__get_actual_props(&wcprops, eb->db, dir_abspath,
+                                         pool, pool));
 
       SVN_ERR(svn_prop_diffs(&propchanges, wcprops, emptyprops, pool));
 
@@ -1332,19 +1350,22 @@ close_directory(void *dir_baton,
         {
           if (db->eb->use_text_base)
             {
-              SVN_ERR(svn_wc__internal_propdiff(NULL, &originalprops, eb->db,
-                                                db->local_abspath, pool, pool));
+              SVN_ERR(svn_wc__get_pristine_props(&originalprops,
+                                                 eb->db, db->local_abspath,
+                                                 pool, pool));
             }
           else
             {
               apr_hash_t *base_props, *repos_props;
 
-              SVN_ERR(svn_wc__load_props(NULL, &originalprops,
-                                         eb->db, db->local_abspath, pool, pool));
+              SVN_ERR(svn_wc__get_actual_props(&originalprops,
+                                               eb->db, db->local_abspath,
+                                               pool, pool));
 
               /* Load the BASE and repository directory properties. */
-              SVN_ERR(svn_wc__internal_propdiff(NULL, &base_props, eb->db,
-                                                db->local_abspath, pool, pool));
+              SVN_ERR(svn_wc__get_pristine_props(&base_props,
+                                                 eb->db, db->local_abspath,
+                                                 pool, pool));
 
               repos_props = apply_propchanges(base_props, db->propchanges);
 
@@ -1575,8 +1596,8 @@ close_file(void *file_baton,
   if (fb->added)
     base_props = apr_hash_make(pool);
   else
-    SVN_ERR(svn_wc__internal_propdiff(NULL, &base_props, eb->db,
-                                      fb->local_abspath, pool, pool));
+    SVN_ERR(svn_wc__get_pristine_props(&base_props, eb->db,
+                                       fb->local_abspath, pool, pool));
 
   repos_props = apply_propchanges(base_props, fb->propchanges);
 
@@ -1669,8 +1690,9 @@ close_file(void *file_baton,
     }
   else
     {
-      SVN_ERR(svn_wc__load_props(NULL, &originalprops, eb->db,
-                                 fb->local_abspath, pool, pool));
+      SVN_ERR(svn_wc__get_actual_props(&originalprops,
+                                       eb->db, fb->local_abspath,
+                                       pool, pool));
 
       /* We have the repository properties in repos_props, and the
          WORKING properties in originalprops.  Recalculate

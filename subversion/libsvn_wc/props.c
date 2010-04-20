@@ -226,13 +226,13 @@ get_existing_prop_reject_file(const char **reject_file,
 
 
 /*** Loading regular properties. ***/
-svn_error_t *
-svn_wc__load_props(apr_hash_t **base_props_p,
-                   apr_hash_t **props_p,
-                   svn_wc__db_t *db,
-                   const char *local_abspath,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
+static svn_error_t *
+load_all_props(apr_hash_t **base_props_p,
+               apr_hash_t **props_p,
+               svn_wc__db_t *db,
+               const char *local_abspath,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
   apr_hash_t *base_props = NULL; /* Silence uninitialized warning. */
 
@@ -1561,10 +1561,10 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
         }
       else
         {
-          SVN_ERR(svn_wc__load_props(base_props ? NULL : &base_props,
-                                     working_props ? NULL : &working_props,
-                                     db, local_abspath,
-                                     result_pool, scratch_pool));
+          SVN_ERR(load_all_props(base_props ? NULL : &base_props,
+                                 working_props ? NULL : &working_props,
+                                 db, local_abspath,
+                                 result_pool, scratch_pool));
         }
     }
   if (!server_baseprops)
@@ -1786,6 +1786,23 @@ svn_wc__wcprop_set(svn_wc__db_t *db,
 
 /*** Public Functions ***/
 
+svn_error_t *
+svn_wc__get_actual_props(apr_hash_t **props,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(props != NULL);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  /* ### perform some state checking. for example, locally-deleted nodes
+     ### should not have any ACTUAL props.  */
+
+  return svn_error_return(load_all_props(NULL, props, db, local_abspath,
+                                         result_pool, scratch_pool));
+}
+
 
 svn_error_t *
 svn_wc_prop_list2(apr_hash_t **props,
@@ -1794,11 +1811,70 @@ svn_wc_prop_list2(apr_hash_t **props,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
+  return svn_error_return(svn_wc__get_actual_props(props,
+                                                   wc_ctx->db,
+                                                   local_abspath,
+                                                   result_pool,
+                                                   scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__get_pristine_props(apr_hash_t **props,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+
+  SVN_ERR_ASSERT(props != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  return svn_error_return(
-    svn_wc__load_props(NULL, props, wc_ctx->db, local_abspath,
-                       result_pool, scratch_pool));
+  /* Certain node stats do not have properties defined on them. Check the
+     state, and return NULL for these situations.  */
+
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
+  if (status == svn_wc__db_status_added)
+    {
+      SVN_ERR(svn_wc__db_scan_addition(&status, NULL,
+                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+    }
+  if (status == svn_wc__db_status_added
+#if 0
+      /* ### the update editor needs to fetch properties while the directory
+         ### is still marked incomplete  */
+      || status == svn_wc__db_status_incomplete
+#endif
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_absent
+      || status == svn_wc__db_status_not_present
+      || status == svn_wc__db_status_obstructed
+      || status == svn_wc__db_status_obstructed_add)
+    {
+      *props = NULL;
+      return SVN_NO_ERROR;
+    }
+  if (status == svn_wc__db_status_obstructed_delete)
+    return svn_error_createf(SVN_ERR_PROPERTY_NOT_FOUND, NULL,
+                             /* ### temporary until single-db  */
+                             U_("Directory '%s' is missing on disk, so the "
+                                "properties are not available."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  /* status: normal, moved_here, copied, deleted  */
+
+  return svn_error_return(load_all_props(props, NULL, db, local_abspath,
+                                         result_pool, scratch_pool));
 }
 
 
@@ -1809,14 +1885,11 @@ svn_wc_get_pristine_props(apr_hash_t **props,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  /* ### we should check the node's status and ensure that we are getting
-     ### exactly the properties (or NULL) that the docstring states.  */
-
-  return svn_error_return(
-    svn_wc__load_props(props, NULL, wc_ctx->db, local_abspath,
-                       result_pool, scratch_pool));
+  return svn_error_return(svn_wc__get_pristine_props(props,
+                                                     wc_ctx->db,
+                                                     local_abspath,
+                                                     result_pool,
+                                                     scratch_pool));
 }
 
 
@@ -1898,8 +1971,8 @@ svn_wc__internal_propget(const svn_string_t **value,
   else
     {
       /* regular prop */
-      SVN_ERR_W(svn_wc__load_props(NULL, &prophash, db, local_abspath,
-                                   result_pool, scratch_pool),
+      SVN_ERR_W(svn_wc__get_actual_props(&prophash, db, local_abspath,
+                                         result_pool, scratch_pool),
                 _("Failed to load properties from disk"));
     }
 
@@ -2131,8 +2204,8 @@ svn_wc__internal_propset(svn_wc__db_t *db,
       /* If not, we'll set the file to read-only at commit time. */
     }
 
-  SVN_ERR_W(svn_wc__load_props(&base_prophash, &prophash, db,
-                               local_abspath, scratch_pool, scratch_pool),
+  SVN_ERR_W(load_all_props(&base_prophash, &prophash, db,
+                           local_abspath, scratch_pool, scratch_pool),
             _("Failed to load properties from disk"));
 
   /* If we're changing this file's list of expanded keywords, then
@@ -2378,8 +2451,8 @@ svn_wc__has_props(svn_boolean_t *has_props,
   apr_hash_t *base_props;
   apr_hash_t *working_props;
 
-  SVN_ERR(svn_wc__load_props(&base_props, &working_props,
-                             db, local_abspath, scratch_pool, scratch_pool));
+  SVN_ERR(load_all_props(&base_props, &working_props,
+                         db, local_abspath, scratch_pool, scratch_pool));
   *has_props =
         ((apr_hash_count(base_props) + apr_hash_count(working_props)) > 0);
 
@@ -2471,8 +2544,8 @@ svn_wc__internal_propdiff(apr_array_header_t **propchanges,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__load_props(&baseprops, propchanges ? &props : NULL,
-                             db, local_abspath, result_pool, scratch_pool));
+  SVN_ERR(load_all_props(&baseprops, propchanges ? &props : NULL,
+                         db, local_abspath, result_pool, scratch_pool));
 
   if (original_props != NULL)
     *original_props = baseprops;
