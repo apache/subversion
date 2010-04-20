@@ -2934,21 +2934,19 @@ entry_modify(svn_wc__db_t *db,
   /* Load ADM_ABSPATH's whole entries file:
      Is there an existing access baton for this path?  */
   adm_access = svn_wc__adm_retrieve_internal2(db, adm_abspath, subpool);
-  if (adm_access == NULL)
-    {
-      /* ### should we have some kind of write check here?  */
-
-      /* Don't bother caching entries; we've got no place to store 'em. */
-      SVN_ERR(read_entries(&entries, db, adm_abspath, subpool, subpool));
-    }
-  else
+  if (adm_access != NULL)
     {
       /* Are we allowed to write to this admin area?  */
       SVN_ERR(svn_wc__write_check(db, svn_wc__adm_access_abspath(adm_access),
                                   subpool));
 
-      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, subpool));
+      /* Zap any cached entries. We're about to change them.  */
+      svn_wc__adm_access_set_entries(adm_access, NULL);
     }
+  /* ### else: should we have some kind of write check here?  */
+
+  /* Always read the entries from the database.  */
+  SVN_ERR(read_entries(&entries, db, adm_abspath, subpool, subpool));
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
@@ -2985,10 +2983,7 @@ entry_modify(svn_wc__db_t *db,
     }
 
   /* Fold in the changes, and write them out.  */
-  SVN_ERR(fold_entry(entries, name, modify_flags, entry,
-                     adm_access
-                       ? svn_wc_adm_access_pool(adm_access)
-                       : subpool));
+  SVN_ERR(fold_entry(entries, name, modify_flags, entry, subpool));
 
   err = write_one_entry(db, adm_abspath,
                         apr_hash_get(entries, "", APR_HASH_KEY_STRING),
@@ -2998,12 +2993,6 @@ entry_modify(svn_wc__db_t *db,
   svn_pool_destroy(subpool); /* Close wc.db handles */
 
   SVN_ERR(err);
-
-  if (adm_access)
-    {
-      /* ### is this needed? didn't we already pull the hash from here?  */
-      svn_wc__adm_access_set_entries(adm_access, entries);
-    }
 
   return SVN_NO_ERROR;
 }
