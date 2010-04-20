@@ -428,12 +428,18 @@ svn_wc__node_is_status_present(svn_boolean_t *is_present,
  * @a wc_ctx.  If @a local_abspath is not in the working copy, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
  * allocations.
+ *
+ * NOTE: "added" in this sense, means it was added, copied-here, or
+ *   moved-here. This function provides NO information on whether this
+ *   addition has replaced another node.
+ *
+ *   To be clear, this does NOT correspond to svn_wc_schedule_add.
  */
 svn_error_t *
-svn_wc__node_is_status_added(svn_boolean_t *is_added,
-                             svn_wc_context_t *wc_ctx,
-                             const char *local_abspath,
-                             apr_pool_t *scratch_pool);
+svn_wc__node_is_added(svn_boolean_t *is_added,
+                      svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
 
 /**
  * Get the base revision of @a local_abspath using @a wc_ctx.  If

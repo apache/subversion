@@ -1023,8 +1023,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                                           iterpool);
           svn_boolean_t is_added;
 
-          err = svn_wc__node_is_status_added(&is_added, ctx->wc_ctx,
-                                             parent_abspath, iterpool);
+          err = svn_wc__node_is_added(&is_added, ctx->wc_ctx, parent_abspath,
+                                      iterpool);
           if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
             {
               svn_error_clear(err);

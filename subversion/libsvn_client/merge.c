@@ -838,8 +838,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 
   /* If this is a merge from the same repository and PATH itself has been
      added there is no need to filter. */
-  SVN_ERR(svn_wc__node_is_status_added(&is_added, ctx->wc_ctx,
-                                       local_abspath, pool));
+  SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, local_abspath, pool));
   if (is_added)
     return SVN_NO_ERROR;
 
