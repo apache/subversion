@@ -813,28 +813,14 @@ def reflect_dropped_renumbered_revs(sbox):
                              '/toplevel')
 
   # Verify the svn:mergeinfo properties
-  #
-  # Currently this test is set as XFail because we needed to revert
-  # http://svn.apache.org/viewvc?view=revision&revision=927243,
-  # see http://svn.haxx.se/dev/archive-2010-04/0475.shtml.
-  svntest.actions.run_and_verify_svn(None, ["/trunk:2-4\n"],
-                                     [], 'propget', 'svn:mergeinfo',
-                                     sbox.repo_url + '/branch2')
-  svntest.actions.run_and_verify_svn(None, ["/branch1:5-9\n"],
-                                     [], 'propget', 'svn:mergeinfo',
-                                     sbox.repo_url + '/trunk')
-  svntest.actions.run_and_verify_svn(None, ["/toplevel/trunk:11-13\n"],
-                                     [], 'propget', 'svn:mergeinfo',
-                                     sbox.repo_url + '/toplevel/branch2')
-  svntest.actions.run_and_verify_svn(None, ["/toplevel/branch1:14-18\n"],
-                                     [], 'propget', 'svn:mergeinfo',
-                                     sbox.repo_url + '/toplevel/trunk')
-  svntest.actions.run_and_verify_svn(None, ["/toplevel/trunk:11-12\n"],
-                                     [], 'propget', 'svn:mergeinfo',
-                                     sbox.repo_url + '/toplevel/branch1')
-  svntest.actions.run_and_verify_svn(None, ["/trunk:2-3\n"],
-                                     [], 'propget', 'svn:mergeinfo',
-                                     sbox.repo_url + '/branch1')
+  url = sbox.repo_url
+  expected_output = svntest.verify.UnorderedOutput([
+    url + "/trunk - /branch1:5-9\n",
+    url + "/toplevel/trunk - /toplevel/branch1:14-18\n",
+    ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url)
 
 #----------------------------------------------------------------------
 
@@ -1236,7 +1222,7 @@ test_list = [ None,
               SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
               load_with_parent_dir,
               set_uuid,
-              XFail(reflect_dropped_renumbered_revs),
+              reflect_dropped_renumbered_revs,
               SkipUnless(fsfs_recover_handle_missing_revs_or_revprops_file,
                          svntest.main.is_fs_type_fsfs),
               create_in_repo_subdir,
