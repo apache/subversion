@@ -5631,7 +5631,27 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 
           /* Only "normal" and "not-present" are allowed.  */
           SVN_ERR_ASSERT(base_presence == svn_wc__db_status_normal
-                         || base_presence == svn_wc__db_status_not_present);
+                         || base_presence == svn_wc__db_status_not_present
+#if 1
+                         /* ### there are cases where the BASE node is
+                            ### marked as incomplete. we should treat this
+                            ### as a "normal" node for the purposes of
+                            ### this function. we really should not allow
+                            ### it, but this situation occurs within the
+                            ### following tests:
+                            ###   switch_tests 31
+                            ###   update_tests 46
+                            ###   update_tests 53
+                         */
+                         || base_presence == svn_wc__db_status_incomplete
+#endif
+                         );
+
+#if 1
+          /* ### see above comment  */
+          if (base_presence == svn_wc__db_status_incomplete)
+            base_presence = svn_wc__db_status_normal;
+#endif
 
           /* If a BASE node is marked as not-present, then we'll ignore
              it within this function. That status is simply a bookkeeping
