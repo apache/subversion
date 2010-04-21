@@ -1516,33 +1516,29 @@ check_dir_empty(svn_boolean_t *empty, const char *local_abspath,
                 apr_pool_t *scratch_pool)
 {
   struct status_baton btn;
-  svn_error_t *err;
+  svn_boolean_t is_wc_root;
   int i;
 
+  /* Working copy root cannot be deleted, so never consider it empty. */
+  SVN_ERR(svn_wc__strictly_is_wc_root(&is_wc_root, wc_ctx, local_abspath,
+                                      scratch_pool));
+  if (is_wc_root)
+    {
+      *empty = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Find existing children of the directory. */
   btn.existing_targets = apr_array_make(scratch_pool, 0, 
                                         sizeof(patch_target_t *));
   btn.parent_path = local_abspath;
   btn.result_pool = scratch_pool;
-
-  err = svn_wc_walk_status(wc_ctx, local_abspath, svn_depth_immediates,
-                           TRUE, TRUE, TRUE, NULL, find_existing_children,
-                           &btn, NULL, NULL, NULL, NULL, scratch_pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
-        {
-          /* The patch has deleted the entire working copy. */
-          svn_error_clear(err);
-          *empty = FALSE;
-          return SVN_NO_ERROR;
-        }
-      else
-        svn_error_return(err);
-    }
-
+  SVN_ERR(svn_wc_walk_status(wc_ctx, local_abspath, svn_depth_immediates,
+                             TRUE, TRUE, TRUE, NULL, find_existing_children,
+                             &btn, NULL, NULL, NULL, NULL, scratch_pool));
   *empty = TRUE;
 
-  /* Do we delete all targets? */
+  /* Do we delete all children? */
   for (i = 0; i < btn.existing_targets->nelts; i++)
     {
       int j;
