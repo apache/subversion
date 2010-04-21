@@ -5708,7 +5708,7 @@ svn_wc_prop_list(apr_hash_t **props,
  * BASE node's properties will not be accessible until the copy is reverted.
  *
  * Nodes that are incomplete, excluded, absent, or not present at the
- * node's revision will return NULL in @props.
+ * node's revision will return NULL in @a props.
  *
  * If the node is not versioned, SVN_ERR_WC_PATH_NOT_FOUND will be returned.
  *
