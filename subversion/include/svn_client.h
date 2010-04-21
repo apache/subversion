@@ -4870,7 +4870,7 @@ svn_client_info(const char *path_or_url,
  * If @a patched_tempfiles is not NULL, return in @a *patched_tempfiles
  * a mapping {target path -> path to temporary file containing patched result}
  * for all patched targets which were neither skipped nor excluded via
- * @ignore_patterns or @a exlude_patterns.
+ * @a include_patterns or @a exclude_patterns.
  * Note that if all hunks were rejected, the patched result will look just
  * like the target file, unmodified.
  * If @a reject_tempfiles is not NULL, return in @a *reject_tempfiles
