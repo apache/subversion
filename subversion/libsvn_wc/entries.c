@@ -1171,6 +1171,87 @@ read_entries_new(apr_hash_t **result_entries,
 }
 
 
+/* Read a pair of entries from wc_db in the directory DIR_ABSPATH. Return
+   the directory's entry in *PARENT_ENTRY and NAME's entry in *ENTRY. The
+   two returned pointers will be the same if NAME=="" ("this dir").
+
+   The parent entry must exist.
+
+   The requested entry MAY exist. If it does not, then NULL will be returned.
+
+   The resulting entries are allocated in RESULT_POOL, and all temporary
+   allocations are made in SCRATCH_POOL.  */
+static svn_error_t *
+read_entry_pair(const svn_wc_entry_t **parent_entry,
+                const svn_wc_entry_t **entry,
+                svn_wc__db_t *db,
+                const char *dir_abspath,
+                const char *name,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  apr_uint64_t wc_id = 1;  /* ### hacky. should remove.  */
+
+  SVN_ERR(read_one_entry(parent_entry, db, wc_id, dir_abspath,
+                         "" /* name */,
+                         NULL /* parent_entry */,
+                         result_pool, scratch_pool));
+
+  /* If we need the entry for "this dir", then return the parent_entry
+     in both outputs. Otherwise, read the child node.  */
+  if (*name == '\0')
+    {
+      *entry = *parent_entry;
+    }
+  else
+    {
+      const apr_array_header_t *children;
+      int i;
+
+      /* Default to not finding the child.  */
+      *entry = NULL;
+
+      /* Determine whether the parent KNOWS about this child. If it does
+         not, then we should not attempt to look for it.
+
+         For example: the parent doesn't "know" about the child, but the
+         versioned directory *does* exist on disk. We don't want to look
+         into that subdir.  */
+      SVN_ERR(svn_wc__db_read_children(&children, db, dir_abspath,
+                                       scratch_pool, scratch_pool));
+      for (i = children->nelts; i--; )
+        {
+          const char *child = APR_ARRAY_IDX(children, i, const char *);
+
+          if (strcmp(child, name) == 0)
+            {
+              svn_error_t *err;
+
+              err = read_one_entry(entry,
+                                   db, wc_id, dir_abspath, name, *parent_entry,
+                                   result_pool, scratch_pool);
+              if (err)
+                {
+                  if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+                    return svn_error_return(err);
+
+                  /* No problem. Clear the error and leave the default value
+                     of "missing".  */
+                  svn_error_clear(err);
+                }
+
+              /* Found it. No need to keep searching.  */
+              break;
+            }
+        }
+      /* if the loop ends without finding a child, then we have the default
+         ENTRY value of NULL.  */
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* */
 static svn_error_t *
 read_entries(apr_hash_t **entries,
@@ -2529,31 +2610,27 @@ write_one_entry(svn_wc__db_t *db,
 
 
 
-/* Update an entry NAME in ENTRIES, according to the combination of
-   entry data found in ENTRY and masked by MODIFY_FLAGS. If the entry
-   already exists, the requested changes will be folded (merged) into
-   the entry's existing state.  If the entry doesn't exist, the entry
-   will be created with exactly those properties described by the set
-   of changes. Also cleanups meaningless fields combinations.
+/* Update the entry CUR_ENTRY, according to the combination of
+   entry data found in ENTRY and masked by MODIFY_FLAGS.
+   The requested changes will be folded (merged) into
+   the entry's existing state.
+   Also cleanups meaningless fields combinations.
 
-   The SVN_WC__ENTRY_MODIFY_FORCE flag is ignored.
+   PARENT_ENTRY must be passed, in order to grab certain "default" values.
 
-   POOL may be used to allocate memory referenced by ENTRIES.
+   POOL will be used to allocate memory referenced by ENTRIES.
  */
 static svn_error_t *
-fold_entry(apr_hash_t *entries,
+fold_entry(svn_wc_entry_t *cur_entry,
            const char *name,
            apr_uint64_t modify_flags,
            const svn_wc_entry_t *entry,
+           const svn_wc_entry_t *parent_entry,
            apr_pool_t *pool)
 {
-  svn_wc_entry_t *cur_entry
-    = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
-
+  SVN_ERR_ASSERT(cur_entry != NULL);
   SVN_ERR_ASSERT(name != NULL);
-
-  if (! cur_entry)
-    cur_entry = alloc_entry(pool);
+  SVN_ERR_ASSERT(entry != NULL);
 
   /* Name (just a safeguard here, really) */
   if (! cur_entry->name)
@@ -2644,13 +2721,8 @@ fold_entry(apr_hash_t *entries,
 
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
-  if (cur_entry->kind != svn_node_dir)
-    {
-      const svn_wc_entry_t *default_entry
-        = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
-      if (default_entry)
-        take_from_entry(default_entry, cur_entry, pool);
-    }
+  if (cur_entry->kind != svn_node_dir && parent_entry != NULL)
+    take_from_entry(parent_entry, cur_entry, pool);
 
   /* Cleanup meaningless fields */
 
@@ -2693,11 +2765,6 @@ fold_entry(apr_hash_t *entries,
       cur_entry->file_external_peg_rev = entry->file_external_peg_rev;
       cur_entry->file_external_rev = entry->file_external_rev;
     }
-
-  /* Make sure the entry exists in the entries hash.  Possibly it
-     already did, in which case this could have been skipped, but what
-     the heck. */
-  apr_hash_set(entries, cur_entry->name, APR_HASH_KEY_STRING, cur_entry);
 
   return SVN_NO_ERROR;
 }
@@ -2952,18 +3019,19 @@ entry_modify(svn_wc__db_t *db,
              const char *local_abspath,
              svn_node_kind_t kind,
              svn_boolean_t parent_stub,
-             svn_wc_entry_t *entry,
+             svn_wc_entry_t *entry_mods,
              apr_uint64_t modify_flags,
              apr_pool_t *scratch_pool)
 {
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
   svn_error_t *err;
-  apr_hash_t *entries;
   svn_wc_adm_access_t *adm_access;
   const char *adm_abspath;
   const char *name;
+  const svn_wc_entry_t *parent_entry;
+  svn_wc_entry_t *cur_entry;
 
-  SVN_ERR_ASSERT(entry);
+  SVN_ERR_ASSERT(entry_mods);
 
   SVN_ERR(get_entry_access_info(&adm_abspath, &name, db, local_abspath,
                                 kind, parent_stub, subpool, subpool));
@@ -2982,8 +3050,10 @@ entry_modify(svn_wc__db_t *db,
     }
   /* ### else: should we have some kind of write check here?  */
 
-  /* Always read the entries from the database.  */
-  SVN_ERR(read_entries(&entries, db, adm_abspath, subpool, subpool));
+  /* Cast our non-const CUR_ENTRY appropriately. It will be allocated for
+     us in SUB_POOL, so we actually know it is modifiable.  */
+  SVN_ERR(read_entry_pair(&parent_entry, (const svn_wc_entry_t **)&cur_entry,
+                          db, adm_abspath, name, subpool, subpool));
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
@@ -2998,12 +3068,11 @@ entry_modify(svn_wc__db_t *db,
              manage those modifications. */
           SVN_ERR(fold_scheduling(&skip_schedule_change,
                                   &delete_entry,
-                                  &entry->schedule,
-                                  apr_hash_get(entries, "",
-                                               APR_HASH_KEY_STRING),
-                                  apr_hash_get(entries, name,
-                                               APR_HASH_KEY_STRING),
-                                  entry->schedule,
+                                  /* ### this is our OUT parameter  */
+                                  &entry_mods->schedule,
+                                  parent_entry,
+                                  cur_entry,
+                                  entry_mods->schedule,
                                   name, subpool));
 
           /* Check if the scheduling folding resulted in removing this entry */
@@ -3019,19 +3088,22 @@ entry_modify(svn_wc__db_t *db,
         }
     }
 
+  /* Yay! Our "modify" function can actually "create". Bleah.  */
+  if (cur_entry == NULL)
+    cur_entry = alloc_entry(subpool);
+
   /* Fold in the changes, and write them out.  */
-  SVN_ERR(fold_entry(entries, name, modify_flags, entry, subpool));
+  SVN_ERR(fold_entry(cur_entry, name, modify_flags, entry_mods, parent_entry,
+                     subpool));
 
   err = write_one_entry(db, adm_abspath,
-                        apr_hash_get(entries, "", APR_HASH_KEY_STRING),
-                        apr_hash_get(entries, name, APR_HASH_KEY_STRING),
+                        parent_entry,
+                        cur_entry,
                         subpool);
 
   svn_pool_destroy(subpool); /* Close wc.db handles */
 
-  SVN_ERR(err);
-
-  return SVN_NO_ERROR;
+  return svn_error_return(err);
 }
 
 
