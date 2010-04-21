@@ -309,23 +309,38 @@ static const char * const TESTING_DATA = (
    "  null, null, null, 0, null, null, '()', 0); "
    );
 
+
+static const char * const M_TESTING_DATA = (
+   /* Load our test data.
+
+      Note: do not use named-column insertions. This allows us to test
+      the column count in the schema matches our expectation here. */
+
+   "insert into repository values (1, '" ROOT_ONE "', '" UUID_ONE "'); "
+   "insert into repository values (2, '" ROOT_TWO "', '" UUID_TWO "'); "
+   "insert into wcroot values (1, null); "
+
+   "insert into base_node values ("
+   "  1, '', 1, 'M', null, 'normal', 'dir', "
+   "  1, null, null, "
+   "  1, " TIME_1s ", '" AUTHOR_1 "', 'infinity', null, null, '()', null, 0, "
+   "  null); "
+   );
+
 WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
 
 
 static svn_error_t *
-create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
+make_one_db(const char *dirpath,
+            const char * const my_statements[],
+            apr_pool_t *scratch_pool)
 {
-  const char *dirpath = svn_dirent_join_many(scratch_pool,
-                                             "fake-wc", subdir, ".svn", NULL);
   const char *dbpath = svn_dirent_join(dirpath, "wc.db", scratch_pool);
   svn_sqlite__db_t *sdb;
-  const char * const my_statements[] = {
-    statements[STMT_CREATE_SCHEMA],
-    TESTING_DATA,
-    NULL
-  };
 
+  /* Create fake-wc/SUBDIR/.svn/ for placing the metadata. */
   SVN_ERR(svn_io_make_dir_recursively(dirpath, scratch_pool));
+
   svn_error_clear(svn_io_remove_file(dbpath, scratch_pool));
   SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_rwcreate,
                            my_statements,
@@ -337,6 +352,33 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
 
   /* Throw our extra data into the database.  */
   SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ 1));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
+{
+  const char *dirpath;
+  const char * const my_statements[] = {
+    statements[STMT_CREATE_SCHEMA],
+    TESTING_DATA,
+    NULL
+  };
+  const char * const M_statements[] = {
+    statements[STMT_CREATE_SCHEMA],
+    M_TESTING_DATA,
+    NULL
+  };
+
+  dirpath = svn_dirent_join_many(scratch_pool,
+                                 "fake-wc", subdir, ".svn", NULL);
+  SVN_ERR(make_one_db(dirpath, my_statements, scratch_pool));
+
+  dirpath = svn_dirent_join_many(scratch_pool,
+                                 "fake-wc", subdir, "M", ".svn", NULL);
+  SVN_ERR(make_one_db(dirpath, M_statements, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -410,10 +452,85 @@ test_entries_alloc(apr_pool_t *pool)
 }
 
 
+static svn_error_t *
+test_stubs(apr_pool_t *pool)
+{
+  svn_wc__db_t *db;
+  const char *local_abspath;
+  const char *local_relpath;
+  svn_wc_adm_access_t *adm_access;
+  svn_wc_adm_access_t *subdir_access;
+  const svn_wc_entry_t *stub_entry;
+  const svn_wc_entry_t *entry;
+  const svn_wc_entry_t *test_entry;
+  apr_hash_t *entries;
+
+#undef WC_NAME
+#define WC_NAME "test_stubs"
+
+  SVN_ERR(create_open(&db, &local_abspath, WC_NAME, pool));
+
+  /* The "M" entry is a subdir. Let's ensure we can reach its stub,
+     and the actual contents.  */
+  local_relpath = svn_dirent_join_many(pool,
+                                       "fake-wc",
+                                       WC_NAME,
+                                       "M",
+                                       NULL);
+
+  SVN_ERR(svn_wc_adm_open3(&adm_access,
+                           NULL /* associated */,
+                           svn_dirent_join("fake-wc", WC_NAME, pool),
+                           FALSE /* write_lock */,
+                           0 /* levels_to_lock */,
+                           NULL /* cancel_func */,
+                           NULL /* cancel_baton */,
+                           pool));
+
+  /* Ensure we get the stub. NOTE: do this before we have associated the
+     subdir baton with ADM_ACCESS.  */
+  SVN_ERR(svn_wc_entry(&stub_entry, local_relpath, adm_access, TRUE, pool));
+  SVN_TEST_STRING_ASSERT(stub_entry->name, "M");
+
+  SVN_ERR(svn_wc_adm_open3(&subdir_access,
+                           adm_access,
+                           local_relpath,
+                           FALSE /* write_lock */,
+                           0 /* levels_to_lock */,
+                           NULL /* cancel_func */,
+                           NULL /* cancel_baton */,
+                           pool));
+
+  /* Ensure we get the real entry.  */
+  SVN_ERR(svn_wc_entry(&entry, local_relpath, subdir_access, TRUE, pool));
+  SVN_TEST_STRING_ASSERT(entry->name, "");
+
+  /* Ensure that we get the SAME entry, even using the parent baton.  */
+  SVN_ERR(svn_wc_entry(&test_entry, local_relpath, adm_access, TRUE, pool));
+  SVN_TEST_ASSERT(test_entry == entry);
+
+  /* Ensure we get the stub when reading entries with ADM_ACCESS.  */
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE /* show_hidden */,
+                              pool));
+  SVN_TEST_ASSERT(stub_entry
+                  == apr_hash_get(entries, "M", APR_HASH_KEY_STRING));
+
+  /* Ensure we get the real entry when reading entries with SUBDIR_ACCESS.  */
+  SVN_ERR(svn_wc_entries_read(&entries, subdir_access, TRUE /* show_hidden */,
+                              pool));
+  SVN_TEST_ASSERT(entry
+                  == apr_hash_get(entries, "", APR_HASH_KEY_STRING));
+
+  return SVN_NO_ERROR;
+}
+
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_entries_alloc,
                    "entries are allocated in access baton"),
+    SVN_TEST_PASS2(test_stubs,
+                   "access baton mojo can return stubs"),
     SVN_TEST_NULL
   };
