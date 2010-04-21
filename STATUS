@@ -176,6 +176,8 @@ Candidate changes:
      svn rm URL should just work on 'http://server/path/with%20space'
    Notes: r935992 is a test for this issue and r935996 fixes the issue and
      extends the testcase a bit.
+   Branch:
+     ^/subversion/branches/1.6.x-r935996.
    Votes:
      +1 rhuijben
 
