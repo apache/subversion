@@ -1041,10 +1041,22 @@ read_one_entry(const svn_wc_entry_t **new_entry,
       else
         entry->kind = svn_node_unknown;
 
+      /* We should always have a REPOS_RELPATH, except for:
+         - deleted nodes
+         - certain obstructed nodes
+         - not-present nodes
+         - absent nodes
+         - excluded nodes
+
+         ### the last three should probably have an "implied" REPOS_RELPATH
+      */
       SVN_ERR_ASSERT(repos_relpath != NULL
                      || entry->schedule == svn_wc_schedule_delete
                      || status == svn_wc__db_status_obstructed
                      || status == svn_wc__db_status_obstructed_delete
+                     || status == svn_wc__db_status_not_present
+                     || status == svn_wc__db_status_absent
+                     || status == svn_wc__db_status_excluded
                      );
       if (repos_relpath)
         entry->url = svn_path_url_add_component2(entry->repos,
