@@ -85,14 +85,14 @@ def reflect_dropped_renumbered_revs(sbox):
                              "--ignore-uuid")
 
   # Verify the svn:mergeinfo properties
-  svntest.actions.run_and_verify_svn(None,
-                                     [sbox.repo_url+"/trunk - /branch1:4-5\n"],
-                                     [], 'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url + '/trunk')
-  svntest.actions.run_and_verify_svn(None,
-                                     [sbox.repo_url+"/branch1 - /trunk:1-2\n"],
-                                     [], 'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url + '/branch1')
+  url = sbox.repo_url
+  expected_output = svntest.verify.UnorderedOutput([
+    url + "/trunk - /branch1:4-5\n",
+    ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url)
+  
 
   # Test svndumpfilter with exclude option
   test_create(sbox)
@@ -105,14 +105,12 @@ def reflect_dropped_renumbered_revs(sbox):
                              "--ignore-uuid")
 
   # Verify the svn:mergeinfo properties
-  svntest.actions.run_and_verify_svn(None,
-                                     [sbox.repo_url+"/trunk - \n"],
-                                     [], 'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url + '/trunk')
-  svntest.actions.run_and_verify_svn(None,
-                                     [sbox.repo_url+"/branch2 - /trunk:1-2\n"],
-                                     [], 'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url + '/branch2')
+  expected_output = svntest.verify.UnorderedOutput([
+    url + "/trunk - \n",
+    ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url)
 
 def svndumpfilter_loses_mergeinfo(sbox):
   "svndumpfilter loses mergeinfo"
@@ -131,14 +129,13 @@ def svndumpfilter_loses_mergeinfo(sbox):
   load_and_verify_dumpstream(sbox, [], [], None, filtered_out)
 
   # Verify the svn:mergeinfo properties
-  svntest.actions.run_and_verify_svn(None,
-                                     [sbox.repo_url+"/trunk - /branch1:4-8\n"],
-                                     [], 'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url + '/trunk')
-  svntest.actions.run_and_verify_svn(None,
-                                     [sbox.repo_url+"/branch1 - /trunk:1-2\n"],
-                                     [], 'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url + '/branch1')
+  url = sbox.repo_url
+  expected_output = svntest.verify.UnorderedOutput([
+    url + "/trunk - /branch1:4-8\n",
+    ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url)
 
 
 def _simple_dumpfilter_test(sbox, dumpfile, *dumpargs):
