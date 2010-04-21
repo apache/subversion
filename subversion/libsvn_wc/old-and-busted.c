@@ -1301,47 +1301,46 @@ svn_wc_entry(const svn_wc_entry_t **entry,
              svn_boolean_t show_hidden,
              apr_pool_t *pool)
 {
+  svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
-  svn_error_t *err;
+  svn_wc_adm_access_t *dir_access;
+  const char *entry_name;
+  apr_hash_t *entries;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  err = svn_wc__get_entry(entry,
-                          svn_wc__adm_get_db(adm_access),
-                          local_abspath,
-                          TRUE /* allow_unversioned */,
-                          svn_node_unknown,
-                          FALSE /* need_parent_stub */,
-                          svn_wc_adm_access_pool(adm_access), pool);
-  if (err)
+  /* Does the provided path refer to a directory with an associated
+     access baton?  */
+  dir_access = svn_wc__adm_retrieve_internal2(db, local_abspath, pool);
+  if (dir_access == NULL)
     {
-      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          /* Even though we said ALLOW_UNVERSIONED == TRUE, this error can
-             happen when the requested node is a directory, but that
-             directory is not found. We'll go ahead and return the stub.
+      /* Damn. Okay. Assume the path is to a child, and let's look for
+         a baton associated with its parent.  */
 
-             So: fall through to clear the error.  */
-        }
-      else if (err->apr_err == SVN_ERR_WC_MISSING)
-        {
-          /* This can happen when we ask about a subdir's node, but both
-             the subdirectory and its parent are missing metadata. This
-             can happen during (say) the diff process against the repository
-             where a node *does* exist, and it looks for the same locally.
+      const char *dir_abspath;
 
-             See diff_tests 36 -- diff_added_subtree()
+      svn_dirent_split(local_abspath, &dir_abspath, &entry_name, pool);
 
-             We'll just say the entry does not exist, and fall through to
-             clear this error.  */
-          *entry = NULL;
-        }
-      else if (err->apr_err != SVN_ERR_NODE_UNEXPECTED_KIND)
-        return svn_error_return(err);
-
-      /* We got the parent stub instead of the real entry. Fine.  */
-      svn_error_clear(err);
+      dir_access = svn_wc__adm_retrieve_internal2(db, dir_abspath, pool);
     }
+  else
+    {
+      /* Woo! Got one. Look for "this dir" in the entries hash.  */
+      entry_name = "";
+    }
+
+  if (dir_access == NULL)
+    {
+      /* Early exit.  */
+      *entry = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* Load an entries hash, and cache it into DIR_ACCESS. Go ahead and
+     fetch all entries here (optimization) since we know how to filter
+     out a "hidden" node.  */
+  SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, pool));
+  *entry = apr_hash_get(entries, entry_name, APR_HASH_KEY_STRING);
 
   if (!show_hidden && *entry != NULL)
     {
