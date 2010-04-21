@@ -813,6 +813,10 @@ def reflect_dropped_renumbered_revs(sbox):
                              '/toplevel')
 
   # Verify the svn:mergeinfo properties
+  #
+  # Currently this test is set as XFail because we needed to revert
+  # http://svn.apache.org/viewvc?view=revision&revision=927243,
+  # see http://svn.haxx.se/dev/archive-2010-04/0475.shtml.
   svntest.actions.run_and_verify_svn(None, ["/trunk:2-4\n"],
                                      [], 'propget', 'svn:mergeinfo',
                                      sbox.repo_url + '/branch2')
@@ -1067,7 +1071,26 @@ def drop_mergeinfo_outside_of_dump_stream(sbox):
   #   Properties on 'Projects/Project-X/branches/B2':
   #     svn:mergeinfo
   #       /Projects/Project-X/trunk:10
-
+  #
+  # ...With the reversion of
+  # http://svn.apache.org/viewvc?view=revision&revision=927243, see
+  # http://svn.haxx.se/dev/archive-2010-04/0475.shtml, this is failing
+  # again with this mergeinfo:
+  #
+  #   Properties on 'projects\Project-X\branches\B1':
+  #     svn:mergeinfo
+  #       /projects/Project-X/branches/B2:12-13
+  #       /projects/Project-X/trunk:6-7,10
+  #                                 ^
+  #   Properties on 'projects\Project-X\branches\B1\B\E':
+  #     svn:mergeinfo
+  #       /projects/Project-X/branches/B2/B/E:12-13
+  #       /projects/Project-X/trunk/B/E:5-7,9-10
+  #                                     ^^
+  #   Properties on 'projects\Project-X\branches\B2':
+  #     svn:mergeinfo
+  #       /projects/Project-X/trunk:10
+  
   # Load the skeleton dump:
   dumpfile1 = open(os.path.join(os.path.dirname(sys.argv[0]),
                                 'svnadmin_tests_data',
@@ -1213,14 +1236,14 @@ test_list = [ None,
               SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
               load_with_parent_dir,
               set_uuid,
-              reflect_dropped_renumbered_revs,
+              XFail(reflect_dropped_renumbered_revs),
               SkipUnless(fsfs_recover_handle_missing_revs_or_revprops_file,
                          svntest.main.is_fs_type_fsfs),
               create_in_repo_subdir,
               SkipUnless(verify_with_invalid_revprops,
                          svntest.main.is_fs_type_fsfs),
-              drop_mergeinfo_outside_of_dump_stream,
-              XFail(dont_drop_valid_mergeinfo_during_incremental_loads),
+              XFail(drop_mergeinfo_outside_of_dump_stream),
+              dont_drop_valid_mergeinfo_during_incremental_loads,
              ]
 
 if __name__ == '__main__':
