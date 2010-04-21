@@ -1823,6 +1823,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
   void *inner_baton;
   svn_delta_editor_t *tree_editor;
   const svn_delta_editor_t *inner_editor;
+  const char *anchor_abspath;
 
   SVN_ERR(make_edit_baton(&eb,
                           wc_ctx->db,
@@ -1852,12 +1853,14 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
   inner_editor = tree_editor;
   inner_baton = eb;
 
+  SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor_path, result_pool));
+
   if (depth == svn_depth_unknown)
     SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
                                                 &inner_baton,
                                                 inner_editor,
                                                 inner_baton,
-                                                anchor_path,
+                                                anchor_abspath,
                                                 target,
                                                 wc_ctx->db,
                                                 result_pool));
