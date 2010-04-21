@@ -1393,9 +1393,6 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
 {
   const char *dir_abspath;
   const char *entry_name;
-  svn_wc_adm_access_t *adm_access;
-  apr_hash_t *entries;
-  apr_pool_t *source_pool;
 
   /* Can't ask for the parent stub if the node is a file.  */
   SVN_ERR_ASSERT(!need_parent_stub || kind != svn_node_file);
@@ -1404,16 +1401,11 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
                                 kind, need_parent_stub, scratch_pool,
                                 scratch_pool));
 
-  /* Is there an existing access baton for this path?  */
-  adm_access = svn_wc__adm_retrieve_internal2(db, dir_abspath, scratch_pool);
-  if (adm_access == NULL)
     {
+      const svn_wc_entry_t *parent_entry;
       svn_error_t *err;
 
-      /* No access baton. Just read the entries into the scratch pool.
-         No place to cache them, so they won't stick around.
-
-         NOTE: if KIND is UNKNOWN and we decided to examine the *parent*
+      /* NOTE: if KIND is UNKNOWN and we decided to examine the *parent*
          directory, then it is possible we moved out of the working copy.
          If the on-disk node is a DIR, and we asked for a stub, then we
          obviously can't provide that (parent has no info). If the on-disk
@@ -1425,8 +1417,9 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
          obstructed on-disk by some other node kind (NONE, FILE, UNKNOWN),
          then this will throw an error.  */
 
-      err = read_entries(&entries, db, dir_abspath,
-                         scratch_pool, scratch_pool);
+      err = read_entry_pair(&parent_entry, entry,
+                            db, dir_abspath, entry_name,
+                            result_pool, scratch_pool);
       if (err)
         {
           if (err->apr_err != SVN_ERR_WC_MISSING || kind != svn_node_unknown
@@ -1470,29 +1463,8 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
                                  svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
         }
-
-      /* The entries are allocated in scratch_pool right now.  */
-      source_pool = scratch_pool;
-    }
-  else
-    {
-      /* We have a place to cache the results.  */
-
-      /* The entries are currently, or will be, allocated in the access
-         baton's pool.  */
-      source_pool = svn_wc_adm_access_pool(adm_access);
-
-      entries = svn_wc__adm_access_entries(adm_access);
-      if (entries == NULL)
-        {
-          /* See note above about reading the entries for an UNKNOWN.  */
-          SVN_ERR(read_entries(&entries, db, dir_abspath,
-                               source_pool, scratch_pool));
-          svn_wc__adm_access_set_entries(adm_access, entries);
-        }
     }
 
-  *entry = apr_hash_get(entries, entry_name, APR_HASH_KEY_STRING);
   if (*entry == NULL)
     {
       if (allow_unversioned)
@@ -1502,10 +1474,6 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
                                svn_dirent_local_style(local_abspath,
                                                       scratch_pool));
     }
-
-  /* Give the caller a valid entry.  */
-  if (result_pool != source_pool)
-    *entry = svn_wc_entry_dup(*entry, result_pool);
 
   /* The caller had the wrong information.  */
   if ((kind == svn_node_file && (*entry)->kind != svn_node_file)
