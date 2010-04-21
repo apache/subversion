@@ -659,10 +659,6 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
     }
   else if (status == svn_wc__db_status_deleted)
     {
-      /* This node is deleted, but we didn't get a revnum above. So this must
-         be a delete inside a locally copied tree. Return the revision number
-         of the parent of the delete, presumably the copy-from revision.
-         ### This is legacy behaviour, and it sucks. */
       const char *work_del_abspath;
       const char *parent_abspath;
       svn_wc__db_status_t parent_status;
@@ -671,25 +667,34 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
                                        &work_del_abspath,
                                        wc_ctx->db, local_abspath,
                                        scratch_pool, scratch_pool));
-      SVN_ERR_ASSERT(work_del_abspath != NULL);
-      parent_abspath = svn_dirent_dirname(work_del_abspath, scratch_pool);
+      if (work_del_abspath != NULL)
+        {
+          /* This is a deletion within a copied subtree. Get the copied-from
+           * revision. */
+          parent_abspath = svn_dirent_dirname(work_del_abspath, scratch_pool);
 
-      SVN_ERR(svn_wc__db_read_info(&parent_status,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL,
-                                   wc_ctx->db, parent_abspath,
-                                   scratch_pool, scratch_pool));
-
-      SVN_ERR_ASSERT(parent_status == svn_wc__db_status_added
-                     || parent_status == svn_wc__db_status_obstructed_add);
-
-      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL,
-                                       commit_base_revision,
+          SVN_ERR(svn_wc__db_read_info(&parent_status,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
                                        wc_ctx->db, parent_abspath,
                                        scratch_pool, scratch_pool));
+
+          SVN_ERR_ASSERT(parent_status == svn_wc__db_status_added
+                         || parent_status == svn_wc__db_status_obstructed_add);
+
+          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL,
+                                           commit_base_revision,
+                                           wc_ctx->db, parent_abspath,
+                                           scratch_pool, scratch_pool));
+        }
+      else
+        /* This is a normal delete. Get the base revision. */
+        return svn_wc__node_get_base_rev(commit_base_revision,
+                                         wc_ctx, local_abspath,
+                                         scratch_pool);
     }
 
   return SVN_NO_ERROR;
