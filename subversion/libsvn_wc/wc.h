@@ -473,7 +473,7 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     void **edit_baton,
                                     const svn_delta_editor_t *wrapped_editor,
                                     void *wrapped_edit_baton,
-                                    const char *anchor,
+                                    const char *anchor_abspath,
                                     const char *target,
                                     svn_wc__db_t *db,
                                     apr_pool_t *pool);

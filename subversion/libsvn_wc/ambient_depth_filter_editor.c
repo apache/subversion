@@ -95,7 +95,6 @@ struct edit_baton
   void *wrapped_edit_baton;
   svn_wc__db_t *db;
   const char *anchor_abspath;
-  const char *anchor;
   const char *target;
 };
 
@@ -111,7 +110,7 @@ struct dir_baton
   svn_boolean_t ambiently_excluded;
   svn_depth_t ambient_depth;
   struct edit_baton *edit_baton;
-  const char *path;
+  const char *abspath;
   void *wrapped_baton;
 };
 
@@ -138,9 +137,9 @@ make_dir_baton(struct dir_baton **d_p,
   /* Okay, no easy out, so allocate and initialize a dir baton. */
   d = apr_pcalloc(pool, sizeof(*d));
 
-  d->path = apr_pstrdup(pool, eb->anchor);
+  d->abspath = apr_pstrdup(pool, eb->anchor_abspath);
   if (path)
-    d->path = svn_dirent_join(d->path, path, pool);
+    d->abspath = svn_dirent_join(d->abspath, path, pool);
 
   /* The svn_depth_unknown means that: 1) pb is the anchor; 2) there
      is an non-null target, for which we are preparing the baton.
@@ -154,7 +153,8 @@ make_dir_baton(struct dir_baton **d_p,
       svn_boolean_t exists = TRUE;
 
       abspath = svn_dirent_join(eb->anchor_abspath,
-                                svn_dirent_skip_ancestor(eb->anchor, path),
+                                svn_dirent_skip_ancestor(eb->anchor_abspath,
+                                                         path),
                                 pool);
 
       err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -237,7 +237,8 @@ make_file_baton(struct file_baton **f_p,
       const char *abspath;
 
       abspath = svn_dirent_join(eb->anchor_abspath,
-                                svn_dirent_skip_ancestor(eb->anchor, path),
+                                svn_dirent_skip_ancestor(eb->anchor_abspath,
+                                                         path),
                                 pool);
 
       SVN_ERR(svn_wc__db_read_kind(&kind, pb->edit_baton->db, abspath, TRUE,
@@ -349,7 +350,8 @@ delete_entry(const char *path,
       const char *abspath;
 
       abspath = svn_dirent_join(eb->anchor_abspath,
-                                svn_dirent_skip_ancestor(eb->anchor, path),
+                                svn_dirent_skip_ancestor(eb->anchor_abspath,
+                                                         path),
                                 pool);
 
       SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, abspath, TRUE, pool));
@@ -441,7 +443,8 @@ open_directory(const char *path,
      this svn_wc_entry call. */
 
   local_abspath = svn_dirent_join(eb->anchor_abspath,
-                                  svn_dirent_skip_ancestor(eb->anchor, path),
+                                  svn_dirent_skip_ancestor(eb->anchor_abspath,
+                                                           path),
                                   pool);
 
 
@@ -644,13 +647,15 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     void **edit_baton,
                                     const svn_delta_editor_t *wrapped_editor,
                                     void *wrapped_edit_baton,
-                                    const char *anchor,
+                                    const char *anchor_abspath,
                                     const char *target,
                                     svn_wc__db_t *db,
                                     apr_pool_t *pool)
 {
   svn_delta_editor_t *depth_filter_editor;
   struct edit_baton *eb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(anchor_abspath));
 
   depth_filter_editor = svn_delta_default_editor(pool);
   depth_filter_editor->set_target_revision = set_target_revision;
@@ -673,8 +678,7 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
   eb->wrapped_editor = wrapped_editor;
   eb->wrapped_edit_baton = wrapped_edit_baton;
   eb->db = db;
-  SVN_ERR(svn_dirent_get_absolute(&eb->anchor_abspath, anchor, pool));
-  eb->anchor = anchor;
+  eb->anchor_abspath = anchor_abspath;
   eb->target = target;
 
   *editor = depth_filter_editor;
