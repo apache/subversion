@@ -694,9 +694,9 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
       if (! SVN_IS_VALID_REVNUM(*commit_base_revision) && base_shadowed)
         /* It is a replace that does not feature a copy/move-here.
            Return the revert-base revision. */
-        return svn_wc__node_get_base_rev(commit_base_revision,
-                                         wc_ctx, local_abspath,
-                                         scratch_pool);
+        return svn_error_return(
+          svn_wc__node_get_base_rev(commit_base_revision, wc_ctx,
+                                    local_abspath, scratch_pool));
     }
   else if (status == svn_wc__db_status_deleted)
     {
@@ -733,9 +733,9 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
         }
       else
         /* This is a normal delete. Get the base revision. */
-        return svn_wc__node_get_base_rev(commit_base_revision,
-                                         wc_ctx, local_abspath,
-                                         scratch_pool);
+        return svn_error_return(
+          svn_wc__node_get_base_rev(commit_base_revision, wc_ctx,
+                                    local_abspath, scratch_pool));
     }
 
   return SVN_NO_ERROR;
