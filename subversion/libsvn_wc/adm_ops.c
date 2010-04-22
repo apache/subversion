@@ -502,23 +502,8 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
           if (status == svn_wc__db_status_excluded)
             continue;
 
-          /* Recurse, but only allow further recursion if the child is
-             a directory.  Pass NULL for NEW_DAV_CACHE, because the
-             ones present in the current call are only applicable to
-             this one committed item. */
-          if (kind == svn_wc__db_kind_dir)
-            {
-              SVN_ERR(svn_wc__process_committed_internal(db, this_abspath,
-                                                         TRUE /* recurse */,
-                                                         new_revnum, new_date,
-                                                         rev_author,
-                                                         NULL,
-                                                         TRUE /* no_unlock */,
-                                                         keep_changelist, NULL,
-                                                         queue, iterpool));
-              SVN_ERR(svn_wc__wq_run(db, this_abspath, NULL, NULL, iterpool));
-            }
-          else
+          checksum = NULL;
+          if (kind != svn_wc__db_kind_dir)
             {
               /* Suppress log creation for deleted entries in a replaced
                  directory.  By the time any log we create here is run,
@@ -537,7 +522,6 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                     continue;
                 }
 
-              checksum = NULL;
               if (queue != NULL)
                 {
                   const committed_queue_item_t *cqi
@@ -547,14 +531,23 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                   if (cqi != NULL)
                     checksum = cqi->checksum;
                 }
-
-              SVN_ERR(process_committed_leaf(db, this_abspath,
-                                             new_revnum,
-                                             new_date, rev_author, NULL,
-                                             TRUE /* no_unlock */,
-                                             keep_changelist,
-                                             checksum, iterpool));
             }
+
+          /* Recurse.  Pass NULL for NEW_DAV_CACHE, because the
+             ones present in the current call are only applicable to
+             this one committed item. */
+          SVN_ERR(svn_wc__process_committed_internal(db, this_abspath,
+                                                     TRUE /* recurse */,
+                                                     new_revnum, new_date,
+                                                     rev_author,
+                                                     NULL,
+                                                     TRUE /* no_unlock */,
+                                                     keep_changelist,
+                                                     checksum,
+                                                     queue, iterpool));
+
+          if (kind == svn_wc__db_kind_dir)
+            SVN_ERR(svn_wc__wq_run(db, this_abspath, NULL, NULL, iterpool));
         }
 
       svn_pool_destroy(iterpool);
