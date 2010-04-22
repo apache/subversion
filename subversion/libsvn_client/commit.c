@@ -933,16 +933,15 @@ collect_lock_tokens(apr_hash_t **result,
   return SVN_NO_ERROR;
 }
 
-/* Put ITEM onto QUEUE... */
+/* Put ITEM onto QUEUE, allocating it in QUEUE's pool... */
 static svn_error_t *
 post_process_commit_item(svn_wc_committed_queue_t *queue,
-                         svn_client_commit_item3_t *item,
+                         const svn_client_commit_item3_t *item,
                          svn_wc_context_t *wc_ctx,
                          svn_boolean_t keep_changelists,
                          svn_boolean_t keep_locks,
                          apr_hash_t *checksums,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
   svn_boolean_t loop_recurse = FALSE;
   svn_boolean_t remove_lock;
@@ -957,10 +956,11 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
       svn_boolean_t obstructed;
 
       SVN_ERR(svn_wc__node_is_status_obstructed(&obstructed,
-                                                wc_ctx, item->path, pool));
+                                                wc_ctx, item->path,
+                                                scratch_pool));
       if (obstructed)
         return svn_wc__temp_mark_missing_not_present(item->path,
-                                                     wc_ctx, pool);
+                                                     wc_ctx, scratch_pool);
     }
 
   if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
@@ -971,15 +971,13 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
   remove_lock = (! keep_locks && (item->state_flags
                                        & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
 
-  /* Allocate the queue in a longer-lived pool than (iter)pool:
-     we want it to survive the next iteration. */
   return svn_wc_queue_committed3(queue, item->path,
                                  loop_recurse, item->incoming_prop_changes,
                                  remove_lock, !keep_changelists,
                                  apr_hash_get(checksums,
                                               item->path,
                                               APR_HASH_KEY_STRING),
-                                 result_pool);
+                                 scratch_pool);
 }
 
 
@@ -1134,13 +1132,19 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
      At the same time, if a non-recursive commit is desired, do not
      allow a deleted directory as one of the targets. */
-  for (i = 0; i < targets->nelts; i++)
-    {
-      const char *target_path = APR_ARRAY_IDX(targets, i, const char *);
+  {
+    apr_pool_t *iterpool = svn_pool_create(pool);
 
-      SVN_ERR(check_nonrecursive_dir_delete(target_path, ctx->wc_ctx, depth,
-                                            /*iter*/pool));
-    }
+    for (i = 0; i < targets->nelts; i++)
+      {
+        const char *target_path = APR_ARRAY_IDX(targets, i, const char *);
+
+        svn_pool_clear(iterpool);
+        SVN_ERR(check_nonrecursive_dir_delete(target_path, ctx->wc_ctx, depth,
+                                              iterpool));
+      }
+    svn_pool_destroy(iterpool);
+  }
 
   /* Crawl the working copy for commit items. */
   if ((cmt_err = svn_client__harvest_committables(&committables,
@@ -1245,7 +1249,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
           svn_pool_clear(iterpool);
           bump_err = post_process_commit_item(queue, item, ctx->wc_ctx,
                                               keep_changelists, keep_locks,
-                                              checksums, pool, iterpool);
+                                              checksums, iterpool);
           if (bump_err)
             goto cleanup;
         }
