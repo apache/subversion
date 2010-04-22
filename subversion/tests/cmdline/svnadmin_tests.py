@@ -1202,6 +1202,85 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
+  # Load the skeleton dump:
+  dumpfile1 = open(os.path.join(os.path.dirname(sys.argv[0]),
+                                'svnadmin_tests_data',
+                                'skeleton_repos.dump')).read()
+
+  # Now test that the load of an incremental dump into a non-empty
+  # repository correctly adjusts the incoming mergeinfo by the expected
+  # offset, particularly in the case where the first revision in the
+  # load stream has mergeinfo.
+  #
+  # Once again, remove the current repos and create an empty one in
+  # its place.
+  test_create(sbox)
+  # Load this skeleton repos into the empty target:
+  #
+  #   Projects/       (Added r1)
+  #     README        (Added r2)
+  #     Project-X     (Added r3)
+  #     Project-Y     (Added r4)
+  #     Project-Z     (Added r5)
+  #     docs/         (Added r6)
+  #       README      (Added r6)
+  dumpfile1 = open(os.path.join(os.path.dirname(sys.argv[0]),
+                                'svnadmin_tests_data',
+                                'skeleton_repos.dump')).read()
+  load_and_verify_dumpstream(sbox, [], [], None, dumpfile1, '--ignore-uuid')
+
+  # Once again load the three incremental dump files in sequence, but this
+  # time into the /Projects/Project-X directory of the target repos.
+  load_and_verify_dumpstream(sbox, [], [], None,
+                             open(dump_file_r1_10).read(),
+                             '--parent-dir', 'Projects/Project-X',
+                             '--ignore-uuid')
+  load_and_verify_dumpstream(sbox, [], [], None,
+                             open(dump_file_r11_13).read(),
+                             '--parent-dir', 'Projects/Project-X',
+                             '--ignore-uuid')
+  load_and_verify_dumpstream(sbox, [], [], None,
+                             open(dump_file_r14_15).read(),
+                             '--parent-dir', 'Projects/Project-X',
+                             '--ignore-uuid')
+
+  # Check that the mergeinfo is as expected.  This is exactly the
+  # same expected mergeinfo we previously checked, except that the
+  # revisions are all offset +6 to reflect the revions already in
+  # the skeleton target before we began loading.
+  #
+  # Currently this fails because our current logic mapping mergeinfo revs
+  # in the load stream to their new values based on the offset of the
+  # target repository is quite flawed.  Right now this is the resulting
+  # mergeinfo:
+  #
+  #    Properties on 'svnadmin_tests-21\Projects\Project-X\branches\B1\B
+  #      svn:mergeinfo
+  #        /Projects/Project-X/branches/B2/B/E:11-12
+  #        /Projects/Project-X/trunk/B/E:5-6,8-9
+  #    Properties on 'svnadmin_tests-21\Projects\Project-X\branches\B1':
+  #      svn:mergeinfo
+  #        /Projects/Project-X/branches/B2:11-18
+  #                                           ^^
+  #                                 The *only* correct rev here!
+  #        /Projects/Project-X/trunk:6,9
+  #    Properties on 'svnadmin_tests-21\Projects\Project-X\branches\B2':
+  #      svn:mergeinfo
+  #        /Projects/Project-X/trunk:9
+  #
+  # See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16 for
+  # more info.
+  url = sbox.repo_url + '/branches/'
+  expected_output = svntest.verify.UnorderedOutput([
+    url + "B1 - /branches/B2:17-18\n",
+    "/trunk:12,15\n",
+    url + "B2 - /trunk:15\n",
+    url + "B1/B/E - /branches/B2/B/E:17-18\n",
+    "/trunk/B/E:11-12,14-15\n"])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url)
+
 ########################################################################
 # Run the tests
 
@@ -1230,7 +1309,7 @@ test_list = [ None,
               SkipUnless(verify_with_invalid_revprops,
                          svntest.main.is_fs_type_fsfs),
               XFail(drop_mergeinfo_outside_of_dump_stream),
-              dont_drop_valid_mergeinfo_during_incremental_loads,
+              XFail(dont_drop_valid_mergeinfo_during_incremental_loads),
              ]
 
 if __name__ == '__main__':
