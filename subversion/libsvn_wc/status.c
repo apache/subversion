@@ -2380,6 +2380,7 @@ internal_status(svn_wc_status3_t **status,
   err = svn_wc__get_entry(&entry, db, local_abspath, TRUE,
                           svn_node_unknown, FALSE, scratch_pool, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_WC_MISSING
+                || err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
                 || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
                 || err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND))
     {
@@ -2406,6 +2407,7 @@ internal_status(svn_wc_status3_t **status,
       err = svn_wc__get_entry(&parent_entry, db, parent_abspath, TRUE,
                               svn_node_dir, FALSE, scratch_pool, scratch_pool);
       if (err && (err->apr_err == SVN_ERR_WC_MISSING
+                    || err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
                     || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
                     || err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND))
         {
