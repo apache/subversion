@@ -57,14 +57,6 @@ struct svn_stream_t {
   svn_io_line_transformer_cb_t line_transformer_cb;
 };
 
-/* A type which represents a mark on a stream. */
-struct svn_stream_mark_t {
-  union {
-    apr_off_t apr;
-    apr_size_t stringbuf;
-  } m;
-};
-
 
 /*** Generic streams. ***/
 
@@ -677,6 +669,10 @@ struct baton_apr {
   apr_off_t end;
 };
 
+/* svn_stream_mark_t for streams backed by APR files. */
+struct mark_apr {
+  apr_off_t off;
+};
 
 static svn_error_t *
 read_handler_apr(void *baton, char *buffer, apr_size_t *len)
@@ -727,9 +723,12 @@ static svn_error_t *
 mark_handler_apr(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 {
   struct baton_apr *btn = baton;
-  (*mark) = apr_palloc(pool, sizeof(**mark));
-  (*mark)->m.apr = 0;
-  SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &(*mark)->m.apr, btn->pool));
+  struct mark_apr *mark_apr;
+
+  mark_apr = apr_palloc(pool, sizeof(*mark_apr));
+  mark_apr->off = 0;
+  SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &mark_apr->off, btn->pool));
+  *mark = (svn_stream_mark_t *)mark_apr;
   return SVN_NO_ERROR;
 }
 
@@ -737,7 +736,10 @@ static svn_error_t *
 seek_handler_apr(void *baton, svn_stream_mark_t *mark)
 {
   struct baton_apr *btn = baton;
-  SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &mark->m.apr, btn->pool));
+  struct mark_apr *mark_apr;
+
+  mark_apr = (struct mark_apr *)mark;
+  SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &mark_apr->off, btn->pool));
   return SVN_NO_ERROR;
 }
 
@@ -1395,6 +1397,11 @@ struct stringbuf_stream_baton
   apr_size_t amt_read;
 };
 
+/* svn_stream_mark_t for streams backed by stringbufs. */
+struct stringbuf_stream_mark {
+    apr_size_t pos; 
+};
+
 static svn_error_t *
 read_handler_stringbuf(void *baton, char *buffer, apr_size_t *len)
 {
@@ -1427,17 +1434,25 @@ reset_handler_stringbuf(void *baton)
 static svn_error_t *
 mark_handler_stringbuf(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 {
-  struct stringbuf_stream_baton *btn = baton;
-  (*mark) = apr_palloc(pool, sizeof(**mark));
-  (*mark)->m.stringbuf = btn->amt_read;
+  struct stringbuf_stream_baton *btn;
+  struct stringbuf_stream_mark *stringbuf_stream_mark;
+
+  btn = baton;
+  stringbuf_stream_mark = apr_palloc(pool, sizeof(*stringbuf_stream_mark));
+  stringbuf_stream_mark->pos = btn->amt_read;
+  *mark = (svn_stream_mark_t *)stringbuf_stream_mark;
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 seek_handler_stringbuf(void *baton, svn_stream_mark_t *mark)
 {
-  struct stringbuf_stream_baton *btn = baton;
-  btn->amt_read = mark->m.stringbuf;
+  struct stringbuf_stream_baton *btn;
+  struct stringbuf_stream_mark *stringbuf_stream_mark;
+
+  btn = baton;
+  stringbuf_stream_mark = (struct stringbuf_stream_mark *)mark;
+  btn->amt_read = stringbuf_stream_mark->pos;
   return SVN_NO_ERROR;
 }
 
