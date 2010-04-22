@@ -196,6 +196,10 @@ struct edit_baton
   /* The first revision dumped in this dumpstream. */
   svn_revnum_t oldest_dumped_rev;
 
+  /* Set to true if any references to revisions older than
+     OLDEST_DUMPED_REV were found in the dumpstream. */
+  svn_boolean_t found_old_reference;
+
   /* reusable buffer for writing file contents */
   char buffer[SVN__STREAM_CHUNK_SIZE];
   apr_size_t bufsize;
@@ -428,7 +432,7 @@ dump_node(struct edit_baton *eb,
                        " into an empty repository\n"
                        "WARNING: will fail.\n"),
                      cmp_rev, eb->oldest_dumped_rev);
-
+              eb->found_old_reference = TRUE;
               SVN_ERR(eb->progress_func(eb->progress_baton,
                                         eb->oldest_dumped_rev, warning, pool));
             }
@@ -982,6 +986,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
   svn_revnum_t youngest;
   const char *uuid;
   int version;
+  svn_boolean_t found_old_reference = FALSE;
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -1109,6 +1114,23 @@ svn_repos_dump_fs3(svn_repos_t *repos,
     loop_end:
       if (progress_func)
         SVN_ERR(progress_func(progress_baton, to_rev, NULL, subpool));
+
+      if (((struct edit_baton *)dump_edit_baton)->found_old_reference)
+        found_old_reference = TRUE;
+    }
+
+  /* Did we issue any warnings about references to revisions older than
+     the oldest dumped revision?  If so, then issue a final generic
+     warning, since the inline warnings already issued might easily be
+     missed. */
+  if (found_old_reference)
+    {
+      const char *warning = apr_psprintf(
+        subpool,
+        _("WARNING: The range of revisions dumped contained references to\n"
+          "WARNING: copy sources outside that range.\n"));
+      SVN_ERR(progress_func(progress_baton, SVN_INVALID_REVNUM, warning,
+                            subpool));
     }
 
   svn_pool_destroy(subpool);
