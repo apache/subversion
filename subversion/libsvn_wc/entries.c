@@ -1213,6 +1213,22 @@ read_entry_pair(const svn_wc_entry_t **parent_entry,
      in both outputs. Otherwise, read the child node.  */
   if (*name == '\0')
     {
+      /* If the retrieved node is a FILE, then we have a problem. We asked
+         for a directory. This implies there is an obstructing, unversioned
+         directory where a FILE should be. We navigated from the obstructing
+         subdir up to the parent dir, then returned the FILE found there.
+
+         Let's return WC_MISSING cuz the caller thought we had a dir, but
+         that (versioned subdir) isn't there.  */
+      if ((*parent_entry)->kind == svn_node_file)
+        {
+          *parent_entry = NULL;
+          return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
+                                 _("'%s' is not a versioned working copy"),
+                                 svn_dirent_local_style(dir_abspath,
+                                                        scratch_pool));
+        }
+
       *entry = *parent_entry;
     }
   else
@@ -1428,7 +1444,7 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
           svn_error_clear(err);
 
           /* The caller didn't know the node type, we saw a directory there,
-             we attempted to read that directory, and then wc_db reports
+             we attempted to read IN that directory, and then wc_db reports
              that it is NOT a working copy directory. It is possible that
              one of two things has happened:
 
@@ -1439,10 +1455,14 @@ svn_wc__get_entry(const svn_wc_entry_t **entry,
              return the newly-found data.
 
              If we assumed (2), then a valid result still won't help us
-             since the caller asked for the actual contents, not the stub.
-             However, if we assume (1) and get back a stub, then we have
-             verified a missing, versioned directory, and can return an
-             error describing that.  */
+             since the caller asked for the actual contents, not the stub
+             (which is why we read *into* the directory). However, if we
+             assume (1) and get back a stub, then we have verified a
+             missing, versioned directory, and can return an error
+             describing that.
+
+             Redo the fetch, but "insist" we are trying to find a file.
+             This will read from the parent directory of the "file".  */
           err = svn_wc__get_entry(entry, db, local_abspath, allow_unversioned,
                                   svn_node_file, FALSE,
                                   result_pool, scratch_pool);
