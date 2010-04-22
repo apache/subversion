@@ -589,26 +589,28 @@ svn_client__repos_locations(const char **start_url,
      the copyfrom information. */
   if (! svn_path_is_url(path))
     {
-      const svn_wc_entry_t *entry;
+      const char *node_url, *copyfrom_url;
+      svn_revnum_t copyfrom_rev;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath_or_url, path, subpool));
-      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx,
-                                          local_abspath_or_url,
-                                          svn_node_unknown, FALSE, FALSE,
-                                          pool, pool));
-      if (entry->copyfrom_url && revision->kind == svn_opt_revision_working)
+      SVN_ERR(svn_wc__node_get_url(&node_url, ctx->wc_ctx,
+                                   local_abspath_or_url, pool, subpool));
+      SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, &copyfrom_rev,
+                                             ctx->wc_ctx, local_abspath_or_url,
+                                             pool, subpool));
+      if (copyfrom_url && revision->kind == svn_opt_revision_working)
         {
-          url = entry->copyfrom_url;
-          peg_revnum = entry->copyfrom_rev;
-          if (!entry->url || strcmp(entry->url, entry->copyfrom_url) != 0)
+          url = copyfrom_url;
+          peg_revnum = copyfrom_rev;
+          if (!node_url || strcmp(node_url, copyfrom_url) != 0)
             {
               /* We can't use the caller provided RA session in this case */
               ra_session = NULL;
             }
         }
-      else if (entry->url)
+      else if (node_url)
         {
-          url = entry->url;
+          url = node_url;
         }
       else
         {
