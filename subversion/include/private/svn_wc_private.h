@@ -478,8 +478,8 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
  * return the revision of the copy/move source. Do the same even when the node
  * has been removed from a recursive copy (subpath excluded from the copy).
  *
- * If this node is locally added or replaced and is not moved-here or
- * copied-here, return SVN_INVALID_REVNUM.
+ * Else, if this node is locally added, return SVN_INVALID_REVNUM, or if this
+ * node is locally deleted or replaced, return the revert-base revision.
  */
 svn_error_t *
 svn_wc__node_get_commit_base_rev(svn_revnum_t *base_revision,

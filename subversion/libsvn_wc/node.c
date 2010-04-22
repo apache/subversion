@@ -633,12 +633,13 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
                                  apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
+  svn_boolean_t base_shadowed;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL,
                                commit_base_revision,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, &base_shadowed, NULL, NULL,
                                wc_ctx->db, local_abspath, scratch_pool,
                                scratch_pool));
 
@@ -656,6 +657,13 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
                                        NULL, NULL, commit_base_revision,
                                        wc_ctx->db, local_abspath,
                                        scratch_pool, scratch_pool));
+
+      if (! SVN_IS_VALID_REVNUM(*commit_base_revision) && base_shadowed)
+        /* It is a replace that does not feature a copy/move-here.
+           Return the revert-base revision. */
+        return svn_wc__node_get_base_rev(commit_base_revision,
+                                         wc_ctx, local_abspath,
+                                         scratch_pool);
     }
   else if (status == svn_wc__db_status_deleted)
     {
