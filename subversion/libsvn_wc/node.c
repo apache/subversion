@@ -338,6 +338,39 @@ svn_wc__node_get_url(const char **url,
                             result_pool, scratch_pool));
 }
 
+svn_error_t *
+svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
+                               svn_revnum_t *copyfrom_rev,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  svn_wc__db_t *db = wc_ctx->db;
+  const char *original_root_url;
+  const char *original_repos_relpath;
+  svn_revnum_t original_revision;
+
+  *copyfrom_url = NULL;
+  *copyfrom_rev = SVN_INVALID_REVNUM;
+
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, &original_repos_relpath,
+                               &original_root_url, NULL, &original_revision,
+                               NULL, NULL, NULL, NULL, NULL, db,
+                               local_abspath, scratch_pool, scratch_pool));
+  if (original_root_url && original_repos_relpath)
+    {
+      *copyfrom_url = svn_path_url_add_component2(original_root_url,
+                                                  original_repos_relpath,
+                                                  result_pool);
+      *copyfrom_rev = original_revision;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* A recursive node-walker, helper for svn_wc__node_walk_children(). */
 static svn_error_t *

@@ -361,6 +361,21 @@ svn_wc__node_get_url(const char **url,
 
 
 /**
+ * Set @a *copyfrom_url to the corresponding copy-from URL, and @a
+ * copyfrom_rev to the corresponding copy-from revision, of @a
+ * local_abspath, using @a wc_ctx.  If @a local_abspath does not
+ * represent the root of a copied subtree, set @a *copyfrom_rev to
+ * NULL and @a copyfrom_rev to @c SVN_INVALID_REVNUM.
+ */
+svn_error_t *
+svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
+                               svn_revnum_t *copyfrom_rev,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+
+/**
  * Recursively call @a callbacks->found_node for all nodes underneath
  * @a local_abspath.
  */
