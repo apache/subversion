@@ -880,22 +880,21 @@ convert_to_url(const char **url,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
-
   if (svn_path_is_url(abspath_or_url))
     {
       *url = apr_pstrdup(result_pool, abspath_or_url);
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, abspath_or_url,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      scratch_pool, scratch_pool));
-
-  if (entry->url)
-    *url = apr_pstrdup(result_pool, entry->url);
-  else
-    *url = apr_pstrdup(result_pool, entry->copyfrom_url);
+  SVN_ERR(svn_wc__node_get_url(url, wc_ctx, abspath_or_url,
+                               result_pool, scratch_pool));
+  if (! *url)
+    {
+      svn_revnum_t copyfrom_rev;
+      SVN_ERR(svn_wc__node_get_copyfrom_info(url, &copyfrom_rev,
+                                             wc_ctx, abspath_or_url,
+                                             result_pool, scratch_pool));
+    }
   return SVN_NO_ERROR;
 }
 
