@@ -818,8 +818,8 @@ handle_dir_entry(const struct walk_status_baton *wb,
                  const char *local_abspath,
                  const svn_wc_entry_t *dir_entry,
                  const svn_wc_entry_t *entry,
-                 svn_node_kind_t kind,
-                 svn_boolean_t special,
+                 svn_node_kind_t path_kind,
+                 svn_boolean_t path_special,
                  const apr_array_header_t *ignores,
                  svn_depth_t depth,
                  svn_boolean_t get_all,
@@ -831,12 +831,16 @@ handle_dir_entry(const struct walk_status_baton *wb,
                  void *cancel_baton,
                  apr_pool_t *pool)
 {
-  if (kind == svn_node_dir)
+  SVN_ERR_ASSERT(dir_entry != NULL);
+  SVN_ERR_ASSERT(entry != NULL);
+
+  /* We are looking at a directory on-disk.  */
+  if (path_kind == svn_node_dir)
     {
       /* Descend only if the subdirectory is a working copy directory (which
          we've discovered because we got a THIS_DIR entry. And only descend
          if DEPTH permits it, of course.  */
-      if (!*entry->name
+      if (*entry->name == '\0'
           && (depth == svn_depth_unknown
               || depth == svn_depth_immediates
               || depth == svn_depth_infinity))
@@ -848,19 +852,20 @@ handle_dir_entry(const struct walk_status_baton *wb,
         }
       else
         {
-          /* FULL_ENTRY is still a stub (an obstructed subdir), or DEPTH
-             is limiting us. Send just this directory.  */
+          /* ENTRY is a child entry (file or parent stub). Or we have a
+             directory entry but DEPTH is limiting our recursion.  */
           SVN_ERR(send_status_structure(wb, local_abspath, entry,
-                                        dir_entry, kind, special, get_all,
-                                        FALSE,
+                                        dir_entry, path_kind, path_special,
+                                        get_all, FALSE,
                                         status_func, status_baton, pool));
         }
     }
   else
     {
-      /* File entries are ... just fine! */
+      /* This is a file/symlink on-disk.  */
       SVN_ERR(send_status_structure(wb, local_abspath, entry,
-                                    dir_entry, kind, special, get_all, FALSE,
+                                    dir_entry, path_kind, path_special,
+                                    get_all, FALSE,
                                     status_func, status_baton, pool));
     }
   return SVN_NO_ERROR;
@@ -1051,6 +1056,8 @@ get_dir_status(const struct walk_status_baton *wb,
 
       apr_hash_this(hi, &key, &klen, NULL);
 
+      node_abspath = svn_dirent_join(local_abspath, key, iterpool);
+
       dirent_p = apr_hash_get(dirents, key, klen);
 
       if (apr_hash_get(nodes, key, klen))
@@ -1058,9 +1065,7 @@ get_dir_status(const struct walk_status_baton *wb,
           /* Versioned node */
           svn_error_t *err;
           const svn_wc_entry_t *entry;
-
           svn_boolean_t hidden;
-          node_abspath = svn_dirent_join(local_abspath, key, iterpool);
 
           SVN_ERR(svn_wc__db_node_hidden(&hidden, wb->db, node_abspath,
                                          iterpool));
@@ -1068,13 +1073,15 @@ get_dir_status(const struct walk_status_baton *wb,
           if (!hidden || get_excluded)
             {
               err = svn_wc__get_entry(&entry, wb->db, node_abspath, FALSE,
-                                      dirent_p ? dirent_p->kind
-                                               : svn_node_unknown,
-                                      FALSE, iterpool, iterpool);
+                                      svn_node_unknown, FALSE,
+                                      iterpool, iterpool);
               if (err)
                 {
                   if (err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND)
-                    svn_error_clear(err);
+                    {
+                      /* We asked for the contents, but got the stub.  */
+                      svn_error_clear(err);
+                    }
                   else if (err && err->apr_err == SVN_ERR_WC_MISSING)
                     {
                       svn_error_clear(err);
@@ -1098,7 +1105,7 @@ get_dir_status(const struct walk_status_baton *wb,
               if (depth == svn_depth_files && entry->kind == svn_node_dir)
                 continue;
 
-              /* Handle this directory entry (possibly recursing). */
+              /* Handle this entry (possibly recursing). */
               SVN_ERR(handle_dir_entry(wb,
                                        node_abspath,
                                        dir_entry,
@@ -1128,8 +1135,7 @@ get_dir_status(const struct walk_status_baton *wb,
                                             iterpool));
 
           SVN_ERR(send_unversioned_item(wb,
-                                        svn_dirent_join(local_abspath, key,
-                                                        iterpool),
+                                        node_abspath,
                                         dirent_p ? dirent_p->kind
                                                  : svn_node_none,
                                         dirent_p ? dirent_p->special : FALSE,
@@ -1158,8 +1164,7 @@ get_dir_status(const struct walk_status_baton *wb,
                                         iterpool));
 
       SVN_ERR(send_unversioned_item(wb,
-                                    svn_dirent_join(local_abspath, key,
-                                                    iterpool),
+                                    node_abspath,
                                     dirent_p->kind,
                                     dirent_p->special,
                                     patterns,
