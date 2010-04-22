@@ -350,11 +350,12 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
   const char *original_root_url;
   const char *original_repos_relpath;
   svn_revnum_t original_revision;
+  svn_wc__db_status_t status;
 
   *copyfrom_url = NULL;
   *copyfrom_rev = SVN_INVALID_REVNUM;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, &original_repos_relpath,
                                &original_root_url, NULL, &original_revision,
@@ -362,10 +363,45 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
                                local_abspath, scratch_pool, scratch_pool));
   if (original_root_url && original_repos_relpath)
     {
+      /* If this was the root of the copy then the URL is immediately
+         available... */
       *copyfrom_url = svn_path_url_add_component2(original_root_url,
                                                   original_repos_relpath,
                                                   result_pool);
       *copyfrom_rev = original_revision;
+    }
+  else if (status == svn_wc__db_status_added
+           || status == svn_wc__db_status_obstructed_add)
+    {
+      /* ...But if this is merely the descendant of an explicitly
+         copied/moved directory, we need to do a bit more work to
+         determine copyfrom_url and copyfrom_rev. */
+      const char *op_root_abspath;
+
+      SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath, NULL, NULL,
+                                       NULL, &original_repos_relpath,
+                                       &original_root_url, NULL,
+                                       &original_revision, db, local_abspath,
+                                       scratch_pool, scratch_pool));
+      if (status == svn_wc__db_status_copied ||
+          status == svn_wc__db_status_moved_here)
+        {
+          const char *src_parent_url;
+          const char *src_relpath;
+
+          src_parent_url = svn_path_url_add_component2(original_root_url,
+                                                       original_repos_relpath,
+                                                       scratch_pool);
+          src_relpath = svn_dirent_is_child(op_root_abspath, local_abspath,
+                                            scratch_pool);
+          if (src_relpath)
+            {
+              *copyfrom_url = svn_path_url_add_component2(src_parent_url,
+                                                          src_relpath,
+                                                          result_pool);
+              *copyfrom_rev = original_revision;
+            }
+        }
     }
 
   return SVN_NO_ERROR;

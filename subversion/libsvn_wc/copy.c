@@ -258,78 +258,6 @@ copy_added_dir_administratively(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
-/* A helper for copy_file_administratively() which sets *COPYFROM_URL
-   and *COPYFROM_REV appropriately (possibly to NULL/SVN_INVALID_REVNUM).  */
-static svn_error_t *
-determine_copyfrom_info(const char **copyfrom_url,
-                        svn_revnum_t *copyfrom_rev,
-                        svn_wc__db_t *db,
-                        const char *src_abspath,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
-{
-  const char *url;
-  const char *original_root_url;
-  const char *original_repos_relpath;
-  svn_revnum_t original_revision;
-  svn_wc__db_status_t status;
-
-  url = NULL;
-  original_revision = SVN_INVALID_REVNUM;
-
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, &original_repos_relpath,
-                               &original_root_url, NULL, &original_revision,
-                               NULL, NULL, NULL, NULL, NULL, db, src_abspath,
-                               scratch_pool, scratch_pool));
-  if (original_root_url && original_repos_relpath)
-    {
-      /* When copying/moving a file that was already explicitly
-         copied/moved then we know the URL it was copied from... */
-      url = svn_path_url_add_component2(original_root_url,
-                                        original_repos_relpath, scratch_pool);
-    }
-  else if (status == svn_wc__db_status_added
-           || status == svn_wc__db_status_obstructed_add)
-    {
-      /* ...But if this file is merely the descendant of an explicitly
-         copied/moved directory, we need to do a bit more work to
-         determine copyfrom_url and copyfrom_rev. */
-      const char *op_root_abspath;
-
-      SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath, NULL, NULL,
-                                       NULL, &original_repos_relpath,
-                                       &original_root_url, NULL,
-                                       &original_revision, db, src_abspath,
-                                       scratch_pool, scratch_pool));
-      if (status == svn_wc__db_status_copied ||
-          status == svn_wc__db_status_moved_here)
-        {
-          const char *src_parent_url;
-          const char *src_relpath;
-
-          src_parent_url = svn_path_url_add_component2(original_root_url,
-                                                       original_repos_relpath,
-                                                       scratch_pool);
-          src_relpath = svn_dirent_is_child(op_root_abspath, src_abspath,
-                                            scratch_pool);
-          if (src_relpath)
-            url = svn_path_url_add_component2(src_parent_url, src_relpath,
-                                              scratch_pool);
-        }
-    }
-
-  if (url)
-    *copyfrom_url = apr_pstrdup(result_pool, url);
-  else
-    *copyfrom_url = NULL;
-  *copyfrom_rev = original_revision;
-
-  return SVN_NO_ERROR;
-}
-
-
 /* This function effectively creates and schedules a file for
    addition, but does extra administrative things to allow it to
    function as a 'copy'.
@@ -420,9 +348,9 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
        but not committed? */
     if (src_entry->copied)
       {
-        SVN_ERR(determine_copyfrom_info(&copyfrom_url, &copyfrom_rev, db,
-                                        src_abspath,
-                                        scratch_pool, scratch_pool));
+        SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, &copyfrom_rev,
+                                               wc_ctx, src_abspath,
+                                               scratch_pool, scratch_pool));
 
         /* If the COPYFROM information is the SAME as the destination
            URL/REVISION, then omit the copyfrom info.  */
@@ -762,9 +690,9 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
         SVN_ERR(svn_wc__get_entry(&dst_entry, db, dst_abspath, TRUE,
                                   svn_node_dir, TRUE,
                                   scratch_pool, scratch_pool));
-        SVN_ERR(determine_copyfrom_info(&copyfrom_url, &copyfrom_rev, db,
-                                        src_abspath,
-                                        scratch_pool, scratch_pool));
+        SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, &copyfrom_rev,
+                                               wc_ctx, src_abspath,
+                                               scratch_pool, scratch_pool));
 
         /* If the COPYFROM information is the SAME as the destination
            URL/REVISION, then omit the copyfrom info.  */
