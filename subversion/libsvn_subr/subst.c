@@ -842,7 +842,7 @@ create_translation_baton(const char *eol_str,
 /* Create a deep copy of the KEYWORDS hash, allocated in RESULT_POOL,
  * and return a pointer to it. */
 static apr_hash_t *
-keywords_hash_deep_copy(const apr_hash_t *keywords, apr_pool_t *result_pool)
+keywords_hash_deep_copy(apr_hash_t *keywords, apr_pool_t *result_pool)
 {
   apr_hash_t *copy = apr_hash_make(result_pool);
   apr_hash_index_t *hi;
