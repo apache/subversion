@@ -1117,17 +1117,21 @@ def drop_mergeinfo_outside_of_dump_stream(sbox):
 # Even *more* testing for issue #3020 'Reflect dropped/renumbered
 # revisions in svn:mergeinfo data during svnadmin load'
 #
-# Filtering revsions from mergeinfo in a load stream that refers to
-# history outside of the stream is all well and good if the load
-# is a partial dump loaded in one shot...but if a repository's full
-# history is dumped incrementally and each incremental dump is loaded,
-# well then, *any* filtering done then is removing valid mergeinfo...
+# Full or incremental dump-load cycles should result in the same
+# mergeinfo in the loaded repository.
 #
-# ...and currently we do exactly that, as this test demonstrates.
+# Given a repository 'SOURCE-REPOS' with mergeinfo, and a repository
+# 'TARGET-REPOS' (which may or may not be empty), either of the following
+# methods to move 'SOURCE-REPOS' to 'TARGET-REPOS' should result in
+# the same mergeinfo on 'TARGET-REPOS':
 #
-# Note: If a repository is *partially* dumped in a sequence of incremental
-# dumps then possibly some mergeinfo should be filtered on the load, but
-# not *all* mergeinfo, which is what we are doing in that case too.
+#   1) Dump -r1:HEAD from 'SOURCE-REPOS' and load it in one shot to
+#      'TARGET-REPOS'.
+#
+#   2) Dump 'SOURCE-REPOS' in a series of incremental dumps and load
+#      each of them to 'TARGET-REPOS'.
+#
+# See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc13
 def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   "don't filter mergeinfo revs from incremental dump"
 
@@ -1194,9 +1198,6 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # Check the mergeinfo, we use the same expected output as before,
   # as it (duh!) should be exactly the same as when we loaded the
   # repos in one shot.
-  #
-  # Currently this test is set as XFail, because the mergeinfo filtering
-  # logic in load is removing valid mergeinfo.
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
