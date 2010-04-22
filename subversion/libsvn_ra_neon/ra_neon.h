@@ -722,6 +722,14 @@ svn_ra_neon__parsed_request(svn_ra_neon__session_t *sess,
                             apr_pool_t *pool);
 
 
+/* If XML_PARSER found an XML parse error, then return a Subversion error
+ * saying that the error was found in the response to the DAV request METHOD
+ * for the URL URL. Otherwise, return SVN_NO_ERROR. */
+svn_error_t *
+svn_ra_neon__check_parse_error(const char *method,
+                               ne_xml_parser *xml_parser,
+                               const char *url);
+
 /* ### add SVN_RA_NEON_ to these to prefix conflicts with (sys) headers? */
 enum {
   /* Redefine Neon elements */

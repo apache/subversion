@@ -300,6 +300,10 @@ do_lock(svn_lock_t **lock,
   if (err)
     goto cleanup;
 
+  err = svn_ra_neon__check_parse_error("LOCK", lck_parser, url);
+  if (err)
+    goto cleanup;
+
   /*###FIXME: we never verified whether we have received back the type
     of lock we requested: was it shared/exclusive? was it write/otherwise?
     How many did we get back? Only one? */
@@ -547,6 +551,10 @@ svn_ra_neon__get_lock_internal(svn_ra_neon__session_t *ras,
       err = svn_error_quick_wrap(err, _("Failed to fetch lock information"));
       goto cleanup;
     }
+
+  err = svn_ra_neon__check_parse_error("PROPFIND", lck_parser, url);
+  if (err)
+    goto cleanup;
 
   /*###FIXME We assume here we only got one lock response. The WebDAV
     spec makes no such guarantees. How to make sure we grab the one we need? */

@@ -285,15 +285,9 @@ svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
     goto cleanup;
 
   /* Was there an XML parse error somewhere? */
-  msg = ne_xml_get_error(parser);
-  if (msg && *msg)
-    {
-      err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                              _("The %s request returned invalid XML "
-                                "in the response: %s (%s)"),
-                              "OPTIONS", msg, ras->url->data);
-      goto cleanup;
-    }
+  err = svn_ra_neon__check_parse_error("OPTIONS", parser, ras->url->data);
+  if (err)
+    goto cleanup;
 
   /* We asked for, and therefore expect, to have found an activity
      collection in the response.  */
