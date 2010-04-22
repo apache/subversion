@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include "svn_pools.h"
 #include "svn_io.h"
+#include "svn_subst.h"
 #include <apr_general.h>
 
 #include "../svn_test.h"
@@ -554,6 +555,86 @@ test_stream_seek_stringbuf(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_stream_seek_translated(apr_pool_t *pool)
+{
+  svn_stream_t *stream, *translated_stream;
+  svn_stringbuf_t *stringbuf;
+  char buf[23];
+  apr_size_t len;
+  svn_stream_mark_t *mark, *mark2;
+  apr_hash_t *keywords;
+  svn_string_t *keyword_val;
+  
+  keywords = apr_hash_make(pool);
+  keyword_val = svn_string_create("my key word was expanded", pool);
+  apr_hash_set(keywords, "MyKeyword", APR_HASH_KEY_STRING, keyword_val);
+  stringbuf = svn_stringbuf_create("One$MyKeyword$Two", pool);
+  stream = svn_stream_from_stringbuf(stringbuf, pool);
+  translated_stream = svn_subst_stream_translated(stream, APR_EOL_STR,
+                                                  FALSE, keywords, TRUE, pool);
+  len = 3;
+  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR_ASSERT(len == 3);
+  buf[3] = '\0';
+  SVN_ERR_ASSERT(strcmp(buf, "One") == 0);
+
+  /* Seek from outside of keyword to inside of keyword. */
+  SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
+  len = 3;
+  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR_ASSERT(len == 3);
+  buf[3] = '\0';
+  /* ### The test currently fails here because the keyword isn't
+   * ### expanded correctly. buf contains "$My\0" */
+  SVN_ERR_ASSERT(strcmp(buf, "my ") == 0);
+  SVN_ERR(svn_stream_seek(stream, mark));
+  len = 3;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR_ASSERT(len == 3);
+  buf[3] = '\0';
+  SVN_ERR_ASSERT(strcmp(buf, "my ") == 0);
+
+  /* Seek from inside of keyword to inside of keyword. */
+  SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
+  len = 3;
+  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR_ASSERT(len == 3);
+  buf[3] = '\0';
+  SVN_ERR_ASSERT(strcmp(buf, "key") == 0);
+  SVN_ERR(svn_stream_seek(stream, mark));
+  len = 3;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR_ASSERT(len == 3);
+  buf[3] = '\0';
+  SVN_ERR_ASSERT(strcmp(buf, "my ") == 0);
+
+  /* Seek from inside of keyword to outside of keyword. */
+  len = 22;
+  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR_ASSERT(len == 22);
+  buf[22] = '\0';
+  SVN_ERR_ASSERT(strcmp(buf, "keyword was expandedTw") == 0);
+  SVN_ERR(svn_stream_mark(translated_stream, &mark2, pool));
+  SVN_ERR(svn_stream_seek(stream, mark));
+  len = 3;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR_ASSERT(len == 3);
+  buf[3] = '\0';
+  SVN_ERR_ASSERT(strcmp(buf, "my ") == 0);
+  SVN_ERR(svn_stream_seek(stream, mark2));
+  len = 1;
+  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR_ASSERT(len == 1);
+  buf[1] = '\0';
+  SVN_ERR_ASSERT(strcmp(buf, "o") == 0);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -578,5 +659,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test stream seeking for files"),
     SVN_TEST_PASS2(test_stream_seek_stringbuf,
                    "test stream seeking for stringbufs"),
+    SVN_TEST_XFAIL2(test_stream_seek_translated,
+                    "test stream seeking for translated streams"),
     SVN_TEST_NULL
   };
