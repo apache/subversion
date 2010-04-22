@@ -839,6 +839,43 @@ create_translation_baton(const char *eol_str,
   return b;
 }
 
+/* Create a deep copy of the KEYWORDS hash, allocated in RESULT_POOL,
+ * and return a pointer to it. */
+static apr_hash_t *
+keywords_hash_deep_copy(const apr_hash_t *keywords, apr_pool_t *result_pool)
+{
+  apr_hash_t *copy = apr_hash_make(result_pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(result_pool, keywords);
+       hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      apr_hash_set(copy, apr_pstrdup(result_pool, key),
+                   APR_HASH_KEY_STRING,
+                   svn_string_dup(val, result_pool));
+    }
+
+  return copy;
+}
+
+/* Create a deep copy of TRANSLATION_BATON, allocated in RESULT_POOL,
+ * and return a pointer to it. */
+static struct translation_baton *
+dup_translation_baton(const struct translation_baton *translation_baton,
+                      apr_pool_t *result_pool)
+{
+  struct translation_baton *b = apr_palloc(result_pool, sizeof(*b));
+
+  *b = *translation_baton;
+  b->keywords = keywords_hash_deep_copy(translation_baton->keywords,
+                                        result_pool);
+  return b;
+}
+
 /* Translate eols and keywords of a 'chunk' of characters BUF of size BUFLEN
  * according to the settings and state stored in baton B.
  *
@@ -1164,13 +1201,40 @@ translated_stream_reset(void *baton)
   return svn_error_return(err);
 }
 
+/* svn_stream_mark_t for translation streams. */
+typedef struct
+{
+  /* Saved translation state. */
+  struct translated_stream_baton *saved_baton;
+
+  /* Mark set on the underlying stream. */
+  svn_stream_mark_t *mark;
+} mark_translated_t;
+
 /* Implements svn_io_mark_fn_t. */
 static svn_error_t *
 translated_stream_mark(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 {
+  mark_translated_t *mark_translated;
   struct translated_stream_baton *b = baton;
+  struct translated_stream_baton *sb;
+  
+  mark_translated = apr_palloc(pool, sizeof(*mark_translated));
+  SVN_ERR(svn_stream_mark(b->stream, &mark_translated->mark, pool));
 
-  return svn_error_return(svn_stream_mark(b->stream, mark, pool));
+  /* Save translation state. */
+  sb = apr_pcalloc(pool, sizeof(*sb));
+  sb->in_baton = dup_translation_baton(b->in_baton, pool);
+  sb->out_baton = dup_translation_baton(b->out_baton, pool);
+  sb->written = b->written;
+  sb->readbuf = svn_stringbuf_dup(b->readbuf, pool);
+  sb->readbuf_off = b->readbuf_off;
+  sb->buf = apr_pmemdup(pool, b->buf, SVN__STREAM_CHUNK_SIZE + 1);
+
+  mark_translated->saved_baton = sb;
+  *mark = (svn_stream_mark_t *)mark_translated;
+
+  return SVN_NO_ERROR;
 }
 
 /* Implements svn_io_seek_fn_t. */
@@ -1178,30 +1242,25 @@ static svn_error_t *
 translated_stream_seek(void *baton, svn_stream_mark_t *mark)
 {
   struct translated_stream_baton *b = baton;
-  svn_error_t *err;
+  struct translated_stream_baton *sb;
+  mark_translated_t *mark_translated = (mark_translated_t *)mark;
 
   /* Flush output buffer if necessary. */
   if (b->written)
     SVN_ERR(translate_chunk(b->stream, b->out_baton, NULL, 0, b->iterpool));
 
-  err = svn_stream_seek(b->stream, mark);
-  if (err == NULL)
-    {
-      /* Force into boring state. */
-      b->in_baton->newline_off = 0;
-      b->in_baton->keyword_off = 0;
-      b->out_baton->newline_off = 0;
-      b->out_baton->keyword_off = 0;
+  SVN_ERR(svn_stream_seek(b->stream, mark_translated->mark));
 
-      /* Output buffer has been flushed. */
-      b->written = FALSE;
+  /* Restore translation state. */
+  sb = mark_translated->saved_baton;
+  b->in_baton = dup_translation_baton(sb->in_baton, b->pool);
+  b->out_baton = dup_translation_baton(sb->out_baton, b->pool);
+  b->written = sb->written;
+  b->readbuf = svn_stringbuf_dup(sb->readbuf, b->pool);
+  b->readbuf_off = sb->readbuf_off;
+  b->buf = apr_pmemdup(b->pool, sb->buf, SVN__STREAM_CHUNK_SIZE + 1);
 
-      /* Reset read buffer. */
-      svn_stringbuf_setempty(b->readbuf);
-      b->readbuf_off = 0;
-    }
-
-  return svn_error_return(err);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1255,7 +1314,7 @@ svn_subst_stream_translated(svn_stream_t *stream,
     = apr_palloc(baton_pool, sizeof(*baton));
   svn_stream_t *s = svn_stream_create(baton, baton_pool);
 
-  /* Make sure EOL_STR and KEYWORDS are allocated in POOL, as
+  /* Make sure EOL_STR and KEYWORDS are allocated in BATON_POOL, as
      required by create_translation_baton() */
   if (eol_str)
     eol_str = apr_pstrdup(baton_pool, eol_str);
@@ -1265,22 +1324,8 @@ svn_subst_stream_translated(svn_stream_t *stream,
         keywords = NULL;
       else
         {
-          /* deep copy the hash to make sure it's allocated in POOL */
-          apr_hash_t *copy = apr_hash_make(baton_pool);
-          apr_hash_index_t *hi;
-
-          for (hi = apr_hash_first(pool, keywords);
-               hi; hi = apr_hash_next(hi))
-            {
-              const void *key;
-              void *val;
-              apr_hash_this(hi, &key, NULL, &val);
-              apr_hash_set(copy, apr_pstrdup(baton_pool, key),
-                           APR_HASH_KEY_STRING,
-                           svn_string_dup(val, baton_pool));
-            }
-
-          keywords = copy;
+          /* deep copy the hash to make sure it's allocated in BATON_POOL */
+          keywords = keywords_hash_deep_copy(keywords, baton_pool);
         }
     }
 
