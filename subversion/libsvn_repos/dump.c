@@ -979,7 +979,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
                    apr_pool_t *pool)
 {
   const svn_delta_editor_t *dump_editor;
-  void *dump_edit_baton;
+  void *dump_edit_baton = NULL;
   svn_revnum_t i;
   svn_fs_t *fs = svn_repos_fs(repos);
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -1115,7 +1115,8 @@ svn_repos_dump_fs3(svn_repos_t *repos,
       if (progress_func)
         SVN_ERR(progress_func(progress_baton, to_rev, NULL, subpool));
 
-      if (((struct edit_baton *)dump_edit_baton)->found_old_reference)
+      if (dump_edit_baton /* We never get an edit baton for r0. */
+          && ((struct edit_baton *)dump_edit_baton)->found_old_reference)
         found_old_reference = TRUE;
     }
 
