@@ -391,17 +391,26 @@ svn_client_status5(svn_revnum_t *result_rev,
                                 &kind, pool));
       if (kind == svn_node_none)
         {
-          const svn_wc_entry_t *entry;
-          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx,
-                                              dir_abspath, svn_node_dir,
-                                              FALSE, FALSE,
-                                              pool, pool));
+          svn_boolean_t added;
 
-          /* Our status target does not exist in HEAD of the
-             repository.  If we're just adding this thing, that's
-             fine.  But if it was previously versioned, then it must
-             have been deleted from the repository. */
-          if (entry->schedule != svn_wc_schedule_add)
+          /* Our status target does not exist in HEAD.  If we've got
+             it localled added, that's okay.  But if it was previously
+             versioned, then it must have since been deleted from the
+             repository.  (Note that "locally replaced" doesn't count
+             as "added" in this case.)  */
+          SVN_ERR(svn_wc__node_is_added(&added, ctx->wc_ctx,
+                                        dir_abspath, pool));
+          if (added)
+            {
+              svn_boolean_t replaced;
+
+              SVN_ERR(svn_wc__node_is_replaced(&added, ctx->wc_ctx,
+                                               dir_abspath, pool));
+              if (replaced)
+                added = FALSE;
+            }
+
+          if (! added)
             sb.deleted_in_repos = TRUE;
 
           /* And now close the edit. */
