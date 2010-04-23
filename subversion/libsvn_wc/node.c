@@ -295,15 +295,19 @@ svn_wc__internal_node_get_url(const char **url,
     {
       if (status == svn_wc__db_status_normal
           || status == svn_wc__db_status_incomplete
-          || status == svn_wc__db_status_deleted)
+          || status == svn_wc__db_status_deleted
+          || status == svn_wc__db_status_obstructed_delete)
         {
+          /* ### we should NOT do this for status_deleted, or
+             ### status_obstructed_delete. those may represent
+             ### the deletion of a child of a copied tree, NOT
+             ### a BASE node.  */
           SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
                                              NULL,
                                              db, local_abspath,
                                              scratch_pool, scratch_pool));
         }
-      else if (status == svn_wc__db_status_added
-               || status == svn_wc__db_status_obstructed_add)
+      else if (status == svn_wc__db_status_added)
         {
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
                                            &repos_root_url, NULL, NULL, NULL,
@@ -313,6 +317,10 @@ svn_wc__internal_node_get_url(const char **url,
         }
       else
         {
+          /* Status: obstructed, obstructed_add, absent, excluded,
+             not_present  */
+          /* ### we should be able to derive a URL for absent, excluded,
+             ### and not-present, since those cannot be switched.  */
           *url = NULL;
           return SVN_NO_ERROR;
         }
