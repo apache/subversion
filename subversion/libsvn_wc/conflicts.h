@@ -38,6 +38,19 @@ extern "C" {
 
 
 
+#define SVN_WC__CONFLICT_OP_UPDATE "update"
+#define SVN_WC__CONFLICT_OP_SWITCH "switch"
+#define SVN_WC__CONFLICT_OP_MERGE "merge"
+#define SVN_WC__CONFLICT_OP_PATCH "patch"
+
+#define SVN_WC__CONFLICT_KIND_TEXT "text"
+#define SVN_WC__CONFLICT_KIND_PROP "prop"
+#define SVN_WC__CONFLICT_KIND_TREE "tree"
+#define SVN_WC__CONFLICT_KIND_REJECT "reject"
+#define SVN_WC__CONFLICT_KIND_OBSTRUCTED "obstructed"
+
+
+
 /* Return a new conflict skel, allocated in RESULT_POOL. */
 svn_skel_t *
 svn_wc__conflict_skel_new(apr_pool_t *result_pool);
@@ -147,24 +160,26 @@ svn_wc__conflict_skel_add_text_conflict(
   apr_pool_t *scratch_pool);
 
 
-/* Add a property conflict to CONFLICT_SKEL.
+/* Add a property conflict to SKEL.
 
    PROP_NAME is the name of the conflicted property.
 
-   ORIGINAL_VALUE is a stream of the property's value at the BASE revision.
-   MINE_VALUE is a stream of the property's value in WORKING (BASE + local
-   modifications).  INCOMING_VALUE is a stream of the incoming property
-   value brought in by the operation. ### Is this enough? What about merge?
+   ORIGINAL_VALUE is the property's value at the BASE revision. MINE_VALUE
+   is the property's value in WORKING (BASE + local modifications).
+   INCOMING_VALUE is the incoming property value brought in by the
+   operation. When merging, INCOMING_BASE_VALUE is the base value against
+   which INCOMING_VALUE ws being applied. For updates, INCOMING_BASE_VALUE
+   should be the same as ORIGINAL_VALUE.
 
-   ORIGINAL/MINE/INCOMING_VALUE may be NULL, indicating no value was
-   present.
+   *_VALUE may be NULL, indicating no value was present.
 
    It is an error (### which one?) if no conflicting operation has been
    set on CONFLICT_SKEL before calling this function.
    It is an error (### which one?) if CONFLICT_SKEL already cotains
    a propery conflict for PROP_NAME.
 
-   Do temporary allocations in SCRATCH_POOL.
+   The conflict recorded in SKEL will be allocated from RESULT_POOL. Do
+   temporary allocations in SCRATCH_POOL.
 */
 svn_error_t *
 svn_wc__conflict_skel_add_prop_conflict(
@@ -173,6 +188,7 @@ svn_wc__conflict_skel_add_prop_conflict(
   const svn_string_t *original_value,
   const svn_string_t *mine_value,
   const svn_string_t *incoming_value,
+  const svn_string_t *incoming_base_value,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 

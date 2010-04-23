@@ -30,8 +30,6 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_hash.h>
-#include <apr_file_io.h>
-#include <apr_time.h>
 #include <apr_errno.h>
 
 #include "svn_types.h"
@@ -44,14 +42,13 @@
 #include "svn_diff.h"
 
 #include "wc.h"
-#include "log.h"
-#include "adm_ops.h"
-#include "props.h"
-#include "tree_conflicts.h"
-#include "workqueue.h"
+#include "wc_db.h"
+#include "conflicts.h"
+
+#include "private/svn_wc_private.h"
+#include "private/svn_skel.h"
 
 #include "svn_private_config.h"
-#include "private/svn_wc_private.h"
 
 struct svn_wc_conflict_t
 {
@@ -197,6 +194,69 @@ svn_wc_get_property_conflict_data(const svn_string_t **older_value,
 {
   SVN_ERR_MALFUNCTION(); /* ### Not implemented yet */
 }
+
+
+svn_skel_t *
+svn_wc__conflict_skel_new(apr_pool_t *result_pool)
+{
+  svn_skel_t *operation = svn_skel__make_empty_list(result_pool);
+  svn_skel_t *result = svn_skel__make_empty_list(result_pool);
+
+  svn_skel__prepend(operation, result);
+  return result;
+}
+
+
+static void
+prepend_prop_value(const svn_string_t *value,
+                   svn_skel_t *skel,
+                   apr_pool_t *result_pool)
+{
+  svn_skel_t *value_skel = svn_skel__make_empty_list(result_pool);
+
+  if (value != NULL)
+    {
+      const void *dup = apr_pmemdup(result_pool, value->data, value->len);
+
+      svn_skel__prepend(svn_skel__mem_atom(dup, value->len, result_pool),
+                        value_skel);
+    }
+
+  svn_skel__prepend(value_skel, skel);
+}
+
+
+svn_error_t *
+svn_wc__conflict_skel_add_prop_conflict(
+  svn_skel_t *skel,
+  const char *prop_name,
+  const svn_string_t *original_value,
+  const svn_string_t *mine_value,
+  const svn_string_t *incoming_value,
+  const svn_string_t *incoming_base_value,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  svn_skel_t *prop_skel = svn_skel__make_empty_list(result_pool);
+
+  /* ### check that OPERATION has been filled in.  */
+
+  /* See notes/wc-ng/conflict-storage  */
+  prepend_prop_value(incoming_base_value, prop_skel, result_pool);
+  prepend_prop_value(incoming_value, prop_skel, result_pool);
+  prepend_prop_value(mine_value, prop_skel, result_pool);
+  prepend_prop_value(original_value, prop_skel, result_pool);
+  svn_skel__prepend_str(apr_pstrdup(result_pool, prop_name), prop_skel,
+                        result_pool);
+  svn_skel__prepend_str(SVN_WC__CONFLICT_KIND_PROP, prop_skel, result_pool);
+
+  /* Now we append PROP_SKEL to the end of the provided conflict SKEL.  */
+  svn_skel__append(skel, prop_skel);
+
+  return SVN_NO_ERROR;
+}
+
+
 
 
 /*** Resolving a conflict automatically ***/
