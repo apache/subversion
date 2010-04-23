@@ -3629,6 +3629,22 @@ typedef struct svn_wc_status3_t
   /** Date of last commit. */
   apr_time_t changed_date;
 
+  /** The locally present lock token.
+   */
+  const char *lock_token;
+
+  /** The locally present lock owner.
+   */
+  const char *lock_owner;
+
+  /** The locally present lock comment.
+   */
+  const char *lock_comment;
+
+  /** The locally present lock creation date.
+   */
+  apr_time_t lock_creation_date;
+
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
 } svn_wc_status3_t;
 

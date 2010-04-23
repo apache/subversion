@@ -167,9 +167,9 @@ print_status(const char *path,
         {
           if (status->repos_lock)
             {
-              if (status->entry && status->entry->lock_token)
+              if (status->lock_token)
                 {
-                  if (strcmp(status->repos_lock->token, status->entry->lock_token)
+                  if (strcmp(status->repos_lock->token, status->lock_token)
                       == 0)
                     lock_status = 'K';
                   else
@@ -178,13 +178,13 @@ print_status(const char *path,
               else
                 lock_status = 'O';
             }
-          else if (status->entry && status->entry->lock_token)
+          else if (status->lock_token)
             lock_status = 'B';
           else
             lock_status = ' ';
         }
       else
-        lock_status = (status->entry && status->entry->lock_token) ? 'K' : ' ';
+        lock_status = (status->lock_token) ? 'K' : ' ';
 
       if (show_last_committed)
         {
@@ -245,7 +245,7 @@ print_status(const char *path,
                           status->locked ? 'L' : ' ',
                           status->copied ? '+' : ' ',
                           generate_switch_column_code(status),
-                          ((status->entry && status->entry->lock_token)
+                          ((status->lock_token)
                            ? 'K' : ' '),
                           tree_status_code,
                           path,
@@ -301,27 +301,27 @@ svn_cl__print_status_xml(const char *path,
                                pool);
     }
 
-  if (status->entry && status->entry->lock_token)
+  if (status->lock_token)
     {
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "lock", NULL);
 
-      svn_cl__xml_tagged_cdata(&sb, pool, "token", status->entry->lock_token);
+      svn_cl__xml_tagged_cdata(&sb, pool, "token", status->lock_token);
 
       /* If lock_owner is NULL, assume WC is corrupt. */
-      if (status->entry->lock_owner)
+      if (status->lock_owner)
         svn_cl__xml_tagged_cdata(&sb, pool, "owner",
-                                 status->entry->lock_owner);
+                                 status->lock_owner);
       else
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("'%s' has lock token, but no lock owner"),
                                  svn_dirent_local_style(path, pool));
 
       svn_cl__xml_tagged_cdata(&sb, pool, "comment",
-                               status->entry->lock_comment);
+                               status->lock_comment);
 
       svn_cl__xml_tagged_cdata(&sb, pool, "created",
                                svn_time_to_cstring
-                               (status->entry->lock_creation_date, pool));
+                               (status->lock_creation_date, pool));
 
       svn_xml_make_close_tag(&sb, pool, "lock");
     }
