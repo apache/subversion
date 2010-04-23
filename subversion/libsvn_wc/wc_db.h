@@ -1655,9 +1655,9 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
 
 /* Scan upwards for information about a known addition to the WORKING tree.
 
-   Iff a node's status as returned by svn_wc__db_read_info() is
-   svn_wc__db_status_added, then this function returns a refined status in
-   *STATUS, which is one of:
+   IFF a node's status as returned by svn_wc__db_read_info() is
+   svn_wc__db_status_added (NOT obstructed_add!), then this function
+   returns a refined status in *STATUS, which is one of:
 
      svn_wc__db_status_added -- this NODE is a simple add without history.
        OP_ROOT_ABSPATH will be set to the topmost node in the added subtree
