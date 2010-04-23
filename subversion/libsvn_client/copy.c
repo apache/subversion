@@ -2037,33 +2037,37 @@ try_copy(svn_commit_info_t **commit_info_p,
 
               for (i = 0; i < copy_pairs->nelts; i++)
                 {
-                  const char *url;
+                  const char *src_abspath, *copyfrom_url, *url;
+                  svn_revnum_t base_rev, copyfrom_rev;
                   svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
-
-                  /* We can convert the working copy path to a URL based on the
-                     entries file. */
-                  const svn_wc_entry_t *entry;
-                  const char *src_abspath;
 
                   svn_pool_clear(iterpool);
 
                   SVN_ERR(svn_dirent_get_absolute(&src_abspath, pair->src,
                                                   iterpool));
-                  SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx,
-                                                      src_abspath,
-                                                      svn_node_unknown,
-                                                      FALSE, FALSE,
-                                                      iterpool, iterpool));
-
-                  url = (entry->copied ? entry->copyfrom_url : entry->url);
+                  SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url,
+                                                         &copyfrom_rev,
+                                                         ctx->wc_ctx,
+                                                         src_abspath,
+                                                         pool, iterpool));
+                  if (copyfrom_url)
+                    url = copyfrom_url;
+                  else
+                    {
+                      SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx,
+                                                   src_abspath,
+                                                   pool, iterpool));
+                      SVN_ERR(svn_wc__node_get_base_rev(&base_rev, ctx->wc_ctx,
+                                                        src_abspath, iterpool));
+                    }
                   if (url == NULL)
                     return svn_error_createf
                       (SVN_ERR_ENTRY_MISSING_URL, NULL,
                        _("'%s' does not have a URL associated with it"),
                        svn_dirent_local_style(pair->src, pool));
 
-                  pair->src = apr_pstrdup(pool, url);
+                  pair->src = url;
 
                   if (!need_repos_peg_rev
                       || pair->src_peg_revision.kind == svn_opt_revision_base)
@@ -2071,7 +2075,7 @@ try_copy(svn_commit_info_t **commit_info_p,
                       /* Default the peg revision to that of the WC entry. */
                       pair->src_peg_revision.kind = svn_opt_revision_number;
                       pair->src_peg_revision.value.number =
-                        (entry->copied ? entry->copyfrom_rev : entry->revision);
+                        (copyfrom_url ? copyfrom_rev : base_rev);
                     }
 
                   if (pair->src_op_revision.kind == svn_opt_revision_base)
@@ -2079,7 +2083,7 @@ try_copy(svn_commit_info_t **commit_info_p,
                       /* Use the entry's revision as the operational rev. */
                       pair->src_op_revision.kind = svn_opt_revision_number;
                       pair->src_op_revision.value.number =
-                        (entry->copied ? entry->copyfrom_rev : entry->revision);
+                        (copyfrom_url ? copyfrom_rev : base_rev);
                     }
                 }
 
