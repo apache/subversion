@@ -1124,15 +1124,12 @@ svn_repos_dump_fs3(svn_repos_t *repos,
      the oldest dumped revision?  If so, then issue a final generic
      warning, since the inline warnings already issued might easily be
      missed. */
-  if (found_old_reference)
-    {
-      const char *warning = apr_psprintf(
-        subpool,
-        _("WARNING: The range of revisions dumped contained references to\n"
-          "WARNING: copy sources outside that range.\n"));
-      SVN_ERR(progress_func(progress_baton, SVN_INVALID_REVNUM, warning,
+  if (progress_func && found_old_reference)
+    SVN_ERR(progress_func(progress_baton, SVN_INVALID_REVNUM,
+                          _("WARNING: The range of revisions dumped "
+                            "contained references to\n"
+                            "WARNING: copy sources outside that range.\n"),
                             subpool));
-    }
 
   svn_pool_destroy(subpool);
 
