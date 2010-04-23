@@ -940,7 +940,7 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
                          svn_wc_context_t *wc_ctx,
                          svn_boolean_t keep_changelists,
                          svn_boolean_t keep_locks,
-                         apr_hash_t *checksums,
+                         const svn_checksum_t *md5_checksum,
                          apr_pool_t *scratch_pool)
 {
   svn_boolean_t loop_recurse = FALSE;
@@ -974,10 +974,7 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
   return svn_wc_queue_committed3(queue, item->path,
                                  loop_recurse, item->incoming_prop_changes,
                                  remove_lock, !keep_changelists,
-                                 apr_hash_get(checksums,
-                                              item->path,
-                                              APR_HASH_KEY_STRING),
-                                 scratch_pool);
+                                 md5_checksum, scratch_pool);
 }
 
 
@@ -1249,7 +1246,10 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
           svn_pool_clear(iterpool);
           bump_err = post_process_commit_item(queue, item, ctx->wc_ctx,
                                               keep_changelists, keep_locks,
-                                              checksums, iterpool);
+                                              apr_hash_get(checksums,
+                                                           item->path,
+                                                           APR_HASH_KEY_STRING),
+                                              iterpool);
           if (bump_err)
             goto cleanup;
         }
