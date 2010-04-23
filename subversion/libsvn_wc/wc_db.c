@@ -3894,6 +3894,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
   new_working_status = working_status;
   if (working_none)
     {
+      /* No structural changes  */
       if (base_status == svn_wc__db_status_normal
           || base_status == svn_wc__db_status_obstructed
           || base_status == svn_wc__db_status_incomplete
@@ -3907,7 +3908,11 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
             || working_status == svn_wc__db_status_obstructed)
            && (base_none || base_status == svn_wc__db_status_not_present))
     {
+      /* ADD  */
+
       svn_boolean_t add_or_root_of_copy;
+
+      /* ### this fails for the status_obstructed case.  */
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
                                      db, local_abspath, scratch_pool));
       if (add_or_root_of_copy)
@@ -3917,6 +3922,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
     }
   else if (working_status == svn_wc__db_status_normal)
     {
+      /* DELETE + ADD  */
       svn_boolean_t add_or_root_of_copy;
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
                                      db, local_abspath, scratch_pool));
@@ -5363,6 +5369,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
     {
       svn_sqlite__stmt_t *stmt;
       svn_boolean_t have_row;
+      svn_wc__db_status_t presence;
       svn_boolean_t presence_is_normal;
 
       /* ### is it faster to fetch fewer columns? */
@@ -5398,15 +5405,11 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
           break;
         }
 
-      presence_is_normal = strcmp("normal",
-                                  svn_sqlite__column_text(stmt, 0, NULL)) == 0;
+      presence = svn_sqlite__column_token(stmt, 0, presence_map);
 
       /* Record information from the starting node.  */
       if (current_abspath == local_abspath)
         {
-          svn_wc__db_status_t presence
-            = svn_sqlite__column_token(stmt, 0, presence_map);
-
           /* The starting node should exist normally.  */
           if (presence != svn_wc__db_status_normal)
             return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
@@ -5414,6 +5417,18 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                                      _("Expected node '%s' to be added."),
                                      svn_dirent_local_style(local_abspath,
                                                             scratch_pool));
+
+          /* ### in per-dir operation, it is possible that we just fetched
+             ### the parent stub. examine the KIND field.
+             ###
+             ### scan_addition is NOT allowed for an obstructed_add status
+             ### from read_info. there may be key information in the
+             ### subdir record (eg. copyfrom_*).  */
+          {
+            svn_wc__db_kind_t kind = svn_sqlite__column_token(stmt, 1,
+                                                              kind_map);
+            SVN_ERR_ASSERT(kind != svn_wc__db_kind_subdir);
+          }
 
           /* Provide the default status; we'll override as appropriate. */
           if (status)
@@ -5423,7 +5438,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
       /* We want the operation closest to the start node, and then we
          ignore any operations on its ancestors.  */
       if (!found_info
-          && presence_is_normal
+          && presence == svn_wc__db_status_normal
           && !svn_sqlite__column_is_null(stmt, 9 /* copyfrom_repos_id */))
         {
           if (status)
