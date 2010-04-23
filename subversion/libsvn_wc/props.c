@@ -709,6 +709,136 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
 }
 
 
+/* Generate a message to describe the property conflict among these four
+   values.
+
+   Note that this function (currently) interprets the property values as
+   strings, but they could actually be binary values. We'll keep the
+   types as svn_string_t in case we fix this in the future.  */
+static const svn_string_t *
+generate_conflict_message(const char *propname,
+                          const svn_string_t *original,
+                          const svn_string_t *mine,
+                          const svn_string_t *incoming,
+                          const svn_string_t *incoming_base,
+                          apr_pool_t *result_pool)
+{
+  if (incoming_base == NULL)
+    {
+      /* Attempting to add the value INCOMING.  */
+      SVN_ERR_ASSERT_NO_RETURN(incoming != NULL);
+
+      if (mine)
+        {
+          /* To have a conflict, these must be different.  */
+          SVN_ERR_ASSERT_NO_RETURN(!svn_string_compare(mine, incoming));
+
+          /* Note that we don't care whether MINE is locally-added or
+             edited, or just something different that is a copy of the
+             pristine ORIGINAL.  */
+          return svn_string_createf(result_pool,
+                                    _("Trying to add new property '%s' with "
+                                      "value '%s',\nbut property already "
+                                      "exists with value '%s'."),
+                                    propname, incoming->data, mine->data);
+        }
+
+      /* To have a conflict, we must have an ORIGINAL which has been
+         locally-deleted.  */
+      SVN_ERR_ASSERT_NO_RETURN(original != NULL);
+      return svn_string_createf(result_pool,
+                                _("Trying to create property '%s' with "
+                                  "value '%s',\nbut it has been locally "
+                                  "deleted."),
+                                propname, incoming->data);
+    }
+
+  if (incoming == NULL)
+    {
+      /* Attempting to delete the value INCOMING_BASE.  */
+      SVN_ERR_ASSERT_NO_RETURN(incoming_base != NULL);
+
+      /* A conflict can only occur if we originally had the property;
+         otherwise, we would have merged the property-delete into the
+         non-existent property.  */
+      SVN_ERR_ASSERT_NO_RETURN(original != NULL);
+
+      if (mine && svn_string_compare(original, incoming_base))
+        {
+          /* We were trying to delete the correct property, but an edit
+             caused the conflict.  */
+          return svn_string_createf(result_pool,
+                                    _("Trying to delete property '%s' with "
+                                      "value '%s'\nbut it has been modified "
+                                      "from '%s' to '%s'."),
+                                    propname, incoming_base->data,
+                                    original->data, mine->data);
+        }
+
+      /* We were trying to delete INCOMING_BASE but our ORIGINAL is
+         something else entirely.  */
+      SVN_ERR_ASSERT_NO_RETURN(!svn_string_compare(original, incoming_base));
+
+      /* ### wait. what if we had a different property and locally
+         ### deleted it? the statement below is gonna blow up.
+         ### we could have: local-add, local-edit, local-del, or just
+         ### something different (and unchanged).  */
+      return svn_string_createf(result_pool,
+                                _("Trying to delete property '%s' with "
+                                  "value '%s'\nbut the local value is "
+                                  "'%s'."),
+                                propname, incoming_base->data, mine->data);
+    }
+
+  /* Attempting to change the property from INCOMING_BASE to INCOMING.  */
+
+  /* If we have a (current) property value, then it should be different
+     from the INCOMING_BASE; otherwise, the incoming change would have
+     been applied to it.  */
+  SVN_ERR_ASSERT_NO_RETURN(!mine || !svn_string_compare(mine, incoming_base));
+
+  if (original && mine && svn_string_compare(original, mine))
+    {
+      /* We have an unchanged property, so the original values must
+         have been different.  */
+      SVN_ERR_ASSERT_NO_RETURN(!svn_string_compare(original, incoming_base));
+      return svn_string_createf(result_pool,
+                                _("Trying to change property '%s' from '%s' "
+                                  "to '%s',\nbut property already exists "
+                                  "with value '%s'."),
+                                propname, incoming_base->data, incoming->data,
+                                mine->data);
+    }
+
+  if (original && mine)
+    return svn_string_createf(result_pool,
+                              _("Trying to change property '%s' from '%s' "
+                                "to '%s',\nbut the property has been locally "
+                                "changed from '%s' to '%s'."),
+                              propname, incoming_base->data, incoming->data,
+                              original->data, mine->data);
+
+  if (original)
+    return svn_string_createf(result_pool,
+                              _("Trying to change property '%s' from '%s' "
+                                "to '%s',\nbut it has been locally deleted."),
+                              propname, incoming_base->data, incoming->data);
+
+  if (mine)
+    return svn_string_createf(result_pool,
+                              _("Trying to change property '%s' from '%s' "
+                                "to '%s',\nbut property has been locally "
+                                "added with value '%s'."),
+                              propname, incoming_base->data, incoming->data,
+                              mine->data);
+  
+  return svn_string_createf(result_pool,
+                            _("Trying to change property '%s' from '%s' to "
+                              "'%s',\nbut the property does not exist."),
+                            propname, incoming_base->data, incoming->data);
+}
+
+
 /* Set the value of *STATE to NEW_VALUE if STATE is not NULL
  * and NEW_VALUE is a higer order value than *STATE's current value
  * using this ordering (lower order first):
@@ -1166,6 +1296,8 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
 
   if (! base_val)
     {
+      /* ### what about working_val? what if we locally-added?  */
+
       apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, NULL);
       if (old_val)
         /* This is a merge, merging a delete into non-existent */
@@ -1216,11 +1348,13 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
                                           cancel_func, cancel_baton,
                                           dry_run, scratch_pool));
       if (got_conflict)
+        /* ### wait. what if we had a different property and locally
+           ### deleted it? the statement below is gonna blow up.  */
         *conflict = svn_string_createf
             (result_pool,
              _("Trying to delete property '%s' with value '%s'\n"
                "but the local value is '%s'."),
-             propname, base_val->data, working_val->data);
+             propname, old_val->data, working_val->data);
     }
 
   return SVN_NO_ERROR;
@@ -1373,10 +1507,11 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
   svn_string_t *working_val
     = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
 
+  SVN_ERR_ASSERT(old_val != NULL);
+
   /* If working_val is the same as old_val... */
-  if ((!working_val && !old_val)
-      || (working_val && old_val
-          && svn_string_compare(working_val, old_val)))
+  if (working_val && old_val
+      && svn_string_compare(working_val, old_val))
     {
       /* A trivial update: change it to new_val. */
       apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
@@ -1580,6 +1715,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       svn_string_t *conflict = NULL;
       const svn_prop_t *incoming_change;
       const svn_string_t *from_val, *to_val, *base_val;
+      const svn_string_t *mine_val;
 
       svn_pool_clear(iterpool);
 
@@ -1594,6 +1730,9 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
       if (base_merge)
         apr_hash_set(base_props, propname, APR_HASH_KEY_STRING, to_val);
+
+      /* Save MINE for later message generation.  */
+      mine_val = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
 
       /* We already know that state is at least `changed', so mark
          that, but remember that we may later upgrade to `merged' or
@@ -1638,6 +1777,20 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
       if (conflict)
         {
+          /* ### for now, just demonstrate we produce the correct
+             ### messages. we'll be doing more interesting stuff later.  */
+          {
+            const svn_string_t *message;
+
+            message = generate_conflict_message(propname,
+                                                base_val,
+                                                mine_val,
+                                                to_val,
+                                                from_val,
+                                                iterpool);
+            SVN_ERR_ASSERT(svn_string_compare(conflict, message));
+          }
+
           set_prop_merge_state(state, svn_wc_notify_state_conflicted);
 
           if (dry_run)

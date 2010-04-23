@@ -1790,6 +1790,83 @@ def rm_of_replaced_file(sbox):
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
 
+def prop_reject_grind(sbox):
+  """grind through all variants of prop rejects"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = sbox.ospath('iota')
+  mu_path = sbox.ospath('A/mu')
+
+  # Create r2 with all the properties we intend to use as incoming-change,
+  # and as incoming-delete. Also set up our local-edit and local-delete
+  # properties. We also need some properties that are simply different
+  # from the incoming properties
+  sbox.simple_propset('edit.diff', 'repos', iota_path)
+  sbox.simple_propset('edit.edit', 'repos', iota_path)
+  sbox.simple_propset('edit.del', 'repos', iota_path)
+  sbox.simple_propset('edit.add', 'repos', iota_path)
+  sbox.simple_propset('edit.none', 'repos', iota_path)
+  sbox.simple_propset('del.edit', 'repos', iota_path)
+  sbox.simple_propset('del.edit2', 'repos', iota_path)
+  sbox.simple_propset('del.diff', 'repos', iota_path)
+  sbox.simple_propset('del.del', 'repos', iota_path)
+  sbox.simple_propset('del.add', 'repos', iota_path)
+
+  sbox.simple_propset('edit.edit', 'local', mu_path)
+  sbox.simple_propset('add.edit', 'local', mu_path)
+  sbox.simple_propset('del.edit', 'local', mu_path)
+  sbox.simple_propset('del.edit2', 'repos', mu_path)
+  sbox.simple_propset('add.del', 'local', mu_path)
+  sbox.simple_propset('edit.del', 'local', mu_path)
+  sbox.simple_propset('del.del', 'local', mu_path)
+  sbox.simple_propset('edit.diff', 'local', mu_path)
+  sbox.simple_propset('add.diff', 'local', mu_path)
+  sbox.simple_propset('del.diff', 'local', mu_path)
+
+  sbox.simple_commit()
+
+  # Create r3 with all the properties that we intend to use as incoming-add,
+  # and then perform the incoming-edits and incoming-deletes.
+  sbox.simple_propset('add.add', 'repos', iota_path)
+  sbox.simple_propset('add.edit', 'repos', iota_path)
+  sbox.simple_propset('add.del', 'repos', iota_path)
+  sbox.simple_propset('add.diff', 'repos', iota_path)
+  sbox.simple_propset('edit.diff', 'repos.changed', iota_path)
+  sbox.simple_propset('edit.edit', 'repos.changed', iota_path)
+  sbox.simple_propset('edit.del', 'repos.changed', iota_path)
+  sbox.simple_propset('edit.add', 'repos.changed', iota_path)
+  sbox.simple_propset('edit.none', 'repos.changed', iota_path)
+  sbox.simple_propdel('del.edit', iota_path)
+  sbox.simple_propdel('del.edit2', iota_path)
+  sbox.simple_propdel('del.diff', iota_path)
+  ### don't delete this. causes a segfault :-)
+  #sbox.simple_propdel('del.del', iota_path)
+  sbox.simple_propdel('del.add', iota_path)
+  sbox.simple_commit()
+
+  # Set up our victim for all the right rejects: local-adds, local-edits,
+  # and local-deletes.
+  sbox.simple_propset('edit.add', 'local', mu_path)
+  sbox.simple_propset('add.add', 'local', mu_path)
+  sbox.simple_propset('del.add', 'local', mu_path)
+  sbox.simple_propset('edit.edit', 'local.changed', mu_path)
+  sbox.simple_propset('add.edit', 'local.changed', mu_path)
+  sbox.simple_propset('del.edit', 'local.changed', mu_path)
+  sbox.simple_propset('del.edit2', 'repos.changed', mu_path)
+  sbox.simple_propdel('add.del', mu_path)
+  sbox.simple_propdel('edit.del', mu_path)
+  sbox.simple_propdel('del.del', mu_path)
+
+  # Now merge r2:3 into the victim to create all variants
+  svntest.main.run_svn(False, 'merge', '-r2:3', sbox.repo_url + '/iota',
+                       mu_path)
+
+  ### need to verify mu.prej
+  ### note that del.add has been erroneously deleted!
+
+
 ########################################################################
 # Run the tests
 
@@ -1831,6 +1908,7 @@ test_list = [ None,
               delete_nonexistent_property,
               XFail(post_revprop_change_hook, svntest.main.is_ra_type_dav),
               rm_of_replaced_file,
+              prop_reject_grind,
              ]
 
 if __name__ == '__main__':
