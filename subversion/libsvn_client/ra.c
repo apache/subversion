@@ -596,7 +596,8 @@ svn_client__repos_locations(const char **start_url,
       SVN_ERR(svn_wc__node_get_url(&node_url, ctx->wc_ctx,
                                    local_abspath_or_url, pool, subpool));
       SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, &copyfrom_rev,
-                                             ctx->wc_ctx, local_abspath_or_url,
+                                             NULL, ctx->wc_ctx,
+                                             local_abspath_or_url,
                                              pool, subpool));
       if (copyfrom_url && revision->kind == svn_opt_revision_working)
         {

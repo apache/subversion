@@ -349,7 +349,7 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
     if (src_entry->copied)
       {
         SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, &copyfrom_rev,
-                                               wc_ctx, src_abspath,
+                                               NULL, wc_ctx, src_abspath,
                                                scratch_pool, scratch_pool));
 
         /* If the COPYFROM information is the SAME as the destination
@@ -691,7 +691,7 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
                                   svn_node_dir, TRUE,
                                   scratch_pool, scratch_pool));
         SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, &copyfrom_rev,
-                                               wc_ctx, src_abspath,
+                                               NULL, wc_ctx, src_abspath,
                                                scratch_pool, scratch_pool));
 
         /* If the COPYFROM information is the SAME as the destination

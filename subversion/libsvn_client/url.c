@@ -147,7 +147,7 @@ svn_client__entry_location(const char **url,
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
   SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, &copyfrom_rev,
-                                         wc_ctx, local_abspath,
+                                         NULL, wc_ctx, local_abspath,
                                          result_pool, scratch_pool));
 
   if (copyfrom_url && peg_rev_kind == svn_opt_revision_working)
