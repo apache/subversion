@@ -34,6 +34,7 @@
 #include "svn_checksum.h"
 #include "svn_props.h"
 
+#include "private/svn_mergeinfo_private.h"
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
@@ -199,6 +200,10 @@ struct edit_baton
   /* Set to true if any references to revisions older than
      OLDEST_DUMPED_REV were found in the dumpstream. */
   svn_boolean_t found_old_reference;
+
+  /* Set to true if any mergeinfo was dumped which contains revisions
+     older than OLDEST_DUMPED_REV. */
+  svn_boolean_t found_old_mergeinfo;
 
   /* reusable buffer for writing file contents */
   char buffer[SVN__STREAM_CHUNK_SIZE];
@@ -504,6 +509,43 @@ dump_node(struct edit_baton *eb,
       apr_size_t proplen;
 
       SVN_ERR(svn_fs_node_proplist(&prophash, eb->fs_root, path, pool));
+
+      /* If this is a partial dump, then issue a warning if we dump mergeinfo
+         properties that refer to revisions older than the first revision
+         dumped. */
+      if (eb->progress_func && eb->oldest_dumped_rev > 1)
+        {
+          svn_string_t *mergeinfo_str = apr_hash_get(prophash,
+                                                     SVN_PROP_MERGEINFO,
+                                                     APR_HASH_KEY_STRING);
+          if (mergeinfo_str)
+            {
+              svn_mergeinfo_t mergeinfo, old_mergeinfo;
+
+              SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_str->data,
+                                          pool));
+              SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
+                &old_mergeinfo, mergeinfo,
+                eb->oldest_dumped_rev - 1, 0,
+                TRUE, pool, pool));
+              if (apr_hash_count(old_mergeinfo))
+                {
+                  const char *warning = apr_psprintf(
+                    pool,
+                    _("WARNING: Mergeinfo referencing revision(s) prior "
+                      "to the oldest dumped revision (%ld).\n"
+                      "WARNING: Loading this dump may result in invalid "
+                      "mergeinfo.\n"),
+                    eb->oldest_dumped_rev);
+
+                  eb->found_old_mergeinfo = TRUE;
+                  SVN_ERR(eb->progress_func(eb->progress_baton,
+                                            SVN_INVALID_REVNUM,
+                                            warning, pool));
+                }
+            }
+        }
+
       if (eb->use_deltas && compare_root)
         {
           /* Fetch the old property hash to diff against and output a header
@@ -987,6 +1029,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
   const char *uuid;
   int version;
   svn_boolean_t found_old_reference = FALSE;
+  svn_boolean_t found_old_mergeinfo = FALSE;
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -1115,21 +1158,39 @@ svn_repos_dump_fs3(svn_repos_t *repos,
       if (progress_func)
         SVN_ERR(progress_func(progress_baton, to_rev, NULL, subpool));
 
-      if (dump_edit_baton /* We never get an edit baton for r0. */
-          && ((struct edit_baton *)dump_edit_baton)->found_old_reference)
-        found_old_reference = TRUE;
+      if (dump_edit_baton) /* We never get an edit baton for r0. */
+        {
+          if (((struct edit_baton *)dump_edit_baton)->found_old_reference)
+            found_old_reference = TRUE;
+          if (((struct edit_baton *)dump_edit_baton)->found_old_mergeinfo)
+            found_old_mergeinfo = TRUE;
+        }
     }
 
-  /* Did we issue any warnings about references to revisions older than
-     the oldest dumped revision?  If so, then issue a final generic
-     warning, since the inline warnings already issued might easily be
-     missed. */
-  if (progress_func && found_old_reference)
-    SVN_ERR(progress_func(progress_baton, SVN_INVALID_REVNUM,
-                          _("WARNING: The range of revisions dumped "
-                            "contained references to\n"
-                            "WARNING: copy sources outside that range.\n"),
-                            subpool));
+  if (progress_func)
+    {
+      /* Did we issue any warnings about references to revisions older than
+         the oldest dumped revision?  If so, then issue a final generic
+         warning, since the inline warnings already issued might easily be
+         missed. */
+      if (found_old_reference)
+        SVN_ERR(progress_func(progress_baton, SVN_INVALID_REVNUM,
+                              _("WARNING: The range of revisions dumped "
+                                "contained references to\n"
+                                "WARNING: copy sources outside that "
+                                "range.\n"),
+                              subpool));
+
+      /* Ditto if we issued any warnings about old revisions referenced
+         in dumped mergeinfo. */
+      if (found_old_mergeinfo)
+        SVN_ERR(progress_func(progress_baton, SVN_INVALID_REVNUM,
+                              _("WARNING: The range of revisions dumped "
+                                "contained mergeinfo\n"
+                                "WARNING: which reference revisions outside "
+                                "that range.\n"),
+                              subpool));
+    }
 
   svn_pool_destroy(subpool);
 
