@@ -40,6 +40,7 @@
 #include "cl.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 
@@ -65,6 +66,8 @@ struct status_baton
   unsigned int text_conflicts;
   unsigned int prop_conflicts;
   unsigned int tree_conflicts;
+
+  svn_client_ctx_t *ctx;
 };
 
 
@@ -167,6 +170,35 @@ print_status(void *baton,
              apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
+  svn_wc_status3_t *tweaked_status;
+  svn_revnum_t revision;
+  svn_revnum_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, sb->cl_pool));
+  tweaked_status = svn_wc_dup_status3(status, sb->cl_pool);
+
+  /* ### The revision information with associates are based on what
+   * ### _read_info() returns. The svn_wc_status_func4_t callback is
+   * ### suppposed to handle the gathering of additional information from the
+   * ### WORKING nodes on its own. Until we've agreed on how the CLI should
+   * ### handle the revision information, we use this appproach to stay compat
+   * ### with our testsuite. */
+  if (status->entry)
+    {
+      SVN_ERR(svn_wc__node_get_working_rev_info(&revision, &changed_rev,
+                                                &changed_date,
+                                                &changed_author,
+                                                sb->ctx->wc_ctx,
+                                                local_abspath, sb->cl_pool,
+                                                pool));
+      tweaked_status->revision = revision;
+      tweaked_status->changed_rev = changed_rev;
+      tweaked_status->changed_date = changed_date;
+      tweaked_status->changed_author = changed_author;
+    }
 
   /* If there's a changelist attached to the entry, then we don't print
      the item, but instead dup & cache the status structure for later. */
@@ -178,7 +210,7 @@ print_status(void *baton,
       const char *cl_key = apr_pstrdup(sb->cl_pool, status->entry->changelist);
       struct status_cache *scache = apr_pcalloc(sb->cl_pool, sizeof(*scache));
       scache->path = apr_pstrdup(sb->cl_pool, path);
-      scache->status = svn_wc_dup_status3(status, sb->cl_pool);
+      scache->status = svn_wc_dup_status3(tweaked_status, sb->cl_pool);
 
       path_array =
         apr_hash_get(sb->cached_changelists, cl_key, APR_HASH_KEY_STRING);
@@ -194,7 +226,7 @@ print_status(void *baton,
       return SVN_NO_ERROR;
     }
 
-  return print_status_normal_or_xml(baton, path, status, pool);
+  return print_status_normal_or_xml(baton, path, tweaked_status, pool);
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
@@ -255,6 +287,7 @@ svn_cl__status(apr_getopt_t *os,
   sb.text_conflicts = 0;
   sb.prop_conflicts = 0;
   sb.tree_conflicts = 0;
+  sb.ctx = ctx;
 
   SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
 
