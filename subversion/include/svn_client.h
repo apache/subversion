@@ -553,7 +553,7 @@ typedef struct svn_client_commit_item_t
 svn_client_commit_item3_t *
 svn_client_commit_item3_create(apr_pool_t *pool);
 
-/** Like svn_client_commit_item_create2() but with a stupid "const"
+/** Like svn_client_commit_item3_create() but with a stupid "const"
  * qualifier on the returned structure, and it returns an error that
  * will never happen.
  *
