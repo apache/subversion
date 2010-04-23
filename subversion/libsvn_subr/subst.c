@@ -839,20 +839,6 @@ create_translation_baton(const char *eol_str,
   return b;
 }
 
-/* Create a deep copy of TRANSLATION_BATON, allocated in RESULT_POOL,
- * and return a pointer to it. Note that no deep copy is made of keywords,
- * since keywords are constant over the lifetime of the translation stream. */
-static struct translation_baton *
-dup_translation_baton(const struct translation_baton *translation_baton,
-                      apr_pool_t *result_pool)
-{
-  struct translation_baton *b = apr_palloc(result_pool, sizeof(*b));
-
-  *b = *translation_baton;
-
-  return b;
-}
-
 /* Translate eols and keywords of a 'chunk' of characters BUF of size BUFLEN
  * according to the settings and state stored in baton B.
  *
@@ -1043,9 +1029,7 @@ struct translated_stream_baton
   /* Buffer to hold read data
      between svn_stream_read() and translate_chunk(). */
   char *buf;
-
-  /* Pool in which (only!) this baton is allocated. */
-  apr_pool_t *pool;
+#define SVN__TRANSLATION_BUF_SIZE (SVN__STREAM_CHUNK_SIZE + 1)
 
   /* Pool for callback iterations */
   apr_pool_t *iterpool;
@@ -1062,7 +1046,6 @@ translated_stream_read(void *baton,
   apr_size_t readlen = SVN__STREAM_CHUNK_SIZE;
   apr_size_t unsatisfied = *len;
   apr_size_t off = 0;
-  apr_pool_t *iterpool;
 
   /* Optimization for a frequent special case. The configuration parser (and
      a few others) reads the stream one byte at a time. All the memcpy, pool
@@ -1083,13 +1066,12 @@ translated_stream_read(void *baton,
     }
 
   /* Standard code path. */
-  iterpool = b->iterpool;
   while (readlen == SVN__STREAM_CHUNK_SIZE && unsatisfied > 0)
     {
       apr_size_t to_copy;
       apr_size_t buffer_remainder;
 
-      svn_pool_clear(iterpool);
+      svn_pool_clear(b->iterpool);
       /* fill read buffer, if necessary */
       if (! (b->readbuf_off < b->readbuf->len))
         {
@@ -1098,14 +1080,14 @@ translated_stream_read(void *baton,
           svn_stringbuf_setempty(b->readbuf);
           b->readbuf_off = 0;
           SVN_ERR(svn_stream_read(b->stream, b->buf, &readlen));
-          buf_stream = svn_stream_from_stringbuf(b->readbuf, iterpool);
+          buf_stream = svn_stream_from_stringbuf(b->readbuf, b->iterpool);
 
           SVN_ERR(translate_chunk(buf_stream, b->in_baton, b->buf,
-                                  readlen, iterpool));
+                                  readlen, b->iterpool));
 
           if (readlen != SVN__STREAM_CHUNK_SIZE)
             SVN_ERR(translate_chunk(buf_stream, b->in_baton, NULL, 0,
-                                    iterpool));
+                                    b->iterpool));
 
           SVN_ERR(svn_stream_close(buf_stream));
         }
@@ -1149,7 +1131,6 @@ translated_stream_close(void *baton)
 
   SVN_ERR(svn_stream_close(b->stream));
 
-  svn_pool_destroy(b->pool);   /* Also destroys the baton itself */
   return SVN_NO_ERROR;
 }
 
@@ -1199,12 +1180,16 @@ translated_stream_mark(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
   SVN_ERR(svn_stream_mark(b->stream, &mt->mark, pool));
 
   /* Save translation state. */
-  mt->saved_baton.in_baton = dup_translation_baton(b->in_baton, pool);
-  mt->saved_baton.out_baton = dup_translation_baton(b->out_baton, pool);
+  mt->saved_baton.in_baton = apr_palloc(pool,
+                                        sizeof(*mt->saved_baton.in_baton));
+  *mt->saved_baton.in_baton = *b->in_baton;
+  mt->saved_baton.out_baton = apr_palloc(pool,
+                                         sizeof(*mt->saved_baton.out_baton));
+  *mt->saved_baton.out_baton = *b->out_baton;
   mt->saved_baton.written = b->written;
   mt->saved_baton.readbuf = svn_stringbuf_dup(b->readbuf, pool);
   mt->saved_baton.readbuf_off = b->readbuf_off;
-  mt->saved_baton.buf = apr_pmemdup(pool, b->buf, SVN__STREAM_CHUNK_SIZE + 1);
+  mt->saved_baton.buf = apr_pmemdup(pool, b->buf, SVN__TRANSLATION_BUF_SIZE);
 
   *mark = (svn_stream_mark_t *)mt;
 
@@ -1224,13 +1209,15 @@ translated_stream_seek(void *baton, svn_stream_mark_t *mark)
 
   SVN_ERR(svn_stream_seek(b->stream, mt->mark));
 
-  /* Restore translation state. */
-  b->in_baton = dup_translation_baton(mt->saved_baton.in_baton, b->pool);
-  b->out_baton = dup_translation_baton(mt->saved_baton.out_baton, b->pool);
+  /* Restore translation state, avoiding new allocations. */
+  *b->in_baton = *mt->saved_baton.in_baton;
+  *b->out_baton = *mt->saved_baton.out_baton;
   b->written = mt->saved_baton.written;
-  b->readbuf = svn_stringbuf_dup(mt->saved_baton.readbuf, b->pool);
+  svn_stringbuf_setempty(b->readbuf);
+  svn_stringbuf_appendbytes(b->readbuf, mt->saved_baton.readbuf->data, 
+                            mt->saved_baton.readbuf->len);
   b->readbuf_off = mt->saved_baton.readbuf_off;
-  b->buf = apr_pmemdup(b->pool, mt->saved_baton.buf, SVN__STREAM_CHUNK_SIZE + 1);
+  memcpy(b->buf, mt->saved_baton.buf, SVN__TRANSLATION_BUF_SIZE);
 
   return SVN_NO_ERROR;
 }
@@ -1279,55 +1266,23 @@ svn_subst_stream_translated(svn_stream_t *stream,
                             svn_boolean_t repair,
                             apr_hash_t *keywords,
                             svn_boolean_t expand,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool)
 {
-  apr_pool_t *baton_pool = svn_pool_create(pool);
   struct translated_stream_baton *baton
-    = apr_palloc(baton_pool, sizeof(*baton));
-  svn_stream_t *s = svn_stream_create(baton, baton_pool);
-
-  /* Make sure EOL_STR and KEYWORDS are allocated in BATON_POOL, as
-     required by create_translation_baton() */
-  if (eol_str)
-    eol_str = apr_pstrdup(baton_pool, eol_str);
-  if (keywords)
-    {
-      if (apr_hash_count(keywords) == 0)
-        keywords = NULL;
-      else
-        {
-          /* deep copy the hash to make sure it's allocated in BATON_POOL */
-          apr_hash_t *copy = apr_hash_make(baton_pool);
-          apr_hash_index_t *hi;
-
-          for (hi = apr_hash_first(pool, keywords);
-               hi; hi = apr_hash_next(hi))
-            {
-              const void *key;
-              void *val;
-
-              apr_hash_this(hi, &key, NULL, &val);
-              apr_hash_set(copy, apr_pstrdup(baton_pool, key),
-                           APR_HASH_KEY_STRING,
-                           svn_string_dup(val, baton_pool));
-            }
-
-            keywords = copy;
-        }
-    }
+    = apr_palloc(result_pool, sizeof(*baton));
+  svn_stream_t *s = svn_stream_create(baton, result_pool);
 
   /* Setup the baton fields */
   baton->stream = stream;
   baton->in_baton
-    = create_translation_baton(eol_str, repair, keywords, expand, baton_pool);
+    = create_translation_baton(eol_str, repair, keywords, expand, result_pool);
   baton->out_baton
-    = create_translation_baton(eol_str, repair, keywords, expand, baton_pool);
+    = create_translation_baton(eol_str, repair, keywords, expand, result_pool);
   baton->written = FALSE;
-  baton->readbuf = svn_stringbuf_create("", baton_pool);
+  baton->readbuf = svn_stringbuf_create("", result_pool);
   baton->readbuf_off = 0;
-  baton->iterpool = svn_pool_create(baton_pool);
-  baton->pool = baton_pool;
-  baton->buf = apr_palloc(baton->pool, SVN__STREAM_CHUNK_SIZE + 1);
+  baton->iterpool = svn_pool_create(result_pool);
+  baton->buf = apr_palloc(result_pool, SVN__TRANSLATION_BUF_SIZE);
 
   /* Setup the stream methods */
   svn_stream_set_read(s, translated_stream_read);
