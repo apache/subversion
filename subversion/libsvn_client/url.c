@@ -137,7 +137,8 @@ svn_client__entry_location(const char **url,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
+  const char *copyfrom_url;
+  svn_revnum_t copyfrom_rev;
 
   /* This function doesn't contact the repository, so error out if
      asked to do so. */
@@ -145,39 +146,57 @@ svn_client__entry_location(const char **url,
       || peg_rev_kind == svn_opt_revision_head)
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, &copyfrom_rev,
+                                         wc_ctx, local_abspath,
+                                         result_pool, scratch_pool));
 
-  if (entry->copyfrom_url && peg_rev_kind == svn_opt_revision_working)
+  if (copyfrom_url && peg_rev_kind == svn_opt_revision_working)
     {
-      *url = apr_pstrdup(result_pool, entry->copyfrom_url);
+      *url = copyfrom_url;
       if (revnum)
-        *revnum = entry->copyfrom_rev;
-    }
-  else if (entry->url)
-    {
-      *url = apr_pstrdup(result_pool, entry->url);
-      if (revnum)
-        {
-          if (peg_rev_kind == svn_opt_revision_committed)
-            *revnum = entry->cmt_rev;
-          else if (peg_rev_kind == svn_opt_revision_previous)
-            *revnum = entry->cmt_rev - 1;
-          else
-            /* Local modifications are not relevant here, so consider
-               svn_opt_revision_unspecified, svn_opt_revision_number,
-               svn_opt_revision_base, and svn_opt_revision_working
-               as the same. */
-            *revnum = entry->revision;
-        }
+        *revnum = copyfrom_rev;
     }
   else
     {
-      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                               _("Entry for '%s' has no URL"),
-                               svn_dirent_local_style(local_abspath,
-                                                      scratch_pool));
+      const char *node_url;
+
+      SVN_ERR(svn_wc__node_get_url(&node_url, wc_ctx, local_abspath,
+                                   result_pool, scratch_pool));
+      if (node_url)
+        {
+          *url = node_url;
+          if (revnum)
+            {
+              if ((peg_rev_kind == svn_opt_revision_committed) ||
+                  (peg_rev_kind == svn_opt_revision_previous))
+                {
+                  SVN_ERR(svn_wc__node_get_changed_info(revnum, NULL, NULL,
+                                                        wc_ctx,
+                                                        local_abspath,
+                                                        result_pool,
+                                                        scratch_pool));
+                  if (peg_rev_kind == svn_opt_revision_previous)
+                    *revnum = *revnum - 1;
+                }
+              else
+                {
+                  /* Local modifications are not relevant here, so consider
+                     svn_opt_revision_unspecified, svn_opt_revision_number,
+                     svn_opt_revision_base, and svn_opt_revision_working
+                     as the same. */
+                  SVN_ERR(svn_wc__node_get_base_rev(revnum,
+                                                    wc_ctx, local_abspath,
+                                                    scratch_pool));
+                }
+            }
+        }
+      else
+        {
+          return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                                   _("Entry for '%s' has no URL"),
+                                   svn_dirent_local_style(local_abspath,
+                                                          scratch_pool));
+        }
     }
 
   return SVN_NO_ERROR;
