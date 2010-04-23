@@ -894,7 +894,7 @@ convert_to_url(const char **url,
       SVN_ERR(svn_wc__node_get_copyfrom_info(url, &copyfrom_rev,
                                              wc_ctx, abspath_or_url,
                                              result_pool, scratch_pool));
-      if (! url)
+      if (! *url)
         return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                  _("Path '%s' has no URL"),
                                  svn_dirent_local_style(abspath_or_url,
