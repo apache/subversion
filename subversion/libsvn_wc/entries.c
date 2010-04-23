@@ -808,6 +808,18 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                 }
             }
 
+          /* If we don't have "real" data from the entry (obstruction),
+             then we cannot begin a scan for data. The original node may
+             have important data. Set up stuff to kill that idea off,
+             and finish up this entry.  */
+          if (status == svn_wc__db_status_obstructed_add)
+            {
+              entry->cmt_rev = SVN_INVALID_REVNUM;
+              work_status = svn_wc__db_status_normal;
+              scanned_original_relpath = NULL;
+            }
+          else
+            {
           SVN_ERR(svn_wc__db_scan_addition(&work_status,
                                            &op_root_abspath,
                                            &repos_relpath,
@@ -819,6 +831,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                            db,
                                            entry_abspath,
                                            result_pool, iterpool));
+            }
 
           if (!SVN_IS_VALID_REVNUM(entry->cmt_rev)
               && scanned_original_relpath == NULL)
@@ -1053,6 +1066,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
       SVN_ERR_ASSERT(repos_relpath != NULL
                      || entry->schedule == svn_wc_schedule_delete
                      || status == svn_wc__db_status_obstructed
+                     || status == svn_wc__db_status_obstructed_add
                      || status == svn_wc__db_status_obstructed_delete
                      || status == svn_wc__db_status_not_present
                      || status == svn_wc__db_status_absent
