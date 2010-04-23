@@ -503,7 +503,9 @@ run_revert(svn_wc__db_t *db,
 }
 
 
-/* For issue #2101, we need to deliver this error. When the wc-ng pristine
+/* Return an APR_ENOENT error if LOCAL_ABSPATH has no text base.
+
+   For issue #2101, we need to deliver this error. When the wc-ng pristine
    handling comes into play, the issue should be fixed, and this code can
    go away.  */
 static svn_error_t *
