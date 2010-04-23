@@ -316,7 +316,6 @@ switch_file_external(const char *path,
   const char *anchor_abspath;
   const char *local_abspath;
   const char *target;
-  const svn_wc_entry_t *entry;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -326,6 +325,7 @@ switch_file_external(const char *path,
   svn_boolean_t remove_from_revision_control = FALSE;
   svn_boolean_t locked_here;
   svn_error_t *err = NULL;
+  svn_node_kind_t kind;
 
   /* See if the user wants last-commit timestamps instead of current ones. */
   SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
@@ -367,9 +367,8 @@ switch_file_external(const char *path,
                                          subpool, subpool));
     }
 
-  err = svn_wc__maybe_get_entry(&entry, ctx->wc_ctx, local_abspath,
-                                svn_node_unknown, FALSE, FALSE, subpool,
-                                subpool);
+  err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
+                              subpool);
   if (err)
     goto cleanup;
 
@@ -382,9 +381,15 @@ switch_file_external(const char *path,
      external before working with it.  If there is no entry in the
      working copy, then create an empty file and add it to the working
      copy. */
-  if (entry)
+  if (kind != svn_node_none && kind != svn_node_unknown)
     {
-      if (! entry->file_external_path)
+      svn_boolean_t file_external;
+      err = svn_wc__node_is_file_external(&file_external, ctx->wc_ctx,
+                                          local_abspath, subpool);
+      if (err)
+        goto cleanup;
+
+      if (! file_external)
         {
           if (!locked_here)
             SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath,
