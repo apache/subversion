@@ -4870,10 +4870,6 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * Queue committed items to be processed later by
  * svn_wc_process_committed_queue2().
  *
- * All pointer data passed to this function (@a local_abspath,
- * @a wcprop_changes * and @a checksum) should remain valid until the
- * queue has been processed by svn_wc_process_committed_queue2().
- *
  * Record in @a queue that @a local_abspath will need to be bumped
  * after a commit succeeds.
  *
@@ -4897,15 +4893,33 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  *   ### see svn_wc__process_committed_internal().
  *
  * If @a recurse is TRUE and @a local_abspath is a directory, then bump every
- * versioned object at or under @a path.  This is usually done for
+ * versioned object at or under @a local_abspath.  This is usually done for
  * copied trees.
  *
- * Temporary allocations will be performed in @a scratch_pool, and persistent
- * allocations will use the same pool as @a queue used when it was created.
+ * ### In the present implementation, if a recursive directory item is in
+ *     the queue, then any children (at any depth) of that directory that
+ *     are also in the queue as separate items will get:
+ *       'wcprop_changes' = NULL;
+ *       'remove_lock' = FALSE;
+ *       'remove_changelist' from the recursive parent item;
+ *       'checksum' from the child item in the queue;
+ *     and any children (at any depth) of that directory that are NOT in
+ *     the queue as separate items will get:
+ *       'wcprop_changes' = NULL;
+ *       'remove_lock' = FALSE;
+ *       'remove_changelist' from the recursive parent item;
+ *       'checksum' = NULL  ### means what?
  *
  * @note the @a recurse parameter should be used with extreme care since
  * it will bump ALL nodes under the directory, regardless of their
  * actual inclusion in the new revision.
+ *
+ * All pointer data passed to this function (@a local_abspath,
+ * @a wcprop_changes and @a checksum) should remain valid until the
+ * queue has been processed by svn_wc_process_committed_queue2().
+ *
+ * Temporary allocations will be performed in @a scratch_pool, and persistent
+ * allocations will use the same pool as @a queue used when it was created.
  *
  * @since New in 1.7.
  */
