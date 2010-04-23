@@ -301,7 +301,9 @@ svn_subst_translate_stream(svn_stream_t *src_stream,
  * if @a repair is @c TRUE, convert any line ending to @a eol_str.
  * Recognized line endings are: "\n", "\r", and "\r\n".
  *
- * The stream returned is allocated in @a pool.
+ * The stream returned is allocated in @a result_pool.
+ * @a eol_str and @a keywords are expected to be allocated in a pool
+ * with sufficient lifetime for use by the stream.
  *
  * If the inner stream implements resetting via svn_stream_reset(),
  * or marking and seeking via svn_stream_mark() and svn_stream_seek(),
@@ -315,7 +317,7 @@ svn_subst_stream_translated(svn_stream_t *stream,
                             svn_boolean_t repair,
                             apr_hash_t *keywords,
                             svn_boolean_t expand,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool);
 
 
 /** Return a stream which performs eol translation and keyword
