@@ -182,6 +182,14 @@ class Sandbox:
     assert len(targets) > 0
     svntest.main.run_svn(False, 'revert', *targets)
 
+  def simple_propset(self, name, value, *targets):
+    assert len(targets) > 0
+    svntest.main.run_svn(False, 'propset', name, value, *targets)
+
+  def simple_propdel(self, name, *targets):
+    assert len(targets) > 0
+    svntest.main.run_svn(False, 'propdel', name, *targets)
+
 
 def is_url(target):
   return (target.startswith('^/')
