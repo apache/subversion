@@ -532,292 +532,291 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
+  svn_wc__db_kind_t kind;
+  svn_wc__db_status_t status;
+  svn_wc__db_lock_t *lock;
+  const char *repos_relpath;
+  const svn_checksum_t *checksum;
+  svn_filesize_t translated_size;
+  svn_wc_entry_t *entry = alloc_entry(result_pool);
+  const char *entry_abspath;
+  const char *original_repos_relpath;
+  const char *original_root_url;
+  svn_boolean_t conflicted;
+  svn_boolean_t base_shadowed;
+
+  entry->name = name;
+
+  entry_abspath = svn_dirent_join(dir_abspath, entry->name, scratch_pool);
+
+  SVN_ERR(svn_wc__db_read_info(
+            &status,
+            &kind,
+            &entry->revision,
+            &repos_relpath,
+            &entry->repos,
+            &entry->uuid,
+            &entry->cmt_rev,
+            &entry->cmt_date,
+            &entry->cmt_author,
+            &entry->text_time,
+            &entry->depth,
+            &checksum,
+            &translated_size,
+            NULL,
+            &entry->changelist,
+            &original_repos_relpath,
+            &original_root_url,
+            NULL,
+            &entry->copyfrom_rev,
+            NULL,
+            NULL,
+            &base_shadowed,
+            &conflicted,
+            &lock,
+            db,
+            entry_abspath,
+            result_pool,
+            scratch_pool));
+
+  if (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
     {
-      svn_wc__db_kind_t kind;
-      svn_wc__db_status_t status;
-      svn_wc__db_lock_t *lock;
-      const char *repos_relpath;
-      const svn_checksum_t *checksum;
-      svn_filesize_t translated_size;
-      svn_wc_entry_t *entry = alloc_entry(result_pool);
-      const char *entry_abspath;
-      const char *original_repos_relpath;
-      const char *original_root_url;
-      svn_boolean_t conflicted;
-      svn_boolean_t base_shadowed;
+      /* get the tree conflict data. */
+      apr_hash_t *tree_conflicts = NULL;
+      const apr_array_header_t *conflict_victims;
+      int k;
 
-      entry->name = name;
-
-      entry_abspath = svn_dirent_join(dir_abspath, entry->name, scratch_pool);
-
-      SVN_ERR(svn_wc__db_read_info(
-                &status,
-                &kind,
-                &entry->revision,
-                &repos_relpath,
-                &entry->repos,
-                &entry->uuid,
-                &entry->cmt_rev,
-                &entry->cmt_date,
-                &entry->cmt_author,
-                &entry->text_time,
-                &entry->depth,
-                &checksum,
-                &translated_size,
-                NULL,
-                &entry->changelist,
-                &original_repos_relpath,
-                &original_root_url,
-                NULL,
-                &entry->copyfrom_rev,
-                NULL,
-                NULL,
-                &base_shadowed,
-                &conflicted,
-                &lock,
-                db,
-                entry_abspath,
-                result_pool,
-                scratch_pool));
-
-      if (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
-        {
-          /* get the tree conflict data. */
-          apr_hash_t *tree_conflicts = NULL;
-          const apr_array_header_t *conflict_victims;
-          int k;
-
-          SVN_ERR(svn_wc__db_read_conflict_victims(&conflict_victims, db,
-                                                   dir_abspath,
-                                                   scratch_pool,
-                                                   scratch_pool));
-
-          for (k = 0; k < conflict_victims->nelts; k++)
-            {
-              int j;
-              const apr_array_header_t *child_conflicts;
-              const char *child_name;
-              const char *child_abspath;
-
-              child_name = APR_ARRAY_IDX(conflict_victims, k, const char *);
-              child_abspath = svn_dirent_join(dir_abspath, child_name,
-                                              scratch_pool);
-
-              SVN_ERR(svn_wc__db_read_conflicts(&child_conflicts,
-                                                db, child_abspath,
-                                                scratch_pool, scratch_pool));
-
-              for (j = 0; j < child_conflicts->nelts; j++)
-                {
-                  const svn_wc_conflict_description2_t *conflict =
-                    APR_ARRAY_IDX(child_conflicts, j,
-                                  svn_wc_conflict_description2_t *);
-
-                  if (conflict->kind == svn_wc_conflict_kind_tree)
-                    {
-                      if (!tree_conflicts)
-                        tree_conflicts = apr_hash_make(scratch_pool);
-                      apr_hash_set(tree_conflicts, child_name,
-                                   APR_HASH_KEY_STRING, conflict);
-                    }
-                }
-            }
-
-          if (tree_conflicts)
-            {
-              SVN_ERR(svn_wc__write_tree_conflicts(&entry->tree_conflict_data,
-                                                   tree_conflicts,
-                                                   result_pool));
-            }
-        }
-
-      if (status == svn_wc__db_status_normal
-          || status == svn_wc__db_status_incomplete)
-        {
-          svn_boolean_t have_row = FALSE;
-
-          /* Ugh. During a checkout, it is possible that we are constructing
-             a subdirectory "over" a not-present directory. The read_info()
-             will return information out of the wc.db in the subdir. We
-             need to detect this situation and create a DELETED entry
-             instead.  */
-          if (kind == svn_wc__db_kind_dir)
-            {
-                svn_sqlite__db_t *sdb;
-                svn_sqlite__stmt_t *stmt;
-
-                SVN_ERR(svn_wc__db_temp_borrow_sdb(
-                          &sdb, db, dir_abspath,
-                          svn_wc__db_openmode_readonly,
-                          scratch_pool));
-
-                SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                                  STMT_SELECT_NOT_PRESENT));
-                SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, entry->name));
-                SVN_ERR(svn_sqlite__step(&have_row, stmt));
-                SVN_ERR(svn_sqlite__reset(stmt));
-            }
-
-          if (have_row)
-            {
-              /* Just like a normal "not-present" node: schedule=normal
-                 and DELETED.  */
-              entry->schedule = svn_wc_schedule_normal;
-              entry->deleted = TRUE;
-            }
-          else
-            {
-              /* Plain old BASE node.  */
-              entry->schedule = svn_wc_schedule_normal;
-
-              /* Grab inherited repository information, if necessary. */
-              if (repos_relpath == NULL)
-                {
-                  SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
-                                                     &entry->repos,
-                                                     &entry->uuid,
-                                                     db,
-                                                     entry_abspath,
-                                                     result_pool,
-                                                     scratch_pool));
-                }
-
-              entry->incomplete = (status == svn_wc__db_status_incomplete);
-            }
-        }
-      else if (status == svn_wc__db_status_deleted
-               || status == svn_wc__db_status_obstructed_delete)
-        {
-          /* ### we don't have to worry about moves, so this is a delete. */
-          entry->schedule = svn_wc_schedule_delete;
-
-          /* ### keep_local ... ugh. hacky.  */
-          /* We only read keep_local in the directory itself, because we
-             can't rely on the actual record being available in the parent
-             stub when the directory is recorded as deleted in the directory
-             itself. (This last value is the status that brought us in this
-             if block).
-
-             This is safe because we will only write this flag in the
-             directory itself (see mark_deleted() in adm_ops.c), and also
-             because we will never use keep_local in the final version of
-             WC-NG. With a central db and central pristine store we can
-             remove working copy directories directly. So any left over
-             directories after the delete operation are always kept locally.
-             */
-          if (*entry->name == '\0')
-            SVN_ERR(svn_wc__db_temp_determine_keep_local(&entry->keep_local,
-                                                         db, entry_abspath,
-                                                         scratch_pool));
-        }
-      else if (status == svn_wc__db_status_added
-               || status == svn_wc__db_status_obstructed_add)
-        {
-          svn_wc__db_status_t work_status;
-          const char *op_root_abspath;
-          const char *scanned_original_relpath;
-          svn_revnum_t original_revision;
-
-          /* For child nodes, pick up the parent's revision.  */
-          if (*entry->name != '\0')
-            {
-              assert(parent_entry != NULL);
-              assert(entry->revision == SVN_INVALID_REVNUM);
-
-              entry->revision = parent_entry->revision;
-            }
-
-          if (base_shadowed)
-            {
-              svn_wc__db_status_t base_status;
-
-              /* ENTRY->REVISION is overloaded. When a node is schedule-add
-                 or -replace, then REVISION refers to the BASE node's revision
-                 that is being overwritten. We need to fetch it now.  */
-              SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL,
-                                               &entry->revision,
-                                               NULL, NULL, NULL,
-                                               NULL, NULL, NULL,
-                                               NULL, NULL, NULL,
-                                               NULL, NULL, NULL,
-                                               db, entry_abspath,
+      SVN_ERR(svn_wc__db_read_conflict_victims(&conflict_victims, db,
+                                               dir_abspath,
                                                scratch_pool,
                                                scratch_pool));
 
-              if (base_status == svn_wc__db_status_not_present)
-                {
-                  /* The underlying node is DELETED in this revision.  */
-                  entry->deleted = TRUE;
+      for (k = 0; k < conflict_victims->nelts; k++)
+        {
+          int j;
+          const apr_array_header_t *child_conflicts;
+          const char *child_name;
+          const char *child_abspath;
 
-                  /* This is an add since there isn't a node to replace.  */
-                  entry->schedule = svn_wc_schedule_add;
+          child_name = APR_ARRAY_IDX(conflict_victims, k, const char *);
+          child_abspath = svn_dirent_join(dir_abspath, child_name,
+                                          scratch_pool);
+
+          SVN_ERR(svn_wc__db_read_conflicts(&child_conflicts,
+                                            db, child_abspath,
+                                            scratch_pool, scratch_pool));
+
+          for (j = 0; j < child_conflicts->nelts; j++)
+            {
+              const svn_wc_conflict_description2_t *conflict =
+                APR_ARRAY_IDX(child_conflicts, j,
+                              svn_wc_conflict_description2_t *);
+
+              if (conflict->kind == svn_wc_conflict_kind_tree)
+                {
+                  if (!tree_conflicts)
+                    tree_conflicts = apr_hash_make(scratch_pool);
+                  apr_hash_set(tree_conflicts, child_name,
+                               APR_HASH_KEY_STRING, conflict);
                 }
-              else
-                entry->schedule = svn_wc_schedule_replace;
+            }
+        }
+
+      if (tree_conflicts)
+        {
+          SVN_ERR(svn_wc__write_tree_conflicts(&entry->tree_conflict_data,
+                                               tree_conflicts,
+                                               result_pool));
+        }
+    }
+
+  if (status == svn_wc__db_status_normal
+      || status == svn_wc__db_status_incomplete)
+    {
+      svn_boolean_t have_row = FALSE;
+
+      /* Ugh. During a checkout, it is possible that we are constructing
+         a subdirectory "over" a not-present directory. The read_info()
+         will return information out of the wc.db in the subdir. We
+         need to detect this situation and create a DELETED entry
+         instead.  */
+      if (kind == svn_wc__db_kind_dir)
+        {
+          svn_sqlite__db_t *sdb;
+          svn_sqlite__stmt_t *stmt;
+
+          SVN_ERR(svn_wc__db_temp_borrow_sdb(
+                    &sdb, db, dir_abspath,
+                    svn_wc__db_openmode_readonly,
+                    scratch_pool));
+
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                            STMT_SELECT_NOT_PRESENT));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, entry->name));
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+          SVN_ERR(svn_sqlite__reset(stmt));
+        }
+
+      if (have_row)
+        {
+          /* Just like a normal "not-present" node: schedule=normal
+             and DELETED.  */
+          entry->schedule = svn_wc_schedule_normal;
+          entry->deleted = TRUE;
+        }
+      else
+        {
+          /* Plain old BASE node.  */
+          entry->schedule = svn_wc_schedule_normal;
+
+          /* Grab inherited repository information, if necessary. */
+          if (repos_relpath == NULL)
+            {
+              SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
+                                                 &entry->repos,
+                                                 &entry->uuid,
+                                                 db,
+                                                 entry_abspath,
+                                                 result_pool,
+                                                 scratch_pool));
+            }
+
+          entry->incomplete = (status == svn_wc__db_status_incomplete);
+        }
+    }
+  else if (status == svn_wc__db_status_deleted
+           || status == svn_wc__db_status_obstructed_delete)
+    {
+      /* ### we don't have to worry about moves, so this is a delete. */
+      entry->schedule = svn_wc_schedule_delete;
+
+      /* ### keep_local ... ugh. hacky.  */
+      /* We only read keep_local in the directory itself, because we
+         can't rely on the actual record being available in the parent
+         stub when the directory is recorded as deleted in the directory
+         itself. (This last value is the status that brought us in this
+         if block).
+
+         This is safe because we will only write this flag in the
+         directory itself (see mark_deleted() in adm_ops.c), and also
+         because we will never use keep_local in the final version of
+         WC-NG. With a central db and central pristine store we can
+         remove working copy directories directly. So any left over
+         directories after the delete operation are always kept locally.
+      */
+      if (*entry->name == '\0')
+        SVN_ERR(svn_wc__db_temp_determine_keep_local(&entry->keep_local,
+                                                     db, entry_abspath,
+                                                     scratch_pool));
+    }
+  else if (status == svn_wc__db_status_added
+           || status == svn_wc__db_status_obstructed_add)
+    {
+      svn_wc__db_status_t work_status;
+      const char *op_root_abspath;
+      const char *scanned_original_relpath;
+      svn_revnum_t original_revision;
+
+      /* For child nodes, pick up the parent's revision.  */
+      if (*entry->name != '\0')
+        {
+          assert(parent_entry != NULL);
+          assert(entry->revision == SVN_INVALID_REVNUM);
+
+          entry->revision = parent_entry->revision;
+        }
+
+      if (base_shadowed)
+        {
+          svn_wc__db_status_t base_status;
+
+          /* ENTRY->REVISION is overloaded. When a node is schedule-add
+             or -replace, then REVISION refers to the BASE node's revision
+             that is being overwritten. We need to fetch it now.  */
+          SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL,
+                                           &entry->revision,
+                                           NULL, NULL, NULL,
+                                           NULL, NULL, NULL,
+                                           NULL, NULL, NULL,
+                                           NULL, NULL, NULL,
+                                           db, entry_abspath,
+                                           scratch_pool,
+                                           scratch_pool));
+
+          if (base_status == svn_wc__db_status_not_present)
+            {
+              /* The underlying node is DELETED in this revision.  */
+              entry->deleted = TRUE;
+
+              /* This is an add since there isn't a node to replace.  */
+              entry->schedule = svn_wc_schedule_add;
+            }
+          else
+            entry->schedule = svn_wc_schedule_replace;
+        }
+      else
+        {
+          /* If we are reading child directories, then we need to
+             correctly populate the DELETED flag. WC_DB normally
+             wants to provide all of a directory's metadata from
+             its own area. But this information is stored only in
+             the parent directory, so we need to call a custom API
+             to fetch this value.
+
+             ### we should start generating BASE_NODE rows for THIS_DIR
+             ### in the subdir. future step because it is harder.  */
+          if (kind == svn_wc__db_kind_dir && *entry->name != '\0')
+            {
+              SVN_ERR(svn_wc__db_temp_is_dir_deleted(&entry->deleted,
+                                                     &entry->revision,
+                                                     db, entry_abspath,
+                                                     scratch_pool));
+            }
+          if (entry->deleted)
+            {
+              /* There was a DELETED marker in the parent, meaning
+                 that we truly are shadowing a base node. It isn't
+                 called a 'replace' though (the BASE is pretending
+                 not to exist).  */
+              entry->schedule = svn_wc_schedule_add;
             }
           else
             {
-              /* If we are reading child directories, then we need to
-                 correctly populate the DELETED flag. WC_DB normally
-                 wants to provide all of a directory's metadata from
-                 its own area. But this information is stored only in
-                 the parent directory, so we need to call a custom API
-                 to fetch this value.
+              /* There was NOT a 'not-present' BASE_NODE in the parent
+                 directory. And there is no BASE_NODE in this directory.
+                 Therefore, we are looking at some kind of add/copy
+                 rather than a replace.  */
 
-                 ### we should start generating BASE_NODE rows for THIS_DIR
-                 ### in the subdir. future step because it is harder.  */
-              if (kind == svn_wc__db_kind_dir && *entry->name != '\0')
-                {
-                  SVN_ERR(svn_wc__db_temp_is_dir_deleted(&entry->deleted,
-                                                         &entry->revision,
-                                                         db, entry_abspath,
-                                                         scratch_pool));
-                }
-              if (entry->deleted)
-                {
-                  /* There was a DELETED marker in the parent, meaning
-                     that we truly are shadowing a base node. It isn't
-                     called a 'replace' though (the BASE is pretending
-                     not to exist).  */
-                  entry->schedule = svn_wc_schedule_add;
-                }
+              /* ### if this looks like a plain old add, then rev=0.  */
+              if (!SVN_IS_VALID_REVNUM(entry->copyfrom_rev)
+                  && !SVN_IS_VALID_REVNUM(entry->cmt_rev))
+                entry->revision = 0;
+
+              if (status == svn_wc__db_status_obstructed_add)
+                entry->revision = SVN_INVALID_REVNUM;
+
+              /* ### when we're reading a directory that is not present,
+                 ### then it must be "normal" rather than "add".  */
+              if (*entry->name == '\0'
+                  && status == svn_wc__db_status_obstructed_add)
+                entry->schedule = svn_wc_schedule_normal;
               else
-                {
-                  /* There was NOT a 'not-present' BASE_NODE in the parent
-                     directory. And there is no BASE_NODE in this directory.
-                     Therefore, we are looking at some kind of add/copy
-                     rather than a replace.  */
-
-                  /* ### if this looks like a plain old add, then rev=0.  */
-                  if (!SVN_IS_VALID_REVNUM(entry->copyfrom_rev)
-                      && !SVN_IS_VALID_REVNUM(entry->cmt_rev))
-                    entry->revision = 0;
-
-                  if (status == svn_wc__db_status_obstructed_add)
-                    entry->revision = SVN_INVALID_REVNUM;
-
-                  /* ### when we're reading a directory that is not present,
-                     ### then it must be "normal" rather than "add".  */
-                  if (*entry->name == '\0'
-                      && status == svn_wc__db_status_obstructed_add)
-                    entry->schedule = svn_wc_schedule_normal;
-                  else
-                    entry->schedule = svn_wc_schedule_add;
-                }
+                entry->schedule = svn_wc_schedule_add;
             }
+        }
 
-          /* If we don't have "real" data from the entry (obstruction),
-             then we cannot begin a scan for data. The original node may
-             have important data. Set up stuff to kill that idea off,
-             and finish up this entry.  */
-          if (status == svn_wc__db_status_obstructed_add)
-            {
-              entry->cmt_rev = SVN_INVALID_REVNUM;
-              work_status = svn_wc__db_status_normal;
-              scanned_original_relpath = NULL;
-            }
-          else
-            {
+      /* If we don't have "real" data from the entry (obstruction),
+         then we cannot begin a scan for data. The original node may
+         have important data. Set up stuff to kill that idea off,
+         and finish up this entry.  */
+      if (status == svn_wc__db_status_obstructed_add)
+        {
+          entry->cmt_rev = SVN_INVALID_REVNUM;
+          work_status = svn_wc__db_status_normal;
+          scanned_original_relpath = NULL;
+        }
+      else
+        {
           SVN_ERR(svn_wc__db_scan_addition(&work_status,
                                            &op_root_abspath,
                                            &repos_relpath,
@@ -829,319 +828,318 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                            db,
                                            entry_abspath,
                                            result_pool, scratch_pool));
+        }
+
+      if (!SVN_IS_VALID_REVNUM(entry->cmt_rev)
+          && scanned_original_relpath == NULL)
+        {
+          /* There is NOT a last-changed revision (last-changed date and
+             author may be unknown, but we can always check the rev).
+             The absence of a revision implies this node was added WITHOUT
+             any history. Avoid the COPIED checks in the else block.  */
+          /* ### scan_addition may need to be updated to avoid returning
+             ### status_copied in this case.  */
+        }
+      else if (work_status == svn_wc__db_status_copied)
+        {
+          entry->copied = TRUE;
+
+          /* If this is a child of a copied subtree, then it should be
+             schedule_normal.  */
+          if (original_repos_relpath == NULL)
+            {
+              /* ### what if there is a BASE node under there? */
+              entry->schedule = svn_wc_schedule_normal;
             }
 
-          if (!SVN_IS_VALID_REVNUM(entry->cmt_rev)
-              && scanned_original_relpath == NULL)
+          /* Copied nodes need to mirror their copyfrom_rev, if they
+             don't have a revision of their own already. */
+          if (!SVN_IS_VALID_REVNUM(entry->revision)
+              || entry->revision == 0 /* added */)
+            entry->revision = original_revision;
+        }
+
+      /* Does this node have copyfrom_* information?  */
+      if (scanned_original_relpath != NULL)
+        {
+          svn_boolean_t is_copied_child;
+          svn_boolean_t is_mixed_rev = FALSE;
+
+          SVN_ERR_ASSERT(work_status == svn_wc__db_status_copied);
+
+          /* If this node inherits copyfrom information from an
+             ancestor node, then it must be a copied child.  */
+          is_copied_child = (original_repos_relpath == NULL);
+
+          /* If this node has copyfrom information on it, then it may
+             be an actual copy-root, or it could be participating in
+             a mixed-revision copied tree. So if we don't already know
+             this is a copied child, then we need to look for this
+             mixed-revision situation.  */
+          if (!is_copied_child)
             {
-              /* There is NOT a last-changed revision (last-changed date and
-                 author may be unknown, but we can always check the rev).
-                 The absence of a revision implies this node was added WITHOUT
-                 any history. Avoid the COPIED checks in the else block.  */
-              /* ### scan_addition may need to be updated to avoid returning
-                 ### status_copied in this case.  */
-            }
-          else if (work_status == svn_wc__db_status_copied)
-            {
-              entry->copied = TRUE;
+              const char *parent_abspath;
+              svn_error_t *err;
+              const char *parent_repos_relpath;
+              const char *parent_root_url;
 
-              /* If this is a child of a copied subtree, then it should be
-                 schedule_normal.  */
-              if (original_repos_relpath == NULL)
+              /* When we insert entries into the database, we will
+                 construct additional copyfrom records for mixed-revision
+                 copies. The old entries would simply record the different
+                 revision in the entry->revision field. That is not
+                 available within wc-ng, so additional copies are made
+                 (see the logic inside write_entry()). However, when
+                 reading these back *out* of the database, the additional
+                 copies look like new "Added" nodes rather than a simple
+                 mixed-rev working copy.
+
+                 That would be a behavior change if we did not compensate.
+                 If there is copyfrom information for this node, then the
+                 code below looks at the parent to detect if it *also* has
+                 copyfrom information, and if the copyfrom_url would align
+                 properly. If it *does*, then we omit storing copyfrom_url
+                 and copyfrom_rev (ie. inherit the copyfrom info like a
+                 normal child), and update entry->revision with the
+                 copyfrom_rev in order to (re)create the mixed-rev copied
+                 subtree that was originally presented for storage.  */
+
+              /* Get the copyfrom information from our parent.
+
+                 Note that the parent could be added/copied/moved-here.
+                 There is no way for it to be deleted/moved-away and
+                 have *this* node appear as copied.  */
+              parent_abspath = svn_dirent_dirname(entry_abspath,
+                                                  scratch_pool);
+              err = svn_wc__db_scan_addition(NULL,
+                                             &op_root_abspath,
+                                             NULL, NULL, NULL,
+                                             &parent_repos_relpath,
+                                             &parent_root_url,
+                                             NULL, NULL,
+                                             db,
+                                             parent_abspath,
+                                             scratch_pool,
+                                             scratch_pool);
+              if (err)
                 {
-                  /* ### what if there is a BASE node under there? */
-                  entry->schedule = svn_wc_schedule_normal;
+                  if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+                    return svn_error_return(err);
+                  svn_error_clear(err);
                 }
-
-              /* Copied nodes need to mirror their copyfrom_rev, if they
-                 don't have a revision of their own already. */
-              if (!SVN_IS_VALID_REVNUM(entry->revision)
-                  || entry->revision == 0 /* added */)
-                entry->revision = original_revision;
-            }
-
-          /* Does this node have copyfrom_* information?  */
-          if (scanned_original_relpath != NULL)
-            {
-              svn_boolean_t is_copied_child;
-              svn_boolean_t is_mixed_rev = FALSE;
-
-              SVN_ERR_ASSERT(work_status == svn_wc__db_status_copied);
-
-              /* If this node inherits copyfrom information from an
-                 ancestor node, then it must be a copied child.  */
-              is_copied_child = (original_repos_relpath == NULL);
-
-              /* If this node has copyfrom information on it, then it may
-                 be an actual copy-root, or it could be participating in
-                 a mixed-revision copied tree. So if we don't already know
-                 this is a copied child, then we need to look for this
-                 mixed-revision situation.  */
-              if (!is_copied_child)
+              else if (parent_root_url != NULL
+                       && strcmp(original_root_url, parent_root_url) == 0)
                 {
-                  const char *parent_abspath;
-                  svn_error_t *err;
-                  const char *parent_repos_relpath;
-                  const char *parent_root_url;
-
-                  /* When we insert entries into the database, we will
-                     construct additional copyfrom records for mixed-revision
-                     copies. The old entries would simply record the different
-                     revision in the entry->revision field. That is not
-                     available within wc-ng, so additional copies are made
-                     (see the logic inside write_entry()). However, when
-                     reading these back *out* of the database, the additional
-                     copies look like new "Added" nodes rather than a simple
-                     mixed-rev working copy.
-
-                     That would be a behavior change if we did not compensate.
-                     If there is copyfrom information for this node, then the
-                     code below looks at the parent to detect if it *also* has
-                     copyfrom information, and if the copyfrom_url would align
-                     properly. If it *does*, then we omit storing copyfrom_url
-                     and copyfrom_rev (ie. inherit the copyfrom info like a
-                     normal child), and update entry->revision with the
-                     copyfrom_rev in order to (re)create the mixed-rev copied
-                     subtree that was originally presented for storage.  */
-
-                  /* Get the copyfrom information from our parent.
-
-                     Note that the parent could be added/copied/moved-here.
-                     There is no way for it to be deleted/moved-away and
-                     have *this* node appear as copied.  */
-                  parent_abspath = svn_dirent_dirname(entry_abspath,
-                                                      scratch_pool);
-                  err = svn_wc__db_scan_addition(NULL,
-                                                 &op_root_abspath,
-                                                 NULL, NULL, NULL,
-                                                 &parent_repos_relpath,
-                                                 &parent_root_url,
-                                                 NULL, NULL,
-                                                 db,
-                                                 parent_abspath,
-                                                 scratch_pool,
-                                                 scratch_pool);
-                  if (err)
-                    {
-                      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-                        return svn_error_return(err);
-                      svn_error_clear(err);
-                    }
-                  else if (parent_root_url != NULL
-                           && strcmp(original_root_url, parent_root_url) == 0)
-                    {
-                      const char *relpath_to_entry = svn_dirent_is_child(
-                        op_root_abspath, entry_abspath, NULL);
-                      const char *entry_repos_relpath = svn_relpath_join(
-                        parent_repos_relpath, relpath_to_entry, scratch_pool);
-
-                      /* The copyfrom repos roots matched.
-
-                         Now we look to see if the copyfrom path of the parent
-                         would align with our own path. If so, then it means
-                         this copyfrom was spontaneously created and inserted
-                         for mixed-rev purposes and can be eliminated without
-                         changing the semantics of a mixed-rev copied subtree.
-
-                         See notes/api-errata/wc003.txt for some additional
-                         detail, and potential issues.  */
-                      if (strcmp(entry_repos_relpath,
-                                 original_repos_relpath) == 0)
-                        {
-                          is_copied_child = TRUE;
-                          is_mixed_rev = TRUE;
-                        }
-                    }
-                }
-
-              if (is_copied_child)
-                {
-                  /* We won't be settig the  copyfrom_url, yet need to
-                     clear out the copyfrom_rev. Thus, this node becomes a
-                     child of a copied subtree (rather than its own root).  */
-                  entry->copyfrom_rev = SVN_INVALID_REVNUM;
-
-                  /* Children in a copied subtree are schedule normal
-                     since we don't plan to actually *do* anything with
-                     them. Their operation is implied by ancestors.  */
-                  entry->schedule = svn_wc_schedule_normal;
-
-                  /* And *finally* we turn this entry into the mixed
-                     revision node that it was intended to be. This
-                     node's revision is taken from the copyfrom record
-                     that we spontaneously constructed.  */
-                  if (is_mixed_rev)
-                    entry->revision = original_revision;
-                }
-              else if (original_repos_relpath != NULL)
-                {
-                  entry->copyfrom_url =
-                    svn_path_url_add_component2(original_root_url,
-                                                original_repos_relpath,
-                                                result_pool);
-                }
-              else
-                {
-                  /* NOTE: if original_repos_relpath == NULL, then the
-                     second call to scan_addition() will not have occurred.
-                     Thus, this use of OP_ROOT_ABSPATH still contains the
-                     original value where we fetched a value for
-                     SCANNED_REPOS_RELPATH.  */
                   const char *relpath_to_entry = svn_dirent_is_child(
                     op_root_abspath, entry_abspath, NULL);
                   const char *entry_repos_relpath = svn_relpath_join(
-                    scanned_original_relpath, relpath_to_entry, scratch_pool);
+                    parent_repos_relpath, relpath_to_entry, scratch_pool);
 
-                  entry->copyfrom_url =
-                    svn_path_url_add_component2(original_root_url,
-                                                entry_repos_relpath,
-                                                result_pool);
+                  /* The copyfrom repos roots matched.
+
+                     Now we look to see if the copyfrom path of the parent
+                     would align with our own path. If so, then it means
+                     this copyfrom was spontaneously created and inserted
+                     for mixed-rev purposes and can be eliminated without
+                     changing the semantics of a mixed-rev copied subtree.
+
+                     See notes/api-errata/wc003.txt for some additional
+                     detail, and potential issues.  */
+                  if (strcmp(entry_repos_relpath,
+                             original_repos_relpath) == 0)
+                    {
+                      is_copied_child = TRUE;
+                      is_mixed_rev = TRUE;
+                    }
                 }
             }
-        }
-      else if (status == svn_wc__db_status_not_present)
-        {
-          /* ### buh. 'deleted' nodes are actually supposed to be
-             ### schedule "normal" since we aren't going to actually *do*
-             ### anything to this node at commit time.  */
-          entry->schedule = svn_wc_schedule_normal;
-          entry->deleted = TRUE;
-        }
-      else if (status == svn_wc__db_status_obstructed)
-        {
-          /* ### set some values that should (hopefully) let this directory
-             ### be usable.  */
-          entry->revision = SVN_INVALID_REVNUM;
-        }
-      else if (status == svn_wc__db_status_absent)
-        {
-          entry->absent = TRUE;
-        }
-      else if (status == svn_wc__db_status_excluded)
-        {
-          entry->schedule = svn_wc_schedule_normal;
-          entry->depth = svn_depth_exclude;
-        }
-      else
-        {
-          /* ### we should have handled all possible status values.  */
-          SVN_ERR_MALFUNCTION();
-        }
 
-      /* ### higher levels want repos information about deleted nodes, even
-         ### tho they are not "part of" a repository any more.  */
-      if (entry->schedule == svn_wc_schedule_delete)
-        {
-          SVN_ERR(get_base_info_for_deleted(entry,
-                                            &kind,
-                                            &repos_relpath,
-                                            &checksum,
-                                            db, entry_abspath,
-                                            parent_entry,
-                                            result_pool, scratch_pool));
+          if (is_copied_child)
+            {
+              /* We won't be settig the  copyfrom_url, yet need to
+                 clear out the copyfrom_rev. Thus, this node becomes a
+                 child of a copied subtree (rather than its own root).  */
+              entry->copyfrom_rev = SVN_INVALID_REVNUM;
+
+              /* Children in a copied subtree are schedule normal
+                 since we don't plan to actually *do* anything with
+                 them. Their operation is implied by ancestors.  */
+              entry->schedule = svn_wc_schedule_normal;
+
+              /* And *finally* we turn this entry into the mixed
+                 revision node that it was intended to be. This
+                 node's revision is taken from the copyfrom record
+                 that we spontaneously constructed.  */
+              if (is_mixed_rev)
+                entry->revision = original_revision;
+            }
+          else if (original_repos_relpath != NULL)
+            {
+              entry->copyfrom_url =
+                svn_path_url_add_component2(original_root_url,
+                                            original_repos_relpath,
+                                            result_pool);
+            }
+          else
+            {
+              /* NOTE: if original_repos_relpath == NULL, then the
+                 second call to scan_addition() will not have occurred.
+                 Thus, this use of OP_ROOT_ABSPATH still contains the
+                 original value where we fetched a value for
+                 SCANNED_REPOS_RELPATH.  */
+              const char *relpath_to_entry = svn_dirent_is_child(
+                op_root_abspath, entry_abspath, NULL);
+              const char *entry_repos_relpath = svn_relpath_join(
+                scanned_original_relpath, relpath_to_entry, scratch_pool);
+
+              entry->copyfrom_url =
+                svn_path_url_add_component2(original_root_url,
+                                            entry_repos_relpath,
+                                            result_pool);
+            }
         }
+    }
+  else if (status == svn_wc__db_status_not_present)
+    {
+      /* ### buh. 'deleted' nodes are actually supposed to be
+         ### schedule "normal" since we aren't going to actually *do*
+         ### anything to this node at commit time.  */
+      entry->schedule = svn_wc_schedule_normal;
+      entry->deleted = TRUE;
+    }
+  else if (status == svn_wc__db_status_obstructed)
+    {
+      /* ### set some values that should (hopefully) let this directory
+         ### be usable.  */
+      entry->revision = SVN_INVALID_REVNUM;
+    }
+  else if (status == svn_wc__db_status_absent)
+    {
+      entry->absent = TRUE;
+    }
+  else if (status == svn_wc__db_status_excluded)
+    {
+      entry->schedule = svn_wc_schedule_normal;
+      entry->depth = svn_depth_exclude;
+    }
+  else
+    {
+      /* ### we should have handled all possible status values.  */
+      SVN_ERR_MALFUNCTION();
+    }
 
-      /* ### default to the infinite depth if we don't know it. */
-      if (entry->depth == svn_depth_unknown)
-        entry->depth = svn_depth_infinity;
+  /* ### higher levels want repos information about deleted nodes, even
+     ### tho they are not "part of" a repository any more.  */
+  if (entry->schedule == svn_wc_schedule_delete)
+    {
+      SVN_ERR(get_base_info_for_deleted(entry,
+                                        &kind,
+                                        &repos_relpath,
+                                        &checksum,
+                                        db, entry_abspath,
+                                        parent_entry,
+                                        result_pool, scratch_pool));
+    }
 
-      if (kind == svn_wc__db_kind_dir)
-        entry->kind = svn_node_dir;
-      else if (kind == svn_wc__db_kind_file)
-        entry->kind = svn_node_file;
-      else if (kind == svn_wc__db_kind_symlink)
-        entry->kind = svn_node_file;  /* ### no symlink kind */
-      else
-        entry->kind = svn_node_unknown;
+  /* ### default to the infinite depth if we don't know it. */
+  if (entry->depth == svn_depth_unknown)
+    entry->depth = svn_depth_infinity;
 
-      /* We should always have a REPOS_RELPATH, except for:
-         - deleted nodes
-         - certain obstructed nodes
-         - not-present nodes
-         - absent nodes
-         - excluded nodes
+  if (kind == svn_wc__db_kind_dir)
+    entry->kind = svn_node_dir;
+  else if (kind == svn_wc__db_kind_file)
+    entry->kind = svn_node_file;
+  else if (kind == svn_wc__db_kind_symlink)
+    entry->kind = svn_node_file;  /* ### no symlink kind */
+  else
+    entry->kind = svn_node_unknown;
 
-         ### the last three should probably have an "implied" REPOS_RELPATH
-      */
-      SVN_ERR_ASSERT(repos_relpath != NULL
-                     || entry->schedule == svn_wc_schedule_delete
-                     || status == svn_wc__db_status_obstructed
-                     || status == svn_wc__db_status_obstructed_add
-                     || status == svn_wc__db_status_obstructed_delete
-                     || status == svn_wc__db_status_not_present
-                     || status == svn_wc__db_status_absent
-                     || status == svn_wc__db_status_excluded
-                     );
-      if (repos_relpath)
-        entry->url = svn_path_url_add_component2(entry->repos,
-                                                 repos_relpath,
-                                                 result_pool);
+  /* We should always have a REPOS_RELPATH, except for:
+     - deleted nodes
+     - certain obstructed nodes
+     - not-present nodes
+     - absent nodes
+     - excluded nodes
 
-      if (checksum)
-        {
-          /* SVN_EXPERIMENTAL_PRISTINE:
-             If we got a SHA-1, get the corresponding MD-5. */
-          if (checksum->kind != svn_checksum_md5)
-            SVN_ERR(svn_wc__db_pristine_get_md5(&checksum, db,
-                                                entry_abspath, checksum,
-                                                scratch_pool, scratch_pool));
+     ### the last three should probably have an "implied" REPOS_RELPATH
+  */
+  SVN_ERR_ASSERT(repos_relpath != NULL
+                 || entry->schedule == svn_wc_schedule_delete
+                 || status == svn_wc__db_status_obstructed
+                 || status == svn_wc__db_status_obstructed_add
+                 || status == svn_wc__db_status_obstructed_delete
+                 || status == svn_wc__db_status_not_present
+                 || status == svn_wc__db_status_absent
+                 || status == svn_wc__db_status_excluded
+                 );
+  if (repos_relpath)
+    entry->url = svn_path_url_add_component2(entry->repos,
+                                             repos_relpath,
+                                             result_pool);
 
-          SVN_ERR_ASSERT(checksum->kind == svn_checksum_md5);
-          entry->checksum = svn_checksum_to_cstring(checksum, result_pool);
-        }
-
-      if (conflicted)
-        {
-          const apr_array_header_t *conflicts;
-          int j;
-          SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, entry_abspath,
+  if (checksum)
+    {
+      /* SVN_EXPERIMENTAL_PRISTINE:
+         If we got a SHA-1, get the corresponding MD-5. */
+      if (checksum->kind != svn_checksum_md5)
+        SVN_ERR(svn_wc__db_pristine_get_md5(&checksum, db,
+                                            entry_abspath, checksum,
                                             scratch_pool, scratch_pool));
 
-          for (j = 0; j < conflicts->nelts; j++)
-            {
-              const svn_wc_conflict_description2_t *cd;
-              cd = APR_ARRAY_IDX(conflicts, j,
-                                 const svn_wc_conflict_description2_t *);
+      SVN_ERR_ASSERT(checksum->kind == svn_checksum_md5);
+      entry->checksum = svn_checksum_to_cstring(checksum, result_pool);
+    }
 
-              switch (cd->kind)
-                {
-                  case svn_wc_conflict_kind_text:
-                    entry->conflict_old = apr_pstrdup(result_pool,
-                                                      cd->base_file);
-                    entry->conflict_new = apr_pstrdup(result_pool,
-                                                      cd->their_file);
-                    entry->conflict_wrk = apr_pstrdup(result_pool,
-                                                      cd->my_file);
-                    break;
-                  case svn_wc_conflict_kind_property:
-                    entry->prejfile = apr_pstrdup(result_pool,
-                                                  cd->their_file);
-                    break;
-                  case svn_wc_conflict_kind_tree:
-                    break;
-                }
+  if (conflicted)
+    {
+      const apr_array_header_t *conflicts;
+      int j;
+      SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, entry_abspath,
+                                        scratch_pool, scratch_pool));
+
+      for (j = 0; j < conflicts->nelts; j++)
+        {
+          const svn_wc_conflict_description2_t *cd;
+          cd = APR_ARRAY_IDX(conflicts, j,
+                             const svn_wc_conflict_description2_t *);
+
+          switch (cd->kind)
+            {
+            case svn_wc_conflict_kind_text:
+              entry->conflict_old = apr_pstrdup(result_pool,
+                                                cd->base_file);
+              entry->conflict_new = apr_pstrdup(result_pool,
+                                                cd->their_file);
+              entry->conflict_wrk = apr_pstrdup(result_pool,
+                                                cd->my_file);
+              break;
+            case svn_wc_conflict_kind_property:
+              entry->prejfile = apr_pstrdup(result_pool,
+                                            cd->their_file);
+              break;
+            case svn_wc_conflict_kind_tree:
+              break;
             }
         }
-
-      if (lock)
-        {
-          entry->lock_token = lock->token;
-          entry->lock_owner = lock->owner;
-          entry->lock_comment = lock->comment;
-          entry->lock_creation_date = lock->date;
-        }
-
-      /* Let's check for a file external.
-         ### right now this is ugly, since we have no good way querying
-         ### for a file external OR retrieving properties.  ugh.  */
-      if (entry->kind == svn_node_file)
-        SVN_ERR(check_file_external(entry, db, entry_abspath, result_pool,
-                                    scratch_pool));
-
-      entry->working_size = translated_size;
-
-      *new_entry = entry;
     }
+
+  if (lock)
+    {
+      entry->lock_token = lock->token;
+      entry->lock_owner = lock->owner;
+      entry->lock_comment = lock->comment;
+      entry->lock_creation_date = lock->date;
+    }
+
+  /* Let's check for a file external.
+     ### right now this is ugly, since we have no good way querying
+     ### for a file external OR retrieving properties.  ugh.  */
+  if (entry->kind == svn_node_file)
+    SVN_ERR(check_file_external(entry, db, entry_abspath, result_pool,
+                                scratch_pool));
+
+  entry->working_size = translated_size;
+
+  *new_entry = entry;
 
   return SVN_NO_ERROR;
 }
