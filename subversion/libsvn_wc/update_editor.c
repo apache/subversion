@@ -2910,22 +2910,19 @@ close_directory(void *dir_baton,
   SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &wc_props,
                                &regular_props, pool));
 
-  if (db->adding_dir)
-    {
-      /* A newly added directory has no properties.  */
-      base_props = apr_hash_make(pool);
-      actual_props = apr_hash_make(pool);
-    }
-  else
-    {
-      /* Fetch the existing properties.  */
-      SVN_ERR(svn_wc__get_pristine_props(&base_props,
-                                         eb->db, db->local_abspath,
-                                         pool, pool));
-      SVN_ERR(svn_wc__get_actual_props(&actual_props,
-                                       eb->db, db->local_abspath,
-                                       pool, pool));
-    }
+  /* Fetch the existing properties.  */
+  SVN_ERR(svn_wc__get_pristine_props(&base_props,
+                                     eb->db, db->local_abspath,
+                                     pool, pool));
+  SVN_ERR(svn_wc__get_actual_props(&actual_props,
+                                   eb->db, db->local_abspath,
+                                   pool, pool));
+
+  /* Local-add nodes have no pristines. Incoming-adds have no actuals.  */
+  if (base_props == NULL)
+    base_props = apr_hash_make(pool);
+  if (actual_props == NULL)
+    actual_props = apr_hash_make(pool);
 
   /* An incomplete directory might have props which were supposed to be
      deleted but weren't.  Because the server sent us all the props we're
@@ -3452,9 +3449,9 @@ copy_regular_props(apr_hash_t *props_in,
   for (hi = apr_hash_first(pool, props_in); hi; hi = apr_hash_next(hi))
     {
       const char *propname = svn__apr_hash_index_key(hi);
-      svn_string_t *propval = svn__apr_hash_index_val(hi);
+      const svn_string_t *propval = svn__apr_hash_index_val(hi);
 
-      if (svn_property_kind(NULL, propname) == svn_prop_regular_kind)
+      if (svn_wc_is_normal_prop(propname))
         apr_hash_set(props_out, propname, APR_HASH_KEY_STRING, propval);
     }
   return props_out;
@@ -4689,8 +4686,8 @@ close_file(void *file_baton,
   const svn_wc_entry_t *entry;
   svn_boolean_t install_pristine;
   const char *install_from;
-  apr_hash_t *current_base_props;
-  apr_hash_t *current_actual_props;
+  apr_hash_t *current_base_props = NULL;
+  apr_hash_t *current_actual_props = NULL;
 
   if (fb->skip_this)
     {
@@ -4795,14 +4792,19 @@ close_file(void *file_baton,
      BASE_PROPS and WORKING_PROPS are hashes of the base and
      working props of the file; if NULL they are read from the wc.  */
 
-  if (fb->adding_file)
+  /* ### some of this feels like voodoo... */
+
+  if (fb->copied_base_props)
     {
-      /* Adding with history? (aka copy-here)  */
+      /* The BASE props are given by the source of the copy. We may also
+         have some ACTUAL props if the server directed us to copy a path
+         located in our WC which had some ACTUAL changes.  */
       current_base_props = fb->copied_base_props;
       current_actual_props = fb->copied_working_props;
     }
-  else
+  else if (entry != NULL)
     {
+      /* This node already exists. Grab its properties.  */
       SVN_ERR(svn_wc__get_pristine_props(&current_base_props,
                                          eb->db, fb->local_abspath,
                                          pool, pool));
