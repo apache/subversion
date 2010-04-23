@@ -665,6 +665,8 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
 
   SVN_ERR(svn_wc__get_pristine_props(&base_props, wc_ctx->db, local_abspath,
                                      pool, pool));
+  if (base_props == NULL)
+    base_props = apr_hash_make(pool);  /* some nodes have no pristines  */
   SVN_ERR(svn_wc__get_actual_props(&actual_props, wc_ctx->db, local_abspath,
                                    pool, pool));
 
