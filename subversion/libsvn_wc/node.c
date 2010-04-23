@@ -349,6 +349,7 @@ svn_wc__node_get_url(const char **url,
 svn_error_t *
 svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
                                svn_revnum_t *copyfrom_rev,
+                               svn_boolean_t *is_copy_target,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                apr_pool_t *result_pool,
@@ -360,8 +361,12 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
   svn_revnum_t original_revision;
   svn_wc__db_status_t status;
 
-  *copyfrom_url = NULL;
-  *copyfrom_rev = SVN_INVALID_REVNUM;
+  if (copyfrom_url)
+    *copyfrom_url = NULL;
+  if (copyfrom_rev)
+    *copyfrom_rev = SVN_INVALID_REVNUM;
+  if (is_copy_target)
+    *is_copy_target = FALSE;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -373,13 +378,18 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
     {
       /* If this was the root of the copy then the URL is immediately
          available... */
-      *copyfrom_url = svn_path_url_add_component2(original_root_url,
-                                                  original_repos_relpath,
-                                                  result_pool);
-      *copyfrom_rev = original_revision;
+      if (is_copy_target)
+        *is_copy_target = TRUE;
+      if (copyfrom_url)
+        *copyfrom_url = svn_path_url_add_component2(original_root_url,
+                                                    original_repos_relpath,
+                                                    result_pool);
+      if (copyfrom_rev)
+        *copyfrom_rev = original_revision;
     }
-  else if (status == svn_wc__db_status_added
-           || status == svn_wc__db_status_obstructed_add)
+  else if ((status == svn_wc__db_status_added
+            || status == svn_wc__db_status_obstructed_add)
+           && (copyfrom_rev || copyfrom_url))
     {
       /* ...But if this is merely the descendant of an explicitly
          copied/moved directory, we need to do a bit more work to
@@ -404,10 +414,12 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
                                             scratch_pool);
           if (src_relpath)
             {
-              *copyfrom_url = svn_path_url_add_component2(src_parent_url,
-                                                          src_relpath,
-                                                          result_pool);
-              *copyfrom_rev = original_revision;
+              if (copyfrom_url)
+                *copyfrom_url = svn_path_url_add_component2(src_parent_url,
+                                                            src_relpath,
+                                                            result_pool);
+              if (copyfrom_rev)
+                *copyfrom_rev = original_revision;
             }
         }
     }

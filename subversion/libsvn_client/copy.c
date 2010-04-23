@@ -2048,7 +2048,7 @@ try_copy(svn_commit_info_t **commit_info_p,
                                                   iterpool));
                   SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url,
                                                          &copyfrom_rev,
-                                                         ctx->wc_ctx,
+                                                         NULL, ctx->wc_ctx,
                                                          src_abspath,
                                                          pool, iterpool));
                   if (copyfrom_url)
