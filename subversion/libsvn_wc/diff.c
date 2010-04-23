@@ -549,6 +549,7 @@ file_diff(struct dir_baton *db,
   svn_boolean_t replaced;
   svn_wc__db_status_t status;
   svn_revnum_t revision;
+  svn_revnum_t revert_base_revnum;
   svn_boolean_t base_shadowed;
   svn_wc__db_status_t base_status;
   const char *local_abspath;
@@ -571,7 +572,7 @@ file_diff(struct dir_baton *db,
                                &base_shadowed, NULL, NULL,
                                eb->db, local_abspath, pool, pool));
   if (base_shadowed)
-    SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL,
+    SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revert_base_revnum,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
                                      eb->db, local_abspath, pool, pool));
@@ -587,6 +588,17 @@ file_diff(struct dir_baton *db,
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, eb->db, local_abspath,
                                      pool, pool));
+
+  /* A wc-wc diff of replaced files actually shows a diff against the
+   * revert-base, showing all previous lines as removed and adding all new
+   * lines. This does not happen for copied/moved-here files, not even with
+   * show_copies_as_adds == TRUE (in which case copy/move is really shown as
+   * an add, diffing against the empty file).
+   * So show the revert-base revision for plain replaces. */
+  if (replaced
+      && ! (status == svn_wc__db_status_copied
+            || status == svn_wc__db_status_moved_here))
+    revision = revert_base_revnum;
 
   /* Prep these two paths early. */
   SVN_ERR(svn_wc__text_base_path(&textbase, eb->db, local_abspath, FALSE,
