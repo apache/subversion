@@ -532,10 +532,6 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
-  /* Rename some parameters.  */
-  const char *local_abspath = dir_abspath;
-  apr_pool_t *iterpool = scratch_pool;
-
     {
       svn_wc__db_kind_t kind;
       svn_wc__db_status_t status;
@@ -552,7 +548,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
       entry->name = name;
 
-      entry_abspath = svn_dirent_join(local_abspath, entry->name, iterpool);
+      entry_abspath = svn_dirent_join(dir_abspath, entry->name, scratch_pool);
 
       SVN_ERR(svn_wc__db_read_info(
                 &status,
@@ -582,7 +578,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                 db,
                 entry_abspath,
                 result_pool,
-                iterpool));
+                scratch_pool));
 
       if (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
         {
@@ -592,8 +588,9 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           int k;
 
           SVN_ERR(svn_wc__db_read_conflict_victims(&conflict_victims, db,
-                                                   local_abspath, iterpool,
-                                                   iterpool));
+                                                   dir_abspath,
+                                                   scratch_pool,
+                                                   scratch_pool));
 
           for (k = 0; k < conflict_victims->nelts; k++)
             {
@@ -603,12 +600,12 @@ read_one_entry(const svn_wc_entry_t **new_entry,
               const char *child_abspath;
 
               child_name = APR_ARRAY_IDX(conflict_victims, k, const char *);
-              child_abspath = svn_dirent_join(local_abspath, child_name,
-                                                             iterpool);
+              child_abspath = svn_dirent_join(dir_abspath, child_name,
+                                              scratch_pool);
 
               SVN_ERR(svn_wc__db_read_conflicts(&child_conflicts,
-                                                db, child_abspath, iterpool,
-                                                iterpool));
+                                                db, child_abspath,
+                                                scratch_pool, scratch_pool));
 
               for (j = 0; j < child_conflicts->nelts; j++)
                 {
@@ -619,7 +616,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                   if (conflict->kind == svn_wc_conflict_kind_tree)
                     {
                       if (!tree_conflicts)
-                        tree_conflicts = apr_hash_make(iterpool);
+                        tree_conflicts = apr_hash_make(scratch_pool);
                       apr_hash_set(tree_conflicts, child_name,
                                    APR_HASH_KEY_STRING, conflict);
                     }
@@ -650,9 +647,9 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                 svn_sqlite__stmt_t *stmt;
 
                 SVN_ERR(svn_wc__db_temp_borrow_sdb(
-                          &sdb, db, local_abspath,
+                          &sdb, db, dir_abspath,
                           svn_wc__db_openmode_readonly,
-                          iterpool));
+                          scratch_pool));
 
                 SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                                   STMT_SELECT_NOT_PRESENT));
@@ -682,7 +679,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                                      db,
                                                      entry_abspath,
                                                      result_pool,
-                                                     iterpool));
+                                                     scratch_pool));
                 }
 
               entry->incomplete = (status == svn_wc__db_status_incomplete);
@@ -744,7 +741,8 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                                NULL, NULL, NULL,
                                                NULL, NULL, NULL,
                                                db, entry_abspath,
-                                               iterpool, iterpool));
+                                               scratch_pool,
+                                               scratch_pool));
 
               if (base_status == svn_wc__db_status_not_present)
                 {
@@ -773,7 +771,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                   SVN_ERR(svn_wc__db_temp_is_dir_deleted(&entry->deleted,
                                                          &entry->revision,
                                                          db, entry_abspath,
-                                                         iterpool));
+                                                         scratch_pool));
                 }
               if (entry->deleted)
                 {
@@ -830,7 +828,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                            &original_revision,
                                            db,
                                            entry_abspath,
-                                           result_pool, iterpool));
+                                           result_pool, scratch_pool));
             }
 
           if (!SVN_IS_VALID_REVNUM(entry->cmt_rev)
@@ -911,7 +909,8 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                      Note that the parent could be added/copied/moved-here.
                      There is no way for it to be deleted/moved-away and
                      have *this* node appear as copied.  */
-                  parent_abspath = svn_dirent_dirname(entry_abspath, iterpool);
+                  parent_abspath = svn_dirent_dirname(entry_abspath,
+                                                      scratch_pool);
                   err = svn_wc__db_scan_addition(NULL,
                                                  &op_root_abspath,
                                                  NULL, NULL, NULL,
@@ -920,7 +919,8 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                                  NULL, NULL,
                                                  db,
                                                  parent_abspath,
-                                                 iterpool, iterpool);
+                                                 scratch_pool,
+                                                 scratch_pool);
                   if (err)
                     {
                       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -933,7 +933,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                       const char *relpath_to_entry = svn_dirent_is_child(
                         op_root_abspath, entry_abspath, NULL);
                       const char *entry_repos_relpath = svn_relpath_join(
-                        parent_repos_relpath, relpath_to_entry, iterpool);
+                        parent_repos_relpath, relpath_to_entry, scratch_pool);
 
                       /* The copyfrom repos roots matched.
 
@@ -990,7 +990,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                   const char *relpath_to_entry = svn_dirent_is_child(
                     op_root_abspath, entry_abspath, NULL);
                   const char *entry_repos_relpath = svn_relpath_join(
-                    scanned_original_relpath, relpath_to_entry, iterpool);
+                    scanned_original_relpath, relpath_to_entry, scratch_pool);
 
                   entry->copyfrom_url =
                     svn_path_url_add_component2(original_root_url,
@@ -1038,7 +1038,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                             &checksum,
                                             db, entry_abspath,
                                             parent_entry,
-                                            result_pool, iterpool));
+                                            result_pool, scratch_pool));
         }
 
       /* ### default to the infinite depth if we don't know it. */
@@ -1095,7 +1095,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           const apr_array_header_t *conflicts;
           int j;
           SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, entry_abspath,
-                                            iterpool, iterpool));
+                                            scratch_pool, scratch_pool));
 
           for (j = 0; j < conflicts->nelts; j++)
             {
@@ -1136,7 +1136,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
          ### for a file external OR retrieving properties.  ugh.  */
       if (entry->kind == svn_node_file)
         SVN_ERR(check_file_external(entry, db, entry_abspath, result_pool,
-                                    iterpool));
+                                    scratch_pool));
 
       entry->working_size = translated_size;
 
