@@ -160,13 +160,23 @@ There can be one or more property conflicts on the node, represented
 by one or more "prop" KIND conflicts. Each "prop" conflict has the
 following form:
 
-  ("prop" PROPERTY_NAME ([ORIGINAL_VALUE]) ([MINE_VALUE]) ([INCOMING_VALUE]))
+  ("prop" PROPERTY_NAME
+          ([ORIGINAL_VALUE])
+          ([MINE_VALUE])
+          ([INCOMING_VALUE])
+          ([INCOMING_BASE_VALUE]))
 
 PROPERTY_NAME is the name of the property, such as "svn:eol-style".
 
-Each property value ({ORIGINAL,MINE,INCOMING}_VALUE) is represented as an
-empty list indicating the property did not exist in that version, or a
-1-item list containing the particular value.
+Each property value ({ORIGINAL,MINE,INCOMING,INCOMING_BASE}_VALUE) is
+represented as an empty list indicating the property did not exist in
+that version, or a 1-item list containing the particular value.
+
+ORIGINAL_VALUE is the property that was checked out
+MINE_VALUE is the current/ACTUAL value in the working copy
+INCOMING_VALUE is the new/target value from an update/merge/etc
+INCOMING_BASE_VALUE is used during merges, as an incoming property
+  change is expressed as "change from INCOMING_BASE to INCOMING"
 
 ### stsp: What's the size limit of a prop value?
 ### HKW: In theory, there isn't one.  In practice, we used to caution people
