@@ -4797,12 +4797,9 @@ close_file(void *file_baton,
 
   if (fb->adding_file)
     {
-      current_base_props = (fb->copied_base_props
-                            ? fb->copied_base_props
-                            : apr_hash_make(pool));
-      current_actual_props = (fb->copied_working_props
-                              ? fb->copied_working_props
-                              : apr_hash_make(pool));
+      /* Adding with history? (aka copy-here)  */
+      current_base_props = fb->copied_base_props;
+      current_actual_props = fb->copied_working_props;
     }
   else
     {
@@ -4813,6 +4810,15 @@ close_file(void *file_baton,
                                        eb->db, fb->local_abspath,
                                        pool, pool));
     }
+
+  /* Note: even if the node existed before, it may not have
+     pristine props (e.g a local-add)  */
+  if (current_base_props == NULL)
+    current_base_props = apr_hash_make(pool);
+
+  /* And new nodes need an empty set of ACTUAL props.  */
+  if (current_actual_props == NULL)
+    current_actual_props = apr_hash_make(pool);
 
   prop_state = svn_wc_notify_state_unknown;
 
