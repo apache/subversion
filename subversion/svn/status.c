@@ -142,12 +142,20 @@ print_status(const char *path,
 
       if (! status->entry)
         working_rev = "";
-      else if (! SVN_IS_VALID_REVNUM(status->entry->revision))
-        working_rev = " ? ";
+      else if (! SVN_IS_VALID_REVNUM(status->revision))
+        {
+          if (status->copied)
+            working_rev = "-";
+          else if (text_status == svn_wc_status_added
+              || text_status == svn_wc_status_replaced)
+            working_rev = "0";
+          else
+            working_rev = " ? ";
+        }
       else if (status->copied)
         working_rev = "-";
       else
-        working_rev = apr_psprintf(pool, "%ld", status->entry->revision);
+        working_rev = apr_psprintf(pool, "%ld", status->revision);
 
       if (status->repos_text_status != svn_wc_status_none
           || status->repos_prop_status != svn_wc_status_none)
@@ -183,15 +191,15 @@ print_status(const char *path,
           const char *commit_rev;
           const char *commit_author;
 
-          if (status->entry && SVN_IS_VALID_REVNUM(status->entry->cmt_rev))
-            commit_rev = apr_psprintf(pool, "%ld", status->entry->cmt_rev);
+          if (SVN_IS_VALID_REVNUM(status->changed_rev))
+            commit_rev = apr_psprintf(pool, "%ld", status->changed_rev);
           else if (status->entry)
             commit_rev = " ? ";
           else
             commit_rev = "";
 
-          if (status->entry && status->entry->cmt_author)
-            commit_author = status->entry->cmt_author;
+          if (status->changed_author)
+            commit_author = status->changed_author;
           else if (status->entry)
             commit_author = " ? ";
           else
@@ -277,17 +285,17 @@ svn_cl__print_status_xml(const char *path,
     apr_hash_set(att_hash, "file-external", APR_HASH_KEY_STRING, "true");
   if (status->entry && ! status->entry->copied)
     apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
-                 apr_psprintf(pool, "%ld", status->entry->revision));
+                 apr_psprintf(pool, "%ld", status->revision));
   if (status->tree_conflict)
     apr_hash_set(att_hash, "tree-conflicted", APR_HASH_KEY_STRING,
                  "true");
   svn_xml_make_open_tag_hash(&sb, pool, svn_xml_normal, "wc-status",
                              att_hash);
 
-  if (status->entry && SVN_IS_VALID_REVNUM(status->entry->cmt_rev))
+  if (SVN_IS_VALID_REVNUM(status->changed_rev))
     {
-      svn_cl__print_xml_commit(&sb, status->entry->cmt_rev,
-                               status->entry->cmt_author,
+      svn_cl__print_xml_commit(&sb, status->changed_rev,
+                               status->changed_author,
                                svn_time_to_cstring(status->entry->cmt_date,
                                                    pool),
                                pool);

@@ -487,6 +487,41 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                           const char *local_abspath,
                           apr_pool_t *scratch_pool);
 
+
+/* Get the working revision of @a local_abspath using @a wc_ctx. If @a
+ * local_abspath is not in the working copy, return @c
+ * SVN_ERR_WC_PATH_NOT_FOUND.  
+ *
+ * This function is meant as a temporary solution for using the old-style
+ * semantics of entries. It will handle any uncommitted changes (delete,
+ * replace and/or copy-here/move-here).
+ *
+ * For a delete the @a revision is the BASE node of the operation root, e.g
+ * the path that was deleted. But if the delete is  below an add, the
+ * revision is set to SVN_INVALID_REVNUM. For an add, copy or move we return
+ * SVN_INVALID_REVNUM. In case of a replacement, we return the BASE
+ * revision. 
+ *
+ * The @changed_rev is set to the latest committed change to @a
+ * local_abspath before or equal to @a revision, unless the node is
+ * copied-here or moved-here. Then it is the revision of the latest committed
+ * change before or equal to the copyfrom_rev.  NOTE, that we use
+ * SVN_INVALID_REVNUM for a scheduled copy or move. 
+ *
+ * The @a changed_date and @a changed_author are the ones associated with @a
+ * changed_rev.  
+ */
+svn_error_t *
+svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
+                                  svn_revnum_t *changed_rev, 
+                                  apr_time_t *changed_date, 
+                                  const char **changed_author,
+                                  svn_wc_context_t *wc_ctx, 
+                                  const char *local_abspath, 
+                                  apr_pool_t *scratch_pool,
+                                  apr_pool_t *result_pool);
+
+
 /** This whole function is for legacy, and it sucks. It does not really
  * make sense to get the copy-from revision number without the copy-from
  * URL, but higher level code currently wants that. This should go away.

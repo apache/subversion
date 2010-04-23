@@ -297,6 +297,11 @@ assemble_status(svn_wc_status3_t **status,
   svn_boolean_t switched_p = FALSE;
   const svn_wc_conflict_description2_t *tree_conflict;
   svn_boolean_t file_external_p = FALSE;
+  svn_revnum_t revision;
+  svn_revnum_t changed_rev;
+  const char *changed_author;
+  apr_time_t changed_date;
+  svn_boolean_t base_shadowed;
 #ifdef HAVE_SYMLINK
   svn_boolean_t wc_special;
 #endif /* HAVE_SYMLINK */
@@ -376,6 +381,10 @@ assemble_status(svn_wc_status3_t **status,
 
       stat->repos_lock = repos_lock;
       stat->url = NULL;
+      stat->revision = SVN_INVALID_REVNUM;
+      stat->changed_rev = SVN_INVALID_REVNUM;
+      stat->changed_author = NULL;
+      stat->changed_date = 0;
       stat->ood_last_cmt_rev = SVN_INVALID_REVNUM;
       stat->ood_last_cmt_date = 0;
       stat->ood_kind = svn_node_none;
@@ -384,6 +393,13 @@ assemble_status(svn_wc_status3_t **status,
       *status = stat;
       return SVN_NO_ERROR;
     }
+
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, &revision, NULL, NULL, NULL,
+                               &changed_rev, &changed_date, &changed_author,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, &base_shadowed, NULL,
+                               NULL, db, local_abspath, result_pool,
+                               scratch_pool));
 
   /* Someone either deleted the administrative directory in the versioned
      subdir, or deleted the directory altogether and created a new one.
@@ -606,6 +622,10 @@ assemble_status(svn_wc_status3_t **status,
   stat->copied = entry->copied;
   stat->repos_lock = repos_lock;
   stat->url = (entry->url ? entry->url : NULL);
+  stat->revision = revision;
+  stat->changed_rev = changed_rev;
+  stat->changed_author = changed_author;
+  stat->changed_date = changed_date;
   stat->ood_last_cmt_rev = SVN_INVALID_REVNUM;
   stat->ood_last_cmt_date = 0;
   stat->ood_kind = svn_node_none;
@@ -2458,6 +2478,9 @@ svn_wc_dup_status3(const svn_wc_status3_t *orig_stat,
 
   if (orig_stat->url)
     new_stat->url = apr_pstrdup(pool, orig_stat->url);
+
+  if (orig_stat->changed_author)
+    new_stat->changed_author = apr_pstrdup(pool, orig_stat->changed_author);
 
   if (orig_stat->ood_last_cmt_author)
     new_stat->ood_last_cmt_author

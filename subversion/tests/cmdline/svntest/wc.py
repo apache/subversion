@@ -317,6 +317,9 @@ class State:
             item.status = ' ' + item.status[1]
           if item.status[1] == 'M':
             item.status = item.status[0] + ' '
+          if item.entry_rev is not None:
+            item.wc_rev = item.entry_rev
+            item.entry_rev = None
       if item.writelocked:
         # we don't contact the repository, so our only information is what
         # is in the working copy. 'K' means we have one and it matches the
@@ -615,7 +618,7 @@ class StateItem:
   """
 
   def __init__(self, contents=None, props=None,
-               status=None, verb=None, wc_rev=None,
+               status=None, verb=None, wc_rev=None, entry_rev=None,
                locked=None, copied=None, switched=None, writelocked=None,
                treeconflict=None):
     # provide an empty prop dict if it wasn't provided
@@ -638,6 +641,9 @@ class StateItem:
     self.verb = verb
     # The base revision number of the node in the WC, as a string.
     self.wc_rev = wc_rev
+    # This one will be set when we expect the wc_rev to differ from the one
+    # found ni the entries code.
+    self.entry_rev = entry_rev
     # For the following attributes, the value is the status character of that
     # field from 'svn status', except using value None instead of status ' '.
     self.locked = locked

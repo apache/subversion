@@ -980,7 +980,7 @@ def repos_to_wc(sbox):
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
-    'pi' : Item(status='A ',  wc_rev='1'),
+    'pi' : Item(status='A ',  wc_rev='0', entry_rev='1'),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 

@@ -3617,6 +3617,18 @@ typedef struct svn_wc_status3_t
    */
   enum svn_wc_status_kind pristine_prop_status;
 
+  /** Base revision.  */
+  svn_revnum_t revision;
+
+  /** Last revision this was changed */
+  svn_revnum_t changed_rev;
+
+  /** Last commit author of this item */
+  const char *changed_author;
+
+  /** Date of last commit. */
+  apr_time_t changed_date;
+
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
 } svn_wc_status3_t;
 

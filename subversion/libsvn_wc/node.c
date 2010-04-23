@@ -754,6 +754,68 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
 }
 
 svn_error_t *
+svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
+                                  svn_revnum_t *changed_rev, 
+                                  apr_time_t *changed_date, 
+                                  const char **changed_author,
+                                  svn_wc_context_t *wc_ctx, 
+                                  const char *local_abspath, 
+                                  apr_pool_t *scratch_pool,
+                                  apr_pool_t *result_pool)
+{
+  svn_wc__db_status_t status;
+  svn_boolean_t base_shadowed;
+
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, revision, NULL, NULL, NULL,
+                               changed_rev, changed_date, changed_author,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, &base_shadowed, NULL,
+                               NULL, wc_ctx->db, local_abspath, result_pool,
+                               scratch_pool));
+
+  if (status == svn_wc__db_status_deleted)
+    {
+      const char *work_del_abspath = NULL;
+      const char *base_del_abspath = NULL;
+
+      SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, NULL,
+                                       NULL, &work_del_abspath, wc_ctx->db,
+                                       local_abspath, scratch_pool,
+                                       result_pool));
+      if (work_del_abspath)
+        {
+          SVN_ERR(svn_wc__db_read_info(&status, NULL, revision, NULL, NULL,
+                                       NULL, changed_rev, changed_date,
+                                       changed_author, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, &base_shadowed,
+                                       NULL, NULL, wc_ctx->db, work_del_abspath,
+                                       result_pool, scratch_pool));
+        }
+      else
+        {
+          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, revision, NULL,
+                                           NULL, NULL, changed_rev,
+                                           changed_date, changed_author,
+                                           NULL, NULL, NULL, NULL, NULL,
+                                           NULL, wc_ctx->db,
+                                           base_del_abspath, result_pool,
+                                           scratch_pool));
+        }
+    }
+  else if (base_shadowed)
+    {
+      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, revision, NULL, NULL,
+                                       NULL, changed_rev, changed_date,
+                                       changed_author, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, wc_ctx->db, local_abspath,
+                                       result_pool, scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
                                  svn_wc_context_t *wc_ctx,
                                  const char *local_abspath,
