@@ -629,27 +629,54 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                     apr_pool_t *pool /* scratch_pool */)
 {
   svn_boolean_t hidden;
+  int i;
+  svn_wc__db_kind_t kind;
   apr_hash_t *new_base_props;
   apr_hash_t *new_actual_props;
+  apr_hash_t *base_props;
+  apr_hash_t *actual_props;
 
   /* IMPORTANT: svn_wc_merge_prop_diffs relies on the fact that baseprops
      may be NULL. */
 
   /* Checks whether the node exists and returns the hidden flag */
   SVN_ERR(svn_wc__db_node_hidden(&hidden, wc_ctx->db, local_abspath, pool));
-
   if (hidden)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("The node '%s' was not found."),
                              svn_dirent_local_style(local_abspath, pool));
 
+  /* The PROPCHANGES may not have non-"normal" properties in it. If entry
+     or wc props were allowed, then the following code would install them
+     into the BASE and/or WORKING properties(!).  */
+  for (i = propchanges->nelts; i--; )
+    {
+      const svn_prop_t *change = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
+
+      if (!svn_wc_is_normal_prop(change->name))
+        return svn_error_createf(SVN_ERR_BAD_PROP_KIND, NULL,
+                                 _("The property '%s' may not be merged "
+                                   "into '%s'."),
+                                 change->name,
+                                 svn_dirent_local_style(local_abspath, pool));
+    }
+
+  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, FALSE, pool));
+
+  SVN_ERR(svn_wc__get_pristine_props(&base_props, wc_ctx->db, local_abspath,
+                                     pool, pool));
+  SVN_ERR(svn_wc__get_actual_props(&actual_props, wc_ctx->db, local_abspath,
+                                   pool, pool));
+
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
   SVN_ERR(svn_wc__merge_props(state,
                               &new_base_props, &new_actual_props,
-                              wc_ctx->db, local_abspath,
+                              wc_ctx->db, local_abspath, kind,
                               left_version, right_version,
-                              baseprops, NULL, NULL,
+                              baseprops /* server_baseprops */,
+                              base_props,
+                              actual_props,
                               propchanges, base_merge, dry_run,
                               conflict_func, conflict_baton,
                               cancel_func, cancel_baton,
@@ -657,11 +684,8 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
 
   if (!dry_run)
     {
-      svn_wc__db_kind_t kind;
       const char *dir_abspath;
 
-      SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath,
-                                   FALSE, pool));
       if (kind == svn_wc__db_kind_dir)
         dir_abspath = local_abspath;
       else
@@ -1497,6 +1521,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                     apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,
                     const char *local_abspath,
+                    svn_wc__db_kind_t kind,
                     const svn_wc_conflict_version_t *left_version,
                     const svn_wc_conflict_version_t *right_version,
                     apr_hash_t *server_baseprops,
@@ -1518,52 +1543,21 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   const char *reject_path = NULL;
   svn_stream_t *reject_tmp_stream = NULL;  /* the temporary conflicts stream */
   const char *reject_tmp_path = NULL;
-  svn_wc__db_kind_t kind;
   const char *adm_abspath;
+
+  SVN_ERR_ASSERT(base_props != NULL);
+  SVN_ERR_ASSERT(working_props != NULL);
 
   *new_base_props = NULL;
   *new_actual_props = NULL;
 
-  /* ### shouldn't ALLOW_MISSING be FALSE? how can we merge props into
-     ### a node that doesn't exist?!  */
-  /* ### BH: In some cases we allow merging into missing to create a new
-             node. */
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
+  is_dir = (kind == svn_wc__db_kind_dir);
 
-  if (kind == svn_wc__db_kind_dir)
-    {
-      is_dir = TRUE;
-      adm_abspath = local_abspath;
-    }
+  if (is_dir)
+    adm_abspath = local_abspath;
   else
-    {
-      is_dir = FALSE;
-      adm_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-    }
+    adm_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  /* If not provided, load the base & working property files into hashes */
-  if (! base_props || ! working_props)
-    {
-      if (kind == svn_wc__db_kind_unknown)
-        {
-          /* No entry... no props.  */
-          if (base_props == NULL)
-            base_props = apr_hash_make(result_pool);
-          if (working_props == NULL)
-            working_props = apr_hash_make(result_pool);
-        }
-      else
-        {
-          if (base_props == NULL)
-            SVN_ERR(load_pristine_props(&base_props,
-                                        db, local_abspath,
-                                        result_pool, scratch_pool));
-          if (working_props == NULL)
-            SVN_ERR(load_actual_props(&working_props,
-                                      db, local_abspath,
-                                      result_pool, scratch_pool));
-        }
-    }
   if (!server_baseprops)
     server_baseprops = base_props;
 
@@ -1584,14 +1578,12 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       svn_string_t *conflict = NULL;
       const svn_prop_t *incoming_change;
       const svn_string_t *from_val, *to_val, *base_val;
-      svn_boolean_t is_normal;
 
       svn_pool_clear(iterpool);
 
       /* For the incoming propchange, figure out the TO and FROM values. */
       incoming_change = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
       propname = incoming_change->name;
-      is_normal = svn_wc_is_normal_prop(propname);
       to_val = incoming_change->value
         ? svn_string_dup(incoming_change->value, result_pool) : NULL;
       from_val = apr_hash_get(server_baseprops, propname, APR_HASH_KEY_STRING);
@@ -1604,11 +1596,10 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       /* We already know that state is at least `changed', so mark
          that, but remember that we may later upgrade to `merged' or
          even `conflicted'. */
-      if (is_normal)
-        set_prop_merge_state(state, svn_wc_notify_state_changed);
+      set_prop_merge_state(state, svn_wc_notify_state_changed);
 
       if (! from_val)  /* adding a new property */
-        SVN_ERR(apply_single_prop_add(is_normal ? state : NULL, &conflict,
+        SVN_ERR(apply_single_prop_add(state, &conflict,
                                       db, local_abspath,
                                       left_version, right_version,
                                       is_dir, working_props,
@@ -1618,7 +1609,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                                       dry_run, result_pool, iterpool));
 
       else if (! to_val) /* delete an existing property */
-        SVN_ERR(apply_single_prop_delete(is_normal ? state : NULL, &conflict,
+        SVN_ERR(apply_single_prop_delete(state, &conflict,
                                          db, local_abspath,
                                          left_version, right_version,
                                          is_dir,
@@ -1629,7 +1620,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                                          dry_run, result_pool, iterpool));
 
       else  /* changing an existing property */
-        SVN_ERR(apply_single_prop_change(is_normal ? state : NULL, &conflict,
+        SVN_ERR(apply_single_prop_change(state, &conflict,
                                          db, local_abspath,
                                          left_version, right_version,
                                          is_dir,
@@ -1645,8 +1636,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
       if (conflict)
         {
-          if (is_normal)
-            set_prop_merge_state(state, svn_wc_notify_state_conflicted);
+          set_prop_merge_state(state, svn_wc_notify_state_conflicted);
 
           if (dry_run)
             continue;   /* skip to next incoming change */

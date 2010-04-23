@@ -300,6 +300,9 @@ struct dir_baton
   /* Set if there was a previous notification for this directory */
   svn_boolean_t already_notified;
 
+  /* Set if this directory is being added during this editor drive. */
+  svn_boolean_t adding_dir;
+
   /* Set on a node and its descendants when a node gets tree conflicted
      and descendants should still be updated (not skipped).
      These nodes should all be marked as deleted. */
@@ -661,6 +664,7 @@ make_dir_baton(struct dir_baton **d_p,
   d->add_existed  = FALSE;
   d->bump_info    = bdi;
   d->old_revision = SVN_INVALID_REVNUM;
+  d->adding_dir   = adding;
 
   /* The caller of this function needs to fill these in. */
   d->ambient_depth = svn_depth_unknown;
@@ -2884,7 +2888,8 @@ close_directory(void *dir_baton,
   struct last_change_info *last_change = NULL;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   apr_array_header_t *entry_props, *wc_props, *regular_props;
-  apr_hash_t *base_props = NULL, *working_props = NULL;
+  apr_hash_t *base_props;
+  apr_hash_t *actual_props;
   apr_hash_t *new_base_props = NULL, *new_actual_props = NULL;
   struct bump_dir_info *bdi;
 
@@ -2905,6 +2910,23 @@ close_directory(void *dir_baton,
   SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &wc_props,
                                &regular_props, pool));
 
+  if (db->adding_dir)
+    {
+      /* A newly added directory has no properties.  */
+      base_props = apr_hash_make(pool);
+      actual_props = apr_hash_make(pool);
+    }
+  else
+    {
+      /* Fetch the existing properties.  */
+      SVN_ERR(svn_wc__get_pristine_props(&base_props,
+                                         eb->db, db->local_abspath,
+                                         pool, pool));
+      SVN_ERR(svn_wc__get_actual_props(&actual_props,
+                                       eb->db, db->local_abspath,
+                                       pool, pool));
+    }
+
   /* An incomplete directory might have props which were supposed to be
      deleted but weren't.  Because the server sent us all the props we're
      supposed to have, any previous base props not in this list must be
@@ -2913,25 +2935,7 @@ close_directory(void *dir_baton,
     {
       int i;
       apr_hash_t *props_to_delete;
-      svn_wc__db_kind_t kind;
       apr_hash_index_t *hi;
-
-      SVN_ERR(svn_wc__db_read_kind(&kind, eb->db,
-                                   db->local_abspath, TRUE, pool));
-      if (kind == svn_wc__db_kind_unknown)
-        {
-          base_props = apr_hash_make(pool);
-          working_props = apr_hash_make(pool);
-        }
-      else
-        {
-          SVN_ERR(svn_wc__get_pristine_props(&base_props,
-                                             eb->db, db->local_abspath,
-                                             pool, pool));
-          SVN_ERR(svn_wc__get_actual_props(&working_props,
-                                           eb->db, db->local_abspath,
-                                           pool, pool));
-        }
 
       /* In a copy of the BASE props, remove every property that we see an
          incoming change for. The remaining unmentioned properties are those
@@ -3007,10 +3011,12 @@ close_directory(void *dir_baton,
                                         &new_actual_props,
                                         eb->db,
                                         db->local_abspath,
+                                        svn_wc__db_kind_dir,
                                         NULL, /* left_version */
                                         NULL, /* right_version */
                                         NULL /* use baseprops */,
-                                        base_props, working_props,
+                                        base_props,
+                                        actual_props,
                                         regular_props,
                                         TRUE /* base_merge */,
                                         FALSE /* dry_run */,
@@ -4683,6 +4689,8 @@ close_file(void *file_baton,
   const svn_wc_entry_t *entry;
   svn_boolean_t install_pristine;
   const char *install_from;
+  apr_hash_t *current_base_props;
+  apr_hash_t *current_actual_props;
 
   if (fb->skip_this)
     {
@@ -4787,6 +4795,25 @@ close_file(void *file_baton,
      BASE_PROPS and WORKING_PROPS are hashes of the base and
      working props of the file; if NULL they are read from the wc.  */
 
+  if (fb->adding_file)
+    {
+      current_base_props = (fb->copied_base_props
+                            ? fb->copied_base_props
+                            : apr_hash_make(pool));
+      current_actual_props = (fb->copied_working_props
+                              ? fb->copied_working_props
+                              : apr_hash_make(pool));
+    }
+  else
+    {
+      SVN_ERR(svn_wc__get_pristine_props(&current_base_props,
+                                         eb->db, fb->local_abspath,
+                                         pool, pool));
+      SVN_ERR(svn_wc__get_actual_props(&current_actual_props,
+                                       eb->db, fb->local_abspath,
+                                       pool, pool));
+    }
+
   prop_state = svn_wc_notify_state_unknown;
 
   /* Merge the 'regular' props into the existing working proplist. */
@@ -4798,11 +4825,12 @@ close_file(void *file_baton,
                               &new_actual_props,
                               eb->db,
                               fb->local_abspath,
+                              svn_wc__db_kind_file,
                               NULL /* left_version */,
                               NULL /* right_version */,
                               NULL /* server_baseprops (update, not merge)  */,
-                              fb->copied_base_props,
-                              fb->copied_working_props,
+                              current_base_props,
+                              current_actual_props,
                               regular_props,
                               TRUE /* base_merge */,
                               FALSE /* dry_run */,
