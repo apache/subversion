@@ -1223,6 +1223,11 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
        The BASE or WORKING node is incomplete due to an interrupted
        operation.
 
+   If REVISION is requested, it will be set to the revision of the
+   unmodified (BASE) node, or to SVN_INVALID_REVNUM if any structural
+   changes have been made to that node (that is, if the node has a row in
+   the WORKING table).
+
    If DEPTH is requested, and the node is NOT a directory, then
    the value will be set to svn_depth_unknown.
 
