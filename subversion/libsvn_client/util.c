@@ -150,12 +150,6 @@ wc_path_to_repos_urls(const char **url,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
-                                      svn_node_unknown, FALSE, FALSE,
-                                      scratch_pool, scratch_pool));
-
   SVN_ERR(svn_client__entry_location(url, NULL, wc_ctx, local_abspath,
                                      svn_opt_revision_unspecified,
                                      result_pool, scratch_pool));
@@ -164,7 +158,9 @@ wc_path_to_repos_urls(const char **url,
      the entry.  The entry might not hold a URL -- in that case, we'll
      need a fallback plan. */
   if (*repos_root == NULL)
-    *repos_root = apr_pstrdup(result_pool, entry->repos);
+    SVN_ERR(svn_wc__node_get_repos_info(repos_root, NULL, wc_ctx,
+                                        local_abspath, TRUE,
+                                        result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -247,8 +243,9 @@ svn_client__get_repos_root(const char **repos_root,
           || peg_revision->kind == svn_opt_revision_base))
     {
       *repos_root = NULL;
-      SVN_ERR(wc_path_to_repos_urls(&abspath_or_url, repos_root, ctx->wc_ctx,
-                                    abspath_or_url, result_pool, scratch_pool));
+      SVN_ERR(wc_path_to_repos_urls(&abspath_or_url, repos_root,
+                                    ctx->wc_ctx, abspath_or_url,
+                                    result_pool, scratch_pool));
     }
   else
     {
