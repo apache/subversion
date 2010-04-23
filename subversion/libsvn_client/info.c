@@ -78,9 +78,9 @@ build_info_from_dirent(svn_info_t **info,
 }
 
 
-/* Helper: build an svn_info_t *INFO struct from svn_wc_entry_t ENTRY,
-   allocated in POOL.  Pointer fields are copied by reference, not dup'd.
-   PATH is the path of the WC node that ENTRY represents. */
+/* Helper: build an svn_info_t *INFO struct from WC metadata,
+   allocated in POOL.  Pointer fields are copied by reference, not
+   dup'd.  PATH is the path of the WC node that ENTRY represents. */
 static svn_error_t *
 build_info_for_entry(svn_info_t **info,
                      svn_wc_context_t *wc_ctx,
@@ -88,6 +88,9 @@ build_info_for_entry(svn_info_t **info,
                      apr_pool_t *pool)
 {
   svn_info_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+  const char *copyfrom_url;
+  svn_revnum_t copyfrom_rev;
+  svn_boolean_t is_copy_target;
   const svn_wc_entry_t *entry;
 
   SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
@@ -96,23 +99,50 @@ build_info_for_entry(svn_info_t **info,
 
   SVN_ERR(svn_wc__node_get_kind(&tmpinfo->kind, wc_ctx, local_abspath, TRUE,
                                 pool));
-
-  tmpinfo->URL                  = entry->url;
-  tmpinfo->rev                  = entry->revision;
-  tmpinfo->kind                 = entry->kind;
-  tmpinfo->repos_UUID           = entry->uuid;
-  tmpinfo->repos_root_URL       = entry->repos;
+  SVN_ERR(svn_wc__node_get_url(&tmpinfo->URL, wc_ctx, local_abspath,
+                               pool, pool));
+  SVN_ERR(svn_wc__node_get_repos_info(&tmpinfo->repos_root_URL,
+                                      &tmpinfo->repos_UUID,
+                                      wc_ctx, local_abspath, TRUE,
+                                      pool, pool));
   SVN_ERR(svn_wc__node_get_changed_info(&tmpinfo->last_changed_rev,
                                         &tmpinfo->last_changed_date,
                                         &tmpinfo->last_changed_author,
                                         wc_ctx, local_abspath, pool, pool));
+  SVN_ERR(svn_wc__node_get_commit_base_rev(&tmpinfo->rev, wc_ctx,
+                                           local_abspath, pool));
+  /* ### FIXME: For now, we'll tweak an SVN_INVALID_REVNUM and make it
+     ### 0.  In WC-1, files scheduled for addition were assigned
+     ### revision=0.  This is wrong, and we're trying to remedy that,
+     ### but for the sake of test suite and code sanity now in WC-NG,
+     ### we'll just maintain the old behavior.
+     ###
+     ### We should also just be fetching the true BASE revision
+     ### above, which means copied items would also not have a
+     ### revision to display.  But WC-1 wants to show the revision of
+     ### copy targets as the copyfrom-rev.  *sigh*
+  */
+  if (! SVN_IS_VALID_REVNUM(tmpinfo->rev))
+    tmpinfo->rev = 0;
+
+  SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url, &copyfrom_rev,
+                                         &is_copy_target, wc_ctx,
+                                         local_abspath, pool, pool));
+  if (is_copy_target)
+    {
+      tmpinfo->copyfrom_url = copyfrom_url;
+      tmpinfo->copyfrom_rev = copyfrom_rev;
+    }
+  else
+    {
+      tmpinfo->copyfrom_url = NULL;
+      tmpinfo->copyfrom_rev = SVN_INVALID_REVNUM;
+    }
 
   /* entry-specific stuff */
   tmpinfo->has_wc_info          = TRUE;
   tmpinfo->schedule             = entry->schedule;
   tmpinfo->depth                = entry->depth;
-  tmpinfo->copyfrom_url         = entry->copyfrom_url;
-  tmpinfo->copyfrom_rev         = entry->copyfrom_rev;
   tmpinfo->text_time            = entry->text_time;
   tmpinfo->checksum             = entry->checksum;
   tmpinfo->conflict_old         = entry->conflict_old;
@@ -120,15 +150,13 @@ build_info_for_entry(svn_info_t **info,
   tmpinfo->conflict_wrk         = entry->conflict_wrk;
   tmpinfo->prejfile             = entry->prejfile;
   tmpinfo->changelist           = entry->changelist;
+  tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
+  tmpinfo->size64               = SVN_INVALID_FILESIZE;
 
   if (((apr_size_t)entry->working_size) == entry->working_size)
     tmpinfo->working_size       = (apr_size_t)entry->working_size;
   else /* >= 4GB */
     tmpinfo->working_size       = SVN_INFO_SIZE_UNKNOWN;
-
-  tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
-  tmpinfo->size64               = SVN_INVALID_FILESIZE;
-
   tmpinfo->working_size64       = entry->working_size;
 
   /* lock stuff */
