@@ -453,6 +453,8 @@ def unschedule_missing_added(sbox):
   # FILE1_PATH will throw an error. DIR1_PATH will not since the stub is
   # still available in the parent directory.
   svntest.main.run_svn(svntest.verify.AnyOutput, 'rm', file1_path)
+  ### actually, the stub does not provide enough information to revert
+  ### the addition, so this command will fail. marking as XFail
   sbox.simple_rm(dir1_path)
   sbox.simple_revert(file2_path, dir2_path)
 
@@ -656,7 +658,7 @@ test_list = [ None,
               SkipUnless(revert_add_executable, svntest.main.is_posix_os),
               revert_delete_files,
               revert_delete_dirs,
-              unschedule_missing_added,
+              XFail(unschedule_missing_added),
               delete_missing,
               revert_inside_newly_added_dir,
               status_add_deleted_directory,

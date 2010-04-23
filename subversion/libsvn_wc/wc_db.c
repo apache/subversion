@@ -2472,70 +2472,6 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
 }
 
 
-/* A WORKING version of svn_wc__db_base_get_info, stripped down to
-   just the status column.
-
-   ### This function should not exist!  What I really want is presence
-   ### not status, and so it's a mistake to return an
-   ### svn_wc__db_status_t here as it doesn't have quite the same
-   ### meaning as status returned by other functions.  I think I need
-   ### to abandon this function and work out how to decode status back
-   ### into presence :(
-*/
-static svn_error_t *
-db_working_get_status(svn_wc__db_status_t *status,
-                      svn_wc__db_t *db,
-                      const char *local_abspath,
-                      apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-  svn_error_t *err = SVN_NO_ERROR;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_SELECT_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (have_row)
-    {
-      svn_wc__db_kind_t node_kind = svn_sqlite__column_token(stmt, 1,
-                                                             kind_map);
-
-      *status = svn_sqlite__column_token(stmt, 0, presence_map);
-
-      if (node_kind == svn_wc__db_kind_subdir
-          && *status == svn_wc__db_status_normal)
-        {
-          /* We're looking at the subdir record in the *parent* directory,
-             which implies per-dir .svn subdirs. We should be looking
-             at the subdir itself; therefore, it is missing or obstructed
-             in some way. Inform the caller.  */
-          *status = svn_wc__db_status_obstructed;
-        }
-    }
-  else
-    {
-      err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                              _("The node '%s' was not found."),
-                              svn_dirent_local_style(local_abspath,
-                                                     scratch_pool));
-    }
-
-
-  return svn_error_compose_create(err, svn_sqlite__reset(stmt));
-}
-
-
 svn_error_t *
 svn_wc__db_base_get_prop(const svn_string_t **propval,
                          svn_wc__db_t *db,
@@ -3854,6 +3790,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
   svn_error_t *err;
   svn_boolean_t base_none, working_none, new_working_none;
   svn_wc__db_status_t base_status, working_status, new_working_status;
+  svn_boolean_t base_shadowed;
 
   err = svn_wc__db_base_get_info(&base_status,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -3875,24 +3812,71 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
   if (!base_none && base_status == svn_wc__db_status_absent)
     return SVN_NO_ERROR; /* ### should return an error.... WHICH ONE? */
 
-  err = db_working_get_status(&working_status,
-                              db, local_abspath, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+  /* No need to check for SVN_ERR_WC_PATH_NOT_FOUND. Something has to
+     be there for us to delete.  */
+  SVN_ERR(svn_wc__db_read_info(&working_status, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, &base_shadowed, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
+  if (working_status == svn_wc__db_status_deleted
+      || working_status == svn_wc__db_status_obstructed_delete)
     {
-      working_none = TRUE;
-      svn_error_clear(err);
+      /* The node is already deleted.  */
+      /* ### return an error? callers should know better.  */
+      return SVN_NO_ERROR;
     }
-  else if (! err)
-    working_none = FALSE;
-  else
-    return svn_error_return(err);
 
-  if (base_none && working_none)
-    return SVN_NO_ERROR; /* ### should return PATH_NOT_FOUND */
+  /* We must have a WORKING node if there is no BASE node (gotta have
+     something!). If there IS a BASE node, then we have a WORKING node
+     if BASE_SHADOWED is TRUE.  */
+  working_none = !(base_none || base_shadowed);
 
   new_working_none = working_none;
   new_working_status = working_status;
-  if (working_none)
+
+  if (working_status == svn_wc__db_status_normal
+      || working_status == svn_wc__db_status_not_present
+      || working_status == svn_wc__db_status_obstructed)
+    {
+      /* No structural changes (ie. no WORKING node). Mark the BASE node
+         as deleted.  */
+
+      SVN_ERR_ASSERT(working_none);
+
+      new_working_none = FALSE;
+      new_working_status = svn_wc__db_status_base_deleted;
+    }
+  else if (working_status == svn_wc__db_status_obstructed_add)
+    {
+      /* There is a parent stub for some kind of addition.
+
+         ### we cannot tell if this is a local-add or a copied/moved-here.
+         ### when the latter case, if this node is the root of that
+         ### copy/move, then we just "revert" it. otherwise, we're deleting
+         ### a child of that copy/move and marked it as delete. and the
+         ### second proble: we also cannot tell whether this is the root
+         ### or not.
+         ###
+         ### return WC_MISSING here. we need that working copy metadata
+         ###
+         ### when we get to single-db, there are no "obstructed" status
+         ### codes, so this will magically work...  */
+      SVN_ERR_ASSERT(!working_none);
+
+      return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
+                               _("The directory '%s' is missing and cannot "
+                                 "be marked for deletion."),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
+  /* ### remaining states: added, absent, excluded, incomplete
+     ### the last three have debatable schedule-delete semantics,
+     ### and this code may need to change further, but I'm not
+     ### going to worry about it now
+  */
+  else if (working_none)
     {
       /* No structural changes  */
       if (base_status == svn_wc__db_status_normal
@@ -3904,15 +3888,13 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
           new_working_status = svn_wc__db_status_base_deleted;
         }
     }
-  else if ((working_status == svn_wc__db_status_normal
-            || working_status == svn_wc__db_status_obstructed)
+  else if (working_status == svn_wc__db_status_added
            && (base_none || base_status == svn_wc__db_status_not_present))
     {
-      /* ADD  */
+      /* ADD/COPY-HERE/MOVE-HERE. There is "no BASE node".  */
 
       svn_boolean_t add_or_root_of_copy;
 
-      /* ### this fails for the status_obstructed case.  */
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
                                      db, local_abspath, scratch_pool));
       if (add_or_root_of_copy)
@@ -3920,7 +3902,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
       else
         new_working_status = svn_wc__db_status_not_present;
     }
-  else if (working_status == svn_wc__db_status_normal)
+  else if (working_status == svn_wc__db_status_added)
     {
       /* DELETE + ADD  */
       svn_boolean_t add_or_root_of_copy;
@@ -5370,7 +5352,6 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
       svn_sqlite__stmt_t *stmt;
       svn_boolean_t have_row;
       svn_wc__db_status_t presence;
-      svn_boolean_t presence_is_normal;
 
       /* ### is it faster to fetch fewer columns? */
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
