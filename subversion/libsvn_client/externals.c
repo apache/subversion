@@ -175,18 +175,28 @@ switch_dir_external(const char *path,
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind == svn_node_dir)
     {
-      const svn_wc_entry_t *entry;
+      const char *node_url;
 
-      SVN_ERR(svn_wc__maybe_get_entry(&entry, ctx->wc_ctx, local_abspath,
-                                      svn_node_dir, FALSE, FALSE, subpool,
-                                      subpool));
-
-      if (entry && entry->url)
+      /* Doubles as an "is versioned" check. */
+      err = svn_wc__node_get_url(&node_url, ctx->wc_ctx, local_abspath,
+                                 pool, subpool);
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
         {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+          goto relegate;
+        }
+      else if (err)
+        return svn_error_return(err);
+
+      if (node_url)
+        {
+          const char *repos_root_url;
+
           /* If we have what appears to be a version controlled
              subdir, and its top-level URL matches that of our
              externals definition, perform an update. */
-          if (strcmp(entry->url, url) == 0)
+          if (strcmp(node_url, url) == 0)
             {
               SVN_ERR(svn_client__update_internal(NULL, path, revision,
                                                   svn_depth_unknown, FALSE,
@@ -196,11 +206,15 @@ switch_dir_external(const char *path,
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
             }
-          else if (entry->repos)
+
+          SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL,
+                                              ctx->wc_ctx, local_abspath,
+                                              FALSE, pool, subpool));
+          if (repos_root_url)
             {
               /* URLs don't match.  Try to relocate (if necessary) and then
                  switch. */
-              if (! svn_uri_is_ancestor(entry->repos, url))
+              if (! svn_uri_is_ancestor(repos_root_url, url))
                 {
                   const char *repos_root;
                   svn_ra_session_t *ra_session;
@@ -212,7 +226,7 @@ switch_dir_external(const char *path,
                   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root,
                                                  subpool));
 
-                  err = svn_client_relocate(path, entry->repos, repos_root,
+                  err = svn_client_relocate(path, repos_root_url, repos_root,
                                             TRUE, ctx, subpool);
                   /* If the relocation failed because the new URL points
                      to another repository, then we need to relegate and
