@@ -297,11 +297,11 @@ assemble_status(svn_wc_status3_t **status,
   svn_boolean_t switched_p = FALSE;
   const svn_wc_conflict_description2_t *tree_conflict;
   svn_boolean_t file_external_p = FALSE;
+  svn_wc__db_lock_t *lock;
   svn_revnum_t revision;
   svn_revnum_t changed_rev;
   const char *changed_author;
   apr_time_t changed_date;
-  svn_boolean_t base_shadowed;
 #ifdef HAVE_SYMLINK
   svn_boolean_t wc_special;
 #endif /* HAVE_SYMLINK */
@@ -389,6 +389,10 @@ assemble_status(svn_wc_status3_t **status,
       stat->ood_last_cmt_date = 0;
       stat->ood_kind = svn_node_none;
       stat->ood_last_cmt_author = NULL;
+      stat->lock_token = NULL;
+      stat->lock_owner = NULL;
+      stat->lock_comment = NULL;
+      stat->lock_creation_date = 0;
 
       *status = stat;
       return SVN_NO_ERROR;
@@ -397,8 +401,8 @@ assemble_status(svn_wc_status3_t **status,
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, &revision, NULL, NULL, NULL,
                                &changed_rev, &changed_date, &changed_author,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, &base_shadowed, NULL,
-                               NULL, db, local_abspath, result_pool,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &lock, db, local_abspath, result_pool,
                                scratch_pool));
 
   /* Someone either deleted the administrative directory in the versioned
@@ -633,6 +637,10 @@ assemble_status(svn_wc_status3_t **status,
   stat->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
   stat->pristine_text_status = pristine_text_status;
   stat->pristine_prop_status = pristine_prop_status;
+  stat->lock_token = lock ? lock->token : NULL;
+  stat->lock_owner = lock ? lock->owner : NULL;
+  stat->lock_comment = lock ? lock->comment : NULL;
+  stat->lock_creation_date = lock ? lock->date : 0;
 
   *status = stat;
 
@@ -2489,6 +2497,18 @@ svn_wc_dup_status3(const svn_wc_status3_t *orig_stat,
   if (orig_stat->tree_conflict)
     new_stat->tree_conflict
       = svn_wc__conflict_description_dup(orig_stat->tree_conflict, pool);
+
+  if (orig_stat->lock_token)
+    new_stat->lock_token
+      = apr_pstrdup(pool, orig_stat->lock_token);
+
+  if (orig_stat->lock_owner)
+    new_stat->lock_owner
+      = apr_pstrdup(pool, orig_stat->lock_owner);
+
+  if (orig_stat->lock_comment)
+    new_stat->lock_comment
+      = apr_pstrdup(pool, orig_stat->lock_comment);
 
   /* Return the new hotness. */
   return new_stat;
