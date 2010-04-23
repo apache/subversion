@@ -548,5 +548,7 @@ svn_wc_status2_t *
 svn_wc__status2_from_3(const svn_wc_status3_t *status, 
                        apr_pool_t *scratch_pool)
 {
+  /* ### As of r937468, status2_t and status3_t are no longer identical. We
+   * ### need to extend this function to properly do the conversion. */ 
   return (svn_wc_status2_t *) svn_wc_dup_status3(status, scratch_pool);
 }
