@@ -2195,9 +2195,9 @@ svn_repos_verify_fs(svn_repos_t *repos,
  * be done with full plain text.  A dump with @a use_deltas set cannot
  * be loaded by Subversion 1.0.x.
  *
- * For every dumped revision call @a progress_func with @a rev set to the
- * dumped revision and @a warning_text @c NULL. For warnings call @a
- * progress_func with @a warning_text.
+ * If @a progress_func is not @c NULL, then for every dumped revision call
+ * @a progress_func with @a rev set to the dumped revision and @a warning_text
+ * @c NULL. For warnings call @a progress_func with @a warning_text.
  *
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
