@@ -1958,18 +1958,14 @@ try_copy(svn_commit_info_t **commit_info_p,
           svn_client__copy_pair_t *pair =
             APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
           const char *src_abspath;
-
-          const svn_wc_entry_t *entry;
+          svn_boolean_t is_file_external;
 
           svn_pool_clear(iterpool);
 
           SVN_ERR(svn_dirent_get_absolute(&src_abspath, pair->src, iterpool));
-          SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx,
-                                              src_abspath, svn_node_unknown,
-                                              FALSE, FALSE,
-                                              iterpool, iterpool));
-
-          if (entry->file_external_path)
+          SVN_ERR(svn_wc__node_is_file_external(&is_file_external, ctx->wc_ctx,
+                                                src_abspath, iterpool));
+          if (is_file_external)
             return svn_error_createf(SVN_ERR_WC_CANNOT_MOVE_FILE_EXTERNAL,
                                      NULL,
                                      _("Cannot move the file external at "
