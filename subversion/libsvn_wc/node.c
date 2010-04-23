@@ -712,8 +712,9 @@ svn_wc__node_is_replaced(svn_boolean_t *replaced,
                          const char *local_abspath,
                          apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__internal_is_replaced(replaced, wc_ctx->db,
-                                       local_abspath, scratch_pool));
+  return svn_error_return(svn_wc__internal_is_replaced(replaced, wc_ctx->db,
+                                                       local_abspath,
+                                                       scratch_pool));
 }
 
 
