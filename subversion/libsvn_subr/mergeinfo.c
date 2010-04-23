@@ -1959,6 +1959,10 @@ svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool)
 {
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(oldest_rev));
+  SVN_ERR_ASSERT(oldest_rev < youngest_rev);
+
   *filtered_mergeinfo = apr_hash_make(result_pool);
 
   if (mergeinfo)
