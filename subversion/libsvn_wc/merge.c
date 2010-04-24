@@ -596,6 +596,8 @@ preserve_pre_merge_files(svn_wc__db_t *db,
                          const char *left_label,
                          const char *right_label,
                          const char *target_label,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
                          apr_pool_t *pool)
 {
   const char *left_copy, *right_copy, *target_copy;
@@ -695,6 +697,7 @@ preserve_pre_merge_files(svn_wc__db_t *db,
   SVN_ERR(svn_wc__internal_translated_file(
            &detranslated_target_copy, target_abspath, db, target_abspath,
            SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
+           cancel_func, cancel_baton,
            pool, pool));
   SVN_ERR(svn_wc__loggy_translated_file(db, dir_abspath,
                                         target_copy, detranslated_target_copy,
@@ -765,6 +768,8 @@ maybe_resolve_conflicts(svn_wc__db_t *db,
                         svn_diff_file_options_t *options,
                         svn_wc_conflict_resolver_func_t conflict_func,
                         void *conflict_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         apr_pool_t *pool)
 {
   svn_wc_conflict_result_t *result = NULL;
@@ -839,6 +844,7 @@ maybe_resolve_conflicts(svn_wc__db_t *db,
                                    left_label,
                                    right_label,
                                    target_label,
+                                   cancel_func, cancel_baton,
                                    pool));
 
   *merge_outcome = svn_wc_merge_conflict;
@@ -866,6 +872,8 @@ merge_text_file(enum svn_wc_merge_outcome_t *merge_outcome,
                 const svn_prop_t *mimeprop,
                 svn_wc_conflict_resolver_func_t conflict_func,
                 void *conflict_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
                 apr_pool_t *pool)
 {
   svn_diff_file_options_t *options;
@@ -938,6 +946,7 @@ merge_text_file(enum svn_wc_merge_outcome_t *merge_outcome,
                                       mimeprop,
                                       options,
                                       conflict_func, conflict_baton,
+                                      cancel_func, cancel_baton,
                                       pool));
 
       if (*merge_outcome == svn_wc_merge_merged)
@@ -1287,8 +1296,8 @@ svn_wc__internal_merge(enum svn_wc_merge_outcome_t *merge_outcome,
                             copyfrom_abspath,
                             detranslated_target_abspath,
                             mimeprop,
-                            conflict_func,
-                            conflict_baton,
+                            conflict_func, conflict_baton,
+                            cancel_func, cancel_baton,
                             pool));
 
   /* Merging is complete.  Regardless of text or binariness, we might

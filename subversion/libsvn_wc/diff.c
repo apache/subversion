@@ -707,6 +707,7 @@ file_diff(struct dir_baton *db,
       SVN_ERR(svn_wc__internal_translated_file(
               &translated, local_abspath, eb->db, local_abspath,
               SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+              eb->cancel_func, eb->cancel_baton,
               pool, pool));
 
       SVN_ERR(eb->callbacks->file_added(NULL, NULL, NULL, NULL, path,
@@ -745,6 +746,7 @@ file_diff(struct dir_baton *db,
           SVN_ERR(svn_wc__internal_translated_file(
                     &translated, local_abspath, eb->db, local_abspath,
                     SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+                    eb->cancel_func, eb->cancel_baton,
                     pool, pool));
         }
 
@@ -1035,6 +1037,7 @@ report_wc_file_as_added(struct dir_baton *db,
   SVN_ERR(svn_wc__internal_translated_file(
            &translated_file, source_file, eb->db, local_abspath,
            SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+           eb->cancel_func, eb->cancel_baton,
            pool, pool));
 
   SVN_ERR(eb->callbacks->file_added(db->local_abspath,
@@ -1695,6 +1698,7 @@ close_file(void *file_baton,
         SVN_ERR(svn_wc__internal_translated_file(
                  &localfile, fb->local_abspath, eb->db, fb->local_abspath,
                  SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
+                 eb->cancel_func, eb->cancel_baton,
                  pool, pool));
     }
   else

@@ -1158,6 +1158,8 @@ install_committed_file(svn_boolean_t *overwrote_working,
                        const char *tmp_text_base_abspath,
                        svn_boolean_t remove_executable,
                        svn_boolean_t remove_read_only,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
                        apr_pool_t *scratch_pool)
 {
   svn_boolean_t same, did_set;
@@ -1204,6 +1206,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
     SVN_ERR(svn_wc__internal_translated_file(&tmp_wfile, tmp, db,
                                              file_abspath,
                                              SVN_WC_TRANSLATE_FROM_NF,
+                                             cancel_func, cancel_baton,
                                              scratch_pool, scratch_pool));
 
     /* If the translation is a no-op, the text base and the working copy
@@ -1300,6 +1303,8 @@ log_do_committed(svn_wc__db_t *db,
                  const svn_checksum_t *new_checksum,
                  apr_hash_t *new_dav_cache,
                  svn_boolean_t keep_changelist,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
                  apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
@@ -1454,6 +1459,7 @@ log_do_committed(svn_wc__db_t *db,
       if ((err = install_committed_file(&overwrote_working, db,
                                         local_abspath, tmp_text_base_abspath,
                                         remove_executable, set_read_write,
+                                        cancel_func, cancel_baton,
                                         pool)))
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, err,
@@ -1642,6 +1648,7 @@ run_postcommit(svn_wc__db_t *db,
                            new_revision, new_date,
                            new_author, new_checksum, new_dav_cache,
                            keep_changelist,
+                           cancel_func, cancel_baton,
                            scratch_pool));
 
   return SVN_NO_ERROR;
