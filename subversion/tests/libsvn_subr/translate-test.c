@@ -370,8 +370,9 @@ substitute_and_verify(const char *test_name,
                    APR_HASH_KEY_STRING, val);
     }
 
-  err = svn_subst_copy_and_translate3(src_fname, dst_fname, dst_eol, repair,
-                                      keywords, expand, FALSE, subpool);
+  err = svn_subst_copy_and_translate4(src_fname, dst_fname, dst_eol, repair,
+                                      keywords, expand, FALSE,
+                                      NULL, NULL, subpool);
   svn_pool_destroy(subpool);
 
   /* Conversion should have failed, if src has mixed eol, and the

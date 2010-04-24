@@ -193,10 +193,11 @@ log_do_file_cp_and_translate(svn_wc__db_t *db,
                               scratch_pool);
 
   if (! err)
-    err = svn_subst_copy_and_translate3(from_abspath, dest_abspath,
+    err = svn_subst_copy_and_translate4(from_abspath, dest_abspath,
                                         eol, TRUE /* repair */,
                                         keywords, TRUE /* expand */,
                                         special,
+                                        NULL, NULL, /* ### cancel */
                                         scratch_pool);
 
   if (err)

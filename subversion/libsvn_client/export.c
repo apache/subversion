@@ -542,6 +542,8 @@ struct edit_baton
   const char *native_eol;
   svn_boolean_t ignore_keywords;
 
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 };
@@ -865,12 +867,12 @@ close_file(void *file_baton,
                                           fb->revision, fb->url, fb->date,
                                           fb->author, pool));
 
-      SVN_ERR(svn_subst_copy_and_translate3
-              (fb->tmppath, fb->path,
-               eol, repair, final_kw,
-               TRUE, /* expand */
-               fb->special,
-               pool));
+      SVN_ERR(svn_subst_copy_and_translate4(fb->tmppath, fb->path,
+                                            eol, repair, final_kw,
+                                            TRUE, /* expand */
+                                            fb->special,
+                                            eb->cancel_func, eb->cancel_baton,
+                                            pool));
 
       SVN_ERR(svn_io_remove_file2(fb->tmppath, FALSE, pool));
     }
@@ -943,11 +945,13 @@ svn_client_export5(svn_revnum_t *result_rev,
       eb->root_url = url;
       eb->force = overwrite;
       eb->target_revision = &edit_revision;
-      eb->notify_func = ctx->notify_func2;
-      eb->notify_baton = ctx->notify_baton2;
       eb->externals = apr_hash_make(pool);
       eb->native_eol = native_eol;
       eb->ignore_keywords = ignore_keywords;
+      eb->cancel_func = ctx->cancel_func;
+      eb->cancel_baton = ctx->cancel_baton;
+      eb->notify_func = ctx->notify_func2;
+      eb->notify_baton = ctx->notify_baton2;
 
       SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
 
