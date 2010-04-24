@@ -242,11 +242,12 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
             return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
         }
 
-      SVN_ERR(svn_subst_copy_and_translate3(src, tmp_vfile,
+      SVN_ERR(svn_subst_copy_and_translate4(src, tmp_vfile,
                                             eol, repair_forced,
                                             keywords,
                                             expand,
                                             special,
+                                            NULL, NULL,  /* ### cancel  */
                                             result_pool));
 
       xlated_path = tmp_vfile;

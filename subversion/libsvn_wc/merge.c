@@ -122,6 +122,8 @@ detranslate_wc_file(const char **detranslated_abspath,
                     svn_boolean_t force_copy,
                     const apr_array_header_t *prop_diff,
                     const char *source_abspath,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
@@ -209,7 +211,7 @@ detranslate_wc_file(const char **detranslated_abspath,
       /* Force a copy into the temporary wc area to avoid having
          temporary files created below to appear in the actual wc. */
 
-      /* ### svn_subst_copy_and_translate3() also creates a tempfile
+      /* ### svn_subst_copy_and_translate4() also creates a tempfile
          ### internally.  Anyway to piggyback on that? */
       SVN_ERR(svn_io_open_unique_file3(NULL, &detranslated, NULL,
                                       svn_io_file_del_on_pool_cleanup,
@@ -225,13 +227,14 @@ detranslate_wc_file(const char **detranslated_abspath,
                && style != svn_subst_eol_style_none)
         return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
 
-      SVN_ERR(svn_subst_copy_and_translate3(source_abspath,
+      SVN_ERR(svn_subst_copy_and_translate4(source_abspath,
                                             detranslated,
                                             eol,
                                             TRUE /* repair */,
                                             keywords,
                                             FALSE /* contract keywords */,
                                             special,
+                                            cancel_func, cancel_baton,
                                             scratch_pool));
 
       SVN_ERR(svn_dirent_get_absolute(detranslated_abspath, detranslated,
@@ -252,6 +255,8 @@ maybe_update_target_eols(const char **new_target_abspath,
                          svn_wc__db_t *db,
                          const char *old_target_abspath,
                          const apr_array_header_t *prop_diff,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -270,11 +275,15 @@ maybe_update_target_eols(const char **new_target_abspath,
       /* Always 'repair' EOLs here, so that we can apply a diff that
          changes from inconsistent newlines and no 'svn:eol-style' to
          consistent newlines and 'svn:eol-style' set.  */
-      SVN_ERR(svn_subst_copy_and_translate3(old_target_abspath,
+      SVN_ERR(svn_subst_copy_and_translate4(old_target_abspath,
                                             tmp_new,
-                                            eol, TRUE /* repair EOLs */,
-                                            NULL, FALSE,
-                                            FALSE, scratch_pool));
+                                            eol,
+                                            TRUE /* repair */,
+                                            NULL /* keywords */,
+                                            FALSE /* expand */,
+                                            FALSE /* special */,
+                                            cancel_func, cancel_baton,
+                                            scratch_pool));
       *new_target_abspath = apr_pstrdup(result_pool, tmp_new);
     }
   else
@@ -756,8 +765,6 @@ maybe_resolve_conflicts(svn_wc__db_t *db,
                         svn_diff_file_options_t *options,
                         svn_wc_conflict_resolver_func_t conflict_func,
                         void *conflict_baton,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
                         apr_pool_t *pool)
 {
   svn_wc_conflict_result_t *result = NULL;
@@ -859,8 +866,6 @@ merge_text_file(enum svn_wc_merge_outcome_t *merge_outcome,
                 const svn_prop_t *mimeprop,
                 svn_wc_conflict_resolver_func_t conflict_func,
                 void *conflict_baton,
-                svn_cancel_func_t cancel_func,
-                void *cancel_baton,
                 apr_pool_t *pool)
 {
   svn_diff_file_options_t *options;
@@ -933,7 +938,6 @@ merge_text_file(enum svn_wc_merge_outcome_t *merge_outcome,
                                       mimeprop,
                                       options,
                                       conflict_func, conflict_baton,
-                                      cancel_func, cancel_baton,
                                       pool));
 
       if (*merge_outcome == svn_wc_merge_merged)
@@ -995,8 +999,6 @@ merge_binary_file(enum svn_wc_merge_outcome_t *merge_outcome,
                   const svn_prop_t *mimeprop,
                   svn_wc_conflict_resolver_func_t conflict_func,
                   void *conflict_baton,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
                   apr_pool_t *pool)
 {
   /* ### when making the binary-file backups, should we be honoring
@@ -1237,13 +1239,14 @@ svn_wc__internal_merge(enum svn_wc_merge_outcome_t *merge_outcome,
   working_abspath = copyfrom_abspath ? copyfrom_abspath : target_abspath;
   SVN_ERR(detranslate_wc_file(&detranslated_target_abspath, db, target_abspath,
                               (! is_binary) && diff3_cmd != NULL,
-                              prop_diff, working_abspath, pool, pool));
+                              prop_diff, working_abspath,
+                              cancel_func, cancel_baton, pool, pool));
 
   /* We cannot depend on the left file to contain the same eols as the
      right file. If the merge target has mods, this will mark the entire
      file as conflicted, so we need to compensate. */
   SVN_ERR(maybe_update_target_eols(&left_abspath, db, left_abspath, prop_diff,
-                                   pool, pool));
+                                   cancel_func, cancel_baton, pool, pool));
 
   if (is_binary)
     {
@@ -1265,8 +1268,6 @@ svn_wc__internal_merge(enum svn_wc_merge_outcome_t *merge_outcome,
                                   mimeprop,
                                   conflict_func,
                                   conflict_baton,
-                                  cancel_func,
-                                  cancel_baton,
                                   pool));
     }
   else
@@ -1288,8 +1289,6 @@ svn_wc__internal_merge(enum svn_wc_merge_outcome_t *merge_outcome,
                             mimeprop,
                             conflict_func,
                             conflict_baton,
-                            cancel_func,
-                            cancel_baton,
                             pool));
 
   /* Merging is complete.  Regardless of text or binariness, we might

@@ -112,6 +112,8 @@ copy_and_translate(svn_wc__db_t *db,
                    const char *source_abspath,
                    const char *dest_abspath,
                    const char *versioned_abspath,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *scratch_pool)
 {
   svn_subst_eol_style_t style;
@@ -128,11 +130,12 @@ copy_and_translate(svn_wc__db_t *db,
   SVN_ERR(svn_wc__get_special(&special, db, versioned_abspath,
                               scratch_pool));
 
-  SVN_ERR(svn_subst_copy_and_translate3(
+  SVN_ERR(svn_subst_copy_and_translate4(
             source_abspath, dest_abspath,
             eol, TRUE,
             keywords, TRUE,
             special,
+            NULL, NULL,  /* ### cancel  */
             scratch_pool));
 
   /* ### this is a problem. DEST_ABSPATH is not necessarily versioned.  */
@@ -354,7 +357,9 @@ run_revert(svn_wc__db_t *db,
           /* Copy from the text base to the working file. The working file
              specifies the params for translation.  */
           SVN_ERR(copy_and_translate(db, text_base_path, local_abspath,
-                                     local_abspath, scratch_pool));
+                                     local_abspath,
+                                     cancel_func, cancel_baton,
+                                     scratch_pool));
 
           use_commit_times = svn_skel__parse_int(arg1->next->next->next,
                                                  scratch_pool) != 0;
