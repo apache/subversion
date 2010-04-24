@@ -91,8 +91,8 @@ struct encoder_baton {
         2000 encodes as [1 0001111] [0 1010000]
 */
 
-static char *
-encode_int(char *p, svn_filesize_t val)
+static unsigned char *
+encode_int(unsigned char *p, svn_filesize_t val)
 {
   int n;
   svn_filesize_t v;
@@ -116,7 +116,7 @@ encode_int(char *p, svn_filesize_t val)
   while (--n >= 0)
     {
       cont = ((n > 0) ? 0x1 : 0x0) << 7;
-      *p++ = (char)(((val >> (n * 7)) & 0x7f) | cont);
+      *p++ = (unsigned char)(((val >> (n * 7)) & 0x7f) | cont);
     }
 
   return p;
@@ -127,10 +127,10 @@ encode_int(char *p, svn_filesize_t val)
 static void
 append_encoded_int(svn_stringbuf_t *header, svn_filesize_t val)
 {
-  char buf[MAX_ENCODED_INT_LEN], *p;
+  unsigned char buf[MAX_ENCODED_INT_LEN], *p;
 
   p = encode_int(buf, val);
-  svn_stringbuf_appendbytes(header, buf, p - buf);
+  svn_stringbuf_appendbytes(header, (const char *)buf, p - buf);
 }
 
 /* If IN is a string that is >= MIN_COMPRESS_SIZE, zlib compress it and
@@ -235,7 +235,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
         ip = encode_int(ip + 1, op->length);
       if (op->action_code != svn_txdelta_new)
         ip = encode_int(ip, op->offset);
-      svn_stringbuf_appendbytes(instructions, ibuf, ip - ibuf);
+      svn_stringbuf_appendbytes(instructions, (const char *)ibuf, ip - ibuf);
     }
 
   /* Encode the header.  */
