@@ -1131,6 +1131,8 @@ translated_stream_close(void *baton)
 
   SVN_ERR(svn_stream_close(b->stream));
 
+  svn_pool_destroy(b->iterpool);
+
   return SVN_NO_ERROR;
 }
 
