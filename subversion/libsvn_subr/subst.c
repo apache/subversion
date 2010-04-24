@@ -1341,6 +1341,7 @@ svn_subst_translate_cstring2(const char *src,
 /* ### this should be folded into svn_subst_copy_and_translate3 */
 static svn_error_t *
 detranslate_special_file(const char *src, const char *dst,
+                         svn_cancel_func_t cancel_func, void *cancel_baton,
                          apr_pool_t *scratch_pool)
 {
   const char *dst_tmp;
@@ -1355,10 +1356,11 @@ detranslate_special_file(const char *src, const char *dst,
                                  scratch_pool, scratch_pool));
   SVN_ERR(svn_subst_read_specialfile(&src_stream, src,
                                      scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, scratch_pool));
+  SVN_ERR(svn_stream_copy3(src_stream, dst_stream,
+                           cancel_func, cancel_baton, scratch_pool));
 
   /* Do the atomic rename from our temporary location. */
-  return svn_io_file_rename(dst_tmp, dst, scratch_pool);
+  return svn_error_return(svn_io_file_rename(dst_tmp, dst, scratch_pool));
 }
 
 /* Creates a special file DST from the "normal form" located in SOURCE.
@@ -1437,13 +1439,15 @@ create_special_file_from_stream(svn_stream_t *source, const char *dst,
 
 
 svn_error_t *
-svn_subst_copy_and_translate3(const char *src,
+svn_subst_copy_and_translate4(const char *src,
                               const char *dst,
                               const char *eol_str,
                               svn_boolean_t repair,
                               apr_hash_t *keywords,
                               svn_boolean_t expand,
                               svn_boolean_t special,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
                               apr_pool_t *pool)
 {
   svn_stream_t *src_stream;
@@ -1483,7 +1487,10 @@ svn_subst_copy_and_translate3(const char *src,
         }
       /* else !expand */
 
-      return svn_error_return(detranslate_special_file(src, dst, pool));
+      return svn_error_return(detranslate_special_file(src, dst,
+                                                       cancel_func,
+                                                       cancel_baton,
+                                                       pool));
     }
 
   /* The easy way out:  no translation needed, just copy. */
@@ -1503,7 +1510,8 @@ svn_subst_copy_and_translate3(const char *src,
                                            keywords, expand, pool);
 
   /* ###: use cancel func/baton in place of NULL/NULL below. */
-  err = svn_stream_copy3(src_stream, dst_stream, NULL, NULL, pool);
+  err = svn_stream_copy3(src_stream, dst_stream, cancel_func, cancel_baton,
+                         pool);
   if (err)
     {
       /* On errors, we have a pathname available. */
