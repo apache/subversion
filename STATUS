@@ -244,5 +244,17 @@ Veto-blocked changes:
      -1: pburba (There is a regression with this fix, see
          http://svn.haxx.se/dev/archive-2010-03/0716.shtml)
 
+ * r937610
+   Allow fs-pack-test 1 to pass with low file descriptor limits.
+   Justification:
+     Makes regression tests pass on a default OpenBSD install
+     without requiring users to bump the default fd limit first.
+     See http://marc.info/?l=openbsd-ports&m=127197191204545&w=2
+     for problem report. (The test logs show fs-pack-test 1 failing with
+     "svn_tests: Can't open file 'test-repo-fsfs-pack/transactions/
+     33-x.txn/changes': Too many open files")
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
