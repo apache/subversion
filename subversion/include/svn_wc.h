@@ -7020,6 +7020,9 @@ svn_wc_create_tmp_file(apr_file_t **fp,
  * whose newlines and keywords are converted using the translation
  * as requested by @a flags.
  *
+ * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
+ * if the client has cancelled the operation.
+ *
  * When translating to the normal form, inconsistent eol styles will be
  * repaired when appropriate for the given setting.  When translating
  * from normal form, no EOL repair is performed (consistency is assumed).
@@ -7050,13 +7053,15 @@ svn_wc_translated_file3(const char **xlated_abspath,
                         svn_wc_context_t *wc_ctx,
                         const char *versioned_abspath,
                         apr_uint32_t flags,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
 
 /** Similar to svn_wc_translated_file3(), but with an adm_access baton
- * and relative paths instead of a wc_context and absolute paths, and
- * with a single pool.
+ * and relative paths instead of a wc_context and absolute paths, with
+ * a single pool, and no cancellation func/baton.
  *
  * @since New in 1.4.
  * @deprecated Provided for compatibility with the 1.6 API

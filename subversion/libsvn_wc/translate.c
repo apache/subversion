@@ -176,6 +176,8 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
                                  svn_wc__db_t *db,
                                  const char *versioned_abspath,
                                  apr_uint32_t flags,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
@@ -247,7 +249,7 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
                                             keywords,
                                             expand,
                                             special,
-                                            NULL, NULL,  /* ### cancel  */
+                                            cancel_func, cancel_baton,
                                             result_pool));
 
       xlated_path = tmp_vfile;
@@ -263,12 +265,15 @@ svn_wc_translated_file3(const char **xlated_abspath,
                         svn_wc_context_t *wc_ctx,
                         const char *versioned_abspath,
                         apr_uint32_t flags,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
   return svn_wc__internal_translated_file(xlated_abspath, src, wc_ctx->db,
                                           versioned_abspath, flags,
-                                          result_pool,scratch_pool);
+                                          cancel_func, cancel_baton,
+                                          result_pool, scratch_pool);
 }
 
 

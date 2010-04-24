@@ -3201,7 +3201,7 @@ svn_wc_translated_file2(const char **xlated_path,
                                          pool));
 
   SVN_ERR(svn_wc_translated_file3(xlated_path, src, wc_ctx, versioned_abspath,
-                                  flags, pool, pool));
+                                  flags, NULL, NULL, pool, pool));
   if (! svn_dirent_is_absolute(versioned_file))
     {
       SVN_ERR(svn_io_temp_dir(&tmp_root, pool));

@@ -142,6 +142,8 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
                                  svn_wc__db_t *db,
                                  const char *versioned_abspath,
                                  apr_uint32_t flags,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 

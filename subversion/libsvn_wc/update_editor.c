@@ -4582,7 +4582,9 @@ merge_file(svn_boolean_t *install_pristine,
              Note that detranslation is done according to the old props. */
           SVN_ERR(svn_wc__internal_translated_file(
                     &tmptext, fb->local_abspath, eb->db, fb->local_abspath,
-                    SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
+                    SVN_WC_TRANSLATE_TO_NF
+                      | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
+                    eb->cancel_func, eb->cancel_baton,
                     pool, pool));
 
           /* We always want to reinstall the working file if the magic
