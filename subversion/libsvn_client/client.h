@@ -924,10 +924,12 @@ svn_client__condense_commit_items(const char **base_url,
    *NEW_TEXT_BASE_ABSPATHS to a hash that maps (const char *) paths (from
    the items' paths) to the (const char *) abspaths of these files.
 
-   MD5 checksums, if available,  for the new text bases of committed
-   files are stored in *CHECKSUMS, which maps const char* paths (from the
-   items' paths) to const svn_checksum_t * digests.  CHECKSUMS may be
-   null.  */
+   If CHECKSUMS is not NULL, set *CHECKSUMS to a hash containing, for each
+   file transmitted, a mapping from the commit-item's (const char *) path
+   to the (const svn_checksum_t *) MD5 checksum of its new text base.
+
+   Use POOL for all allocations.
+   */
 svn_error_t *
 svn_client__do_commit(const char *base_url,
                       const apr_array_header_t *commit_items,

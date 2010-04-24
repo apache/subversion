@@ -26,6 +26,8 @@
    deprecated functions in this file. */
 #define SVN_DEPRECATED
 
+#include <apr_md5.h>
+
 #include "svn_wc.h"
 #include "svn_subst.h"
 #include "svn_pools.h"
@@ -409,15 +411,22 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 {
   const char *local_abspath;
   svn_wc_context_t *wc_ctx;
+  const svn_checksum_t *new_text_base_md5_checksum;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  SVN_ERR(svn_wc_transmit_text_deltas3(tempfile, digest, wc_ctx,
+  SVN_ERR(svn_wc_transmit_text_deltas3(tempfile,
+                                       digest ? &new_text_base_md5_checksum
+                                              : NULL,
+                                       wc_ctx,
                                        local_abspath, fulltext, editor,
                                        file_baton, pool, pool));
+
+  if (digest)
+    memcpy(digest, new_text_base_md5_checksum->digest, APR_MD5_DIGESTSIZE);
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }

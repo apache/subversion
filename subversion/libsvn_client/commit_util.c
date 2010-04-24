@@ -1642,7 +1642,7 @@ svn_client__do_commit(const char *base_url,
       svn_client_commit_item3_t *item;
       void *file_baton;
       const char *tempfile;
-      unsigned char digest[APR_MD5_DIGESTSIZE];
+      const svn_checksum_t *new_text_base_md5_checksum;
       svn_boolean_t fulltext = FALSE;
       const char *item_abspath;
 
@@ -1672,16 +1672,16 @@ svn_client__do_commit(const char *base_url,
 
       SVN_ERR(svn_wc_transmit_text_deltas3(new_text_base_abspaths ? &tempfile
                                                                   : NULL,
-                                           digest, ctx->wc_ctx, item_abspath,
+                                           &new_text_base_md5_checksum,
+                                           ctx->wc_ctx, item_abspath,
                                            fulltext, editor, file_baton,
-                                           iterpool, iterpool));
+                                           pool, iterpool));
       if (new_text_base_abspaths && tempfile)
         apr_hash_set(*new_text_base_abspaths, item->path, APR_HASH_KEY_STRING,
-                     apr_pstrdup(pool, tempfile));
+                     tempfile);
       if (checksums)
         apr_hash_set(*checksums, item->path, APR_HASH_KEY_STRING,
-                     svn_checksum__from_digest(digest, svn_checksum_md5,
-                                               apr_hash_pool_get(*checksums)));
+                     new_text_base_md5_checksum);
     }
 
   svn_pool_destroy(iterpool);

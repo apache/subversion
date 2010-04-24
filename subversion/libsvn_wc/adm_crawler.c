@@ -1044,7 +1044,7 @@ copying_stream(svn_stream_t *source,
 
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(const char **tempfile,
-                                      unsigned char digest[],
+                                      const svn_checksum_t **new_text_base_md5_checksum,
                                       svn_wc__db_t *db,
                                       const char *local_abspath,
                                       svn_boolean_t fulltext,
@@ -1252,8 +1252,9 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                               svn_dirent_local_style(local_abspath,
                                                      scratch_pool)));
 
-  if (digest)
-    memcpy(digest, local_checksum->digest, svn_checksum_size(local_checksum));
+  if (new_text_base_md5_checksum)
+    *new_text_base_md5_checksum = svn_checksum_dup(local_checksum,
+                                                   result_pool);
 
   /* Close the file baton, and get outta here. */
   return editor->close_file(file_baton,
@@ -1264,7 +1265,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 
 svn_error_t *
 svn_wc_transmit_text_deltas3(const char **tempfile,
-                             unsigned char digest[],
+                             const svn_checksum_t **new_text_base_md5_checksum,
                              svn_wc_context_t *wc_ctx,
                              const char *local_abspath,
                              svn_boolean_t fulltext,
@@ -1273,8 +1274,10 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  return svn_wc__internal_transmit_text_deltas(tempfile, digest, wc_ctx->db,
-                                               local_abspath, fulltext, editor,
+  return svn_wc__internal_transmit_text_deltas(tempfile,
+                                               new_text_base_md5_checksum,
+                                               wc_ctx->db, local_abspath,
+                                               fulltext, editor,
                                                file_baton, result_pool,
                                                scratch_pool);
 }
