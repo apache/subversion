@@ -49,6 +49,7 @@
 
 #include "private/svn_wc_private.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_skel.h"
 
 #include "wc.h"
 #include "log.h"
@@ -58,10 +59,19 @@
 #include "translate.h"
 #include "lock.h"  /* for svn_wc__write_check()  */
 #include "workqueue.h"
+#include "conflicts.h"
 
 #include "svn_private_config.h"
 
 /* #define TEST_DB_PROPS */
+
+
+/* Forward declaration.  */
+static const svn_string_t *
+message_from_skel(const svn_skel_t *skel,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool);
+
 
 /*** Reading/writing property hashes from disk ***/
 
@@ -250,17 +260,21 @@ open_reject_tmp_stream(svn_stream_t **stream,
 }
 
 
-/* Write CONFLICT_DESCRIPTION to STREAM, plus a trailing EOL sequence. */
+/* Given a *SINGLE* property conflict in PROP_SKEL, generate a message
+   for it, and write it to STREAM, along with a trailing EOL sequence.
+
+   See message_from_skel() for details on PROP_SKEL.  */
 static svn_error_t *
 append_prop_conflict(svn_stream_t *stream,
-                     const svn_string_t *conflict_description,
+                     const svn_skel_t *prop_skel,
                      apr_pool_t *pool)
 {
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
+  const svn_string_t *message = message_from_skel(prop_skel, pool, pool);
   apr_size_t len;
   const char *native_text =
-    svn_utf_cstring_from_utf8_fuzzy(conflict_description->data, pool);
+    svn_utf_cstring_from_utf8_fuzzy(message->data, pool);
 
   len = strlen(native_text);
   SVN_ERR(svn_stream_write(stream, native_text, &len));
@@ -836,6 +850,62 @@ generate_conflict_message(const char *propname,
                             _("Trying to change property '%s' from '%s' to "
                               "'%s',\nbut the property does not exist."),
                             propname, incoming_base->data, incoming->data);
+}
+
+
+/* SKEL will be one of:
+
+   ()
+   (VALUE)
+
+   Return NULL for the former (the particular property value was not
+   present), and VALUE for the second.  */
+static const svn_string_t *
+maybe_prop_value(const svn_skel_t *skel,
+                 apr_pool_t *result_pool)
+{
+  if (skel->children == NULL)
+    return NULL;
+
+  return svn_string_ncreate(skel->children->data,
+                            skel->children->len,
+                            result_pool);
+}
+
+
+/* Generate a property conflict message (see generate_conflict_message)
+   from the data contained in SKEL. The message will be allocated in
+   RESULT_POOL.
+
+   Note: SKEL is a single property conflict of the form:
+
+   ("prop" ([ORIGINAL]) ([MINE]) ([INCOMING]) ([INCOMING_BASE]))
+
+   See notes/wc-ng/conflict-storage for more information.  */
+static const svn_string_t *
+message_from_skel(const svn_skel_t *skel,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  const svn_string_t *original;
+  const svn_string_t *mine;
+  const svn_string_t *incoming;
+  const svn_string_t *incoming_base;
+  const char *propname;
+
+  /* Navigate to the property name.  */
+  skel = skel->children->next;
+
+  /* We need to copy these into SCRATCH_POOL in order to nul-terminate
+     the values.  */
+  propname = apr_pstrmemdup(scratch_pool, skel->data, skel->len);
+  original = maybe_prop_value(skel->next, scratch_pool);
+  mine = maybe_prop_value(skel->next->next, scratch_pool);
+  incoming = maybe_prop_value(skel->next->next->next, scratch_pool);
+  incoming_base = maybe_prop_value(skel->next->next->next->next, scratch_pool);
+
+  return generate_conflict_message(propname, original, mine, incoming,
+                                   incoming_base, result_pool);
 }
 
 
@@ -1693,14 +1763,16 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
       if (conflict_remains)
         {
-          const svn_string_t *message;
+          svn_skel_t *conflict_skel = svn_wc__conflict_skel_new(iterpool);
 
-          message = generate_conflict_message(propname,
-                                              base_val,
-                                              mine_val,
-                                              to_val,
-                                              from_val,
-                                              iterpool);
+          SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflict_skel,
+                                                          propname,
+                                                          base_val,
+                                                          mine_val,
+                                                          to_val,
+                                                          from_val,
+                                                          iterpool,
+                                                          iterpool));
 
           set_prop_merge_state(state, svn_wc_notify_state_conflicted);
 
@@ -1714,8 +1786,11 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                                            local_abspath,
                                            scratch_pool, iterpool));
 
-          /* Append the conflict to the open tmp/PROPS/---.prej file */
-          SVN_ERR(append_prop_conflict(reject_tmp_stream, message,
+          /* Append the conflict to the open tmp/PROPS/---.prej file. Note
+             that skel->children refers to the OPERATION skel, and ->next
+             refers to the single property conflict skel.  */
+          SVN_ERR(append_prop_conflict(reject_tmp_stream,
+                                       conflict_skel->children->next,
                                        iterpool));
         }
 
