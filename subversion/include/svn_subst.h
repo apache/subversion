@@ -415,8 +415,32 @@ svn_subst_stream_from_specialfile(svn_stream_t **stream,
  * If @a eol_str and @a keywords are @c NULL, behavior is just a byte-for-byte
  * copy.
  *
- * @since New in 1.3.
+ * @a cancel_func and @a cancel_baton will be called (if not NULL)
+ * periodically to check for cancellation.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_subst_copy_and_translate4(const char *src,
+                              const char *dst,
+                              const char *eol_str,
+                              svn_boolean_t repair,
+                              apr_hash_t *keywords,
+                              svn_boolean_t expand,
+                              svn_boolean_t special,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_subst_copy_and_translate4() but without a cancellation
+ * function and baton.
+ *
+ * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_copy_and_translate3(const char *src,
                               const char *dst,
@@ -426,6 +450,7 @@ svn_subst_copy_and_translate3(const char *src,
                               svn_boolean_t expand,
                               svn_boolean_t special,
                               apr_pool_t *pool);
+
 
 /**
  * Similar to svn_subst_copy_and_translate3() except that @a keywords is a
