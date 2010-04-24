@@ -1076,14 +1076,14 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
       svn_stream_t *tempstream;
 
       SVN_ERR(svn_wc__text_base_path(tempfile, db, local_abspath, TRUE,
-                                     scratch_pool));
+                                     result_pool));
 
       /* Make an untranslated copy of the working file in the
          administrative tmp area because a) we need to detranslate eol
          and keywords anyway, and b) after the commit, we're going to
          copy the tmp file to become the new text base anyway. */
       SVN_ERR(svn_stream_open_writable(&tempstream, *tempfile,
-                                       result_pool, scratch_pool));
+                                       scratch_pool, scratch_pool));
 
       /* Wrap the translated stream with a new stream that writes the
          translated contents into the new text base file as we read from it.
