@@ -240,26 +240,6 @@ load_actual_props(apr_hash_t **props,
 }
 
 
-/* Opens reject temporary stream for FULL_PATH in the appropriate tmp space. */
-static svn_error_t *
-open_reject_tmp_stream(svn_stream_t **stream,
-                       const char **reject_tmp_path,
-                       svn_wc__db_t *db,
-                       const char *local_abspath,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
-{
-  const char *tmp_base_abspath;
-
-  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmp_base_abspath, db, local_abspath,
-                                         scratch_pool, scratch_pool));
-
-  return svn_stream_open_unique(stream, reject_tmp_path, tmp_base_abspath,
-                                svn_io_file_del_none, result_pool,
-                                scratch_pool);
-}
-
-
 /* Given a *SINGLE* property conflict in PROP_SKEL, generate a message
    for it, and write it to STREAM, along with a trailing EOL sequence.
 
@@ -906,6 +886,46 @@ message_from_skel(const svn_skel_t *skel,
 
   return generate_conflict_message(propname, original, mine, incoming,
                                    incoming_base, result_pool);
+}
+
+
+/* Create a property conflict file at PREJFILE based on the property
+   conflicts in CONFLICT_SKEL.  */
+static svn_error_t *
+create_conflict_file(const char **tmp_prejfile_abspath,
+                     svn_wc__db_t *db,
+                     const char *local_abspath,
+                     const svn_skel_t *conflict_skel,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  const char *tempdir_abspath;
+  svn_stream_t *stream;
+  const char *temp_abspath;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  const svn_skel_t *scan;
+
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tempdir_abspath,
+                                         db, local_abspath,
+                                         iterpool, iterpool));
+
+  SVN_ERR(svn_stream_open_unique(&stream, &temp_abspath,
+                                 tempdir_abspath, svn_io_file_del_none,
+                                 scratch_pool, iterpool));
+
+  for (scan = conflict_skel->children->next; scan != NULL; scan = scan->next)
+    {
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(append_prop_conflict(stream, scan, iterpool));
+    }
+
+  SVN_ERR(svn_stream_close(stream));
+
+  svn_pool_destroy(iterpool);
+
+  *tmp_prejfile_abspath = apr_pstrdup(result_pool, temp_abspath);
+  return SVN_NO_ERROR;
 }
 
 
@@ -1662,10 +1682,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   apr_pool_t *iterpool;
   int i;
   svn_boolean_t is_dir;
-  const char *reject_path = NULL;
-  svn_stream_t *reject_tmp_stream = NULL;  /* the temporary conflicts stream */
-  const char *reject_tmp_path = NULL;
   const char *adm_abspath;
+  svn_skel_t *conflict_skel = NULL;
 
   SVN_ERR_ASSERT(base_props != NULL);
   SVN_ERR_ASSERT(working_props != NULL);
@@ -1763,7 +1781,13 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
       if (conflict_remains)
         {
-          svn_skel_t *conflict_skel = svn_wc__conflict_skel_new(iterpool);
+          set_prop_merge_state(state, svn_wc_notify_state_conflicted);
+
+          if (dry_run)
+            continue;   /* skip to next incoming change */
+
+          if (conflict_skel == NULL)
+            conflict_skel = svn_wc__conflict_skel_new(scratch_pool);
 
           SVN_ERR(svn_wc__conflict_skel_add_prop_conflict(conflict_skel,
                                                           propname,
@@ -1771,27 +1795,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                                                           mine_val,
                                                           to_val,
                                                           from_val,
-                                                          iterpool,
+                                                          scratch_pool,
                                                           iterpool));
-
-          set_prop_merge_state(state, svn_wc_notify_state_conflicted);
-
-          if (dry_run)
-            continue;   /* skip to next incoming change */
-
-          if (! reject_tmp_stream)
-            /* This is the very first prop conflict found on this item. */
-            SVN_ERR(open_reject_tmp_stream(&reject_tmp_stream,
-                                           &reject_tmp_path, db,
-                                           local_abspath,
-                                           scratch_pool, iterpool));
-
-          /* Append the conflict to the open tmp/PROPS/---.prej file. Note
-             that skel->children refers to the OPERATION skel, and ->next
-             refers to the single property conflict skel.  */
-          SVN_ERR(append_prop_conflict(reject_tmp_stream,
-                                       conflict_skel->children->next,
-                                       iterpool));
         }
 
     }  /* foreach propchange ... */
@@ -1805,14 +1810,16 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   *new_base_props = base_props;
   *new_actual_props = working_props;
 
-  if (reject_tmp_stream)
+  if (conflict_skel != NULL)
     {
-      /* There's a temporary reject file sitting in .svn/tmp/ somewhere.  Deal
-         with the conflicts.  */
+      const char *tmp_prejfile_abspath;
+      const char *reject_path;
 
-      /* First, _close_ this temporary conflicts file.  We've been
-         appending to it all along. */
-      SVN_ERR(svn_stream_close(reject_tmp_stream));
+      /* Construct a property reject file in the temporary area.  */
+      SVN_ERR(create_conflict_file(&tmp_prejfile_abspath,
+                                   db, local_abspath,
+                                   conflict_skel,
+                                   scratch_pool, scratch_pool));
 
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
@@ -1847,23 +1854,11 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
              disk. */
         }
 
-      /* We've now guaranteed that some kind of .prej file exists
-         above the .svn/ dir.  We write log entries to append our
-         conflicts to it. */
-      SVN_ERR(svn_wc__loggy_append(db, adm_abspath, reject_tmp_path,
-                                   reject_path, scratch_pool));
-
-      /* And of course, delete the temporary reject file. */
-      {
-        const svn_skel_t *work_item;
-
-        SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                             db, reject_tmp_path,
-                                             scratch_pool, scratch_pool));
-        /* ### we should pass WORK_ITEM to some wc_db api that records
-           ### the property conflicts.  */
-        SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
-      }
+      /* Move the temporary file to THE property reject file in the working
+         copy area.  */
+      SVN_ERR(svn_wc__loggy_move(db, adm_abspath,
+                                 tmp_prejfile_abspath, reject_path,
+                                 scratch_pool));
 
       /* Mark entry as "conflicted" with a particular .prej file. */
       {
@@ -1875,8 +1870,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                                            SVN_WC__ENTRY_MODIFY_PREJFILE,
                                            scratch_pool));
       }
-
-    } /* if (reject_tmp_fp) */
+    }
 
   return SVN_NO_ERROR;
 }

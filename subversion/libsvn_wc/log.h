@@ -43,25 +43,6 @@ extern "C" {
 */
 
 
-
-/* Insert into DB a work queue instruction to append the contents
-   of SRC to DST.
-   SRC and DST are relative to ADM_ABSPATH.
-
-   This command fails to be idempotent or atomic: there's no way to
-   tell if you should re-run this!  This function is deprecated; new
-   uses should not be added, and the single current use (constructing
-   human-readable non-parsed property conflict files) should be
-   rewritten.  See Issue #3015.
-*/
-SVN_DEPRECATED
-svn_error_t *
-svn_wc__loggy_append(svn_wc__db_t *db,
-                     const char *adm_abspath,
-                     const char *src, const char *dst,
-                     apr_pool_t *scratch_pool);
-
-
 /* Insert into DB a work queue instruction to generate a translated
    file from SRC to DST with translation settings from VERSIONED.
    ADM_ABSPATH is the absolute path for the admin directory for PATH.
