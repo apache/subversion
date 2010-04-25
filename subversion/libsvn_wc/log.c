@@ -88,9 +88,6 @@
    the DEST. */
 #define SVN_WC__LOG_CP_AND_TRANSLATE    "cp-and-translate"
 
-/* Append file from SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
-#define SVN_WC__LOG_APPEND              "append"
-
 /* Make file SVN_WC__LOG_ATTR_NAME readonly */
 #define SVN_WC__LOG_READONLY            "readonly"
 
@@ -149,25 +146,6 @@ struct log_runner
                            svn_dirent_local_style(loggy->adm_abspath,   \
                                                   loggy->pool)),        \
                          loggy->parser)
-
-
-static svn_error_t *
-log_do_file_append(const char *from_abspath,
-                   const char *dest_abspath,
-                   apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-
-  err = svn_io_append_file(from_abspath, dest_abspath, scratch_pool);
-  if (err)
-    {
-      if (!APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_return(err);
-      svn_error_clear(err);
-    }
-
-  return SVN_NO_ERROR;
-}
 
 
 static svn_error_t *
@@ -623,16 +601,6 @@ start_handler(void *userData, const char *eltname, const char **atts)
     err = log_do_file_cp_and_translate(loggy->db, from_abspath, dest_abspath,
                                        versioned_abspath, loggy->pool);
   }
-  else if (strcmp(eltname, SVN_WC__LOG_APPEND) == 0) {
-    const char *dest = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DEST, atts);
-    const char *from_abspath;
-    const char *dest_abspath;
-
-    SVN_ERR_ASSERT_NO_RETURN(dest != NULL);
-    from_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
-    dest_abspath = svn_dirent_join(loggy->adm_abspath, dest, loggy->pool);
-    err = log_do_file_append(from_abspath, dest_abspath, loggy->pool);
-  }
   else if (strcmp(eltname, SVN_WC__LOG_READONLY) == 0) {
     err = log_do_file_readonly(loggy, name);
   }
@@ -732,31 +700,6 @@ loggy_path(const char **logy_path,
     }
 
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__loggy_append(svn_wc__db_t *db,
-                     const char *adm_abspath,
-                     const char *src, const char *dst,
-                     apr_pool_t *scratch_pool)
-{
-  const char *loggy_path1;
-  const char *loggy_path2;
-  svn_stringbuf_t *log_accum = NULL;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(adm_abspath));
-
-  SVN_ERR(loggy_path(&loggy_path1, src, adm_abspath, scratch_pool));
-  SVN_ERR(loggy_path(&loggy_path2, dst, adm_abspath, scratch_pool));
-  svn_xml_make_open_tag(&log_accum, scratch_pool,
-                        svn_xml_self_closing, SVN_WC__LOG_APPEND,
-                        SVN_WC__LOG_ATTR_NAME, loggy_path1,
-                        SVN_WC__LOG_ATTR_DEST, loggy_path2,
-                        NULL);
-
-  return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
-                                               scratch_pool));
 }
 
 
