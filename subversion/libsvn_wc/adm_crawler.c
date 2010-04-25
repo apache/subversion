@@ -447,11 +447,11 @@ report_revisions_and_depths(svn_wc__db_t *db,
         }
       else
         {
-          const char *childname = svn_uri_is_child(dir_repos_relpath,
-                                                   this_repos_relpath, NULL);
+          const char *childname = svn_relpath_is_child(dir_repos_relpath,
+                                                       this_repos_relpath,
+                                                       NULL);
 
-          if (childname == NULL
-              || strcmp(svn_path_uri_decode(childname, iterpool), child) != 0)
+          if (childname == NULL || strcmp(childname, child) != 0)
             this_switched = TRUE;
           else
             this_switched = FALSE;
