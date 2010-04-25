@@ -176,9 +176,20 @@ svn_wc__node_get_kind(svn_node_kind_t *kind,
                       apr_pool_t *scratch_pool)
 {
   svn_wc__db_kind_t db_kind;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc__db_read_kind(&db_kind, wc_ctx->db, abspath, TRUE,
-                               scratch_pool));
+  err = svn_wc__db_read_kind(&db_kind, wc_ctx->db, abspath, FALSE,
+                             scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      *kind = svn_node_none;
+      return SVN_NO_ERROR;
+    }
+  else
+    SVN_ERR(err);
+
   switch (db_kind)
     {
       case svn_wc__db_kind_file:
@@ -191,16 +202,14 @@ svn_wc__node_get_kind(svn_node_kind_t *kind,
         *kind = svn_node_file;
         break;
       case svn_wc__db_kind_unknown:
-        *kind = svn_node_unknown;  /* ### should probably be svn_node_none  */
+        *kind = svn_node_unknown;
         break;
       default:
         SVN_ERR_MALFUNCTION();
     }
 
-  /* If we found a svn_node_file or svn_node_dir, but it is hidden,
-     then consider *KIND to be svn_node_none unless SHOW_HIDDEN is true. */
-  if (! show_hidden
-      && (*kind == svn_node_file || *kind == svn_node_dir))
+  /* Make sure hidden nodes return svn_node_none. */
+  if (! show_hidden)
     {
       svn_boolean_t hidden;
 
