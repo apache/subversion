@@ -368,11 +368,12 @@ svn_wc__node_get_url(const char **url,
 
 
 /**
- * Set @a *copyfrom_url to the corresponding copy-from URL, and @a
- * copyfrom_rev to the corresponding copy-from revision, of @a
- * local_abspath, using @a wc_ctx.  Set @a is_copy_target to TRUE iff
- * @a local_abspath was the target of a copy information (versus being
- * a member of the subtree beneath such a copy target).
+ * Set @a *copyfrom_url to the corresponding copy-from URL (allocated
+ * from @a result_pool), and @a copyfrom_rev to the corresponding
+ * copy-from revision, of @a local_abspath, using @a wc_ctx.  Set @a
+ * is_copy_target to TRUE iff @a local_abspath was the target of a
+ * copy information (versus being a member of the subtree beneath such
+ * a copy target).
  *
  * If @a local_abspath is not copied, set @a *copyfrom_rev to NULL and
  * @a *copyfrom_rev to @c SVN_INVALID_REVNUM.
