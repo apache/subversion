@@ -1252,7 +1252,7 @@ svn_client__condense_commit_items(const char **base_url,
 
 struct file_mod_t
 {
-  svn_client_commit_item3_t *item;
+  const svn_client_commit_item3_t *item;
   void *file_baton;
 };
 
@@ -1270,12 +1270,16 @@ struct path_driver_cb_baton
 };
 
 
-/* This implements svn_delta_path_driver_cb_func_t.
- * Act on the item of CALLBACK_BATON->commit_items keyed by PATH.
- * CALLBACK_BATON->commit_items is an input.
- * If the item is a file with text mods, then add a mapping of "item-url =>
- * (commit-item, file-baton)" into CALLBACK_BATON->file_mods.
- * (That is the sole use of CALLBACK_BATON->file_mods.) */
+/* Drive CALLBACK_BATON->editor with the change described by the item in
+ * CALLBACK_BATON->commit_items that is keyed by PATH.  If the change
+ * includes a text mod, however, call the editor's file_open() function
+ * but do not send the text mod to the editor; instead, add a mapping of
+ * "item-url => (commit-item, file-baton)" into CALLBACK_BATON->file_mods.
+ *
+ * Before driving the editor, call the cancellation and notification
+ * callbacks in CALLBACK_BATON->ctx, if present.
+ *
+ * This implements svn_delta_path_driver_cb_func_t. */
 static svn_error_t *
 do_item_commit(void **dir_baton,
                void *parent_baton,
@@ -1284,22 +1288,20 @@ do_item_commit(void **dir_baton,
                apr_pool_t *pool)
 {
   struct path_driver_cb_baton *cb_baton = callback_baton;
-  svn_client_commit_item3_t *item = apr_hash_get(cb_baton->commit_items,
-                                                 path, APR_HASH_KEY_STRING);
+  const svn_client_commit_item3_t *item = apr_hash_get(cb_baton->commit_items,
+                                                       path,
+                                                       APR_HASH_KEY_STRING);
   svn_node_kind_t kind = item->kind;
   void *file_baton = NULL;
-  const char *copyfrom_url = NULL;
   apr_pool_t *file_pool = NULL;
   const svn_delta_editor_t *editor = cb_baton->editor;
   apr_hash_t *file_mods = cb_baton->file_mods;
   svn_client_ctx_t *ctx = cb_baton->ctx;
-  svn_error_t *err = SVN_NO_ERROR;
+  svn_error_t *err;
   const char *local_abspath = NULL;
 
   /* Do some initializations. */
   *dir_baton = NULL;
-  if (item->copyfrom_url)
-    copyfrom_url = item->copyfrom_url;
   if (item->kind != svn_node_none && item->path)
     {
       /* We might not always get a local_abspath.
@@ -1325,7 +1327,7 @@ do_item_commit(void **dir_baton,
   /* Validation. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
     {
-      if (! copyfrom_url)
+      if (! item->copyfrom_url)
         return svn_error_createf
           (SVN_ERR_BAD_URL, NULL,
            _("Commit item '%s' has copy flag but no copyfrom URL"),
@@ -1417,16 +1419,16 @@ do_item_commit(void **dir_baton,
         {
           SVN_ERR_ASSERT(parent_baton);
           SVN_ERR(editor->add_file
-                  (path, parent_baton, copyfrom_url,
-                   copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
+                  (path, parent_baton, item->copyfrom_url,
+                   item->copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
                    file_pool, &file_baton));
         }
       else /* May be svn_node_none when adding parent dirs for a copy. */
         {
           SVN_ERR_ASSERT(parent_baton);
           SVN_ERR(editor->add_directory
-                  (path, parent_baton, copyfrom_url,
-                   copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
+                  (path, parent_baton, item->copyfrom_url,
+                   item->copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
                    pool, dir_baton));
         }
 
@@ -1639,8 +1641,7 @@ svn_client__do_commit(const char *base_url,
   for (hi = apr_hash_first(pool, file_mods); hi; hi = apr_hash_next(hi))
     {
       struct file_mod_t *mod = svn__apr_hash_index_val(hi);
-      svn_client_commit_item3_t *item;
-      void *file_baton;
+      const svn_client_commit_item3_t *item = mod->item;
       const char *tempfile;
       const svn_checksum_t *new_text_base_md5_checksum;
       svn_boolean_t fulltext = FALSE;
@@ -1649,8 +1650,6 @@ svn_client__do_commit(const char *base_url,
       svn_pool_clear(iterpool);
 
       /* Transmit the entry. */
-      item = mod->item;
-      file_baton = mod->file_baton;
       SVN_ERR(svn_dirent_get_absolute(&item_abspath, item->path, iterpool));
 
       if (ctx->cancel_func)
@@ -1674,7 +1673,7 @@ svn_client__do_commit(const char *base_url,
                                                                   : NULL,
                                            &new_text_base_md5_checksum,
                                            ctx->wc_ctx, item_abspath,
-                                           fulltext, editor, file_baton,
+                                           fulltext, editor, mod->file_baton,
                                            pool, iterpool));
       if (new_text_base_abspaths && tempfile)
         apr_hash_set(*new_text_base_abspaths, item->path, APR_HASH_KEY_STRING,
