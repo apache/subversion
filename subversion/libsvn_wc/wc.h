@@ -512,6 +512,7 @@ svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                       const svn_checksum_t **new_text_base_md5_checksum,
+                                      const svn_checksum_t **new_text_base_sha1_checksum,
                                       svn_wc__db_t *db,
                                       const char *local_abspath,
                                       svn_boolean_t fulltext,
