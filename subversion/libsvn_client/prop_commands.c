@@ -615,55 +615,6 @@ propget_walk_cb(const char *local_abspath,
                                  wb->changelist_hash, pool))
     return SVN_NO_ERROR;
 
-  /* If we're looking at pristines, we need nodes that aren't added
-     (that is, there are pristines to look at); otherwise, nodes that
-     aren't deleted (that is, there should be working props).  */
-  if (wb->pristine)
-    {
-      svn_boolean_t is_added;
-      svn_error_t *err;
-
-      err = svn_wc__node_is_added(&is_added, wb->wc_ctx, local_abspath, pool);
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-      else if (err)
-        return svn_error_return(err);
-
-      if (is_added)
-        {
-          svn_boolean_t replaced;
-
-          SVN_ERR(svn_wc__node_is_replaced(&replaced, wb->wc_ctx,
-                                           local_abspath, pool));
-          if (replaced)
-            is_added = FALSE;
-        }
-
-      if (is_added)
-        return SVN_NO_ERROR;
-    }
-  else
-    {
-      svn_boolean_t is_deleted;
-      svn_error_t *err;
-      
-      err = svn_wc__node_is_status_deleted(&is_deleted, wb->wc_ctx,
-                                           local_abspath, pool);
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-      else if (err)
-        return svn_error_return(err);
-
-      if (is_deleted)
-        return SVN_NO_ERROR;
-   }
-
   SVN_ERR(pristine_or_working_propval(&propval, wb->wc_ctx, local_abspath,
                                       wb->propname, wb->pristine,
                                       apr_hash_pool_get(wb->props), pool));
