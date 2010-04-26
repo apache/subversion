@@ -1671,7 +1671,7 @@ svn_client__do_commit(const char *base_url,
 
       SVN_ERR(svn_wc_transmit_text_deltas3(new_text_base_abspaths ? &tempfile
                                                                   : NULL,
-                                           &new_text_base_md5_checksum,
+                                           &new_text_base_md5_checksum, NULL,
                                            ctx->wc_ctx, item_abspath,
                                            fulltext, editor, mod->file_baton,
                                            pool, iterpool));

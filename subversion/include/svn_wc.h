@@ -7151,6 +7151,7 @@ svn_wc_translated_stream(svn_stream_t **stream,
  * If @a new_text_base_md5_checksum is non-NULL, set
  * @a *new_text_base_md5_checksum to the MD5 checksum of (@a local_abspath
  * translated to repository-normal form), allocated in @a result_pool.
+ * Similarly for @a new_text_base_sha1_checksum.
  *
  * If @a fulltext, send the untranslated copy of @a local_abspath through
  * @a editor as full-text; else send it as svndiff against the current text
@@ -7169,6 +7170,7 @@ svn_wc_translated_stream(svn_stream_t **stream,
 svn_error_t *
 svn_wc_transmit_text_deltas3(const char **tempfile,
                              const svn_checksum_t **new_text_base_md5_checksum,
+                             const svn_checksum_t **new_text_base_sha1_checksum,
                              svn_wc_context_t *wc_ctx,
                              const char *local_abspath,
                              svn_boolean_t fulltext,
@@ -7178,8 +7180,8 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
                              apr_pool_t *scratch_pool);
 
 /** Similar to svn_wc_transmit_text_deltas3(), but with a relative path
- * and adm_access baton, and the checksum output is a digest instead of
- * an svn_checksum_t object.
+ * and adm_access baton, and the checksum output is an MD5 digest instead of
+ * two svn_checksum_t objects.
  *
  * @since New in 1.4.
  * @deprecated Provided for backwards compatibility with the 1.6 API.

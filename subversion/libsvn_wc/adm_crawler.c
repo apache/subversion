@@ -1045,6 +1045,7 @@ copying_stream(svn_stream_t *source,
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                       const svn_checksum_t **new_text_base_md5_checksum,
+                                      const svn_checksum_t **new_text_base_sha1_checksum,
                                       svn_wc__db_t *db,
                                       const char *local_abspath,
                                       svn_boolean_t fulltext,
@@ -1057,7 +1058,8 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
   void *wh_baton;
   const svn_checksum_t *expected_md5_checksum;
   svn_checksum_t *verify_checksum = NULL;  /* calc'd MD5 of BASE_STREAM */
-  svn_checksum_t *local_checksum;  /* calc'd MD5 of LOCAL_STREAM */
+  svn_checksum_t *local_md5_checksum;  /* calc'd MD5 of LOCAL_STREAM */
+  svn_checksum_t *local_sha1_checksum;  /* calc'd SHA1 of LOCAL_STREAM */
   svn_error_t *err;
   svn_stream_t *base_stream;  /* delta source */
   svn_stream_t *local_stream;  /* delta target: LOCAL_ABSPATH transl. to NF */
@@ -1190,10 +1192,16 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                     &handler, &wh_baton));
   }
 
+  if (new_text_base_sha1_checksum)
+    local_stream = svn_stream_checksummed2(local_stream,
+                                           &local_sha1_checksum,
+                                           NULL, svn_checksum_sha1, TRUE,
+                                           scratch_pool);
+
   /* Run diff processing, throwing windows at the handler. */
   err = svn_txdelta_run(base_stream, local_stream,
                         handler, wh_baton,
-                        svn_checksum_md5, &local_checksum,
+                        svn_checksum_md5, &local_md5_checksum,
                         NULL, NULL,
                         scratch_pool, scratch_pool);
 
@@ -1253,12 +1261,15 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                                      scratch_pool)));
 
   if (new_text_base_md5_checksum)
-    *new_text_base_md5_checksum = svn_checksum_dup(local_checksum,
+    *new_text_base_md5_checksum = svn_checksum_dup(local_md5_checksum,
                                                    result_pool);
+  if (new_text_base_sha1_checksum)
+    *new_text_base_sha1_checksum = svn_checksum_dup(local_sha1_checksum,
+                                                    result_pool);
 
   /* Close the file baton, and get outta here. */
   return editor->close_file(file_baton,
-                            svn_checksum_to_cstring(local_checksum,
+                            svn_checksum_to_cstring(local_md5_checksum,
                                                     scratch_pool),
                             scratch_pool);
 }
@@ -1266,6 +1277,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 svn_error_t *
 svn_wc_transmit_text_deltas3(const char **tempfile,
                              const svn_checksum_t **new_text_base_md5_checksum,
+                             const svn_checksum_t **new_text_base_sha1_checksum,
                              svn_wc_context_t *wc_ctx,
                              const char *local_abspath,
                              svn_boolean_t fulltext,
@@ -1276,6 +1288,7 @@ svn_wc_transmit_text_deltas3(const char **tempfile,
 {
   return svn_wc__internal_transmit_text_deltas(tempfile,
                                                new_text_base_md5_checksum,
+                                               new_text_base_sha1_checksum,
                                                wc_ctx->db, local_abspath,
                                                fulltext, editor,
                                                file_baton, result_pool,

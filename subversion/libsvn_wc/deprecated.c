@@ -421,7 +421,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   SVN_ERR(svn_wc_transmit_text_deltas3(tempfile,
                                        digest ? &new_text_base_md5_checksum
                                               : NULL,
-                                       wc_ctx,
+                                       NULL, wc_ctx,
                                        local_abspath, fulltext, editor,
                                        file_baton, pool, pool));
 
