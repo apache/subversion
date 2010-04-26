@@ -63,6 +63,7 @@
 #define OP_FILE_INSTALL "file-install"
 #define OP_FILE_REMOVE "file-remove"
 #define OP_SYNC_FILE_FLAGS "sync-file-flags"
+#define OP_PREJ_INSTALL "prej-install"
 
 
 /* For work queue debugging. Generates output about its operation.  */
@@ -2234,6 +2235,76 @@ svn_wc__wq_build_sync_file_flags(const svn_skel_t **work_item,
 
 /* ------------------------------------------------------------------------ */
 
+/* OP_PREJ_INSTALL  */
+
+static svn_error_t *
+run_prej_install(svn_wc__db_t *db,
+                 const svn_skel_t *work_item,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_abspath;
+  const svn_skel_t *conflict_skel;
+  const char *tmp_prejfile_abspath;
+  const char *prejfile_abspath;
+
+  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  if (arg1->next != NULL)
+    conflict_skel = arg1->next;
+  else
+    SVN_ERR_MALFUNCTION();  /* ### wc_db can't provide it ... yet.  */
+
+  /* Construct a property reject file in the temporary area.  */
+  SVN_ERR(svn_wc__create_prejfile(&tmp_prejfile_abspath,
+                                  db, local_abspath,
+                                  conflict_skel,
+                                  scratch_pool, scratch_pool));
+
+  /* Get the (stored) name of where it should go.  */
+  SVN_ERR(svn_wc__get_prejfile_abspath(&prejfile_abspath, db, local_abspath,
+                                       scratch_pool, scratch_pool));
+  SVN_ERR_ASSERT(prejfile_abspath != NULL);
+
+  /* ... and atomically move it into place.  */
+  SVN_ERR(svn_io_file_rename(tmp_prejfile_abspath,
+                             prejfile_abspath,
+                             scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_build_prej_install(const svn_skel_t **work_item,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              const svn_skel_t *conflict_skel,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  svn_skel_t *build_item = svn_skel__make_empty_list(result_pool);
+
+  /* ### gotta have this, today  */
+  SVN_ERR_ASSERT(conflict_skel != NULL);
+
+  if (conflict_skel != NULL)
+    /* ### woah! this needs to dup the skel into RESULT_POOL  */
+    svn_skel__prepend((svn_skel_t *)conflict_skel, build_item);
+  svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
+                        build_item, result_pool);
+  svn_skel__prepend_str(OP_PREJ_INSTALL, build_item, result_pool);
+
+  /* Done. Assign to the const-ful WORK_ITEM.  */
+  *work_item = build_item;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
   { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
@@ -2247,6 +2318,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_FILE_INSTALL, run_file_install },
   { OP_FILE_REMOVE, run_file_remove },
   { OP_SYNC_FILE_FLAGS, run_sync_file_flags },
+  { OP_PREJ_INSTALL, run_prej_install },
 
   /* Sentinel.  */
   { NULL }

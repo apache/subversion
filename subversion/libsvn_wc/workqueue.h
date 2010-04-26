@@ -106,6 +106,19 @@ svn_wc__wq_build_sync_file_flags(const svn_skel_t **work_item,
                                  apr_pool_t *scratch_pool);
 
 
+/* Build a work item that will install a property reject file for
+   LOCAL_ABSPATH into the working copy. The propety conflicts will
+   be taken from CONFLICT_SKEL, or if NULL, then from wc_db for the
+   given DB/LOCAL_ABSPATH.  */
+svn_error_t *
+svn_wc__wq_build_prej_install(const svn_skel_t **work_item,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              const svn_skel_t *conflict_skel,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+
 /* Record a work item to revert LOCAL_ABSPATH.  */
 svn_error_t *
 svn_wc__wq_add_revert(svn_boolean_t *will_revert,
