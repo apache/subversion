@@ -1182,12 +1182,10 @@ translated_stream_mark(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
   SVN_ERR(svn_stream_mark(b->stream, &mt->mark, pool));
 
   /* Save translation state. */
-  mt->saved_baton.in_baton = apr_palloc(pool,
-                                        sizeof(*mt->saved_baton.in_baton));
-  *mt->saved_baton.in_baton = *b->in_baton;
-  mt->saved_baton.out_baton = apr_palloc(pool,
-                                         sizeof(*mt->saved_baton.out_baton));
-  *mt->saved_baton.out_baton = *b->out_baton;
+  mt->saved_baton.in_baton = apr_pmemdup(pool, b->in_baton,
+                                         sizeof(*mt->saved_baton.in_baton));
+  mt->saved_baton.out_baton = apr_pmemdup(pool, b->out_baton,
+                                          sizeof(*mt->saved_baton.out_baton));
   mt->saved_baton.written = b->written;
   mt->saved_baton.readbuf = svn_stringbuf_dup(b->readbuf, pool);
   mt->saved_baton.readbuf_off = b->readbuf_off;
