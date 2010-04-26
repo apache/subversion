@@ -225,6 +225,21 @@ svn_wc__marked_as_binary(svn_boolean_t *marked,
                          apr_pool_t *scratch_pool);
 
 
+svn_error_t *
+svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__create_prejfile(const char **tmp_prejfile_abspath,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        const svn_skel_t *conflict_skel,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

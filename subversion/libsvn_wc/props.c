@@ -267,20 +267,18 @@ append_prop_conflict(svn_stream_t *stream,
 
 /* Get the reject file for LOCAL_ABSPATH in DB.  Set *REJECT_FILE to the
    name of that file, or to NULL if no such file exists. */
-static svn_error_t *
-get_existing_prop_reject_file(const char **reject_file,
-                              svn_wc__db_t *db,
-                              const char *adm_abspath,
-                              const char *local_abspath,
-                              apr_pool_t *pool)
+svn_error_t *
+svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
   const apr_array_header_t *conflicts;
   int i;
 
-  *reject_file = NULL;
-
   SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                    pool, pool));
+                                    scratch_pool, scratch_pool));
 
   for (i = 0; i < conflicts->nelts; i++)
     {
@@ -288,9 +286,22 @@ get_existing_prop_reject_file(const char **reject_file,
       cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
 
       if (cd->kind == svn_wc_conflict_kind_property)
-        *reject_file = svn_dirent_join(adm_abspath, cd->their_file, pool);
+        {
+          if (strcmp(cd->their_file, SVN_WC__THIS_DIR_PREJ) == 0)
+            *prejfile_abspath = svn_dirent_join(local_abspath,
+                                                SVN_WC__THIS_DIR_PREJ,
+                                                result_pool);
+          else
+            *prejfile_abspath = svn_dirent_join(
+                                  svn_dirent_dirname(local_abspath,
+                                                     scratch_pool),
+                                  cd->their_file,
+                                  result_pool);
+          return SVN_NO_ERROR;
+        }
     }
 
+  *prejfile_abspath = NULL;
   return SVN_NO_ERROR;
 }
 
@@ -891,13 +902,13 @@ message_from_skel(const svn_skel_t *skel,
 
 /* Create a property conflict file at PREJFILE based on the property
    conflicts in CONFLICT_SKEL.  */
-static svn_error_t *
-create_conflict_file(const char **tmp_prejfile_abspath,
-                     svn_wc__db_t *db,
-                     const char *local_abspath,
-                     const svn_skel_t *conflict_skel,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__create_prejfile(const char **tmp_prejfile_abspath,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        const svn_skel_t *conflict_skel,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   const char *tempdir_abspath;
   svn_stream_t *stream;
@@ -1812,19 +1823,12 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
   if (conflict_skel != NULL)
     {
-      const char *tmp_prejfile_abspath;
       const char *reject_path;
-
-      /* Construct a property reject file in the temporary area.  */
-      SVN_ERR(create_conflict_file(&tmp_prejfile_abspath,
-                                   db, local_abspath,
-                                   conflict_skel,
-                                   scratch_pool, scratch_pool));
 
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
-      SVN_ERR(get_existing_prop_reject_file(&reject_path, db, adm_abspath,
-                                            local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__get_prejfile_abspath(&reject_path, db, local_abspath,
+                                           scratch_pool, scratch_pool));
 
       if (! reject_path)
         {
@@ -1854,12 +1858,6 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
              disk. */
         }
 
-      /* Move the temporary file to THE property reject file in the working
-         copy area.  */
-      SVN_ERR(svn_wc__loggy_move(db, adm_abspath,
-                                 tmp_prejfile_abspath, reject_path,
-                                 scratch_pool));
-
       /* Mark entry as "conflicted" with a particular .prej file. */
       {
         svn_wc_entry_t entry;
@@ -1869,6 +1867,21 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                                            local_abspath, &entry,
                                            SVN_WC__ENTRY_MODIFY_PREJFILE,
                                            scratch_pool));
+      }
+
+      /* Once the prejfile is recorded, then install the file.  */
+      {
+        const svn_skel_t *work_item;
+
+        /* ### careful. CONFLICT_SKEL is NOT dup'd into the provided
+           ### result_pool at the moment. we'll get that fixed soon-ish.
+           ### this is okay for now since we immediately serialize it and
+           ### shove it into the database.  */
+        SVN_ERR(svn_wc__wq_build_prej_install(&work_item,
+                                              db, local_abspath,
+                                              conflict_skel,
+                                              scratch_pool, scratch_pool));
+        SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
       }
     }
 
