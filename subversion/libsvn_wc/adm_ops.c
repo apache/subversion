@@ -83,7 +83,7 @@ typedef struct
   svn_boolean_t recurse;
   svn_boolean_t no_unlock;
   svn_boolean_t keep_changelist;
-  const svn_checksum_t *checksum;
+  const svn_checksum_t *md5_checksum;
   apr_hash_t *new_dav_cache;
 } committed_queue_item_t;
 
@@ -444,7 +444,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    apr_hash_t *new_dav_cache,
                                    svn_boolean_t no_unlock,
                                    svn_boolean_t keep_changelist,
-                                   const svn_checksum_t *checksum,
+                                   const svn_checksum_t *md5_checksum,
                                    const svn_wc_committed_queue_t *queue,
                                    apr_pool_t *scratch_pool)
 {
@@ -456,7 +456,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                  new_revnum, new_date, rev_author,
                                  new_dav_cache,
                                  no_unlock, keep_changelist,
-                                 checksum, scratch_pool));
+                                 md5_checksum, scratch_pool));
 
   if (recurse && kind == svn_wc__db_kind_dir)
     {
@@ -502,7 +502,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
           if (status == svn_wc__db_status_excluded)
             continue;
 
-          checksum = NULL;
+          md5_checksum = NULL;
           if (kind != svn_wc__db_kind_dir)
             {
               /* Suppress log creation for deleted entries in a replaced
@@ -529,7 +529,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    APR_HASH_KEY_STRING);
 
                   if (cqi != NULL)
-                    checksum = cqi->checksum;
+                    md5_checksum = cqi->md5_checksum;
                 }
             }
 
@@ -543,7 +543,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                                      NULL,
                                                      TRUE /* no_unlock */,
                                                      keep_changelist,
-                                                     checksum,
+                                                     md5_checksum,
                                                      queue, iterpool));
 
           if (kind == svn_wc__db_kind_dir)
@@ -600,7 +600,7 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
                         const apr_array_header_t *wcprop_changes,
                         svn_boolean_t remove_lock,
                         svn_boolean_t remove_changelist,
-                        const svn_checksum_t *checksum,
+                        const svn_checksum_t *md5_checksum,
                         apr_pool_t *scratch_pool)
 {
   committed_queue_item_t *cqi;
@@ -619,7 +619,7 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
   cqi->recurse = recurse;
   cqi->no_unlock = !remove_lock;
   cqi->keep_changelist = !remove_changelist;
-  cqi->checksum = checksum;
+  cqi->md5_checksum = md5_checksum;
   cqi->new_dav_cache = svn_wc__prop_array_to_hash(wcprop_changes, queue->pool);
 
   apr_hash_set(queue->queue, local_abspath, APR_HASH_KEY_STRING, cqi);
@@ -699,7 +699,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                                  cqi->new_dav_cache,
                                                  cqi->no_unlock,
                                                  cqi->keep_changelist,
-                                                 cqi->checksum, queue,
+                                                 cqi->md5_checksum, queue,
                                                  iterpool));
 
       SVN_ERR(svn_wc__wq_run(wc_ctx->db, cqi->local_abspath, NULL, NULL,
