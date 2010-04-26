@@ -3751,14 +3751,14 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
                         const apr_array_header_t *wcprop_changes,
                         svn_boolean_t remove_lock,
                         svn_boolean_t remove_changelist,
-                        const svn_checksum_t *checksum,
+                        const svn_checksum_t *md5_checksum,
                         apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
   return svn_wc_queue_committed3(queue, local_abspath, recurse, wcprop_changes,
-                                 remove_lock, remove_changelist, checksum,
+                                 remove_lock, remove_changelist, md5_checksum,
                                  scratch_pool);
 }
 
@@ -3773,18 +3773,18 @@ svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
                        const unsigned char *digest,
                        apr_pool_t *pool)
 {
-  const svn_checksum_t *checksum;
+  const svn_checksum_t *md5_checksum;
 
   if (digest)
-    checksum = svn_checksum__from_digest(
+    md5_checksum = svn_checksum__from_digest(
                    digest, svn_checksum_md5,
                    svn_wc__get_committed_queue_pool(*queue));
   else
-    checksum = NULL;
+    md5_checksum = NULL;
 
   return svn_wc_queue_committed2(*queue, path, adm_access, recurse,
                                  wcprop_changes, remove_lock,
-                                 remove_changelist, checksum, pool);
+                                 remove_changelist, md5_checksum, pool);
 }
 
 svn_error_t *
