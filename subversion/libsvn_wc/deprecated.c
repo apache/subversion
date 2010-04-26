@@ -2230,6 +2230,7 @@ struct status4_wrapper_baton
   void *old_baton;
   const char *anchor_abspath;
   const char *anchor_relpath;
+  svn_wc_context_t *wc_ctx;
 };
 
 /* */
@@ -2243,7 +2244,8 @@ status4_wrapper_func(void *baton,
   svn_wc_status2_t *dup;
   const char *path = local_abspath;
 
-  dup = svn_wc__status2_from_3(status, scratch_pool);
+  SVN_ERR(svn_wc__status2_from_3(&dup, status, swb->wc_ctx, local_abspath,
+                                 scratch_pool, scratch_pool));
 
   if (swb->anchor_abspath != NULL)
     {
@@ -2288,6 +2290,8 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
 
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          wc_db, pool));
+
+  swb->wc_ctx = wc_ctx;
 
   anchor_abspath = svn_wc__adm_access_abspath(anchor);
 
@@ -2562,7 +2566,8 @@ svn_wc_status2(svn_wc_status2_t **status,
                                          pool));
 
   SVN_ERR(svn_wc_status3(&stat3, wc_ctx, local_abspath, pool, pool));
-  *status = svn_wc__status2_from_3(stat3, pool);
+  SVN_ERR(svn_wc__status2_from_3(status, stat3, wc_ctx, local_abspath,
+                                 pool, pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }

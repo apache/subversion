@@ -1428,6 +1428,7 @@ svn_client_proplist(apr_array_header_t **props,
 struct status4_wrapper_baton
 {
   svn_wc_status_func3_t old_func;
+  svn_wc_context_t *wc_ctx;
   void *old_baton;
 };
 
@@ -1439,8 +1440,12 @@ status4_wrapper_func(void *baton,
 {
   struct status4_wrapper_baton *swb = baton;
   svn_wc_status2_t *dup;
+  const char *local_abspath;
 
-  dup = svn_wc__status2_from_3(status, scratch_pool);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+  SVN_ERR(svn_wc__status2_from_3(&dup, status, swb->wc_ctx,
+                                 local_abspath, scratch_pool,
+                                 scratch_pool));
 
   return (*swb->old_func)(swb->old_baton, path, dup, scratch_pool);
 }
@@ -1460,7 +1465,8 @@ svn_client_status4(svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  struct status4_wrapper_baton swb = { status_func, status_baton };
+  struct status4_wrapper_baton swb = { status_func, ctx->wc_ctx,
+                                       status_baton };
 
   return svn_client_status5(result_rev, path, revision, status4_wrapper_func,
                             &swb, depth, get_all, update, no_ignore,
