@@ -399,10 +399,8 @@ svn_wc__open_writable_base(svn_stream_t **stream,
   const char *temp_dir_abspath;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  /* Select a directory in which to put a WC-1-style temp text-base file. */
-  /* See update_editor.c:get_pristine_tee_stream() for the WC-NG way. */
-  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, db, local_abspath,
-                                         scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_pristine_get_tempdir(&temp_dir_abspath, db, local_abspath,
+                                          scratch_pool, scratch_pool));
   SVN_ERR(svn_stream_open_unique(stream,
                                  temp_base_abspath,
                                  temp_dir_abspath,
