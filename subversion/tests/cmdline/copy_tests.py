@@ -980,7 +980,7 @@ def repos_to_wc(sbox):
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
-    'pi' : Item(status='A ',  wc_rev='0', entry_rev='1'),
+    'pi' : Item(status='A ',  wc_rev='1'),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
@@ -4389,6 +4389,36 @@ def nonrecursive_commit_of_copy(sbox):
                                         None,
                                         wc_dir, '--depth', 'immediates')
 
+def copy_added_dir_with_copy(sbox):
+  """copy of new dir with copied file keeps history"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  new_dir = os.path.join(wc_dir, 'NewDir');
+  new_dir2 = os.path.join(wc_dir, 'NewDir2');
+
+  # Alias for svntest.actions.run_and_verify_svn
+  rav_svn = svntest.actions.run_and_verify_svn
+
+  rav_svn(None, None, [], 'mkdir', new_dir)
+  rav_svn(None, None, [], 'cp', os.path.join(wc_dir, 'A', 'mu'), new_dir)
+  rav_svn(None, None, [], 'cp', new_dir, new_dir2)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  expected_status.add(
+    {
+      'NewDir'            : Item(status='A ', wc_rev='0'),
+      'NewDir/mu'         : Item(status='A ', copied='+', wc_rev='-'),
+      'NewDir2'           : Item(status='A ', wc_rev='0'),
+      'NewDir2/mu'        : Item(status='A ', copied='+', wc_rev='-'),
+    })
+
+  # Currently this fails because NewDir2/mu loses its history in the copy
+  # from NewDir to NewDir2
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -4479,6 +4509,7 @@ test_list = [ None,
               XFail(move_below_move),
               reverse_merge_move,
               XFail(nonrecursive_commit_of_copy),
+              XFail(copy_added_dir_with_copy),
              ]
 
 if __name__ == '__main__':
