@@ -256,7 +256,6 @@ svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
   svn_error_t *err = SVN_NO_ERROR;
   ne_xml_parser *parser = NULL;
   options_ctx_t oc = { 0 };
-  const char *msg;
   int status_code;
 
   oc.pool = pool;
