@@ -7151,7 +7151,10 @@ svn_wc_translated_stream(svn_stream_t **stream,
  * If @a new_text_base_md5_checksum is non-NULL, set
  * @a *new_text_base_md5_checksum to the MD5 checksum of (@a local_abspath
  * translated to repository-normal form), allocated in @a result_pool.
- * Similarly for @a new_text_base_sha1_checksum.
+ *
+ * If @a new_text_base_sha1_checksum in non-NULL, store a copy of (@a
+ * local_abspath translated to repository-normal form) in the pristine text
+ * store, and set @a *new_text_base_sha1_checksum to its SHA-1 checksum.
  *
  * If @a fulltext, send the untranslated copy of @a local_abspath through
  * @a editor as full-text; else send it as svndiff against the current text

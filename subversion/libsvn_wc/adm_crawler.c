@@ -1060,6 +1060,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
   svn_checksum_t *verify_checksum = NULL;  /* calc'd MD5 of BASE_STREAM */
   svn_checksum_t *local_md5_checksum;  /* calc'd MD5 of LOCAL_STREAM */
   svn_checksum_t *local_sha1_checksum;  /* calc'd SHA1 of LOCAL_STREAM */
+  const char *new_pristine_tmp_abspath;
   svn_error_t *err;
   svn_stream_t *base_stream;  /* delta source */
   svn_stream_t *local_stream;  /* delta target: LOCAL_ABSPATH transl. to NF */
@@ -1092,6 +1093,18 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
          Note that the new text base file will be closed when the new stream
          is closed. */
       local_stream = copying_stream(local_stream, tempstream, scratch_pool);
+    }
+  if (new_text_base_sha1_checksum)
+    {
+      svn_stream_t *new_pristine_stream;
+
+      SVN_ERR(svn_wc__open_writable_base(&new_pristine_stream,
+                                         &new_pristine_tmp_abspath,
+                                         NULL, &local_sha1_checksum,
+                                         db, local_abspath,
+                                         scratch_pool, scratch_pool));
+      local_stream = copying_stream(local_stream, new_pristine_stream,
+                                    scratch_pool);
     }
 
   /* Set BASE_STREAM to a stream providing the base (source) content for the
@@ -1192,12 +1205,6 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                     &handler, &wh_baton));
   }
 
-  if (new_text_base_sha1_checksum)
-    local_stream = svn_stream_checksummed2(local_stream,
-                                           &local_sha1_checksum,
-                                           NULL, svn_checksum_sha1, TRUE,
-                                           scratch_pool);
-
   /* Run diff processing, throwing windows at the handler. */
   err = svn_txdelta_run(base_stream, local_stream,
                         handler, wh_baton,
@@ -1264,8 +1271,14 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
     *new_text_base_md5_checksum = svn_checksum_dup(local_md5_checksum,
                                                    result_pool);
   if (new_text_base_sha1_checksum)
-    *new_text_base_sha1_checksum = svn_checksum_dup(local_sha1_checksum,
-                                                    result_pool);
+    {
+      SVN_ERR(svn_wc__db_pristine_install(db, new_pristine_tmp_abspath,
+                                          local_sha1_checksum,
+                                          local_md5_checksum,
+                                          scratch_pool));
+      *new_text_base_sha1_checksum = svn_checksum_dup(local_sha1_checksum,
+                                                      result_pool);
+    }
 
   /* Close the file baton, and get outta here. */
   return editor->close_file(file_baton,
