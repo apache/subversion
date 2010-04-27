@@ -290,8 +290,8 @@ resolve_target_path(patch_target_t *target,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__node_get_kind(&target->kind, wc_ctx, target->abs_path,
-                                FALSE, scratch_pool));
+  SVN_ERR(svn_wc_read_kind(&target->kind, wc_ctx, target->abs_path, FALSE,
+                           scratch_pool));
   switch (target->kind)
     {
       case svn_node_file:
@@ -307,8 +307,8 @@ resolve_target_path(patch_target_t *target,
            * create it. Check if the containing directory of the target
            * exists. We may need to create it later. */
           abs_dirname = svn_dirent_dirname(target->abs_path, scratch_pool);
-          SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, abs_dirname,
-                                        FALSE, scratch_pool));
+          SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, abs_dirname, FALSE,
+                                   scratch_pool));
           SVN_ERR(svn_wc_status3(&status, wc_ctx, abs_dirname,
                                  scratch_pool, scratch_pool));
           target->parent_dir_exists =
@@ -1341,9 +1341,8 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                                         const char *);
               abs_path = svn_dirent_join(abs_path, component, pool);
 
-              SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx,
-                                            abs_path, TRUE,
-                                            iterpool));
+              SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, abs_path, TRUE,
+                                       iterpool));
               if (kind == svn_node_file)
                 {
                   /* Obstructed. */
@@ -1355,7 +1354,7 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                   /* ### wc-ng should eventually be able to replace
                    * directories in-place, so this schedule conflict
                    * check will go away. We could then also make the
-                   * svn_wc__node_get_kind() call above ignore hidden
+                   * svn_wc_read_kind() call above ignore hidden
                    * nodes.*/
                   svn_boolean_t is_deleted;
 

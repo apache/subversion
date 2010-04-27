@@ -344,8 +344,8 @@ copy_versioned_files(const char *from,
         return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__node_get_kind(&from_kind, ctx->wc_ctx, from_abspath,
-                                FALSE, pool));
+  SVN_ERR(svn_wc_read_kind(&from_kind, ctx->wc_ctx, from_abspath, FALSE,
+                           pool));
 
   if (from_kind == svn_node_dir)
     {
@@ -394,8 +394,8 @@ copy_versioned_files(const char *from,
           /* ### We could also invoke ctx->notify_func somewhere in
              ### here... Is it called for, though?  Not sure. */
 
-          SVN_ERR(svn_wc__node_get_kind(&child_kind, ctx->wc_ctx,
-                                        child_abspath, FALSE, iterpool));
+          SVN_ERR(svn_wc_read_kind(&child_kind, ctx->wc_ctx, child_abspath,
+                                   FALSE, iterpool));
 
           if (child_kind == svn_node_dir)
             {

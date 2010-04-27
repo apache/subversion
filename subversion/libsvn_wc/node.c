@@ -169,11 +169,11 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
 }
 
 svn_error_t *
-svn_wc__node_get_kind(svn_node_kind_t *kind,
-                      svn_wc_context_t *wc_ctx,
-                      const char *abspath,
-                      svn_boolean_t show_hidden,
-                      apr_pool_t *scratch_pool)
+svn_wc_read_kind(svn_node_kind_t *kind,
+                 svn_wc_context_t *wc_ctx,
+                 const char *abspath,
+                 svn_boolean_t show_hidden,
+                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_kind_t db_kind;
   svn_error_t *err;

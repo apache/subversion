@@ -368,8 +368,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
                                            changelists, pool));
 
-      err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
-                                  pool);
+      err = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE, pool);
 
       if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
           || kind == svn_node_unknown || kind == svn_node_none)
@@ -861,8 +860,7 @@ svn_client_propget3(apr_hash_t **props,
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
 
-      err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                                  pool);
+      err = svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE, pool);
 
       if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
           || kind == svn_node_unknown || kind == svn_node_none)
@@ -1179,8 +1177,7 @@ svn_client_proplist3(const char *path_or_url,
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
 
-      err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                                  pool);
+      err = svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE, pool);
 
       if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
           || kind == svn_node_unknown || kind == svn_node_none)

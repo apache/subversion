@@ -437,8 +437,8 @@ obstructed_or_missing(const char *path,
   err = svn_dirent_get_absolute(&local_abspath, path, pool);
 
   if (!err)
-    err = svn_wc__node_get_kind(&wc_kind, merge_b->ctx->wc_ctx, local_abspath,
-                                FALSE, pool);
+    err = svn_wc_read_kind(&wc_kind, merge_b->ctx->wc_ctx, local_abspath,
+                           FALSE, pool);
 
   if (err)
     {
@@ -1378,8 +1378,8 @@ merge_file_changed(const char *local_dir_abspath,
     svn_node_kind_t kind;
     svn_node_kind_t wc_kind;
 
-    SVN_ERR(svn_wc__node_get_kind(&wc_kind, merge_b->ctx->wc_ctx, mine_abspath,
-                                  FALSE, subpool));
+    SVN_ERR(svn_wc_read_kind(&wc_kind, merge_b->ctx->wc_ctx, mine_abspath,
+                             FALSE, subpool));
     SVN_ERR(svn_io_check_path(mine, &kind, subpool));
 
     /* ### a future thought:  if the file is under version control,
@@ -1762,8 +1762,8 @@ merge_file_added(const char *local_dir_abspath,
         {
           /* directory already exists, is it under version control? */
           svn_node_kind_t wc_kind;
-          SVN_ERR(svn_wc__node_get_kind(&wc_kind, merge_b->ctx->wc_ctx,
-                                        mine_abspath, FALSE, subpool));
+          SVN_ERR(svn_wc_read_kind(&wc_kind, merge_b->ctx->wc_ctx,
+                                   mine_abspath, FALSE, subpool));
 
           if ((wc_kind != svn_node_none) && dry_run_deleted_p(merge_b, mine))
             *content_state = svn_wc_notify_state_changed;
@@ -4256,8 +4256,8 @@ calculate_merge_inheritance(apr_array_header_t *rangelist,
 {
   svn_node_kind_t path_kind;
 
-  SVN_ERR(svn_wc__node_get_kind(&path_kind, wc_ctx, local_abspath,
-                                FALSE, scratch_pool));
+  SVN_ERR(svn_wc_read_kind(&path_kind, wc_ctx, local_abspath, FALSE,
+                           scratch_pool));
   if (path_kind == svn_node_file)
     {
       /* Files *never* have non-inheritable mergeinfo. */
@@ -5208,8 +5208,8 @@ get_mergeinfo_walk_cb(const char *local_abspath,
                                     scratch_pool));
     }
 
-  SVN_ERR(svn_wc__node_get_kind(&kind, wb->ctx->wc_ctx,
-                                local_abspath, TRUE, scratch_pool));
+  SVN_ERR(svn_wc_read_kind(&kind, wb->ctx->wc_ctx, local_abspath, TRUE,
+                           scratch_pool));
   SVN_ERR(svn_wc__node_get_depth(&depth, wb->ctx->wc_ctx, local_abspath,
                                  scratch_pool));
 
@@ -5406,9 +5406,9 @@ insert_parent_and_sibs_of_sw_absent_del_subtree(
             {
               svn_node_kind_t child_kind;
 
-              SVN_ERR(svn_wc__node_get_kind(&child_kind,
-                                            merge_cmd_baton->ctx->wc_ctx,
-                                            child_abspath, FALSE, iterpool));
+              SVN_ERR(svn_wc_read_kind(&child_kind,
+                                       merge_cmd_baton->ctx->wc_ctx,
+                                       child_abspath, FALSE, iterpool));
               if (child_kind != svn_node_file)
                 continue;
             }
@@ -5602,9 +5602,10 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                   if (depth == svn_depth_files)
                     {
                       svn_node_kind_t child_kind;
-                      SVN_ERR(svn_wc__node_get_kind(
-                        &child_kind, merge_cmd_baton->ctx->wc_ctx,
-                        child_abspath, FALSE, iterpool));
+                      SVN_ERR(svn_wc_read_kind(&child_kind,
+                                               merge_cmd_baton->ctx->wc_ctx,
+                                               child_abspath, FALSE,
+                                               iterpool));
                       if (child_kind != svn_node_file)
                         continue;
                     }
@@ -7134,10 +7135,8 @@ record_mergeinfo_for_added_subtrees(
           const char *rel_added_path;
           const char *added_path_mergeinfo_path;
 
-          SVN_ERR(svn_wc__node_get_kind(&added_path_kind,
-                                        merge_b->ctx->wc_ctx,
-                                        added_abspath, FALSE,
-                                        iterpool));
+          SVN_ERR(svn_wc_read_kind(&added_path_kind, merge_b->ctx->wc_ctx,
+                                   added_abspath, FALSE, iterpool));
 
           /* Calculate the mergeinfo resulting from this merge. */
           merge_mergeinfo = apr_hash_make(iterpool);
@@ -7978,8 +7977,8 @@ do_merge(apr_hash_t **modified_subtrees,
         return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__node_get_kind(&target_kind, ctx->wc_ctx, target_abspath,
-                                FALSE, pool));
+  SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
+                           pool));
 
   /* Ensure a known depth. */
   if (depth == svn_depth_unknown)
@@ -8574,9 +8573,10 @@ get_target_and_lock_abspath(const char **target_abspath,
                             apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
-  SVN_ERR(svn_dirent_get_absolute(target_abspath, target_wcpath, scratch_pool));
-  SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx, *target_abspath, FALSE,
-                                scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(target_abspath, target_wcpath,
+                                  scratch_pool));
+  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, *target_abspath, FALSE,
+                           scratch_pool));
   if (kind == svn_node_dir)
     *lock_abspath = *target_abspath;
   else

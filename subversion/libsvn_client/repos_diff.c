@@ -346,7 +346,7 @@ get_dir_abspath(const char **local_dir_abspath,
       svn_error_t *err;
       const char *local_abspath;
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-      err = svn_wc__node_get_kind(&kind, wc_ctx, local_abspath, FALSE, pool);
+      err = svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, pool);
       if (err)
         {
           if (lenient)

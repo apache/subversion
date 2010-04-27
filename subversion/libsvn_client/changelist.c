@@ -66,8 +66,7 @@ set_node_changelist(const char *local_abspath,
                                  b->changelist_hash, pool))
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__node_get_kind(&kind, b->ctx->wc_ctx, local_abspath,
-                                FALSE, pool));
+  SVN_ERR(svn_wc_read_kind(&kind, b->ctx->wc_ctx, local_abspath, FALSE, pool));
 
   /* We only care about files right now. */
   if (kind != svn_node_file)
@@ -194,7 +193,7 @@ get_node_changelist(const char *local_abspath,
   svn_node_kind_t kind;
   const char *changelist;
 
-  SVN_ERR(svn_wc__node_get_kind(&kind, b->wc_ctx, local_abspath, FALSE, pool));
+  SVN_ERR(svn_wc_read_kind(&kind, b->wc_ctx, local_abspath, FALSE, pool));
   SVN_ERR(svn_wc__node_get_changelist(&changelist, b->wc_ctx,
                                       local_abspath, pool, pool));
 

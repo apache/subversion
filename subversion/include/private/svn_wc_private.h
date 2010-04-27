@@ -293,26 +293,6 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
                             apr_pool_t *scratch_pool);
 
 
-/**
- * Set @a kind to the @c svn_node_kind_t of @a abspath.  Use @a wc_ctx
- * to access the working copy, and @a scratch_pool for all temporary
- * allocations.
- *
- * If @a abspath is not under version control, set @a kind to @c svn_node_none.
- * If it is versioned but hidden and @a show_hidden is @c FALSE, also return @c
- * svn_node_none.
- *
- * If the node's info is incomplete, it may or may not have a known node kind
- * set. If the kind is not known (yet), set @a kind to @c svn_node_unknown.
- * Otherwise return the node kind even though the node is marked incomplete.
- */
-svn_error_t *
-svn_wc__node_get_kind(svn_node_kind_t *kind,
-                      svn_wc_context_t *wc_ctx,
-                      const char *abspath,
-                      svn_boolean_t show_hidden,
-                      apr_pool_t *scratch_pool);
-
 
 /**
  * Get the depth of @a local_abspath using @a wc_ctx.  If @a local_abspath is
