@@ -184,19 +184,18 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *scratch_pool);
 
-/*
- * Read tree conflict descriptions from @a conflict_data.  Set @a *conflicts
- * to a hash of pointers to svn_wc_conflict_description2_t objects indexed by
- * svn_wc_conflict_description2_t.local_abspath, all newly allocated in @a
- * pool.  @a dir_path is the path to the working copy directory whose conflicts
- * are being read.  The conflicts read are the tree conflicts on the immediate
- * child nodes of @a dir_path.  Do all allocations in @a pool.
+
+/* Return a hash @a *tree_conflicts of all the children of @a
+ * local_abspath that are in tree conflicts.  The hash maps local
+ * abspaths to pointers to svn_wc_conflict_description2_t, all
+ * allocated in result pool.
  */
 svn_error_t *
-svn_wc__read_tree_conflicts(apr_hash_t **conflicts,
-                            const char *conflict_data,
-                            const char *dir_path,
-                            apr_pool_t *pool);
+svn_wc__get_all_tree_conflicts(apr_hash_t **tree_conflicts,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 /** Return a duplicate of @a conflict, allocated in @a pool.
  * A deep copy of all members, except the adm_access member, will be made.

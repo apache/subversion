@@ -3263,38 +3263,23 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__db_op_read_tree_conflict(
-                     const svn_wc_conflict_description2_t **tree_conflict,
-                     svn_wc__db_t *db,
-                     const char *local_abspath,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
+svn_wc__db_op_read_all_tree_conflicts(apr_hash_t **tree_conflicts,
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
-  const char *parent_abspath;
   svn_boolean_t have_row;
   const char *tree_conflict_data;
-  apr_hash_t *conflicts;
-  svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  err = parse_local_abspath(&pdh, &local_relpath, db, parent_abspath,
-                            svn_sqlite__mode_readwrite,
-                            scratch_pool, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
-    {
-       /* We walked off the top of a working copy.  */
-       svn_error_clear(err);
-       *tree_conflict = NULL;
-       return SVN_NO_ERROR;
-    }
-  else if (err)
-    return svn_error_return(err);
-
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
   /* Get the conflict information for the parent of LOCAL_ABSPATH. */
@@ -3306,7 +3291,7 @@ svn_wc__db_op_read_tree_conflict(
   /* No ACTUAL node, no conflict info, no problem. */
   if (!have_row)
     {
-      *tree_conflict = NULL;
+      *tree_conflicts = NULL;
       SVN_ERR(svn_sqlite__reset(stmt));
       return SVN_NO_ERROR;
     }
@@ -3317,17 +3302,51 @@ svn_wc__db_op_read_tree_conflict(
   /* No tree conflict data?  no problem. */
   if (tree_conflict_data == NULL)
     {
-      *tree_conflict = NULL;
+      *tree_conflicts = NULL;
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
-                                      parent_abspath, result_pool));
+  SVN_ERR(svn_wc__read_tree_conflicts(tree_conflicts, tree_conflict_data,
+                                      local_abspath, result_pool));
 
-  *tree_conflict = apr_hash_get(conflicts,
-                                svn_dirent_basename(local_abspath,
-                                                    scratch_pool),
-                                APR_HASH_KEY_STRING);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_op_read_tree_conflict(
+                     const svn_wc_conflict_description2_t **tree_conflict,
+                     svn_wc__db_t *db,
+                     const char *local_abspath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  const char *parent_abspath;
+  apr_hash_t *tree_conflicts;
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  err = svn_wc__db_op_read_all_tree_conflicts(&tree_conflicts, db,
+                                              parent_abspath,
+                                              result_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+    {
+       /* We walked off the top of a working copy.  */
+       svn_error_clear(err);
+       *tree_conflict = NULL;
+       return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_return(err);
+
+  if (tree_conflicts)
+    *tree_conflict = apr_hash_get(tree_conflicts,
+                                  svn_dirent_basename(local_abspath,
+                                                      scratch_pool),
+                                  APR_HASH_KEY_STRING);
+  else
+    *tree_conflict = NULL;
 
   return SVN_NO_ERROR;
 }
