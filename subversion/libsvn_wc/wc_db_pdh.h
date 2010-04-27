@@ -30,6 +30,7 @@
 #ifndef WC_DB_PDH_H
 #define WC_DB_PDH_H
 
+#include "wc_db.h"
 
 
 struct svn_wc__db_t {
