@@ -331,9 +331,9 @@ close_wcroot(void *data)
 
 /* */
 static svn_error_t *
-close_many_wcroots(apr_hash_t *roots,
-                   apr_pool_t *state_pool,
-                   apr_pool_t *scratch_pool)
+svn_wc__db_close_many_wcroots(apr_hash_t *roots,
+                              apr_pool_t *state_pool,
+                              apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
 
@@ -1739,8 +1739,8 @@ svn_wc__db_close(svn_wc__db_t *db)
     }
 
   /* Run the cleanup for each WCROOT.  */
-  return svn_error_return(close_many_wcroots(roots, db->state_pool,
-                                             scratch_pool));
+  return svn_error_return(svn_wc__db_close_many_wcroots(roots, db->state_pool,
+                                                        scratch_pool));
 }
 
 
@@ -6019,8 +6019,8 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
         }
     }
 
-  return svn_error_return(close_many_wcroots(roots, db->state_pool,
-                                             scratch_pool));
+  return svn_error_return(svn_wc__db_close_many_wcroots(roots, db->state_pool,
+                                                        scratch_pool));
 }
 
 /* ### temporary API. remove before release.  */
