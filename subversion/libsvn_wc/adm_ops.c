@@ -632,7 +632,7 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
   cqi->no_unlock = !remove_lock;
   cqi->keep_changelist = !remove_changelist;
   cqi->md5_checksum = md5_checksum;
-  cqi->sha1_checksum = md5_checksum;
+  cqi->sha1_checksum = sha1_checksum;
   cqi->new_dav_cache = svn_wc__prop_array_to_hash(wcprop_changes, queue->pool);
 
   apr_hash_set(queue->queue, local_abspath, APR_HASH_KEY_STRING, cqi);
