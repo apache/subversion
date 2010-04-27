@@ -1170,6 +1170,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                                     svn_client__copy_pair_t *);
       svn_pool_clear(iterpool);
       /* Sanity check if the source path is versioned. */
+      SVN_ERR_ASSERT(svn_dirent_is_absolute(pair->src));
       SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx, pair->src, FALSE,
                                     iterpool));
       if (kind == svn_node_none)
@@ -1959,14 +1960,13 @@ try_copy(svn_commit_info_t **commit_info_p,
         {
           svn_client__copy_pair_t *pair =
             APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
-          const char *src_abspath;
           svn_boolean_t is_file_external;
 
           svn_pool_clear(iterpool);
 
-          SVN_ERR(svn_dirent_get_absolute(&src_abspath, pair->src, iterpool));
+          SVN_ERR_ASSERT(svn_dirent_is_absolute(pair->src));
           SVN_ERR(svn_wc__node_is_file_external(&is_file_external, ctx->wc_ctx,
-                                                src_abspath, iterpool));
+                                                pair->src, iterpool));
           if (is_file_external)
             return svn_error_createf(SVN_ERR_WC_CANNOT_MOVE_FILE_EXTERNAL,
                                      NULL,
@@ -2039,29 +2039,29 @@ try_copy(svn_commit_info_t **commit_info_p,
 
               for (i = 0; i < copy_pairs->nelts; i++)
                 {
-                  const char *src_abspath, *copyfrom_url, *url;
+                  const char *copyfrom_url, *url;
                   svn_revnum_t base_rev, copyfrom_rev;
                   svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
 
                   svn_pool_clear(iterpool);
 
-                  SVN_ERR(svn_dirent_get_absolute(&src_abspath, pair->src,
-                                                  iterpool));
+                  SVN_ERR_ASSERT(svn_dirent_is_absolute(pair->src));
+
                   SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url,
                                                          &copyfrom_rev,
                                                          NULL, ctx->wc_ctx,
-                                                         src_abspath,
+                                                         pair->src,
                                                          pool, iterpool));
                   if (copyfrom_url)
                     url = copyfrom_url;
                   else
                     {
                       SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx,
-                                                   src_abspath,
+                                                   pair->src,
                                                    pool, iterpool));
                       SVN_ERR(svn_wc__node_get_base_rev(&base_rev, ctx->wc_ctx,
-                                                        src_abspath, iterpool));
+                                                        pair->src, iterpool));
                     }
                   if (url == NULL)
                     return svn_error_createf
