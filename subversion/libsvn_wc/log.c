@@ -803,7 +803,7 @@ svn_wc__loggy_entry_modify(svn_wc__db_t *db,
                  SVN_WC__ENTRY_ATTR_SCHEDULE,
                  SVN_WC__ENTRY_VALUE_ADD);
 
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_COPIED)
     SVN_ERR_ASSERT(entry->copied);
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_COPIED,
                  SVN_WC__ENTRY_ATTR_COPIED,
