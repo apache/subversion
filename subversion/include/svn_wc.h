@@ -4920,6 +4920,10 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  *   ### [JAF]  No, it doesn't calculate the checksum, it stores null in wc.db:
  *   ### see svn_wc__process_committed_internal().
  *
+ * If @a sha1_checksum is non-NULL, use it instead of @a md5_checksum to
+ * identify the node's pristine text.
+ * ### NOT YET IMPLEMENTED.
+ *
  * If @a recurse is TRUE and @a local_abspath is a directory, then bump every
  * versioned object at or under @a local_abspath.  This is usually done for
  * copied trees.
@@ -4943,7 +4947,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * actual inclusion in the new revision.
  *
  * All pointer data passed to this function (@a local_abspath,
- * @a wcprop_changes and @a md5_checksum) should remain valid until the
+ * @a wcprop_changes and the checksums) should remain valid until the
  * queue has been processed by svn_wc_process_committed_queue2().
  *
  * Temporary allocations will be performed in @a scratch_pool, and persistent
@@ -4959,10 +4963,12 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
                         svn_boolean_t remove_lock,
                         svn_boolean_t remove_changelist,
                         const svn_checksum_t *md5_checksum,
+                        const svn_checksum_t *sha1_checksum,
                         apr_pool_t *scratch_pool);
 
 /** Same as svn_wc_queue_committed3() except @a path doesn't have to be an
- * abspath and @a adm_access is unused.
+ * abspath and @a adm_access is unused and a SHA-1 checksum cannot be
+ * specified.
  *
  * @since New in 1.6.
  *

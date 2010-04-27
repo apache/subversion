@@ -212,13 +212,17 @@ svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue);
  * If @a no_unlock is set, don't release any user locks on @a
  * local_abspath; otherwise release them as part of this processing.
  *
- * If @keep_changelist is set, don't remove any changeset assignments
+ * If @a keep_changelist is set, don't remove any changeset assignments
  * from @a local_abspath; otherwise, clear it of such assignments.
  *
  * If @a local_abspath is a file and @a md5_checksum is non-NULL, use
  * @a md5_checksum as the checksum for the new text base. Otherwise,
  * calculate the checksum if needed.
  *   ### [JAF]  No, it doesn't calculate the checksum, it stores null in wc.db.
+ *
+ * If @a sha1_checksum is non-NULL, use it instead of @a md5_checksum to
+ * identify the node's pristine text.
+ * ### NOT YET IMPLEMENTED.
  */
 svn_error_t *
 svn_wc__process_committed_internal(svn_wc__db_t *db,
@@ -231,6 +235,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    svn_boolean_t no_unlock,
                                    svn_boolean_t keep_changelist,
                                    const svn_checksum_t *md5_checksum,
+                                   const svn_checksum_t *sha1_checksum,
                                    const svn_wc_committed_queue_t *queue,
                                    apr_pool_t *scratch_pool);
 

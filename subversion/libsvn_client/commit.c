@@ -933,7 +933,8 @@ collect_lock_tokens(apr_hash_t **result,
   return SVN_NO_ERROR;
 }
 
-/* Put ITEM onto QUEUE, allocating it in QUEUE's pool... */
+/* Put ITEM onto QUEUE, allocating it in QUEUE's pool...
+ * If a checksum is provided, it can be the MD5 and/or the SHA1. */
 static svn_error_t *
 post_process_commit_item(svn_wc_committed_queue_t *queue,
                          const svn_client_commit_item3_t *item,
@@ -941,6 +942,7 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
                          svn_boolean_t keep_changelists,
                          svn_boolean_t keep_locks,
                          const svn_checksum_t *md5_checksum,
+                         const svn_checksum_t *sha1_checksum,
                          apr_pool_t *scratch_pool)
 {
   svn_boolean_t loop_recurse = FALSE;
@@ -974,7 +976,7 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
   return svn_wc_queue_committed3(queue, item->path,
                                  loop_recurse, item->incoming_prop_changes,
                                  remove_lock, !keep_changelists,
-                                 md5_checksum, scratch_pool);
+                                 md5_checksum, sha1_checksum, scratch_pool);
 }
 
 
@@ -1070,7 +1072,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   apr_hash_t *committables;
   apr_hash_t *lock_tokens;
   apr_hash_t *tempfiles = NULL;
-  apr_hash_t *checksums;
+  apr_hash_t *md5_checksums;
+  apr_hash_t *sha1_checksums;
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
   svn_error_t *bump_err = SVN_NO_ERROR, *cleanup_err = SVN_NO_ERROR;
@@ -1225,8 +1228,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   /* Perform the commit. */
   cmt_err = svn_client__do_commit(base_url, commit_items, editor, edit_baton,
-                                  notify_prefix, &tempfiles, &checksums, ctx,
-                                  pool);
+                                  notify_prefix, &tempfiles, &md5_checksums,
+                                  &sha1_checksums, ctx, pool);
 
   /* Handle a successful commit. */
   if ((! cmt_err)
@@ -1246,7 +1249,10 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
           svn_pool_clear(iterpool);
           bump_err = post_process_commit_item(queue, item, ctx->wc_ctx,
                                               keep_changelists, keep_locks,
-                                              apr_hash_get(checksums,
+                                              apr_hash_get(md5_checksums,
+                                                           item->path,
+                                                           APR_HASH_KEY_STRING),
+                                              apr_hash_get(sha1_checksums,
                                                            item->path,
                                                            APR_HASH_KEY_STRING),
                                               iterpool);
