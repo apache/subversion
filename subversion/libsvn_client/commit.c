@@ -1099,7 +1099,13 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   /* No targets means nothing to commit, so just return. */
   if (base_abspath == NULL)
-    return SVN_NO_ERROR;
+    {
+      /* As per our promise, if *commit_info_p isn't set, provide a
+         default where rev = SVN_INVALID_REVNUM. */
+      if (! *commit_info_p)
+        *commit_info_p = svn_create_commit_info(pool);
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR_ASSERT(rel_targets != NULL);
 
