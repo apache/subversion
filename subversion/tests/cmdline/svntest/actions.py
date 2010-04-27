@@ -269,7 +269,7 @@ def run_and_verify_load(repo_dir, dump_file_content):
     raise TypeError("dump_file_content argument should have list type")
   expected_stderr = []
   exit_code, output, errput = main.run_command_stdin(
-    main.svnadmin_binary, expected_stderr, 1, dump_file_content,
+    main.svnadmin_binary, expected_stderr, 0, 1, dump_file_content,
     'load', '--force-uuid', '--quiet', repo_dir)
 
   verify.verify_outputs("Unexpected stderr output", None, errput,

@@ -47,7 +47,7 @@ Item = svntest.wc.StateItem
 # Helper routines
 
 
-def filter_and_return_output(dump, *varargs):
+def filter_and_return_output(dump, bufsize=0, *varargs):
   """Filter the array of lines passed in 'dump' and return the output"""
 
   if isinstance(dump, str):
@@ -55,7 +55,7 @@ def filter_and_return_output(dump, *varargs):
 
   ## TODO: Should we need to handle errput and exit_code?
   exit_code, output, errput = svntest.main.run_command_stdin(
-    svntest.main.svndumpfilter_binary, None, 1, dump, *varargs)
+    svntest.main.svndumpfilter_binary, None, bufsize, 1, dump, *varargs)
 
   return output
 
@@ -76,7 +76,7 @@ def reflect_dropped_renumbered_revs(sbox):
                                    'with_merges.dump')
   dumpfile = open(dumpfile_location).read()
 
-  filtered_out = filter_and_return_output(dumpfile, "include",
+  filtered_out = filter_and_return_output(dumpfile, 0, "include",
                                           "trunk", "branch1",
                                           "--skip-missing-merge-sources",
                                           "--drop-empty-revs",
@@ -96,7 +96,7 @@ def reflect_dropped_renumbered_revs(sbox):
 
   # Test svndumpfilter with exclude option
   test_create(sbox)
-  filtered_out = filter_and_return_output(dumpfile, "exclude",
+  filtered_out = filter_and_return_output(dumpfile, 0, "exclude",
                                           "branch1",
                                           "--skip-missing-merge-sources",
                                           "--drop-empty-revs",
@@ -124,7 +124,7 @@ def svndumpfilter_loses_mergeinfo(sbox):
                                    'with_merges.dump')
   dumpfile = open(dumpfile_location).read()
 
-  filtered_out = filter_and_return_output(dumpfile, "include",
+  filtered_out = filter_and_return_output(dumpfile, 0, "include",
                                           "trunk", "branch1", "--quiet")
   load_and_verify_dumpstream(sbox, [], [], None, filtered_out)
 
@@ -141,7 +141,8 @@ def svndumpfilter_loses_mergeinfo(sbox):
 def _simple_dumpfilter_test(sbox, dumpfile, *dumpargs):
   wc_dir = sbox.wc_dir
 
-  filtered_output = filter_and_return_output(dumpfile, '--quiet', *dumpargs)
+  filtered_output = filter_and_return_output(dumpfile, 0,
+                                             '--quiet', *dumpargs)
 
   # Setup our expectations
   load_and_verify_dumpstream(sbox, [], [], None, filtered_output,
