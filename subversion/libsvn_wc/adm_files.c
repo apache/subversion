@@ -108,66 +108,32 @@ svn_wc_set_adm_dir(const char *name, apr_pool_t *pool)
 }
 
 
-/* Return the path to something in PATH's administrative area.
- *
- * First, the adm subdir is appended to PATH as a component, then the
- * "tmp" directory is added iff USE_TMP is set, then each of the
- * varargs in AP (char *'s) is appended as a path component.  The list
- * must be terminated with a NULL argument.
- *
- * Adding an empty component results in no effect (i.e., the separator
- * char is not doubled).
- *
- * If EXTENSION is non-null, it will be appended to the final string
- * without a separator character.
- */
 static const char *
-v_extend_with_adm_name(const char *path,
-                       const char *extension,
-                       svn_boolean_t use_tmp,
-                       apr_pool_t *pool,
-                       va_list ap)
+simple_extend(const char *adm_path,  /* ### adm_abspath?  */
+              svn_boolean_t use_tmp,
+              const char *subdir,
+              const char *child,
+              const char *extension,
+              apr_pool_t *result_pool)
 {
-  const char *this;
-
-  /* Tack on the administrative subdirectory. */
-  path = svn_dirent_join(path, adm_dir_name, pool);
-
-  /* If this is a tmp file, name it into the tmp area. */
-  if (use_tmp)
-    path = svn_dirent_join(path, SVN_WC__ADM_TMP, pool);
-
-  /* Tack on everything else. */
-  while ((this = va_arg(ap, const char *)) != NULL)
-    {
-      if (this[0] == '\0')
-        continue;
-
-      path = svn_dirent_join(path, this, pool);
-    }
-
+  if (subdir)
+    child = svn_dirent_join(subdir, child, result_pool);
   if (extension)
-    path = apr_pstrcat(pool, path, extension, NULL);
+    child = apr_pstrcat(result_pool, child, extension, NULL);
 
-  return path;
-}
+  if (use_tmp)
+    return svn_dirent_join_many(result_pool,
+                                adm_path,
+                                adm_dir_name,
+                                SVN_WC__ADM_TMP,
+                                child,
+                                NULL);
 
-
-/* See v_extend_with_adm_name() for details. */
-static const char *
-extend_with_adm_name(const char *path,
-                     const char *extension,
-                     svn_boolean_t use_tmp,
-                     apr_pool_t *pool,
-                     ...)
-{
-  va_list ap;
-
-  va_start(ap, pool);
-  path = v_extend_with_adm_name(path, extension, use_tmp, pool, ap);
-  va_end(ap);
-
-  return path;
+  return svn_dirent_join_many(result_pool,
+                              adm_path,
+                              adm_dir_name,
+                              child,
+                              NULL);
 }
 
 
@@ -175,7 +141,7 @@ const char *svn_wc__adm_child(const char *path,
                               const char *child,
                               apr_pool_t *result_pool)
 {
-  return extend_with_adm_name(path, NULL, FALSE, result_pool, child, NULL);
+  return simple_extend(path, FALSE, NULL, child, NULL, result_pool);
 }
 
 
@@ -212,7 +178,7 @@ make_adm_subdir(const char *path,
 {
   const char *fullpath;
 
-  fullpath = extend_with_adm_name(path, NULL, tmp, pool, subdir, NULL);
+  fullpath = simple_extend(path, tmp, NULL, subdir, NULL, pool);
 
   return svn_io_dir_make(fullpath, APR_OS_DEFAULT, pool);
 }
@@ -234,8 +200,8 @@ svn_wc__sync_text_base(const char *local_abspath,
   svn_dirent_split(local_abspath, &parent_path, &base_name, pool);
 
   /* Extend real name. */
-  base_path = extend_with_adm_name(parent_path, SVN_WC__BASE_EXT, FALSE, pool,
-                                   SVN_WC__ADM_TEXT_BASE, base_name, NULL);
+  base_path = simple_extend(parent_path, FALSE, SVN_WC__ADM_TEXT_BASE,
+                            base_name, SVN_WC__BASE_EXT, pool);
 
   /* Rename. */
   SVN_ERR(svn_io_file_rename(tmp_text_base_abspath, base_path, pool));
@@ -254,13 +220,12 @@ svn_wc__text_base_path(const char **result_abspath,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   svn_dirent_split(local_abspath, &newpath, &base_name, pool);
-  *result_abspath = extend_with_adm_name(newpath,
-                                         SVN_WC__BASE_EXT,
-                                         tmp,
-                                         pool,
-                                         SVN_WC__ADM_TEXT_BASE,
-                                         base_name,
-                                         NULL);
+  *result_abspath = simple_extend(newpath,
+                                  tmp,
+                                  SVN_WC__ADM_TEXT_BASE,
+                                  base_name,
+                                  SVN_WC__BASE_EXT,
+                                  pool);
 
   return SVN_NO_ERROR;
 }
@@ -276,13 +241,12 @@ svn_wc__text_revert_path(const char **result_abspath,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   svn_dirent_split(local_abspath, &newpath, &base_name, pool);
-  *result_abspath = extend_with_adm_name(newpath,
-                                         SVN_WC__REVERT_EXT,
-                                         FALSE,
-                                         pool,
-                                         SVN_WC__ADM_TEXT_BASE,
-                                         base_name,
-                                         NULL);
+  *result_abspath = simple_extend(newpath,
+                                  FALSE,
+                                  SVN_WC__ADM_TEXT_BASE,
+                                  base_name,
+                                  SVN_WC__REVERT_EXT,
+                                  pool);
 
   return SVN_NO_ERROR;
 }
@@ -328,13 +292,8 @@ svn_wc__prop_path(const char **prop_path,
         SVN_WC__ADM_DIR_PROPS         /* svn_wc__props_working */
       };
 
-      *prop_path = extend_with_adm_name
-        (path,
-         NULL,
-         FALSE,
-         pool,
-         names[props_kind],
-         NULL);
+      *prop_path = simple_extend(path, FALSE, NULL, names[props_kind], NULL,
+                                 pool);
     }
   else  /* It's a file */
     {
@@ -353,14 +312,8 @@ svn_wc__prop_path(const char **prop_path,
       const char *base_name;
 
       svn_dirent_split(path, prop_path, &base_name, pool);
-      *prop_path = extend_with_adm_name
-        (*prop_path,
-         extensions[props_kind],
-         FALSE,
-         pool,
-         dirs[props_kind],
-         base_name,
-         NULL);
+      *prop_path = simple_extend(*prop_path, FALSE, dirs[props_kind],
+                                 base_name, extensions[props_kind], pool);
     }
 
   return SVN_NO_ERROR;
@@ -471,6 +424,10 @@ init_adm(svn_wc__db_t *db,
 
   /* SVN_WC__ADM_PRISTINE */
   SVN_ERR(make_adm_subdir(local_abspath, SVN_WC__ADM_PRISTINE, FALSE, pool));
+
+  /* ### want to add another directory? do a format bump to ensure that
+     ### all existing working copies get the new directories. or maybe
+     ### create-on-demand (more expensive)  */
 
   /** Init the tmp area. ***/
   SVN_ERR(init_adm_tmp_area(local_abspath, pool));
