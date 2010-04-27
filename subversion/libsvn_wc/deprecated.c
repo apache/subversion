@@ -593,7 +593,7 @@ svn_wc_process_committed4(const char *path,
                                              new_revnum, new_date, rev_author,
                                              wcprop_changes_hash,
                                              !remove_lock, !remove_changelist,
-                                             checksum, NULL, pool));
+                                             checksum, NULL, NULL, pool));
 
   /* Run the log file(s) we just created. */
   return svn_error_return(svn_wc__wq_run(db, local_abspath, NULL, NULL, pool));
@@ -3764,7 +3764,7 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
   return svn_wc_queue_committed3(queue, local_abspath, recurse, wcprop_changes,
                                  remove_lock, remove_changelist, md5_checksum,
-                                 scratch_pool);
+                                 NULL /* sha1_checksum */, scratch_pool);
 }
 
 svn_error_t *

@@ -1583,7 +1583,8 @@ svn_client__do_commit(const char *base_url,
                       void *edit_baton,
                       const char *notify_path_prefix,
                       apr_hash_t **new_text_base_abspaths,
-                      apr_hash_t **checksums,
+                      apr_hash_t **md5_checksums,
+                      apr_hash_t **sha1_checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
@@ -1609,9 +1610,11 @@ svn_client__do_commit(const char *base_url,
   if (new_text_base_abspaths)
     *new_text_base_abspaths = apr_hash_make(pool);
 
-  /* Ditto for the md5 checksums. */
-  if (checksums)
-    *checksums = apr_hash_make(pool);
+  /* Ditto for the checksums. */
+  if (md5_checksums)
+    *md5_checksums = apr_hash_make(pool);
+  if (sha1_checksums)
+    *sha1_checksums = apr_hash_make(pool);
 
   /* Build a hash from our COMMIT_ITEMS array, keyed on the
      URI-decoded relative paths (which come from the item URLs).  And
@@ -1644,6 +1647,7 @@ svn_client__do_commit(const char *base_url,
       const svn_client_commit_item3_t *item = mod->item;
       const char *tempfile;
       const svn_checksum_t *new_text_base_md5_checksum;
+      const svn_checksum_t *new_text_base_sha1_checksum;
       svn_boolean_t fulltext = FALSE;
       const char *item_abspath;
 
@@ -1671,16 +1675,20 @@ svn_client__do_commit(const char *base_url,
 
       SVN_ERR(svn_wc_transmit_text_deltas3(new_text_base_abspaths ? &tempfile
                                                                   : NULL,
-                                           &new_text_base_md5_checksum, NULL,
+                                           &new_text_base_md5_checksum,
+                                           &new_text_base_sha1_checksum,
                                            ctx->wc_ctx, item_abspath,
                                            fulltext, editor, mod->file_baton,
                                            pool, iterpool));
       if (new_text_base_abspaths && tempfile)
         apr_hash_set(*new_text_base_abspaths, item->path, APR_HASH_KEY_STRING,
                      tempfile);
-      if (checksums)
-        apr_hash_set(*checksums, item->path, APR_HASH_KEY_STRING,
+      if (md5_checksums)
+        apr_hash_set(*md5_checksums, item->path, APR_HASH_KEY_STRING,
                      new_text_base_md5_checksum);
+      if (sha1_checksums)
+        apr_hash_set(*sha1_checksums, item->path, APR_HASH_KEY_STRING,
+                     new_text_base_sha1_checksum);
     }
 
   svn_pool_destroy(iterpool);
