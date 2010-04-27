@@ -5844,19 +5844,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
             && status != svn_wc__db_status_added
             && status != svn_wc__db_status_obstructed_add)
           {
-            const char *dst_rtext;
-
-            /* ### replace this with: svn_wc__wq_prepare_revert_files()  */
-
-            SVN_ERR(svn_wc__text_revert_path(&dst_rtext, db, local_abspath,
-                                             pool));
-
-            SVN_ERR(svn_wc__loggy_move(db, dir_abspath,
-                                       text_base_abspath, dst_rtext,
-                                       pool));
-
-            SVN_ERR(svn_wc__loggy_revert_props_create(db, local_abspath,
-                                                      pool));
+            /* Move around some files to keep them safe for a possible
+               future revert operation.  */
+            SVN_ERR(svn_wc__wq_prepare_revert_files(db, local_abspath, pool));
           }
       }
   }

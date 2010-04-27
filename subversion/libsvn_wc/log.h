@@ -174,17 +174,6 @@ svn_wc__loggy_add_tree_conflict(svn_wc__db_t *db,
                                 apr_pool_t *scratch_pool);
 
 
-/* Queue work items to save the current baseprops of
-   LOCAL_ABSPATH as revert props.
-
-   Makes sure the baseprops are destroyed.
-*/
-svn_error_t *
-svn_wc__loggy_revert_props_create(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_pool_t *scratch_pool);
-
-
 /* TODO ###
 
    Use SCRATCH_POOL for temporary allocations.

@@ -97,7 +97,6 @@ message_from_skel(const svn_skel_t *skel,
        sync'ing to disk and clearing appropriate caches.
      install_props_file(): Used with loggy.
      svn_wc__install_props(): Used with loggy.
-     svn_wc__loggy_revert_props_create(): Used with loggy.
  */
 
 /* The real functionality here is part of libsvn_subr, in hashdump.c.
@@ -471,72 +470,6 @@ svn_wc__props_delete(svn_wc__db_t *db,
   SVN_ERR(svn_wc__prop_path(&props_file, local_abspath, kind, props_kind,
                             pool));
   return svn_error_return(svn_io_remove_file2(props_file, TRUE, pool));
-}
-
-svn_error_t *
-svn_wc__loggy_revert_props_create(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_pool_t *scratch_pool)
-{
-  svn_wc__db_kind_t kind;
-  const char *adm_abspath;
-  const char *revert_prop_abspath;
-  const char *base_prop_abspath;
-  svn_node_kind_t on_disk;
-
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
-
-  if (kind == svn_wc__db_kind_dir)
-    adm_abspath = local_abspath;
-  else
-    adm_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-
-  /* TODO(#2843) The current caller ensures that PATH will not be an excluded
-     item. But do we really need show_hidden = TRUE here? */
-
-  SVN_ERR(svn_wc__prop_path(&revert_prop_abspath, local_abspath, kind,
-                            svn_wc__props_revert, scratch_pool));
-  SVN_ERR(svn_wc__prop_path(&base_prop_abspath, local_abspath, kind,
-                            svn_wc__props_base, scratch_pool));
-
-  /* If prop base exist, move it to revert base. */
-  SVN_ERR(svn_io_check_path(base_prop_abspath, &on_disk, scratch_pool));
-  if (on_disk == svn_node_file)
-    {
-      SVN_ERR(svn_wc__loggy_move(db, adm_abspath,
-                                 base_prop_abspath, revert_prop_abspath,
-                                 scratch_pool));
-    }
-  else if (on_disk == svn_node_none)
-    {
-      const char *prop_tmp_abspath;
-      svn_stream_t *stream;
-
-      /* If there wasn't any prop base we still need an empty revert
-         propfile, otherwise a revert won't know that a change to the
-         props needs to be made (it'll just see no file, and do nothing).
-         So (loggily) write out an empty revert propfile.  */
-
-      /* Create an empty file.  */
-      SVN_ERR(svn_stream_open_unique(&stream, &prop_tmp_abspath,
-                                     svn_dirent_dirname(revert_prop_abspath,
-                                                        scratch_pool),
-                                     svn_io_file_del_none,
-                                     scratch_pool, scratch_pool));
-      SVN_ERR(svn_stream_close(stream));
-
-      /* Write a log entry to move tmp file to the destination.  */
-      SVN_ERR(svn_wc__loggy_move(db, adm_abspath,
-                                 prop_tmp_abspath, revert_prop_abspath,
-                                 scratch_pool));
-
-      /* And make the destination read-only.  */
-      SVN_ERR(svn_wc__loggy_set_readonly(db, adm_abspath,
-                                         revert_prop_abspath,
-                                         scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
 }
 
 
