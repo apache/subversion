@@ -218,7 +218,7 @@ run_revert(svn_wc__db_t *db,
   const char *working_props_path;
   const char *parent_abspath;
   svn_boolean_t conflicted;
-  apr_uint64_t modify_flags = 0;
+  int modify_flags = 0;
   svn_wc_entry_t tmp_entry;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */

@@ -75,7 +75,7 @@ extern "C" {
 
    Set MODIFY_FLAGS to reflect the fields that were present in ATTS. */
 svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
-                                   apr_uint64_t *modify_flags,
+                                   int *modify_flags,
                                    apr_hash_t *atts,
                                    apr_pool_t *pool);
 
@@ -83,35 +83,28 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 /* The MODIFY_FLAGS that tell svn_wc__entry_modify which parameters to
    pay attention to.  ### These should track the changes made to the
    SVN_WC__ENTRY_ATTR_* #defines! */
-/* Note: we use APR_INT64_C because APR 0.9 lacks APR_UINT64_C */
-#define SVN_WC__ENTRY_MODIFY_REVISION           APR_INT64_C(0x0000000000000001)
-#define SVN_WC__ENTRY_MODIFY_URL                APR_INT64_C(0x0000000000000002)
-/* OPEN */
-#define SVN_WC__ENTRY_MODIFY_KIND               APR_INT64_C(0x0000000000000008)
-#define SVN_WC__ENTRY_MODIFY_TEXT_TIME          APR_INT64_C(0x0000000000000010)
-/* OPEN */
-#define SVN_WC__ENTRY_MODIFY_CHECKSUM           APR_INT64_C(0x0000000000000040)
-#define SVN_WC__ENTRY_MODIFY_SCHEDULE           APR_INT64_C(0x0000000000000080)
-#define SVN_WC__ENTRY_MODIFY_COPIED             APR_INT64_C(0x0000000000000100)
-#define SVN_WC__ENTRY_MODIFY_DELETED            APR_INT64_C(0x0000000000000200)
-#define SVN_WC__ENTRY_MODIFY_COPYFROM_URL       APR_INT64_C(0x0000000000000400)
-#define SVN_WC__ENTRY_MODIFY_COPYFROM_REV       APR_INT64_C(0x0000000000000800)
-#define SVN_WC__ENTRY_MODIFY_CONFLICT_OLD       APR_INT64_C(0x0000000000001000)
-#define SVN_WC__ENTRY_MODIFY_CONFLICT_NEW       APR_INT64_C(0x0000000000002000)
-#define SVN_WC__ENTRY_MODIFY_CONFLICT_WRK       APR_INT64_C(0x0000000000004000)
-#define SVN_WC__ENTRY_MODIFY_PREJFILE           APR_INT64_C(0x0000000000008000)
-/* OPEN */
-#define SVN_WC__ENTRY_MODIFY_ABSENT             APR_INT64_C(0x0000000000200000)
-/* OPEN */
-#define SVN_WC__ENTRY_MODIFY_WORKING_SIZE       APR_INT64_C(0x0000000100000000)
-/* OPEN */
-#define SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL      APR_INT64_C(0x0000000400000000)
-/* No #define for DEPTH, because it's only meaningful on this-dir anyway. */
+#define SVN_WC__ENTRY_MODIFY_REVISION           0x00000001
+#define SVN_WC__ENTRY_MODIFY_URL                0x00000002
+#define SVN_WC__ENTRY_MODIFY_KIND               0x00000004
+#define SVN_WC__ENTRY_MODIFY_TEXT_TIME          0x00000008
+#define SVN_WC__ENTRY_MODIFY_CHECKSUM           0x00000010
+#define SVN_WC__ENTRY_MODIFY_SCHEDULE           0x00000020
+#define SVN_WC__ENTRY_MODIFY_COPIED             0x00000040
+#define SVN_WC__ENTRY_MODIFY_DELETED            0x00000080
+#define SVN_WC__ENTRY_MODIFY_COPYFROM_URL       0x00000100
+#define SVN_WC__ENTRY_MODIFY_COPYFROM_REV       0x00000200
+#define SVN_WC__ENTRY_MODIFY_CONFLICT_OLD       0x00000400
+#define SVN_WC__ENTRY_MODIFY_CONFLICT_NEW       0x00000800
+#define SVN_WC__ENTRY_MODIFY_CONFLICT_WRK       0x00001000
+#define SVN_WC__ENTRY_MODIFY_PREJFILE           0x00002000
+#define SVN_WC__ENTRY_MODIFY_ABSENT             0x00004000
+#define SVN_WC__ENTRY_MODIFY_WORKING_SIZE       0x00008000
+#define SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL      0x00010000
 
 /* ...ORed together with this to mean: just set the schedule to the new
    value, instead of treating the new value as a change of state to be
    merged with the current schedule. */
-#define SVN_WC__ENTRY_MODIFY_FORCE              APR_INT64_C(0x4000000000000000)
+#define SVN_WC__ENTRY_MODIFY_FORCE              0x00020000
 
 
 /* TODO ### Rewrite doc string to mention DB, LOCAL_ABSPATH; not ADM_ACCESS, NAME.
@@ -139,19 +132,19 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 */
 svn_error_t *
 svn_wc__entry_modify(svn_wc__db_t *db,
-                      const char *local_abspath,
-                      svn_node_kind_t kind,
-                      svn_wc_entry_t *entry,
-                      apr_uint64_t modify_flags,
-                      apr_pool_t *scratch_pool);
+                     const char *local_abspath,
+                     svn_node_kind_t kind,
+                     const svn_wc_entry_t *entry,
+                     int modify_flags,
+                     apr_pool_t *scratch_pool);
 
 
 /* Like svn_wc__entry_modify(), but modifies the "parent stub".  */
 svn_error_t *
 svn_wc__entry_modify_stub(svn_wc__db_t *db,
                           const char *local_abspath,
-                          svn_wc_entry_t *entry,
-                          apr_uint64_t modify_flags,
+                          const svn_wc_entry_t *entry,
+                          int modify_flags,
                           apr_pool_t *scratch_pool);
 
 /* Remove LOCAL_ABSPATH from DB, unconditionally.

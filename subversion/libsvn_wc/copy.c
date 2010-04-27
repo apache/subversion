@@ -555,9 +555,9 @@ post_copy_cleanup(svn_wc__db_t *db,
          with creating a directory.  See Issue #2101 for details. */
       if (entry->deleted)
         {
-          apr_uint64_t flags = (SVN_WC__ENTRY_MODIFY_FORCE
-                                | SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                | SVN_WC__ENTRY_MODIFY_DELETED);
+          int modify_flags = (SVN_WC__ENTRY_MODIFY_FORCE
+                              | SVN_WC__ENTRY_MODIFY_SCHEDULE
+                              | SVN_WC__ENTRY_MODIFY_DELETED);
           svn_wc_entry_t tmp_entry;
 
           tmp_entry.schedule = svn_wc_schedule_delete;
@@ -583,11 +583,11 @@ post_copy_cleanup(svn_wc__db_t *db,
               schedule delete until the copy is committed, when they become
               state deleted and everything works! */
               tmp_entry.kind = svn_node_file;
-              flags |= SVN_WC__ENTRY_MODIFY_KIND;
+              modify_flags |= SVN_WC__ENTRY_MODIFY_KIND;
             }
 
           SVN_ERR(svn_wc__entry_modify(db, child_abspath, svn_node_unknown,
-                                       &tmp_entry, flags, iterpool));
+                                       &tmp_entry, modify_flags, iterpool));
         }
 
       /* Remove lock stuffs. */
