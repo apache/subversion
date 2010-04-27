@@ -732,7 +732,7 @@ svn_client__get_diff_summarize_editor(const char *target,
 typedef struct
 {
     /* The absolute source path or url. */
-    const char *src;
+    const char *src_abspath_or_url;
 
     /* The base name of the object.  It should be the same for both src
        and dst. */
@@ -755,7 +755,7 @@ typedef struct
     svn_revnum_t src_revnum;
 
     /* The absolute destination path or url */
-    const char *dst;
+    const char *dst_abspath_or_url;
 
     /* The absolute source path or url of the destination's parent. */
     const char *dst_parent_abspath;
