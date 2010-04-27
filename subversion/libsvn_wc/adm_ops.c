@@ -1334,7 +1334,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   svn_wc_entry_t tmp_entry;
   svn_boolean_t is_replace = FALSE;
   svn_node_kind_t kind;
-  apr_uint64_t modify_flags = 0;
+  apr_uint64_t modify_flags;
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *err;
   svn_wc__db_status_t status;
