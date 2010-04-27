@@ -1101,15 +1101,18 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
   const char *src_abspath;
 
   /* Read the entry for this SRC. */
-  SVN_ERR(svn_dirent_get_absolute(&src_abspath, pair->src, pool));
+  /* ### TODO: Is this conversion really necessary? */
+  SVN_ERR(svn_dirent_get_absolute(&src_abspath,
+                                  pair->src_abspath_or_url, pool));
   SVN_ERR(svn_wc__get_entry_versioned(&entry, btn->ctx->wc_ctx, src_abspath,
                                       svn_node_unknown, FALSE, FALSE,
                                       pool, pool));
 
   /* Handle this SRC.  Because add_committable() uses the hash pool to
      allocate the new commit_item, we can safely use the iterpool here. */
-  return harvest_committables(btn->committables, NULL, pair->src,
-                              pair->dst, entry->url, entry,
+  return harvest_committables(btn->committables, NULL,
+                              pair->src_abspath_or_url,
+                              pair->dst_abspath_or_url, entry->url, entry,
                               NULL, FALSE, TRUE, svn_depth_infinity,
                               FALSE, NULL, btn->ctx, pool);
 }
