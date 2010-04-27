@@ -107,4 +107,13 @@ typedef struct svn_wc__db_pdh_t {
   svn_wc_adm_access_t *adm_access;
 } svn_wc__db_pdh_t;
 
+
+
+/* */
+svn_wc__db_pdh_t *
+svn_wc__db_pdh_get_or_create(svn_wc__db_t *db,
+                             const char *local_dir_abspath,
+                             svn_boolean_t create_allowed,
+                             apr_pool_t *scratch_pool);
+
 #endif /* WC_DB_PDH_H */

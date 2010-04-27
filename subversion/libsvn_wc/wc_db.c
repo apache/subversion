@@ -675,35 +675,6 @@ get_old_version(int *version,
 }
 
 
-/* */
-static svn_wc__db_pdh_t *
-get_or_create_pdh(svn_wc__db_t *db,
-                  const char *local_dir_abspath,
-                  svn_boolean_t create_allowed,
-                  apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh = apr_hash_get(db->dir_data,
-                                       local_dir_abspath, APR_HASH_KEY_STRING);
-
-  if (pdh == NULL && create_allowed)
-    {
-      pdh = apr_pcalloc(db->state_pool, sizeof(*pdh));
-
-      /* Copy the path for the proper lifetime.  */
-      pdh->local_abspath = apr_pstrdup(db->state_pool, local_dir_abspath);
-
-      /* We don't know anything about this directory, so we cannot construct
-         a svn_wc__db_wcroot_t for it (yet).  */
-
-      /* ### parent */
-
-      apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING, pdh);
-    }
-
-  return pdh;
-}
-
-
 /* POOL may be NULL if the lifetime of LOCAL_ABSPATH is sufficient.  */
 static const char *
 compute_pdh_relpath(const svn_wc__db_pdh_t *pdh,
@@ -5897,7 +5868,8 @@ svn_wc__db_temp_get_format(int *format,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
+                                     scratch_pool);
 
   /* ### for per-dir layouts, the wcroot should be this directory. under
      ### wc-ng, the wcroot may have become set for this missing subdir.  */
@@ -5974,7 +5946,8 @@ svn_wc__db_temp_reset_format(int format,
 
   /* Do not create a PDH. If we don't have one, then we don't have any
      cached version information.  */
-  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
+                                     scratch_pool);
   if (pdh != NULL)
     {
       /* ### ideally, we would reset this to UNKNOWN, and then read the working
@@ -6048,7 +6021,8 @@ svn_wc__db_temp_get_access(svn_wc__db_t *db,
 
   /* Do not create a PDH. If we don't have one, then we don't have an
      access baton.  */
-  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
+                                     scratch_pool);
 
   return pdh ? pdh->adm_access : NULL;
 }
@@ -6066,7 +6040,8 @@ svn_wc__db_temp_set_access(svn_wc__db_t *db,
   SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  pdh = get_or_create_pdh(db, local_dir_abspath, TRUE, scratch_pool);
+  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, TRUE,
+                                     scratch_pool);
 
   /* Better not override something already there.  */
   SVN_ERR_ASSERT_NO_RETURN(pdh->adm_access == NULL);
@@ -6088,7 +6063,8 @@ svn_wc__db_temp_close_access(svn_wc__db_t *db,
 
   /* Do not create a PDH. If we don't have one, then we don't have an
      access baton to close.  */
-  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
+                                     scratch_pool);
   if (pdh != NULL)
     {
       /* We should be closing the correct one, *or* it's already closed.  */
@@ -6114,7 +6090,8 @@ svn_wc__db_temp_clear_access(svn_wc__db_t *db,
 
   /* Do not create a PDH. If we don't have one, then we don't have an
      access baton to clear out.  */
-  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
+                                     scratch_pool);
   if (pdh != NULL)
     pdh->adm_access = NULL;
 }
@@ -6668,7 +6645,7 @@ svn_wc__db_wclock_remove(svn_wc__db_t *db,
 
   /* If we've just removed the "physical" lock, we also need to ensure we
      don't continue to think we own the lock. */
-  pdh = get_or_create_pdh(db, local_abspath, FALSE, scratch_pool);
+  pdh = svn_wc__db_pdh_get_or_create(db, local_abspath, FALSE, scratch_pool);
   if (pdh)
     pdh->locked = FALSE;
 
@@ -6685,7 +6662,8 @@ svn_wc__db_temp_mark_locked(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
 
-  pdh = get_or_create_pdh(db, local_dir_abspath, TRUE, scratch_pool);
+  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, TRUE,
+                                     scratch_pool);
   pdh->locked = TRUE;
 
   return SVN_NO_ERROR;
@@ -6702,7 +6680,8 @@ svn_wc__db_temp_own_lock(svn_boolean_t *own_lock,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
 
-  pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
+                                     scratch_pool);
   *own_lock = (pdh != NULL && pdh->locked);
 
   return SVN_NO_ERROR;
@@ -6738,7 +6717,8 @@ svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
 
   if (affected_rows > 0)
    {
-     pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+     pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
+                                        scratch_pool);
      flush_entries(pdh);
    }
 
@@ -6776,7 +6756,8 @@ svn_wc__db_temp_op_set_working_incomplete(svn_wc__db_t *db,
 
   if (affected_rows > 0)
    {
-     pdh = get_or_create_pdh(db, local_dir_abspath, FALSE, scratch_pool);
+     pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
+                                        scratch_pool);
      flush_entries(pdh);
    }
 
