@@ -1099,8 +1099,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   /* No targets means nothing to commit, so just return. */
   if (base_abspath == NULL)
-    goto cleanup;
-  /* ### BUG: cleanup relies on base_abspath != NULL */
+    return SVN_NO_ERROR;
 
   SVN_ERR_ASSERT(rel_targets != NULL);
 
