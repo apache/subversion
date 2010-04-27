@@ -79,6 +79,8 @@
 
 /* Delete the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_ENTRY        "delete-entry"
+#define SVN_WC__LOG_ATTR_REVISION       "revision"
+#define SVN_WC__LOG_ATTR_KIND           "kind"
 
 /* Move file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
 #define SVN_WC__LOG_MV                  "mv"
@@ -103,7 +105,6 @@
 #define SVN_WC__LOG_ATTR_NAME           "name"
 #define SVN_WC__LOG_ATTR_DEST           "dest"
 #define SVN_WC__LOG_ATTR_TIMESTAMP      "timestamp"
-#define SVN_WC__LOG_ATTR_FORCE          "force"
 #define SVN_WC__LOG_ATTR_DATA           "data"
 
 /* This one is for SVN_WC__LOG_CP_AND_TRANSLATE to indicate a versioned
@@ -316,12 +317,6 @@ log_do_modify_entry(struct log_runner *loggy,
 
       entry->working_size = finfo.size;
     }
-
-  /* Handle force flag. */
-  valuestr = apr_hash_get(ah, SVN_WC__LOG_ATTR_FORCE,
-                          APR_HASH_KEY_STRING);
-  if (valuestr && strcmp(valuestr, "true") == 0)
-    modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
 
   /* ### this function never needs to modify a parent stub.
      ### NOTE: this call to entry_modify MAY create a new node.  */
@@ -542,9 +537,9 @@ start_handler(void *userData, const char *eltname, const char **atts)
     svn_revnum_t revision;
     svn_node_kind_t kind;
 
-    attr = svn_xml_get_attr_value(SVN_WC__ENTRY_ATTR_REVISION, atts);
+    attr = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_REVISION, atts);
     revision = SVN_STR_TO_REV(attr);
-    attr = svn_xml_get_attr_value(SVN_WC__ENTRY_ATTR_KIND, atts);
+    attr = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_KIND, atts);
     if (strcmp(attr, "dir") == 0)
       kind = svn_node_dir;
     else
@@ -727,9 +722,9 @@ svn_wc__loggy_delete_entry(svn_wc__db_t *db,
                         SVN_WC__LOG_DELETE_ENTRY,
                         SVN_WC__LOG_ATTR_NAME,
                         loggy_path1,
-                        SVN_WC__ENTRY_ATTR_REVISION,
+                        SVN_WC__LOG_ATTR_REVISION,
                         apr_psprintf(scratch_pool, "%ld", revision),
-                        SVN_WC__ENTRY_ATTR_KIND,
+                        SVN_WC__LOG_ATTR_KIND,
                         kind == svn_wc__db_kind_dir ? "dir" : "file",
                         NULL);
 
@@ -768,56 +763,54 @@ svn_wc__loggy_entry_modify(svn_wc__db_t *db,
   svn_stringbuf_t *log_accum = NULL;
   const char *loggy_path1;
   apr_hash_t *prop_hash = apr_hash_make(scratch_pool);
-  static const char *kind_str[] =
-    { "none",
-      SVN_WC__ENTRIES_ATTR_FILE_STR,
-      SVN_WC__ENTRIES_ATTR_DIR_STR,
-      "unknown",
-    };
-  static const char *schedule_str[] =
-    {
-      "", /* svn_wc_schedule_normal */
-      SVN_WC__ENTRY_VALUE_ADD,
-      SVN_WC__ENTRY_VALUE_DELETE,
-      SVN_WC__ENTRY_VALUE_REPLACE,
-    };
 
+  SVN_ERR_ASSERT(modify_flags != 0);
 
-  if (! modify_flags)
-    return SVN_NO_ERROR;
+  /* ### this code has a limited set of modifications. enforce it.  */
+  SVN_ERR_ASSERT((modify_flags & ~(
+                    /* from update_editor.c  */
+                    SVN_WC__ENTRY_MODIFY_SCHEDULE
+                    | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
+                    | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
+                    | SVN_WC__ENTRY_MODIFY_COPIED
+                    | SVN_WC__ENTRY_MODIFY_KIND
+                    | SVN_WC__ENTRY_MODIFY_TEXT_TIME
+                    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE
+                    | SVN_WC__ENTRY_MODIFY_CHECKSUM
+
+                    /* from props.c  */
+                    | SVN_WC__ENTRY_MODIFY_PREJFILE
+
+                    /* from merge.c  */
+                    | SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
+                    | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
+                    | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK)) == 0);
 
 #define ADD_ENTRY_ATTR(attr_flag, attr_name, value) \
    if (modify_flags & (attr_flag)) \
      apr_hash_set(prop_hash, (attr_name), APR_HASH_KEY_STRING, value)
 
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_REVISION,
-                 SVN_WC__ENTRY_ATTR_REVISION,
-                 apr_psprintf(scratch_pool, "%ld", entry->revision));
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_URL,
-                 SVN_WC__ENTRY_ATTR_URL,
-                 entry->url);
-
+  /* ### it is always a file  */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_KIND)
+    SVN_ERR_ASSERT(entry->kind == svn_node_file);
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_KIND,
                  SVN_WC__ENTRY_ATTR_KIND,
-                 kind_str[entry->kind]);
+                 SVN_WC__ENTRIES_ATTR_FILE_STR);
 
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
+    SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_add);
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_SCHEDULE,
                  SVN_WC__ENTRY_ATTR_SCHEDULE,
-                 schedule_str[entry->schedule]);
+                 SVN_WC__ENTRY_VALUE_ADD);
 
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
+    SVN_ERR_ASSERT(entry->copied);
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_COPIED,
                  SVN_WC__ENTRY_ATTR_COPIED,
-                 entry->copied ? "true" : "false");
+                 "true");
 
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_DELETED,
-                 SVN_WC__ENTRY_ATTR_DELETED,
-                 entry->deleted ? "true" : "false");
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_ABSENT,
-                 SVN_WC__ENTRY_ATTR_ABSENT,
-                 entry->absent ? "true" : "false");
-
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_COPYFROM_URL)
+    SVN_ERR_ASSERT(entry->copyfrom_url != NULL);
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_COPYFROM_URL,
                  SVN_WC__ENTRY_ATTR_COPYFROM_URL,
                  entry->copyfrom_url);
@@ -826,22 +819,30 @@ svn_wc__loggy_entry_modify(svn_wc__db_t *db,
                  SVN_WC__ENTRY_ATTR_COPYFROM_REV,
                  apr_psprintf(scratch_pool, "%ld", entry->copyfrom_rev));
 
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICT_OLD)
+    SVN_ERR_ASSERT(entry->conflict_old != NULL);
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CONFLICT_OLD,
                  SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
-                 entry->conflict_old ? entry->conflict_old : "");
+                 entry->conflict_old);
 
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICT_NEW)
+    SVN_ERR_ASSERT(entry->conflict_new != NULL);
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CONFLICT_NEW,
                  SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
-                 entry->conflict_new ? entry->conflict_new : "");
+                 entry->conflict_new);
 
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
                  SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
                  entry->conflict_wrk ? entry->conflict_wrk : "");
 
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_PREJFILE)
+    SVN_ERR_ASSERT(entry->prejfile != NULL);
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_PREJFILE,
                  SVN_WC__ENTRY_ATTR_PREJFILE,
-                 entry->prejfile ? entry->prejfile : "");
+                 entry->prejfile);
 
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
+    SVN_ERR_ASSERT(entry->text_time == 0);
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                  SVN_WC__ENTRY_ATTR_TEXT_TIME,
                  svn_time_to_cstring(entry->text_time, scratch_pool));
@@ -850,26 +851,16 @@ svn_wc__loggy_entry_modify(svn_wc__db_t *db,
                  SVN_WC__ENTRY_ATTR_CHECKSUM,
                  entry->checksum);
 
-  /* Note: Last-commit flags are no longer passed to this function. */
-
-  /* Note: LOCK flags are no longer passed to this function.  */
-
-  /* Note: ignoring the (deprecated) has_props, has_prop_mods,
-     cachable_props, and present_props fields. */
-
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_WORKING_SIZE)
+    SVN_ERR_ASSERT(entry->working_size == SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN);
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
                  SVN_WC__ENTRY_ATTR_WORKING_SIZE,
                  apr_psprintf(scratch_pool, "%" APR_OFF_T_FMT,
                               entry->working_size));
 
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_FORCE,
-                 SVN_WC__LOG_ATTR_FORCE,
-                 "true");
-
 #undef ADD_ENTRY_ATTR
 
-  if (apr_hash_count(prop_hash) == 0)
-    return SVN_NO_ERROR;
+  SVN_ERR_ASSERT(apr_hash_count(prop_hash) != 0);
 
   SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
   apr_hash_set(prop_hash, SVN_WC__LOG_ATTR_NAME,
