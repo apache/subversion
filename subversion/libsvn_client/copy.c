@@ -1172,7 +1172,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       /* Sanity check if the source path is versioned. */
       SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx, pair->src, FALSE,
                                     iterpool));
-      if (kind == svn_node_unknown)
+      if (kind == svn_node_none)
         return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                                  _("Path '%s' does not exist"),
                                  svn_dirent_local_style(pair->src, pool));
