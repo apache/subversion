@@ -1163,20 +1163,17 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
   iterpool = svn_pool_create(pool);
 
+  /* Verify that all the source paths exist, are versioned, etc.
+     We'll do so by querying the base revisions of those things (which
+     we'll need to know later anyway). */
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      svn_node_kind_t kind;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_pool_clear(iterpool);
-      /* Sanity check if the source path is versioned. */
-      SVN_ERR_ASSERT(svn_dirent_is_absolute(pair->src));
-      SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx, pair->src, FALSE,
-                                    iterpool));
-      if (kind == svn_node_none)
-        return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                                 _("Path '%s' does not exist"),
-                                 svn_dirent_local_style(pair->src, pool));
+
+      SVN_ERR(svn_wc__node_get_base_rev(&pair->src_revnum, ctx->wc_ctx,
+                                        pair->src, iterpool));
     }
 
   /* Determine the longest common ancestor for the destinations, and open an RA
@@ -1189,8 +1186,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
    *     It looks like the entire block of code hanging off this comment
    *     is redundant. */
   svn_uri_split(APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *)->dst,
-                &top_dst_url,
-                NULL, pool);
+                &top_dst_url, NULL, pool);
   for (i = 1; i < copy_pairs->nelts; i++)
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
@@ -1221,10 +1217,6 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
         APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
 
       svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_wc__node_get_base_rev(&pair->src_revnum, ctx->wc_ctx,
-                                        pair->src, iterpool));
-
       dst_rel = svn_path_uri_decode(svn_uri_is_child(top_dst_url,
                                                      pair->dst,
                                                      iterpool),
