@@ -3139,6 +3139,37 @@ svn_wc__entry_modify_stub(svn_wc__db_t *db,
                           apr_uint64_t modify_flags,
                           apr_pool_t *scratch_pool)
 {
+  SVN_ERR_ASSERT((modify_flags & ~(
+                    /* from adm_ops.c  */
+                    SVN_WC__ENTRY_MODIFY_SCHEDULE
+                    | SVN_WC__ENTRY_MODIFY_KIND
+                    | SVN_WC__ENTRY_MODIFY_REVISION
+                    | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
+                    | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
+                    | SVN_WC__ENTRY_MODIFY_COPIED
+                    | SVN_WC__ENTRY_MODIFY_CHECKSUM
+
+                    /* from entries.c  */
+                    | SVN_WC__ENTRY_MODIFY_URL
+                    | SVN_WC__ENTRY_MODIFY_REVISION
+
+                    | SVN_WC__ENTRY_MODIFY_DELETED
+                    | SVN_WC__ENTRY_MODIFY_SCHEDULE
+                    | SVN_WC__ENTRY_MODIFY_FORCE
+
+                    /* from update_editor.c  */
+                    | SVN_WC__ENTRY_MODIFY_KIND
+                    | SVN_WC__ENTRY_MODIFY_DELETED
+                    | SVN_WC__ENTRY_MODIFY_ABSENT
+                    | SVN_WC__ENTRY_MODIFY_SCHEDULE
+                    | SVN_WC__ENTRY_MODIFY_FORCE
+
+                    /* from workqueue.c  */
+                    | SVN_WC__ENTRY_MODIFY_COPIED
+                    | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
+                    | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
+                    | SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                   )) == 0);
   return svn_error_return(entry_modify(db, local_abspath,
                                        svn_node_dir, TRUE,
                                        entry, modify_flags, scratch_pool));
