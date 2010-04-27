@@ -1149,7 +1149,6 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   void *commit_baton;
   apr_hash_t *committables;
   apr_array_header_t *commit_items;
-  const svn_wc_entry_t *entry;
   apr_pool_t *iterpool;
   apr_array_header_t *new_dirs = NULL;
   apr_hash_t *commit_revprops;
@@ -1166,13 +1165,17 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
   for (i = 0; i < copy_pairs->nelts; i++)
     {
+      svn_node_kind_t kind;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_pool_clear(iterpool);
       /* Sanity check if the source path is versioned. */
-      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src,
-                                          svn_node_unknown, FALSE, FALSE,
-                                          iterpool, iterpool));
+      SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx, pair->src, FALSE,
+                                    iterpool));
+      if (kind == svn_node_unknown)
+        return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                                 _("Path '%s' does not exist"),
+                                 svn_dirent_local_style(pair->src, pool));
     }
 
   /* Determine the longest common ancestor for the destinations, and open an RA
@@ -1218,10 +1221,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src,
-                                          svn_node_unknown, FALSE, FALSE,
-                                          iterpool, iterpool));
-      pair->src_revnum = entry->revision;
+      SVN_ERR(svn_wc__node_get_base_rev(&pair->src_revnum, ctx->wc_ctx,
+                                        pair->src, iterpool));
 
       dst_rel = svn_path_uri_decode(svn_uri_is_child(top_dst_url,
                                                      pair->dst,
@@ -1338,9 +1339,6 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, pair->src,
                                          NULL, SVN_INVALID_REVNUM,
                                          ctx, iterpool));
-      SVN_ERR(svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, pair->src,
-                                          svn_node_unknown, FALSE, FALSE,
-                                          pool, pool));
       SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, ctx->wc_ctx,
                                           pair->src, iterpool, iterpool));
       if (wc_mergeinfo && mergeinfo)
