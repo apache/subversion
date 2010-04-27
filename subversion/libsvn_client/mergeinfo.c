@@ -417,8 +417,8 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 
   /* If LOCAL_ABSPATH is a directory and we want the subtree mergeinfo too,
      then get it. */
-  SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                                scratch_pool));
+  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
+                           scratch_pool));
   if (kind == svn_node_dir && include_descendants)
     {
       wb.target_abspath = local_abspath;

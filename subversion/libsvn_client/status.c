@@ -267,8 +267,7 @@ svn_client_status5(svn_revnum_t *result_rev,
     svn_node_kind_t kind, disk_kind;
 
     SVN_ERR(svn_io_check_path(target_abspath, &disk_kind, pool));
-    err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
-                                pool);
+    err = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE, pool);
 
     if (err && ((err->apr_err == SVN_ERR_WC_MISSING) ||
                 (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)))
@@ -297,8 +296,8 @@ svn_client_status5(svn_revnum_t *result_rev,
 
         if (kind != svn_node_file)
           {
-            err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, dir_abspath,
-                                        FALSE, pool);
+            err = svn_wc_read_kind(&kind, ctx->wc_ctx, dir_abspath, FALSE,
+                                   pool);
 
             svn_error_clear(err);
 

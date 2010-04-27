@@ -367,8 +367,7 @@ switch_file_external(const char *path,
                                          subpool, subpool));
     }
 
-  err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                              subpool);
+  err = svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE, subpool);
   if (err)
     goto cleanup;
 

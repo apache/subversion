@@ -2291,7 +2291,7 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
       ignore_patterns = ignores;
     }
 
-  SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
+  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
   SVN_ERR(svn_io_check_path(local_abspath, &local_kind, scratch_pool));
 
   if (kind == svn_node_file && local_kind == svn_node_file)

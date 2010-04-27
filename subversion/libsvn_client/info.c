@@ -97,8 +97,7 @@ build_info_for_entry(svn_info_t **info,
                                       svn_node_unknown, TRUE, FALSE,
                                       pool, pool));
 
-  SVN_ERR(svn_wc__node_get_kind(&tmpinfo->kind, wc_ctx, local_abspath, TRUE,
-                                pool));
+  SVN_ERR(svn_wc_read_kind(&tmpinfo->kind, wc_ctx, local_abspath, TRUE, pool));
   SVN_ERR(svn_wc__node_get_url(&tmpinfo->URL, wc_ctx, local_abspath,
                                pool, pool));
   SVN_ERR(svn_wc__node_get_repos_info(&tmpinfo->repos_root_URL,

@@ -229,8 +229,8 @@ svn_cl__propedit(apr_getopt_t *os,
               /* Split the path if it is a file path. */
               SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, subpool));
 
-              SVN_ERR(svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath,
-                                            FALSE, subpool));
+              SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
+                                       subpool));
 
               if (kind == svn_node_none)
                 return svn_error_createf(

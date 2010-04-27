@@ -177,8 +177,8 @@ svn_client_upgrade(const char *path,
              upgraded if it's a dir. If it's a file then the lookup is done
              in an adm_dir belonging to the real wc and since that was
              updated before the externals no error is returned. */
-          err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, external_abspath,
-                                        FALSE, iterpool);
+          err = svn_wc_read_kind(&kind, ctx->wc_ctx, external_abspath, FALSE,
+                                 iterpool);
 
           if (err && err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
             {

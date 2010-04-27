@@ -992,8 +992,7 @@ check_nonrecursive_dir_delete(const char *target_path,
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_path, pool));
 
-  SVN_ERR(svn_wc__node_get_kind(&kind, wc_ctx, target_abspath, FALSE,
-                                pool));
+  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, target_abspath, FALSE, pool));
   if (kind == svn_node_dir)
     lock_abspath = target_abspath;
   else

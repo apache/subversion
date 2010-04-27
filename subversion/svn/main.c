@@ -1997,8 +1997,8 @@ main(int argc, const char *argv[])
 
           if (!err)
             {
-              err = svn_wc__node_get_kind(&kind, ctx->wc_ctx, local_abspath,
-                                          FALSE, pool);
+              err = svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
+                                     pool);
 
               if (!err && kind != svn_node_none && kind != svn_node_unknown)
                 {
