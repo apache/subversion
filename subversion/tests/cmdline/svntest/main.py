@@ -365,7 +365,7 @@ def run_command(command, error_expected, binary_mode=0, *varargs):
   as lists of lines (including line terminators).  See run_command_stdin()
   for details.  If ERROR_EXPECTED is None, any stderr also will be printed."""
 
-  return run_command_stdin(command, error_expected, binary_mode,
+  return run_command_stdin(command, error_expected, 0, binary_mode,
                            None, *varargs)
 
 # A regular expression that matches arguments that are trivially safe
@@ -394,9 +394,10 @@ def _quote_arg(arg):
       arg = arg.replace('$', '\$')
     return '"%s"' % (arg,)
 
-def open_pipe(command, stdin=None, stdout=None, stderr=None):
+def open_pipe(command, bufsize=0, stdin=None, stdout=None, stderr=None):
   """Opens a subprocess.Popen pipe to COMMAND using STDIN,
-  STDOUT, and STDERR.
+  STDOUT, and STDERR.  BUFSIZE is passed to subprocess.Popen's
+  argument of the same name.
 
   Returns (infile, outfile, errfile, waiter); waiter
   should be passed to wait_on_pipe."""
@@ -425,6 +426,7 @@ def open_pipe(command, stdin=None, stdout=None, stderr=None):
     stderr = subprocess.PIPE
 
   p = subprocess.Popen(command,
+                       bufsize,
                        stdin=stdin,
                        stdout=stdout,
                        stderr=stderr,
@@ -478,8 +480,14 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
                        % (command_string, exit_code))
     return stdout_lines, stderr_lines, exit_code
 
-def spawn_process(command, binary_mode=0, stdin_lines=None, *varargs):
+def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
+                  *varargs):
   """Run any binary, supplying input text, logging the command line.
+  BUFSIZE dictates the pipe buffer size used in communication with the
+  subprocess: 0 means unbuffered, 1 means line buffered, any other
+  positive value means use a buffer of (approximately) that size.
+  A negative bufsize means to use the system default, which usually
+  means fully buffered. The default value for bufsize is 0 (unbuffered).
   Normalize Windows line endings of stdout and stderr if not BINARY_MODE.
   Return exit code as int; stdout, stderr as lists of lines (including
   line terminators)."""
@@ -492,7 +500,7 @@ def spawn_process(command, binary_mode=0, stdin_lines=None, *varargs):
                                       ' '.join([_quote_arg(x) for x in varargs])))
     sys.stdout.flush()
 
-  infile, outfile, errfile, kid = open_pipe([command] + list(varargs))
+  infile, outfile, errfile, kid = open_pipe([command] + list(varargs), bufsize)
 
   if stdin_lines:
     for x in stdin_lines:
@@ -506,13 +514,15 @@ def spawn_process(command, binary_mode=0, stdin_lines=None, *varargs):
 
   return exit_code, stdout_lines, stderr_lines
 
-def run_command_stdin(command, error_expected, binary_mode=0,
+def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
                       stdin_lines=None, *varargs):
   """Run COMMAND with VARARGS; input STDIN_LINES (a list of strings
   which should include newline characters) to program via stdin - this
   should not be very large, as if the program outputs more than the OS
   is willing to buffer, this will deadlock, with both Python and
-  COMMAND waiting to write to each other for ever.
+  COMMAND waiting to write to each other for ever.  For tests where this
+  is a problem, setting BUFSIZE to a sufficiently large value will prevent
+  the deadlock, see spawn_process().
   Normalize Windows line endings of stdout and stderr if not BINARY_MODE.
   Return exit code as int; stdout, stderr as lists of lines (including
   line terminators).
@@ -522,6 +532,7 @@ def run_command_stdin(command, error_expected, binary_mode=0,
     start = time.time()
 
   exit_code, stdout_lines, stderr_lines = spawn_process(command,
+                                                        bufsize,
                                                         binary_mode,
                                                         stdin_lines,
                                                         *varargs)
@@ -634,7 +645,7 @@ def run_entriesdump(path):
   # use spawn_process rather than run_command to avoid copying all the data
   # to stdout in verbose mode.
   exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
-                                                        0, None, path)
+                                                        0, 0, None, path)
   if verbose_mode:
     ### finish the CMD output
     print
@@ -1143,7 +1154,8 @@ class TestSpawningThread(threading.Thread):
     if server_minor_version:
       args.append('--server-minor-version=' + str(server_minor_version))
 
-    result, stdout_lines, stderr_lines = spawn_process(command, 0, None, *args)
+    result, stdout_lines, stderr_lines = spawn_process(command, 0, 0, None,
+                                                       *args)
     self.results.append((index, result, stdout_lines, stderr_lines))
 
     if result != 1:
