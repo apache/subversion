@@ -53,3 +53,57 @@ svn_wc__db_pdh_get_or_create(svn_wc__db_t *db,
 
   return pdh;
 }
+
+
+svn_error_t *
+svn_wc__db_open(svn_wc__db_t **db,
+                svn_wc__db_openmode_t mode,
+                svn_config_t *config,
+                svn_boolean_t auto_upgrade,
+                svn_boolean_t enforce_empty_wq,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  *db = apr_pcalloc(result_pool, sizeof(**db));
+  (*db)->mode = mode;
+  (*db)->config = config;
+  (*db)->auto_upgrade = auto_upgrade;
+  (*db)->enforce_empty_wq = enforce_empty_wq;
+  (*db)->dir_data = apr_hash_make(result_pool);
+  (*db)->state_pool = result_pool;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_close(svn_wc__db_t *db)
+{
+  apr_pool_t *scratch_pool = db->state_pool;
+  apr_hash_t *roots = apr_hash_make(scratch_pool);
+  apr_hash_index_t *hi;
+
+  /* Collect all the unique WCROOT structures, and empty out DIR_DATA.  */
+  for (hi = apr_hash_first(scratch_pool, db->dir_data);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      svn_wc__db_pdh_t *pdh;
+
+      apr_hash_this(hi, &key, &klen, &val);
+      pdh = val;
+
+      if (pdh->wcroot && pdh->wcroot->sdb)
+        apr_hash_set(roots, pdh->wcroot->abspath, APR_HASH_KEY_STRING,
+                     pdh->wcroot);
+
+      apr_hash_set(db->dir_data, key, klen, NULL);
+    }
+
+  /* Run the cleanup for each WCROOT.  */
+  return svn_error_return(svn_wc__db_close_many_wcroots(roots, db->state_pool,
+                                                        scratch_pool));
+}

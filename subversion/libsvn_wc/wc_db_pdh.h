@@ -116,4 +116,10 @@ svn_wc__db_pdh_get_or_create(svn_wc__db_t *db,
                              svn_boolean_t create_allowed,
                              apr_pool_t *scratch_pool);
 
+/* */
+svn_error_t *
+svn_wc__db_close_many_wcroots(apr_hash_t *roots,
+                              apr_pool_t *state_pool,
+                              apr_pool_t *scratch_pool);
+
 #endif /* WC_DB_PDH_H */
