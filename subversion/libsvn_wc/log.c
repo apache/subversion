@@ -88,9 +88,6 @@
    the DEST. */
 #define SVN_WC__LOG_CP_AND_TRANSLATE    "cp-and-translate"
 
-/* Make file SVN_WC__LOG_ATTR_NAME readonly */
-#define SVN_WC__LOG_READONLY            "readonly"
-
 /* Set SVN_WC__LOG_ATTR_NAME to have timestamp SVN_WC__LOG_ATTR_TIMESTAMP. */
 #define SVN_WC__LOG_SET_TIMESTAMP       "set-timestamp"
 
@@ -207,26 +204,6 @@ log_do_file_move(const char *from_abspath,
       svn_error_clear(err);
     }
 
-  return SVN_NO_ERROR;
-}
-
-
-/* Make file NAME in log's CWD readonly */
-static svn_error_t *
-log_do_file_readonly(struct log_runner *loggy,
-                     const char *name)
-{
-  svn_error_t *err;
-  const char *local_abspath
-    = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
-
-  err = svn_io_set_file_read_only(local_abspath, FALSE, loggy->pool);
-  if (err)
-    {
-      if (!APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_return(err);
-      svn_error_clear(err);
-    }
   return SVN_NO_ERROR;
 }
 
@@ -600,9 +577,6 @@ start_handler(void *userData, const char *eltname, const char **atts)
                                         loggy->pool);
     err = log_do_file_cp_and_translate(loggy->db, from_abspath, dest_abspath,
                                        versioned_abspath, loggy->pool);
-  }
-  else if (strcmp(eltname, SVN_WC__LOG_READONLY) == 0) {
-    err = log_do_file_readonly(loggy, name);
   }
   else if (strcmp(eltname, SVN_WC__LOG_SET_TIMESTAMP) == 0) {
     err = log_do_file_timestamp(loggy, name, atts);
@@ -995,27 +969,6 @@ svn_wc__loggy_set_entry_working_size_from_wc(svn_wc__db_t *db,
                                                scratch_pool));
 }
 
-svn_error_t *
-svn_wc__loggy_set_readonly(svn_wc__db_t *db,
-                           const char *adm_abspath,
-                           const char *path,
-                           apr_pool_t *scratch_pool)
-{
-  svn_stringbuf_t *log_accum = NULL;
-  const char *loggy_path1;
-
-  SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
-  svn_xml_make_open_tag(&log_accum,
-                        scratch_pool,
-                        svn_xml_self_closing,
-                        SVN_WC__LOG_READONLY,
-                        SVN_WC__LOG_ATTR_NAME,
-                        loggy_path1,
-                        NULL);
-
-  return svn_error_return(svn_wc__wq_add_loggy(db, adm_abspath, log_accum,
-                                               scratch_pool));
-}
 
 svn_error_t *
 svn_wc__loggy_set_timestamp(svn_wc__db_t *db,

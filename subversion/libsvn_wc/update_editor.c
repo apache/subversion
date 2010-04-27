@@ -4228,9 +4228,8 @@ install_text_base(svn_wc__db_t *db,
   SVN_ERR(svn_wc__loggy_move(db, adm_abspath,
                              temp_text_base_abspath, final_text_base_abspath,
                              scratch_pool));
-  SVN_ERR(svn_wc__loggy_set_readonly(db, adm_abspath,
-                                     final_text_base_abspath,
-                                     scratch_pool));
+  /* ### future pristine storage should ensure all files are readonly
+     ### once they are placed in storage.  */
 
   return SVN_NO_ERROR;
 }

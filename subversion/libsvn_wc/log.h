@@ -143,17 +143,6 @@ svn_wc__loggy_set_entry_working_size_from_wc(svn_wc__db_t *db,
                                              apr_pool_t *scratch_pool);
 
 
-/* Queue instructions to set permissions of PATH
-   to 'readonly'.
-
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-*/
-svn_error_t *
-svn_wc__loggy_set_readonly(svn_wc__db_t *db,
-                           const char *adm_abspath,
-                           const char *path,
-                           apr_pool_t *scratch_pool);
-
 /* Queue instructions to set the timestamp of PATH to
    the time TIMESTR.
 
