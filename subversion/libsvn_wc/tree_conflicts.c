@@ -497,3 +497,18 @@ svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
     svn_wc__db_op_read_tree_conflict(tree_conflict, wc_ctx->db, victim_abspath,
                                      scratch_pool, scratch_pool));
 }
+
+svn_error_t *
+svn_wc__get_all_tree_conflicts(apr_hash_t **tree_conflicts,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_op_read_all_tree_conflicts(tree_conflicts, wc_ctx->db,
+                                                local_abspath,
+                                                result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}

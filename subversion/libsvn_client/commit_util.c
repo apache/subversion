@@ -237,7 +237,7 @@ add_lock_token(const char *local_abspath,
 static svn_error_t *
 bail_on_tree_conflicted_children(svn_wc_context_t *wc_ctx,
                                  const char *local_abspath,
-                                 const svn_wc_entry_t *entry,
+                                 svn_node_kind_t kind,
                                  svn_depth_t depth,
                                  apr_hash_t *changelists,
                                  apr_pool_t *pool)
@@ -246,17 +246,18 @@ bail_on_tree_conflicted_children(svn_wc_context_t *wc_ctx,
   apr_hash_index_t *hi;
 
   if ((depth == svn_depth_empty)
-      || (entry->kind != svn_node_dir)
-      || (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0))
+      || (kind != svn_node_dir))
     /* There can't possibly be tree-conflicts information here. */
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, entry->tree_conflict_data,
-                                      local_abspath, pool));
+  SVN_ERR(svn_wc__get_all_tree_conflicts(&conflicts, wc_ctx, local_abspath,
+                                         pool, pool));
+  if (!conflicts)
+    return SVN_NO_ERROR;
 
   for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
     {
-      const svn_wc_conflict_description_t *conflict =
+      const svn_wc_conflict_description2_t *conflict =
           svn__apr_hash_index_val(hi);
 
       if ((conflict->node_kind == svn_node_dir) &&
@@ -274,7 +275,7 @@ bail_on_tree_conflicted_children(svn_wc_context_t *wc_ctx,
       return svn_error_createf(
                SVN_ERR_WC_FOUND_CONFLICT, NULL,
                _("Aborting commit: '%s' remains in conflict"),
-               svn_dirent_local_style(conflict->path, pool));
+               svn_dirent_local_style(conflict->local_abspath, pool));
     }
 
   return SVN_NO_ERROR;
@@ -476,7 +477,7 @@ harvest_committables(apr_hash_t *committables,
     SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_delete);
   else
     SVN_ERR(bail_on_tree_conflicted_children(ctx->wc_ctx, local_abspath,
-                                             entry, depth, changelists,
+                                             entry->kind, depth, changelists,
                                              scratch_pool));
 
   /* If we have our own URL, and we're NOT in COPY_MODE, it wins over

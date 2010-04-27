@@ -1095,6 +1095,18 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 
+/* Return a hash @a *tree_conflicts of all the children of @a
+ * local_abspath that are in tree conflicts.  The hash maps local
+ * abspaths to pointers to svn_wc_conflict_description2_t, all
+ * allocated in result pool.
+ */
+svn_error_t *
+svn_wc__db_op_read_all_tree_conflicts(apr_hash_t **tree_conflicts,
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+
 /* Get any tree conflict associated with LOCAL_ABSPATH in DB, and put it
    in *TREE_CONFLICT, allocated in RESULT_POOL.
 
