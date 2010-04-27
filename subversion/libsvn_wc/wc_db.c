@@ -144,7 +144,7 @@ typedef struct {
      format has not (yet) been determined, this will be UNKNOWN_FORMAT.  */
   int format;
 
-} wcroot_t;
+} svn_wc__db_wcroot_t;
 
 /**  Pristine Directory Handle
  *
@@ -164,7 +164,7 @@ typedef struct svn_wc__db_pdh_t {
   const char *local_abspath;
 
   /* What wcroot does this directory belong to?  */
-  wcroot_t *wcroot;
+  svn_wc__db_wcroot_t *wcroot;
 
   /* The parent directory's per-dir information. */
   struct svn_wc__db_pdh_t *parent;
@@ -382,7 +382,7 @@ verify_no_work(svn_sqlite__db_t *sdb)
 static apr_status_t
 close_wcroot(void *data)
 {
-  wcroot_t *wcroot = data;
+  svn_wc__db_wcroot_t *wcroot = data;
   svn_error_t *err;
 
   SVN_ERR_ASSERT_NO_RETURN(wcroot->sdb != NULL);
@@ -410,7 +410,7 @@ close_many_wcroots(apr_hash_t *roots,
 
   for (hi = apr_hash_first(scratch_pool, roots); hi; hi = apr_hash_next(hi))
     {
-      wcroot_t *wcroot = svn__apr_hash_index_val(hi);
+      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
       apr_status_t result;
 
       result = apr_pool_cleanup_run(state_pool, wcroot, close_wcroot);
@@ -422,10 +422,10 @@ close_many_wcroots(apr_hash_t *roots,
 }
 
 
-/* Construct a new wcroot_t. The WCROOT_ABSPATH and SDB parameters must
-   have lifetime of at least RESULT_POOL.  */
+/* Construct a new svn_wc__db_wcroot_t. The WCROOT_ABSPATH and SDB parameters
+   must have lifetime of at least RESULT_POOL.  */
 static svn_error_t *
-create_wcroot(wcroot_t **wcroot,
+create_wcroot(svn_wc__db_wcroot_t **wcroot,
               const char *wcroot_abspath,
               svn_sqlite__db_t *sdb,
               apr_int64_t wc_id,
@@ -604,7 +604,7 @@ fetch_repos_info(const char **repos_root_url,
 static svn_error_t *
 scan_upwards_for_repos(apr_int64_t *repos_id,
                        const char **repos_relpath,
-                       const wcroot_t *wcroot,
+                       const svn_wc__db_wcroot_t *wcroot,
                        const char *local_abspath,
                        const char *local_relpath,
                        apr_pool_t *result_pool,
@@ -764,7 +764,7 @@ get_or_create_pdh(svn_wc__db_t *db,
       pdh->local_abspath = apr_pstrdup(db->state_pool, local_dir_abspath);
 
       /* We don't know anything about this directory, so we cannot construct
-         a wcroot_t for it (yet).  */
+         a svn_wc__db_wcroot_t for it (yet).  */
 
       /* ### parent */
 
@@ -797,7 +797,7 @@ compute_pdh_relpath(const svn_wc__db_pdh_t *pdh,
    ### look in subdirs for other metadata.  */
 static svn_error_t *
 determine_obstructed_file(svn_boolean_t *obstructed_file,
-                          const wcroot_t *wcroot,
+                          const svn_wc__db_wcroot_t *wcroot,
                           const char *local_relpath,
                           apr_pool_t *scratch_pool)
 {
