@@ -52,6 +52,7 @@
 #define ENTRIES_TAG_ENTRY "entry"
 
 /* Attribute names used in our old XML entries file.  */
+#define ENTRIES_ATTR_NAME               "name"
 #define ENTRIES_ATTR_REPOS              "repos"
 #define ENTRIES_ATTR_UUID               "uuid"
 #define ENTRIES_ATTR_INCOMPLETE         "incomplete"
@@ -59,6 +60,13 @@
 #define ENTRIES_ATTR_LOCK_OWNER         "lock-owner"
 #define ENTRIES_ATTR_LOCK_COMMENT       "lock-comment"
 #define ENTRIES_ATTR_LOCK_CREATION_DATE "lock-creation-date"
+#define ENTRIES_ATTR_DELETED            "deleted"
+#define ENTRIES_ATTR_ABSENT             "absent"
+#define ENTRIES_ATTR_CMT_REV            "committed-rev"
+#define ENTRIES_ATTR_CMT_DATE           "committed-date"
+#define ENTRIES_ATTR_CMT_AUTHOR         "last-author"
+#define ENTRIES_ATTR_REVISION           "revision"
+#define ENTRIES_ATTR_URL                "url"
 
 
 /* */
@@ -705,7 +713,8 @@ do_bool_attr(svn_boolean_t *entry_flag,
            _("Entry '%s' has invalid '%s' value"),
            (entry_name ? entry_name : SVN_WC_ENTRY_THIS_DIR), attr_name);
 
-      *modify_flags |= modify_flag;
+      if (modify_flags)
+        *modify_flags |= modify_flag;
     }
   return SVN_NO_ERROR;
 }
@@ -713,7 +722,7 @@ do_bool_attr(svn_boolean_t *entry_flag,
 
 /* */
 static const char *
-extract_string(apr_uint64_t *result_flags,
+extract_string(apr_uint64_t *modify_flags,
                apr_hash_t *atts,
                const char *att_name,
                apr_uint64_t flag,
@@ -725,7 +734,8 @@ extract_string(apr_uint64_t *result_flags,
   if (value == NULL)
     return NULL;
 
-  *result_flags |= flag;
+  if (modify_flags)
+    *modify_flags |= flag;
 
   if (normalize && *value == '\0')
     return NULL;
@@ -735,7 +745,15 @@ extract_string(apr_uint64_t *result_flags,
 
 
 /* NOTE: this is used for running old logs, and for upgrading old XML-based
-   entries file. Be wary of removing items.  */
+   entries file. Be wary of removing items.
+
+   ### many attributes are no longer used within the old-style log files.
+   ### These attrs need to be recognized for old entries, however. For these
+   ### cases, the code will parse the attribute, but not set *MODIFY_FLAGS
+   ### for that particular field. MODIFY_FLAGS is *only* used by the
+   ### log-based entry modification system, and will go way once we
+   ### completely move away from loggy.
+*/
 svn_error_t *
 svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                       apr_uint64_t *modify_flags,
@@ -748,34 +766,33 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
   *modify_flags = 0;
 
   /* Find the name and set up the entry under that name. */
-  name = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_NAME, APR_HASH_KEY_STRING);
+  name = apr_hash_get(atts, ENTRIES_ATTR_NAME, APR_HASH_KEY_STRING);
   entry->name = name ? apr_pstrdup(pool, name) : SVN_WC_ENTRY_THIS_DIR;
 
-  /* Attempt to set revision (resolve_to_defaults may do it later, too) */
+  /* Attempt to set revision (resolve_to_defaults may do it later, too)
+
+     ### not used by loggy; no need to set MODIFY_FLAGS  */
   {
     const char *revision_str
-      = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING);
+      = apr_hash_get(atts, ENTRIES_ATTR_REVISION, APR_HASH_KEY_STRING);
 
     if (revision_str)
-      {
-        entry->revision = SVN_STR_TO_REV(revision_str);
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
-      }
+      entry->revision = SVN_STR_TO_REV(revision_str);
     else
       entry->revision = SVN_INVALID_REVNUM;
   }
 
-  /* Attempt to set up url path (again, see resolve_to_defaults). */
-  entry->url = extract_string(modify_flags, atts,
-                              SVN_WC__ENTRY_ATTR_URL,
-                              SVN_WC__ENTRY_MODIFY_URL,
+  /* Attempt to set up url path (again, see resolve_to_defaults).
+
+     ### not used by loggy; no need to set MODIFY_FLAGS  */
+  entry->url = extract_string(NULL, atts,
+                              ENTRIES_ATTR_URL, 0,
                               FALSE, pool);
 
   /* Set up repository root.  Make sure it is a prefix of url.
 
-     NOTE: we do not set a modify_flags value since this attribute only
-     occurs in old XML entries files.  */
-  entry->repos = extract_string(modify_flags, atts,
+     ### not used by loggy; no need to set MODIFY_FLAGS  */
+  entry->repos = extract_string(NULL, atts,
                                 ENTRIES_ATTR_REPOS, 0,
                                 FALSE, pool);
   if (entry->url && entry->repos
@@ -873,22 +890,25 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
       }
   }
 
-  /* Is this entry deleted? */
-  SVN_ERR(do_bool_attr(&entry->deleted,
-                       modify_flags, SVN_WC__ENTRY_MODIFY_DELETED,
-                       atts, SVN_WC__ENTRY_ATTR_DELETED, name));
+  /* Is this entry deleted?
 
-  /* Is this entry absent? */
+     ### not used by loggy; no need to set MODIFY_FLAGS  */
+  SVN_ERR(do_bool_attr(&entry->deleted,
+                       NULL, 0,
+                       atts, ENTRIES_ATTR_DELETED, name));
+
+  /* Is this entry absent?
+
+     ### not used by loggy; no need to set MODIFY_FLAGS  */
   SVN_ERR(do_bool_attr(&entry->absent,
-                       modify_flags, SVN_WC__ENTRY_MODIFY_ABSENT,
-                       atts, SVN_WC__ENTRY_ATTR_ABSENT, name));
+                       NULL, 0,
+                       atts, ENTRIES_ATTR_ABSENT, name));
 
   /* Is this entry incomplete?
 
-     NOTE: we do not set a modify_flags value since this attribute only
-     occurs in old XML entries files.  */
+     ### not used by loggy; no need to set MODIFY_FLAGS  */
   SVN_ERR(do_bool_attr(&entry->incomplete,
-                       modify_flags, 0,
+                       NULL, 0,
                        atts, ENTRIES_ATTR_INCOMPLETE, name));
 
   /* Attempt to set up timestamps. */
@@ -927,9 +947,8 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 
   /* UUID.
 
-     NOTE: we do not set a modify_flags value since this attribute only
-     occurs in old XML entries files. */
-  entry->uuid = extract_string(modify_flags, atts,
+     ### not used by loggy; no need to set MODIFY_FLAGS  */
+  entry->uuid = extract_string(NULL, atts,
                                ENTRIES_ATTR_UUID,
                                0, FALSE, pool);
 
@@ -937,7 +956,7 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
   {
     const char *cmt_datestr, *cmt_revstr;
 
-    cmt_datestr = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CMT_DATE,
+    cmt_datestr = apr_hash_get(atts, ENTRIES_ATTR_CMT_DATE,
                                APR_HASH_KEY_STRING);
     if (cmt_datestr)
       {
@@ -946,8 +965,7 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     else
       entry->cmt_date = 0;
 
-    cmt_revstr = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CMT_REV,
-                              APR_HASH_KEY_STRING);
+    cmt_revstr = apr_hash_get(atts, ENTRIES_ATTR_CMT_REV, APR_HASH_KEY_STRING);
     if (cmt_revstr)
       {
         entry->cmt_rev = SVN_STR_TO_REV(cmt_revstr);
@@ -955,20 +973,19 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     else
       entry->cmt_rev = SVN_INVALID_REVNUM;
 
-    entry->cmt_author = extract_string(modify_flags, atts,
-                                       SVN_WC__ENTRY_ATTR_CMT_AUTHOR,
+    entry->cmt_author = extract_string(NULL, atts,
+                                       ENTRIES_ATTR_CMT_AUTHOR,
                                        0, FALSE, pool);
   }
 
-  /* NOTE: we do not set modify_flags values since the lock attributes only
-     occur in old XML entries files.  */
-  entry->lock_token = extract_string(modify_flags, atts,
+  /* ### not used by loggy; no need to set MODIFY_FLAGS  */
+  entry->lock_token = extract_string(NULL, atts,
                                      ENTRIES_ATTR_LOCK_TOKEN,
                                      0, FALSE, pool);
-  entry->lock_owner = extract_string(modify_flags, atts,
+  entry->lock_owner = extract_string(NULL, atts,
                                      ENTRIES_ATTR_LOCK_OWNER,
                                      0, FALSE, pool);
-  entry->lock_comment = extract_string(modify_flags, atts,
+  entry->lock_comment = extract_string(NULL, atts,
                                        ENTRIES_ATTR_LOCK_COMMENT,
                                        0, FALSE, pool);
   {

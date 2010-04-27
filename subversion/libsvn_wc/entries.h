@@ -50,25 +50,17 @@ extern "C" {
    and for error reporting when reading a non-XML entries file.
    ### If you add or remove items here, you probably want to make sure
    to do the same for the SVN_WC__ENTRY_MODIFY_* #defines as well. */
-#define SVN_WC__ENTRY_ATTR_NAME               "name"
-#define SVN_WC__ENTRY_ATTR_REVISION           "revision"
-#define SVN_WC__ENTRY_ATTR_URL                "url"
 #define SVN_WC__ENTRY_ATTR_KIND               "kind"
 #define SVN_WC__ENTRY_ATTR_TEXT_TIME          "text-time"
 #define SVN_WC__ENTRY_ATTR_CHECKSUM           "checksum"
 #define SVN_WC__ENTRY_ATTR_SCHEDULE           "schedule"
 #define SVN_WC__ENTRY_ATTR_COPIED             "copied"
-#define SVN_WC__ENTRY_ATTR_DELETED            "deleted"
-#define SVN_WC__ENTRY_ATTR_ABSENT             "absent"
 #define SVN_WC__ENTRY_ATTR_COPYFROM_URL       "copyfrom-url"
 #define SVN_WC__ENTRY_ATTR_COPYFROM_REV       "copyfrom-rev"
 #define SVN_WC__ENTRY_ATTR_CONFLICT_OLD       "conflict-old" /* saved old file */
 #define SVN_WC__ENTRY_ATTR_CONFLICT_NEW       "conflict-new" /* saved new file */
 #define SVN_WC__ENTRY_ATTR_CONFLICT_WRK       "conflict-wrk" /* saved wrk file */
 #define SVN_WC__ENTRY_ATTR_PREJFILE           "prop-reject-file"
-#define SVN_WC__ENTRY_ATTR_CMT_REV            "committed-rev"
-#define SVN_WC__ENTRY_ATTR_CMT_DATE           "committed-date"
-#define SVN_WC__ENTRY_ATTR_CMT_AUTHOR         "last-author"
 #define SVN_WC__ENTRY_ATTR_WORKING_SIZE       "working-size"
 
 /* Attribute values for 'schedule' */
