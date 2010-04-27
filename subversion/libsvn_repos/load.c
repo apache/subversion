@@ -55,6 +55,11 @@ struct parse_baton
   enum svn_repos_load_uuid uuid_action;
   const char *parent_dir;
   apr_pool_t *pool;
+
+  /* A hash mapping copy-from revisions and mergeinfo range revisions
+     (svn_revnum_t *) in the dump stream to their corresponding revisions
+     (svn_revnum_t *) in the loaded repository.  The hash and its
+     contents are allocated in POOL. */
   apr_hash_t *rev_map;
 };
 
