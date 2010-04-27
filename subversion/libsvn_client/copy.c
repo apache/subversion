@@ -1411,7 +1411,6 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 {
   svn_revnum_t src_revnum = pair->src_revnum;
   apr_hash_t *src_mergeinfo;
-  const svn_wc_entry_t *dst_entry;
   const char *dst_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&dst_abspath, pair->dst, pool));
@@ -1432,10 +1431,6 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
          way to do this; see its doc for more about the controversy.) */
       if (same_repositories)
         {
-          SVN_ERR(svn_wc__get_entry_versioned(&dst_entry, ctx->wc_ctx,
-                                              dst_abspath, svn_node_unknown,
-                                              FALSE, FALSE, pool, pool));
-
           if (pair->src_op_revision.kind == svn_opt_revision_head)
             {
               /* If we just checked out from the "head" revision,
@@ -1455,7 +1450,8 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
               /* We just did a checkout; whatever revision we just
                  got, that should be the copyfrom_revision when we
                  commit later. */
-              src_revnum = dst_entry->revision;
+              SVN_ERR(svn_wc__node_get_base_rev(&src_revnum, ctx->wc_ctx,
+                                                dst_abspath, pool));
             }
 
           /* Schedule dst_path for addition in parent, with copy history.
