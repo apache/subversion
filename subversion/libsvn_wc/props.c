@@ -287,10 +287,12 @@ svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
 
       if (cd->kind == svn_wc_conflict_kind_property)
         {
-          if (strcmp(cd->their_file, SVN_WC__THIS_DIR_PREJ) == 0)
-            *prejfile_abspath = svn_dirent_join(local_abspath,
-                                                SVN_WC__THIS_DIR_PREJ,
-                                                result_pool);
+          if (strcmp(cd->their_file,
+                     SVN_WC__THIS_DIR_PREJ SVN_WC__PROP_REJ_EXT) == 0)
+            *prejfile_abspath = svn_dirent_join(
+                                  local_abspath,
+                                  SVN_WC__THIS_DIR_PREJ SVN_WC__PROP_REJ_EXT,
+                                  result_pool);
           else
             *prejfile_abspath = svn_dirent_join(
                                   svn_dirent_dirname(local_abspath,
