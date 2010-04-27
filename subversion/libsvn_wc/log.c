@@ -257,7 +257,7 @@ log_do_modify_entry(struct log_runner *loggy,
   apr_hash_t *ah = svn_xml_make_att_hash(atts, loggy->pool);
   const char *local_abspath;
   svn_wc_entry_t *entry;
-  apr_uint64_t modify_flags;
+  int modify_flags;
   const char *valuestr;
 
   local_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);

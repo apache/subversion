@@ -1334,7 +1334,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   svn_wc_entry_t tmp_entry;
   svn_boolean_t is_replace = FALSE;
   svn_node_kind_t kind;
-  apr_uint64_t modify_flags;
+  int modify_flags;
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *err;
   svn_wc__db_status_t status;
@@ -1451,9 +1451,15 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
        svn_dirent_local_style(local_abspath, pool));
 
   /* Init the modify flags. */
+  tmp_entry.schedule = svn_wc_schedule_add;
+  tmp_entry.kind = kind;
   modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_KIND;
+
   if (! (is_replace || copyfrom_url))
-    modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
+    {
+      tmp_entry.revision = 0;
+      modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
+    }
 
   /* If a copy ancestor was given, make sure the copyfrom URL is in the same
      repository (if possible) and put the proper ancestry info in the new
@@ -1480,10 +1486,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       tmp_entry.checksum = NULL;
       modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
     }
-
-  tmp_entry.revision = 0;
-  tmp_entry.kind = kind;
-  tmp_entry.schedule = svn_wc_schedule_add;
 
 
   /* Store the pristine properties to install them on working, because
@@ -1571,8 +1573,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                               copyfrom_rev, depth, pool));
         }
 
-      /* ### This block can be removed after we fully abandon access batons
-             and centralise the db. */
+      /* ### This block can be removed after we centralise the db and have
+         ### infinite depth admin locks. */
       if (! exists)
         {
           /* Lock on parent needs to be propogated into the child db. */
@@ -1590,9 +1592,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       if (modify_flags)
         {
           modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
-          tmp_entry.schedule = is_replace
-            ? svn_wc_schedule_replace
-            : svn_wc_schedule_add;
+          tmp_entry.schedule = (is_replace
+                                ? svn_wc_schedule_replace
+                                : svn_wc_schedule_add);
           SVN_ERR(svn_wc__entry_modify(db, local_abspath, svn_node_dir,
                                        &tmp_entry, modify_flags, pool));
         }

@@ -694,7 +694,7 @@ read_entry(svn_wc_entry_t **new_entry,
  * false.  ENTRY_NAME is the name of the WC-entry. */
 static svn_error_t *
 do_bool_attr(svn_boolean_t *entry_flag,
-             apr_uint64_t *modify_flags, apr_uint64_t modify_flag,
+             int *modify_flags, int modify_flag,
              apr_hash_t *atts, const char *attr_name,
              const char *entry_name)
 {
@@ -722,10 +722,10 @@ do_bool_attr(svn_boolean_t *entry_flag,
 
 /* */
 static const char *
-extract_string(apr_uint64_t *modify_flags,
+extract_string(int *modify_flags,
                apr_hash_t *atts,
                const char *att_name,
-               apr_uint64_t flag,
+               int flag,
                svn_boolean_t normalize,
                apr_pool_t *result_pool)
 {
@@ -756,7 +756,7 @@ extract_string(apr_uint64_t *modify_flags,
 */
 svn_error_t *
 svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
-                      apr_uint64_t *modify_flags,
+                      int *modify_flags,
                       apr_hash_t *atts,
                       apr_pool_t *pool)
 {
@@ -1054,7 +1054,7 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
   apr_hash_t *attributes;
   svn_wc_entry_t *entry;
   svn_error_t *err;
-  apr_uint64_t modify_flags = 0;
+  int modify_flags = 0;
 
   /* We only care about the `entry' tag; all other tags, such as `xml'
      and `wc-entries', are ignored. */

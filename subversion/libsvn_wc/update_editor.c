@@ -2610,8 +2610,9 @@ add_directory(const char *path,
 
     {
       svn_wc_entry_t tmp_entry;
-      apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND |
-        SVN_WC__ENTRY_MODIFY_DELETED | SVN_WC__ENTRY_MODIFY_ABSENT;
+      int modify_flags = (SVN_WC__ENTRY_MODIFY_KIND
+                          | SVN_WC__ENTRY_MODIFY_DELETED
+                          | SVN_WC__ENTRY_MODIFY_ABSENT);
 
       /* Immediately create an entry for the new directory in the parent.
          Note that the parent must already be either added or opened, and
@@ -2630,8 +2631,8 @@ add_directory(const char *path,
       if (db->add_existed)
         {
           tmp_entry.schedule = svn_wc_schedule_normal;
-          modify_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE |
-            SVN_WC__ENTRY_MODIFY_FORCE;
+          modify_flags |= (SVN_WC__ENTRY_MODIFY_SCHEDULE
+                           | SVN_WC__ENTRY_MODIFY_FORCE);
         }
 
       SVN_ERR(svn_wc__entry_modify_stub(eb->db, db->local_abspath,
@@ -2643,8 +2644,9 @@ add_directory(const char *path,
              is no longer scheduled for addition.  Change rev from 0
              to the target revision allowing prep_directory() to do
              its thing without error. */
-          modify_flags  = SVN_WC__ENTRY_MODIFY_SCHEDULE
-            | SVN_WC__ENTRY_MODIFY_FORCE | SVN_WC__ENTRY_MODIFY_REVISION;
+          modify_flags = (SVN_WC__ENTRY_MODIFY_SCHEDULE
+                          | SVN_WC__ENTRY_MODIFY_FORCE
+                          | SVN_WC__ENTRY_MODIFY_REVISION);
 
           tmp_entry.revision = *(eb->target_revision);
 
@@ -5856,7 +5858,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
    */
   {
     svn_wc_entry_t tmp_entry;
-    apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE;
+    int modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE;
 
     tmp_entry.schedule = svn_wc_schedule_add;
 

@@ -2635,7 +2635,7 @@ write_one_entry(svn_wc__db_t *db,
 static svn_error_t *
 fold_entry(svn_wc_entry_t *cur_entry,
            const char *name,
-           apr_uint64_t modify_flags,
+           int modify_flags,
            const svn_wc_entry_t *entry,
            const svn_wc_entry_t *parent_entry,
            apr_pool_t *pool)
@@ -2660,9 +2660,7 @@ fold_entry(svn_wc_entry_t *cur_entry,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_KIND)
     cur_entry->kind = entry->kind;
 
-  /* Schedule */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
-    cur_entry->schedule = entry->schedule;
+  /* Schedule: handled by caller.  */
 
   /* Checksum */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CHECKSUM)
@@ -2750,7 +2748,7 @@ fold_entry(svn_wc_entry_t *cur_entry,
 
   */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE
-      && entry->schedule == svn_wc_schedule_delete)
+      && cur_entry->schedule == svn_wc_schedule_delete)
     {
       cur_entry->copied = FALSE;
       cur_entry->copyfrom_rev = SVN_INVALID_REVNUM;
@@ -2762,7 +2760,7 @@ fold_entry(svn_wc_entry_t *cur_entry,
 
   /* keep_local makes sense only when we are going to delete directory. */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE
-      && entry->schedule != svn_wc_schedule_delete)
+      && cur_entry->schedule != svn_wc_schedule_delete)
     {
       cur_entry->keep_local = FALSE;
     }
@@ -2822,40 +2820,34 @@ svn_wc__entry_remove(svn_wc__db_t *db,
 
    The output can be:
     * *SKIP_SCHEDULE_CHANGE set to true, when no schedule change is necessary.
-    * *DELETE_ENTRY true, when the entry should just be removed.
     * Or a schedule change.
 
    In all these cases *RESULT_SCHEDULE contains the new schedule value.
-
-   SCRATCH_POOL can be used for local allocations.
  */
 static svn_error_t *
 fold_scheduling(svn_boolean_t *skip_schedule_change,
-                svn_boolean_t *delete_entry,
                 svn_wc_schedule_t *result_schedule,
                 const svn_wc_entry_t *this_dir_entry,
                 const svn_wc_entry_t *entry,
                 svn_wc_schedule_t new_schedule,
-                const char *name,
-                apr_pool_t *scratch_pool)
+                const char *name)
 {
   SVN_ERR_ASSERT(this_dir_entry);
+  SVN_ERR_ASSERT(new_schedule != svn_wc_schedule_replace);
 
   *skip_schedule_change = FALSE;
-  *delete_entry = FALSE;
   *result_schedule = new_schedule;
 
   /* The only operation valid on an item not already in revision
      control is addition. */
-  if (! entry)
+  if (entry == NULL)
     {
       if (new_schedule == svn_wc_schedule_add)
         return SVN_NO_ERROR;
-      else
-        return
-          svn_error_createf(SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-                            _("'%s' is not under version control"),
-                            name);
+
+      return svn_error_createf(SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
+                               _("'%s' is not under version control"),
+                               name);
     }
 
   /* At this point, we know the following things:
@@ -2880,147 +2872,102 @@ fold_scheduling(svn_boolean_t *skip_schedule_change,
                             _("Can't add '%s' to deleted directory; "
                               "try undeleting its parent directory first"),
                             name);
-      if (new_schedule == svn_wc_schedule_replace)
-        return
-          svn_error_createf(SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-                            _("Can't replace '%s' in deleted directory; "
-                              "try undeleting its parent directory first"),
-                            name);
     }
 
   if (entry->absent && (new_schedule == svn_wc_schedule_add))
     {
-      return svn_error_createf
-        (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-         _("'%s' is marked as absent, so it cannot be scheduled for addition"),
-         name);
+      return svn_error_createf(SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
+                               _("'%s' is marked as absent, so it cannot "
+                                 "be scheduled for addition"),
+                               name);
     }
 
-  switch (entry->schedule)
+  if (entry->schedule == svn_wc_schedule_normal
+      && new_schedule == svn_wc_schedule_add
+      && !entry->deleted)
     {
-    case svn_wc_schedule_normal:
-      switch (new_schedule)
+      /* You can't add something that's already been added to
+         revision control... unless it's got a 'deleted' state */
+      return svn_error_createf(SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
+                               _("Entry '%s' is already under version "
+                                 "control"),
+                               name);
+    }
+
+  if (entry->schedule == svn_wc_schedule_normal)
+    {
+      if (new_schedule == svn_wc_schedule_normal)
         {
-        case svn_wc_schedule_normal:
-          /* Normal is a trivial no-op case. Reset the
-             schedule modification bit and move along. */
+          /* No-op case.  */
           *skip_schedule_change = TRUE;
-          return SVN_NO_ERROR;
-
-        case svn_wc_schedule_delete:
-        case svn_wc_schedule_replace:
-          /* These are all good. */
-          return SVN_NO_ERROR;
-
-        case svn_wc_schedule_add:
-          /* You can't add something that's already been added to
-             revision control... unless it's got a 'deleted' state */
-          if (! entry->deleted)
-            return
-              svn_error_createf
-              (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-               _("Entry '%s' is already under version control"), name);
         }
-      break;
-
-    case svn_wc_schedule_add:
-      switch (new_schedule)
+    }
+  else if (entry->schedule == svn_wc_schedule_add)
+    {
+      if (new_schedule == svn_wc_schedule_normal
+          || new_schedule == svn_wc_schedule_add)
         {
-        case svn_wc_schedule_normal:
-        case svn_wc_schedule_add:
-        case svn_wc_schedule_replace:
-          /* These are all no-op cases.  Normal is obvious, as is add.
-               ### The 'add' case is not obvious: above, we throw an error if
-               ### already versioned, so why not here too?
-             Replace on an entry marked for addition breaks down to
-             (add + (delete + add)), which resolves to just (add), and
-             since this entry is already marked with (add), this too
-             is a no-op. */
-          *skip_schedule_change = TRUE;
-          return SVN_NO_ERROR;
+          /* These are both no-op cases.  Normal is obvious, as is add.
 
-        case svn_wc_schedule_delete:
-          /* Not-yet-versioned item being deleted.  If the original
-             entry was not marked as "deleted", then remove the entry.
-             Else, return the entry to a 'normal' state, preserving
-               ### What does it mean for an entry be schedule-add and
-               ### deleted at once, and why change schedule to normal?
-             the "deleted" flag.  Check that we are not trying to
-             remove the SVN_WC_ENTRY_THIS_DIR entry as that would
-             leave the entries file in an invalid state. */
+             ### Neither case is obvious: above, we throw an error if
+             ### already versioned, so why not here too?
+          */
+          *skip_schedule_change = TRUE;
+        }
+      else if (new_schedule == svn_wc_schedule_delete)
+        {
+          /* This is deleting a node added over the top of a not-present
+             (DELETED=true) node. Return it to the not-present state.  */
+          /* ### not trying to delete the directory, and this is a
+             ### not-present node. (otherwise, caller handles this case)  */
           SVN_ERR_ASSERT(entry != this_dir_entry);
-          if (! entry->deleted)
-            *delete_entry = TRUE;
-          else
-            *result_schedule = svn_wc_schedule_normal;
-          return SVN_NO_ERROR;
+          SVN_ERR_ASSERT(entry->deleted);
+
+          *result_schedule = svn_wc_schedule_normal;
         }
-      break;
-
-    case svn_wc_schedule_delete:
-      switch (new_schedule)
+    }
+  else if (entry->schedule == svn_wc_schedule_delete)
+    {
+      if (new_schedule == svn_wc_schedule_normal)
         {
-        case svn_wc_schedule_normal:
           /* Reverting a delete results in normal */
-          return SVN_NO_ERROR;
-
-        case svn_wc_schedule_delete:
-          /* These are no-op cases. */
+        }
+      else if (new_schedule == svn_wc_schedule_delete)
+        {
+          /* This is a no-op case  */
           *skip_schedule_change = TRUE;
-          return SVN_NO_ERROR;
-
-
-        case svn_wc_schedule_add:
+        }
+      else if (new_schedule == svn_wc_schedule_add)
+        {
           /* Re-adding an entry marked for deletion?  This is really a
              replace operation. */
           *result_schedule = svn_wc_schedule_replace;
-          return SVN_NO_ERROR;
-
-
-        case svn_wc_schedule_replace:
-          /* Replacing an item marked for deletion breaks down to
-             (delete + (delete + add)), which might deserve a warning,
-             but whatever. */
-          return SVN_NO_ERROR;
-
         }
-      break;
+    }
+  else
+    {
+      /* Only possible state left.  */
+      SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_replace);
 
-    case svn_wc_schedule_replace:
-      switch (new_schedule)
+      if (new_schedule == svn_wc_schedule_normal)
         {
-        case svn_wc_schedule_normal:
-          /* Reverting replacements results normal. */
-          return SVN_NO_ERROR;
-
-        case svn_wc_schedule_add:
+          /* Reverting replacements results in normal  */
+        }
+      else if (new_schedule == svn_wc_schedule_add)
+        {
           /* Adding a to-be-replaced entry breaks down to ((delete +
              add) + add) which might deserve a warning, but we'll just
              no-op it. */
-        case svn_wc_schedule_replace:
-          /* Replacing a to-be-replaced entry breaks down to ((delete
-             + add) + (delete + add)), which is insane!  Make up your
-             friggin' mind, dude! :-)  Well, we'll no-op this one,
-             too. */
           *skip_schedule_change = TRUE;
-          return SVN_NO_ERROR;
-
-
-        case svn_wc_schedule_delete:
+        }
+      else if (new_schedule == svn_wc_schedule_delete)
+        {
           /* Deleting a to-be-replaced entry breaks down to ((delete +
              add) + delete) which resolves to a flat deletion. */
           *result_schedule = svn_wc_schedule_delete;
-          return SVN_NO_ERROR;
-
         }
-      break;
-
-    default:
-      return
-        svn_error_createf
-        (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-         _("Entry '%s' has illegal schedule"), name);
     }
+
   return SVN_NO_ERROR;
 }
 
@@ -3031,8 +2978,8 @@ entry_modify(svn_wc__db_t *db,
              const char *local_abspath,
              svn_node_kind_t kind,
              svn_boolean_t parent_stub,
-             svn_wc_entry_t *entry_mods,
-             apr_uint64_t modify_flags,
+             const svn_wc_entry_t *entry_mods,
+             int modify_flags,
              apr_pool_t *scratch_pool)
 {
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
@@ -3042,6 +2989,7 @@ entry_modify(svn_wc__db_t *db,
   const char *name;
   const svn_wc_entry_t *parent_entry;
   svn_wc_entry_t *cur_entry;
+  svn_wc_schedule_t new_schedule;
 
   SVN_ERR_ASSERT(entry_mods);
 
@@ -3069,31 +3017,39 @@ entry_modify(svn_wc__db_t *db,
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
+      new_schedule = entry_mods->schedule;
+
       /* We may just want to force the scheduling change in. Otherwise,
          call our special function to fold the change in.  */
       if (!(modify_flags & SVN_WC__ENTRY_MODIFY_FORCE))
         {
           svn_boolean_t skip_schedule_change;
-          svn_boolean_t delete_entry;
 
-          /* If scheduling changes were made, we have a special routine to
-             manage those modifications. */
-          SVN_ERR(fold_scheduling(&skip_schedule_change,
-                                  &delete_entry,
-                                  /* ### this is our OUT parameter  */
-                                  &entry_mods->schedule,
-                                  parent_entry,
-                                  cur_entry,
-                                  entry_mods->schedule,
-                                  name, subpool));
+          /* ### adm_ops.c is the only code that attempts to transition to
+             ### schedule_replace, but it uses FORCE.  */
+          SVN_ERR_ASSERT(entry_mods->schedule != svn_wc_schedule_replace);
 
-          /* Check if the scheduling folding resulted in removing this entry */
-          if (delete_entry)
+          /* If we are deleting a node that has been added, then simply
+             remove the entry. Do NOT do this for an add over a not-present
+             BASE node (the DELETED flag).  */
+          if (entry_mods->schedule == svn_wc_schedule_delete
+              && cur_entry != NULL
+              && cur_entry->schedule == svn_wc_schedule_add
+              && !cur_entry->deleted)
             {
               SVN_ERR(svn_wc__entry_remove(db, local_abspath, subpool));
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
             }
+
+          /* If scheduling changes were made, we have a special routine to
+             manage those modifications. */
+          SVN_ERR(fold_scheduling(&skip_schedule_change,
+                                  &new_schedule,
+                                  parent_entry,
+                                  cur_entry,
+                                  entry_mods->schedule,
+                                  name));
 
           if (skip_schedule_change)
             modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
@@ -3105,6 +3061,8 @@ entry_modify(svn_wc__db_t *db,
     cur_entry = alloc_entry(subpool);
 
   /* Fold in the changes, and write them out.  */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
+    cur_entry->schedule = new_schedule;
   SVN_ERR(fold_entry(cur_entry, name, modify_flags, entry_mods, parent_entry,
                      subpool));
 
@@ -3123,8 +3081,8 @@ svn_error_t *
 svn_wc__entry_modify(svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_node_kind_t kind,
-                     svn_wc_entry_t *entry,
-                     apr_uint64_t modify_flags,
+                     const svn_wc_entry_t *entry,
+                     int modify_flags,
                      apr_pool_t *scratch_pool)
 {
   return svn_error_return(entry_modify(db, local_abspath, kind, FALSE,
@@ -3135,8 +3093,8 @@ svn_wc__entry_modify(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__entry_modify_stub(svn_wc__db_t *db,
                           const char *local_abspath,
-                          svn_wc_entry_t *entry,
-                          apr_uint64_t modify_flags,
+                          const svn_wc_entry_t *entry,
+                          int modify_flags,
                           apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT((modify_flags & ~(
@@ -3243,7 +3201,7 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
 {
   const svn_wc_entry_t *entry;
   svn_wc_entry_t tmp_entry;
-  apr_uint64_t modify_flags = 0;
+  int modify_flags = 0;
 
   SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE, kind,
                             parent_stub, scratch_pool, scratch_pool));
