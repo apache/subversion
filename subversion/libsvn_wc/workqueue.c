@@ -1506,14 +1506,9 @@ log_do_committed(svn_wc__db_t *db,
       return SVN_NO_ERROR;
   }
 
-  /* Make sure our entry exists in the parent. */
+  /* Make sure we have a parent stub in a clean/unmodified state.  */
   {
-    const svn_wc_entry_t *dir_entry;
     svn_wc_entry_t tmp_entry;
-
-    /* Check if we have a valid record in our parent */
-    SVN_ERR(svn_wc__get_entry(&dir_entry, db, local_abspath,
-                              FALSE, svn_node_dir, TRUE, pool, pool));
 
     tmp_entry.schedule = svn_wc_schedule_normal;
     tmp_entry.copied = FALSE;
@@ -1522,16 +1517,13 @@ log_do_committed(svn_wc__db_t *db,
 
            If this fails for you in the transition to one DB phase, please
            run svn cleanup one level higher. */
-    err = svn_wc__entry_modify_stub(db, local_abspath,
-                                    &tmp_entry,
-                                    (SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                     | SVN_WC__ENTRY_MODIFY_COPIED
-                                     | SVN_WC__ENTRY_MODIFY_DELETED
-                                     | SVN_WC__ENTRY_MODIFY_FORCE),
-                                    pool);
-    if (err != NULL)
-      return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
-                               _("Error modifying entry of '%s'"), "");
+    SVN_ERR(svn_wc__entry_modify_stub(db, local_abspath,
+                                      &tmp_entry,
+                                      (SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                       | SVN_WC__ENTRY_MODIFY_COPIED
+                                       | SVN_WC__ENTRY_MODIFY_DELETED
+                                       | SVN_WC__ENTRY_MODIFY_FORCE),
+                                      pool));
   }
 
   return SVN_NO_ERROR;
