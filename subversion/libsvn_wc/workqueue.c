@@ -1407,6 +1407,7 @@ log_do_committed(svn_wc__db_t *db,
                                        NULL /* new_children */,
                                        new_dav_cache,
                                        keep_changelist,
+                                       NULL /* work_items */,
                                        pool));
 
       /* Install the new file, which may involve expanding keywords.
@@ -1487,6 +1488,7 @@ log_do_committed(svn_wc__db_t *db,
                                    NULL /* new_children */,
                                    new_dav_cache,
                                    keep_changelist,
+                                   NULL /* work_items */,
                                    pool));
 
   /* For directories, we also have to reset the state in the parent's

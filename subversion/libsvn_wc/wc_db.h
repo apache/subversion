@@ -1522,6 +1522,8 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
      files: NEW_CHILDREN should be NULL
      dirs: NEW_CHECKSUM should be NULL
      symlinks: both should be NULL
+
+   WORK_ITEMS will be place into the work queue.
 */
 svn_error_t *
 svn_wc__db_global_commit(svn_wc__db_t *db,
@@ -1533,6 +1535,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
                          const apr_array_header_t *new_children,
                          apr_hash_t *new_dav_cache,
                          svn_boolean_t keep_changelist,
+                         const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
 
 

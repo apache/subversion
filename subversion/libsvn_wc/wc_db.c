@@ -4533,6 +4533,8 @@ struct commit_baton {
 
   apr_int64_t repos_id;
   const char *repos_relpath;
+
+  const svn_skel_t *work_items;
 };
 
 
@@ -4731,6 +4733,9 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
       /* ### process the children  */
     }
 
+  /* Install any work items into the queue, as part of this transaction.  */
+  SVN_ERR(add_work_items(sdb, cb->work_items, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -4814,6 +4819,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
                          const apr_array_header_t *new_children,
                          apr_hash_t *new_dav_cache,
                          svn_boolean_t keep_changelist,
+                         const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -4839,6 +4845,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
   cb.new_children = new_children;
   cb.new_dav_cache = new_dav_cache;
   cb.keep_changelist = keep_changelist;
+  cb.work_items = work_items;
 
   /* If we are adding a directory (no BASE_NODE), then we need to get
      repository information from an ancestor node (start scanning from the
