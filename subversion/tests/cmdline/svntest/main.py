@@ -1621,11 +1621,12 @@ def run_tests(test_list, serial_only = False):
   if serial_only or len(testnums) < 2:
     parallel = 0
 
-  # Build out the default configuration directory
-  create_config_dir(default_config_dir)
+  if not is_child_process:
+    # Build out the default configuration directory
+    create_config_dir(default_config_dir)
 
-  # Setup the pristine repository
-  svntest.actions.setup_pristine_repository()
+    # Setup the pristine repository
+    svntest.actions.setup_pristine_repository()
 
   # Run the tests.
   exit_code = _internal_run_tests(test_list, testnums, parallel)
