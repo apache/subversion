@@ -514,11 +514,14 @@ combine_mergeinfo_props(const svn_string_t **output,
                         apr_pool_t *scratch_pool)
 {
   svn_mergeinfo_t mergeinfo1, mergeinfo2;
+  svn_string_t *mergeinfo_string;
+
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo1, prop_val1->data, scratch_pool));
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo2, prop_val2->data, scratch_pool));
   SVN_ERR(svn_mergeinfo_merge(mergeinfo1, mergeinfo2, scratch_pool));
-  return svn_mergeinfo_to_string((svn_string_t **)output, mergeinfo1,
-                                 result_pool);
+  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string, mergeinfo1, result_pool));
+  *output = mergeinfo_string;
+  return SVN_NO_ERROR;
 }
 
 /* Perform a 3-way merge operation on mergeinfo.  FROM_PROP_VAL is
@@ -532,6 +535,7 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
                                apr_pool_t *pool)
 {
   svn_mergeinfo_t from_mergeinfo, l_deleted, l_added, r_deleted, r_added;
+  svn_string_t *mergeinfo_string;
 
   /* ### OPTIMIZE: Use from_mergeinfo when diff'ing. */
   SVN_ERR(diff_mergeinfo_props(&l_deleted, &l_added, from_prop_val,
@@ -548,7 +552,9 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
   SVN_ERR(svn_mergeinfo_remove2(&from_mergeinfo, l_deleted,
                                 from_mergeinfo, TRUE, pool, pool));
 
-  return svn_mergeinfo_to_string((svn_string_t **)output, from_mergeinfo, pool);
+  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string, from_mergeinfo, pool));
+  *output = mergeinfo_string;
+  return SVN_NO_ERROR;
 }
 
 
@@ -1439,12 +1445,15 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
              incoming value relative to the base, and
              "combine" those with the empty WC value. */
           svn_mergeinfo_t deleted_mergeinfo, added_mergeinfo;
+          svn_string_t *mergeinfo_string;
+
           SVN_ERR(diff_mergeinfo_props(&deleted_mergeinfo,
                                        &added_mergeinfo,
                                        old_val, new_val, scratch_pool));
-          SVN_ERR(svn_mergeinfo_to_string((svn_string_t **)&new_val,
+          SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string,
                                           added_mergeinfo, result_pool));
-          apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
+          apr_hash_set(working_props, propname, APR_HASH_KEY_STRING,
+                       mergeinfo_string);
     }
 
   else /* means working && base && svn_string_compare(working, base) */
