@@ -373,11 +373,11 @@ harvest_committables(apr_hash_t *committables,
 {
   svn_boolean_t text_mod = FALSE, prop_mod = FALSE;
   apr_byte_t state_flags = 0;
-  svn_node_kind_t kind;
+  svn_node_kind_t working_kind, db_kind;
   const char *cf_url = NULL;
   svn_revnum_t cf_rev = entry->copyfrom_rev;
   const svn_string_t *propval;
-  svn_boolean_t is_special;
+  svn_boolean_t is_special, is_file_external;
   apr_pool_t *token_pool = (lock_tokens ? apr_hash_pool_get(lock_tokens)
                             : NULL);
 
@@ -396,17 +396,19 @@ harvest_committables(apr_hash_t *committables,
   /* Return error on unknown path kinds.  We check both the entry and
      the node itself, since a path might have changed kind since its
      entry was written. */
-  if ((entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
+  SVN_ERR(svn_wc_read_kind(&db_kind, ctx->wc_ctx, local_abspath,
+                           TRUE, scratch_pool));
+  if ((db_kind != svn_node_file) && (db_kind != svn_node_dir))
     return svn_error_createf
       (SVN_ERR_NODE_UNKNOWN_KIND, NULL, _("Unknown entry kind for '%s'"),
        svn_dirent_local_style(local_abspath, scratch_pool));
 
-  SVN_ERR(svn_io_check_special_path(local_abspath, &kind, &is_special,
+  SVN_ERR(svn_io_check_special_path(local_abspath, &working_kind, &is_special,
                                     scratch_pool));
 
-  if ((kind != svn_node_file)
-      && (kind != svn_node_dir)
-      && (kind != svn_node_none))
+  if ((working_kind != svn_node_file)
+      && (working_kind != svn_node_dir)
+      && (working_kind != svn_node_none))
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
@@ -423,7 +425,7 @@ harvest_committables(apr_hash_t *committables,
 #ifdef HAVE_SYMLINK
        || ((propval) && (! is_special))
 #endif /* HAVE_SYMLINK */
-       ) && (kind != svn_node_none))
+       ) && (working_kind != svn_node_none))
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
@@ -431,10 +433,12 @@ harvest_committables(apr_hash_t *committables,
          svn_dirent_local_style(local_abspath, scratch_pool));
     }
 
-  if (entry->file_external_path && copy_mode)
+  SVN_ERR(svn_wc__node_is_file_external(&is_file_external, ctx->wc_ctx,
+                                        local_abspath, scratch_pool));
+  if (is_file_external && copy_mode)
     return SVN_NO_ERROR;
 
-  if (entry->kind == svn_node_dir)
+  if (db_kind == svn_node_dir)
     {
       /* Read the dir's own entries for use when recursing. */
       svn_error_t *err;
@@ -477,7 +481,7 @@ harvest_committables(apr_hash_t *committables,
     SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_delete);
   else
     SVN_ERR(bail_on_tree_conflicted_children(ctx->wc_ctx, local_abspath,
-                                             entry->kind, depth, changelists,
+                                             db_kind, depth, changelists,
                                              scratch_pool));
 
   /* If we have our own URL, and we're NOT in COPY_MODE, it wins over
@@ -571,12 +575,10 @@ harvest_committables(apr_hash_t *committables,
      information about it. */
   if (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
     {
-      svn_node_kind_t working_kind;
       svn_boolean_t eol_prop_changed;
 
       /* First of all, the working file or directory must exist.
          See issue #3198. */
-      SVN_ERR(svn_io_check_path(local_abspath, &working_kind, scratch_pool));
       if (working_kind == svn_node_none)
         {
           return svn_error_createf
@@ -591,7 +593,7 @@ harvest_committables(apr_hash_t *committables,
 
       /* Regular adds of files have text mods, but for copies we have
          to test for textual mods.  Directories simply don't have text! */
-      if (entry->kind == svn_node_file)
+      if (db_kind == svn_node_file)
         {
           /* Check for text mods.  If EOL_PROP_CHANGED is TRUE, then
              we need to force a translated byte-for-byte comparison
@@ -625,7 +627,7 @@ harvest_committables(apr_hash_t *committables,
          bail out early.  Depending on how the svn:eol-style prop was
          changed, we might have to send new text to the server to
          match the new newline style.  */
-      if (entry->kind == svn_node_file)
+      if (db_kind == svn_node_file)
         SVN_ERR(svn_wc_text_modified_p2(&text_mod, ctx->wc_ctx, local_abspath,
                                         eol_prop_changed, scratch_pool));
     }
@@ -650,7 +652,7 @@ harvest_committables(apr_hash_t *committables,
                                    scratch_pool))
         {
           /* Finally, add the committable item. */
-          add_committable(committables, local_abspath, entry->kind, url,
+          add_committable(committables, local_abspath, db_kind, url,
                           entry->revision,
                           cf_url,
                           cf_rev,
@@ -665,7 +667,7 @@ harvest_committables(apr_hash_t *committables,
   /* For directories, recursively handle each entry according to depth
      (except when the directory is being deleted, unless the deletion
      is part of a replacement ... how confusing).  */
-  if ((entry->kind == svn_node_dir) && (depth > svn_depth_empty)
+  if ((db_kind == svn_node_dir) && (depth > svn_depth_empty)
       && ((! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
           || (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
     {
@@ -683,9 +685,11 @@ harvest_committables(apr_hash_t *committables,
           const char *this_abspath = APR_ARRAY_IDX(children, i, const char *);
           const char *name = svn_dirent_basename(this_abspath, NULL);
           const svn_wc_entry_t *this_entry;
-          const char *full_path;
-          const char *used_url = NULL;
+          const char *used_url = NULL, *this_url;
           const char *this_cf_url = cf_url ? cf_url : copyfrom_url;
+          svn_depth_t this_depth;
+          svn_boolean_t this_is_deleted;
+          svn_node_kind_t this_kind;
           svn_error_t *err;
 
           svn_pool_clear(iterpool);
@@ -706,8 +710,11 @@ harvest_committables(apr_hash_t *committables,
           else
             SVN_ERR(err);
 
+
           /* Skip the excluded item. */
-          if (this_entry->depth == svn_depth_exclude)
+          SVN_ERR(svn_wc__node_get_depth(&this_depth, ctx->wc_ctx, this_abspath,
+                                         iterpool));
+          if (this_depth == svn_depth_exclude)
             continue;
 
           /* Issue #3281.
@@ -764,28 +771,29 @@ harvest_committables(apr_hash_t *committables,
            * ### Note that, in trunk, the entry of post-replace deleted nodes
            * ### does not get blown away, so trunk is one step ahead of 1.6.x
            * ### already. */
-          if (entry->schedule == svn_wc_schedule_replace &&
-              this_entry->schedule == svn_wc_schedule_delete)
+          SVN_ERR(svn_wc__node_is_status_deleted(&this_is_deleted, ctx->wc_ctx,
+                                                 this_abspath, iterpool));
+          if (entry->schedule == svn_wc_schedule_replace && this_is_deleted)
             continue;
 
-          full_path = svn_dirent_join(local_abspath, name, iterpool);
           if (this_cf_url)
             this_cf_url = svn_path_url_add_component2(this_cf_url, name,
                                                       iterpool);
 
           /* We'll use the entry's URL if it has one and if we aren't
              in copy_mode, else, we'll just extend the parent's URL
-             with the entry's basename.
-
-             TODO: Do we even need this conditional with WC-NG?  Aren't we
-             always returning the URL in the entry struct? */
-          if (this_entry->url && !copy_mode)
-            used_url = this_entry->url;
+             with the entry's basename. */
+          SVN_ERR(svn_wc__node_get_url(&this_url, ctx->wc_ctx,
+                                       this_abspath, iterpool, iterpool));
+          if (this_url && !copy_mode)
+            used_url = this_url;
           else
             used_url = svn_path_url_add_component2(url, name, iterpool);
 
           /* Recurse. */
-          if (this_entry->kind == svn_node_dir)
+          SVN_ERR(svn_wc_read_kind(&this_kind, ctx->wc_ctx, this_abspath,
+                                   TRUE, iterpool));
+          if (this_kind == svn_node_dir)
             {
               if (depth <= svn_depth_files)
                 {
@@ -807,13 +815,10 @@ harvest_committables(apr_hash_t *committables,
                       /* A missing, schedule-delete child dir is
                          allowable.  Just don't try to recurse. */
                       svn_node_kind_t childkind;
-                      err = svn_io_check_path(full_path,
-                                              &childkind,
-                                              iterpool);
-                      if (! err
-                          && (childkind == svn_node_none)
-                          && (this_entry->schedule
-                              == svn_wc_schedule_delete))
+                      SVN_ERR(svn_io_check_path(this_abspath,
+                                                &childkind,
+                                                iterpool));
+                      if (childkind == svn_node_none && this_is_deleted)
                         {
                           if (svn_wc__changelist_match(ctx->wc_ctx,
                                                        this_abspath,
@@ -821,8 +826,8 @@ harvest_committables(apr_hash_t *committables,
                                                        iterpool))
                             {
                               add_committable(
-                                committables, full_path,
-                                this_entry->kind, used_url,
+                                committables, this_abspath,
+                                this_kind, used_url,
                                 SVN_INVALID_REVNUM,
                                 NULL,
                                 SVN_INVALID_REVNUM,
@@ -830,8 +835,6 @@ harvest_committables(apr_hash_t *committables,
                               continue; /* don't recurse! */
                             }
                         }
-                      else
-                        SVN_ERR(err);
                     }
                 }
             }
@@ -852,8 +855,8 @@ harvest_committables(apr_hash_t *committables,
               depth_below_here = svn_depth_empty;
 
             SVN_ERR(harvest_committables
-                    (committables, lock_tokens, full_path,
-                     used_url ? used_url : this_entry->url,
+                    (committables, lock_tokens, this_abspath,
+                     used_url ? used_url : this_url,
                      this_cf_url,
                      this_entry,
                      entry,
@@ -871,7 +874,7 @@ harvest_committables(apr_hash_t *committables,
     }
 
   /* Fetch lock tokens for descendants of deleted directories. */
-  if (lock_tokens && entry->kind == svn_node_dir
+  if (lock_tokens && db_kind == svn_node_dir
       && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
       struct add_lock_token_baton altb;
