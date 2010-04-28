@@ -135,13 +135,6 @@ svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 apr_pool_t *scratch_pool);
 
-/* Record a work item to remove the "revert props" and "revert text base"
-   for LOCAL_ABSPATH.  */
-svn_error_t *
-svn_wc__wq_remove_revert_files(svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool);
-
 
 /* Handle the old "KILLME" concept -- perform the actual deletion of a
    subdir (or just its admin area) during post-commit processing of a
