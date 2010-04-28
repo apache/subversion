@@ -924,6 +924,7 @@ dav_svn__update_report(const dav_resource *resource,
   void *rbaton = NULL;
   update_ctx_t uc = { 0 };
   svn_revnum_t revnum = SVN_INVALID_REVNUM;
+  svn_boolean_t revnum_is_head = FALSE;
   svn_revnum_t from_revnum = SVN_INVALID_REVNUM;
   int ns;
   /* entry_counter and entry_is_empty are for operational logging. */
@@ -1131,6 +1132,7 @@ dav_svn__update_report(const dav_resource *resource,
                                     "Could not determine the youngest "
                                     "revision for the update process.",
                                     resource->pool);
+      revnum_is_head = TRUE;
     }
 
   uc.svndiff_version = resource->info->svndiff_version;
@@ -1246,6 +1248,23 @@ dav_svn__update_report(const dav_resource *resource,
                   {
                     rev = SVN_STR_TO_REV(this_attr->value);
                     saw_rev = TRUE;
+                    if (revnum_is_head && rev > revnum)
+                      {
+                        /* ### This error could be improved with more details
+                           ### if we know  that this repository is a slave
+                           ### repository in a master-slave setup. */
+                        const char *errstr = apr_pstrdup(resource->pool,
+                                                         "A reported revision"
+                                                         " is higher than the"
+                                                         " current HEAD"
+                                                         " revision of the"
+                                                         " repository.");
+                        return dav_svn__new_error_tag(resource->pool,
+                                                      HTTP_INTERNAL_SERVER_ERROR,
+                                                      0, errstr,
+                                                      SVN_DAV_ERROR_NAMESPACE,
+                                                      SVN_DAV_ERROR_TAG);
+                      }
                   }
                 else if (strcmp(this_attr->name, "depth") == 0)
                   depth = svn_depth_from_word(this_attr->value);
