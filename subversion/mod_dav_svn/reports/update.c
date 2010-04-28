@@ -913,8 +913,8 @@ malformed_element_error(const char *tagname, apr_pool_t *pool)
                                 SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
 }
 
-dav_error *
 
+dav_error *
 dav_svn__update_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
                        ap_filter_t *output)
