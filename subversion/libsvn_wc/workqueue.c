@@ -1254,9 +1254,7 @@ log_do_committed(svn_wc__db_t *db,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
   apr_pool_t *pool = scratch_pool;
-  int is_this_dir;
   svn_boolean_t remove_executable = FALSE;
   svn_boolean_t set_read_write = FALSE;
   const svn_wc_entry_t *orig_entry;
@@ -1276,8 +1274,6 @@ log_do_committed(svn_wc__db_t *db,
      There isn't anything more to do.  */
   if (orig_entry->schedule == svn_wc_schedule_normal && orig_entry->deleted)
     return SVN_NO_ERROR;
-
-  is_this_dir = orig_entry->kind == svn_node_dir;
 
   /* We shouldn't be in this function for schedule-delete nodes.  */
   SVN_ERR_ASSERT(orig_entry->schedule != svn_wc_schedule_delete);
@@ -1299,7 +1295,8 @@ log_do_committed(svn_wc__db_t *db,
      individual commit targets, and thus will be re-visited by
      log_do_committed().  Children which were marked for deletion,
      however, need to be outright removed from revision control.  */
-  if ((orig_entry->schedule == svn_wc_schedule_replace) && is_this_dir)
+  if (orig_entry->schedule == svn_wc_schedule_replace
+      && orig_entry->kind == svn_node_dir)
     {
       /* Loop over all children entries, look for items scheduled for
          deletion. */
@@ -1403,21 +1400,14 @@ log_do_committed(svn_wc__db_t *db,
          timestamp of the copy of this file in `tmp/text-base' (which
          by then will have moved to `text-base'. */
 
-      if ((err = install_committed_file(&overwrote_working, db,
-                                        local_abspath, tmp_text_base_abspath,
-                                        remove_executable, set_read_write,
-                                        cancel_func, cancel_baton,
-                                        pool)))
-        return svn_error_createf
-          (SVN_ERR_WC_BAD_ADM_LOG, err,
-           _("Error replacing text-base of '%s'"),
-           svn_dirent_local_style(local_abspath, pool));
+      SVN_ERR(install_committed_file(&overwrote_working, db,
+                                     local_abspath, tmp_text_base_abspath,
+                                     remove_executable, set_read_write,
+                                     cancel_func, cancel_baton,
+                                     pool));
 
-      if ((err = svn_io_stat(&finfo, local_abspath,
-                             APR_FINFO_MIN | APR_FINFO_LINK, pool)))
-        return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
-                                 _("Error getting 'affected time' of '%s'"),
-                                 svn_dirent_local_style(local_abspath, pool));
+      SVN_ERR(svn_io_stat(&finfo, local_abspath,
+                          APR_FINFO_MIN | APR_FINFO_LINK, pool));
 
       /* We will compute and modify the size and timestamp */
 
@@ -1441,14 +1431,9 @@ log_do_committed(svn_wc__db_t *db,
              timestamp instead. */
           SVN_ERR(svn_wc__text_base_path(&base_abspath, db,
                                          local_abspath, FALSE, pool));
-          err = svn_io_stat(&basef_finfo, base_abspath,
-                            APR_FINFO_MIN | APR_FINFO_LINK,
-                            pool);
-          if (err)
-            return svn_error_createf
-              (SVN_ERR_WC_BAD_ADM_LOG, err,
-               _("Error getting 'affected time' for '%s'"),
-               svn_dirent_local_style(base_abspath, pool));
+          SVN_ERR(svn_io_stat(&basef_finfo, base_abspath,
+                              APR_FINFO_MIN | APR_FINFO_LINK,
+                              pool));
 
           /* Verify that the working file is the same as the base file
              by comparing file sizes, then timestamps and the contents
@@ -1460,16 +1445,9 @@ log_do_committed(svn_wc__db_t *db,
           modified = finfo.size != basef_finfo.size;
           if (finfo.mtime != basef_finfo.mtime && ! modified)
             {
-              err = svn_wc__internal_versioned_file_modcheck(&modified,
-                                                             db, local_abspath,
-                                                             base_abspath,
-                                                             FALSE, pool);
-              if (err)
-                return svn_error_createf
-                  (SVN_ERR_WC_BAD_ADM_LOG, err,
-                   _("Error comparing '%s' and '%s'"),
-                   svn_dirent_local_style(local_abspath, pool),
-                   svn_dirent_local_style(base_abspath, pool));
+              SVN_ERR(svn_wc__internal_versioned_file_modcheck(
+                        &modified,
+                        db, local_abspath, base_abspath, FALSE, pool));
             }
           /* If they are the same, use the working file's timestamp,
              else use the base file's timestamp. */
@@ -1550,6 +1528,7 @@ run_postcommit(svn_wc__db_t *db,
   apr_hash_t *new_dav_cache;
   svn_boolean_t keep_changelist;
   const char *tmp_text_base_abspath;
+  svn_error_t *err;
 
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   new_revision = (svn_revnum_t)svn_skel__parse_int(arg1->next, scratch_pool);
@@ -1583,12 +1562,17 @@ run_postcommit(svn_wc__db_t *db,
                                            arg5->next->next->next->data,
                                            arg5->next->next->next->len);
 
-  SVN_ERR(log_do_committed(db, local_abspath, tmp_text_base_abspath,
-                           new_revision, new_date,
-                           new_author, new_checksum, new_dav_cache,
-                           keep_changelist,
-                           cancel_func, cancel_baton,
-                           scratch_pool));
+  err = log_do_committed(db, local_abspath, tmp_text_base_abspath,
+                         new_revision, new_date,
+                         new_author, new_checksum, new_dav_cache,
+                         keep_changelist,
+                         cancel_func, cancel_baton,
+                         scratch_pool);
+  if (err)
+    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
+                             _("Error processing post-commit work for '%s'"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   return SVN_NO_ERROR;
 }
