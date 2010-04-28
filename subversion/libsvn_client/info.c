@@ -351,8 +351,9 @@ info_found_node_callback(const char *local_abspath,
 }
 
 
-/* Helper function:  push the svn_wc_entry_t for WCPATH at
-   RECEIVER/BATON, and possibly recurse over more entries. */
+/* Walk the children of LOCAL_ABSPATH to push svn_info_t's through
+   RECEIVER/RECEIVER_BATON.  Honor DEPTH while crawling children, and
+   filter the pushed items against CHANGELIST_HASH.  */
 static svn_error_t *
 crawl_entries(const char *local_abspath,
               svn_info_receiver_t receiver,
