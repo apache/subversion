@@ -1317,28 +1317,33 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
                                      void *baton,
                                      apr_pool_t *scratch_pool)
 {
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
   apr_array_header_t *propmods;
   svn_wc__db_kind_t kind;
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, iterpool));
 
   /* Get an array of local changes by comparing the hashes. */
   SVN_ERR(svn_wc__internal_propdiff(&propmods, NULL, db, local_abspath,
-                                    scratch_pool, scratch_pool));
+                                    scratch_pool, iterpool));
 
   /* Apply each local change to the baton */
   for (i = 0; i < propmods->nelts; i++)
     {
       const svn_prop_t *p = &APR_ARRAY_IDX(propmods, i, svn_prop_t);
+
+      svn_pool_clear(iterpool);
+
       if (kind == svn_wc__db_kind_file)
         SVN_ERR(editor->change_file_prop(baton, p->name, p->value,
-                                         scratch_pool));
+                                         iterpool));
       else
         SVN_ERR(editor->change_dir_prop(baton, p->name, p->value,
-                                        scratch_pool));
+                                        iterpool));
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
