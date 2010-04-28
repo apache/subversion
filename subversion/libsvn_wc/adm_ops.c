@@ -377,13 +377,44 @@ process_committed_leaf(svn_wc__db_t *db,
                                 scratch_pool));
     }
 
+  /* Queue a removal of any "revert" properties now. These correspond to
+     the BASE properties, but hidden by new pristine props in WORKING.
+     Regardless, the commit will be installing new BASE props.  */
+  /* ### this goes away once props are fully in the database  */
+  {
+    const char *revert_props_abspath;
+    const svn_skel_t *work_item;
+
+    /* ### this breaks the abstraction of svn_wc__props_delete, but
+       ### screw it. this is transitional code.  */
+    /* ### what happens if the node changes its KIND? should be okay
+       ### since we disallow that today, and props should be in the DB
+       ### by the time that we DO allow that.  */
+    SVN_ERR(svn_wc__prop_path(&revert_props_abspath, local_abspath, kind,
+                              svn_wc__props_revert, scratch_pool));
+
+    SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                         db, revert_props_abspath,
+                                         scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
+  }
+
   /* ### this picks up file and symlink  */
   if (kind != svn_wc__db_kind_dir)
     {
-      /* If the props or text revert file exists it needs to be deleted when
-       * the file is committed. */
-      /* ### don't directories have revert props? */
-      SVN_ERR(svn_wc__wq_remove_revert_files(db, local_abspath, scratch_pool));
+      /* Queue a removal any "revert" text base now.  */
+      {
+        const char *revert_abspath;
+        const svn_skel_t *work_item;
+
+        SVN_ERR(svn_wc__text_revert_path(&revert_abspath, db, local_abspath,
+                                         scratch_pool));
+
+        SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                             db, revert_abspath,
+                                             scratch_pool, scratch_pool));
+        SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
+      }
 
       /* If we sent a delta (meaning: post-copy modification),
          then this file will appear in the queue and so we should have

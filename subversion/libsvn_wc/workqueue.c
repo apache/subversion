@@ -50,7 +50,6 @@
 /* Workqueue operation names.  */
 #define OP_REVERT "revert"
 #define OP_PREPARE_REVERT_FILES "prep-rev-files"
-#define OP_REMOVE_REVERT_FILES "remove-rev-files"
 #define OP_KILLME "killme"
 #define OP_LOGGY "loggy"
 #define OP_DELETION_POSTCOMMIT "deletion-postcommit"
@@ -753,60 +752,6 @@ svn_wc__wq_prepare_revert_files(svn_wc__db_t *db,
      we only need the work_item to survive for the duration of wq_add.  */
   svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
   svn_skel__prepend_str(OP_PREPARE_REVERT_FILES, work_item, scratch_pool);
-
-  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* ------------------------------------------------------------------------ */
-
-/* OP_REMOVE_REVERT_FILES  */
-
-
-/* Process the OP_REMOVE_REVERT_FILES work item WORK_ITEM.
- * See svn_wc__wq_remove_revert_files() which generates this work item.
- * Implements (struct work_item_dispatch).func. */
-static svn_error_t *
-run_remove_revert_files(svn_wc__db_t *db,
-                        const svn_skel_t *work_item,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        apr_pool_t *scratch_pool)
-{
-  const svn_skel_t *arg1 = work_item->children->next;
-  const char *local_abspath;
-  const char *revert_file;
-  svn_node_kind_t kind;
-
-  /* We need a NUL-terminated path, so copy it out of the skel.  */
-  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-
-  SVN_ERR(svn_wc__text_revert_path(&revert_file, db, local_abspath,
-                                   scratch_pool));
-
-  SVN_ERR(svn_io_check_path(revert_file, &kind, scratch_pool));
-  if (kind == svn_node_file)
-    SVN_ERR(svn_io_remove_file2(revert_file, FALSE, scratch_pool));
-
-  SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_revert,
-                               scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__wq_remove_revert_files(svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool)
-{
-  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
-
-  /* These skel atoms hold references to very transitory state, but
-     we only need the work_item to survive for the duration of wq_add.  */
-  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
-  svn_skel__prepend_str(OP_REMOVE_REVERT_FILES, work_item, scratch_pool);
 
   SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
 
@@ -2309,7 +2254,6 @@ svn_wc__wq_build_prej_install(const svn_skel_t **work_item,
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
   { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
-  { OP_REMOVE_REVERT_FILES, run_remove_revert_files },
   { OP_KILLME, run_killme },
   { OP_LOGGY, run_loggy },
   { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
