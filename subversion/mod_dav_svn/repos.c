@@ -4286,7 +4286,9 @@ int dav_svn__method_post(request_rec *r)
     return dav_svn__error_response_tag(r, derr);
 
   /* Build a "201 Created" response with header that tells the client
-     our new transaction's name. */
+     our new transaction's name.
+
+     ### What is repos_root_uri for?  It's not used.  */
   repos_root_uri = dav_svn__build_uri(resource->info->repos,
                                       DAV_SVN__BUILD_URI_PUBLIC,
                                       SVN_IGNORED_REVNUM, "", 0,
