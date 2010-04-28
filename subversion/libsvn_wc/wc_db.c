@@ -3299,7 +3299,6 @@ svn_wc__db_op_read_tree_conflict(
 svn_error_t *
 svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
                                 const char *local_abspath,
-                                svn_boolean_t flush_entry_cache,
                                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
@@ -3315,20 +3314,18 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  if (flush_entry_cache)
-    flush_entries(pdh);
+  flush_entries(pdh);
 
   /* Check if we should remove it from the parent db instead */
-  if (strcmp(current_relpath, "") == 0)
+  if (*current_relpath == '\0')
     {
       SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
                                  scratch_pool));
-
       VERIFY_USABLE_PDH(pdh);
+
       current_relpath = svn_dirent_basename(local_abspath, NULL);
 
-      if (flush_entry_cache)
-        flush_entries(pdh);
+      flush_entries(pdh);
     }
 
   sdb = pdh->wcroot->sdb;
