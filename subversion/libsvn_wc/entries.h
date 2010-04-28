@@ -147,14 +147,6 @@ svn_wc__entry_modify_stub(svn_wc__db_t *db,
                           int modify_flags,
                           apr_pool_t *scratch_pool);
 
-/* Remove LOCAL_ABSPATH from DB, unconditionally.
-
-   All temporary allocations will be performed in SCRATCH_POOL.  */
-svn_error_t *
-svn_wc__entry_remove(svn_wc__db_t *db,
-                     const char *local_abspath,
-                     apr_pool_t *scratch_pool);
-
 
 /* Tweak the information for LOCAL_ABSPATH in DB.  If NEW_URL is non-null,
  * make this the entry's new url.  If NEW_REV is valid, make this the

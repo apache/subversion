@@ -2780,16 +2780,6 @@ fold_entry(svn_wc_entry_t *cur_entry,
 }
 
 
-svn_error_t *
-svn_wc__entry_remove(svn_wc__db_t *db,
-                     const char *local_abspath,
-                     apr_pool_t *scratch_pool)
-{
-  return svn_error_return(svn_wc__db_temp_op_remove_entry(db, local_abspath,
-                                                          scratch_pool));
-}
-
-
 /* Our general purpose intelligence module for handling a scheduling change
    to a single entry.
 
@@ -3019,7 +3009,8 @@ entry_modify(svn_wc__db_t *db,
               && cur_entry->schedule == svn_wc_schedule_add
               && !cur_entry->deleted)
             {
-              SVN_ERR(svn_wc__entry_remove(db, local_abspath, subpool));
+              SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                                      subpool));
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
             }
@@ -3223,7 +3214,8 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
   if (allow_removal
       && (entry->deleted || (entry->absent && entry->revision != new_rev)))
     {
-      SVN_ERR(svn_wc__entry_remove(db, local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                              scratch_pool));
     }
   else if (modify_flags)
     {
