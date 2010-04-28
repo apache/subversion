@@ -3305,11 +3305,11 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
   svn_sqlite__stmt_t *stmt;
   svn_sqlite__db_t *sdb;
   apr_int64_t wc_id;
-  const char *current_relpath;
+  const char *local_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &current_relpath, db, local_abspath,
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
@@ -3317,13 +3317,13 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
   flush_entries(pdh);
 
   /* Check if we should remove it from the parent db instead */
-  if (*current_relpath == '\0')
+  if (*local_relpath == '\0')
     {
       SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
                                  scratch_pool));
       VERIFY_USABLE_PDH(pdh);
 
-      current_relpath = svn_dirent_basename(local_abspath, NULL);
+      local_relpath = svn_dirent_basename(local_abspath, NULL);
 
       flush_entries(pdh);
     }
@@ -3332,15 +3332,15 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
   wc_id = pdh->wcroot->wc_id;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_BASE_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, current_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, current_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, current_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
 
   return svn_error_return(svn_sqlite__step_done(stmt));
 }
