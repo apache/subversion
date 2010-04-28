@@ -4270,7 +4270,6 @@ int dav_svn__method_post(request_rec *r)
   dav_resource *resource;
   dav_error *derr;
   const char *txn_name;
-  const char *repos_root_uri;
 
   derr = get_resource(r, dav_svn__get_root_dir(r),
                       "ignored", 0, &resource);
@@ -4286,13 +4285,7 @@ int dav_svn__method_post(request_rec *r)
     return dav_svn__error_response_tag(r, derr);
 
   /* Build a "201 Created" response with header that tells the client
-     our new transaction's name.
-
-     ### What is repos_root_uri for?  It's not used.  */
-  repos_root_uri = dav_svn__build_uri(resource->info->repos,
-                                      DAV_SVN__BUILD_URI_PUBLIC,
-                                      SVN_IGNORED_REVNUM, "", 0,
-                                      resource->pool);
+     our new transaction's name. */
   apr_table_set(resource->info->r->headers_out, SVN_DAV_TXN_NAME_HEADER,
                 txn_name);
   r->status = HTTP_CREATED;
