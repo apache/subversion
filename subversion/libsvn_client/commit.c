@@ -808,27 +808,24 @@ remove_tmpfiles(apr_hash_t *tempfiles,
                 apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
 
   /* Split if there's nothing to be done. */
   if (! tempfiles)
     return SVN_NO_ERROR;
 
-  /* Make a subpool. */
-  subpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(pool);
 
   /* Clean up any tempfiles. */
   for (hi = apr_hash_first(pool, tempfiles); hi; hi = apr_hash_next(hi))
     {
       const char *path = svn__apr_hash_index_val(hi);
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_io_remove_file2(path, TRUE, subpool));
+      SVN_ERR(svn_io_remove_file2(path, TRUE, iterpool));
     }
-
-  /* Remove the subpool. */
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
