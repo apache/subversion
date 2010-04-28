@@ -2557,8 +2557,10 @@ svn_io_parse_mimetypes_file(apr_hash_t **type_map,
           type = APR_ARRAY_IDX(tokens, 0, const char *);
           for (i = 1; i < tokens->nelts; i++)
             {
-              const char *ext = APR_ARRAY_IDX(tokens, i, const char *);
-              fileext_tolower((char *)ext);
+              /* We can safely address 'ext' as a non-const string because
+               * we know svn_cstring_split() allocated it in 'pool' for us. */
+              char *ext = APR_ARRAY_IDX(tokens, i, char *);
+              fileext_tolower(ext);
               apr_hash_set(types, ext, APR_HASH_KEY_STRING, type);
             }
         }
