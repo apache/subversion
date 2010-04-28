@@ -90,7 +90,6 @@ struct encoder_baton {
          129 encodes as [1 0000001] [0 0000001]
         2000 encodes as [1 0001111] [0 1010000]
 */
-
 static unsigned char *
 encode_int(unsigned char *p, svn_filesize_t val)
 {
@@ -355,7 +354,6 @@ struct decode_baton
    the byte after the integer.  The bytes to be decoded live in the
    range [P..END-1].  See the comment for encode_int earlier in this
    file for more detail on the encoding format.  */
-
 static const unsigned char *
 decode_file_offset(svn_filesize_t *val,
                    const unsigned char *p,
@@ -375,8 +373,7 @@ decode_file_offset(svn_filesize_t *val,
 }
 
 
-/* Same as above, only decide into a size variable. */
-
+/* Same as above, only decode into a size variable. */
 static const unsigned char *
 decode_size(apr_size_t *val,
             const unsigned char *p,
@@ -399,7 +396,6 @@ decode_size(apr_size_t *val,
    We expect an integer is prepended to IN that specifies the original
    size, and that if encoded size == original size, that the remaining
    data is not compressed.  */
-
 static svn_error_t *
 zlib_decode(svn_stringbuf_t *in, svn_stringbuf_t *out, apr_size_t limit)
 {
@@ -452,7 +448,6 @@ zlib_decode(svn_stringbuf_t *in, svn_stringbuf_t *out, apr_size_t limit)
 /* Decode an instruction into OP, returning a pointer to the text
    after the instruction.  Note that if the action code is
    svn_txdelta_new, the offset field of *OP will not be set.  */
-
 static const unsigned char *
 decode_instruction(svn_txdelta_op_t *op,
                    const unsigned char *p,
