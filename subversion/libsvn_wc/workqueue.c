@@ -1255,33 +1255,54 @@ log_do_committed(svn_wc__db_t *db,
                  apr_pool_t *scratch_pool)
 {
   apr_pool_t *pool = scratch_pool;
+  svn_wc__db_kind_t kind;
+  svn_wc__db_status_t status;
   svn_boolean_t remove_executable = FALSE;
   svn_boolean_t set_read_write = FALSE;
-  const svn_wc_entry_t *orig_entry;
   svn_boolean_t prop_mods;
 
-  /*** Perform sanity checking operations ***/
+  /* ### this gets the *intended* kind. for now, this also matches any
+     ### potential BASE kind since we cannot change kinds.  */
+  SVN_ERR(svn_wc__db_read_info(
+            &status, &kind, NULL,
+            NULL, NULL, NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL,
+            NULL, NULL,
+            db, local_abspath,
+            scratch_pool, scratch_pool));
 
-  /* Read the entry for the affected item.  If we can't find the
-     entry, or if the entry states that our item is not either "this
-     dir" or a file kind, perhaps this isn't really the entry our log
-     creator was expecting.  */
-  SVN_ERR(svn_wc__get_entry(&orig_entry, db, local_abspath, FALSE,
-                            svn_node_unknown, FALSE, pool, pool));
-
-  /* We should never be running a commit on a DELETED node, so if we see
-     this, then it (probably) means that a prior run has deleted this node.
-     There isn't anything more to do.  */
-  if (orig_entry->schedule == svn_wc_schedule_normal && orig_entry->deleted)
+  /* We should never be running a commit on a not-present node. If we see
+     this, then it (probably) means that a prior run has deleted this node,
+     and left the not-present behind. There isn't anything more to do.  */
+  if (status == svn_wc__db_status_not_present)
     return SVN_NO_ERROR;
 
-  /* We shouldn't be in this function for schedule-delete nodes.  */
-  SVN_ERR_ASSERT(orig_entry->schedule != svn_wc_schedule_delete);
-
+  /* We shouldn't be in this function for deleted nodes. They are handled
+     by other processes.  */
+  SVN_ERR_ASSERT(status != svn_wc__db_status_deleted);
 
   /*** Mark the committed item committed-to-date ***/
 
-  /* If "this dir" has been replaced (delete + add), remove those of
+  /* ### this comment is quite old. originally, we looked for
+     ### schedule_replace here. that definition is:
+     ###
+     ### ((status == svn_wc__db_status_added
+     ###   || status == svn_wc__db_status_obstructed_add)
+     ###  && base_shadowed
+     ###  && base_status != svn_wc__db_status_not_present)
+     ###
+     ### An obstructed add cannot be committed, so we don't have to
+     ### worry about that.
+     ###
+     ### If the BASE node is not-present, then it has no children which
+     ### may be marked for deletion, so that won't contribute to this
+     ### loop either (ie. we won't accidentally remove something)
+     ###
+     ### Thus, we're simply looking for status == svn_wc__db_status_added
+
+     If "this dir" has been replaced (delete + add), remove those of
      its children that are marked for deletion.
 
      All its immmediate children *must* be either scheduled for deletion
@@ -1295,8 +1316,8 @@ log_do_committed(svn_wc__db_t *db,
      individual commit targets, and thus will be re-visited by
      log_do_committed().  Children which were marked for deletion,
      however, need to be outright removed from revision control.  */
-  if (orig_entry->schedule == svn_wc_schedule_replace
-      && orig_entry->kind == svn_node_dir)
+
+  if (status == svn_wc__db_status_added && kind == svn_wc__db_kind_dir)
     {
       /* Loop over all children entries, look for items scheduled for
          deletion. */
@@ -1307,35 +1328,33 @@ log_do_committed(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
                                        pool, pool));
 
-      for(i = 0; i < children->nelts; i++)
+      for (i = 0; i < children->nelts; i++)
         {
           const char *child_name = APR_ARRAY_IDX(children, i, const char*);
           const char *child_abspath;
-          svn_wc__db_kind_t kind;
-          svn_wc__db_status_t status;
+          svn_wc__db_status_t child_status;
 
           apr_pool_clear(iterpool);
           child_abspath = svn_dirent_join(local_abspath, child_name, iterpool);
 
-          SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, TRUE,
-                                       iterpool));
-
-          SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
+          SVN_ERR(svn_wc__db_read_info(&child_status,
+                                       NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        db, child_abspath, iterpool, iterpool));
 
-          if (! (status == svn_wc__db_status_deleted
-                || status == svn_wc__db_status_obstructed_delete) )
-            continue;
-
-          /* ### We pass NULL, NULL for cancel_func and cancel_baton below.
-             ### If they were available, it would be nice to use them. */
-          SVN_ERR(svn_wc__internal_remove_from_revision_control(
-                                    db, child_abspath,
-                                    FALSE, FALSE,
-                                    NULL, NULL, iterpool));
+          /* Committing a deletion should remove the local nodes.  */
+          if (child_status == svn_wc__db_status_deleted
+              || child_status == svn_wc__db_status_obstructed_delete)
+            {
+              SVN_ERR(svn_wc__internal_remove_from_revision_control(
+                        db, child_abspath,
+                        FALSE /* destroy_wf */,
+                        FALSE /* instant_error */,
+                        cancel_func, cancel_baton,
+                        iterpool));
+            }
         }
     }
 
@@ -1344,7 +1363,7 @@ log_do_committed(svn_wc__db_t *db,
   SVN_ERR(svn_wc__props_modified(&prop_mods, db, local_abspath, pool));
   if (prop_mods)
     {
-      if (orig_entry->kind == svn_node_file)
+      if (kind == svn_wc__db_kind_file)
         {
           /* Examine propchanges here before installing the new
              propbase.  If the executable prop was -deleted-, remember
@@ -1375,7 +1394,7 @@ log_do_committed(svn_wc__db_t *db,
     }
 
   /* If it's a file, install the tree changes and the file's text. */
-  if (orig_entry->kind == svn_node_file)
+  if (kind == svn_wc__db_kind_file)
     {
       svn_boolean_t overwrote_working;
       apr_finfo_t finfo;
