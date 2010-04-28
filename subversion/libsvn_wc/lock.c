@@ -370,8 +370,7 @@ add_to_shared(svn_wc_adm_access_t *lock, apr_pool_t *scratch_pool)
                                                             scratch_pool);
     if (IS_MISSING(prior))
       SVN_ERR(svn_wc__db_temp_close_access(lock->db, lock->abspath,
-                                           (svn_wc_adm_access_t *)&missing,
-                                           scratch_pool));
+                                           prior, scratch_pool));
   }
 
   svn_wc__db_temp_set_access(lock->db, lock->abspath, lock,
