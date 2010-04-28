@@ -2412,12 +2412,6 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
       SVN_ERR(svn_wc__text_base_path(&text_base_file, db, local_abspath,
                                      FALSE, scratch_pool));
 
-      /* Clear the dav cache.  */
-      /* ### one day... (now?) this will simply be part of removing the
-         ### BASE_NODE row.  */
-      SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
-                                            scratch_pool));
-
       /* Remove prop/NAME, prop-base/NAME.svn-base. */
       SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
                                    scratch_pool));
@@ -2428,8 +2422,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
       SVN_ERR(svn_wc__entry_remove(db, local_abspath, scratch_pool));
 
       /* Remove text-base/NAME.svn-base */
-      SVN_ERR(svn_io_remove_file2(text_base_file,
-                                  TRUE, scratch_pool));
+      SVN_ERR(svn_io_remove_file2(text_base_file, TRUE, scratch_pool));
 
       /* If we were asked to destroy the working file, do so unless
          it has local mods. */
@@ -2458,10 +2451,6 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
       int i;
 
       /* ### sanity check:  check 2 places for DELETED flag? */
-
-      /* Get rid of the dav cache for this directory.  */
-      SVN_ERR(svn_wc__db_base_set_dav_cache(db, local_abspath, NULL,
-                                            iterpool));
 
       /* Walk over every entry. */
       SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
