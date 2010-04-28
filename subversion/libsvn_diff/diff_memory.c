@@ -46,7 +46,7 @@ typedef struct source_tokens_t
   apr_size_t next_token;
 
   /* The source, containing the in-memory data to be diffed */
-  svn_string_t *source;
+  const svn_string_t *source;
 
   /* The last token ends with a newline character (sequence) */
   svn_boolean_t ends_without_eol;
@@ -214,7 +214,7 @@ fill_source_tokens(source_tokens_t *src,
 
   src->tokens = apr_array_make(pool, 0, sizeof(svn_string_t *));
   src->next_token = 0;
-  src->source = (svn_string_t *)text;
+  src->source = text;
 
   for (startp = curp = text->data, endp = curp + text->len;
        curp != endp; curp++)
