@@ -1576,6 +1576,10 @@ run_postcommit(svn_wc__db_t *db,
     SVN_ERR(svn_skel__parse_proplist(&new_dav_cache, arg5->next,
                                      scratch_pool));
   keep_changelist = svn_skel__parse_int(arg5->next->next, scratch_pool) != 0;
+
+  /* Before r927056, this WQ item didn't have this next field.  Catch any
+   * attempt to run this code on a WC having a stale WQ item in it. */
+  SVN_ERR_ASSERT(arg5->next->next->next != NULL);
   if (arg5->next->next->next->len == 0)
     tmp_text_base_abspath = NULL;
   else
