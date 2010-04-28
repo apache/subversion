@@ -152,13 +152,13 @@ class Sandbox:
       wc_dir = self.wc_dir
     return os.path.join(wc_dir, svntest.wc.to_ospath(relpath))
 
-  def simple_commit(self, target_dir=None):
+  def simple_commit(self, target=None):
     assert not self.read_only
-    if target_dir is None:
-      target_dir = self.wc_dir
+    if target is None:
+      target = self.wc_dir
     svntest.main.run_svn(False, 'commit',
                          '-m', svntest.main.make_log_msg(),
-                         target_dir)
+                         target)
 
   def simple_rm(self, *targets):
     assert len(targets) > 0
