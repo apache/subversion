@@ -2037,7 +2037,6 @@ svn_wc__db_temp_set_keep_local(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
                                 const char *local_abspath,
-                                svn_boolean_t flush_entry_cache,
                                 apr_pool_t *scratch_pool);
 
 /* Sets the depth of LOCAL_ABSPATH in its working copy to DEPTH
