@@ -913,8 +913,8 @@ malformed_element_error(const char *tagname, apr_pool_t *pool)
                                 SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
 }
 
-
 dav_error *
+
 dav_svn__update_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
                        ap_filter_t *output)
@@ -1253,17 +1253,15 @@ dav_svn__update_report(const dav_resource *resource,
                         /* ### This error could be improved with more details
                            ### if we know  that this repository is a slave
                            ### repository in a master-slave setup. */
-                        const char *errstr = apr_pstrdup(resource->pool,
-                                                         "A reported revision"
-                                                         " is higher than the"
-                                                         " current HEAD"
-                                                         " revision of the"
-                                                         " repository.");
-                        return dav_svn__new_error_tag(resource->pool,
-                                                      HTTP_INTERNAL_SERVER_ERROR,
-                                                      0, errstr,
-                                                      SVN_DAV_ERROR_NAMESPACE,
-                                                      SVN_DAV_ERROR_TAG);
+                        return dav_svn__new_error_tag(
+                                            resource->pool,
+                                            HTTP_INTERNAL_SERVER_ERROR,
+                                            0,
+                                            "A reported revision is higher"
+                                            " than the current HEAD revision"
+                                            " of the repository.",
+                                            SVN_DAV_ERROR_NAMESPACE,
+                                            SVN_DAV_ERROR_TAG);
                       }
                   }
                 else if (strcmp(this_attr->name, "depth") == 0)
