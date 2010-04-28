@@ -403,7 +403,8 @@ basic_delete_entry(svn_wc__db_t *db,
           */
           if (status != svn_wc__db_status_obstructed_add)
             {
-              SVN_ERR(svn_wc__entry_remove(db, local_abspath, scratch_pool));
+              SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                                      scratch_pool));
 
               return SVN_NO_ERROR;
             }

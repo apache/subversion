@@ -211,7 +211,8 @@ tweak_entries(svn_wc__db_t *db,
                     || status == svn_wc__db_status_obstructed_add)
                   && !excluded)
                 {
-                  SVN_ERR(svn_wc__entry_remove(db, child_abspath, iterpool));
+                  SVN_ERR(svn_wc__db_temp_op_remove_entry(db, child_abspath,
+                                                          iterpool));
 
                   if (notify_func)
                     {
@@ -1922,7 +1923,8 @@ revert_entry(svn_depth_t *depth,
                  adm_access, for which we definitely can't use the 'else'
                  code path (as it will remove the parent from version
                  control... (See issue 2425) */
-              SVN_ERR(svn_wc__entry_remove(db, local_abspath, pool));
+              SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                                      pool));
             }
           else
             {
@@ -2450,7 +2452,8 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                    scratch_pool));
 
       /* Remove NAME from PATH's entries file: */
-      SVN_ERR(svn_wc__entry_remove(db, local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                              scratch_pool));
 
       /* Remove text-base/NAME.svn-base */
       SVN_ERR(svn_io_remove_file2(text_base_file, TRUE, scratch_pool));
@@ -2473,7 +2476,8 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
          just delete the entry in the parent directory.
 
          ### This case disappears after we move to one DB. */
-      SVN_ERR(svn_wc__entry_remove(db, local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                              scratch_pool));
     }
   else /* looking at THIS_DIR */
     {
@@ -2503,7 +2507,8 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                          iterpool));
           if (hidden)
             {
-              SVN_ERR(svn_wc__entry_remove(db, entry_abspath, iterpool));
+              SVN_ERR(svn_wc__db_temp_op_remove_entry(db, entry_abspath,
+                                                      iterpool));
               continue;
             }
 
@@ -2543,7 +2548,8 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
            full_path.  We need to remove that entry: */
         if (! is_root)
           {
-            SVN_ERR(svn_wc__entry_remove(db, local_abspath, iterpool));
+            SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
+                                                    iterpool));
           }
       }
 
