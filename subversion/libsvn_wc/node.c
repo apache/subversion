@@ -292,25 +292,23 @@ svn_wc__internal_node_get_url(const char **url,
   svn_wc__db_status_t status;
   const char *repos_relpath;
   const char *repos_root_url;
+  svn_boolean_t base_shadowed;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, &repos_relpath,
                                &repos_root_url,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
+                               &base_shadowed, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
   if (repos_relpath == NULL)
     {
       if (status == svn_wc__db_status_normal
           || status == svn_wc__db_status_incomplete
-          || status == svn_wc__db_status_deleted
-          || status == svn_wc__db_status_obstructed_delete)
+          || (base_shadowed
+              && (status == svn_wc__db_status_deleted
+                  || status == svn_wc__db_status_obstructed_delete)))
         {
-          /* ### we should NOT do this for status_deleted, or
-             ### status_obstructed_delete. those may represent
-             ### the deletion of a child of a copied tree, NOT
-             ### a BASE node.  */
           SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
                                              NULL,
                                              db, local_abspath,
@@ -324,12 +322,24 @@ svn_wc__internal_node_get_url(const char **url,
                                            db, local_abspath,
                                            scratch_pool, scratch_pool));
         }
+      else if (status == svn_wc__db_status_absent
+               || status == svn_wc__db_status_excluded
+               || status == svn_wc__db_status_not_present
+               || (!base_shadowed
+                   && (status == svn_wc__db_status_deleted
+                       || status == svn_wc__db_status_obstructed_delete)))
+        {
+          const char *parent_abspath;
+
+          svn_dirent_split(local_abspath, &parent_abspath, &repos_relpath,
+                           scratch_pool);
+          SVN_ERR(svn_wc__internal_node_get_url(&repos_root_url, db,
+                                                parent_abspath,
+                                                scratch_pool, scratch_pool));
+        }
       else
         {
-          /* Status: obstructed, obstructed_add, absent, excluded,
-             not_present  */
-          /* ### we should be able to derive a URL for absent, excluded,
-             ### and not-present, since those cannot be switched.  */
+          /* Status: obstructed, obstructed_add */
           *url = NULL;
           return SVN_NO_ERROR;
         }
