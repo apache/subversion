@@ -1527,7 +1527,7 @@ merge_file_added(const char *local_dir_abspath,
   const char *parent_abspath;
   svn_node_kind_t kind;
   int i;
-  apr_hash_t *new_props;
+  apr_hash_t *file_props;
   const char *mine_abspath;
 
   /* Easy out: We are only applying mergeinfo differences. */
@@ -1555,7 +1555,7 @@ merge_file_added(const char *local_dir_abspath,
     *tree_conflicted = FALSE;
 
   /* Apply the prop changes to a new hash table. */
-  new_props = apr_hash_copy(subpool, original_props);
+  file_props = apr_hash_copy(subpool, original_props);
   for (i = 0; i < prop_changes->nelts; ++i)
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(prop_changes, i, svn_prop_t);
@@ -1579,7 +1579,7 @@ merge_file_added(const char *local_dir_abspath,
           && strcmp(prop->name, SVN_PROP_MERGEINFO) == 0)
         continue;
 
-      apr_hash_set(new_props, prop->name, APR_HASH_KEY_STRING, prop->value);
+      apr_hash_set(file_props, prop->name, APR_HASH_KEY_STRING, prop->value);
     }
 
   /* Easy out:  if we have no adm_access for the parent directory,
@@ -1593,7 +1593,7 @@ merge_file_added(const char *local_dir_abspath,
         {
           if (content_state)
             *content_state = svn_wc_notify_state_changed;
-          if (prop_state && apr_hash_count(new_props))
+          if (prop_state && apr_hash_count(file_props))
             *prop_state = svn_wc_notify_state_changed;
         }
       else
@@ -1630,14 +1630,15 @@ merge_file_added(const char *local_dir_abspath,
       {
         if (! merge_b->dry_run)
           {
-            const char *copyfrom_url = NULL;
-            svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
-            svn_stream_t *new_base_contents;
+            const char *copyfrom_url;
+            svn_revnum_t copyfrom_rev;
+            svn_stream_t *new_contents, *new_base_contents;
+            apr_hash_t *new_base_props, *new_props;
             const svn_wc_conflict_description2_t *existing_conflict;
 
-            /* If this is a merge from the same repository as our working copy,
-               we handle adds as add-with-history.  Otherwise, we'll use a pure
-               add. */
+            /* If this is a merge from the same repository as our
+               working copy, we handle adds as add-with-history.
+               Otherwise, we'll use a pure add. */
             if (merge_b->same_repos)
               {
                 const char *child = svn_dirent_is_child(merge_b->target_abspath,
@@ -1652,10 +1653,22 @@ merge_file_added(const char *local_dir_abspath,
                 SVN_ERR(check_scheme_match(merge_b->ctx->wc_ctx,
                                            parent_abspath,
                                            copyfrom_url, subpool));
+                new_base_props = file_props;
+                new_props = NULL; /* inherit from new_base_props */
+                SVN_ERR(svn_stream_open_readonly(&new_base_contents, yours,
+                                                 subpool, subpool));
+                new_contents = NULL; /* inherit from new_base_contents */
               }
-
-            SVN_ERR(svn_stream_open_readonly(&new_base_contents, yours,
-                                             subpool, subpool));
+            else
+              {
+                copyfrom_url = NULL;
+                copyfrom_rev = SVN_INVALID_REVNUM;
+                new_base_props = apr_hash_make(subpool);
+                new_props = file_props;
+                new_base_contents = svn_stream_empty(subpool);
+                SVN_ERR(svn_stream_open_readonly(&new_contents, yours,
+                                                 subpool, subpool));
+              }
 
             SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict,
                                               merge_b->ctx->wc_ctx,
@@ -1685,7 +1698,8 @@ merge_file_added(const char *local_dir_abspath,
                 /* ### would be nice to have cancel/notify funcs to pass */
                 SVN_ERR(svn_wc_add_repos_file4(
                             merge_b->ctx->wc_ctx, mine_abspath,
-                            new_base_contents, NULL, new_props, NULL,
+                            new_base_contents, new_contents,
+                            new_base_props, new_props,
                             copyfrom_url, copyfrom_rev,
                             NULL, NULL, NULL, NULL, subpool));
 
@@ -1694,7 +1708,7 @@ merge_file_added(const char *local_dir_abspath,
           }
         if (content_state)
           *content_state = svn_wc_notify_state_changed;
-        if (prop_state && apr_hash_count(new_props))
+        if (prop_state && apr_hash_count(file_props))
           *prop_state = svn_wc_notify_state_changed;
       }
       break;
