@@ -376,7 +376,8 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
  *   - Return svn_wc_notify_state_inapplicable if the node kind matches.
  *   - Return 'obstructed' if there is a node on disk where none or a
  *     different kind is expected, or if the disk node cannot be read.
- *   - Return 'missing' if there is no node on disk but one is expected. */
+ *   - Return 'missing' if there is no node on disk but one is expected.
+ *     Also return 'missing' for absent nodes (not here due to authz).*/
 static svn_wc_notify_state_t
 obstructed_or_missing(const char *path,
                       const char *local_dir_abspath,
@@ -405,6 +406,20 @@ obstructed_or_missing(const char *path,
       kind_expected = svn_node_none;
     }
 
+  /* Report absent nodes as 'missing'. First of all, they count as 'hidden',
+   * and since we pass show_hidden == FALSE above, they will show up as
+   * 'none' here. */
+  if (kind_expected == svn_node_none)
+    {
+      svn_boolean_t is_absent;
+      err = svn_wc__node_is_status_absent(&is_absent, merge_b->ctx->wc_ctx,
+                                          local_abspath, pool);
+      if (err)
+        svn_error_clear(err);
+      else if (is_absent)
+        return svn_wc_notify_state_missing;
+    }
+
   /* If a node is deleted, we will still get its kind from the working copy.
    * But to compare with disk state, we want to consider deleted nodes as
    * svn_node_none instead of their original kind.
@@ -424,7 +439,7 @@ obstructed_or_missing(const char *path,
         kind_expected = svn_node_none;
     }
 
-  err = svn_io_check_path(path, &kind_on_disk, pool);
+  err = svn_io_check_path(local_abspath, &kind_on_disk, pool);
   if (err)
     {
       svn_error_clear(err);
