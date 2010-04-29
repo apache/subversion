@@ -365,7 +365,7 @@ test_list = [ None,
               svndumpfilter_loses_mergeinfo,
               dumpfilter_with_targets,
               dumpfilter_with_patterns,
-              filter_mergeinfo_revs_outside_of_dump_stream,
+              XFail(filter_mergeinfo_revs_outside_of_dump_stream),
               ]
 
 if __name__ == '__main__':
