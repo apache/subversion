@@ -977,7 +977,12 @@ parse_baton_initialize(struct parse_baton_t **pb,
                               apr_file_open_stdout, pool));
 
   baton->do_exclude = do_exclude;
-  baton->do_renumber_revs = opt_state->renumber_revs;
+
+  /* Ignore --renumber-revs if there can't possibly be
+     anything to renumber. */
+  baton->do_renumber_revs =
+    (opt_state->renumber_revs && opt_state->drop_empty_revs);
+
   baton->drop_empty_revs = opt_state->drop_empty_revs;
   baton->preserve_revprops = opt_state->preserve_revprops;
   baton->quiet = opt_state->quiet;
