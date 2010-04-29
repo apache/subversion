@@ -583,7 +583,9 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(Skip(mergeinfo_and_skipped_paths,
+              # Marked XFAIL because svn fails to emit a 'skipped' notice
+              # on the file 'psi'.
+              SkipUnless(Skip(XFail(mergeinfo_and_skipped_paths),
                               svntest.main.is_ra_type_file),
                          svntest.main.server_has_mergeinfo),
               SkipUnless(merge_fails_if_subtree_is_deleted_on_src,
