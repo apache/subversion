@@ -74,7 +74,7 @@ fixup_out_of_date_error(const char *path,
 /* Add a new commit candidate (described by all parameters except
    `COMMITTABLES') to the COMMITTABLES hash.  All of the commit item's
    members are allocated out of the COMMITTABLES hash pool. */
-static void
+static svn_error_t *
 add_committable(apr_hash_t *committables,
                 const char *path,
                 svn_node_kind_t kind,
@@ -90,7 +90,7 @@ add_committable(apr_hash_t *committables,
   svn_client_commit_item3_t *new_item;
 
   /* Sanity checks. */
-  assert(path && url);
+  SVN_ERR_ASSERT(path && url);
 
   /* ### todo: Get the canonical repository for this item, which will
      be the real key for the COMMITTABLES hash, instead of the above
@@ -121,6 +121,8 @@ add_committable(apr_hash_t *committables,
 
   /* Now, add the commit item to the array. */
   APR_ARRAY_PUSH(array, svn_client_commit_item3_t *) = new_item;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -328,7 +330,7 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
 
 
 /* Recursively search for commit candidates in (and under) LOCAL_ABSPATH
-   (with entry ENTRY and ancestry URL), and add those candidates to
+   (with entry ENTRY), and add those candidates to
    COMMITTABLES.  If in ADDS_ONLY modes, only new additions are
    recognized.  COPYFROM_URL is the default copyfrom-url for children
    of copied directories.
@@ -343,7 +345,8 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
 
    If in COPY_MODE, treat the entry as if it is destined to be added
    with history as URL, and add 'deleted' entries to COMMITTABLES as
-   items to delete in the copy destination.
+   items to delete in the copy destination.  URL must be NULL if not in
+   COPY_MODE.
 
    If CHANGELISTS is non-NULL, it is a hash whose keys are const char *
    changelist names used as a restrictive filter
@@ -374,7 +377,7 @@ harvest_committables(apr_hash_t *committables,
   svn_boolean_t text_mod = FALSE, prop_mod = FALSE;
   apr_byte_t state_flags = 0;
   svn_node_kind_t working_kind, db_kind;
-  const char *cf_url = NULL;
+  const char *entry_url, *cf_url = NULL;
   svn_revnum_t cf_rev = entry->copyfrom_rev;
   const svn_string_t *propval;
   svn_boolean_t is_special, is_file_external;
@@ -388,7 +391,7 @@ harvest_committables(apr_hash_t *committables,
     return SVN_NO_ERROR;
 
   SVN_ERR_ASSERT(entry);
-  SVN_ERR_ASSERT(url);
+  SVN_ERR_ASSERT((copy_mode && url) || (! copy_mode && ! url));
 
   if (ctx->cancel_func)
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -405,6 +408,10 @@ harvest_committables(apr_hash_t *committables,
 
   SVN_ERR(svn_io_check_special_path(local_abspath, &working_kind, &is_special,
                                     scratch_pool));
+
+  /* ### In 1.6 an obstructed dir would fail when locking before we
+         got here.  Locking now doesn't fail so perhaps we should do
+         some sort of checking here. */
 
   if ((working_kind != svn_node_file)
       && (working_kind != svn_node_dir)
@@ -484,11 +491,13 @@ harvest_committables(apr_hash_t *committables,
                                              db_kind, depth, changelists,
                                              scratch_pool));
 
-  /* If we have our own URL, and we're NOT in COPY_MODE, it wins over
-     the telescoping one(s).  In COPY_MODE, URL will always be the
-     URL-to-be of the copied item.  */
-  if ((entry->url) && (! copy_mode))
-    url = entry->url;
+  /* Our own URL wins if not in COPY_MODE.  In COPY_MODE the
+     telescoping URLs are used. */
+  SVN_ERR(svn_wc__node_get_url(&entry_url, ctx->wc_ctx, local_abspath,
+                               scratch_pool, scratch_pool));
+  if (! copy_mode)
+    url = entry_url;
+
 
   /* Check for the deletion case.  Deletes occur only when not in
      "adds-only mode".  We use the SVN_CLIENT_COMMIT_ITEM_DELETE flag
@@ -560,7 +569,7 @@ harvest_committables(apr_hash_t *committables,
           adds_only = FALSE;
           cf_rev = entry->revision;
           if (copy_mode)
-            cf_url = entry->url;
+            cf_url = entry_url;
           else if (copyfrom_url)
             cf_url = copyfrom_url;
           else /* ### See issue #830 */
@@ -652,11 +661,11 @@ harvest_committables(apr_hash_t *committables,
                                    scratch_pool))
         {
           /* Finally, add the committable item. */
-          add_committable(committables, local_abspath, db_kind, url,
-                          entry->revision,
-                          cf_url,
-                          cf_rev,
-                          state_flags);
+          SVN_ERR(add_committable(committables, local_abspath, db_kind, url,
+                                  entry->revision,
+                                  cf_url,
+                                  cf_rev,
+                                  state_flags));
           if (lock_tokens && entry->lock_token)
             apr_hash_set(lock_tokens, apr_pstrdup(token_pool, url),
                          APR_HASH_KEY_STRING,
@@ -685,8 +694,7 @@ harvest_committables(apr_hash_t *committables,
           const char *this_abspath = APR_ARRAY_IDX(children, i, const char *);
           const char *name = svn_dirent_basename(this_abspath, NULL);
           const svn_wc_entry_t *this_entry;
-          const char *used_url = NULL, *this_url;
-          const char *this_cf_url = cf_url ? cf_url : copyfrom_url;
+          const char *this_url, *this_cf_url = cf_url ? cf_url : copyfrom_url;
           svn_depth_t this_depth;
           svn_boolean_t this_is_deleted;
           svn_node_kind_t this_kind;
@@ -780,15 +788,11 @@ harvest_committables(apr_hash_t *committables,
             this_cf_url = svn_path_url_add_component2(this_cf_url, name,
                                                       iterpool);
 
-          /* We'll use the entry's URL if it has one and if we aren't
-             in copy_mode, else, we'll just extend the parent's URL
-             with the entry's basename. */
-          SVN_ERR(svn_wc__node_get_url(&this_url, ctx->wc_ctx,
-                                       this_abspath, iterpool, iterpool));
-          if (this_url && !copy_mode)
-            used_url = this_url;
+          if (! copy_mode)
+            SVN_ERR(svn_wc__node_get_url(&this_url, ctx->wc_ctx,
+                                         this_abspath, iterpool, iterpool));
           else
-            used_url = svn_path_url_add_component2(url, name, iterpool);
+            this_url = svn_path_url_add_component2(url, name, iterpool);
 
           /* Recurse. */
           SVN_ERR(svn_wc_read_kind(&this_kind, ctx->wc_ctx, this_abspath,
@@ -825,13 +829,13 @@ harvest_committables(apr_hash_t *committables,
                                                        changelists,
                                                        iterpool))
                             {
-                              add_committable(
+                              SVN_ERR(add_committable(
                                 committables, this_abspath,
-                                this_kind, used_url,
+                                this_kind, NULL,
                                 SVN_INVALID_REVNUM,
                                 NULL,
                                 SVN_INVALID_REVNUM,
-                                SVN_CLIENT_COMMIT_ITEM_DELETE);
+                                SVN_CLIENT_COMMIT_ITEM_DELETE));
                               continue; /* don't recurse! */
                             }
                         }
@@ -856,7 +860,7 @@ harvest_committables(apr_hash_t *committables,
 
             SVN_ERR(harvest_committables
                     (committables, lock_tokens, this_abspath,
-                     used_url ? used_url : this_url,
+                     copy_mode ? this_url : NULL,
                      this_cf_url,
                      this_entry,
                      entry,
@@ -1073,7 +1077,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                                iterpool));
 
       SVN_ERR(harvest_committables(*committables, *lock_tokens, target_abspath,
-                                   entry->url, NULL,
+                                   NULL, NULL,
                                    entry, NULL, FALSE, FALSE, depth,
                                    just_locked, changelist_hash,
                                    ctx, iterpool));
