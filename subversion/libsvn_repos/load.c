@@ -295,8 +295,18 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
                                                    svn_merge_range_t *);
           rev_from_map = apr_hash_get(pb->rev_map, &range->start,
                                       sizeof(svn_revnum_t));
+          /* If we can't remap the start revision then don't even bother
+             trying to remap the end revision.  It's possible we might
+             actually succeed at the latter, which can result in invalid
+             mergeinfo with a start rev > end red.  If that gets into the
+             repository then a world of bustage breaks loose anytime that
+             bogus mergeinfo is parsed.  See
+             http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16.
+             */
           if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
-              range->start = *rev_from_map;
+            range->start = *rev_from_map;
+          else
+            continue;
 
           rev_from_map = apr_hash_get(pb->rev_map, &range->end,
                                       sizeof(svn_revnum_t));
