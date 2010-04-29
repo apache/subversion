@@ -367,57 +367,11 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
           apr_hash_count(merge_b->conflicted_paths) > 0);
 }
 
-/* Return the node kind of the working version of local path PATH,
- * according to the WC metadata in ENTRY. If ENTRY is null, assume the node
- * is unversioned and so set the kind to 'none'.
- *
- * However, if this is a dry run, set *NODE_KIND to 'none' if the node would
- * already have been deleted by the merge if this were not a dry run. Use
- * MERGE_B to determine the dry-run details. */
-static svn_node_kind_t
-node_kind_working(const char *path,
-                  const merge_cmd_baton_t *merge_b,
-                  const svn_wc_entry_t *entry)
-{
-  if (!entry
-      || (entry->schedule == svn_wc_schedule_delete)
-      || (merge_b->dry_run && dry_run_deleted_p(merge_b, path))
-      || (entry->deleted && entry->schedule != svn_wc_schedule_add))
-    return svn_node_none;
-  else
-    return entry->kind;
-}
-
-/* Return the node kind that is found on disk at local path PATH.
- *
- * However, if this is a dry run, set *NODE_KIND to 'none' if the node would
- * already have been deleted by the merge if this were not a dry run. Use
- * MERGE_B to determine the dry-run details. */
-static svn_node_kind_t
-node_kind_on_disk(const char *path,
-                  const merge_cmd_baton_t *merge_b,
-                  apr_pool_t *pool)
-{
-  svn_error_t *err;
-  svn_node_kind_t node_kind;
-
-  err = svn_io_check_path(path, &node_kind, pool);
-  if (err)
-    {
-      svn_error_clear(err);
-      return svn_node_unknown;
-    }
-  else if (dry_run_deleted_p(merge_b, path))
-    return svn_node_none;
-  else
-    return node_kind;
-}
-
-/* Return a state indicating whether the WC metadata in ENTRY matches the
- * node kind on disk of the local path PATH. If ENTRY is null, assume the
- * node is unversioned. In the case of a dry-run merge, use the disk node
- * kind that would exist if it were not a dry run. Use MERGE_B to determine
- * the dry-run details.
+/* Return a state indicating whether the WC metadata matches the
+ * node kind on disk of the local path PATH.
+ * Use MERGE_B to determine the dry-run details; particularly, if a dry run
+ * noted that it deleted this path, assume matching node kinds (as if both
+ * kinds were svn_node_none).
  *
  *   - Return svn_wc_notify_state_inapplicable if the node kind matches.
  *   - Return 'obstructed' if there is a node on disk where none or a
@@ -430,55 +384,52 @@ obstructed_or_missing(const char *path,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
-  const svn_wc_entry_t *entry = NULL;
-  svn_node_kind_t kind_expected, kind_on_disk, wc_kind;
+  svn_node_kind_t kind_expected, kind_on_disk;
   const char *local_abspath;
 
+  /* In a dry run, make as if nodes "deleted" by the dry run appear so. */
+  if (merge_b->dry_run && dry_run_deleted_p(merge_b, path))
+    return svn_wc_notify_state_inapplicable;
+
+  /* Since this function returns no svn_error_t, we make all errors look like
+   * no node found in the wc. */
   err = svn_dirent_get_absolute(&local_abspath, path, pool);
 
   if (!err)
-    err = svn_wc_read_kind(&wc_kind, merge_b->ctx->wc_ctx, local_abspath,
-                           FALSE, pool);
+    err = svn_wc_read_kind(&kind_expected, merge_b->ctx->wc_ctx,
+                           local_abspath, FALSE, pool);
 
   if (err)
     {
-      wc_kind = svn_node_none;
       svn_error_clear(err);
-      entry = NULL;
+      kind_expected = svn_node_none;
     }
-  else
+
+  /* If a node is deleted, we will still get its kind from the working copy.
+   * But to compare with disk state, we want to consider deleted nodes as
+   * svn_node_none instead of their original kind.
+   * ### Not necessary with central DB:
+   * Because deleted directories are expected to remain on disk until commit
+   * to keep the metadata available, we only do this for files, not dirs. */
+  if (kind_expected == svn_node_file)
     {
-      err = svn_wc__get_entry_versioned(&entry, merge_b->ctx->wc_ctx,
-                                        local_abspath, svn_node_unknown,
-                                        TRUE, FALSE, pool, pool);
-
+      svn_boolean_t is_deleted;
+      err = svn_wc__node_is_status_deleted(&is_deleted,
+                                           merge_b->ctx->wc_ctx,
+                                           local_abspath,
+                                           pool);
       if (err)
-        {
-          svn_error_clear(err);
-          entry = NULL;
-        }
+        svn_error_clear(err);
+      else if (is_deleted)
+        kind_expected = svn_node_none;
     }
 
-  if ((wc_kind == svn_node_dir || wc_kind == svn_node_file)
-      && !entry)
-    return svn_wc_notify_state_missing;
-
-  /* ### This check (and most of this function)
-         can be removed after we move to one DB */
-  /* svn_wc__get_entry_versioned ignores node kind errors, so check if we
-     didn't get the parent stub, instead of the real thing */
-  if (entry && entry->kind == svn_node_dir && *entry->name != '\0')
-    return svn_wc_notify_state_missing; /* Only found parent entry */
-
-  kind_expected = node_kind_working(path, merge_b, entry);
-  kind_on_disk = node_kind_on_disk(path, merge_b, pool);
-
-  /* If it's a sched-delete directory, change the expected kind to "dir"
-   * because the directory should not yet have gone from disk. */
-  if (entry && entry->kind == svn_node_dir
-      && entry->schedule == svn_wc_schedule_delete
-      && kind_on_disk == svn_node_dir)
-    kind_expected = svn_node_dir;
+  err = svn_io_check_path(path, &kind_on_disk, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      kind_on_disk = svn_node_unknown;
+    }
 
   if (kind_expected == kind_on_disk)
     return svn_wc_notify_state_inapplicable;
