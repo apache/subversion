@@ -228,7 +228,133 @@ def dumpfilter_with_patterns(sbox):
   _simple_dumpfilter_test(sbox, dumpfile,
                           'exclude', '--pattern', '/A/D/[GH]*', '/A/[B]/E*')
 
+#----------------------------------------------------------------------
+# More testing for issue #3020 'Reflect dropped/renumbered revisions in
+# svn:mergeinfo data during svnadmin load'
+#
+# Specifically, test that svndumpfilter, when used with the
+# --skip-missing-merge-sources option, removes mergeinfo that refers to
+# revisions that are older than the oldest revision in the dump stream.
+def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
+  "filter mergeinfo revs outside of dump stream"
 
+  test_create(sbox)
+
+  # Load a partial dump into an existing repository.
+  #
+  # Picture == 1k words:
+  #
+  # The dump file we filter in this test, 'mergeinfo_included_partial.dump', is
+  # a dump of r6:HEAD of the following repos:
+  #
+  #                       __________________________________________
+  #                      |                                         |
+  #                      |             ____________________________|_____
+  #                      |            |                            |     |
+  # trunk---r2---r3-----r5---r6-------r8---r9--------------->      |     |
+  #   r1             |        |     |       |                      |     |
+  # intial           |        |     |       |______                |     |
+  # import         copy       |   copy             |            merge   merge
+  #                  |        |     |            merge           (r5)   (r8)
+  #                  |        |     |            (r9)              |     |
+  #                  |        |     |              |               |     |
+  #                  |        |     V              V               |     |
+  #                  |        | branches/B2-------r11---r12---->   |     |
+  #                  |        |     r7              |____|         |     |
+  #                  |        |                        |           |     |
+  #                  |      merge                      |___        |     |
+  #                  |      (r6)                           |       |     |
+  #                  |        |_________________           |       |     |
+  #                  |                          |        merge     |     |
+  #                  |                          |      (r11-12)    |     |
+  #                  |                          |          |       |     |
+  #                  V                          V          V       |     |
+  #              branches/B1-------------------r10--------r13-->   |     |
+  #                  r4                                            |     |
+  #                   |                                            V     V
+  #                  branches/B1/B/E------------------------------r14---r15->
+  #                  
+  #
+  # The mergeinfo on the complete repos would look like this:
+  #
+  #   Properties on 'branches/B1':
+  #     svn:mergeinfo
+  #       /branches/B2:11-12
+  #       /trunk:6,9
+  #   Properties on 'branches/B1/B/E':
+  #     svn:mergeinfo
+  #       /branches/B2/B/E:11-12
+  #       /trunk/B/E:5-6,8-9
+  #   Properties on 'branches/B2':
+  #     svn:mergeinfo
+  #       /trunk:9
+  #
+  # We will run the partial dump through svndumpfilter using the the
+  # --skip-missing-merge-soruces which should strip out any revisions < 6.
+  # Then we'll load the filtered result into an empty repository.  This
+  # should offset the incoming mergeinfo by -5.  The resulting mergeinfo
+  # should look like this:
+  #
+  #   Properties on 'branches/B1':
+  #     svn:mergeinfo
+  #       /branches/B2:6-7
+  #       /trunk:1,4
+  #   Properties on 'branches/B1/B/E':
+  #     svn:mergeinfo
+  #       /branches/B2/B/E:6-7
+  #       /trunk/B/E:1,3-4
+  #   Properties on 'branches/B2':
+  #     svn:mergeinfo
+  #       /trunk:4
+  partial_dump = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'mergeinfo_included_partial.dump')
+  partial_dump_contents = open(partial_dump).read()
+  filtered_dumpfile2 = filter_and_return_output(partial_dump_contents,
+                                                8192, # Set a sufficiently
+                                                      # large bufsize to
+                                                      # avoid a deadlock
+                                                "include", "trunk", "branches",
+                                                "--skip-missing-merge-sources",
+                                                "--quiet")
+  load_and_verify_dumpstream(sbox, [], [], None, filtered_dumpfile2,
+                             '--ignore-uuid')
+  # Check the resulting mergeinfo.
+  #
+  # Currently this fails with this mergeinfo:
+  #
+  #   Properties on 'branches\B1':
+  #     svn:mergeinfo
+  #       /branches/B2:6-7
+  #       /trunk:4,5-2
+  #                ^^^
+  # What's this?!?!  It's corrupt mergeinfo caused when svnadmin load
+  # maps the end rev of the incoming 5-6, but not the start rev, see '2)'
+  # in http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16
+  # svnadmin_tests.py 20 'don't filter mergeinfo revs from incremental dump'
+  # also covers this problem.  Same problem here---
+  #                                                |
+  #   Properties on 'branches\B1\B\E':             |
+  #     svn:mergeinfo                              |
+  #       /branches/B2/B/E:6-7                     |
+  #       /trunk/B/E:3-4,4-2 <---------------------
+  #   Properties on 'branches\B2':
+  #     svn:mergeinfo
+  #       /trunk:4
+  #
+  # This test is set as XFail until --skip-missing-merge-sources gains its
+  # new filtering functionality.
+  url = sbox.repo_url + "/branches"
+  expected_output = svntest.verify.UnorderedOutput([
+    url + "/B1 - /branches/B2:6-7\n",
+    "/trunk:1,4\n",
+    url + "/B2 - /trunk:4\n",
+    url + "/B1/B/E - /branches/B2/B/E:6-7\n",
+    "/trunk/B/E:1,3-4\n"])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url)
+ 
 ########################################################################
 # Run the tests
 
@@ -239,6 +365,7 @@ test_list = [ None,
               svndumpfilter_loses_mergeinfo,
               dumpfilter_with_targets,
               dumpfilter_with_patterns,
+              filter_mergeinfo_revs_outside_of_dump_stream,
               ]
 
 if __name__ == '__main__':
