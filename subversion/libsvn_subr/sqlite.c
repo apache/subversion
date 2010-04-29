@@ -70,7 +70,7 @@ struct svn_sqlite__db_t
   const char * const *statement_strings;
   int nbr_statements;
   svn_sqlite__stmt_t **prepared_stmts;
-  apr_pool_t *result_pool;
+  apr_pool_t *state_pool;
 };
 
 struct svn_sqlite__stmt_t
@@ -141,7 +141,7 @@ svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
   if (db->prepared_stmts[stmt_idx] == NULL)
     SVN_ERR(svn_sqlite__prepare(&db->prepared_stmts[stmt_idx], db,
                                 db->statement_strings[stmt_idx],
-                                db->result_pool));
+                                db->state_pool));
 
   *stmt = db->prepared_stmts[stmt_idx];
 
@@ -934,7 +934,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   else
     (*db)->nbr_statements = 0;
 
-  (*db)->result_pool = result_pool;
+  (*db)->state_pool = result_pool;
   apr_pool_cleanup_register(result_pool, *db, close_apr, apr_pool_cleanup_null);
 
   return SVN_NO_ERROR;
@@ -943,7 +943,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 svn_error_t *
 svn_sqlite__close(svn_sqlite__db_t *db)
 {
-  apr_status_t result = apr_pool_cleanup_run(db->result_pool, db, close_apr);
+  apr_status_t result = apr_pool_cleanup_run(db->state_pool, db, close_apr);
 
   if (result == APR_SUCCESS)
     return SVN_NO_ERROR;
