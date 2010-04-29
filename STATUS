@@ -183,6 +183,19 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r939375-939376
+   Fix issue #3623, a bug in foreign repository merges that causes properties
+   on merge-added files to be dropped from commits of those merges.
+   Justification:
+     This can actually result in what is arguably a corrupt working copy,
+     one that thinks it is in sync with the repository but actually is not.
+   Notes:
+     r939375 tweaks a test to cover this case.  There's a minor conflict
+     with its merge with a single deleted function call.  (Keep 'theirs'.)
+     r939376 is the fix.  It merges cleanly.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
