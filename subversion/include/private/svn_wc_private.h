@@ -401,7 +401,7 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
                                apr_pool_t *scratch_pool);
 
 /**
- * Set @a *is_deleted to whether @a local_abspath is obstructed, using
+ * Set @a *is_obstructed to whether @a local_abspath is obstructed, using
  * @a wc_ctx.  If @a local_abspath is not in the working copy, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
  * allocations.
@@ -413,7 +413,7 @@ svn_wc__node_is_status_obstructed(svn_boolean_t *is_obstructed,
                                   apr_pool_t *scratch_pool);
 
 /**
- * Set @a *is_deleted to whether @a local_abspath is absent, using
+ * Set @a *is_absent to whether @a local_abspath is absent, using
  * @a wc_ctx.  If @a local_abspath is not in the working copy, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
  * allocations.
