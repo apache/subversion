@@ -336,6 +336,19 @@ svn_wc__node_get_changelist(const char **changelist,
 
 
 /**
+ * Set @a *checksum to the checksum of the pristine text associated
+ * with @a local_abspath if the working copy has recorded such
+ * information, or to @c NULL otherwise.  Allocate the result in @a
+ * result_pool and use @a scratch_pool for temporary allocations.
+ */
+svn_error_t *
+svn_wc__node_get_base_checksum(const svn_checksum_t **checksum,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+
+/**
  * Set @a *url to the corresponding url for @a local_abspath, using @a wc_ctx.
  * If the node is added, return the url it will have in the repository.
  *
