@@ -94,6 +94,7 @@ build_info_for_entry(svn_info_t **info,
   const svn_wc_entry_t *entry;
   const char *lock_token, *lock_owner, *lock_comment;
   apr_time_t lock_date;
+  const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
                                       svn_node_unknown, TRUE, FALSE,
@@ -140,17 +141,27 @@ build_info_for_entry(svn_info_t **info,
       tmpinfo->copyfrom_rev = SVN_INVALID_REVNUM;
     }
 
+  SVN_ERR(svn_wc__node_get_changelist(&tmpinfo->changelist, wc_ctx,
+                                      local_abspath, pool, pool));
+
+  SVN_ERR(svn_wc__node_get_base_checksum(&checksum, wc_ctx, local_abspath,
+                                         pool, pool));
+  if (checksum)
+    tmpinfo->checksum = svn_checksum_to_cstring(checksum, pool);
+
+  SVN_ERR(svn_wc__node_get_depth(&tmpinfo->depth, wc_ctx,
+                                 local_abspath, pool));
+  if (tmpinfo->depth == svn_depth_unknown)
+    tmpinfo->depth = svn_depth_infinity;
+
   /* entry-specific stuff */
   tmpinfo->has_wc_info          = TRUE;
   tmpinfo->schedule             = entry->schedule;
-  tmpinfo->depth                = entry->depth;
   tmpinfo->text_time            = entry->text_time;
-  tmpinfo->checksum             = entry->checksum;
   tmpinfo->conflict_old         = entry->conflict_old;
   tmpinfo->conflict_new         = entry->conflict_new;
   tmpinfo->conflict_wrk         = entry->conflict_wrk;
   tmpinfo->prejfile             = entry->prejfile;
-  tmpinfo->changelist           = entry->changelist;
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
   tmpinfo->size64               = SVN_INVALID_FILESIZE;
 

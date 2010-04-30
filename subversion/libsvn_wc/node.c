@@ -283,6 +283,23 @@ svn_wc__node_get_changelist(const char **changelist,
 }
 
 svn_error_t *
+svn_wc__node_get_base_checksum(const svn_checksum_t **checksum,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  return svn_error_return(svn_wc__db_read_info(NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, checksum,
+                                               NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL,
+                                               wc_ctx->db, local_abspath,
+                                               result_pool, scratch_pool));
+}
+
+svn_error_t *
 svn_wc__internal_node_get_url(const char **url,
                               svn_wc__db_t *db,
                               const char *local_abspath,
