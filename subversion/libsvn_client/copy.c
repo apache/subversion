@@ -1584,32 +1584,58 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
-      const svn_wc_entry_t *ent;
-      const char *dst_abspath;
+      svn_node_kind_t kind;
+      svn_depth_t node_depth;
+      svn_boolean_t is_absent;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_dirent_get_absolute(&dst_abspath, pair->dst_abspath_or_url,
-                                      iterpool));
 
-      SVN_ERR(svn_wc__maybe_get_entry(&ent, ctx->wc_ctx, dst_abspath,
-                                      svn_node_unknown, TRUE, FALSE,
-                                      iterpool, iterpool));
-      if (ent)
+      SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, pair->dst_abspath_or_url,
+                               FALSE, iterpool));
+      if (kind == svn_node_none)
+        continue;
+
+      /* ### TODO(#2843): Rework these error report. Maybe we can
+         ### simplify the conditions? */
+
+      /* Hidden by client exclusion */
+      SVN_ERR(svn_wc__node_get_depth(&node_depth, ctx->wc_ctx, 
+                                     pair->dst_abspath_or_url, iterpool));
+      if (node_depth == svn_depth_exclude)
         {
-          /* TODO(#2843): Rework the error report. Maybe we can simplify the
-             condition. Currently, the first is about hidden items and the
-             second is for missing items. */
-          if (ent->depth == svn_depth_exclude
-              || ent->absent)
-            {
-              return svn_error_createf
-                (SVN_ERR_ENTRY_EXISTS,
-                 NULL, _("'%s' is already under version control"),
-                 svn_dirent_local_style(pair->dst_abspath_or_url, iterpool));
-            }
-          else if ((ent->kind != svn_node_dir) &&
-                   (ent->schedule != svn_wc_schedule_delete)
-                   && ! ent->deleted)
+          return svn_error_createf
+            (SVN_ERR_ENTRY_EXISTS,
+             NULL, _("'%s' is already under version control"),
+             svn_dirent_local_style(pair->dst_abspath_or_url, iterpool));
+        }
+
+      /* Hidden by server exclusion (absent) */
+      SVN_ERR(svn_wc__node_is_status_absent(&is_absent, ctx->wc_ctx,
+                                            pair->dst_abspath_or_url,
+                                            iterpool));
+      if (is_absent)
+        {
+          return svn_error_createf
+            (SVN_ERR_ENTRY_EXISTS,
+             NULL, _("'%s' is already under version control"),
+             svn_dirent_local_style(pair->dst_abspath_or_url, iterpool));
+        }
+
+      /* Working file missing to something other than being scheduled
+         for addition or in "deleted" state. */
+      if (kind != svn_node_dir)
+        {
+          svn_boolean_t is_deleted;
+          svn_boolean_t is_present;
+
+          SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
+                                                 pair->dst_abspath_or_url,
+                                                 iterpool));
+          SVN_ERR(svn_wc__node_is_status_present(&is_present, 
+                                                 ctx->wc_ctx,
+                                                 pair->dst_abspath_or_url,
+                                                 iterpool));
+          if ((! is_deleted) && is_present)
             return svn_error_createf
               (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                _("Entry for '%s' exists (though the working file is missing)"),
