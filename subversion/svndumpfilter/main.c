@@ -191,6 +191,9 @@ struct parse_baton_t
   apr_hash_t *dropped_nodes;
   apr_hash_t *renumber_history;  /* svn_revnum_t -> struct revmap_t */
   svn_revnum_t last_live_revision;
+  /* The oldest original revision in the input stream which was
+     not filtered. */
+  svn_revnum_t oldest_original_rev;
 };
 
 struct revision_baton_t
@@ -392,6 +395,10 @@ output_revision(struct revision_baton_t *rb)
                                rb->header->data, &(rb->header->len)));
       SVN_ERR(svn_stream_write(rb->pb->out_stream,
                                props->data, &(props->len)));
+
+      /* Stash the oldest original rev not dropped. */
+      if (!SVN_IS_VALID_REVNUM(rb->pb->oldest_original_rev))
+        rb->pb->oldest_original_rev = rb->rev_orig;
 
       if (rb->pb->do_renumber_revs)
         {
@@ -670,6 +677,17 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, initial_val->data, subpool));
+
+  /* Issue #3020: If we are skipping missing merge sources, then also
+     filter mergeinfo ranges older than the oldest revision in the dump
+     stream (since they are missing too).  If the oldest rev is r0 or r1,
+     then the filtering would be a no-op, so don't bother. */
+  if (rb->pb->skip_missing_merge_sources && rb->pb->oldest_original_rev > 1)
+    SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
+      &mergeinfo, mergeinfo,
+      rb->pb->oldest_original_rev - 1, 0,
+      FALSE, subpool, subpool));
+
   for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const char *merge_source = svn__apr_hash_index_key(hi);
@@ -993,6 +1011,7 @@ parse_baton_initialize(struct parse_baton_t **pb,
   baton->dropped_nodes = apr_hash_make(pool);
   baton->renumber_history = apr_hash_make(pool);
   baton->last_live_revision = SVN_INVALID_REVNUM;
+  baton->oldest_original_rev = SVN_INVALID_REVNUM;
 
   /* This is non-ideal: We should pass through the version of the
    * input dumpstream.  However, our API currently doesn't allow that.
