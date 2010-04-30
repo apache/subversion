@@ -1038,7 +1038,7 @@ def handleError(error, withTraceback=False):
 if __name__ == '__main__':
   from optparse import OptionParser
 
-  parser = OptionParser("usage: %prog [-w | -i | -r | -n] REV-FILE")
+  parser = OptionParser("usage: %prog [OPTIONS] REV-FILE")
   parser.add_option("-c", "--changed-paths",
                     action="store_true", dest="dumpChanged",
                     help="Dump changed path information", default=False)
