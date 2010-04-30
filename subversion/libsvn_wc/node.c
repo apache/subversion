@@ -930,11 +930,14 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
 }
 
 svn_error_t *
-svn_wc__node_get_lock_token(const char **lock_token,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
+svn_wc__node_get_lock_info(const char **lock_token,
+                           const char **lock_owner,
+                           const char **lock_comment,
+                           apr_time_t *lock_date,
+                           svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   svn_wc__db_lock_t *lock;
 
@@ -945,8 +948,15 @@ svn_wc__node_get_lock_token(const char **lock_token,
                                NULL, &lock,
                                wc_ctx->db, local_abspath,
                                result_pool, scratch_pool));
-  *lock_token = lock ? lock->token : NULL;
-
+  if (lock_token)
+    *lock_token = lock ? lock->token : NULL;
+  if (lock_owner)
+    *lock_owner = lock ? lock->owner : NULL;
+  if (lock_comment)
+    *lock_comment = lock ? lock->comment : NULL;
+  if (lock_date)
+    *lock_date = lock ? lock->date : 0;
+      
   return SVN_NO_ERROR;
 }
 

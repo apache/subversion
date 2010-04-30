@@ -550,16 +550,28 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *base_revision,
                                  apr_pool_t *scratch_pool);
 
 /**
- * Get the lock token of @a local_abspath using @a wc_ctx or NULL
- * if there is no lock.  If @a local_abspath is not in the working
-*  copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
+ * Fetch lock information (if any) for @a local_abspath using @a wc_ctx:
+ *
+ *   Set @a *lock_token to the lock token (or NULL)
+ *   Set @a *lock_owner to the owner of the lock (or NULL)
+ *   Set @a *lock_comment to the comment associated with the lock (or NULL)
+ *   Set @a *lock_date to the timestamp of the lock (or 0)
+ *
+ * Any of the aforementioned return values may be NULL to indicate
+ * that the caller doesn't care about those values.
+ *
+ * If @a local_abspath is not in the working copy, return @c
+ * SVN_ERR_WC_PATH_NOT_FOUND.
  */
 svn_error_t *
-svn_wc__node_get_lock_token(const char **lock_token,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+svn_wc__node_get_lock_info(const char **lock_token,
+                           const char **lock_owner,
+                           const char **lock_comment,
+                           apr_time_t *lock_date,
+                           svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 
 /* Return TRUE in *FILE_EXTERNAL if the node LOCAL_ABSPATH is a file

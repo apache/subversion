@@ -320,10 +320,9 @@ organize_lock_targets(const char **common_parent_url,
                 {
                   const char *lock_token;
 
-                  SVN_ERR(svn_wc__node_get_lock_token(&lock_token,
-                                                      ctx->wc_ctx,
-                                                      abs_path,
-                                                      pool, subpool));
+                  SVN_ERR(svn_wc__node_get_lock_info(&lock_token, NULL, NULL,
+                                                     NULL, ctx->wc_ctx,
+                                                     abs_path, pool, subpool));
                   if (! lock_token)
                     return svn_error_createf
                       (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN, NULL,

@@ -92,6 +92,8 @@ build_info_for_entry(svn_info_t **info,
   svn_revnum_t copyfrom_rev;
   svn_boolean_t is_copy_target;
   const svn_wc_entry_t *entry;
+  const char *lock_token, *lock_owner, *lock_comment;
+  apr_time_t lock_date;
 
   SVN_ERR(svn_wc__get_entry_versioned(&entry, wc_ctx, local_abspath,
                                       svn_node_unknown, TRUE, FALSE,
@@ -159,14 +161,16 @@ build_info_for_entry(svn_info_t **info,
   tmpinfo->working_size64       = entry->working_size;
 
   /* lock stuff */
-  if (entry->lock_token)  /* the token is the critical bit. */
+  SVN_ERR(svn_wc__node_get_lock_info(&lock_token, &lock_owner,
+                                     &lock_comment, &lock_date,
+                                     wc_ctx, local_abspath, pool, pool));
+  if (lock_token)  /* the token is the critical bit. */
     {
       tmpinfo->lock = apr_pcalloc(pool, sizeof(*(tmpinfo->lock)));
-
-      tmpinfo->lock->token      = entry->lock_token;
-      tmpinfo->lock->owner      = entry->lock_owner;
-      tmpinfo->lock->comment    = entry->lock_comment;
-      tmpinfo->lock->creation_date = entry->lock_creation_date;
+      tmpinfo->lock->token         = lock_token;
+      tmpinfo->lock->owner         = lock_owner;
+      tmpinfo->lock->comment       = lock_comment;
+      tmpinfo->lock->creation_date = lock_date;
     }
 
   *info = tmpinfo;
