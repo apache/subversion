@@ -203,8 +203,9 @@ add_lock_token(const char *local_abspath,
   /* I want every lock-token I can get my dirty hands on!
      If this entry is switched, so what.  We will send an irrelevant lock
      token. */
-  SVN_ERR(svn_wc__node_get_lock_token(&lock_token, altb->wc_ctx, local_abspath,
-                                      scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__node_get_lock_info(&lock_token, NULL, NULL, NULL,
+                                     altb->wc_ctx, local_abspath,
+                                     scratch_pool, scratch_pool));
   if (!lock_token)
     return SVN_NO_ERROR;
 
@@ -651,10 +652,10 @@ harvest_committables(apr_hash_t *committables,
      such, note this fact. */
   if (lock_tokens && (state_flags || just_locked))
     {
-      SVN_ERR(svn_wc__node_get_lock_token(&entry_lock_token,
-                                          ctx->wc_ctx, local_abspath,
-                                          apr_hash_pool_get(lock_tokens),
-                                          scratch_pool));
+      SVN_ERR(svn_wc__node_get_lock_info(&entry_lock_token, NULL, NULL, NULL,
+                                         ctx->wc_ctx, local_abspath,
+                                         apr_hash_pool_get(lock_tokens),
+                                         scratch_pool));
       if (entry_lock_token)
         state_flags |= SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN;
     }
