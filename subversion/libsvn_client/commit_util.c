@@ -377,12 +377,10 @@ harvest_committables(apr_hash_t *committables,
   svn_boolean_t text_mod = FALSE, prop_mod = FALSE;
   apr_byte_t state_flags = 0;
   svn_node_kind_t working_kind, db_kind;
-  const char *entry_url, *cf_url = NULL;
+  const char *entry_url, *entry_lock_token, *cf_url = NULL;
   svn_revnum_t cf_rev = entry->copyfrom_rev;
   const svn_string_t *propval;
   svn_boolean_t is_special, is_file_external;
-  apr_pool_t *token_pool = (lock_tokens ? apr_hash_pool_get(lock_tokens)
-                            : NULL);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -392,6 +390,7 @@ harvest_committables(apr_hash_t *committables,
 
   SVN_ERR_ASSERT(entry);
   SVN_ERR_ASSERT((copy_mode && url) || (! copy_mode && ! url));
+  SVN_ERR_ASSERT((just_locked && lock_tokens) || !just_locked);
 
   if (ctx->cancel_func)
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -650,9 +649,15 @@ harvest_committables(apr_hash_t *committables,
   /* If the entry has a lock token and it is already a commit candidate,
      or the caller wants unmodified locked items to be treated as
      such, note this fact. */
-  if (entry->lock_token
-      && (state_flags || just_locked))
-    state_flags |= SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN;
+  if (lock_tokens && (state_flags || just_locked))
+    {
+      SVN_ERR(svn_wc__node_get_lock_token(&entry_lock_token,
+                                          ctx->wc_ctx, local_abspath,
+                                          apr_hash_pool_get(lock_tokens),
+                                          scratch_pool));
+      if (entry_lock_token)
+        state_flags |= SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN;
+    }
 
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
@@ -666,10 +671,10 @@ harvest_committables(apr_hash_t *committables,
                                   cf_url,
                                   cf_rev,
                                   state_flags));
-          if (lock_tokens && entry->lock_token)
-            apr_hash_set(lock_tokens, apr_pstrdup(token_pool, url),
-                         APR_HASH_KEY_STRING,
-                         apr_pstrdup(token_pool, entry->lock_token));
+          if (state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
+            apr_hash_set(lock_tokens,
+                         apr_pstrdup(apr_hash_pool_get(lock_tokens), url),
+                         APR_HASH_KEY_STRING, entry_lock_token);
         }
     }
 
