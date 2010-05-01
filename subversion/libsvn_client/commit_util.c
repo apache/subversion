@@ -379,9 +379,13 @@ harvest_committables(apr_hash_t *committables,
   apr_byte_t state_flags = 0;
   svn_node_kind_t working_kind, db_kind;
   const char *entry_url, *entry_lock_token, *cf_url = NULL;
-  svn_revnum_t cf_rev = entry->copyfrom_rev;
+  const char *entry_copyfrom_url;
+  svn_revnum_t entry_copyfrom_rev;
+  svn_revnum_t cf_rev = SVN_INVALID_REVNUM;
   const svn_string_t *propval;
   svn_boolean_t is_special, is_file_external;
+  svn_boolean_t is_added;
+  svn_boolean_t is_copy_target;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -521,18 +525,26 @@ harvest_committables(apr_hash_t *committables,
   /* Check for the trivial addition case.  Adds can be explicit
      (schedule == add) or implicit (schedule == replace ::= delete+add).
      We also note whether or not this is an add with history here.  */
-  if ((entry->schedule == svn_wc_schedule_add)
-      || (entry->schedule == svn_wc_schedule_replace))
+  SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, local_abspath,
+                                scratch_pool));
+  if (is_added)
     {
-      state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
-      if (entry->copyfrom_url)
+      SVN_ERR(svn_wc__node_get_copyfrom_info(&entry_copyfrom_url,
+                                             &entry_copyfrom_rev,
+                                             &is_copy_target,
+                                             ctx->wc_ctx, local_abspath,
+                                             scratch_pool, scratch_pool));
+      if (is_copy_target)
         {
+          state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
-          cf_url = entry->copyfrom_url;
+          cf_url = entry_copyfrom_url;
+          cf_rev = entry_copyfrom_rev;
           adds_only = FALSE;
         }
-      else
+      else if (!entry_copyfrom_url)
         {
+          state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           adds_only = TRUE;
         }
     }
@@ -989,6 +1001,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
     {
       const svn_wc_entry_t *entry;
       const char *target_abspath;
+      svn_boolean_t is_added;
       svn_error_t *err;
 
       svn_pool_clear(iterpool);
@@ -1028,15 +1041,14 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  _("Entry for '%s' has no URL"),
                                  svn_dirent_local_style(target_abspath, pool));
 
-      /* We have to be especially careful around entries scheduled for
-         addition or replacement. */
-      if ((entry->schedule == svn_wc_schedule_add)
-          || (entry->schedule == svn_wc_schedule_replace))
+      /* Handle an added/replaced node. */
+      SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, target_abspath,
+                                    iterpool));
+      if (is_added)
         {
+          /* This node is added. Is the parent also added? */
           const char *parent_abspath = svn_dirent_dirname(target_abspath,
                                                           iterpool);
-          svn_boolean_t is_added;
-
           err = svn_wc__node_is_added(&is_added, ctx->wc_ctx, parent_abspath,
                                       iterpool);
           if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
