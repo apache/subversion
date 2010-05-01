@@ -149,7 +149,7 @@ print_status_normal_or_xml(void *baton,
   struct status_baton *sb = baton;
 
   if (sb->xml_mode)
-    return svn_cl__print_status_xml(path, status, pool);
+    return svn_cl__print_status_xml(path, status, sb->ctx, pool);
   else
     return svn_cl__print_status(path, status, sb->detailed,
                                 sb->show_last_committed,
@@ -158,6 +158,7 @@ print_status_normal_or_xml(void *baton,
                                 &sb->text_conflicts,
                                 &sb->prop_conflicts,
                                 &sb->tree_conflicts,
+                                sb->ctx,
                                 pool);
 }
 

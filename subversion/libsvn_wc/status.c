@@ -302,6 +302,7 @@ assemble_status(svn_wc_status3_t **status,
   svn_revnum_t changed_rev;
   const char *changed_author;
   apr_time_t changed_date;
+  svn_boolean_t conflicted;
 #ifdef HAVE_SYMLINK
   svn_boolean_t wc_special;
 #endif /* HAVE_SYMLINK */
@@ -393,6 +394,7 @@ assemble_status(svn_wc_status3_t **status,
       stat->lock_owner = NULL;
       stat->lock_comment = NULL;
       stat->lock_creation_date = 0;
+      stat->conflicted = (tree_conflict != NULL);
 
       *status = stat;
       return SVN_NO_ERROR;
@@ -401,7 +403,7 @@ assemble_status(svn_wc_status3_t **status,
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, &revision, NULL, NULL, NULL,
                                &changed_rev, &changed_date, &changed_author,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &conflicted,
                                &lock, db, local_abspath, result_pool,
                                scratch_pool));
 
@@ -641,6 +643,7 @@ assemble_status(svn_wc_status3_t **status,
   stat->lock_owner = lock ? lock->owner : NULL;
   stat->lock_comment = lock ? lock->comment : NULL;
   stat->lock_creation_date = lock ? lock->date : 0;
+  stat->conflicted = conflicted;
 
   *status = stat;
 

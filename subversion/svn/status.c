@@ -34,6 +34,7 @@
 #include "cl.h"
 #include "svn_private_config.h"
 #include "tree-conflicts.h"
+#include "private/svn_wc_private.h"
 
 /* Return the single character representation of STATUS */
 static char
@@ -108,6 +109,7 @@ print_status(const char *path,
              unsigned int *text_conflicts,
              unsigned int *prop_conflicts,
              unsigned int *tree_conflicts,
+             svn_client_ctx_t *ctx,
              apr_pool_t *pool)
 {
   enum svn_wc_status_kind text_status = status->text_status;
@@ -118,20 +120,39 @@ print_status(const char *path,
      'C' in the tree-conflict column, overriding any other status.
      We also print a separate line describing the nature of the tree
      conflict. */
-  if (status->tree_conflict)
+  if (status->conflicted)
     {
       const char *desc;
-      tree_status_code = 'C';
-      svn_cl__get_human_readable_tree_conflict_description(
-        &desc, status->tree_conflict, pool);
-      tree_desc_line = apr_psprintf(pool, "\n      >   %s", desc);
-      (*tree_conflicts)++;
-    }
-  else
-    {
-      if (text_status == svn_wc_status_conflicted)
+      const char *local_abspath;
+      svn_boolean_t text_conflicted = FALSE;
+      svn_boolean_t prop_conflicted = FALSE;
+      svn_boolean_t tree_conflicted = FALSE;
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+      SVN_ERR(svn_wc__node_check_conflicts(&prop_conflicted,
+                                           &text_conflicted,
+                                           &tree_conflicted, ctx->wc_ctx,
+                                           local_abspath, pool, pool));
+
+
+      if (tree_conflicted)
+        {
+          const svn_wc_conflict_description2_t *tree_conflict;
+          svn_wc_conflict_description_t *old_tree_conflict;
+          SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, ctx->wc_ctx,
+                                            local_abspath, pool, pool));
+          old_tree_conflict = svn_wc__cd2_to_cd(tree_conflict, pool);
+
+          tree_status_code = 'C';
+          svn_cl__get_human_readable_tree_conflict_description(
+            &desc, old_tree_conflict, pool);
+          tree_desc_line = apr_psprintf(pool, "\n      >   %s", desc);
+          (*tree_conflicts)++;
+        }
+      else if (text_conflicted)
         (*text_conflicts)++;
-      if (status->prop_status == svn_wc_status_conflicted)
+      else if (prop_conflicted)
         (*prop_conflicts)++;
     }
 
@@ -263,14 +284,22 @@ print_status(const char *path,
 svn_error_t *
 svn_cl__print_status_xml(const char *path,
                          const svn_wc_status3_t *status,
+                         svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
   apr_hash_t *att_hash;
+  const char *local_abspath;
+  svn_boolean_t tree_conflicted = FALSE;
 
   if (status->text_status == svn_wc_status_none
       && status->repos_text_status == svn_wc_status_none)
     return SVN_NO_ERROR;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__node_check_conflicts(NULL, NULL, &tree_conflicted,
+                                       ctx->wc_ctx, local_abspath, pool,
+                                       pool));
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
                         "path", svn_dirent_local_style(path, pool), NULL);
@@ -291,7 +320,7 @@ svn_cl__print_status_xml(const char *path,
   if (status->entry && ! status->entry->copied)
     apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
                  apr_psprintf(pool, "%ld", status->revision));
-  if (status->tree_conflict)
+  if (tree_conflicted)
     apr_hash_set(att_hash, "tree-conflicted", APR_HASH_KEY_STRING,
                  "true");
   svn_xml_make_open_tag_hash(&sb, pool, svn_xml_normal, "wc-status",
@@ -390,15 +419,24 @@ svn_cl__print_status(const char *path,
                      unsigned int *text_conflicts,
                      unsigned int *prop_conflicts,
                      unsigned int *tree_conflicts,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
+  const char *local_abspath;
+  svn_boolean_t tree_conflicted = FALSE;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR(svn_wc__node_check_conflicts(NULL, NULL, &tree_conflicted,
+                                       ctx->wc_ctx, local_abspath, pool,
+                                       pool));
   if (! status
-      || (skip_unrecognized && !(status->entry || status->tree_conflict))
+      || (skip_unrecognized && !(status->entry || tree_conflicted))
       || (status->text_status == svn_wc_status_none
           && status->repos_text_status == svn_wc_status_none))
     return SVN_NO_ERROR;
 
   return print_status(svn_dirent_local_style(path, pool),
                       detailed, show_last_committed, repos_locks, status,
-                      text_conflicts, prop_conflicts, tree_conflicts, pool);
+                      text_conflicts, prop_conflicts, tree_conflicts,
+                      ctx, pool);
 }
