@@ -414,8 +414,51 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
     {
       /* If this was the root of the copy then the URL is immediately
          available... */
+
       if (is_copy_target)
-        *is_copy_target = TRUE;
+        {
+          /* ### At this point we'd just set is_copy_target to TRUE, *but* we
+           * currently want to model wc-1 behaviour.  Particularly, this
+           * affects mixed-revision copies (e.g. wc-wc copy):
+           * - Wc-1 saw only the root of a mixed-revision copy as the copy's
+           *   root.
+           * - Wc-ng returns an explicit original_root_url,
+           *   original_repos_relpath pair for each subtree with mismatching
+           *   revision.
+           * We need to compensate for that: Find out if the parent of
+           * this node is also copied and has a matching copy_from URL. If so,
+           * nevermind the revision, just like wc-1 did, and say this was not
+           * a separate copy target. */
+          const char *parent_abspath;
+          const char *base_name;
+          const char *parent_original_repos_relpath;
+          const char *parent_original_root_url;
+
+          svn_dirent_split(local_abspath, &parent_abspath, &base_name,
+                           scratch_pool);
+
+          /* This is a copied node, so we should never fall off the top of a
+           * working copy here. */
+          SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       &parent_original_repos_relpath,
+                                       &parent_original_root_url, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, db,
+                                       parent_abspath, scratch_pool,
+                                       scratch_pool));
+
+          /* So, count this as a separate copy target only if the URLs
+           * don't match up, or if the parent isn't copied at all. */
+          if (parent_original_root_url == NULL
+              || parent_original_repos_relpath == NULL
+              || strcmp(original_root_url, parent_original_root_url) != 0
+              || strcmp(svn_relpath_join(parent_original_repos_relpath,
+                                         base_name, scratch_pool),
+                        original_repos_relpath) != 0)
+            *is_copy_target = TRUE;
+        }
+
       if (copyfrom_url)
         *copyfrom_url = svn_path_url_add_component2(original_root_url,
                                                     original_repos_relpath,
