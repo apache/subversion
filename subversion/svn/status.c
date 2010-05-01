@@ -124,9 +124,9 @@ print_status(const char *path,
     {
       const char *desc;
       const char *local_abspath;
-      svn_boolean_t text_conflicted = FALSE;
-      svn_boolean_t prop_conflicted = FALSE;
-      svn_boolean_t tree_conflicted = FALSE;
+      svn_boolean_t text_conflicted;
+      svn_boolean_t prop_conflicted;
+      svn_boolean_t tree_conflicted;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
@@ -290,7 +290,7 @@ svn_cl__print_status_xml(const char *path,
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
   apr_hash_t *att_hash;
   const char *local_abspath;
-  svn_boolean_t tree_conflicted = FALSE;
+  svn_boolean_t tree_conflicted;
 
   if (status->text_status == svn_wc_status_none
       && status->repos_text_status == svn_wc_status_none)
@@ -423,7 +423,7 @@ svn_cl__print_status(const char *path,
                      apr_pool_t *pool)
 {
   const char *local_abspath;
-  svn_boolean_t tree_conflicted = FALSE;
+  svn_boolean_t tree_conflicted;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__node_check_conflicts(NULL, NULL, &tree_conflicted,
