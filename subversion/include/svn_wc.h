@@ -3105,14 +3105,15 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
  * *prop_conflicted_p, and @a *tree_conflicted_p.  If one or two of the
  * answers are uninteresting, simply pass @c NULL pointers for those.
  *
- * If @a path is unversioned or does not exist, return
+ * If @a local_abspath is unversioned or does not exist, return
  * #SVN_ERR_WC_PATH_NOT_FOUND.
  *
  * @a adm_access is the admin access baton of the parent directory.
  *
- * If the @a path has corresponding text conflict files (with suffix .mine,
- * .theirs, etc.) that cannot be found, assume that the text conflict has
- * been resolved by the user and return @c FALSE in @a *text_conflicted_p.
+ * If the @a local_abspath has corresponding text conflict files (with suffix
+ * .mine, .theirs, etc.) that cannot be found, assume that the text conflict
+ * has been resolved by the user and return @c FALSE in @a
+ * *text_conflicted_p.
  *
  * Similarly, if a property conflicts file (.prej suffix) is said to exist,
  * but it cannot be found, assume that the property conflicts have been
