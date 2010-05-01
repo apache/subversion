@@ -3108,8 +3108,6 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
  * If @a local_abspath is unversioned or does not exist, return
  * #SVN_ERR_WC_PATH_NOT_FOUND.
  *
- * @a adm_access is the admin access baton of the parent directory.
- *
  * If the @a local_abspath has corresponding text conflict files (with suffix
  * .mine, .theirs, etc.) that cannot be found, assume that the text conflict
  * has been resolved by the user and return @c FALSE in @a
