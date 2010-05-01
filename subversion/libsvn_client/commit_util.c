@@ -375,15 +375,20 @@ harvest_committables(apr_hash_t *committables,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool)
 {
-  svn_boolean_t text_mod = FALSE, prop_mod = FALSE;
+  svn_boolean_t text_mod = FALSE;
+  svn_boolean_t prop_mod = FALSE;
   apr_byte_t state_flags = 0;
-  svn_node_kind_t working_kind, db_kind;
-  const char *entry_url, *entry_lock_token, *cf_url = NULL;
+  svn_node_kind_t working_kind;
+  svn_node_kind_t db_kind;
+  const char *entry_url;
+  const char *entry_lock_token;
+  const char *cf_url = NULL;
   const char *entry_copyfrom_url;
   svn_revnum_t entry_copyfrom_rev;
   svn_revnum_t cf_rev = SVN_INVALID_REVNUM;
   const svn_string_t *propval;
-  svn_boolean_t is_special, is_file_external;
+  svn_boolean_t is_special;
+  svn_boolean_t is_file_external;
   svn_boolean_t is_added;
   svn_boolean_t is_copy_target;
 
