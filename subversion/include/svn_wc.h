@@ -3644,6 +3644,9 @@ typedef struct svn_wc_status3_t
    */
   apr_time_t lock_creation_date;
   
+  /** Set to TRUE if the item is the victim of a text conflict, property
+   * conflict or tree conflict. 
+   * */
   svn_boolean_t conflicted;
 
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
