@@ -398,6 +398,7 @@ svn_cl__print_status(const char *path,
                      unsigned int *text_conflicts,
                      unsigned int *prop_conflicts,
                      unsigned int *tree_conflicts,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
 
@@ -406,6 +407,7 @@ svn_cl__print_status(const char *path,
 svn_error_t *
 svn_cl__print_status_xml(const char *path,
                          const svn_wc_status3_t *status,
+                         svn_client_ctx_t *ctx,
                          apr_pool_t *pool);
 
 

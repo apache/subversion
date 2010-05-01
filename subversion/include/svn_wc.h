@@ -3645,6 +3645,8 @@ typedef struct svn_wc_status3_t
   /** The locally present lock creation date.
    */
   apr_time_t lock_creation_date;
+  
+  svn_boolean_t conflicted;
 
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
 } svn_wc_status3_t;
