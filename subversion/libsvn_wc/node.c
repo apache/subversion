@@ -1062,12 +1062,19 @@ svn_wc__node_check_conflicts(svn_boolean_t *prop_conflicted,
   const apr_array_header_t *conflicts;
   int i;
 
+  if (prop_conflicted)
+    *prop_conflicted = FALSE;
+  if (text_conflicted)
+    *text_conflicted = FALSE;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
   SVN_ERR(svn_wc__db_read_conflicts(&conflicts, wc_ctx->db, local_abspath,
                                     result_pool, scratch_pool));
 
   for (i = 0; i < conflicts->nelts; i++)
     {
-      svn_wc_conflict_description2_t *cd;
+      const svn_wc_conflict_description2_t *cd;
       cd = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description2_t *);
       if (prop_conflicted && cd->kind == svn_wc_conflict_kind_property)
         *prop_conflicted = TRUE;
