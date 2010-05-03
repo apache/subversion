@@ -165,11 +165,12 @@ build_info_for_entry(svn_info_t **info,
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
   tmpinfo->size64               = SVN_INVALID_FILESIZE;
 
-  if (((apr_size_t)entry->working_size) == entry->working_size)
-    tmpinfo->working_size       = (apr_size_t)entry->working_size;
+  SVN_ERR(svn_wc__node_get_translated_size(&tmpinfo->working_size64, wc_ctx,
+                                           local_abspath, pool));
+  if (((apr_size_t)tmpinfo->working_size64) == tmpinfo->working_size64)
+    tmpinfo->working_size       = (apr_size_t)tmpinfo->working_size64;
   else /* >= 4GB */
     tmpinfo->working_size       = SVN_INFO_SIZE_UNKNOWN;
-  tmpinfo->working_size64       = entry->working_size;
 
   /* lock stuff */
   SVN_ERR(svn_wc__node_get_lock_info(&lock_token, &lock_owner,
