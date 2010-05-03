@@ -1272,6 +1272,39 @@ svn_subst_stream_translated(svn_stream_t *stream,
     = apr_palloc(result_pool, sizeof(*baton));
   svn_stream_t *s = svn_stream_create(baton, result_pool);
 
+  /* Make sure EOL_STR and KEYWORDS are allocated in RESULT_POOL
+     so they have the same lifetime as the stream. */
+  if (eol_str)
+    eol_str = apr_pstrdup(result_pool, eol_str);
+  if (keywords)
+    {
+      if (apr_hash_count(keywords) == 0)
+        keywords = NULL;
+      else
+        {
+          /* deep copy the hash to make sure it's allocated in RESULT_POOL */
+          apr_hash_t *copy = apr_hash_make(result_pool);
+          apr_hash_index_t *hi;
+          apr_pool_t *subpool;
+
+          subpool = svn_pool_create(result_pool);
+          for (hi = apr_hash_first(subpool, keywords);
+               hi; hi = apr_hash_next(hi))
+            {
+              const void *key;
+              void *val;
+
+              apr_hash_this(hi, &key, NULL, &val);
+              apr_hash_set(copy, apr_pstrdup(result_pool, key),
+                           APR_HASH_KEY_STRING,
+                           svn_string_dup(val, result_pool));
+            }
+          svn_pool_destroy(subpool);
+
+          keywords = copy;
+        }
+    }
+
   /* Setup the baton fields */
   baton->stream = stream;
   baton->in_baton

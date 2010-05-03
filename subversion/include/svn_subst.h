@@ -302,8 +302,6 @@ svn_subst_translate_stream(svn_stream_t *src_stream,
  * Recognized line endings are: "\n", "\r", and "\r\n".
  *
  * The stream returned is allocated in @a result_pool.
- * @a eol_str and @a keywords are expected to be allocated in a pool
- * with sufficient lifetime for use by the stream.
  *
  * If the inner stream implements resetting via svn_stream_reset(),
  * or marking and seeking via svn_stream_mark() and svn_stream_seek(),
