@@ -394,6 +394,8 @@ assemble_status(svn_wc_status3_t **status,
       stat->lock_owner = NULL;
       stat->lock_comment = NULL;
       stat->lock_creation_date = 0;
+      /* For the case of an incoming delete to a locally deleted path during
+       * an update, we get a tree conflict. */
       stat->conflicted = (tree_conflict != NULL);
 
       *status = stat;
