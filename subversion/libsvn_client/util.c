@@ -159,7 +159,7 @@ wc_path_to_repos_urls(const char **url,
      need a fallback plan. */
   if (*repos_root == NULL)
     SVN_ERR(svn_wc__node_get_repos_info(repos_root, NULL, wc_ctx,
-                                        local_abspath, TRUE,
+                                        local_abspath, TRUE, FALSE,
                                         result_pool, scratch_pool));
 
   return SVN_NO_ERROR;

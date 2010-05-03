@@ -7427,10 +7427,8 @@ remove_noop_subtree_ranges(const char *url1,
 
   SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL,
                                       merge_b->ctx->wc_ctx,
-                                      merge_b->target_abspath,
-                                      FALSE,
-                                      scratch_pool,
-                                      scratch_pool));
+                                      merge_b->target_abspath, FALSE, FALSE,
+                                      scratch_pool, scratch_pool));
 
   /* Set up the log baton. */
   log_gap_baton.merge_b = merge_b;

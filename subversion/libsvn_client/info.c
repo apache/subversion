@@ -103,10 +103,14 @@ build_info_for_entry(svn_info_t **info,
   SVN_ERR(svn_wc_read_kind(&tmpinfo->kind, wc_ctx, local_abspath, TRUE, pool));
   SVN_ERR(svn_wc__node_get_url(&tmpinfo->URL, wc_ctx, local_abspath,
                                pool, pool));
+
+  /* WC-1 returned repos UUID's and root URLs for schedule-deleted
+     stuff, too. */
   SVN_ERR(svn_wc__node_get_repos_info(&tmpinfo->repos_root_URL,
                                       &tmpinfo->repos_UUID,
-                                      wc_ctx, local_abspath, TRUE,
+                                      wc_ctx, local_abspath, TRUE, TRUE,
                                       pool, pool));
+
   SVN_ERR(svn_wc__node_get_changed_info(&tmpinfo->last_changed_rev,
                                         &tmpinfo->last_changed_date,
                                         &tmpinfo->last_changed_author,
@@ -347,7 +351,7 @@ info_found_node_callback(const char *local_abspath,
               SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
                                                   NULL,
                                                   fe_baton->wc_ctx,
-                                                  local_abspath, FALSE,
+                                                  local_abspath, FALSE, FALSE,
                                                   pool, pool));
             }
           else
@@ -411,7 +415,7 @@ crawl_entries(const char *local_abspath,
           SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
                                               NULL,
                                               ctx->wc_ctx,
-                                              local_abspath, FALSE,
+                                              local_abspath, FALSE, FALSE,
                                               pool, pool));
 
           SVN_ERR(receiver(receiver_baton, local_abspath, info, pool));
