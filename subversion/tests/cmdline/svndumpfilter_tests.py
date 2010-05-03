@@ -48,16 +48,28 @@ Item = svntest.wc.StateItem
 
 
 def filter_and_return_output(dump, bufsize=0, *varargs):
-  """Filter the array of lines passed in 'dump' and return the output"""
+  """Filter the array of lines passed in 'dump' and return the output
+  and errput"""
 
   if isinstance(dump, str):
     dump = [ dump ]
 
-  ## TODO: Should we need to handle errput and exit_code?
+  # Does the caller want the stderr?
+  try:
+      varargs.index('-q')
+      expected_errput = None # Stderr with -q or --quiet is a real error!
+  except:
+      try:
+          varargs.index('--quiet')
+          expected_errput = None
+      except:
+          expected_errput = svntest.verify.AnyOutput
+  ## TODO: Should we handle exit_code?
   exit_code, output, errput = svntest.main.run_command_stdin(
-    svntest.main.svndumpfilter_binary, None, bufsize, 1, dump, *varargs)
-
-  return output
+    svntest.main.svndumpfilter_binary, expected_errput, bufsize, 1,
+    dump, *varargs)
+  
+  return output, errput
 
 
 ######################################################################
@@ -76,11 +88,13 @@ def reflect_dropped_renumbered_revs(sbox):
                                    'with_merges.dump')
   dumpfile = open(dumpfile_location).read()
 
-  filtered_out = filter_and_return_output(dumpfile, 0, "include",
-                                          "trunk", "branch1",
-                                          "--skip-missing-merge-sources",
-                                          "--drop-empty-revs",
-                                          "--renumber-revs", "--quiet")
+  filtered_out, filtered_err = filter_and_return_output(
+      dumpfile, 0, "include",
+      "trunk", "branch1",
+      "--skip-missing-merge-sources",
+      "--drop-empty-revs",
+      "--renumber-revs", "--quiet")
+
   load_and_verify_dumpstream(sbox, [], [], None, filtered_out,
                              "--ignore-uuid")
 
@@ -96,11 +110,12 @@ def reflect_dropped_renumbered_revs(sbox):
 
   # Test svndumpfilter with exclude option
   test_create(sbox)
-  filtered_out = filter_and_return_output(dumpfile, 0, "exclude",
-                                          "branch1",
-                                          "--skip-missing-merge-sources",
-                                          "--drop-empty-revs",
-                                          "--renumber-revs", "--quiet")
+  filtered_out, filtered_err = filter_and_return_output(
+      dumpfile, 0, "exclude", "branch1",
+      "--skip-missing-merge-sources",
+      "--drop-empty-revs",
+      "--renumber-revs", "--quiet")
+
   load_and_verify_dumpstream(sbox, [], [], None, filtered_out,
                              "--ignore-uuid")
 
@@ -124,8 +139,9 @@ def svndumpfilter_loses_mergeinfo(sbox):
                                    'with_merges.dump')
   dumpfile = open(dumpfile_location).read()
 
-  filtered_out = filter_and_return_output(dumpfile, 0, "include",
-                                          "trunk", "branch1", "--quiet")
+  filtered_out, filtered_err = filter_and_return_output(dumpfile, 0, "include",
+                                                        "trunk", "branch1",
+                                                        "--quiet")
   load_and_verify_dumpstream(sbox, [], [], None, filtered_out)
 
   # Verify the svn:mergeinfo properties
@@ -141,8 +157,9 @@ def svndumpfilter_loses_mergeinfo(sbox):
 def _simple_dumpfilter_test(sbox, dumpfile, *dumpargs):
   wc_dir = sbox.wc_dir
 
-  filtered_output = filter_and_return_output(dumpfile, 0,
-                                             '--quiet', *dumpargs)
+  filtered_output, filtered_err = filter_and_return_output(dumpfile, 0,
+                                                           '--quiet',
+                                                           *dumpargs)
 
   # Setup our expectations
   load_and_verify_dumpstream(sbox, [], [], None, filtered_output,
@@ -310,13 +327,12 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
                                    'svndumpfilter_tests_data',
                                    'mergeinfo_included_partial.dump')
   partial_dump_contents = open(partial_dump).read()
-  filtered_dumpfile2 = filter_and_return_output(partial_dump_contents,
-                                                8192, # Set a sufficiently
-                                                      # large bufsize to
-                                                      # avoid a deadlock
-                                                "include", "trunk", "branches",
-                                                "--skip-missing-merge-sources",
-                                                "--quiet")
+  filtered_dumpfile2, filtered_out = filter_and_return_output(
+      partial_dump_contents,
+      8192, # Set a sufficiently large bufsize to avoid a deadlock
+      "include", "trunk", "branches",
+      "--skip-missing-merge-sources",
+      "--quiet")
   load_and_verify_dumpstream(sbox, [], [], None, filtered_dumpfile2,
                              '--ignore-uuid')
   # Check the resulting mergeinfo.
