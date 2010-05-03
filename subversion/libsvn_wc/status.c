@@ -359,7 +359,6 @@ assemble_status(svn_wc_status3_t **status,
       stat->locked = FALSE;
       stat->copied = FALSE;
       stat->switched = FALSE;
-      stat->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
       stat->file_external = FALSE;
 
       /* If this path has no entry, but IS present on disk, it's
@@ -638,7 +637,6 @@ assemble_status(svn_wc_status3_t **status,
   stat->ood_last_cmt_date = 0;
   stat->ood_kind = svn_node_none;
   stat->ood_last_cmt_author = NULL;
-  stat->tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
   stat->pristine_text_status = pristine_text_status;
   stat->pristine_prop_status = pristine_prop_status;
   stat->lock_token = lock ? lock->token : NULL;
@@ -810,8 +808,10 @@ send_unversioned_item(const struct walk_status_baton *wb,
   if (is_external)
     status->text_status = svn_wc_status_external;
 
-  /* Don't ever ignore tree conflict victims. */
-  if (status->tree_conflict)
+  /* We can have a tree conflict on an unversioned path, i.e. an incoming
+   * delete on a locally deleted path during an update. Don't ever ignore
+   * those! */
+  if (status->conflicted)
     ignore = FALSE;
 
   /* If we aren't ignoring it, or if it's an externals path, or it has a lock
@@ -1590,7 +1590,7 @@ svn_wc__is_sendable_status(const svn_wc_status3_t *status,
   if ((status->prop_status != svn_wc_status_none)
       && (status->prop_status != svn_wc_status_normal))
     return TRUE;
-  if (status->tree_conflict)
+  if (status->conflicted)
     return TRUE;
 
   /* If it's locked or switched, send it. */
@@ -2498,10 +2498,6 @@ svn_wc_dup_status3(const svn_wc_status3_t *orig_stat,
   if (orig_stat->ood_last_cmt_author)
     new_stat->ood_last_cmt_author
       = apr_pstrdup(pool, orig_stat->ood_last_cmt_author);
-
-  if (orig_stat->tree_conflict)
-    new_stat->tree_conflict
-      = svn_wc__conflict_description_dup(orig_stat->tree_conflict, pool);
 
   if (orig_stat->lock_token)
     new_stat->lock_token

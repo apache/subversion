@@ -553,6 +553,8 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
                        apr_pool_t *scratch_pool)
 {
   const svn_wc_entry_t *entry;
+  const svn_wc_conflict_description2_t *tree_conflict;
+  svn_wc_conflict_description_t *old_tree_conflict;
 
   if (old_status == NULL)
     {
@@ -565,6 +567,12 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
   SVN_ERR(svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, TRUE,
                             svn_node_unknown, FALSE, result_pool,
                             scratch_pool));
+
+  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, wc_ctx->db,
+                                           local_abspath, result_pool,
+                                           scratch_pool));
+  old_tree_conflict = svn_wc__cd2_to_cd(tree_conflict, scratch_pool);
+
   (*status)->entry = entry;
   (*status)->text_status = old_status->text_status;
   (*status)->prop_status = old_status->prop_status;
@@ -579,8 +587,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
   (*status)->ood_last_cmt_date = old_status->ood_last_cmt_date;
   (*status)->ood_kind = old_status->ood_kind;
   (*status)->ood_last_cmt_author = old_status->ood_last_cmt_author;
-  (*status)->tree_conflict =
-    svn_wc__conflict_description_dup(old_status->tree_conflict, result_pool);
+  (*status)->tree_conflict = old_tree_conflict;
   (*status)->file_external = old_status->file_external;
   (*status)->pristine_text_status = old_status->pristine_text_status;
   (*status)->pristine_prop_status = old_status->pristine_prop_status;
