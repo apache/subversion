@@ -349,6 +349,19 @@ svn_wc__node_get_base_checksum(const svn_checksum_t **checksum,
                                apr_pool_t *scratch_pool);
 
 /**
+ * Set @a *translated_size to the recorded size (in bytes) of the
+ * pristine text -- after translation -- associated with @a
+ * local_abspath.  If @a local_abspath isn't a file in the working
+ * copy, set @a *translated_size to SVN_INVALID_FILESIZE.  Use @a
+ * scratch_pool for temporary allocations.
+ */
+svn_error_t *
+svn_wc__node_get_translated_size(svn_filesize_t *translated_size,
+                                 svn_wc_context_t *wc_ctx,
+                                 const char *local_abspath,
+                                 apr_pool_t *scratch_pool);
+
+/**
  * Set @a *url to the corresponding url for @a local_abspath, using @a wc_ctx.
  * If the node is added, return the url it will have in the repository.
  *
