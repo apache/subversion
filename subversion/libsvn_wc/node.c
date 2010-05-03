@@ -668,8 +668,8 @@ svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  /* ### Do we need to consider svn_wc__db_status_obstructed_delete? */
-  *is_deleted = (status == svn_wc__db_status_deleted);
+  *is_deleted = (status == svn_wc__db_status_deleted) ||
+                (status == svn_wc__db_status_obstructed_delete);
 
   return SVN_NO_ERROR;
 }
