@@ -381,7 +381,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   *mergeinfo_cat = NULL;
   SVN_ERR(svn_wc__node_get_repos_info(&repos_root, NULL,
-                                      ctx->wc_ctx, local_abspath, TRUE,
+                                      ctx->wc_ctx, local_abspath, TRUE, FALSE,
                                       scratch_pool, scratch_pool));
   if (!repos_root)
     {
@@ -563,7 +563,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
   SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, local_abspath,
                                 scratch_pool));
   SVN_ERR(svn_wc__node_get_repos_info(&repos_root, NULL,
-                                      ctx->wc_ctx, local_abspath, FALSE,
+                                      ctx->wc_ctx, local_abspath, FALSE, FALSE,
                                       scratch_pool, scratch_pool));
 
   /* We may get an entry with abbreviated information from TARGET_WCPATH's

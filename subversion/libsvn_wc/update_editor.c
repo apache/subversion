@@ -5222,7 +5222,7 @@ make_editor(svn_revnum_t *target_revision,
 
   /* Get the anchor entry, so we can fetch the repository root. */
   SVN_ERR(svn_wc__node_get_repos_info(&repos_root, &repos_uuid, wc_ctx,
-                                      anchor_abspath, TRUE,
+                                      anchor_abspath, TRUE, FALSE,
                                       result_pool, scratch_pool));
 
   /* With WC-NG we need a valid repository root */
@@ -5794,7 +5794,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     /* Find the repository_root via the parent directory, which
        is always versioned before this function is called */
     SVN_ERR(svn_wc__node_get_repos_info(&repos_root, NULL, wc_ctx,
-                                        dir_abspath, TRUE, pool, pool));
+                                        dir_abspath, TRUE, FALSE, pool, pool));
 
     if (copyfrom_url && !svn_uri_is_ancestor(repos_root, copyfrom_url))
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,

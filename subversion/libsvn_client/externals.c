@@ -209,7 +209,7 @@ switch_dir_external(const char *path,
 
           SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL,
                                               ctx->wc_ctx, local_abspath,
-                                              FALSE, pool, subpool));
+                                              FALSE, FALSE, pool, subpool));
           if (repos_root_url)
             {
               /* URLs don't match.  Try to relocate (if necessary) and then

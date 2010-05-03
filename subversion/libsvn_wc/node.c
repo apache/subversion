@@ -106,6 +106,7 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
                             svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
                             svn_boolean_t scan_added,
+                            svn_boolean_t scan_deleted,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
@@ -157,7 +158,9 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
           || status == svn_wc__db_status_obstructed
           || status == svn_wc__db_status_absent
           || status == svn_wc__db_status_excluded
-          || status == svn_wc__db_status_not_present))
+          || status == svn_wc__db_status_not_present
+          || (scan_deleted && (status == svn_wc__db_status_deleted))
+          || (scan_deleted && (status == svn_wc__db_status_obstructed_delete))))
     {
       SVN_ERR(svn_wc__db_scan_base_repos(NULL, repos_root_url, repos_uuid,
                                          wc_ctx->db, local_abspath,
