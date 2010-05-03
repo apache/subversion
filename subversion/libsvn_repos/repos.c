@@ -1110,9 +1110,16 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### Visit http://subversion.apache.org/ for more information."              NL
 ""                                                                           NL
 "[general]"                                                                  NL
-"### These options control access to the repository for unauthenticated"     NL
-"### and authenticated users.  Valid values are \"write\", \"read\","        NL
-"### and \"none\".  The sample settings below are the defaults."             NL
+"### The anon-access and auth-access options control access to the"          NL
+"### repository for unauthenticated (a.k.a. anonymous) users and"            NL
+"### authenticated users, respectively."                                     NL
+"### Valid values are \"write\", \"read\", and \"none\"."                    NL
+"### Setting the value to \"none\" prohibits both reading and writing;"      NL
+"### \"read\" allows read-only access, and \"write\" allows complete "       NL
+"### read/write access to the repository."                                   NL
+"### The sample settings below are the defaults and specify that anonymous"  NL
+"### users have read-only access to the repository, while authenticated"     NL
+"### users have read and write access to the repository."                    NL
 "# anon-access = read"                                                       NL
 "# auth-access = write"                                                      NL
 "### The password-db option controls the location of the password"           NL
