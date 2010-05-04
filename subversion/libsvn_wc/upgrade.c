@@ -1041,11 +1041,11 @@ migrate_props(const char *wcroot_abspath,
 
 /* */
 static svn_error_t *
-bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+bump_to_YYY(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   const char *wcroot_abspath = baton;
 
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_17));
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_YYY));
 
   /* ### or something like this... */
   SVN_ERR(migrate_props(wcroot_abspath, sdb, scratch_pool));
@@ -1145,10 +1145,20 @@ svn_wc__upgrade_sdb(int *result_format,
                                              scratch_pool));
         ++start_format;
 
-#if 0
       case 16:
+        /* Create a '.svn/pristine' directory.  */
+        {
+          const char *pristine_dir = svn_wc__adm_child(wcroot_abspath,
+                                                       SVN_WC__ADM_PRISTINE,
+                                                       scratch_pool);
+          SVN_ERR(svn_io_dir_make(pristine_dir, APR_OS_DEFAULT, scratch_pool));
+        }
+        ++start_format;
+
+#if 0
+      case YYY-1:
         /* Move the properties into the database.  */
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_17,
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_YYY,
                                              (void *)wcroot_abspath,
                                              scratch_pool));
         ++start_format;
