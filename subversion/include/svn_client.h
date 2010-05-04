@@ -4833,10 +4833,11 @@ svn_client_info(const char *path_or_url,
  */
 
 /**
- * The callback invoked by svn_client_patch().  For each patch target,
- * call this function for @a local_abspath, and return the @a patch_abspath
- * and @a reject_abspath.  Neither @a patch_abspath or @a reject_abspath are
- * guaranteed to exist (depending on the @a remove_tempfiles parameter for
+ * The callback invoked by svn_client_patch().  Each invocation describes
+ * a patch application for @a local_abspath, and provides the @a patch_abspath
+ * to the temporary patch file and @a reject_abspath to the temporary reject
+ * file.  Neither @a patch_abspath or @a reject_abspath are guaranteed to
+ * exist (depending on the @a remove_tempfiles parameter for
  * svn_client_patch() ).
  *
  * The const char * parameters may be allocated in @a scratch_pool which
@@ -4889,9 +4890,9 @@ typedef svn_error_t *(*svn_client_patch_func_t)(
  * If @a ignore_whitespaces is TRUE, allow patches to be applied if they
  * only differ from the target by whitespaces.
  *
- * If @a remove_tempfiles is TRUE, the temporary patch and reject files will
- * be removed upon pool cleanup, otherwise, the caller should take ownership
- * of these files.
+ * If @a remove_tempfiles is TRUE, the temporary patch and reject file
+ * lifetimes will be managed internally, otherwise, the caller should take
+ * ownership of these files.
  *
  * If @a patch_func is non-NULL, invoke @a patch_func with @a patch_baton
  * for each patch target processed.
