@@ -4853,7 +4853,7 @@ typedef svn_error_t *(*svn_client_patch_func_t)(
 
 /**
  * Apply a unidiff patch that's located at absolute path
- * @a abs_patch_path to the working copy at @a local_abspath.
+ * @a patch_abspath to the working copy at @a local_abspath.
  *
  * This function makes a best-effort attempt at applying the patch.
  * It might skip patch targets which cannot be patched (e.g. targets
@@ -4907,7 +4907,7 @@ typedef svn_error_t *(*svn_client_patch_func_t)(
  * @since New in 1.7.
  */
 svn_error_t *
-svn_client_patch(const char *abs_patch_path,
+svn_client_patch(const char *patch_abspath,
                  const char *local_abspath,
                  svn_boolean_t dry_run,
                  int strip_count,
