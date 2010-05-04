@@ -4833,6 +4833,25 @@ svn_client_info(const char *path_or_url,
  */
 
 /**
+ * The callback invoked by svn_client_patch().  For each patch target,
+ * call this function for @a local_abspath, and return the @a patch_abspath
+ * and @a reject_abspath.  Neither @a patch_abspath or @a reject_abspath are
+ * guaranteed to exist (depending on the @a remove_tempfiles parameter for
+ * svn_client_patch() ).
+ *
+ * The const char * parameters may be allocated in @a scratch_pool which
+ * will be cleared after each invocation.
+ *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_client_patch_func_t)(
+  void *baton,
+  const char *local_abspath,
+  const char *patch_abspath,
+  const char *reject_abspath,
+  apr_pool_t *scratch_pool);
+
+/**
  * Apply a unidiff patch that's located at absolute path
  * @a abs_patch_path to the working copy at @a local_abspath.
  *
@@ -4867,27 +4886,15 @@ svn_client_info(const char *path_or_url,
  * the @a include_patterns are applied first, i.e. the @a exclude_patterns
  * are applied to all targets which matched one of the @a include_patterns.
  *
- * If @a patched_tempfiles is not NULL, return in @a *patched_tempfiles
- * a mapping {target path -> path to temporary file containing patched result}
- * for all patched targets which were neither skipped nor excluded via
- * @a include_patterns or @a exclude_patterns.
- * Note that if all hunks were rejected, the patched result will look just
- * like the target file, unmodified.
- * If @a reject_tempfiles is not NULL, return in @a *reject_tempfiles
- * a mapping {target path -> path to temporary file containing rejected hunks}
- * Both @a *patched_tempfiles and @a *reject_tempfiles are allocated in
- * @a result_pool, and the key (target path) used is the path as parsed
- * from the patch, but in canonicalized form. The value (path to temporary
- * file) is an absolute path, also in canonicalized form.
- * The temporary files are closed, and it is the caller's responsibility
- * to remove them when they are no longer needed.
- * Using @a patched_tempfiles and @a reject_tempfiles in combination with
- * @a dry_run = TRUE makes it possible to generate a preview of the result
- * of the patching process, e.g. for display purposes, without actually
- * modifying the working copy.
- *
  * If @a ignore_whitespaces is TRUE, allow patches to be applied if they
  * only differ from the target by whitespaces.
+ *
+ * If @a remove_tempfiles is TRUE, the temporary patch and reject files will
+ * be removed upon pool cleanup, otherwise, the caller should take ownership
+ * of these files.
+ *
+ * If @a patch_func is non-NULL, invoke @a patch_func with @a patch_baton
+ * for each patch target processed.
  *
  * If @a ctx->notify_func2 is non-NULL, invoke @a ctx->notify_func2 with
  * @a ctx->notify_baton2 as patching progresses.
@@ -4907,9 +4914,10 @@ svn_client_patch(const char *abs_patch_path,
                  svn_boolean_t reverse,
                  const apr_array_header_t *include_patterns,
                  const apr_array_header_t *exclude_patterns,
-                 apr_hash_t **patched_tempfiles,
-                 apr_hash_t **reject_tempfiles,
                  svn_boolean_t ignore_whitespaces,
+                 svn_boolean_t remove_tempfiles,
+                 svn_client_patch_func_t patch_func,
+                 void *patch_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool);

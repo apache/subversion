@@ -246,6 +246,39 @@ check_patch_result(const char *path, const char **expected_lines, const char *eo
   return SVN_NO_ERROR;
 }
 
+/* A baton for the patch collection function. */
+struct patch_collection_baton
+{
+  apr_hash_t *patched_tempfiles;
+  apr_hash_t *reject_tempfiles;
+  apr_pool_t *state_pool;
+};
+
+/* Collect all the patch information we're interested in. */
+static svn_error_t *
+patch_collection_func(void *baton,
+                      const char *local_abspath,
+                      const char *patch_abspath,
+                      const char *reject_abspath,
+                      apr_pool_t *scratch_pool)
+{
+  struct patch_collection_baton *pcb = baton;
+
+  if (patch_abspath)
+    apr_hash_set(pcb->patched_tempfiles,
+                 apr_pstrdup(pcb->state_pool, local_abspath),
+                 APR_HASH_KEY_STRING,
+                 apr_pstrdup(pcb->state_pool, patch_abspath));
+
+  if (reject_abspath)
+    apr_hash_set(pcb->reject_tempfiles,
+                 apr_pstrdup(pcb->state_pool, local_abspath),
+                 APR_HASH_KEY_STRING,
+                 apr_pstrdup(pcb->state_pool, reject_abspath));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 test_patch(const svn_test_opts_t *opts,
            apr_pool_t *pool)
@@ -254,8 +287,6 @@ test_patch(const svn_test_opts_t *opts,
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
-  apr_hash_t *patched_tempfiles;
-  apr_hash_t *reject_tempfiles;
   const char *repos_url;
   const char *wc_path;
   const char *cwd;
@@ -264,6 +295,7 @@ test_patch(const svn_test_opts_t *opts,
   svn_opt_revision_t peg_rev;
   svn_client_ctx_t *ctx;
   apr_file_t *patch_file;
+  struct patch_collection_baton pcb;
   const char *patch_file_path;
   const char *patched_tempfile_path;
   const char *reject_tempfile_path;
@@ -348,20 +380,23 @@ test_patch(const svn_test_opts_t *opts,
   SVN_ERR(svn_io_file_flush_to_disk(patch_file, pool));
 
   /* Apply the patch. */
+  pcb.patched_tempfiles = apr_hash_make(pool);
+  pcb.reject_tempfiles = apr_hash_make(pool);
+  pcb.state_pool = pool;
   SVN_ERR(svn_client_patch(patch_file_path, wc_path, FALSE, 0, FALSE,
-                           NULL, NULL, &patched_tempfiles, &reject_tempfiles,
-                           FALSE, ctx, pool, pool));
+                           NULL, NULL, FALSE, TRUE, patch_collection_func,
+                           &pcb, ctx, pool, pool));
   SVN_ERR(svn_io_file_close(patch_file, pool));
 
-  SVN_ERR_ASSERT(apr_hash_count(patched_tempfiles) == 1);
+  SVN_ERR_ASSERT(apr_hash_count(pcb.patched_tempfiles) == 1);
   key = "A/D/gamma";
-  patched_tempfile_path = apr_hash_get(patched_tempfiles, key,
+  patched_tempfile_path = apr_hash_get(pcb.patched_tempfiles, key,
                                        APR_HASH_KEY_STRING);
   SVN_ERR(check_patch_result(patched_tempfile_path, expected_gamma, "\n",
                              EXPECTED_GAMMA_LINES, pool));
-  SVN_ERR_ASSERT(apr_hash_count(reject_tempfiles) == 1);
+  SVN_ERR_ASSERT(apr_hash_count(pcb.reject_tempfiles) == 1);
   key = "A/D/gamma";
-  reject_tempfile_path = apr_hash_get(reject_tempfiles, key,
+  reject_tempfile_path = apr_hash_get(pcb.reject_tempfiles, key,
                                      APR_HASH_KEY_STRING);
   SVN_ERR(check_patch_result(reject_tempfile_path, expected_gamma_reject,
                              APR_EOL_STR, EXPECTED_GAMMA_REJECT_LINES, pool));
