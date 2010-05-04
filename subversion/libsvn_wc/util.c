@@ -569,9 +569,9 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
                             scratch_pool));
 
   SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, wc_ctx->db,
-                                           local_abspath, result_pool,
+                                           local_abspath, scratch_pool,
                                            scratch_pool));
-  old_tree_conflict = svn_wc__cd2_to_cd(tree_conflict, scratch_pool);
+  old_tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
 
   (*status)->entry = entry;
   (*status)->text_status = old_status->text_status;
