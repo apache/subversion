@@ -6521,14 +6521,17 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  /* If a working node exists, the node will not be hidden. */
+  /* If a working node exists, the node will not be hidden.
+
+     Note: this can ONLY be an add/copy-here/move-here. It is not possible
+     to delete a "hidden" node.  */
   if (have_row)
     {
       *hidden = FALSE;
       return SVN_NO_ERROR;
     }
 
-  /* Now check the BASE node's presence and depth. */
+  /* Now check the BASE node's status.  */
   SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, db, local_abspath,
