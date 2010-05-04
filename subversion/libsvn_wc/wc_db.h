@@ -866,6 +866,16 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **pristine_md5_checksum,
                             apr_pool_t *scratch_pool);
 
 
+/* Remove the pristine text with SHA-1 checksum SHA1_CHECKSUM from the
+ * pristine store, iff it is not referenced by any of the (other) WC DB
+ * tables. */
+svn_error_t *
+svn_wc__db_pristine_remove(svn_wc__db_t *db,
+                           const char *wri_abspath,
+                           const svn_checksum_t *sha1_checksum,
+                           apr_pool_t *scratch_pool);
+
+
 /* ### check for presence, according to the given mode (on how hard we
    ### should examine things)
 */

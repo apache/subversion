@@ -289,6 +289,23 @@ SELECT md5_checksum
 FROM pristine
 WHERE checksum = ?1
 
+-- STMT_SELECT_ANY_PRISTINE_REFERENCE
+SELECT 1 FROM base_node
+  WHERE checksum = ?1 OR checksum = ?2
+UNION ALL
+SELECT 1 FROM working_node
+  WHERE checksum = ?1 OR checksum = ?2
+UNION ALL
+SELECT 1 FROM actual_node
+  WHERE older_checksum = ?1 OR older_checksum = ?2
+    OR  left_checksum  = ?1 OR left_checksum  = ?2
+    OR  right_checksum = ?1 OR right_checksum = ?2
+LIMIT 1
+
+-- STMT_DELETE_PRISTINE
+DELETE FROM PRISTINE
+WHERE checksum = ?1
+
 -- STMT_SELECT_ACTUAL_CONFLICT_VICTIMS
 SELECT local_relpath
 FROM actual_node

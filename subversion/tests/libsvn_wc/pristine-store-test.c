@@ -183,6 +183,19 @@ pristine_write_read(const svn_test_opts_t *opts,
     SVN_TEST_ASSERT(same);
   }
 
+  /* Trivially test the "remove if unreferenced" API: it's not referenced
+     so we should be able to remove it. */
+  {
+    svn_error_t *err;
+    svn_stream_t *data_read_back;
+
+    SVN_ERR(svn_wc__db_pristine_remove(db, wc_abspath, data_sha1, pool));
+    err = svn_wc__db_pristine_read(&data_read_back, db, wc_abspath,
+                                   data_sha1, pool, pool);
+    SVN_TEST_ASSERT(err != NULL);
+    svn_error_clear(err);
+  }
+
   return SVN_NO_ERROR;
 }
 
