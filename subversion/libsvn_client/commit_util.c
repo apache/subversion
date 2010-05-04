@@ -383,14 +383,11 @@ harvest_committables(apr_hash_t *committables,
   const char *entry_url;
   const char *entry_lock_token;
   const char *cf_url = NULL;
-  const char *entry_copyfrom_url;
-  svn_revnum_t entry_copyfrom_rev;
   svn_revnum_t cf_rev = SVN_INVALID_REVNUM;
   const svn_string_t *propval;
   svn_boolean_t is_special;
   svn_boolean_t is_file_external;
   svn_boolean_t is_added;
-  svn_boolean_t is_copy_target;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -519,12 +516,42 @@ harvest_committables(apr_hash_t *committables,
      - The entry is scheduled for deletion or replacement, which case
        we need to send a delete either way.
   */
-  if ((! adds_only)
-      && ((entry->deleted && entry->schedule == svn_wc_schedule_normal)
-          || (entry->schedule == svn_wc_schedule_delete)
-          || (entry->schedule == svn_wc_schedule_replace)))
+  if (! adds_only)
     {
-      state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
+      svn_boolean_t is_replaced;
+      svn_boolean_t is_status_deleted;
+      svn_boolean_t is_present;
+
+      /* ### There is room for optimization here, but let's keep it plain
+       * while this function is in flux. */
+      SVN_ERR(svn_wc__node_is_status_deleted(&is_status_deleted, ctx->wc_ctx,
+                                             local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__node_is_replaced(&is_replaced, ctx->wc_ctx,
+                                       local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__node_is_status_present(&is_present, ctx->wc_ctx,
+                                             local_abspath, scratch_pool));
+
+      /* ### Catch a mixed-rev copy that replaces. The mixed-rev children are
+       * each regarded as op-roots of the replace and result in currently
+       * unexpected behaviour. Model wc-1 behaviour, seeing only one copy
+       * target at the root of a mixed-rev copy, via
+       * svn_wc__node_get_copyfrom_info(). */
+      if (is_replaced)
+        {
+          const char *is_copy;
+          svn_boolean_t is_copy_target;
+          /* ### TODO: sensibly align this call of get_copyfrom_info() with
+           * the same call below (when checking added nodes). */
+          SVN_ERR(svn_wc__node_get_copyfrom_info(&is_copy, NULL,
+                                                 &is_copy_target, ctx->wc_ctx,
+                                                 local_abspath, scratch_pool,
+                                                 scratch_pool));
+          if (is_copy && ! is_copy_target)
+            is_replaced = FALSE;
+        }
+
+      if (is_status_deleted || is_replaced || ! is_present)
+        state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
     }
 
   /* Check for the trivial addition case.  Adds can be explicit
@@ -534,8 +561,12 @@ harvest_committables(apr_hash_t *committables,
                                 scratch_pool));
   if (is_added)
     {
-      SVN_ERR(svn_wc__node_get_copyfrom_info(&entry_copyfrom_url,
-                                             &entry_copyfrom_rev,
+      svn_boolean_t is_copy_target;
+      const char *copyfrom_url;
+      svn_revnum_t copyfrom_rev;
+
+      SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url,
+                                             &copyfrom_rev,
                                              &is_copy_target,
                                              ctx->wc_ctx, local_abspath,
                                              scratch_pool, scratch_pool));
@@ -543,11 +574,11 @@ harvest_committables(apr_hash_t *committables,
         {
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
-          cf_url = entry_copyfrom_url;
-          cf_rev = entry_copyfrom_rev;
+          cf_url = copyfrom_url;
+          cf_rev = copyfrom_rev;
           adds_only = FALSE;
         }
-      else if (!entry_copyfrom_url)
+      else if (!copyfrom_url)
         {
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           adds_only = TRUE;
