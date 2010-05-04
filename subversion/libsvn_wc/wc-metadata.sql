@@ -584,8 +584,8 @@ PRAGMA user_version = 16;
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 17 introduces new handling for conflict information.  */
--- format: 17
+/* Format YYY introduces new handling for conflict information.  */
+-- format: YYY
 
 
 /* ------------------------------------------------------------------------- */
