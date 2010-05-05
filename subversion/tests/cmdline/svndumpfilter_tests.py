@@ -309,17 +309,19 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   # We will run the partial dump through svndumpfilter using the the
   # --skip-missing-merge-soruces which should strip out any revisions < 6.
   # Then we'll load the filtered result into an empty repository.  This
-  # should offset the incoming mergeinfo by -5.  The resulting mergeinfo
-  # should look like this:
+  # should offset the incoming mergeinfo by -5.  In addition, any mergeinfo
+  # revisions that are adjusted to r1 should be removed because that implies
+  # a merge of -r0:1, which is impossible.  The resulting mergeinfo should
+  # look like this:
   #
   #   Properties on 'branches/B1':
   #     svn:mergeinfo
   #       /branches/B2:6-7
-  #       /trunk:1,4
+  #       /trunk:4
   #   Properties on 'branches/B1/B/E':
   #     svn:mergeinfo
   #       /branches/B2/B/E:6-7
-  #       /trunk/B/E:1,3-4
+  #       /trunk/B/E:3-4
   #   Properties on 'branches/B2':
   #     svn:mergeinfo
   #       /trunk:4
@@ -339,34 +341,24 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   #
   # Currently this fails with this mergeinfo:
   #
-  #   Properties on 'branches\B1':
-  #     svn:mergeinfo
-  #       /branches/B2:6-7
-  #       /trunk:4,5-2
-  #                ^^^
-  # What's this?!?!  It's corrupt mergeinfo caused when svnadmin load
-  # maps the end rev of the incoming 5-6, but not the start rev, see '2)'
-  # in http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16
-  # svnadmin_tests.py 20 'don't filter mergeinfo revs from incremental dump'
-  # also covers this problem.  Same problem here---
-  #                                                |
-  #   Properties on 'branches\B1\B\E':             |
-  #     svn:mergeinfo                              |
-  #       /branches/B2/B/E:6-7                     |
-  #       /trunk/B/E:3-4,4-2 <---------------------
-  #   Properties on 'branches\B2':
-  #     svn:mergeinfo
-  #       /trunk:4
-  #
-  # This test is set as XFail until --skip-missing-merge-sources gains its
-  # new filtering functionality.
+  #  Properties on 'branches\B1':
+  #    svn:mergeinfo
+  #      /branches/B2:6-7
+  #      /trunk:4,6 <-- r6 should be mapped to r1 and then removed.
+  #  Properties on 'branches\B2':
+  #    svn:mergeinfo
+  #      /trunk:4
+  #  Properties on 'branches\B1\B\E':
+  #    svn:mergeinfo
+  #      /branches/B2/B/E:6-7
+  #      /trunk/B/E:3-4,6 <-- r6 should be mapped to r1 and then removed.
   url = sbox.repo_url + "/branches"
   expected_output = svntest.verify.UnorderedOutput([
     url + "/B1 - /branches/B2:6-7\n",
-    "/trunk:1,4\n",
+    "/trunk:4\n",
     url + "/B2 - /trunk:4\n",
     url + "/B1/B/E - /branches/B2/B/E:6-7\n",
-    "/trunk/B/E:1,3-4\n"])
+    "/trunk/B/E:3-4\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
