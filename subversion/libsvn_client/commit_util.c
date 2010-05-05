@@ -1156,15 +1156,18 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
   const svn_wc_entry_t *entry;
   svn_client__copy_pair_t *pair =
     *(svn_client__copy_pair_t **)item;
-  const char *src_abspath;
+  const char *url;
 
   /* Read the entry for this SRC. */
-  /* ### TODO: Is this conversion really necessary? */
-  SVN_ERR(svn_dirent_get_absolute(&src_abspath,
-                                  pair->src_abspath_or_url, pool));
-  SVN_ERR(svn_wc__get_entry_versioned(&entry, btn->ctx->wc_ctx, src_abspath,
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(pair->src_abspath_or_url));
+  SVN_ERR(svn_wc__get_entry_versioned(&entry, btn->ctx->wc_ctx,
+                                      pair->src_abspath_or_url,
                                       svn_node_unknown, FALSE, FALSE,
                                       pool, pool));
+
+  /* The node's URL is used as the copyfrom URL */
+  SVN_ERR(svn_wc__node_get_url(&url, btn->ctx->wc_ctx, pair->src_abspath_or_url,
+                               pool, pool));
 
   /* Handle this SRC.  Because add_committable() uses the hash pool to
      allocate the new commit_item, we can safely use the iterpool here. */
