@@ -359,16 +359,27 @@ decode_file_offset(svn_filesize_t *val,
                    const unsigned char *p,
                    const unsigned char *end)
 {
+  svn_filesize_t temp = 0;
+
   if (p + MAX_ENCODED_INT_LEN < end)
     end = p + MAX_ENCODED_INT_LEN;
   /* Decode bytes until we're done.  */
-  *val = 0;
   while (p < end)
     {
-      *val = (*val << 7) | (*p & 0x7f);
-      if (((*p++ >> 7) & 0x1) == 0)
+      /* Don't use svn_filesize_t here, because this might be 64 bits
+       * on 32 bit targets. Optimizing compilers may or may not be
+       * able to reduce that to the effective code below. */
+      unsigned int c = *p++;
+
+      temp = (temp << 7) | (c & 0x7f);
+      if (c < 0x80)
+      {
+        *val = temp;
         return p;
+      }
     }
+
+  *val = temp;
   return NULL;
 }
 
@@ -379,16 +390,24 @@ decode_size(apr_size_t *val,
             const unsigned char *p,
             const unsigned char *end)
 {
+  apr_size_t temp = 0;
+
   if (p + MAX_ENCODED_INT_LEN < end)
     end = p + MAX_ENCODED_INT_LEN;
   /* Decode bytes until we're done.  */
-  *val = 0;
   while (p < end)
     {
-      *val = (*val << 7) | (*p & 0x7f);
-      if (((*p++ >> 7) & 0x1) == 0)
+      apr_size_t c = *p++;
+
+      temp = (temp << 7) | (c & 0x7f);
+      if (c < 0x80)
+      {
+        *val = temp;
         return p;
+      }
     }
+
+  *val = temp;
   return NULL;
 }
 
@@ -453,27 +472,33 @@ decode_instruction(svn_txdelta_op_t *op,
                    const unsigned char *p,
                    const unsigned char *end)
 {
+  apr_size_t c;
+  apr_size_t action;
+
   if (p == end)
     return NULL;
 
+  /* We need this more than once */
+  c = *p++;
+
   /* Decode the instruction selector.  */
-  switch ((*p >> 6) & 0x3)
-    {
-    case 0x0: op->action_code = svn_txdelta_source; break;
-    case 0x1: op->action_code = svn_txdelta_target; break;
-    case 0x2: op->action_code = svn_txdelta_new; break;
-    case 0x3: return NULL;
-    }
+  action = (c >> 6) & 0x3;
+  if (action >= 0x3)
+      return NULL;
+
+  /* This relies on enum svn_delta_action values to match and never to be
+     redefined. */
+  op->action_code = (enum svn_delta_action)(action);
 
   /* Decode the length and offset.  */
-  op->length = *p++ & 0x3f;
+  op->length = c & 0x3f;
   if (op->length == 0)
     {
       p = decode_size(&op->length, p, end);
       if (p == NULL)
         return NULL;
     }
-  if (op->action_code != svn_txdelta_new)
+  if (action != svn_txdelta_new)
     {
       p = decode_size(&op->offset, p, end);
       if (p == NULL)

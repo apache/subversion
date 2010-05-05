@@ -355,9 +355,9 @@ stream_readline(svn_stringbuf_t **stringbuf,
 
       /* Read into STR up to and including the next EOL sequence. */
       match = eol_str;
+      numbytes = 1;
       while (*match)
         {
-          numbytes = 1;
           SVN_ERR(svn_stream_read(stream, &c, &numbytes));
           if (numbytes != 1)
             {
