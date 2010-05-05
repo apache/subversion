@@ -562,11 +562,11 @@ harvest_committables(apr_hash_t *committables,
   if (is_added)
     {
       svn_boolean_t is_copy_target;
-      const char *copyfrom_url;
-      svn_revnum_t copyfrom_rev;
+      const char *node_copyfrom_url;
+      svn_revnum_t node_copyfrom_rev;
 
-      SVN_ERR(svn_wc__node_get_copyfrom_info(&copyfrom_url,
-                                             &copyfrom_rev,
+      SVN_ERR(svn_wc__node_get_copyfrom_info(&node_copyfrom_url,
+                                             &node_copyfrom_rev,
                                              &is_copy_target,
                                              ctx->wc_ctx, local_abspath,
                                              scratch_pool, scratch_pool));
@@ -574,11 +574,11 @@ harvest_committables(apr_hash_t *committables,
         {
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
-          cf_url = copyfrom_url;
-          cf_rev = copyfrom_rev;
+          cf_url = node_copyfrom_url;
+          cf_rev = node_copyfrom_rev;
           adds_only = FALSE;
         }
-      else if (!copyfrom_url)
+      else if (!node_copyfrom_url)
         {
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           adds_only = TRUE;
