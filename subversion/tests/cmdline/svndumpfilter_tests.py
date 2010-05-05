@@ -338,20 +338,6 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   load_and_verify_dumpstream(sbox, [], [], None, filtered_dumpfile2,
                              '--ignore-uuid')
   # Check the resulting mergeinfo.
-  #
-  # Currently this fails with this mergeinfo:
-  #
-  #  Properties on 'branches\B1':
-  #    svn:mergeinfo
-  #      /branches/B2:6-7
-  #      /trunk:4,6 <-- r6 should be mapped to r1 and then removed.
-  #  Properties on 'branches\B2':
-  #    svn:mergeinfo
-  #      /trunk:4
-  #  Properties on 'branches\B1\B\E':
-  #    svn:mergeinfo
-  #      /branches/B2/B/E:6-7
-  #      /trunk/B/E:3-4,6 <-- r6 should be mapped to r1 and then removed.
   url = sbox.repo_url + "/branches"
   expected_output = svntest.verify.UnorderedOutput([
     url + "/B1 - /branches/B2:6-7\n",
@@ -373,7 +359,7 @@ test_list = [ None,
               svndumpfilter_loses_mergeinfo,
               dumpfilter_with_targets,
               dumpfilter_with_patterns,
-              XFail(filter_mergeinfo_revs_outside_of_dump_stream),
+              filter_mergeinfo_revs_outside_of_dump_stream,
               ]
 
 if __name__ == '__main__':
