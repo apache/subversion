@@ -316,8 +316,17 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
       apr_hash_set(final_mergeinfo, merge_source,
                    APR_HASH_KEY_STRING, rangelist);
     }
-
   SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
+
+  /* Mergeinfo revision sources for r0 and r1 are invalid; you can't merge r0
+     or r1.  However, svndumpfilter can be abused to produce r1 merge source
+     revs.  So if we encounter any, then strip them out, no need to put them
+     into the load target. */
+  SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(&final_mergeinfo,
+                                                    final_mergeinfo,
+                                                    1, 0, FALSE,
+                                                    subpool, subpool));
+
   SVN_ERR(svn_mergeinfo_to_string(final_val, final_mergeinfo, pool));
   svn_pool_destroy(subpool);
 
