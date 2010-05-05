@@ -1123,11 +1123,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
       /* Handle our TARGET. */
       /* Make sure this isn't inside a working copy subtree that is
        * marked as tree-conflicted. */
-      SVN_ERR(bail_on_tree_conflicted_ancestor(ctx->wc_ctx,
-                                               (entry->kind == svn_node_dir
-                                                ? target_abspath
-                                                : svn_dirent_dirname(
-                                                    target_abspath, iterpool)),
+      SVN_ERR(bail_on_tree_conflicted_ancestor(ctx->wc_ctx, target_abspath,
                                                iterpool));
 
       SVN_ERR(harvest_committables(*committables, *lock_tokens, target_abspath,
