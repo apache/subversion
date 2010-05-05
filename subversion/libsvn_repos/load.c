@@ -61,6 +61,10 @@ struct parse_baton
      (svn_revnum_t *) in the loaded repository.  The hash and its
      contents are allocated in POOL. */
   apr_hash_t *rev_map;
+
+  /* The oldest old revision loaded from the dump stream.  If no revisions
+     have been loaded yet, this is set to SVN_INVALID_REVNUM. */
+  svn_revnum_t oldest_old_rev;
 };
 
 struct revision_baton
@@ -295,18 +299,41 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
                                                    svn_merge_range_t *);
           rev_from_map = apr_hash_get(pb->rev_map, &range->start,
                                       sizeof(svn_revnum_t));
-          /* If we can't remap the start revision then don't even bother
-             trying to remap the end revision.  It's possible we might
-             actually succeed at the latter, which can result in invalid
-             mergeinfo with a start rev > end red.  If that gets into the
-             repository then a world of bustage breaks loose anytime that
-             bogus mergeinfo is parsed.  See
-             http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16.
-             */
           if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
-            range->start = *rev_from_map;
+            {
+              range->start = *rev_from_map;
+            }
+          else if (range->start == pb->oldest_old_rev - 1)
+            {
+              /* Since the start revision of svn_merge_range_t are not
+                 inclusive there is one possible valid start revision that
+                 won't be found in the PB->REV_MAP mapping of load stream
+                 revsions to loaded revisions: The revision immediately
+                 preceeding the oldest revision from the load stream.
+                 This is a valid revision for mergeinfo, but not a valid
+                 copy from revision (which PB->REV_MAP also maps for) so it
+                 will never be in the mapping.
+
+                 If that is what we have here, then find the mapping for the
+                 oldest rev from the load stream and subtract 1 to get the
+                 renumbered, non-inclusive, start revision. */
+              rev_from_map = apr_hash_get(pb->rev_map, &pb->oldest_old_rev,
+                                          sizeof(svn_revnum_t));
+              if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
+                range->start = *rev_from_map - 1;
+            }
           else
-            continue;
+            {
+              /* If we can't remap the start revision then don't even bother
+                 trying to remap the end revision.  It's possible we might
+                 actually succeed at the latter, which can result in invalid
+                 mergeinfo with a start rev > end rev.  If that gets into the
+                 repository then a world of bustage breaks loose anytime that
+                 bogus mergeinfo is parsed.  See
+                 http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16.
+                 */
+              continue;
+            }
 
           rev_from_map = apr_hash_get(pb->rev_map, &range->end,
                                       sizeof(svn_revnum_t));
@@ -1379,6 +1406,10 @@ close_revision(void *baton)
         return svn_error_return(err);
     }
 
+  /* Stash the oldest "old" revision committed from the load stream. */
+  if (!SVN_IS_VALID_REVNUM(pb->oldest_old_rev))
+    pb->oldest_old_rev = *old_rev;
+
   /* Run post-commit hook, if so commanded.  */
   if (pb->use_post_commit_hook)
     {
@@ -1460,6 +1491,7 @@ svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **callbacks,
   pb->parent_dir = parent_dir;
   pb->pool = pool;
   pb->rev_map = apr_hash_make(pool);
+  pb->oldest_old_rev = SVN_INVALID_REVNUM;
 
   *callbacks = parser;
   *parse_baton = pb;
