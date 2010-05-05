@@ -1563,10 +1563,6 @@ do_item_commit(void **dir_baton,
       if (err)
         return svn_error_return(fixup_out_of_date_error(path, kind, err));
 
-      SVN_ERR(svn_wc_transmit_prop_deltas2(
-                ctx->wc_ctx, local_abspath, editor,
-                (kind == svn_node_dir) ? *dir_baton : file_baton, pool));
-
       /* Make any additional client -> repository prop changes. */
       if (item->outgoing_prop_changes)
         {
