@@ -1036,7 +1036,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
   for (i = 0; i < targets->nelts; ++i)
     {
       const svn_wc_entry_t *entry;
-      const char *target_abspath;
+      const char *url, *target_abspath;
       svn_boolean_t is_added;
       svn_error_t *err;
 
@@ -1072,7 +1072,9 @@ svn_client__harvest_committables(apr_hash_t **committables,
         }
       SVN_ERR(err);
 
-      if (! entry->url)
+      SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, target_abspath,
+                                   iterpool, iterpool));
+      if (! url)
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("Entry for '%s' has no URL"),
                                  svn_dirent_local_style(target_abspath, pool));
