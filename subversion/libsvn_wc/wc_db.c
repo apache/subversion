@@ -2567,10 +2567,7 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
-  const char *pristine_abspath;
-  svn_error_t *err;
-  const svn_checksum_t *md5_checksum;
-  svn_boolean_t is_referenced = FALSE;
+  svn_boolean_t is_referenced;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
@@ -2580,15 +2577,9 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  err = get_pristine_fname(&pristine_abspath, pdh, sha1_checksum,
-#ifndef SVN__SKIP_SUBDIR
-                           TRUE /* create_subdir */,
-#endif
-                           scratch_pool, scratch_pool);
-  SVN_ERR(err);
-
   /* Find whether the SHA-1 (or the MD-5) is referenced; set IS_REFERENCED. */
   {
+    const svn_checksum_t *md5_checksum;
     svn_sqlite__stmt_t *stmt;
 
     /* ### Transitional: look for references to its MD-5 as well. */
@@ -2608,6 +2599,8 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
   if (! is_referenced)
     {
       svn_sqlite__stmt_t *stmt;
+      svn_error_t *err;
+      const char *pristine_abspath;
 
       /* Remove the DB row. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
@@ -2616,13 +2609,14 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__update(NULL, stmt));
 
       /* Remove the file */
+      err = get_pristine_fname(&pristine_abspath, pdh, sha1_checksum,
+#ifndef SVN__SKIP_SUBDIR
+                               TRUE /* create_subdir */,
+#endif
+                               scratch_pool, scratch_pool);
+      SVN_ERR(err);
       SVN_ERR(svn_io_remove_file2(pristine_abspath, TRUE, scratch_pool));
-    SVN_DBG(("Was referenced: '%s'\n",
-           svn_checksum_to_cstring_display(md5_checksum, scratch_pool)));
     }
-  else
-    SVN_DBG(("Not referenced: '%s'\n",
-           svn_checksum_to_cstring_display(md5_checksum, scratch_pool)));
 
   return SVN_NO_ERROR;
 }
