@@ -191,8 +191,8 @@ struct parse_baton_t
   apr_hash_t *dropped_nodes;
   apr_hash_t *renumber_history;  /* svn_revnum_t -> struct revmap_t */
   svn_revnum_t last_live_revision;
-  /* The oldest original revision in the input stream which was
-     not filtered. */
+  /* The oldest original revision, greater than r0, in the input
+     stream which was not filtered. */
   svn_revnum_t oldest_original_rev;
 };
 
@@ -397,7 +397,8 @@ output_revision(struct revision_baton_t *rb)
                                props->data, &(props->len)));
 
       /* Stash the oldest original rev not dropped. */
-      if (!SVN_IS_VALID_REVNUM(rb->pb->oldest_original_rev))
+      if (rb->rev_orig > 0
+          && !SVN_IS_VALID_REVNUM(rb->pb->oldest_original_rev))
         rb->pb->oldest_original_rev = rb->rev_orig;
 
       if (rb->pb->do_renumber_revs)
