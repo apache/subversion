@@ -1173,7 +1173,7 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
      allocate the new commit_item, we can safely use the iterpool here. */
   return harvest_committables(btn->committables, NULL,
                               pair->src_abspath_or_url,
-                              pair->dst_abspath_or_url, entry->url, entry,
+                              pair->dst_abspath_or_url, url, entry,
                               NULL, FALSE, TRUE, svn_depth_infinity,
                               FALSE, NULL, btn->ctx, pool);
 }
