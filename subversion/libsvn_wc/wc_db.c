@@ -7467,6 +7467,45 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
 
 
 svn_error_t *
+svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
+                             svn_wc__db_t *db,
+                             const char *wri_abspath,
+                             const svn_checksum_t *md5_checksum,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+  SVN_ERR_ASSERT(md5_checksum->kind == svn_checksum_md5);
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_PRISTINE_SHA1_CHECKSUM));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, md5_checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_DB_ERROR, svn_sqlite__reset(stmt),
+                             _("The pristine text with MD5 checksum '%s' was "
+                               "not found"),
+                             svn_checksum_to_cstring_display(md5_checksum,
+                                                             scratch_pool));
+
+  SVN_ERR(svn_sqlite__column_checksum(sha1_checksum, stmt, 0, result_pool));
+  SVN_ERR_ASSERT((*sha1_checksum)->kind == svn_checksum_sha1);
+
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
+
+
+svn_error_t *
 svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
                                      const char *local_abspath,
                                      apr_pool_t *scratch_pool)
