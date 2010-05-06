@@ -562,7 +562,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
       return SVN_NO_ERROR;
     }
 
-  status = apr_pcalloc(result_pool, sizeof(*status));
+  *status = apr_pcalloc(result_pool, sizeof(**status));
 
   SVN_ERR(svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, TRUE,
                             svn_node_unknown, FALSE, result_pool,
