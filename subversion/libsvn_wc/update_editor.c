@@ -5768,7 +5768,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   const char *tmp_text_base_abspath;
   svn_checksum_t *base_checksum;
   struct last_change_info *last_change = NULL;
-  svn_error_t *err;
   const char *source_abspath = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -5804,6 +5803,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
      ### This block can be removed once the new pristine store is in place */
   {
+    svn_error_t *err;
     svn_wc__db_status_t status;
 
     err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -5896,17 +5896,13 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                        pool));
   }
 
-  /* Categorize the base properties. */
+  /* Update LAST_CHANGE to reflect the entry props in NEW_BASE_PROPS, and
+     filter NEW_BASE_PROPS so it contains only regular props. */
   {
     apr_array_header_t *regular_props;
     apr_array_header_t *entry_props;
-    apr_array_header_t *prop_array;
 
-    /* Diff an empty prop has against the new base props gives us an array
-       of all props. */
-    SVN_ERR(svn_prop_diffs(&prop_array, new_base_props,
-                           apr_hash_make(pool), pool));
-    SVN_ERR(svn_categorize_props(prop_array,
+    SVN_ERR(svn_categorize_props(svn_prop_hash_to_array(new_base_props, pool),
                                  &entry_props, NULL, &regular_props,
                                  pool));
 
