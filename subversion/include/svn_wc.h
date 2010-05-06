@@ -7592,6 +7592,9 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
  * If it is versioned but hidden and @a show_hidden is @c FALSE, also return @c
  * svn_node_none.
  *
+ * ### What does hidden really mean?
+ * ### What happens when show_hidden is TRUE?
+ *
  * If the node's info is incomplete, it may or may not have a known node kind
  * set. If the kind is not known (yet), set @a kind to @c svn_node_unknown.
  * Otherwise return the node kind even though the node is marked incomplete.
