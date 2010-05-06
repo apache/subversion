@@ -97,55 +97,6 @@ sync_file_flags(svn_wc__db_t *db,
 }
 
 
-/* Ripped from the old loggy cp_and_translate operation.
-
-   SOURCE_ABSPATH specifies the source which is translated for
-   installation as the working file.
-
-   DEST_ABSPATH specifies the destination of the copy (typically the
-   working file).
-
-   VERSIONED_ABSPATH specifies the versioned file holding the properties
-   which specify the translation parameters.  */
-static svn_error_t *
-copy_and_translate(svn_wc__db_t *db,
-                   const char *source_abspath,
-                   const char *dest_abspath,
-                   const char *versioned_abspath,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
-                   apr_pool_t *scratch_pool)
-{
-  svn_subst_eol_style_t style;
-  const char *eol;
-  apr_hash_t *keywords;
-  svn_boolean_t special;
-
-  SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, versioned_abspath,
-                                scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__get_keywords(&keywords, db, versioned_abspath, NULL,
-                               scratch_pool, scratch_pool));
-
-  /* ### eventually, we will not be called for special files...  */
-  SVN_ERR(svn_wc__get_special(&special, db, versioned_abspath,
-                              scratch_pool));
-
-  SVN_ERR(svn_subst_copy_and_translate4(
-            source_abspath, dest_abspath,
-            eol, TRUE,
-            keywords, TRUE,
-            special,
-            NULL, NULL,  /* ### cancel  */
-            scratch_pool));
-
-  /* ### this is a problem. DEST_ABSPATH is not necessarily versioned.  */
-  /* ### actually, for the single caller: it *is* versioned.  */
-  SVN_ERR(sync_file_flags(db, dest_abspath, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* If SOURCE_ABSPATH is present, then move it to DEST_ABSPATH. Ignore any
    ENOENT message for a missing source, which may indicate the move has
    already been performed.  */
@@ -350,61 +301,19 @@ run_revert(svn_wc__db_t *db,
       if (reinstall_working)
         {
           svn_boolean_t use_commit_times;
-          apr_finfo_t finfo;
-
-          /* ### this should use OP_FILE_INSTALL.  */
-
-          /* Copy from the text base to the working file. The working file
-             specifies the params for translation.  */
-          SVN_ERR(copy_and_translate(db, text_base_path, local_abspath,
-                                     local_abspath,
-                                     cancel_func, cancel_baton,
-                                     scratch_pool));
+          const svn_skel_t *wi_file_install;
 
           use_commit_times = svn_skel__parse_int(arg1->next->next->next,
                                                  scratch_pool) != 0;
 
-          /* Possibly set the timestamp to last-commit-time, rather
-             than the 'now' time that already exists. */
-          if (use_commit_times)
-            {
-              apr_time_t changed_date;
-
-              /* Note: OP_REVERT is not used for a pure addition. There will
-                 always be a BASE node.  */
-              SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
-                                               NULL, NULL, NULL,
-                                               NULL, &changed_date, NULL,
-                                               NULL, NULL, NULL,
-                                               NULL, NULL, NULL,
-                                               db, local_abspath,
-                                               scratch_pool, scratch_pool));
-              if (changed_date)
-                {
-                  svn_boolean_t special;
-
-                  /* ### skip this test once db_kind_symlink is in use.  */
-                  SVN_ERR(svn_wc__get_special(&special, db, local_abspath,
-                                              scratch_pool));
-                  if (!special)
-                    SVN_ERR(svn_io_set_file_affected_time(changed_date,
-                                                          local_abspath,
-                                                          scratch_pool));
-                }
-            }
-
-          /* loggy_set_entry_timestamp_from_wc()  */
-          SVN_ERR(svn_io_file_affected_time(&tmp_entry.text_time,
-                                            local_abspath,
-                                            scratch_pool));
-          modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
-
-          /* loggy_set_entry_working_size_from_wc()  */
-          SVN_ERR(svn_io_stat(&finfo, local_abspath,
-                              APR_FINFO_MIN | APR_FINFO_LINK,
-                              scratch_pool));
-          tmp_entry.working_size = finfo.size;
-          modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE;
+          SVN_ERR(svn_wc__wq_build_file_install(&wi_file_install,
+                                                db, local_abspath,
+                                                NULL /* source_abspath */,
+                                                use_commit_times,
+                                                TRUE /* record_fileinfo */,
+                                                scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_wq_add(db, local_abspath, wi_file_install,
+                                    scratch_pool));
         }
     }
   else if (kind == svn_wc__db_kind_symlink)
