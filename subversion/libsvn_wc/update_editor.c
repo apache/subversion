@@ -4261,11 +4261,6 @@ install_text_base(svn_wc__db_t *db,
  * this file, and removed after a successful run of the generated log
  * commands.
  *
- * NEW_TEXT_BASE_MD5_CHECKSUM and NEW_TEXT_BASE_SHA1_CHECKSUM are the
- * checksums that were computed as we constructed the (new) text base.
- * (That was performed during a txdelta apply, or during a copy of an
- * add-with-history.)
- *
  * Set *CONTENT_STATE to the state of the contents after the
  * installation.
  *
@@ -4278,8 +4273,6 @@ merge_file(svn_boolean_t *install_pristine,
            const svn_wc_entry_t *entry,
            struct file_baton *fb,
            const char *new_text_base_tmp_abspath,
-           const svn_checksum_t *new_text_base_md5_checksum,
-           const svn_checksum_t *new_text_base_sha1_checksum,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = fb->edit_baton;
@@ -4604,10 +4597,9 @@ merge_file(svn_boolean_t *install_pristine,
   /* Deal with installation of the new textbase, if appropriate. */
   if (new_text_base_tmp_abspath)
     {
-      /* Move the temp text-base file to its final destination and install
-       * its checksum in the entry.  FB->text_base_path is the appropriate
-       * path: the "revert-base" path if the node is replaced, else the
-       * usual text-base path. */
+      /* Move the temp text-base file to its final destination.
+       * FB->text_base_path is the appropriate path: the "revert-base" path
+       * if the node is replaced, else the usual text-base path. */
       SVN_ERR(install_text_base(eb->db, pb->local_abspath,
                                 new_text_base_tmp_abspath,
                                 fb->text_base_abspath,
@@ -4870,8 +4862,7 @@ close_file(void *file_baton,
   /* Do the hard work. This will queue some additional work.  */
   SVN_ERR(merge_file(&install_pristine, &install_from,
                      &content_state, entry,
-                     fb, new_text_base_abspath, new_text_base_md5_checksum,
-                     new_text_base_sha1_checksum, pool));
+                     fb, new_text_base_abspath, pool));
 
   /* Insert/replace the BASE node with all of the new metadata.  */
   {
