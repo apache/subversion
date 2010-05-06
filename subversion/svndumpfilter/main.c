@@ -680,13 +680,21 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, initial_val->data, subpool));
 
   /* Issue #3020: If we are skipping missing merge sources, then also
-     filter mergeinfo ranges older than the oldest revision in the dump
-     stream (since they are missing too).  If the oldest rev is r0 or r1,
-     then the filtering would be a no-op, so don't bother. */
-  if (rb->pb->skip_missing_merge_sources && rb->pb->oldest_original_rev > 1)
+     filter mergeinfo ranges as old or older than the oldest revision in the
+     dump stream.  Those older than the oldest obviously refer to history
+     outside of the dump stream.  The oldest rev itself is present in the
+     dump, but cannot be a valid merge source revision since it is the
+     start of all history.  E.g. if we dump -r100:400 then dumpfilter the
+     result with --skip-missing-merge-sources, any mergeinfo with revision
+     100 implies a change of -r99:100, but r99 is part of the history we
+     want filtered.  This is analogous to how r1 is always meaningless as
+     a merge source revision.
+
+     If the oldest rev is r0 then there is nothing to filter. */
+  if (rb->pb->skip_missing_merge_sources && rb->pb->oldest_original_rev > 0)
     SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(
       &mergeinfo, mergeinfo,
-      rb->pb->oldest_original_rev - 1, 0,
+      rb->pb->oldest_original_rev, 0,
       FALSE, subpool, subpool));
 
   for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
