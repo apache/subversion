@@ -135,15 +135,24 @@ alloc_entry(apr_pool_t *pool)
 svn_error_t *
 svn_wc__entry_is_hidden(svn_boolean_t *hidden, const svn_wc_entry_t *entry)
 {
-  /* Note: the condition below may allow certain combinations that the
-     rest of the system will never reach (eg. absent/add).
-
-     In English, the condition is: "the entry is not present, and I haven't
+  /* In English, the condition is: "the entry is not present, and I haven't
      scheduled something over the top of it."  */
-  *hidden = ((entry->deleted
-           || entry->absent
-           || entry->depth == svn_depth_exclude)
-          && entry->schedule != svn_wc_schedule_add);
+  if (entry->deleted
+      || entry->absent
+      || entry->depth == svn_depth_exclude)
+    {
+      /* These kinds of nodes cannot be marked for deletion (which also
+         means no "replace" either).  */
+      SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_add
+                     || entry->schedule == svn_wc_schedule_normal);
+
+      /* Hidden if something hasn't been added over it.
+
+         ### is this even possible with absent or excluded nodes?  */
+      *hidden = entry->schedule != svn_wc_schedule_add;
+    }
+  else
+    *hidden = FALSE;
 
   return SVN_NO_ERROR;
 }
