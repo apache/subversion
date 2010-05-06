@@ -852,18 +852,38 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool);
 
 
-/* Set *PRISTINE_MD5_CHECKSUM to the MD-5 checksum of a pristine text
-   identified by its SHA-1 checksum PRISTINE_SHA1_CHECKSUM. Return an error
+/* Set *MD5_CHECKSUM to the MD-5 checksum of a pristine text
+   identified by its SHA-1 checksum SHA1_CHECKSUM. Return an error
    if the pristine text does not exist or its MD5 checksum is not found.
 
-   Allocate *PRISTINE_MD5_CHECKSUM in RESULT_POOL. */
+   Allocate *MD5_CHECKSUM in RESULT_POOL. */
 svn_error_t *
-svn_wc__db_pristine_get_md5(const svn_checksum_t **pristine_md5_checksum,
+svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
                             svn_wc__db_t *db,
                             const char *wri_abspath,
-                            const svn_checksum_t *pristine_sha1_checksum,
+                            const svn_checksum_t *sha1_checksum,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
+
+
+/* Set *SHA1_CHECKSUM to the SHA-1 checksum of a pristine text
+   identified by its MD-5 checksum MD5_CHECKSUM. Return an error
+   if the pristine text does not exist or its SHA-1 checksum is not found.
+
+   Note: The MD-5 checksum is not strictly guaranteed to be unique in the
+   database table, although duplicates are expected to be extremely rare.
+   ### TODO: The behaviour is currently unspecified if the MD-5 checksum is
+   not unique. Need to see whether this function is going to stay in use,
+   and, if so, address this somehow.
+
+   Allocate *SHA1_CHECKSUM in RESULT_POOL. */
+svn_error_t *
+svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
+                             svn_wc__db_t *db,
+                             const char *wri_abspath,
+                             const svn_checksum_t *md5_checksum,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 
 /* Remove the pristine text with SHA-1 checksum SHA1_CHECKSUM from the

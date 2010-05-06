@@ -289,6 +289,11 @@ SELECT md5_checksum
 FROM pristine
 WHERE checksum = ?1
 
+-- STMT_SELECT_PRISTINE_SHA1_CHECKSUM
+SELECT checksum
+FROM pristine
+WHERE md5_checksum = ?1
+
 -- STMT_SELECT_ANY_PRISTINE_REFERENCE
 SELECT 1 FROM base_node
   WHERE checksum = ?1 OR checksum = ?2
