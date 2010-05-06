@@ -55,7 +55,7 @@ StatusCallback::callback(void *baton,
                          apr_pool_t *pool)
 {
   if (baton)
-    return ((StatusCallback *)baton)->doStatus(local_abspath, status);
+    return ((StatusCallback *)baton)->doStatus(local_abspath, status, pool);
 
   return SVN_NO_ERROR;
 }
@@ -65,7 +65,8 @@ StatusCallback::callback(void *baton,
  */
 svn_error_t *
 StatusCallback::doStatus(const char *local_abspath,
-                         const svn_wc_status3_t *status)
+                         const svn_wc_status3_t *status,
+                         apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -89,7 +90,7 @@ StatusCallback::doStatus(const char *local_abspath,
         POP_AND_RETURN(SVN_NO_ERROR);
     }
 
-  jobject jStatus = CreateJ::Status(local_abspath, status);
+  jobject jStatus = CreateJ::Status(wc_ctx, local_abspath, status, pool);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 
@@ -99,4 +100,10 @@ StatusCallback::doStatus(const char *local_abspath,
 
   env->PopLocalFrame(NULL);
   return SVN_NO_ERROR;
+}
+
+void
+StatusCallback::setWcCtx(svn_wc_context_t *wc_ctx_in)
+{
+  this->wc_ctx = wc_ctx_in;
 }

@@ -54,7 +54,8 @@ class CreateJ
   Lock(const svn_lock_t *lock);
 
   static jobject
-  Status(const char *local_abspath, const svn_wc_status3_t *status);
+  Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
+         const svn_wc_status3_t *status, apr_pool_t *pool);
 
   static jobject
   NotifyInformation(const svn_wc_notify_t *notify);
