@@ -353,7 +353,136 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
- 
+
+  # Blow away the current repos, create an empty one in its place, and
+  # then load this skeleton repos into the empty target:
+  #
+  #   Projects/       (Added r1)
+  #     README        (Added r2)
+  #     Project-X     (Added r3)
+  #     Project-Y     (Added r4)
+  #     Project-Z     (Added r5)
+  #     docs/         (Added r6)
+  #       README      (Added r6).
+  test_create(sbox)
+  skeleton_dumpfile = open(os.path.join(os.path.dirname(sys.argv[0]),
+                                        'svnadmin_tests_data',
+                                        'skeleton_repos.dump')).read()
+  load_and_verify_dumpstream(sbox, [], [], None, skeleton_dumpfile,
+                             '--ignore-uuid')
+  partial_dump2 = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'mergeinfo_included_partial.dump')
+  partial_dump_contents2 = open(partial_dump2).read()
+  # Now use the partial dump file we used above, but this time exclude
+  # the B2 branch.  Load the filtered dump into the /Projects/Project-X
+  # subtree of the skeleton repos.
+  filtered_dumpfile2, filtered_err = filter_and_return_output(
+      partial_dump_contents2,
+      8192, # Set a sufficiently large bufsize to avoid a deadlock
+      "exclude", "branches/B2",
+      "--skip-missing-merge-sources",
+      "--drop-empty-revs",
+      "--renumber-revs")
+
+  # Starting with the same expectation we had when loading into an empty
+  # repository, adjust each revision by +6 to account for the six revision
+  # already present in the target repos, that gives:
+  #
+  #   Properties on 'branches/B1':
+  #     svn:mergeinfo
+  #       /branches/B2:12-13
+  #       /trunk:10
+  #   Properties on 'branches/B1/B/E':
+  #     svn:mergeinfo
+  #       /branches/B2/B/E:12-13
+  #       /trunk/B/E:9-10
+  #   Properties on 'branches/B2':
+  #     svn:mergeinfo
+  #       /trunk:10
+  #
+  # ...But /branches/B2 has been filtered out, so all references to
+  # that branch should be gone, leaving:
+  # 
+  #   Properties on 'branches/B1':
+  #     svn:mergeinfo
+  #       /trunk:10
+  #   Properties on 'branches/B1/B/E':
+  #     svn:mergeinfo
+  #       /trunk/B/E:9-10
+  #
+  # ...But wait, there's more!  Because we use the '--drop-empty-revs'
+  # option, when filtering out 'branches/B2' all the revisions that effect
+  # only that branch should be dropped (i.e. original revs r7, r11, and r12).
+  # In and of itself that has no effect, but we also specifiy the
+  # '--renumber-revs' option, so when r7 is dropped, r8 should map to r7,
+  # r9 to r8, and r10 to r9 (and so on).  That should finally leave us with:
+  #
+  #   Properties on 'branches/B1':
+  #     svn:mergeinfo
+  #       /trunk:9
+  #   Properties on 'branches/B1/B/E':
+  #     svn:mergeinfo
+  #       /trunk/B/E:8-9
+  #
+  # This test currently fails with this mergeinfo:
+  #
+  # 
+  #
+  #
+  # Check that all the blather above really happens.  First does
+  # svndumpfilter report what we expect to stderr?
+  expected_err = [
+      "Excluding (and dropping empty revisions for) prefix patterns:\n",
+      "   '/branches/B2'\n",
+      "\n",
+      "Revision 6 committed as 6.\n",
+      "Revision 7 skipped.\n",        # <-- DROP!
+      "Revision 8 committed as 7.\n",
+      "Revision 9 committed as 8.\n",
+      "Revision 10 committed as 9.\n",
+      "Revision 11 skipped.\n",       # <-- DROP!
+      "Revision 12 skipped.\n",       # <-- DROP!
+      "Revision 13 committed as 10.\n",
+      "Revision 14 committed as 11.\n",
+      "Revision 15 committed as 12.\n",
+      "\n",
+      "Dropped 3 revisions.\n",
+      "\n",
+      "Revisions renumbered as follows:\n",
+      "   15 => 12\n",
+      "   14 => 11\n",
+      "   13 => 10\n",
+      "   12 => (dropped)\n", # <-- DROP!
+      "   11 => (dropped)\n", # <-- DROP!
+      "   10 => 9\n",
+      "   9 => 8\n",
+      "   8 => 7\n",
+      "   7 => (dropped)\n",  # <-- DROP!
+      "   6 => 6\n",
+      "\n",
+      "Dropped 2 nodes:\n",
+      "   '/branches/B2'\n",
+      "   '/branches/B2/D/H/chi'\n",
+      "\n"]
+  svntest.verify.verify_outputs(
+      "Actual svndumpfilter stderr does not agree with expected stderr",
+      None, filtered_err, None, expected_err)
+
+  # Now actually load the filtered dump into the skeleton repository
+  # and then check the resulting mergeinfo.
+  load_and_verify_dumpstream(sbox, [], [], None, filtered_dumpfile2,
+                             '--parent-dir', '/Projects/Project-X',
+                             '--ignore-uuid')
+
+  url = sbox.repo_url + "/Projects/Project-X/branches"
+  expected_output = svntest.verify.UnorderedOutput([
+    url + "/B1 - /Projects/Project-X/trunk:9\n",
+    url + "/B1/B/E - /Projects/Project-X/trunk/B/E:8-9\n"])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url)
+   
 ########################################################################
 # Run the tests
 
