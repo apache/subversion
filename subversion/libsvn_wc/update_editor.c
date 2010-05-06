@@ -5767,9 +5767,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
   const char *tmp_text_base_abspath;
   svn_checksum_t *base_checksum;
-  svn_stream_t *tmp_base_contents;
-  const char *text_base_abspath;
-  const char *temp_dir_abspath;
   struct last_change_info *last_change = NULL;
   svn_error_t *err;
   const char *source_abspath = NULL;
@@ -5780,11 +5777,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* We should have a write lock on this file's parent directory.  */
   SVN_ERR(svn_wc__write_check(db, dir_abspath, pool));
-
-  SVN_ERR(svn_wc__text_base_path(&text_base_abspath, db, local_abspath,
-                                 FALSE, pool));
-  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, db,
-                                         local_abspath, pool, pool));
 
   /* Fabricate the anticipated new URL of the target and check the
      copyfrom URL to be in the same repository. */
@@ -5931,53 +5923,60 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                 new_props ? new_props : new_base_props,
                                 TRUE, FALSE, pool));
 
-  /* Copy the text base contents into a temporary file so our log
-     can refer to it. Compute its checksum as we copy. */
-  SVN_ERR(svn_wc__open_writable_base(&tmp_base_contents,
-                                     &tmp_text_base_abspath,
-                                     &base_checksum, NULL,
-                                     wc_ctx->db, local_abspath,
-                                     pool, pool));
-  SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
-                           cancel_func, cancel_baton,
-                           pool));
+  /* Copy NEW_BASE_CONTENTS into a temporary file so our log can refer to
+     it, and set TMP_TEXT_BASE_ABSPATH to its path.  Compute its MD5
+     checksum as we copy, and put it in BASE_CHECKSUM. */
+  {
+    svn_stream_t *tmp_base_contents;
 
-  /* Install working file. */
+    SVN_ERR(svn_wc__open_writable_base(&tmp_base_contents,
+                                       &tmp_text_base_abspath,
+                                       &base_checksum, NULL,
+                                       wc_ctx->db, local_abspath,
+                                       pool, pool));
+    SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
+                             cancel_func, cancel_baton, pool));
+  }
+
+  /* If the caller gave us a new working file, copy it to a safe (temporary)
+     location and set SOURCE_ABSPATH to that path. We'll then translate/copy
+     that into place after the node's state has been created.  */
   if (new_contents)
     {
+      const char *temp_dir_abspath;
       svn_stream_t *tmp_contents;
 
-      /* If the caller gave us a new working file, copy it to a safe
-         (temporary) location. We'll then translate/copy that into place
-         after the node's state has been created.  */
+      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, db,
+                                             local_abspath, pool, pool));
       SVN_ERR(svn_stream_open_unique(&tmp_contents, &source_abspath,
                                      temp_dir_abspath, svn_io_file_del_none,
                                      pool, pool));
-      SVN_ERR(svn_stream_copy3(new_contents,
-                               tmp_contents,
-                               cancel_func, cancel_baton,
-                               pool));
+      SVN_ERR(svn_stream_copy3(new_contents, tmp_contents,
+                               cancel_func, cancel_baton, pool));
     }
 
   /* Install new text base for copied files. Added files do NOT have a
      text base.  */
   if (copyfrom_url != NULL)
-  {
-    svn_wc_entry_t tmp_entry;
+    {
+      const char *text_base_abspath;
+      svn_wc_entry_t tmp_entry;
 
-    /* Write out log commands to set up the new text base and its checksum.
-       (Install it as the normal text base, not the 'revert base'.) */
-    SVN_ERR(install_text_base(db, dir_abspath,
-                              tmp_text_base_abspath, text_base_abspath,
-                              pool));
+      /* Write out log commands to set up the new text base and its checksum.
+         (Install it as the normal text base, not the 'revert base'.) */
+      SVN_ERR(svn_wc__text_base_path(&text_base_abspath, db, local_abspath,
+                                     FALSE, pool));
+      SVN_ERR(install_text_base(db, dir_abspath,
+                                tmp_text_base_abspath, text_base_abspath,
+                                pool));
 
-    tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
+      tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
 
-    SVN_ERR(svn_wc__loggy_entry_modify(db, dir_abspath,
-                                       local_abspath, &tmp_entry,
-                                       SVN_WC__ENTRY_MODIFY_CHECKSUM,
-                                       pool));
-  }
+      SVN_ERR(svn_wc__loggy_entry_modify(db, dir_abspath,
+                                         local_abspath, &tmp_entry,
+                                         SVN_WC__ENTRY_MODIFY_CHECKSUM,
+                                         pool));
+    }
 
   /* ### HACK: The following code should be performed in the same transaction as the install */
   if (last_change)
