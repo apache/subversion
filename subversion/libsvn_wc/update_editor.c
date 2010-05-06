@@ -376,9 +376,6 @@ struct handler_baton
 
   /* Where we are assembling the new file. */
   const char *new_text_base_tmp_abspath;
-  /* ### SVN_EXPERIMENTAL_PRISTINE:
-     The WC-NG equivalent of NEW_TEXT_BASE_TMP_ABSPATH. */
-  const char *new_pristine_tmp_abspath;
 
     /* The expected MD5 checksum of the text source or NULL if no base
      checksum is available */
@@ -405,7 +402,7 @@ struct handler_baton
      apply_textdelta(). */
   unsigned char new_text_base_md5_digest[APR_MD5_DIGESTSIZE];
 
-  /* A calculated SHA-1 of NEW_PRISTINE_TMP_ABSPATH, which we'll use for
+  /* A calculated SHA-1 of NEW_TEXT_BASE_TMP_ABSPATH, which we'll use for
      eventually writing the pristine. */
   svn_checksum_t * new_text_base_sha1_checksum;
 };
@@ -1004,9 +1001,6 @@ struct file_baton
      in-progress in the tmp area).  This gets set if there are file
      content changes. */
   const char *new_text_base_tmp_abspath;
-  /* ### SVN_EXPERIMENTAL_PRISTINE:
-     The WC-NG equivalent of NEW_TEXT_BASE_TMP_ABSPATH. */
-  const char *new_pristine_tmp_abspath;
 
   /* The MD5 checksum of the incoming text base (pristine text). */
   svn_checksum_t *new_text_base_md5_checksum;
@@ -1149,18 +1143,12 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       /* We failed to apply the delta; clean up the temporary file.  */
       svn_error_clear(svn_io_remove_file2(hb->new_text_base_tmp_abspath, TRUE,
                                           hb->pool));
-      /* ### SVN_EXPERIMENTAL_PRISTINE: */
-      svn_error_clear(svn_io_remove_file2(hb->new_pristine_tmp_abspath, TRUE,
-                                          hb->pool));
     }
   else
     {
       /* Tell the file baton about the new text base. */
       fb->new_text_base_tmp_abspath = apr_pstrdup(fb->pool,
                                               hb->new_text_base_tmp_abspath);
-      /* ### SVN_EXPERIMENTAL_PRISTINE: */
-      fb->new_pristine_tmp_abspath = apr_pstrdup(fb->pool,
-                                              hb->new_pristine_tmp_abspath);
 
       /* ... and its checksums. */
       fb->new_text_base_md5_checksum =
@@ -3229,37 +3217,6 @@ absent_directory(const char *path,
 }
 
 
-/* ### SVN_EXPERIMENTAL_PRISTINE: */
-/* Set *TEE_OUTPUT_STREAM to a writable stream that copies its data to both
-   OUTPUT_STREAM and a new WC-NG pristine temp file corresponding to (DB,
-   LOCAL_ABSPATH). Set *NEW_PRISTINE_TMP_ABSPATH to the path of that file.
- */
-static svn_error_t *
-get_pristine_tee_stream(svn_stream_t **tee_output_stream,
-                        const char **new_pristine_tmp_abspath,
-                        svn_wc__db_t *db,
-                        const char *local_abspath,
-                        svn_stream_t *output_stream,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
-{
-  const char *pristine_tempdir;
-  svn_stream_t *pristine_temp;
-
-  SVN_ERR(svn_wc__db_pristine_get_tempdir(&pristine_tempdir, db,
-                                          local_abspath, scratch_pool,
-                                          scratch_pool));
-  SVN_ERR(svn_stream_open_unique(&pristine_temp, new_pristine_tmp_abspath,
-                                 pristine_tempdir, svn_io_file_del_none,
-                                 result_pool, scratch_pool));
-
-  *tee_output_stream = svn_stream_tee(output_stream, pristine_temp,
-                                      result_pool);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Beginning at DIR_ABSPATH (from repository with uuid DIR_REPOS_UUID and
    with repos_relpath dir_repos_relpath) within a working copy, search the
    working copy for an pre-existing versioned file which is exactly equal
@@ -3519,12 +3476,6 @@ add_file_with_history(const char *path,
                                      &tfb->copied_text_base_sha1_checksum,
                                      db, pb->local_abspath,
                                      pool, pool));
-  /* ### SVN_EXPERIMENTAL_PRISTINE:
-     Copy the 'copied_stream' into a WC-NG pristine temp file as well.
-     This is currently tee'd for compat. */
-  SVN_ERR(get_pristine_tee_stream(&copied_stream, &tfb->new_pristine_tmp_abspath,
-                                  db, tfb->local_abspath, copied_stream,
-                                  pool, subpool));
 
   if (src_local_abspath != NULL) /* Found a file to copy */
     {
@@ -4160,13 +4111,6 @@ apply_textdelta(void *file_baton,
       return svn_error_return(err);
     }
 
-  /* ### SVN_EXPERIMENTAL_PRISTINE:
-     Copy the 'target' stream into a WC-NG pristine temp file as well.
-     This is currently tee'd for compat. */
-  SVN_ERR(get_pristine_tee_stream(&target, &hb->new_pristine_tmp_abspath,
-                                  fb->edit_baton->db, fb->local_abspath,
-                                  target, handler_pool, pool));
-
   /* Prepare to apply the delta.  */
   svn_txdelta_apply(source, target,
                     hb->new_text_base_md5_digest,
@@ -4595,6 +4539,7 @@ merge_file(svn_boolean_t *install_pristine,
     }
 
   /* Deal with installation of the new textbase, if appropriate. */
+#ifndef SVN_EXPERIMENTAL_PRISTINE
   if (new_text_base_tmp_abspath)
     {
       /* Move the temp text-base file to its final destination.
@@ -4605,6 +4550,7 @@ merge_file(svn_boolean_t *install_pristine,
                                 fb->text_base_abspath,
                                 pool));
     }
+#endif
 
   /* Log commands to handle text-timestamp and working-size,
      if the file is - or will be - unmodified and schedule-normal */
@@ -4735,26 +4681,19 @@ close_file(void *file_baton,
             svn_checksum_to_cstring_display(new_text_base_md5_checksum, pool));
 
 #ifdef SVN_EXPERIMENTAL_PRISTINE
-  /* If we had a text change, drop the pristine into it's proper place. */
+  /* If we had a text change, drop the pristine into its proper place. */
   /* ### Caution: there is as yet no code to ever remove these pristine
      files when they are superseded. */
-  /* The WC-1 equivalent code is in merge_file(). Shouldn't they be together?
-     Bert said: In 1.0 the install of the .svn-base has to be done in loggy/wq
-     (or it can break your wc), while with the new pristine the file can and
-     should be created directly and then later in a single transaction we can
-     update all the BASE_NODE info to switch the file over and install a wq
-     item to update the in-wc file. So in a few cases it is logical that the
-     file operations are not side by side. */
-  if (fb->new_pristine_tmp_abspath)
-    SVN_ERR(svn_wc__db_pristine_install(eb->db, fb->new_pristine_tmp_abspath,
+  /* The WC-NG way is to install the new pristine text in two steps: move it
+     into the pristine store now, and then later in a single transaction
+     update the BASE_NODE to include a reference to this pristine text's
+     checksum.  In the old WC-1 way, installation of this file happens later
+     (in merge_file()) as a single move into place, being part of the loggy
+     action of updating the WC metadata. */
+  if (fb->new_text_base_tmp_abspath)
+    SVN_ERR(svn_wc__db_pristine_install(eb->db, fb->new_text_base_tmp_abspath,
                                         new_text_base_sha1_checksum,
                                         new_text_base_md5_checksum, pool));
-#else
-  /* ### We're compiling without experimental support for the new pristine
-     store. Nevertheless, we have created a temp file with this end in mind.
-     Delete it now so it doesn't fill up the poor developer's disk. */
-  if (fb->new_pristine_tmp_abspath)
-    SVN_ERR(svn_io_remove_file2(fb->new_pristine_tmp_abspath, FALSE, pool));
 #endif
 
   /* Get a copy of the entry *before* we begin mucking around with the
