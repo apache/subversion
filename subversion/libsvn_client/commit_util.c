@@ -750,7 +750,7 @@ harvest_committables(apr_hash_t *committables,
           const svn_wc_entry_t *this_entry;
           const char *this_url, *this_cf_url = cf_url ? cf_url : copyfrom_url;
           svn_depth_t this_depth;
-          svn_boolean_t this_is_deleted;
+          svn_boolean_t is_replaced, this_is_deleted;
           svn_node_kind_t this_kind;
           svn_error_t *err;
 
@@ -835,7 +835,9 @@ harvest_committables(apr_hash_t *committables,
            * ### already. */
           SVN_ERR(svn_wc__node_is_status_deleted(&this_is_deleted, ctx->wc_ctx,
                                                  this_abspath, iterpool));
-          if (entry->schedule == svn_wc_schedule_replace && this_is_deleted)
+          SVN_ERR(svn_wc__node_is_replaced(&is_replaced, ctx->wc_ctx,
+                                           local_abspath, iterpool));
+          if (is_replaced && this_is_deleted)
             continue;
 
           if (this_cf_url)
