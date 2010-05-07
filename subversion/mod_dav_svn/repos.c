@@ -4263,7 +4263,32 @@ dav_svn__create_version_resource(dav_resource **version_res,
 }
 
 
-/* POST handler for commits over HTTP protocol v2.
+/* POST handler for HTTP protocol v2.
+ 
+   Currently we allow POSTs only against the "me resource", which may
+   in the future act as a dispatcher of sorts for handling potentially
+   many different kinds of operations as specified by the body of the
+   POST request itself.
+
+   ### TODO: Define what the format of those POST bodies might be.  If
+   ### XML, we have access to Apache's streamy XML parsing code, but
+   ### ... it's XML.  Meh.  If skels, we get skels!  But we need to
+   ### write our own streamy skel parsing routine around a brigade
+   ### read loop.  Ewww...
+   ###
+   ### Today we only support transaction creation requests, but we
+   ### could conceivable support the likes of a multi-path lock
+   ### and/or unlock request, or some other thing for which stock
+   ### WebDAV doesn't work or doesn't work well enough.
+   ###
+   ### Fortunately, today we don't use the POST body at all, and we'll
+   ### be able to get away with not defining the body format in the
+   ### future thanks to the following:
+
+   As a special consideration, an empty POST body is interpreted as a
+   simple request to create a new commit transaction based on the HEAD
+   revision.  The new transaction name will be returned via a custom
+   response header SVN_DAV_TXN_NAME_HEADER.
 */
 int dav_svn__method_post(request_rec *r)
 {
