@@ -1126,9 +1126,9 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
       /* else
          ### Handle added directory that is deleted in parent_access
              (was_deleted=TRUE). The current behavior is to just delete the
-             directory with its administrative area inside, which is OK for WC-1.0,
-             but when we move to a single database per working copy something
-             must unversion the directory. */
+             directory with its administrative area inside, which is OK for
+             WC-1.0, but when we move to a single database per working copy
+             something must unversion the directory. */
     }
 
   if (kind != svn_wc__db_kind_dir || !was_add || was_deleted)
