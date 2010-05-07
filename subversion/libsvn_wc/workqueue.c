@@ -233,9 +233,13 @@ run_revert(svn_wc__db_t *db,
          using the original base.  */
       reinstall_working = magic_changed || replaced;
 
-      /* If there is a "revert base" file (because the file is replaced),
-       * then move that revert base over to the normal base and update the
-       * normal base checksum. */
+      /* Rename the "Revert Base" back to normal "Base".  (This is a WC-1
+       * concept only: in WC-NG, the checksum of this base stays in the
+       * BASE_NODE table so we don't need to rename or move it.)
+       *
+       * The WC-1 way: If there is a "revert base" file (because the file
+       * is replaced), then move that revert base over to the normal base
+       * and update the normal base checksum accordingly. */
       if (replaced)
         {
           const char *revert_base_path;
