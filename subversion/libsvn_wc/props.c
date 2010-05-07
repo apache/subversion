@@ -1853,20 +1853,24 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 }
 
 
-
-/*** Private 'wc prop' functions ***/
-
-
-svn_error_t *
-svn_wc__wcprop_set(svn_wc__db_t *db,
-                   const char *local_abspath,
-                   const char *name,
-                   const svn_string_t *value,
-                   apr_pool_t *scratch_pool)
+/* Set a single 'wcprop' NAME to VALUE for versioned object LOCAL_ABSPATH.
+   If VALUE is null, remove property NAME.  */
+static svn_error_t *
+wcprop_set(svn_wc__db_t *db,
+           const char *local_abspath,
+           const char *name,
+           const svn_string_t *value,
+           apr_pool_t *scratch_pool)
 {
   apr_hash_t *prophash;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  /* Note: this is not well-transacted. But... meh. This is merely a cache,
+     and if two processes are trying to modify this one entry at the same
+     time, then fine: we can let one be a winner, and one a loser. Of course,
+     if there are *other* state changes afoot, then the lack of a txn could
+     be a real issue, but we cannot solve that here.  */
 
   SVN_ERR(svn_wc__db_base_get_dav_cache(&prophash, db, local_abspath,
                                         scratch_pool, scratch_pool));
@@ -1880,10 +1884,6 @@ svn_wc__wcprop_set(svn_wc__db_t *db,
                                                         scratch_pool));
 }
 
-/*------------------------------------------------------------------*/
-
-
-/*** Public Functions ***/
 
 svn_error_t *
 svn_wc__get_actual_props(apr_hash_t **props,
@@ -2240,8 +2240,8 @@ svn_wc__internal_propset(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   if (prop_kind == svn_prop_wc_kind)
-    return svn_error_return(svn_wc__wcprop_set(db, local_abspath,
-                                               name, value, scratch_pool));
+    return svn_error_return(wcprop_set(db, local_abspath, name, value,
+                                       scratch_pool));
 
   /* we don't do entry properties here */
   if (prop_kind == svn_prop_entry_kind)
@@ -2542,34 +2542,6 @@ svn_wc_is_entry_prop(const char *name)
   enum svn_prop_kind kind = svn_property_kind(NULL, name);
   return (kind == svn_prop_entry_kind);
 }
-
-
-svn_error_t *
-svn_wc__has_props(svn_boolean_t *has_props,
-                  svn_wc__db_t *db,
-                  const char *local_abspath,
-                  apr_pool_t *scratch_pool)
-{
-  apr_hash_t *props;
-
-  /* ### this function is only used by status.c. should nuke it all.  */
-
-  /* ### no pristines should be okay  */
-  SVN_ERR(load_pristine_props(&props, db, local_abspath,
-                              scratch_pool, scratch_pool));
-  if (props != NULL && apr_hash_count(props))
-    {
-      *has_props = TRUE;
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(load_actual_props(&props, db, local_abspath,
-                            scratch_pool, scratch_pool));
-  *has_props = (apr_hash_count(props) > 0);
-
-  return SVN_NO_ERROR;
-}
-
 
 
 svn_error_t *

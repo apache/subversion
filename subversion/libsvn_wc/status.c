@@ -457,11 +457,24 @@ assemble_status(svn_wc_status3_t **status,
             precedence over M. */
 
       /* Does the entry have props? */
-      SVN_ERR(svn_wc__has_props(&has_props, db, local_abspath, scratch_pool));
+      {
+        apr_hash_t *pristine;
+        apr_hash_t *actual;
+
+        SVN_ERR(svn_wc__get_pristine_props(&pristine, db, local_abspath,
+                                           scratch_pool, scratch_pool));
+        SVN_ERR(svn_wc__get_actual_props(&actual, db, local_abspath,
+                                         scratch_pool, scratch_pool));
+        has_props = ((pristine != NULL && apr_hash_count(pristine) > 0)
+                     || (actual != NULL && apr_hash_count(actual) > 0));
+      }
       if (has_props)
         final_prop_status = svn_wc_status_normal;
 
       /* If the entry has a property file, see if it has local changes. */
+      /* ### we could compute this ourself, based on the prop hashes
+         ### fetched above. but for now, there is some trickery we may
+         ### need to rely upon in ths function. keep it for now.  */
       SVN_ERR(svn_wc__props_modified(&prop_modified_p, db, local_abspath,
                                      scratch_pool));
 

@@ -44,13 +44,6 @@ typedef enum svn_wc__props_kind_t
   svn_wc__props_working
 } svn_wc__props_kind_t;
 
-
-/* If the working item at PATH has properties attached, set HAS_PROPS. */
-svn_error_t *svn_wc__has_props(svn_boolean_t *has_props,
-                               svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *pool);
-
 
 /* Internal function for diffing props. See svn_wc_get_prop_diffs2(). */
 svn_error_t *
@@ -136,14 +129,6 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool);
 
-
-/* Set a single 'wcprop' NAME to VALUE for versioned object LOCAL_ABSPATH.
-   If VALUE is null, remove property NAME.  */
-svn_error_t *svn_wc__wcprop_set(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const char *name,
-                                const svn_string_t *value,
-                                apr_pool_t *scratch_pool);
 
 /* Given PROPERTIES is array of @c svn_prop_t structures. Returns TRUE if any
    of the PROPERTIES are the known "magic" ones that might require
