@@ -812,6 +812,16 @@ def svn_url_quote(url):
 
 
 # ------------
+
+def text_base_path(file_path):
+  """Return the path to the text-base file for the versioned file
+     FILE_PATH."""
+  dot_svn = svntest.main.get_admin_name()
+  return os.path.join(os.path.dirname(file_path), dot_svn, 'text-base',
+                      os.path.basename(file_path) + '.svn-base')
+
+
+# ------------
 ### probably toss these at some point. or major rework. or something.
 ### just bootstrapping some changes for now.
 #
