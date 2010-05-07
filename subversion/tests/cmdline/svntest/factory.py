@@ -531,10 +531,16 @@ class TestFactory:
         py += '# SKIPPING NON-WC ' + target.runarg + '\n'
         continue
 
-      pystatus = self.get_current_status(target.wc)
-      py += (pystatus +
-             "actions.run_and_verify_status(" + target.wc.py +
-             ", expected_status)\n")
+      if '-q' in status_args:
+        pystatus = self.get_current_status(target.wc, True)
+        py += (pystatus +
+               "actions.run_and_verify_status(" + target.wc.py +
+               ", expected_status)\n")
+      else:
+        pystatus = self.get_current_status(target.wc, False)
+        py += (pystatus +
+               "actions.run_and_verify_unquiet_status(" + target.wc.py +
+               ", expected_status)\n")
     return py
 
 
@@ -933,10 +939,14 @@ class TestFactory:
     self.prev_disk = [wc.realpath, actual]
 
 
-  def get_current_status(self, wc):
+  def get_current_status(self, wc, quiet=True):
     "Probes the given working copy and writes an expected_status for it."
-    code, output, err = main.run_svn(None, 'status', '-v', '-u', '-q',
-                                     wc.realpath)
+    if quiet:
+      code, output, err = main.run_svn(None, 'status', '-v', '-u', '-q',
+                                       wc.realpath)
+    else:
+      code, output, err = main.run_svn(None, 'status', '-v', '-u',
+                                       wc.realpath)
     if code != 0 or len(err) > 0:
       raise Failure("Hmm. `svn status' failed. What now.")
 
