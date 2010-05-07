@@ -224,10 +224,6 @@ run_revert(svn_wc__db_t *db,
     {
       svn_boolean_t magic_changed;
       svn_boolean_t reinstall_working;
-      const char *text_base_path;
-
-      SVN_ERR(svn_wc__text_base_path(&text_base_path, db, local_abspath,
-                                     FALSE, scratch_pool));
 
       magic_changed = svn_skel__parse_int(arg1->next->next, scratch_pool) != 0;
 
@@ -237,13 +233,19 @@ run_revert(svn_wc__db_t *db,
          using the original base.  */
       reinstall_working = magic_changed || replaced;
 
+      /* If there is a "revert base" file (because the file is replaced),
+       * then move that revert base over to the normal base and update the
+       * normal base checksum. */
       if (replaced)
         {
           const char *revert_base_path;
+          const char *text_base_path;
           svn_checksum_t *checksum;
 
           SVN_ERR(svn_wc__text_revert_path(&revert_base_path, db,
                                            local_abspath, scratch_pool));
+          SVN_ERR(svn_wc__text_base_path(&text_base_path, db, local_abspath,
+                                         FALSE, scratch_pool));
           SVN_ERR(move_if_present(revert_base_path, text_base_path,
                                   scratch_pool));
 
