@@ -2454,7 +2454,7 @@ def basic_add_svn_format_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  entries_path = os.path.join(wc_dir, '.svn', 'format')
+  entries_path = os.path.join(wc_dir, svntest.main.get_admin_name(), 'format')
 
   output = svntest.actions.get_virginal_state(wc_dir, 1)
 

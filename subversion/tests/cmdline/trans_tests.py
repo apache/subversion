@@ -867,7 +867,7 @@ def props_only_file_update(sbox):
     raise svntest.Failure("$Author$ is not contracted in 'iota'")
 
   # We used to leave some temporary files around. Make sure that we don't.
-  temps = os.listdir(os.path.join(wc_dir, '.svn', 'tmp'))
+  temps = os.listdir(os.path.join(wc_dir, svntest.main.get_admin_name(), 'tmp'))
   temps.remove('prop-base')
   temps.remove('props')
   temps.remove('text-base')
