@@ -527,7 +527,7 @@ apply_propchanges(apr_hash_t *props,
 }
 
 
-/* Called by directory_elements_diff when a file is to be compared. At this
+/* Diff the file PATH against its text base.  At this
  * stage we are dealing with a file that does exist in the working copy.
  *
  * DIR_BATON is the parent directory baton, PATH is the path to the file to
@@ -600,11 +600,10 @@ file_diff(struct dir_baton *db,
             || status == svn_wc__db_status_moved_here))
     revision = revert_base_revnum;
 
-  /* Prep these two paths early. */
-  SVN_ERR(svn_wc__text_base_path(&textbase, eb->db, local_abspath, FALSE,
-                                 pool));
+  /* Set TEXTBASE to the path to the text-base file that we want to diff
+     against, or to NULL if there isn't one.
 
-  /* If the regular text base is not there, we fall back to the revert
+     If the regular text base is not there, we fall back to the revert
      text base (if that's not present either, we'll error later).  But
      the logic here is subtler than one might at first expect.
 
@@ -625,6 +624,9 @@ file_diff(struct dir_baton *db,
      to match our test suite's expectations. */
   {
     svn_node_kind_t kind;
+
+    SVN_ERR(svn_wc__text_base_path(&textbase, eb->db, local_abspath, FALSE,
+                                   pool));
     SVN_ERR(svn_io_check_path(textbase, &kind, pool));
     if (kind == svn_node_none)
       SVN_ERR(svn_wc__text_revert_path(&textbase, eb->db, local_abspath,
