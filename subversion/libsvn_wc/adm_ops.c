@@ -1232,6 +1232,13 @@ mark_item_copied(svn_wc__db_t *db,
                                SVN_WC__ENTRY_MODIFY_COPIED, scratch_pool));
 
   /* Reinstall the pristine properties on WORKING */
+  /* ### this is all pretty crappy code anyways. not much of a problem
+     ### to pile on here.
+     ### thus... the node's original state may suggest there are no
+     ### pristine properties. in this case, we should say this (copied)
+     ### node has an empty set of properties.  */
+  if (props == NULL)
+    props = apr_hash_make(scratch_pool);
   SVN_ERR(svn_wc__db_temp_working_set_props(db, local_abspath, props,
                                             scratch_pool));
 

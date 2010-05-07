@@ -111,8 +111,8 @@ select properties from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_SELECT_WORKING_PROPS
-select properties from working_node
-where wc_id = ?1 and local_relpath = ?2;
+SELECT properties, presence FROM WORKING_NODE
+WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_SELECT_ACTUAL_PROPS
 select properties from actual_node
