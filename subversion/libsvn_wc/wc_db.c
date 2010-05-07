@@ -4357,34 +4357,45 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  svn_error_t *err;
-
-  *props = NULL;
 
   SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
                                  STMT_SELECT_WORKING_PROPS, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  /* If there is a WORKING row, then we're done.
+  /* If there is a WORKING row, then examine its status:
 
-     For adds/copies/moves, then properties are in this row.
-     For deletes, there are no properties.
+     For adds/copies/moves, then pristine properties are in this row.
 
-     Regardless, we never look at BASE. The properties (or not) are here.  */
+     For deletes, the pristines may be located here (as a result of a
+     copy/move-here), or they are located in BASE.
+     ### right now, we don't have a strong definition yet. moving to the
+     ### proposed NODE_DATA system will create more determinism around
+     ### where props are located and their relation to layered operations.  */
   if (have_row)
     {
-      err = svn_sqlite__column_properties(props, stmt, 0, result_pool,
-                                          scratch_pool);
-      SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
-      if (*props == NULL)
+      svn_wc__db_status_t presence;
+
+      /* For "base-deleted", it is obvious the pristine props are located
+         in the BASE table. Fall through to fetch them.
+
+         ### for regular deletes, the properties should be in the WORKING
+         ### row. though operation layering and the suggested NODE_DATA may
+         ### really be needed to ensure the props are always available,
+         ### and what "pristine" really means.  */
+      presence = svn_sqlite__column_token(stmt, 1, presence_map);
+      if (presence != svn_wc__db_status_base_deleted)
         {
-          /* ### is this a DB constraint violation? the column "probably"
-             ### should never be null. maybe we should leave it null for
-             ### delete operations, so this is okay.  */
-          *props = apr_hash_make(result_pool);
+          svn_error_t *err;
+
+          err = svn_sqlite__column_properties(props, stmt, 0, result_pool,
+                                              scratch_pool);
+          SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+
+          /* ### *PROPS may be NULL. is this okay?  */
+          return SVN_NO_ERROR;
         }
-      return SVN_NO_ERROR;
     }
+
   SVN_ERR(svn_sqlite__reset(stmt));
 
   /* No WORKING node, so the props must be in the BASE node.  */

@@ -1381,9 +1381,11 @@ svn_wc__db_read_prop(const svn_string_t **propval,
 /* Set *PROPS to the properties of the node LOCAL_ABSPATH in the ACTUAL
    tree (looking through to the WORKING or BASE tree as required).
 
+   ### *PROPS will be set to NULL in the following situations:
+   ### ... tbd
+
    PROPS maps "const char *" names to "const svn_string_t *" values.
    If the node has no properties, set *PROPS to an empty hash.
-   *PROPS will never be set to NULL.
    If the node is not present, return an error.
    Allocate *PROPS and its keys and values in RESULT_POOL.
 */
@@ -1398,9 +1400,11 @@ svn_wc__db_read_props(apr_hash_t **props,
 /* Set *PROPS to the properties of the node LOCAL_ABSPATH in the WORKING
    tree (looking through to the BASE tree as required).
 
+   ### *PROPS will set set to NULL in the following situations:
+   ### ... tbd.  see props.c:svn_wc__get_pristine_props()
+
    *PROPS maps "const char *" names to "const svn_string_t *" values.
    If the node has no properties, set *PROPS to an empty hash.
-   *PROPS will never be set to NULL.
    If the node is not present, return an error.
    Allocate *PROPS and its keys and values in RESULT_POOL.
 */

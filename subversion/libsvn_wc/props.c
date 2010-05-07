@@ -179,20 +179,22 @@ load_pristine_props(apr_hash_t **props,
     SVN_ERR(svn_wc__db_read_pristine_props(&db_base_props, db,
                                            local_abspath,
                                            scratch_pool, scratch_pool));
-    SVN_ERR_ASSERT(db_base_props != NULL);
 
-    if (*props != NULL)
+    if (*props != NULL && apr_hash_count(*props) > 0)
       {
         apr_array_header_t *diffs;
+
+        SVN_ERR_ASSERT(db_base_props != NULL);
 
         SVN_ERR(svn_prop_diffs(&diffs, *props, db_base_props, scratch_pool));
         SVN_ERR_ASSERT(diffs->nelts == 0);
       }
     else
       {
-        /* If the propfile is missing, then we should see empty props
+        /* If the propfile is missing, then we should see no/empty props
            in the database.  */
-        SVN_ERR_ASSERT(apr_hash_count(db_base_props) == 0);
+        SVN_ERR_ASSERT(db_base_props == NULL
+                       || apr_hash_count(db_base_props) == 0);
       }
   }
 #endif
@@ -216,8 +218,15 @@ load_actual_props(apr_hash_t **props,
      For this case, just use the pristine properties. This is very
      different from an empty file, which means "all props deleted".  */
   if (*props == NULL)
-    SVN_ERR(load_pristine_props(props, db, local_abspath,
-                                result_pool, scratch_pool));
+    {
+      SVN_ERR(load_pristine_props(props, db, local_abspath,
+                                  result_pool, scratch_pool));
+
+      /* If pristines are not defined for this node, then define this
+         node to have an empty set of properties.  */
+      if (*props == NULL)
+        *props = apr_hash_make(result_pool);
+    }
 
 #ifdef TEST_DB_PROPS
   {
@@ -228,10 +237,16 @@ load_actual_props(apr_hash_t **props,
 
     SVN_ERR(svn_wc__db_read_props(&db_props, db, local_abspath,
                                   scratch_pool, scratch_pool));
-    SVN_ERR_ASSERT(db_props != NULL);
 
-    SVN_ERR(svn_prop_diffs(&diffs, *props, db_props, scratch_pool));
-    SVN_ERR_ASSERT(diffs->nelts == 0);
+    if (db_props != NULL)
+      {
+        SVN_ERR(svn_prop_diffs(&diffs, *props, db_props, scratch_pool));
+        SVN_ERR_ASSERT(diffs->nelts == 0);
+      }
+    else
+      {
+        SVN_ERR_ASSERT(apr_hash_count(*props) == 0);
+      }
   }
 #endif
 
@@ -382,12 +397,17 @@ static svn_error_t *
 immediate_install_props(svn_wc__db_t *db,
                         const char *local_abspath,
                         svn_wc__db_kind_t kind,
-                        apr_hash_t *base_props,
                         apr_hash_t *working_props,
                         apr_pool_t *scratch_pool)
 {
+  apr_hash_t *base_props;
   const char *propfile_abspath;
   apr_array_header_t *prop_diffs;
+
+  /* ### no pristines should be okay.  */
+  SVN_ERR_W(load_pristine_props(&base_props, db, local_abspath,
+                                scratch_pool, scratch_pool),
+            _("Failed to load pristine properties"));
 
   SVN_ERR(svn_wc__prop_path(&propfile_abspath, local_abspath, kind,
                             svn_wc__props_working, scratch_pool));
@@ -1921,6 +1941,8 @@ svn_wc__get_pristine_props(apr_hash_t **props,
                                scratch_pool, scratch_pool));
   if (status == svn_wc__db_status_added)
     {
+      /* Resolve the status. copied and moved_here arrive with properties,
+         while a simple add does not.  */
       SVN_ERR(svn_wc__db_scan_addition(&status, NULL,
                                        NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL,
@@ -1952,6 +1974,7 @@ svn_wc__get_pristine_props(apr_hash_t **props,
 
   /* status: normal, moved_here, copied, deleted  */
 
+  /* After the above checks, these pristines should always be present.  */
   return svn_error_return(load_pristine_props(props, db, local_abspath,
                                               result_pool, scratch_pool));
 }
@@ -2209,7 +2232,7 @@ svn_wc__internal_propset(svn_wc__db_t *db,
                          void *notify_baton,
                          apr_pool_t *scratch_pool)
 {
-  apr_hash_t *prophash, *base_prophash;
+  apr_hash_t *prophash;
   enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
   svn_wc_notify_action_t notify_action;
   svn_wc__db_kind_t kind;
@@ -2283,9 +2306,6 @@ svn_wc__internal_propset(svn_wc__db_t *db,
       /* If not, we'll set the file to read-only at commit time. */
     }
 
-  SVN_ERR_W(load_pristine_props(&base_prophash, db, local_abspath,
-                                scratch_pool, scratch_pool),
-            _("Failed to load pristine properties"));
   SVN_ERR_W(load_actual_props(&prophash, db, local_abspath,
                               scratch_pool, scratch_pool),
             _("Failed to load current properties"));
@@ -2362,8 +2382,8 @@ svn_wc__internal_propset(svn_wc__db_t *db,
 
   /* Drop it right onto the disk. We don't need loggy since we aren't
      coordinating this change with anything else.  */
-  SVN_ERR(immediate_install_props(db, local_abspath, kind,
-                                  base_prophash, prophash, scratch_pool));
+  SVN_ERR(immediate_install_props(db, local_abspath, kind, prophash,
+                                  scratch_pool));
 
   if (notify_func)
     {
@@ -2532,9 +2552,12 @@ svn_wc__has_props(svn_boolean_t *has_props,
 {
   apr_hash_t *props;
 
+  /* ### this function is only used by status.c. should nuke it all.  */
+
+  /* ### no pristines should be okay  */
   SVN_ERR(load_pristine_props(&props, db, local_abspath,
                               scratch_pool, scratch_pool));
-  if (apr_hash_count(props))
+  if (props != NULL && apr_hash_count(props))
     {
       *has_props = TRUE;
       return SVN_NO_ERROR;
@@ -2632,6 +2655,8 @@ svn_wc__internal_propdiff(apr_array_header_t **propchanges,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
+  /* ### if pristines are not defined, then should this raise an error,
+     ### or use an empty set?  */
   SVN_ERR(load_pristine_props(&baseprops, db, local_abspath,
                               result_pool, scratch_pool));
 
