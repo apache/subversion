@@ -974,7 +974,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # Create an empty repos.
   test_create(sbox)
 
-  # Load the test repository to the first repos in a single load.
+  # PART 1: Load a full dump to an empty repository.
   #
   # The test repository used here, 'mergeinfo_included_full.dump', is
   # this repos:
@@ -1019,10 +1019,10 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   #   Properties on 'branches/B2':
   #     svn:mergeinfo
   #       /trunk:9
-  dumpfile1 = open(os.path.join(os.path.dirname(sys.argv[0]),
-                                'svnadmin_tests_data',
-                                'mergeinfo_included_full.dump')).read()
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile1, '--ignore-uuid')
+  dumpfile_full = open(os.path.join(os.path.dirname(sys.argv[0]),
+                                    'svnadmin_tests_data',
+                                    'mergeinfo_included_full.dump')).read()
+  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_full, '--ignore-uuid')
 
   # Check that the mergeinfo is as expected.
   url = sbox.repo_url + '/branches/'
@@ -1036,7 +1036,9 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)  
 
-  # Now incrementally dump that repository into three dump files:
+  # PART 2: Load a a series of incremental dumps to an empty repository.
+  #
+  # Incrementally dump the repository into three dump files:
   dump_file_r1_10 = svntest.main.temp_dir + "-r1-10.dump"
   exit_code, output, errput = svntest.main.run_svnadmin(
     'dump', sbox.repo_dir, '-r1:10')
@@ -1079,19 +1081,14 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
-  # Load the skeleton dump:
-  dumpfile1 = open(os.path.join(os.path.dirname(sys.argv[0]),
-                                'svnadmin_tests_data',
-                                'skeleton_repos.dump')).read()
-
-  # Now test that the load of an incremental dump into a non-empty
-  # repository correctly adjusts the incoming mergeinfo by the expected
-  # offset, particularly in the case where the first revision in the
-  # load stream has mergeinfo.
+  # Now repeat the above two scenarios, but with an initially non-empty target
+  # repository.  First, try the full dump-load in one shot.
   #
-  # Once again, remove the current repos and create an empty one in
-  # its place.
+  # PART 3: Load a full dump to an non-empty repository.
+  #  
+  # Reset our sandbox.
   test_create(sbox)
+
   # Load this skeleton repos into the empty target:
   #
   #   Projects/       (Added r1)
@@ -1101,13 +1098,55 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   #     Project-Z     (Added r5)
   #     docs/         (Added r6)
   #       README      (Added r6)
-  dumpfile1 = open(os.path.join(os.path.dirname(sys.argv[0]),
-                                'svnadmin_tests_data',
-                                'skeleton_repos.dump')).read()
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile1, '--ignore-uuid')
+  dumpfile_skeleton = open(os.path.join(os.path.dirname(sys.argv[0]),
+                                        'svnadmin_tests_data',
+                                        'skeleton_repos.dump')).read()
+  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
+                             '--ignore-uuid')
 
-  # Once again load the three incremental dump files in sequence, but this
-  # time into the /Projects/Project-X directory of the target repos.
+  # Load 'svnadmin_tests_data/mergeinfo_included_full.dump' in one shot:
+  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_full,
+                             '--parent-dir', 'Projects/Project-X',
+                             '--ignore-uuid')
+
+  # Check that the mergeinfo is as expected.  This is exactly the
+  # same expected mergeinfo we previously checked, except that the
+  # revisions are all offset +6 to reflect the revions already in
+  # the skeleton target before we began loading and the leading source
+  # paths are adjusted by the --parent-dir:
+  #
+  #   Properties on 'branches/B1':
+  #     svn:mergeinfo
+  #       /Projects/Project-X/branches/B2:17-18
+  #       /Projects/Project-X/trunk:12,15
+  #   Properties on 'branches/B1/B/E':
+  #     svn:mergeinfo
+  #       /Projects/Project-X/branches/B2/B/E:17-18
+  #       /Projects/Project-X/trunk/B/E:11-12,14-15
+  #   Properties on 'branches/B2':
+  #     svn:mergeinfo
+  #       /Projects/Project-X/trunk:15
+  url = sbox.repo_url + '/Projects/Project-X/branches/'
+  expected_output = svntest.verify.UnorderedOutput([
+    url + "B1 - /Projects/Project-X/branches/B2:17-18\n",
+    "/Projects/Project-X/trunk:12,15\n",
+    url + "B2 - /Projects/Project-X/trunk:15\n",
+    url + "B1/B/E - /Projects/Project-X/branches/B2/B/E:17-18\n",
+    "/Projects/Project-X/trunk/B/E:11-12,14-15\n"])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url)
+
+  # PART 4: Load a a series of incremental dumps to an non-empty repository.
+  #
+  # Reset our sandbox.
+  test_create(sbox)
+
+  # Load this skeleton repos into the empty target:
+  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
+                             '--ignore-uuid')
+  
+  # Load the three incremental dump files in sequence.
   load_and_verify_dumpstream(sbox, [], [], None,
                              open(dump_file_r1_10).read(),
                              '--parent-dir', 'Projects/Project-X',
@@ -1121,10 +1160,8 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
                              '--parent-dir', 'Projects/Project-X',
                              '--ignore-uuid')
 
-  # Check that the mergeinfo is as expected.  This is exactly the
-  # same expected mergeinfo we previously checked, except that the
-  # revisions are all offset +6 to reflect the revions already in
-  # the skeleton target before we began loading.
+  # Check the resulting mergeinfo.  We expect the exact same results
+  # as Part 3.
   #
   # Currently this fails because our current logic mapping mergeinfo revs
   # in the load stream to their new values based on the offset of the
@@ -1147,13 +1184,6 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   #
   # See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16 for
   # more info.
-  url = sbox.repo_url + '/branches/'
-  expected_output = svntest.verify.UnorderedOutput([
-    url + "B1 - /branches/B2:17-18\n",
-    "/trunk:12,15\n",
-    url + "B2 - /trunk:15\n",
-    url + "B1/B/E - /branches/B2/B/E:17-18\n",
-    "/trunk/B/E:11-12,14-15\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
