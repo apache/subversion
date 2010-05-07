@@ -378,9 +378,8 @@ def basic_corruption(sbox):
 
   # Modify mu's text-base, so we get a checksum failure the first time
   # we try to commit.
-  tb_dir_path = os.path.join(wc_dir, 'A',
-                             svntest.main.get_admin_name(), 'text-base')
-  mu_tb_path = os.path.join(tb_dir_path, 'mu.svn-base')
+  mu_tb_path = svntest.wc.text_base_path(mu_path)
+  tb_dir_path = os.path.dirname(mu_tb_path)
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
   mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
@@ -424,9 +423,9 @@ def basic_corruption(sbox):
 
   # Modify mu's text-base, so we get a checksum failure the first time
   # we try to update.
-  tb_dir_path = os.path.join(other_wc, 'A',
-                             svntest.main.get_admin_name(), 'text-base')
-  mu_tb_path = os.path.join(tb_dir_path, 'mu.svn-base')
+  other_mu_path = os.path.join(other_wc, 'A', 'mu')
+  mu_tb_path = svntest.wc.text_base_path(other_mu_path)
+  tb_dir_path = os.path.dirname(mu_tb_path)
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
   mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
