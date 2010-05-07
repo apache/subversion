@@ -119,6 +119,17 @@ svn_wc__wq_build_prej_install(const svn_skel_t **work_item,
                               apr_pool_t *scratch_pool);
 
 
+/* Build a work item that will install PROPS at PROPS_ABSPATH. If PROPS
+   is NULL, then the target props file will will be removed.
+
+   ### this will go away when we fully move to in-db properties.  */
+svn_error_t *
+svn_wc__wq_build_write_old_props(const svn_skel_t **work_item,
+                                 const char *props_abspath,
+                                 apr_hash_t *props,
+                                 apr_pool_t *result_pool);
+
+
 /* Record a work item to revert LOCAL_ABSPATH.  */
 svn_error_t *
 svn_wc__wq_add_revert(svn_boolean_t *will_revert,

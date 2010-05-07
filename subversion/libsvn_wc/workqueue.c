@@ -63,6 +63,7 @@
 #define OP_FILE_REMOVE "file-remove"
 #define OP_SYNC_FILE_FLAGS "sync-file-flags"
 #define OP_PREJ_INSTALL "prej-install"
+#define OP_WRITE_OLD_PROPS "write-old-props"
 
 
 /* For work queue debugging. Generates output about its operation.  */
@@ -1608,23 +1609,17 @@ run_install_properties(svn_wc__db_t *db,
     {
       SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
                                 svn_wc__props_base, scratch_pool));
+      /* ### oh hack!  */
+      {
+        const svn_skel_t *write_item;
 
-      SVN_ERR(svn_io_remove_file2(prop_abspath, TRUE, scratch_pool));
-
-      if (apr_hash_count(base_props) > 0)
-        {
-          svn_stream_t *propfile;
-
-          SVN_ERR(svn_stream_open_writable(&propfile, prop_abspath,
-                                           scratch_pool, scratch_pool));
-
-          SVN_ERR(svn_hash_write2(base_props, propfile, SVN_HASH_TERMINATOR,
+        SVN_ERR(svn_wc__wq_build_write_old_props(&write_item,
+                                                 prop_abspath,
+                                                 base_props,
+                                                 scratch_pool));
+        SVN_ERR(svn_wc__db_wq_add(db, local_abspath, write_item,
                                   scratch_pool));
-
-          SVN_ERR(svn_stream_close(propfile));
-
-          SVN_ERR(svn_io_set_file_read_only(prop_abspath, FALSE, scratch_pool));
-        }
+      }
 
       {
         svn_boolean_t written = FALSE;
@@ -1660,22 +1655,17 @@ run_install_properties(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
                             svn_wc__props_working, scratch_pool));
+  /* ### oh hack!  */
+  {
+    const svn_skel_t *write_item;
 
-  SVN_ERR(svn_io_remove_file2(prop_abspath, TRUE, scratch_pool));
-
-  if (actual_props != NULL)
-    {
-      svn_stream_t *propfile;
-
-      SVN_ERR(svn_stream_open_writable(&propfile, prop_abspath,
-                                       scratch_pool, scratch_pool));
-
-      SVN_ERR(svn_hash_write2(actual_props, propfile, SVN_HASH_TERMINATOR,
+    SVN_ERR(svn_wc__wq_build_write_old_props(&write_item,
+                                             prop_abspath,
+                                             actual_props,
+                                             scratch_pool));
+    SVN_ERR(svn_wc__db_wq_add(db, local_abspath, write_item,
                               scratch_pool));
-
-      SVN_ERR(svn_stream_close(propfile));
-      SVN_ERR(svn_io_set_file_read_only(prop_abspath, FALSE, scratch_pool));
-    }
+  }
 
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
                                   scratch_pool));
@@ -2167,6 +2157,82 @@ svn_wc__wq_build_prej_install(const svn_skel_t **work_item,
 
 /* ------------------------------------------------------------------------ */
 
+/* OP_WRITE_OLD_PROPS  */
+
+static svn_error_t *
+run_write_old_props(svn_wc__db_t *db,
+                    const svn_skel_t *work_item,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *props_abspath;
+  svn_stream_t *stream;
+  apr_hash_t *props;
+
+  props_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+
+  /* Torch whatever may be there.  */
+  SVN_ERR(svn_io_remove_file2(props_abspath, TRUE, scratch_pool));
+
+  if (arg1->next == NULL)
+    {
+      /* PROPS == NULL means the file should be removed. Note that an
+         empty set of properties has an entirely different meaning.
+
+         The file has already been removed. Simply exit.  */
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(svn_skel__parse_proplist(&props, arg1->next, scratch_pool));
+
+  SVN_ERR(svn_stream_open_writable(&stream, props_abspath,
+                                   scratch_pool, scratch_pool));
+
+  /* An empty file is shorthand for an empty set of properties.  */
+  if (apr_hash_count(props) != 0)
+    SVN_ERR(svn_hash_write2(props, stream, SVN_HASH_TERMINATOR, scratch_pool));
+
+  SVN_ERR(svn_stream_close(stream));
+
+  SVN_ERR(svn_io_set_file_read_only(props_abspath,
+                                    FALSE /* ignore_enoent */,
+                                    scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__wq_build_write_old_props(const svn_skel_t **work_item,
+                                 const char *props_abspath,
+                                 apr_hash_t *props,
+                                 apr_pool_t *result_pool)
+{
+  svn_skel_t *build_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(props_abspath));
+
+  if (props != NULL)
+    {
+      svn_skel_t *props_skel;
+
+      SVN_ERR(svn_skel__unparse_proplist(&props_skel, props, result_pool));
+      svn_skel__prepend(props_skel, build_item);
+    }
+  svn_skel__prepend_str(apr_pstrdup(result_pool, props_abspath),
+                        build_item, result_pool);
+  svn_skel__prepend_str(OP_WRITE_OLD_PROPS, build_item, result_pool);
+
+  /* Done. Assign to the const-ful WORK_ITEM.  */
+  *work_item = build_item;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
   { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
@@ -2180,6 +2246,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_FILE_REMOVE, run_file_remove },
   { OP_SYNC_FILE_FLAGS, run_sync_file_flags },
   { OP_PREJ_INSTALL, run_prej_install },
+  { OP_WRITE_OLD_PROPS, run_write_old_props },
 
   /* Sentinel.  */
   { NULL }
