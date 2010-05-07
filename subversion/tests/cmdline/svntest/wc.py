@@ -272,7 +272,7 @@ class State:
     between the two states. LABEL will be used in the display. SELF is the
     "expected" state, and OTHER is the "actual" state.
 
-    If any changes are detected/diplayed, then SVNTreeUnequal is raised.
+    If any changes are detected/displayed, then SVNTreeUnequal is raised.
     """
     norm_self = self.normalize()
     norm_other = other.normalize()

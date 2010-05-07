@@ -484,7 +484,6 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_url,
                                                     scratch_pool)) != 0)
             *is_copy_target = TRUE;
         }
-
     }
   else if ((status == svn_wc__db_status_added
             || status == svn_wc__db_status_obstructed_add)

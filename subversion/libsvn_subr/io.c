@@ -1129,7 +1129,7 @@ svn_io_sleep_for_timestamps(const char *path, apr_pool_t *pool)
       now = apr_time_now(); /* Extract the time used for the path stat */
 
       if (now >= then)
-        return; /* Passing negative values may suspend indefinately (Windows) */
+        return; /* Passing negative values may suspend indefinitely (Windows) */
     }
 
   apr_sleep(then - now);

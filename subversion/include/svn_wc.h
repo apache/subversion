@@ -4719,7 +4719,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
 
 /**
  * Assuming @a local_abspath is under version control or a tree conflict
- * victime and in a state of conflict, then take @a local_abspath *out*
+ * victim and in a state of conflict, then take @a local_abspath *out*
  * of this state.  If @a resolve_text is TRUE then any text conflict is
  * resolved, if @a resolve_tree is TRUE then any tree conflicts are
  * resolved. If @a resolve_prop is set to "" all property conflicts are

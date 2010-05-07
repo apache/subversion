@@ -1157,7 +1157,7 @@ svn_wc__db_op_read_tree_conflict(
    Use SCRATCH_POOL for any temporary allocations.
 */
 /* ### can this also record text/prop conflicts? drop "tree"? */
-/* ### dunno if it can, but it definately should be able to. */
+/* ### dunno if it can, but it definitely should be able to. */
 /* ### gjs: also ref: db_op_mark_conflict()  */
 svn_error_t *
 svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,

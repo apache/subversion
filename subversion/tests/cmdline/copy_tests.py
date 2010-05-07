@@ -1764,7 +1764,7 @@ def mixed_wc_to_url(sbox):
                                      'co', Z_url, wc_dir)
 
   if os.path.exists(os.path.join(wc_dir, 'pi')):
-    raise svntest.Failure
+    raise svntest.Failure("Path 'pi' exists but should be gone.")
 
   fp = open(os.path.join(wc_dir, 'rho'), 'r')
   found_it = 0
@@ -1772,7 +1772,7 @@ def mixed_wc_to_url(sbox):
     if re.match("^Second modification to rho.", line):
       found_it = 1
   if not found_it:
-    raise svntest.Failure
+    raise svntest.Failure("The second modification to rho didn't make it.")
 
 
 #----------------------------------------------------------------------

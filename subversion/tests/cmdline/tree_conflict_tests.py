@@ -862,8 +862,8 @@ def force_del_tc_inside(sbox):
   # Verify deletion status
   # Note: the tree conflicts are still in the status.
   expected_status.tweak('A/C', status='D ')
-  expected_status.tweak('A/C/dir', status='! ', copied=None, wc_rev=None)
-  expected_status.tweak('A/C/file', status='! ', copied=None, wc_rev=None)
+  expected_status.tweak('A/C/dir', 'A/C/file', status='! ', copied=None,
+                        wc_rev=None)
 
   run_and_verify_status(wc_dir, expected_status)
 
