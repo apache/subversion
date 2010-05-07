@@ -403,6 +403,7 @@ immediate_install_props(svn_wc__db_t *db,
   apr_hash_t *base_props;
   const char *propfile_abspath;
   apr_array_header_t *prop_diffs;
+  const svn_skel_t *work_item;
 
   /* ### no pristines should be okay.  */
   SVN_ERR_W(load_pristine_props(&base_props, db, local_abspath,
@@ -416,28 +417,20 @@ immediate_install_props(svn_wc__db_t *db,
   SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props,
                          scratch_pool));
 
-  /* Save the working properties file if it differs from base. */
-  if (prop_diffs->nelts > 0)
-    {
-      /* Write out the properties (synchronously).  */
-      svn_stream_t *stream;
+  /* Save (if there are differences from "base") or remove the
+     ACTUAL (aka "props_working") properties file.  */
 
-      SVN_ERR(svn_io_remove_file2(propfile_abspath, TRUE, scratch_pool));
-      SVN_ERR(svn_stream_open_writable(&stream, propfile_abspath, scratch_pool,
-                                       scratch_pool));
-      if (apr_hash_count(working_props) != 0)
-        SVN_ERR(svn_hash_write2(working_props, stream, SVN_HASH_TERMINATOR,
-                                scratch_pool));
-      SVN_ERR(svn_stream_close(stream));
-
-      SVN_ERR(svn_io_set_file_read_only(propfile_abspath, FALSE,
-                                        scratch_pool));
-    }
-  else
-    {
-      /* No property modifications, remove the file instead. */
-      SVN_ERR(svn_io_remove_file2(propfile_abspath, TRUE, scratch_pool));
-    }
+  /* ### for now, we play some hacky with work items and the queue  */
+  SVN_ERR(svn_wc__wq_build_write_old_props(&work_item,
+                                           propfile_abspath,
+                                           prop_diffs->nelts > 0
+                                             ? working_props
+                                             : NULL,
+                                           scratch_pool));
+  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
+  SVN_ERR(svn_wc__wq_run(db, local_abspath,
+                         NULL, NULL,  /* cancel_func/baton  */
+                         scratch_pool));
 
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
                                   (prop_diffs->nelts > 0) ? working_props
