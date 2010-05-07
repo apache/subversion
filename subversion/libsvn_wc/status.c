@@ -1055,10 +1055,10 @@ get_dir_status(const struct walk_status_baton *wb,
         apr_hash_set(conflicts, selected, APR_HASH_KEY_STRING, "");
     }
 
-  /* If "this dir" has "svn:externals" property set on it, store the
-     name and value in traversal_info, along with this directory's depth.
-     (Also, we want to track the externals internally so we can report
-     status more accurately.) */
+  /* If "this dir" has "svn:externals" property set on it, send the name and
+     value to wc->external_func along with this directory's depth. (Also,
+     we want to track the externals internally so we can report status more
+     accurately.) */
   SVN_ERR(handle_externals(wb, local_abspath, dir_entry->depth, iterpool));
 
   if (!selected)
