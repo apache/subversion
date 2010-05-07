@@ -45,9 +45,10 @@ def mod_all_files(wc_dir, new_text):
   """Walk over working copy WC_DIR, appending NEW_TEXT to all the
   files in that tree (but not inside the .svn areas of that tree)."""
 
+  dot_svn = svntest.main.get_admin_name()
   for dirpath, dirs, files in os.walk(wc_dir):
-    if ".svn" in dirs:
-      dirs.remove(".svn")
+    if dot_svn in dirs:
+      dirs.remove(dot_svn)
     for name in files:
       svntest.main.file_append(os.path.join(dirpath, name), new_text)
 
@@ -57,9 +58,10 @@ def changelist_all_files(wc_dir, name_func):
   noting its string return value (or None, if we wish to remove the
   file from a changelist)."""
 
+  dot_svn = svntest.main.get_admin_name()
   for dirpath, dirs, files in os.walk(wc_dir):
-    if ".svn" in dirs:
-      dirs.remove(".svn")
+    if dot_svn in dirs:
+      dirs.remove(dot_svn)
     for name in files:
         full_path = os.path.join(dirpath, name)
         clname = name_func(full_path)

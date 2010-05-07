@@ -70,8 +70,9 @@ def replace_sbox_with_tarfile(sbox, tar_filename):
 
 
 def check_format(sbox, expected_format):
+  dot_svn = svntest.main.get_admin_name()
   for root, dirs, files in os.walk(sbox.wc_dir):
-    db = svntest.sqlite3.connect(os.path.join(root, '.svn', 'wc.db'))
+    db = svntest.sqlite3.connect(os.path.join(root, dot_svn, 'wc.db'))
     c = db.cursor()
     c.execute('pragma user_version;')
     found_format = c.fetchone()[0]
@@ -81,12 +82,13 @@ def check_format(sbox, expected_format):
       raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
                             (found_format, expected_format, root))
 
-    if '.svn' in dirs:
-      dirs.remove('.svn')
+    if dot_svn in dirs:
+      dirs.remove(dot_svn)
 
 
 def check_dav_cache(dir_path, wc_id, expected_dav_caches):
-  db = svntest.sqlite3.connect(os.path.join(dir_path, '.svn', 'wc.db'))
+  dot_svn = svntest.main.get_admin_name()
+  db = svntest.sqlite3.connect(os.path.join(dir_path, dot_svn, 'wc.db'))
   c = db.cursor()
 
   for local_relpath, expected_dav_cache in expected_dav_caches.items():
@@ -215,7 +217,8 @@ def upgrade_wcprops(sbox):
                                      'upgrade', sbox.wc_dir)
 
   # Make sure that .svn/all-wcprops has disappeared
-  if os.path.exists(os.path.join(sbox.wc_dir, '.svn', 'all-wcprops')):
+  dot_svn = svntest.main.get_admin_name()
+  if os.path.exists(os.path.join(sbox.wc_dir, dot_svn, 'all-wcprops')):
     raise svntest.Failure("all-wcprops file still exists")
 
   # Just for kicks, let's see if the wcprops are what we'd expect them
