@@ -4160,28 +4160,6 @@ change_file_prop(void *file_baton,
 }
 
 
-/* Queue operations to install a text base file from the given temporary
- * path TEMP_TEXT_BASE_ABSPATH (which must be in the adm temp area) to the
- * given final text-base path FINAL_TEXT_BASE_ABSPATH (which must be the
- * standard text-base path or revert-base path for the file).
- */
-static svn_error_t *
-install_text_base(svn_wc__db_t *db,
-                  const char *adm_abspath,
-                  const char *temp_text_base_abspath,
-                  const char *final_text_base_abspath,
-                  apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__loggy_move(db, adm_abspath,
-                             temp_text_base_abspath, final_text_base_abspath,
-                             scratch_pool));
-  /* ### future pristine storage should ensure all files are readonly
-     ### once they are placed in storage.  */
-
-  return SVN_NO_ERROR;
-}
-
-
 /* This is the small planet.  It has the complex responsibility of
  * "integrating" a new revision of a file into a working copy.
  *
@@ -4545,10 +4523,10 @@ merge_file(svn_boolean_t *install_pristine,
       /* Move the temp text-base file to its final destination.
        * FB->text_base_path is the appropriate path: the "revert-base" path
        * if the node is replaced, else the usual text-base path. */
-      SVN_ERR(install_text_base(eb->db, pb->local_abspath,
-                                new_text_base_tmp_abspath,
-                                fb->text_base_abspath,
-                                pool));
+      SVN_ERR(svn_wc__loggy_move(eb->db, pb->local_abspath,
+                                 new_text_base_tmp_abspath,
+                                 fb->text_base_abspath,
+                                 pool));
     }
 #endif
 
@@ -5892,9 +5870,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
          (Install it as the normal text base, not the 'revert base'.) */
       SVN_ERR(svn_wc__text_base_path(&text_base_abspath, db, local_abspath,
                                      FALSE, pool));
-      SVN_ERR(install_text_base(db, dir_abspath,
-                                tmp_text_base_abspath, text_base_abspath,
-                                pool));
+      SVN_ERR(svn_wc__loggy_move(db, dir_abspath,
+                                 tmp_text_base_abspath, text_base_abspath,
+                                 pool));
 
       tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
 
