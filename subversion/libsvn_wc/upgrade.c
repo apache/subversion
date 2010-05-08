@@ -1018,7 +1018,7 @@ migrate_props(const char *wcroot_abspath,
       if (working_props != NULL)
         {
           SVN_ERR(svn_wc__db_op_set_props(db, child_abspath, working_props,
-                                          iterpool));
+                                          NULL, NULL, iterpool));
         }
     }
 

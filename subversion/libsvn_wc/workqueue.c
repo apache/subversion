@@ -231,7 +231,8 @@ run_revert(svn_wc__db_t *db,
                             kind, svn_wc__props_working, scratch_pool));
   SVN_ERR(svn_io_remove_file2(working_props_path, TRUE, scratch_pool));
 
-  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, NULL, scratch_pool));
+  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, NULL, NULL, NULL,
+                                  scratch_pool));
 
   /* Deal with the working file, as needed.  */
   if (kind == svn_wc__db_kind_file)
@@ -1683,7 +1684,7 @@ run_install_properties(svn_wc__db_t *db,
   }
 
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
-                                  scratch_pool));
+                                  NULL, NULL, scratch_pool));
 
   return SVN_NO_ERROR;
 }
