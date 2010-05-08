@@ -4864,6 +4864,34 @@ close_file(void *file_baton,
                                  svn_wc__db_kind_file, new_base_props,
                                  pool));
 
+  {
+    apr_hash_t *props;
+    apr_array_header_t *prop_diffs;
+
+    /* ### grr. the props changes need to occur before the merge_file()
+       ### queued work. we need merge_file() to return a set of work
+       ### items so that we can order them correctly. for now, get the
+       ### new props into their old files. the in-database values are
+       ### going to occur later (skew!), but we'll get that fixed before
+       ### switching to db properties.  */
+    SVN_ERR(svn_wc__db_wq_add(eb->db, fb->local_abspath, work_items, pool));
+
+    props = new_actual_props;
+    SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
+                           pool));
+    if (prop_diffs->nelts == 0)
+      props = NULL;
+
+    SVN_ERR(build_write_actual_props(&work_items, fb->local_abspath,
+                                     svn_wc__db_kind_file,
+                                     props,
+                                     pool));
+    SVN_ERR(svn_wc__db_wq_add(eb->db, fb->local_abspath, work_items, pool));
+
+    /* ### nothing for add_file to queue up.  */
+    work_items = NULL;
+  }
+
   /* This writes a whole bunch of log commands to install wcprops.  */
   /* ### no it doesn't. this immediately modifies them. should probably
      ### occur later, when we know the (new) BASE node exists.  */
