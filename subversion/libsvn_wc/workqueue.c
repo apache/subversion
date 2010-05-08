@@ -57,7 +57,7 @@
  *   (local_abspath, revnum, date, [author], [checksum],
  *    [dav_cache/wc_props], keep_changelist, [tmp_text_base_abspath]). */
 #define OP_POSTCOMMIT "postcommit"
-#define OP_INSTALL_PROPERTIES "install-properties"
+#define OP_INSTALL_PROPERTIES "install-properties-2"
 #define OP_DELETE "delete"
 #define OP_FILE_INSTALL "file-install"
 #define OP_FILE_REMOVE "file-remove"
