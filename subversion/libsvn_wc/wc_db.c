@@ -43,6 +43,7 @@
 #include "lock.h"
 #include "tree_conflicts.h"
 #include "wc_db_pdh.h"
+#include "workqueue.h"
 
 #include "svn_private_config.h"
 #include "private/svn_sqlite.h"
@@ -1593,9 +1594,8 @@ add_work_items(svn_sqlite__db_t *sdb,
   /* Should have a list.  */
   SVN_ERR_ASSERT(!skel->is_atom);
 
-  /* If SKEL has an atom as its first child, then this is a work item
-     (and that atom is one of the OP_* values).  */
-  if (skel->children->is_atom)
+  /* Is the list a single work item? Or a list of work items?  */
+  if (SVN_WC__SINGLE_WORK_ITEM(skel))
     return svn_error_return(add_single_work_item(sdb, skel, scratch_pool));
 
   /* SKEL is a list-of-lists, aka list of work items.  */
