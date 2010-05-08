@@ -419,24 +419,24 @@ immediate_install_props(svn_wc__db_t *db,
 
   /* Save (if there are differences from "base") or remove the
      ACTUAL (aka "props_working") properties file.  */
-
-  /* ### for now, we play some hacky with work items and the queue  */
   SVN_ERR(svn_wc__wq_build_write_old_props(&work_item,
                                            propfile_abspath,
                                            prop_diffs->nelts > 0
                                              ? working_props
                                              : NULL,
                                            scratch_pool));
-  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
-  SVN_ERR(svn_wc__wq_run(db, local_abspath,
-                         NULL, NULL,  /* cancel_func/baton  */
-                         scratch_pool));
 
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
                                   (prop_diffs->nelts > 0) ? working_props
                                                           : NULL,
-                                  NULL, NULL,
+                                  NULL /* conflict */,
+                                  work_item,
                                   scratch_pool));
+
+  /* ### should really leave this to the caller. but for now... */
+  SVN_ERR(svn_wc__wq_run(db, local_abspath,
+                         NULL, NULL,  /* cancel_func/baton  */
+                         scratch_pool));
 
   return SVN_NO_ERROR;
 }
