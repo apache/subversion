@@ -3015,6 +3015,8 @@ close_directory(void *dir_baton,
                                         db->pool,
                                         pool),
                     _("Couldn't do property merge"));
+          /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
+          SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
         }
 
       SVN_ERR(accumulate_last_change(&last_change, NULL, eb->db,
@@ -3086,8 +3088,13 @@ close_directory(void *dir_baton,
     }
 
   /* Queue some items to install the properties.  */
-  if (new_base_props || new_actual_props)
+  /* ### note: we do not have to test NEW_ACTUAL_PROPS. if it is not-NULL,
+     ### then NEW_BASE_PROPS is not-NULL (per logic above). by simplifying
+     ### this conditional, it becomes obvious that NEW_BASE_PROPS will
+     ### be not-NULL when passed to svn_wc__install_props.  */
+  if (new_base_props != NULL)
     SVN_ERR(svn_wc__install_props(eb->db, db->local_abspath,
+                                  svn_wc__db_kind_dir,
                                   new_base_props, new_actual_props,
                                   TRUE /* write_base_props */, TRUE, pool));
 
@@ -4759,15 +4766,17 @@ close_file(void *file_baton,
                               eb->cancel_func, eb->cancel_baton,
                               pool,
                               pool));
+  /* We will ALWAYS have properties to save (after a not-dry-run merge).  */
+  SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
 
   /* We have the new (merged) properties now. Queue some work items to
      install them.  */
-  if (new_base_props || new_actual_props)
-    SVN_ERR(svn_wc__install_props(eb->db, fb->local_abspath,
-                                  new_base_props, new_actual_props,
-                                  TRUE /* write_base_props */,
-                                  TRUE /* force_base_install */,
-                                  pool));
+  SVN_ERR(svn_wc__install_props(eb->db, fb->local_abspath,
+                                svn_wc__db_kind_file,
+                                new_base_props, new_actual_props,
+                                TRUE /* write_base_props */,
+                                TRUE /* force_base_install */,
+                                pool));
 
   /* This writes a whole bunch of log commands to install wcprops.  */
   /* ### no it doesn't. this immediately modifies them. should probably
@@ -5823,7 +5832,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   }
 
   /* Add some work items to install the properties.  */
-  SVN_ERR(svn_wc__install_props(db, local_abspath, new_base_props,
+  SVN_ERR(svn_wc__install_props(db, local_abspath, svn_wc__db_kind_file,
+                                new_base_props,
                                 new_props ? new_props : new_base_props,
                                 TRUE, FALSE, pool));
 
