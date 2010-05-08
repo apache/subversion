@@ -52,6 +52,34 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Returns TRUE if WI refers to a single work item. Returns FALSE if
+   WI is a list of work items. WI must not be NULL.
+
+   A work item looks like: (OP_CODE arg1 arg2 ...)
+
+   If we see OP_CODE (an atom) as WI's first child, then this is a
+   single work item. Otherwise, it is a list of work items.  */
+#define SVN_WC__SINGLE_WORK_ITEM(wi) ((wi)->children->is_atom)
+
+
+/* Combine WORK_ITEM1 and WORK_ITEM2 into a single, resulting work item.
+
+   Each of the WORK_ITEM parameters may have one of three values:
+
+     NULL                          no work item
+     (OPCODE arg1 arg2 ...)        single work item
+     ((OPCODE ...) (OPCODE ...))   multiple work items
+
+   These will be combined as appropriate, and returned in one of the
+   above three styles.
+
+   The resulting list will be ordered: WORK_ITEM1 first, then WORK_ITEM2  */
+svn_skel_t *
+svn_wc__wq_merge(svn_skel_t *work_item1,
+                 svn_skel_t *work_item2,
+                 apr_pool_t *result_pool);
+
+
 /* For the WCROOT identified by the DB and WRI_ABSPATH pair, run any
    work items that may be present in its workqueue.  */
 svn_error_t *

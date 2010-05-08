@@ -2363,3 +2363,51 @@ svn_wc__wq_run(svn_wc__db_t *db,
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
+
+
+svn_skel_t *
+svn_wc__wq_merge(svn_skel_t *work_item1,
+                 svn_skel_t *work_item2,
+                 apr_pool_t *result_pool)
+{
+  /* If either argument is NULL, then just return the other.  */
+  if (work_item1 == NULL)
+    return work_item2;
+  if (work_item2 == NULL)
+    return work_item1;
+
+  /* We have two items. Figure out how to join them.  */
+  if (SVN_WC__SINGLE_WORK_ITEM(work_item1))
+    {
+      if (SVN_WC__SINGLE_WORK_ITEM(work_item2))
+        {
+          /* Both are singular work items. Construct a list, then put
+             both work items into it (in the proper order).  */
+
+          svn_skel_t *result = svn_skel__make_empty_list(result_pool);
+
+          svn_skel__prepend(work_item2, result);
+          svn_skel__prepend(work_item1, result);
+          return result;
+        }
+
+      /* WORK_ITEM2 is a list of work items. We can simply shove WORK_ITEM1
+         in the front to keep the ordering.  */
+      svn_skel__prepend(work_item1, work_item2);
+      return work_item2;
+    }
+  /* WORK_ITEM1 is a list of work items.  */
+
+  if (SVN_WC__SINGLE_WORK_ITEM(work_item2))
+    {
+      /* Put WORK_ITEM2 onto the end of the WORK_ITEM1 list.  */
+      svn_skel__append(work_item1, work_item2);
+      return work_item1;
+    }
+
+  /* We have two lists of work items. We need to chain all of the work
+     items into one big list. We will leave behind the WORK_ITEM2 skel,
+     as we only want its children.  */
+  svn_skel__append(work_item1, work_item2->children);
+  return work_item1;
+}
