@@ -2846,9 +2846,14 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
 struct set_props_baton
 {
   apr_hash_t *props;
+
   const char *local_relpath;
   svn_wc__db_pdh_t *pdh;
+
+  const svn_skel_t *conflict;
+  const svn_skel_t *work_items;
 };
+
 
 /* Set the 'properties' column in the 'ACTUAL_NODE' table to BATON->props.
    Create an entry in the ACTUAL table for the node if it does not yet
@@ -2862,20 +2867,22 @@ set_props_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
   svn_sqlite__stmt_t *stmt;
   int affected_rows;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_UPDATE_ACTUAL_PROPS));
+  /* ### we dunno what to do with CONFLICT yet.  */
+  SVN_ERR_ASSERT(spb->conflict == NULL);
 
+  /* First order of business: insert all the work items.  */
+  SVN_ERR(add_work_items(db, spb->work_items, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_UPDATE_ACTUAL_PROPS));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", spb->pdh->wcroot->wc_id,
                             spb->local_relpath));
-
   SVN_ERR(svn_sqlite__bind_properties(stmt, 3, spb->props, scratch_pool));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
   if (affected_rows == 1)
     return SVN_NO_ERROR; /* We are done */
 
-
   /* We have to insert a row in actual */
-  /* ### Check if we have base or working here ? */
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_INSERT_ACTUAL_PROPS));
 
@@ -2895,10 +2902,15 @@ svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_hash_t *props,
+                        const svn_skel_t *conflict,
+                        const svn_skel_t *work_items,
                         apr_pool_t *scratch_pool)
 {
   struct set_props_baton spb;
+
   spb.props = props;
+  spb.conflict = conflict;
+  spb.work_items = work_items;
 
   SVN_ERR(parse_local_abspath(&spb.pdh, &spb.local_relpath, db, local_abspath,
                               svn_sqlite__mode_readwrite,

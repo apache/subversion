@@ -435,6 +435,7 @@ immediate_install_props(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
                                   (prop_diffs->nelts > 0) ? working_props
                                                           : NULL,
+                                  NULL, NULL,
                                   scratch_pool));
 
   return SVN_NO_ERROR;

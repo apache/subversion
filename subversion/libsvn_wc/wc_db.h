@@ -1017,17 +1017,26 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
    To specify no properties, PROPS must be an empty hash, not NULL.
    If the node is not present, return an error.
 
-   @note: This will overwrite whatever working properties the node currently
+   CONFLICT is used to register a conflict on this node at the same time
+   the properties are changed.
+
+   WORK_ITEMS are inserted into the work queue, as additional things that
+   need to be completed before the working copy is stable.
+
+   NOTE: This will overwrite ALL working properties the node currently
    has. There is no db_op_set_prop() function. Callers must read all the
    properties, change one, and write all the properties.
+   ### ugh. this has poor transaction semantics...
 
-   @note: This will create an entry in the ACTUAL table for the node if it
+   NOTE: This will create an entry in the ACTUAL table for the node if it
    does not yet have one.
 */
 svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_hash_t *props,
+                        const svn_skel_t *conflict,
+                        const svn_skel_t *work_items,
                         apr_pool_t *scratch_pool);
 
 /* ### Set the properties of the node LOCAL_ABSPATH in the BASE tree to PROPS.

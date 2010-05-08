@@ -642,7 +642,7 @@ validate_node(svn_wc__db_t *db,
   /* Now add a property value and read it back (all on actual) */
   apr_hash_set(props, "p999", APR_HASH_KEY_STRING, value);
 
-  SVN_ERR(svn_wc__db_op_set_props(db, path, props, scratch_pool));
+  SVN_ERR(svn_wc__db_op_set_props(db, path, props, NULL, NULL, scratch_pool));
   SVN_ERR(svn_wc__db_read_props(&props, db, path,
                                 scratch_pool, scratch_pool));
   SVN_TEST_ASSERT(props != NULL);
