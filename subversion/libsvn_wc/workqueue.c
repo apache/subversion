@@ -80,6 +80,19 @@ struct work_item_dispatch {
 };
 
 
+/* ### forward declaration for this. Temporary hack so that a work item
+   ### can be constructed within another handler and dispatched
+   ### immediately. in most normal cases, appending a work item to the
+   ### queue should be fine. but for now... not so much. */
+static svn_error_t *
+dispatch_work_item(svn_wc__db_t *db,
+                   const char *wri_abspath,
+                   const svn_skel_t *work_item,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *scratch_pool);
+
+
 static svn_error_t *
 sync_file_flags(svn_wc__db_t *db,
                 const char *local_abspath,
@@ -1617,8 +1630,9 @@ run_install_properties(svn_wc__db_t *db,
                                                  prop_abspath,
                                                  base_props,
                                                  scratch_pool));
-        SVN_ERR(svn_wc__db_wq_add(db, local_abspath, write_item,
-                                  scratch_pool));
+        /* ### double-hack!  */
+        SVN_ERR(dispatch_work_item(db, local_abspath, write_item,
+                                   cancel_func, cancel_baton, scratch_pool));
       }
 
       {
@@ -1663,8 +1677,9 @@ run_install_properties(svn_wc__db_t *db,
                                              prop_abspath,
                                              actual_props,
                                              scratch_pool));
-    SVN_ERR(svn_wc__db_wq_add(db, local_abspath, write_item,
-                              scratch_pool));
+    /* ### double-hack!  */
+    SVN_ERR(dispatch_work_item(db, local_abspath, write_item,
+                               cancel_func, cancel_baton, scratch_pool));
   }
 
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
@@ -2253,6 +2268,52 @@ static const struct work_item_dispatch dispatch_table[] = {
 };
 
 
+static svn_error_t *
+dispatch_work_item(svn_wc__db_t *db,
+                   const char *wri_abspath,
+                   const svn_skel_t *work_item,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *scratch_pool)
+{
+  const struct work_item_dispatch *scan;
+
+  /* Scan the dispatch table for a function to handle this work item.  */
+  for (scan = &dispatch_table[0]; scan->name != NULL; ++scan)
+    {
+      if (svn_skel__matches_atom(work_item->children, scan->name))
+        {
+
+#ifdef DEBUG_WORK_QUEUE
+          SVN_DBG(("dispatch: operation='%s'\n", scan->name));
+#endif
+          SVN_ERR((*scan->func)(db, work_item,
+                                cancel_func, cancel_baton,
+                                scratch_pool));
+          break;
+        }
+    }
+
+  if (scan->name == NULL)
+    {
+      /* We should know about ALL possible work items here. If we do not,
+         then something is wrong. Most likely, some kind of format/code
+         skew. There is nothing more we can do. Erasing or ignoring this
+         work item could leave the WC in an even more broken state.
+
+         Contrary to issue #1581, we cannot simply remove work items and
+         continue, so bail out with an error.  */
+      return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
+                               _("Unrecognized work item in the queue "
+                                 "associated with '%s'"),
+                               svn_dirent_local_style(wri_abspath,
+                                                      scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__wq_run(svn_wc__db_t *db,
                const char *wri_abspath,
@@ -2271,7 +2332,6 @@ svn_wc__wq_run(svn_wc__db_t *db,
       svn_wc__db_kind_t kind;
       apr_uint64_t id;
       svn_skel_t *work_item;
-      const struct work_item_dispatch *scan;
 
       /* Stop work queue processing, if requested. A future 'svn cleanup'
          should be able to continue the processing.  */
@@ -2293,38 +2353,10 @@ svn_wc__wq_run(svn_wc__db_t *db,
       if (work_item == NULL)
         break;
 
-      /* Scan the dispatch table for a function to handle this work item.  */
-      for (scan = &dispatch_table[0]; scan->name != NULL; ++scan)
-        {
-          if (svn_skel__matches_atom(work_item->children, scan->name))
-            {
+      SVN_ERR(dispatch_work_item(db, wri_abspath, work_item,
+                                 cancel_func, cancel_baton, iterpool));
 
-#ifdef DEBUG_WORK_QUEUE
-              SVN_DBG(("wq_run:   operation='%s'\n", scan->name));
-#endif
-              SVN_ERR((*scan->func)(db, work_item,
-                                    cancel_func, cancel_baton,
-                                    iterpool));
-              break;
-            }
-        }
-
-      if (scan->name == NULL)
-        {
-          /* We should know about ALL possible work items here. If we do not,
-             then something is wrong. Most likely, some kind of format/code
-             skew. There is nothing more we can do. Erasing or ignoring this
-             work item could leave the WC in an even more broken state.
-
-             Contrary to issue #1581, we cannot simply remove work items and
-             continue, so bail out with an error.  */
-          return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                                   _("Unrecognized work item in the queue "
-                                     "associated with '%s'"),
-                                   svn_dirent_local_style(wri_abspath,
-                                                          iterpool));
-        }
-
+      /* The work item finished without error. Mark it completed.  */
       SVN_ERR(svn_wc__db_wq_completed(db, wri_abspath, id, iterpool));
     }
 
