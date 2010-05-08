@@ -1596,8 +1596,6 @@ run_install_properties(svn_wc__db_t *db,
   const char *local_abspath;
   apr_hash_t *base_props;
   apr_hash_t *actual_props;
-  svn_wc__db_kind_t kind;
-  const char *prop_abspath;
   svn_boolean_t force_base_install;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
@@ -1618,25 +1616,8 @@ run_install_properties(svn_wc__db_t *db,
   arg = arg->next;
   force_base_install = arg && svn_skel__parse_int(arg, scratch_pool);
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
   if (base_props != NULL)
     {
-      SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
-                                svn_wc__props_base, scratch_pool));
-      /* ### oh hack!  */
-      {
-        const svn_skel_t *write_item;
-
-        SVN_ERR(svn_wc__wq_build_write_old_props(&write_item,
-                                                 prop_abspath,
-                                                 base_props,
-                                                 scratch_pool));
-        /* ### double-hack!  */
-        SVN_ERR(dispatch_work_item(db, local_abspath, write_item,
-                                   cancel_func, cancel_baton, scratch_pool));
-      }
-
-      {
         svn_boolean_t written = FALSE;
 
         if (!force_base_install)
@@ -1664,25 +1645,9 @@ run_install_properties(svn_wc__db_t *db,
         if (!written)
           SVN_ERR(svn_wc__db_temp_base_set_props(db, local_abspath,
                                                  base_props, scratch_pool));
-      }
     }
 
-
-  SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
-                            svn_wc__props_working, scratch_pool));
-  /* ### oh hack!  */
-  {
-    const svn_skel_t *write_item;
-
-    SVN_ERR(svn_wc__wq_build_write_old_props(&write_item,
-                                             prop_abspath,
-                                             actual_props,
-                                             scratch_pool));
-    /* ### double-hack!  */
-    SVN_ERR(dispatch_work_item(db, local_abspath, write_item,
-                               cancel_func, cancel_baton, scratch_pool));
-  }
-
+  /* Okay. It's time to save the ACTUAL props.  */
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
                                   NULL, NULL, scratch_pool));
 

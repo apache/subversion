@@ -364,6 +364,7 @@ svn_wc__load_revert_props(apr_hash_t **revert_props_p,
 svn_error_t *
 svn_wc__install_props(svn_wc__db_t *db,
                       const char *local_abspath,
+                      svn_wc__db_kind_t kind,
                       apr_hash_t *pristine_props,
                       apr_hash_t *props,
                       svn_boolean_t install_pristine_props,
@@ -371,6 +372,10 @@ svn_wc__install_props(svn_wc__db_t *db,
                       apr_pool_t *scratch_pool)
 {
   apr_array_header_t *prop_diffs;
+  const char *prop_abspath;
+  const svn_skel_t *work_item;
+
+  SVN_ERR_ASSERT(pristine_props != NULL);
 
   /* Check if the props are modified. */
   SVN_ERR(svn_prop_diffs(&prop_diffs, props, pristine_props, scratch_pool));
@@ -379,9 +384,33 @@ svn_wc__install_props(svn_wc__db_t *db,
   if (prop_diffs->nelts == 0)
     props = NULL; /* Remove actual properties*/
 
+  if (install_pristine_props)
+    {
+      /* Write out a new set of pristine properties.  */
+      SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
+                                svn_wc__props_base, scratch_pool));
+      SVN_ERR(svn_wc__wq_build_write_old_props(&work_item,
+                                               prop_abspath,
+                                               pristine_props,
+                                               scratch_pool));
+      SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
+    }
+
+  /* For the old school: write the properties into the "working" (aka ACTUAL)
+     location. Note that PROPS may be NULL, indicating a removal of the
+     props file.  */
+  SVN_ERR(svn_wc__prop_path(&prop_abspath, local_abspath, kind,
+                            svn_wc__props_working, scratch_pool));
+  SVN_ERR(svn_wc__wq_build_write_old_props(&work_item,
+                                           prop_abspath,
+                                           props,
+                                           scratch_pool));
+  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
+
+  /* ### this is disappearing. for now, it is a delayed call to put
+     ### properties into wc_db.  */
   if (!install_pristine_props)
     pristine_props = NULL; /* Don't change the pristine properties */
-
   SVN_ERR(svn_wc__wq_add_install_properties(db,
                                             local_abspath,
                                             pristine_props,
@@ -656,7 +685,10 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
       /* Verify that we're holding this directory's write lock.  */
       SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, pool));
 
-      SVN_ERR(svn_wc__install_props(wc_ctx->db, local_abspath,
+      /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
+      SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
+
+      SVN_ERR(svn_wc__install_props(wc_ctx->db, local_abspath, kind,
                                     new_base_props, new_actual_props,
                                     base_merge, FALSE, pool));
 

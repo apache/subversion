@@ -144,6 +144,7 @@ svn_boolean_t svn_wc__has_magic_property(const apr_array_header_t *properties);
 svn_error_t *
 svn_wc__install_props(svn_wc__db_t *db,
                       const char *local_abspath,
+                      svn_wc__db_kind_t kind,
                       apr_hash_t *pristine_props,
                       apr_hash_t *props,
                       svn_boolean_t install_pristine_props,
