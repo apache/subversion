@@ -339,7 +339,6 @@ svn_wc__install_props(svn_wc__db_t *db,
                       apr_hash_t *pristine_props,
                       apr_hash_t *props,
                       svn_boolean_t install_pristine_props,
-                      svn_boolean_t force_base_install,
                       apr_pool_t *scratch_pool)
 {
   apr_array_header_t *prop_diffs;
@@ -386,7 +385,6 @@ svn_wc__install_props(svn_wc__db_t *db,
                                             local_abspath,
                                             pristine_props,
                                             props,
-                                            force_base_install,
                                             scratch_pool));
 
   return SVN_NO_ERROR;
@@ -661,7 +659,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
 
       SVN_ERR(svn_wc__install_props(wc_ctx->db, local_abspath, kind,
                                     new_base_props, new_actual_props,
-                                    base_merge, FALSE, pool));
+                                    base_merge, pool));
 
       SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
                              cancel_func, cancel_baton,

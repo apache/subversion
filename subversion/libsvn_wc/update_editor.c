@@ -5957,7 +5957,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__install_props(db, local_abspath, svn_wc__db_kind_file,
                                 new_base_props,
                                 new_props ? new_props : new_base_props,
-                                TRUE, FALSE, pool));
+                                TRUE, pool));
 
   /* Copy NEW_BASE_CONTENTS into a temporary file so our log can refer to
      it, and set TMP_TEXT_BASE_ABSPATH to its path.  Compute its MD5
