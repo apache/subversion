@@ -2869,6 +2869,54 @@ prop_hash_from_array(const apr_array_header_t *prop_list,
   return prop_hash;
 }
 
+
+/* Build a work item to write an old-style propsfile for the specified
+   BASE properties.
+
+   ### breaks the props encapsulation by using svn_wc__prop_path, but this
+   ### function will only last until we move props into the database.  */
+static svn_error_t *
+build_write_base_props(const svn_skel_t **work_item,
+                       const char *local_abspath,
+                       svn_wc__db_kind_t kind,
+                       apr_hash_t *base_props,
+                       apr_pool_t *scratch_pool)
+{
+  const char *props_abspath;
+
+  SVN_ERR(svn_wc__prop_path(&props_abspath, local_abspath, kind,
+                            svn_wc__props_base, scratch_pool));
+  return svn_error_return(svn_wc__wq_build_write_old_props(work_item,
+                                                           props_abspath,
+                                                           base_props,
+                                                           scratch_pool));
+}
+
+
+/* Build a work item to write an old-style propsfile for the specified
+   ACTUAL properties. If ACTUAL_PROPS is NULL, then the old-style propsfile
+   will be removed, indicating "no change" from the pristines.
+
+   ### breaks the props encapsulation by using svn_wc__prop_path, but this
+   ### function will only last until we move props into the database.  */
+static svn_error_t *
+build_write_actual_props(const svn_skel_t **work_item,
+                         const char *local_abspath,
+                         svn_wc__db_kind_t kind,
+                         apr_hash_t *actual_props,
+                         apr_pool_t *scratch_pool)
+{
+  const char *props_abspath;
+
+  SVN_ERR(svn_wc__prop_path(&props_abspath, local_abspath, kind,
+                            svn_wc__props_working, scratch_pool));
+  return svn_error_return(svn_wc__wq_build_write_old_props(work_item,
+                                                           props_abspath,
+                                                           actual_props,
+                                                           scratch_pool));
+}
+
+
 /* An svn_delta_editor_t function. */
 static svn_error_t *
 close_directory(void *dir_baton,
@@ -3049,10 +3097,12 @@ close_directory(void *dir_baton,
       svn_revnum_t changed_rev;
       apr_time_t changed_date;
       const char *changed_author;
+      apr_hash_t *props;
+      const svn_skel_t *work_items;
 
       /* ### we know a base node already exists. it was created in
          ### open_directory or add_directory.  let's just preserve the
-         ### existing depth value, and possibly changed_*.  */
+         ### existing DEPTH value, and possibly CHANGED_*.  */
       SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
                                        NULL, NULL, NULL,
                                        &changed_rev,
@@ -3070,33 +3120,71 @@ close_directory(void *dir_baton,
           changed_author = last_change->cmt_author;
         }
 
-      /* ### the props thing below is probably wrong. example: maybe we
-         ### didn't get any updates, so the props should be unchanged.  */
+      /* Do we have new properties to install? Or shall we simply retain
+         the prior set of properties? If we're installing new properties,
+         then we also want to write them to an old-style props file.  */
+      props = new_base_props;
+      if (props == NULL)
+        {
+          SVN_ERR(svn_wc__db_base_get_props(&props, eb->db, db->local_abspath,
+                                            pool, pool));
+          work_items = NULL;
+        }
+      else
+        {
+          SVN_ERR(build_write_base_props(&work_items, db->local_abspath,
+                                         svn_wc__db_kind_dir, new_base_props,
+                                         pool));
+        }
+
+      /* ### NOTE: from this point onwards, we make TWO changes to the
+         ### database in a non-transactional way. some kind of revamp
+         ### needs to happend to bring this down to a single DB transaction
+         ### to perform the changes and install all the needed work items.  */
 
       SVN_ERR(svn_wc__db_base_add_directory(
                 eb->db, db->local_abspath,
                 db->new_relpath,
                 eb->repos_root, eb->repos_uuid,
                 *eb->target_revision,
-                new_base_props ? new_base_props : apr_hash_make(pool),
+                props,
                 changed_rev, changed_date, changed_author,
                 NULL /* children */,
                 depth,
                 NULL /* conflict */,
-                NULL /* work_items */,
+                work_items,
                 pool));
-    }
 
-  /* Queue some items to install the properties.  */
-  /* ### note: we do not have to test NEW_ACTUAL_PROPS. if it is not-NULL,
-     ### then NEW_BASE_PROPS is not-NULL (per logic above). by simplifying
-     ### this conditional, it becomes obvious that NEW_BASE_PROPS will
-     ### be not-NULL when passed to svn_wc__install_props.  */
-  if (new_base_props != NULL)
-    SVN_ERR(svn_wc__install_props(eb->db, db->local_abspath,
-                                  svn_wc__db_kind_dir,
-                                  new_base_props, new_actual_props,
-                                  TRUE /* write_base_props */, TRUE, pool));
+      /* If we updated the BASE properties, then we also have ACTUAL
+         properties to update. Do that now, along with queueing a work
+         item to write out an old-style props file.  */
+      if (new_base_props != NULL)
+        {
+          apr_array_header_t *prop_diffs;
+
+          SVN_ERR_ASSERT(new_actual_props != NULL);
+
+          /* If the ACTUAL props are the same as the BASE props, then we
+             should "write" a NULL. This will remove the props from the
+             ACTUAL_NODE row, and remove the old-style props file, indicating
+             "no change".  */
+          props = new_actual_props;
+          SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
+                                 pool));
+          if (prop_diffs->nelts == 0)
+            props = NULL;
+
+          SVN_ERR(build_write_actual_props(&work_items, db->local_abspath,
+                                           svn_wc__db_kind_dir,
+                                           props,
+                                           pool));
+          SVN_ERR(svn_wc__db_op_set_props(eb->db, db->local_abspath,
+                                          props,
+                                          NULL /* conflict */,
+                                          work_items,
+                                          pool));
+        }
+    }
 
   /* Process all of the queued work items for this directory.  */
   SVN_ERR(svn_wc__wq_run(eb->db, db->local_abspath,
@@ -4615,6 +4703,7 @@ close_file(void *file_baton,
   const char *install_from;
   apr_hash_t *current_base_props = NULL;
   apr_hash_t *current_actual_props = NULL;
+  const svn_skel_t *work_items;
 
   if (fb->skip_this)
     {
@@ -4769,14 +4858,11 @@ close_file(void *file_baton,
   /* We will ALWAYS have properties to save (after a not-dry-run merge).  */
   SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
 
-  /* We have the new (merged) properties now. Queue some work items to
-     install them.  */
-  SVN_ERR(svn_wc__install_props(eb->db, fb->local_abspath,
-                                svn_wc__db_kind_file,
-                                new_base_props, new_actual_props,
-                                TRUE /* write_base_props */,
-                                TRUE /* force_base_install */,
-                                pool));
+  /* We are going to write a new set of BASE properties. Create a work item
+     to update the old-style props file.  */
+  SVN_ERR(build_write_base_props(&work_items, fb->local_abspath,
+                                 svn_wc__db_kind_file, new_base_props,
+                                 pool));
 
   /* This writes a whole bunch of log commands to install wcprops.  */
   /* ### no it doesn't. this immediately modifies them. should probably
@@ -4789,6 +4875,12 @@ close_file(void *file_baton,
   SVN_ERR(merge_file(&install_pristine, &install_from,
                      &content_state, entry,
                      fb, new_text_base_abspath, pool));
+
+  /* ### NOTE: from this point onwards, we make several changes to the
+     ### database in a non-transactional way. we also queue additional
+     ### work after these changes. some revamps need to be performed to
+     ### bring this down to a single DB transaction to perform all the
+     ### changes and to install all the needed work items.  */
 
   /* Insert/replace the BASE node with all of the new metadata.  */
   {
@@ -4827,7 +4919,8 @@ close_file(void *file_baton,
                                      last_change->cmt_author,
                                      new_checksum,
                                      SVN_INVALID_FILESIZE,
-                                     NULL, NULL,
+                                     NULL /* conflict */,
+                                     work_items,
                                      pool));
 
     /* ### ugh. deal with preserving the file external value in the database.
@@ -4883,6 +4976,35 @@ close_file(void *file_baton,
                                      | SVN_WC__ENTRY_MODIFY_FORCE,
                                    pool));
     }
+
+  /* Now we need to update the ACTUAL tree, with the result of the
+     properties merge. */
+  {
+    apr_hash_t *props;
+    apr_array_header_t *prop_diffs;
+
+    SVN_ERR_ASSERT(new_actual_props != NULL);
+
+    /* If the ACTUAL props are the same as the BASE props, then we
+       should "write" a NULL. This will remove the props from the
+       ACTUAL_NODE row, and remove the old-style props file, indicating
+       "no change".  */
+    props = new_actual_props;
+    SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
+                           pool));
+    if (prop_diffs->nelts == 0)
+      props = NULL;
+
+    SVN_ERR(build_write_actual_props(&work_items, fb->local_abspath,
+                                     svn_wc__db_kind_file,
+                                     props,
+                                     pool));
+    SVN_ERR(svn_wc__db_op_set_props(eb->db, fb->local_abspath,
+                                    props,
+                                    NULL /* conflict */,
+                                    work_items,
+                                    pool));
+  }
 
   /* ### we may as well run whatever is in the queue right now. this
      ### starts out with some crap node data via construct_base_node(),
