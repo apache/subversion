@@ -1596,7 +1596,6 @@ run_install_properties(svn_wc__db_t *db,
   const char *local_abspath;
   apr_hash_t *base_props;
   apr_hash_t *actual_props;
-  svn_boolean_t force_base_install;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
   local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
@@ -1613,14 +1612,10 @@ run_install_properties(svn_wc__db_t *db,
   else
     SVN_ERR(svn_skel__parse_proplist(&actual_props, arg, scratch_pool));
 
-  arg = arg->next;
-  force_base_install = arg && svn_skel__parse_int(arg, scratch_pool);
-
   if (base_props != NULL)
     {
         svn_boolean_t written = FALSE;
 
-        if (!force_base_install)
           {
             svn_error_t *err;
 
@@ -1660,13 +1655,10 @@ svn_wc__wq_add_install_properties(svn_wc__db_t *db,
                                   const char *local_abspath,
                                   apr_hash_t *base_props,
                                   apr_hash_t *actual_props,
-                                  svn_boolean_t force_base_install,
                                   apr_pool_t *scratch_pool)
 {
   svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
   svn_skel_t *props;
-
-  svn_skel__prepend_int(force_base_install, work_item, scratch_pool);
 
   if (actual_props != NULL)
     {

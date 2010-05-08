@@ -148,7 +148,6 @@ svn_wc__install_props(svn_wc__db_t *db,
                       apr_hash_t *pristine_props,
                       apr_hash_t *props,
                       svn_boolean_t install_pristine_props,
-                      svn_boolean_t force_base_install,
                       apr_pool_t *scratch_pool);
 
 
