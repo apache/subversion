@@ -445,8 +445,13 @@ process_committed_leaf(svn_wc__db_t *db,
     }
 
   if (!no_unlock)
-    SVN_ERR(svn_wc__loggy_delete_lock(db, adm_abspath,
-                                      local_abspath, scratch_pool));
+    {
+      svn_skel_t *work_item;
+
+      SVN_ERR(svn_wc__loggy_delete_lock(&work_item, db, adm_abspath,
+                                        local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
+    }
 
   /* Set TMP_TEXT_BASE_ABSPATH to the new text base to be installed, if any. */
   {

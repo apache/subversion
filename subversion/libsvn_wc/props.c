@@ -1820,12 +1820,14 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       /* Mark entry as "conflicted" with a particular .prej file. */
       {
         svn_wc_entry_t entry;
+        svn_skel_t *work_item;
 
         entry.prejfile = svn_dirent_is_child(adm_abspath, reject_path, NULL);
-        SVN_ERR(svn_wc__loggy_entry_modify(db, adm_abspath,
+        SVN_ERR(svn_wc__loggy_entry_modify(&work_item, db, adm_abspath,
                                            local_abspath, &entry,
                                            SVN_WC__ENTRY_MODIFY_PREJFILE,
                                            scratch_pool));
+        SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
       }
 
       /* Once the prejfile is recorded, then install the file.  */

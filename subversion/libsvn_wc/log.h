@@ -32,6 +32,7 @@
 #include "svn_wc.h"
 
 #include "wc_db.h"
+#include "private/svn_skel.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,12 +49,13 @@ extern "C" {
    ADM_ABSPATH is the absolute path for the admin directory for PATH.
    DST and SRC and VERSIONED are relative to ADM_ABSPATH.  */
 svn_error_t *
-svn_wc__loggy_translated_file(svn_wc__db_t *db,
+svn_wc__loggy_translated_file(svn_skel_t **work_item,
+                              svn_wc__db_t *db,
                               const char *adm_abspath,
                               const char *dst_abspath,
                               const char *src_abspath,
                               const char *versioned_abspath,
-                              apr_pool_t *scratch_pool);
+                              apr_pool_t *result_pool);
 
 /* Insert into DB a work queue instruction to delete the entry
    associated with PATH from the entries file.
@@ -64,12 +66,13 @@ svn_wc__loggy_translated_file(svn_wc__db_t *db,
    Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
-svn_wc__loggy_delete_entry(svn_wc__db_t *db,
+svn_wc__loggy_delete_entry(svn_skel_t **work_item,
+                           svn_wc__db_t *db,
                            const char *adm_abspath,
                            const char *local_abspath,
                            svn_revnum_t revision,
                            svn_wc__db_kind_t kind,
-                           apr_pool_t *scratch_pool);
+                           apr_pool_t *result_pool);
 
 
 /* Insert into DB a work queue instruction to delete lock related
@@ -79,10 +82,11 @@ svn_wc__loggy_delete_entry(svn_wc__db_t *db,
    Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
-svn_wc__loggy_delete_lock(svn_wc__db_t *db,
+svn_wc__loggy_delete_lock(svn_skel_t **work_item,
+                          svn_wc__db_t *db,
                           const char *adm_abspath,
                           const char *local_abspath,
-                          apr_pool_t *scratch_pool);
+                          apr_pool_t *result_pool);
 
 
 /* Queue operations to modify the entry associated with PATH
@@ -97,12 +101,13 @@ svn_wc__loggy_delete_lock(svn_wc__db_t *db,
    Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
-svn_wc__loggy_entry_modify(svn_wc__db_t *db,
+svn_wc__loggy_entry_modify(svn_skel_t **work_item,
+                           svn_wc__db_t *db,
                            const char *adm_abspath,
                            const char *local_abspath,
                            const svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
-                           apr_pool_t *scratch_pool);
+                           apr_pool_t *result_pool);
 
 
 /* Queue instructions to move the file SRC_PATH to DST_PATH.
@@ -117,18 +122,20 @@ svn_wc__loggy_entry_modify(svn_wc__db_t *db,
    the move or the remove will have been carried out.
 */
 svn_error_t *
-svn_wc__loggy_move(svn_wc__db_t *db,
+svn_wc__loggy_move(svn_skel_t **work_item,
+                   svn_wc__db_t *db,
                    const char *adm_abspath,
                    const char *src_abspath,
                    const char *dst_abspath,
-                   apr_pool_t *scratch_pool);
+                   apr_pool_t *result_pool);
 
 
 svn_error_t *
-svn_wc__loggy_set_entry_timestamp_from_wc(svn_wc__db_t *db,
+svn_wc__loggy_set_entry_timestamp_from_wc(svn_skel_t **work_item,
+                                          svn_wc__db_t *db,
                                           const char *adm_abspath,
                                           const char *local_abspath,
-                                          apr_pool_t *scratch_pool);
+                                          apr_pool_t *result_pool);
 
 
 /* Queue log instructions to set the file size of PATH
@@ -137,10 +144,11 @@ svn_wc__loggy_set_entry_timestamp_from_wc(svn_wc__db_t *db,
    ADM_ABSPATH is the absolute path for the admin directory for PATH.
 */
 svn_error_t *
-svn_wc__loggy_set_entry_working_size_from_wc(svn_wc__db_t *db,
+svn_wc__loggy_set_entry_working_size_from_wc(svn_skel_t **work_item,
+                                             svn_wc__db_t *db,
                                              const char *adm_abspath,
                                              const char *local_abspath,
-                                             apr_pool_t *scratch_pool);
+                                             apr_pool_t *result_pool);
 
 
 /* Queue instructions to set the timestamp of PATH to
@@ -149,18 +157,20 @@ svn_wc__loggy_set_entry_working_size_from_wc(svn_wc__db_t *db,
    ADM_ABSPATH is the absolute path for the admin directory for PATH.
 */
 svn_error_t *
-svn_wc__loggy_set_timestamp(svn_wc__db_t *db,
+svn_wc__loggy_set_timestamp(svn_skel_t **work_item,
+                            svn_wc__db_t *db,
                             const char *adm_abspath,
                             const char *local_abspath,
                             const char *timestr,
-                            apr_pool_t *scratch_pool);
+                            apr_pool_t *result_pool);
 
 /* */
 svn_error_t *
-svn_wc__loggy_add_tree_conflict(svn_wc__db_t *db,
+svn_wc__loggy_add_tree_conflict(svn_skel_t **work_item,
+                                svn_wc__db_t *db,
                                 const char *adm_abspath,
                                 const svn_wc_conflict_description2_t *conflict,
-                                apr_pool_t *scratch_pool);
+                                apr_pool_t *result_pool);
 
 
 /* TODO ###

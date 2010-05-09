@@ -2086,6 +2086,7 @@ do_entry_deletion(struct edit_baton *eb,
   svn_wc_conflict_description2_t *tree_conflict = NULL;
   const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
   svn_boolean_t hidden;
+  svn_skel_t *work_item;
 
   SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, local_abspath, FALSE, pool));
 
@@ -2133,8 +2134,9 @@ do_entry_deletion(struct edit_baton *eb,
       /* When we raise a tree conflict on a directory, we want to avoid
        * making any changes inside it. (Will an update ever try to make
        * further changes to or inside a directory it's just deleted?) */
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(eb->db, dir_abspath,
+      SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item, eb->db, dir_abspath,
                                               tree_conflict, pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, dir_abspath, work_item, pool));
 
       SVN_ERR(remember_skipped_tree(eb, local_abspath));
 
@@ -2207,18 +2209,22 @@ do_entry_deletion(struct edit_baton *eb,
   if (strcmp(local_abspath, eb->target_abspath) != 0)
     {
       /* Delete, and do not leave a not-present node.  */
-      SVN_ERR(svn_wc__loggy_delete_entry(eb->db, dir_abspath, local_abspath,
+      SVN_ERR(svn_wc__loggy_delete_entry(&work_item,
+                                         eb->db, dir_abspath, local_abspath,
                                          SVN_INVALID_REVNUM,
                                          svn_wc__db_kind_unknown,
                                          pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, dir_abspath, work_item, pool));
     }
   else
     {
       /* Delete, leaving a not-present node.  */
-      SVN_ERR(svn_wc__loggy_delete_entry(eb->db, dir_abspath, local_abspath,
+      SVN_ERR(svn_wc__loggy_delete_entry(&work_item,
+                                         eb->db, dir_abspath, local_abspath,
                                          *eb->target_revision,
                                          kind,
                                          pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, dir_abspath, work_item, pool));
       eb->target_deleted = TRUE;
     }
 
@@ -2574,12 +2580,17 @@ add_directory(const char *path,
 
               if (tree_conflict != NULL)
                 {
+                  svn_skel_t *work_item;
+
                   /* Queue this conflict in the parent so that its descendants
                      are skipped silently. */
-                  SVN_ERR(svn_wc__loggy_add_tree_conflict(eb->db,
+                  SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
+                                                          eb->db,
                                                           pb->local_abspath,
                                                           tree_conflict,
                                                           pool));
+                  SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath,
+                                            work_item, pool));
 
                   SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
 
@@ -2778,9 +2789,13 @@ open_directory(const char *path,
   /* Remember the roots of any locally deleted trees. */
   if (tree_conflict != NULL)
     {
+      svn_skel_t *work_item;
+
       /* Place a tree conflict into the parent work queue.  */
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(eb->db, pb->local_abspath,
+      SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
+                                              eb->db, pb->local_abspath,
                                               tree_conflict, pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item, pool));
 
       do_notification(eb, db->local_abspath, svn_node_dir,
                       svn_wc_notify_tree_conflict, pool);
@@ -3903,12 +3918,17 @@ add_file(const char *path,
 
               if (tree_conflict != NULL)
                 {
+                  svn_skel_t *work_item;
+
                   /* Record the conflict so that the file is skipped silently
                      by the other callbacks. */
-                  SVN_ERR(svn_wc__loggy_add_tree_conflict(eb->db,
+                  SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
+                                                          eb->db,
                                                           pb->local_abspath,
                                                           tree_conflict,
                                                           subpool));
+                  SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath,
+                                            work_item, pool));
 
                   SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
                   fb->skip_this = TRUE;
@@ -4013,8 +4033,12 @@ open_file(const char *path,
   /* Is this path the victim of a newly-discovered tree conflict? */
   if (tree_conflict)
     {
-      SVN_ERR(svn_wc__loggy_add_tree_conflict(eb->db, pb->local_abspath,
+      svn_skel_t *work_item;
+
+      SVN_ERR(svn_wc__loggy_add_tree_conflict(&work_item,
+                                              eb->db, pb->local_abspath,
                                               tree_conflict, pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item, pool));
 
       if (tree_conflict->reason == svn_wc_conflict_reason_deleted ||
           tree_conflict->reason == svn_wc_conflict_reason_replaced)
@@ -4623,10 +4647,11 @@ merge_file(svn_skel_t **work_items,
       /* Move the temp text-base file to its final destination.
        * FB->text_base_path is the appropriate path: the "revert-base" path
        * if the node is replaced, else the usual text-base path. */
-      SVN_ERR(svn_wc__loggy_move(eb->db, pb->local_abspath,
+      SVN_ERR(svn_wc__loggy_move(&work_item, eb->db, pb->local_abspath,
                                  new_text_base_tmp_abspath,
                                  fb->text_base_abspath,
                                  pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item, pool));
     }
 #endif
 
@@ -4639,22 +4664,30 @@ merge_file(svn_skel_t **work_items,
       /* Adjust working copy file unless this file is an allowed
          obstruction. */
       if (fb->last_changed_date && !fb->obstruction_found)
-        SVN_ERR(svn_wc__loggy_set_timestamp(
-                  eb->db, pb->local_abspath,
-                  fb->local_abspath, fb->last_changed_date,
-                  pool));
+        {
+          SVN_ERR(svn_wc__loggy_set_timestamp(
+                    &work_item, eb->db, pb->local_abspath,
+                    fb->local_abspath, fb->last_changed_date,
+                    pool));
+          SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item,
+                                    pool));
+        }
 
       if ((new_text_base_tmp_abspath || magic_props_changed)
           && !fb->deleted)
         {
           /* Adjust entries file to match working file */
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(
-                    eb->db, pb->local_abspath,
+                    &work_item, eb->db, pb->local_abspath,
                     fb->local_abspath, pool));
+          SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item,
+                                    pool));
         }
+
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(
-                eb->db, pb->local_abspath,
+                &work_item, eb->db, pb->local_abspath,
                 fb->local_abspath, pool));
+      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item, pool));
     }
 
   /* Set the returned content state. */
@@ -5840,6 +5873,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   svn_checksum_t *base_checksum;
   struct last_change_info *last_change = NULL;
   const char *source_abspath = NULL;
+  svn_skel_t *work_item;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(new_base_contents != NULL);
@@ -5939,9 +5973,10 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
           | SVN_WC__ENTRY_MODIFY_COPIED;
       }
 
-    SVN_ERR(svn_wc__loggy_entry_modify(db, dir_abspath,
+    SVN_ERR(svn_wc__loggy_entry_modify(&work_item, db, dir_abspath,
                                        local_abspath, &tmp_entry,
                                        modify_flags, pool));
+    SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
   }
 
   /* ### Clear working node status in preparation for writing a new node. */
@@ -5959,12 +5994,13 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
        have an explicid 'changed' value, so we set the value to 'undefined'. */
     tmp_entry.text_time = 0;
 
-    SVN_ERR(svn_wc__loggy_entry_modify(db, dir_abspath,
+    SVN_ERR(svn_wc__loggy_entry_modify(&work_item, db, dir_abspath,
                                        local_abspath,  &tmp_entry,
                                        SVN_WC__ENTRY_MODIFY_KIND
                                          | SVN_WC__ENTRY_MODIFY_TEXT_TIME
                                          | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
                                        pool));
+    SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
   }
 
   /* Update LAST_CHANGE to reflect the entry props in NEW_BASE_PROPS, and
@@ -6034,16 +6070,18 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
          (Install it as the normal text base, not the 'revert base'.) */
       SVN_ERR(svn_wc__text_base_path(&text_base_abspath, db, local_abspath,
                                      FALSE, pool));
-      SVN_ERR(svn_wc__loggy_move(db, dir_abspath,
+      SVN_ERR(svn_wc__loggy_move(&work_item, db, dir_abspath,
                                  tmp_text_base_abspath, text_base_abspath,
                                  pool));
+      SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
 
       tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
 
-      SVN_ERR(svn_wc__loggy_entry_modify(db, dir_abspath,
+      SVN_ERR(svn_wc__loggy_entry_modify(&work_item, db, dir_abspath,
                                          local_abspath, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_CHECKSUM,
                                          pool));
+      SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
     }
 
   /* ### HACK: The following code should be performed in the same transaction as the install */

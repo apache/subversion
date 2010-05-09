@@ -414,6 +414,7 @@ save_merge_result(svn_wc__db_t *db,
   const char *edited_copy_abspath;
   const char *dir_abspath;
   const char *merge_filename;
+  svn_skel_t *work_item;
 
   svn_dirent_split(target_abspath, &dir_abspath, &merge_filename, pool);
 
@@ -426,11 +427,13 @@ save_merge_result(svn_wc__db_t *db,
                                      ".edited",
                                      svn_io_file_del_none,
                                      pool, pool));
-  SVN_ERR(svn_wc__loggy_translated_file(db, dir_abspath,
+  SVN_ERR(svn_wc__loggy_translated_file(&work_item,
+                                        db, dir_abspath,
                                         edited_copy_abspath,
                                         result_target,
                                         target_abspath,
                                         pool));
+  SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
 
   return SVN_NO_ERROR;
 }
@@ -605,6 +608,7 @@ preserve_pre_merge_files(svn_wc__db_t *db,
   const char *dir_abspath, *target_name;
   const char *temp_dir;
   svn_wc_entry_t tmp_entry;
+  svn_skel_t *work_item;
 
   svn_dirent_split(target_abspath, &dir_abspath, &target_name, pool);
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, target_abspath,
@@ -685,12 +689,14 @@ preserve_pre_merge_files(svn_wc__db_t *db,
   /* Create LEFT and RIGHT backup files, in expanded form.
      We use TARGET_ABSPATH's current properties to do the translation. */
   /* Derive the basenames of the 3 backup files. */
-  SVN_ERR(svn_wc__loggy_translated_file(db, dir_abspath,
+  SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
                                         left_copy, tmp_left,
                                         target_abspath, pool));
-  SVN_ERR(svn_wc__loggy_translated_file(db, dir_abspath,
+  SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
+  SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
                                         right_copy, tmp_right,
                                         target_abspath, pool));
+  SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
 
   /* Back up TARGET_ABSPATH through detranslation/retranslation:
      the new translation properties may not match the current ones */
@@ -699,9 +705,10 @@ preserve_pre_merge_files(svn_wc__db_t *db,
            SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
            cancel_func, cancel_baton,
            pool, pool));
-  SVN_ERR(svn_wc__loggy_translated_file(db, dir_abspath,
+  SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
                                         target_copy, detranslated_target_copy,
                                         target_abspath, pool));
+  SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
 
   tmp_entry.conflict_old = svn_dirent_is_child(dir_abspath, left_copy, pool);
   tmp_entry.conflict_new = svn_dirent_is_child(dir_abspath, right_copy, pool);
@@ -709,12 +716,13 @@ preserve_pre_merge_files(svn_wc__db_t *db,
 
   /* Mark TARGET_ABSPATH's entry as "Conflicted", and start tracking
      the backup files in the entry as well. */
-  SVN_ERR(svn_wc__loggy_entry_modify(db, dir_abspath,
+  SVN_ERR(svn_wc__loggy_entry_modify(&work_item, db, dir_abspath,
                                      target_abspath, &tmp_entry,
                                      SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
                                        | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
                                        | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
                                      pool));
+  SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1016,6 +1024,7 @@ merge_binary_file(enum svn_wc_merge_outcome_t *merge_outcome,
   const char *left_base, *right_base;
   const char *merge_dirpath, *merge_filename;
   svn_wc_entry_t tmp_entry;
+  svn_skel_t *work_item;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
 
@@ -1094,8 +1103,6 @@ merge_binary_file(enum svn_wc_merge_outcome_t *merge_outcome,
 
       if (install_from != NULL)
         {
-          svn_skel_t *work_item;
-
           SVN_ERR(svn_wc__wq_build_file_install(&work_item,
                                                 db, target_abspath,
                                                 install_from,
@@ -1143,11 +1150,12 @@ merge_binary_file(enum svn_wc_merge_outcome_t *merge_outcome,
                                          target_label,
                                          svn_io_file_del_none,
                                          pool, pool));
-      SVN_ERR(svn_wc__loggy_move(db,
+      SVN_ERR(svn_wc__loggy_move(&work_item, db,
                                  merge_dirpath,
                                  detranslated_target_abspath,
                                  mine_copy,
                                  pool));
+      SVN_ERR(svn_wc__db_wq_add(db, merge_dirpath, work_item, pool));
 
       mine_copy = svn_dirent_is_child(merge_dirpath,
                                       mine_copy, pool);
@@ -1165,12 +1173,14 @@ merge_binary_file(enum svn_wc_merge_outcome_t *merge_outcome,
   tmp_entry.conflict_old = left_base;
   tmp_entry.conflict_new = right_base;
   SVN_ERR(svn_wc__loggy_entry_modify(
+            &work_item,
             db, merge_dirpath, target_abspath,
             &tmp_entry,
             SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
               | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
               | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
             pool));
+  SVN_ERR(svn_wc__db_wq_add(db, merge_dirpath, work_item, pool));
 
   *merge_outcome = svn_wc_merge_conflict; /* a conflict happened */
 
