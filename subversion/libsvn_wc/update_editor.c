@@ -4284,7 +4284,8 @@ change_file_prop(void *file_baton,
  * POOL is used for all bookkeeping work during the installation.
  */
 static svn_error_t *
-merge_file(svn_boolean_t *install_pristine,
+merge_file(svn_skel_t **work_items,
+           svn_boolean_t *install_pristine,
            const char **install_from,
            svn_wc_notify_state_t *content_state,
            const svn_wc_entry_t *entry,
@@ -4298,6 +4299,7 @@ merge_file(svn_boolean_t *install_pristine,
   svn_boolean_t is_replaced = FALSE;
   svn_boolean_t magic_props_changed;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
+  svn_skel_t *work_item;
 
   /*
      When this function is called on file F, we assume the following
@@ -4317,6 +4319,7 @@ merge_file(svn_boolean_t *install_pristine,
      modifications.
   */
 
+  *work_items = NULL;
   *install_pristine = FALSE;
   *install_from = NULL;
 
@@ -4476,7 +4479,6 @@ merge_file(svn_boolean_t *install_pristine,
               const char *merge_left;
               svn_boolean_t delete_left = FALSE;
               const char *path_ext = "";
-              svn_skel_t *work_item;
 
               /* If we have any file extensions we're supposed to
                  preserve in generated conflict file names, then find
@@ -4534,6 +4536,7 @@ merge_file(svn_boolean_t *install_pristine,
                  ###   place this file into an inconsistent state.
                  ###   in the future, all the state changes should be
                  ###   made atomically.  */
+              /* ### this should return a work_items  */
               SVN_ERR(svn_wc__internal_merge(
                         &merge_outcome,
                         eb->db,
@@ -4554,8 +4557,7 @@ merge_file(svn_boolean_t *install_pristine,
                   SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
                                                        eb->db, merge_left,
                                                        pool, pool));
-                  SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath,
-                                            work_item, pool));
+                  *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
                 }
 
               /* And clean up add-with-history-related temp file too. */
@@ -4565,8 +4567,7 @@ merge_file(svn_boolean_t *install_pristine,
                                                        eb->db,
                                                        fb->copied_working_text,
                                                        pool, pool));
-                  SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath,
-                                            work_item, pool));
+                  *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
                 }
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
@@ -4610,6 +4611,10 @@ merge_file(svn_boolean_t *install_pristine,
           *install_from = tmptext;
         }
     }
+
+  /* ### dang. gotta queue the existing work before the stuff below.  */
+  SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, *work_items, pool));
+  *work_items = NULL;
 
   /* Deal with installation of the new textbase, if appropriate. */
 #ifndef SVN_EXPERIMENTAL_PRISTINE
@@ -4703,7 +4708,8 @@ close_file(void *file_baton,
   const char *install_from;
   apr_hash_t *current_base_props = NULL;
   apr_hash_t *current_actual_props = NULL;
-  svn_skel_t *work_items;
+  svn_skel_t *all_work_items;
+  svn_skel_t *work_item;
 
   if (fb->skip_this)
     {
@@ -4860,7 +4866,7 @@ close_file(void *file_baton,
 
   /* We are going to write a new set of BASE properties. Create a work item
      to update the old-style props file.  */
-  SVN_ERR(build_write_base_props(&work_items, fb->local_abspath,
+  SVN_ERR(build_write_base_props(&all_work_items, fb->local_abspath,
                                  svn_wc__db_kind_file, new_base_props,
                                  pool));
 
@@ -4874,7 +4880,8 @@ close_file(void *file_baton,
        ### new props into their old files. the in-database values are
        ### going to occur later (skew!), but we'll get that fixed before
        ### switching to db properties.  */
-    SVN_ERR(svn_wc__db_wq_add(eb->db, fb->local_abspath, work_items, pool));
+    SVN_ERR(svn_wc__db_wq_add(eb->db, fb->local_abspath, all_work_items,
+                              pool));
 
     props = new_actual_props;
     SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
@@ -4882,14 +4889,14 @@ close_file(void *file_baton,
     if (prop_diffs->nelts == 0)
       props = NULL;
 
-    SVN_ERR(build_write_actual_props(&work_items, fb->local_abspath,
+    SVN_ERR(build_write_actual_props(&work_item, fb->local_abspath,
                                      svn_wc__db_kind_file,
                                      props,
                                      pool));
-    SVN_ERR(svn_wc__db_wq_add(eb->db, fb->local_abspath, work_items, pool));
+    SVN_ERR(svn_wc__db_wq_add(eb->db, fb->local_abspath, work_item, pool));
 
     /* ### nothing for add_file to queue up.  */
-    work_items = NULL;
+    all_work_items = NULL;
   }
 
   /* This writes a whole bunch of log commands to install wcprops.  */
@@ -4900,9 +4907,10 @@ close_file(void *file_baton,
                                         pool));
 
   /* Do the hard work. This will queue some additional work.  */
-  SVN_ERR(merge_file(&install_pristine, &install_from,
+  SVN_ERR(merge_file(&work_item, &install_pristine, &install_from,
                      &content_state, entry,
                      fb, new_text_base_abspath, pool));
+  all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
 
   /* ### NOTE: from this point onwards, we make several changes to the
      ### database in a non-transactional way. we also queue additional
@@ -4948,7 +4956,7 @@ close_file(void *file_baton,
                                      new_checksum,
                                      SVN_INVALID_FILESIZE,
                                      NULL /* conflict */,
-                                     work_items,
+                                     all_work_items,
                                      pool));
 
     /* ### ugh. deal with preserving the file external value in the database.
@@ -5023,14 +5031,14 @@ close_file(void *file_baton,
     if (prop_diffs->nelts == 0)
       props = NULL;
 
-    SVN_ERR(build_write_actual_props(&work_items, fb->local_abspath,
+    SVN_ERR(build_write_actual_props(&work_item, fb->local_abspath,
                                      svn_wc__db_kind_file,
                                      props,
                                      pool));
     SVN_ERR(svn_wc__db_op_set_props(eb->db, fb->local_abspath,
                                     props,
                                     NULL /* conflict */,
-                                    work_items,
+                                    work_item,
                                     pool));
   }
 
@@ -5044,10 +5052,12 @@ close_file(void *file_baton,
                          eb->cancel_func, eb->cancel_baton,
                          pool));
 
+  /* We'll gather all the work items into one group.  */
+  all_work_items = NULL;
+
   if (install_pristine)
     {
       svn_boolean_t record_fileinfo;
-      svn_skel_t *work_item;
 
       /* If we are installing from the pristine contents, then go ahead and
          record the fileinfo. That will be the "proper" values. Installing
@@ -5063,8 +5073,7 @@ close_file(void *file_baton,
                                             eb->use_commit_times,
                                             record_fileinfo,
                                             pool, pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
-                                work_item, pool));
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
     }
 
   /* Now that all the state has settled, should we update the readonly
@@ -5073,8 +5082,6 @@ close_file(void *file_baton,
   if (new_text_base_abspath == NULL
       && lock_state == svn_wc_notify_lock_state_unlocked)
     {
-      svn_skel_t *work_item;
-
       /* If a lock was removed and we didn't update the text contents, we
          might need to set the file read-only.
 
@@ -5082,8 +5089,7 @@ close_file(void *file_baton,
       SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, eb->db,
                                                fb->local_abspath,
                                                pool, pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
-                                work_item, pool));
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
     }
 
   /* Clean up any temporary files.  */
@@ -5100,26 +5106,24 @@ close_file(void *file_baton,
                                        fb->local_abspath, pool));
       if (strcmp(install_from, revert_base_abspath) != 0)
         {
-          svn_skel_t *work_item;
-
           SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
                                                install_from,
                                                pool, pool));
-          SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
-                                    work_item, pool));
+          all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
         }
     }
 
   if (fb->copied_text_base_abspath)
     {
-      svn_skel_t *work_item;
-
       SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
                                            fb->copied_text_base_abspath,
                                            pool, pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
-                                work_item, pool));
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
     }
+
+  /* Time to add all the work.  */
+  SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
+                            all_work_items, pool));
 
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
