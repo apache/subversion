@@ -58,6 +58,8 @@
 /* Old data files that we no longer need/use.  */
 #define ADM_README "README.txt"
 #define ADM_EMPTY_FILE "empty-file"
+#define ADM_LOG "log"
+#define ADM_LOCK "lock"
 
 
 /* Read the properties from the file at PROPFILE_ABSPATH, returning them
@@ -327,7 +329,7 @@ build_lockfile_path(const char *local_dir_abspath,
   return svn_dirent_join_many(result_pool,
                               local_dir_abspath,
                               ".svn", /* ### switch to dynamic?  */
-                              "lock",
+                              ADM_LOCK,
                               NULL);
 }
 
@@ -442,7 +444,7 @@ upgrade_to_wcng(svn_wc__db_t *db,
                 void *repos_info_baton,
                 apr_pool_t *scratch_pool)
 {
-  const char *logfile_path = svn_wc__adm_child(dir_abspath, SVN_WC__ADM_LOG,
+  const char *logfile_path = svn_wc__adm_child(dir_abspath, ADM_LOG,
                                                scratch_pool);
   svn_node_kind_t logfile_on_disk;
   apr_hash_t *entries;
