@@ -3643,6 +3643,9 @@ typedef struct svn_wc_status3_t
   /** Set to TRUE if the item is the victim of a conflict. */
   svn_boolean_t conflicted;
 
+  /** If the path is under version control, versioned is TRUE. */
+  svn_boolean_t versioned;
+
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
 } svn_wc_status3_t;
 

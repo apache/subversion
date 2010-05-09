@@ -188,7 +188,7 @@ print_status(void *baton,
    * ### WORKING nodes on its own. Until we've agreed on how the CLI should
    * ### handle the revision information, we use this appproach to stay compat
    * ### with our testsuite. */
-  if (status->entry)
+  if (status->versioned)
     {
       SVN_ERR(svn_wc__node_get_working_rev_info(&revision, &changed_rev,
                                                 &changed_date,
