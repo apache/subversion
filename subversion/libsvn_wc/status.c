@@ -293,6 +293,7 @@ assemble_status(svn_wc_status3_t **status,
                 apr_pool_t *scratch_pool)
 {
   svn_wc_status3_t *stat;
+  svn_wc__db_kind_t db_kind;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
   const svn_wc_conflict_description2_t *tree_conflict;
@@ -402,7 +403,7 @@ assemble_status(svn_wc_status3_t **status,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, &revision, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(NULL, &db_kind, &revision, NULL, NULL, NULL,
                                &changed_rev, &changed_date, &changed_author,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, &conflicted,
@@ -413,7 +414,7 @@ assemble_status(svn_wc_status3_t **status,
      subdir, or deleted the directory altogether and created a new one.
      In any case, what is currently there is in the way.
    */
-  if (entry->kind == svn_node_dir)
+  if (db_kind == svn_wc__db_kind_dir)
     {
       if (path_kind == svn_node_dir)
         {
@@ -492,7 +493,7 @@ assemble_status(svn_wc_status3_t **status,
 #endif /* HAVE_SYMLINK */
 
       /* If the entry is a file, check for textual modifications */
-      if ((entry->kind == svn_node_file)
+      if ((db_kind == svn_wc__db_kind_file)
 #ifdef HAVE_SYMLINK
           && (wc_special == path_special)
 #endif /* HAVE_SYMLINK */
@@ -600,14 +601,18 @@ assemble_status(svn_wc_status3_t **status,
           if (final_text_status != svn_wc_status_deleted)
             final_text_status = svn_wc_status_missing;
         }
-      else if (path_kind != entry->kind)
+      /* ### We can do this db_kind to node_kind translation since the cases
+       * where db_kind would have been unknown are treated as unversioned
+       * paths and thus have already returned. */
+      else if (path_kind != (db_kind == svn_wc__db_kind_dir ?  
+                                        svn_node_dir : svn_node_file))
         final_text_status = svn_wc_status_obstructed;
 #ifdef HAVE_SYMLINK
       else if ( wc_special != path_special)
         final_text_status = svn_wc_status_obstructed;
 #endif /* HAVE_SYMLINK */
 
-      if (path_kind == svn_node_dir && entry->kind == svn_node_dir)
+      if (path_kind == svn_node_dir && db_kind == svn_wc__db_kind_dir)
         SVN_ERR(svn_wc__db_wclocked(&locked_p, db, local_abspath,
                                     scratch_pool));
     }
