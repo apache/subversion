@@ -564,7 +564,7 @@ eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
   SVN_ERR_ASSERT(install_from != NULL);
 
   {
-    const svn_skel_t *work_item;
+    svn_skel_t *work_item;
 
     SVN_ERR(svn_wc__wq_build_file_install(&work_item,
                                           db, target_abspath,
@@ -976,7 +976,7 @@ merge_text_file(enum svn_wc_merge_outcome_t *merge_outcome,
 
   if (*merge_outcome != svn_wc_merge_unchanged && ! dry_run)
     {
-      const svn_skel_t *work_item;
+      svn_skel_t *work_item;
 
       /* replace TARGET_ABSPATH with the new merged file, expanding. */
       SVN_ERR(svn_wc__wq_build_file_install(&work_item,
@@ -1094,7 +1094,7 @@ merge_binary_file(enum svn_wc_merge_outcome_t *merge_outcome,
 
       if (install_from != NULL)
         {
-          const svn_skel_t *work_item;
+          svn_skel_t *work_item;
 
           SVN_ERR(svn_wc__wq_build_file_install(&work_item,
                                                 db, target_abspath,
@@ -1305,7 +1305,7 @@ svn_wc__internal_merge(enum svn_wc_merge_outcome_t *merge_outcome,
      possibly make it read-only. */
   if (! dry_run)
     {
-      const svn_skel_t *work_item;
+      svn_skel_t *work_item;
 
       SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db,
                                                target_abspath,

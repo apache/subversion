@@ -343,7 +343,7 @@ svn_wc__install_props(svn_wc__db_t *db,
 {
   apr_array_header_t *prop_diffs;
   const char *prop_abspath;
-  const svn_skel_t *work_item;
+  svn_skel_t *work_item;
 
   SVN_ERR_ASSERT(pristine_props != NULL);
 
@@ -401,7 +401,7 @@ immediate_install_props(svn_wc__db_t *db,
   apr_hash_t *base_props;
   const char *propfile_abspath;
   apr_array_header_t *prop_diffs;
-  const svn_skel_t *work_item;
+  svn_skel_t *work_item;
 
   /* ### no pristines should be okay.  */
   SVN_ERR_W(load_pristine_props(&base_props, db, local_abspath,
@@ -1830,7 +1830,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
       /* Once the prejfile is recorded, then install the file.  */
       {
-        const svn_skel_t *work_item;
+        svn_skel_t *work_item;
 
         /* ### careful. CONFLICT_SKEL is NOT dup'd into the provided
            ### result_pool at the moment. we'll get that fixed soon-ish.

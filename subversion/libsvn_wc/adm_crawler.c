@@ -69,7 +69,7 @@ restore_file(svn_wc__db_t *db,
              svn_boolean_t use_commit_times,
              apr_pool_t *scratch_pool)
 {
-  const svn_skel_t *work_item;
+  svn_skel_t *work_item;
 
   SVN_ERR(svn_wc__wq_build_file_install(&work_item,
                                         db, local_abspath,
