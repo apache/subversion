@@ -842,25 +842,25 @@ run_loggy(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__wq_add_loggy(svn_wc__db_t *db,
-                     const char *adm_abspath,
-                     const svn_stringbuf_t *log_content,
-                     apr_pool_t *scratch_pool)
+svn_wc__wq_build_loggy(svn_skel_t **work_item,
+                       svn_wc__db_t *db,
+                       const char *adm_abspath,
+                       const svn_stringbuf_t *log_content,
+                       apr_pool_t *result_pool)
 {
-  svn_skel_t *work_item;
-
   if (log_content == NULL || svn_stringbuf_isempty(log_content))
-    return SVN_NO_ERROR;
+    {
+      *work_item = NULL;
+      return SVN_NO_ERROR;
+    }
 
-  work_item = svn_skel__make_empty_list(scratch_pool);
+  *work_item = svn_skel__make_empty_list(result_pool);
 
-  /* The skel still points at ADM_ABSPATH and LOG_CONTENT, but the skel will
-     be serialized just below in the wq_add call.  */
-  svn_skel__prepend_str(log_content->data, work_item, scratch_pool);
-  svn_skel__prepend_str(adm_abspath, work_item, scratch_pool);
-  svn_skel__prepend_str(OP_LOGGY, work_item, scratch_pool);
-
-  SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
+  /* NOTE: the skel still points at ADM_ABSPATH and LOG_CONTENT, but we
+     require these parameters to be allocated in RESULT_POOL.  */
+  svn_skel__prepend_str(log_content->data, *work_item, result_pool);
+  svn_skel__prepend_str(adm_abspath, *work_item, result_pool);
+  svn_skel__prepend_str(OP_LOGGY, *work_item, result_pool);
 
   return SVN_NO_ERROR;
 }

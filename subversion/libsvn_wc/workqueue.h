@@ -188,13 +188,17 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
 /* ### temporary compat for mapping the old loggy into workqueue space.
 
    LOG_CONTENT may be NULL or reference an empty log. No work item will be
-   queued in this case.
+   built in this case.
+
+   NOTE: ADM_ABSPATH and LOG_CONTENT must live at least as long as
+   RESULT_POOL (typically, they'll be allocated within RESULT_POOL).
 */
 svn_error_t *
-svn_wc__wq_add_loggy(svn_wc__db_t *db,
-                     const char *adm_abspath,
-                     const svn_stringbuf_t *log_content,
-                     apr_pool_t *scratch_pool);
+svn_wc__wq_build_loggy(svn_skel_t **work_item,
+                       svn_wc__db_t *db,
+                       const char *adm_abspath,
+                       const svn_stringbuf_t *log_content,
+                       apr_pool_t *result_pool);
 
 
 svn_error_t *
