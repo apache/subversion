@@ -66,7 +66,7 @@ svn_wc__loggy_translated_file(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_delete_entry(svn_wc__db_t *db,
                            const char *adm_abspath,
-                           const char *path,
+                           const char *local_abspath,
                            svn_revnum_t revision,
                            svn_wc__db_kind_t kind,
                            apr_pool_t *scratch_pool);
@@ -81,7 +81,7 @@ svn_wc__loggy_delete_entry(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_delete_lock(svn_wc__db_t *db,
                           const char *adm_abspath,
-                          const char *path,
+                          const char *local_abspath,
                           apr_pool_t *scratch_pool);
 
 
@@ -99,7 +99,7 @@ svn_wc__loggy_delete_lock(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_entry_modify(svn_wc__db_t *db,
                            const char *adm_abspath,
-                           const char *path,
+                           const char *local_abspath,
                            const svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
                            apr_pool_t *scratch_pool);
@@ -119,15 +119,15 @@ svn_wc__loggy_entry_modify(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_move(svn_wc__db_t *db,
                    const char *adm_abspath,
-                   const char *src_path,
-                   const char *dst_path,
+                   const char *src_abspath,
+                   const char *dst_abspath,
                    apr_pool_t *scratch_pool);
 
 
 svn_error_t *
 svn_wc__loggy_set_entry_timestamp_from_wc(svn_wc__db_t *db,
                                           const char *adm_abspath,
-                                          const char *path,
+                                          const char *local_abspath,
                                           apr_pool_t *scratch_pool);
 
 
@@ -139,7 +139,7 @@ svn_wc__loggy_set_entry_timestamp_from_wc(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_set_entry_working_size_from_wc(svn_wc__db_t *db,
                                              const char *adm_abspath,
-                                             const char *path,
+                                             const char *local_abspath,
                                              apr_pool_t *scratch_pool);
 
 
@@ -151,7 +151,7 @@ svn_wc__loggy_set_entry_working_size_from_wc(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_set_timestamp(svn_wc__db_t *db,
                             const char *adm_abspath,
-                            const char *path,
+                            const char *local_abspath,
                             const char *timestr,
                             apr_pool_t *scratch_pool);
 

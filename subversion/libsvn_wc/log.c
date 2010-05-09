@@ -643,30 +643,22 @@ svn_wc__run_xml_log(svn_wc__db_t *db,
 }
 
 
-/* Return the portion of PATH that is relative to the working copy directory
- * ADM_ABSPATH, or SVN_WC_ENTRY_THIS_DIR if PATH is that directory. PATH must
- * not be outside that directory. */
+/* Return (in *RELPATH) the portion of ABSPATH that is relative to the
+   working copy directory ADM_ABSPATH, or SVN_WC_ENTRY_THIS_DIR if ABSPATH
+   is that directory. ABSPATH must within ADM_ABSPATH.  */
 static svn_error_t *
-loggy_path(const char **logy_path,
-           const char *path,
+loggy_path(const char **relpath,
+           const char *abspath,
            const char *adm_abspath,
            apr_pool_t *scratch_pool)
 {
-  const char *abspath;
+  *relpath = svn_dirent_is_child(adm_abspath, abspath, NULL);
 
-  SVN_ERR(svn_dirent_get_absolute(&abspath, path, scratch_pool));
-  *logy_path = svn_dirent_is_child(adm_abspath, abspath, NULL);
-
-  if (! (*logy_path))
+  if (*relpath == NULL)
     {
-      if (strcmp(abspath, adm_abspath) == 0) /* same path */
-        *logy_path = SVN_WC_ENTRY_THIS_DIR;
-      else /* not a child path */
-        return svn_error_createf(SVN_ERR_BAD_RELATIVE_PATH, NULL,
-                                 _("Path '%s' is not a child of '%s'"),
-                                 svn_dirent_local_style(path, scratch_pool),
-                                 svn_dirent_local_style(adm_abspath,
-                                                        scratch_pool));
+      SVN_ERR_ASSERT(strcmp(abspath, adm_abspath) == 0);
+
+      *relpath = "";
     }
 
   return SVN_NO_ERROR;
@@ -710,7 +702,7 @@ svn_wc__loggy_translated_file(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_delete_entry(svn_wc__db_t *db,
                            const char *adm_abspath,
-                           const char *path,
+                           const char *local_abspath,
                            svn_revnum_t revision,
                            svn_wc__db_kind_t kind,
                            apr_pool_t *scratch_pool)
@@ -718,7 +710,9 @@ svn_wc__loggy_delete_entry(svn_wc__db_t *db,
   const char *loggy_path1;
   svn_stringbuf_t *log_accum = NULL;
 
-  SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(loggy_path(&loggy_path1, local_abspath, adm_abspath, scratch_pool));
   svn_xml_make_open_tag(&log_accum, scratch_pool, svn_xml_self_closing,
                         SVN_WC__LOG_DELETE_ENTRY,
                         SVN_WC__LOG_ATTR_NAME,
@@ -736,13 +730,15 @@ svn_wc__loggy_delete_entry(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_delete_lock(svn_wc__db_t *db,
                           const char *adm_abspath,
-                          const char *path,
+                          const char *local_abspath,
                           apr_pool_t *scratch_pool)
 {
   const char *loggy_path1;
   svn_stringbuf_t *log_accum = NULL;
 
-  SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(loggy_path(&loggy_path1, local_abspath, adm_abspath, scratch_pool));
   svn_xml_make_open_tag(&log_accum, scratch_pool, svn_xml_self_closing,
                         SVN_WC__LOG_DELETE_LOCK,
                         SVN_WC__LOG_ATTR_NAME, loggy_path1,
@@ -756,7 +752,7 @@ svn_wc__loggy_delete_lock(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_entry_modify(svn_wc__db_t *db,
                            const char *adm_abspath,
-                           const char *path,
+                           const char *local_abspath,
                            const svn_wc_entry_t *entry,
                            apr_uint64_t modify_flags,
                            apr_pool_t *scratch_pool)
@@ -765,6 +761,7 @@ svn_wc__loggy_entry_modify(svn_wc__db_t *db,
   const char *loggy_path1;
   apr_hash_t *prop_hash = apr_hash_make(scratch_pool);
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(modify_flags != 0);
 
   /* ### this code has a limited set of modifications. enforce it.  */
@@ -863,7 +860,7 @@ svn_wc__loggy_entry_modify(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(apr_hash_count(prop_hash) != 0);
 
-  SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
+  SVN_ERR(loggy_path(&loggy_path1, local_abspath, adm_abspath, scratch_pool));
   apr_hash_set(prop_hash, SVN_WC__LOG_ATTR_NAME,
                APR_HASH_KEY_STRING, loggy_path1);
 
@@ -879,19 +876,20 @@ svn_wc__loggy_entry_modify(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_move(svn_wc__db_t *db,
                    const char *adm_abspath,
-                   const char *src_path,
-                   const char *dst_path,
+                   const char *src_abspath,
+                   const char *dst_abspath,
                    apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *log_accum = NULL;
   const char *loggy_path1;
   const char *loggy_path2;
   svn_node_kind_t kind;
-  const char *src_abspath = svn_dirent_join(adm_abspath, src_path,
-                                            scratch_pool);
 
-  SVN_ERR(loggy_path(&loggy_path1, src_path, adm_abspath, scratch_pool));
-  SVN_ERR(loggy_path(&loggy_path2, dst_path, adm_abspath, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+
+  SVN_ERR(loggy_path(&loggy_path1, src_abspath, adm_abspath, scratch_pool));
+  SVN_ERR(loggy_path(&loggy_path2, dst_abspath, adm_abspath, scratch_pool));
 
   SVN_ERR(svn_io_check_path(src_abspath, &kind, scratch_pool));
 
@@ -916,13 +914,15 @@ svn_wc__loggy_move(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_set_entry_timestamp_from_wc(svn_wc__db_t *db,
                                           const char *adm_abspath,
-                                          const char *path,
+                                          const char *local_abspath,
                                           apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *log_accum = NULL;
   const char *loggy_path1;
 
-  SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(loggy_path(&loggy_path1, local_abspath, adm_abspath, scratch_pool));
   svn_xml_make_open_tag(&log_accum,
                         scratch_pool,
                         svn_xml_self_closing,
@@ -940,13 +940,15 @@ svn_wc__loggy_set_entry_timestamp_from_wc(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_set_entry_working_size_from_wc(svn_wc__db_t *db,
                                              const char *adm_abspath,
-                                             const char *path,
+                                             const char *local_abspath,
                                              apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *log_accum = NULL;
   const char *loggy_path1;
 
-  SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(loggy_path(&loggy_path1, local_abspath, adm_abspath, scratch_pool));
   svn_xml_make_open_tag(&log_accum,
                         scratch_pool,
                         svn_xml_self_closing,
@@ -965,14 +967,16 @@ svn_wc__loggy_set_entry_working_size_from_wc(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__loggy_set_timestamp(svn_wc__db_t *db,
                             const char *adm_abspath,
-                            const char *path,
+                            const char *local_abspath,
                             const char *timestr,
                             apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *log_accum = NULL;
   const char *loggy_path1;
 
-  SVN_ERR(loggy_path(&loggy_path1, path, adm_abspath, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(loggy_path(&loggy_path1, local_abspath, adm_abspath, scratch_pool));
   svn_xml_make_open_tag(&log_accum,
                         scratch_pool,
                         svn_xml_self_closing,
