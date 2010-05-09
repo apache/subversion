@@ -40,8 +40,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
-#define SVN_WC__TMP_EXT       ".tmp"
+
 #define SVN_WC__PROP_REJ_EXT  ".prej"
 #define SVN_WC__BASE_EXT      ".svn-base" /* for text and prop bases */
 #define SVN_WC__WORK_EXT      ".svn-work" /* for working propfiles */
@@ -293,7 +292,6 @@ struct svn_wc_traversal_info_t
 /** The files within the administrative subdir. **/
 #define SVN_WC__ADM_FORMAT              "format"
 #define SVN_WC__ADM_ENTRIES             "entries"
-#define SVN_WC__ADM_LOCK                "lock"
 #define SVN_WC__ADM_TMP                 "tmp"
 #define SVN_WC__ADM_TEXT_BASE           "text-base"
 #define SVN_WC__ADM_PROPS               "props"
@@ -301,18 +299,12 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_DIR_PROPS           "dir-props"
 #define SVN_WC__ADM_DIR_PROP_BASE       "dir-prop-base"
 #define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
-#define SVN_WC__ADM_LOG                 "log"
-#define SVN_WC__ADM_KILLME              "KILLME"
 #define SVN_WC__ADM_PRISTINE            "pristine"
 
 /* The basename of the ".prej" file, if a directory ever has property
    conflicts.  This .prej file will appear *within* the conflicted
    directory.  */
 #define SVN_WC__THIS_DIR_PREJ           "dir_conflicts"
-
-/* Possible contents of the killme file.  If present, signals that the
-   administrative area only should be deleted. */
-#define SVN_WC__KILL_ADM_ONLY           "adm-only"
 
 
 /* A few declarations for stuff in util.c.
