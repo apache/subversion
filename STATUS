@@ -30,7 +30,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-r38836.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, steveking
      +0: pburba - I don't have a Vista or Win7 box to try this out on, but it
          works fine on my XP box.
      +0: lgo - code reviewed and looks good, but I don't have access to a
@@ -104,7 +104,7 @@ Candidate changes:
    Justification:
      It's better to be safe, when we are talking about SSL.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, steveking
 
  * r878590, r878607, r878625, r878626, r878627
    In trunk we optimized the common case of 'find-and-replace with same uri'
@@ -169,7 +169,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-r935996.
    Votes:
-     +1 rhuijben
+     +1 rhuijben, steveking
 
  * r937610
    Allow fs-pack-test 1 to pass with low file descriptor limits.
