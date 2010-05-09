@@ -5767,7 +5767,10 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
   const char *local_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-  SVN_ERR_ASSERT(work_item != NULL);
+
+  /* Quick exit, if there are no work items to queue up.  */
+  if (work_item == NULL)
+    return SVN_NO_ERROR;
 
   SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
                               svn_sqlite__mode_readwrite,
