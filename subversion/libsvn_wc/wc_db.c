@@ -784,6 +784,8 @@ open_db(svn_sqlite__db_t **sdb,
    *LOCAL_RELPATH will be allocated within RESULT_POOL. Temporary allocations
    will be made in SCRATCH_POOL.
 
+   *PDH will be allocated within DB->STATE_POOL.
+
    Certain internal structures will be allocated in DB->STATE_POOL.
 */
 static svn_error_t *
@@ -1752,6 +1754,47 @@ svn_wc__db_init(svn_wc__db_t *db,
   /* ### no children, conflicts, or work items to install in a txn... */
 
   return svn_error_return(insert_base_node(&ibb, sdb, scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__db_to_relpath(const char **local_relpath,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+
+  SVN_ERR(parse_local_abspath(&pdh, local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readonly,
+                              result_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_from_relpath(const char **local_abspath,
+                        svn_wc__db_t *db,
+                        const char *wri_abspath,
+                        const char *local_relpath,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *unused_relpath;
+
+  SVN_ERR(parse_local_abspath(&pdh, &unused_relpath, db, wri_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  *local_abspath = svn_dirent_join(pdh->wcroot->abspath,
+                                   local_relpath,
+                                   result_pool);
+  return SVN_NO_ERROR;
 }
 
 

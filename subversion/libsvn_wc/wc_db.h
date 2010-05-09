@@ -369,6 +369,50 @@ svn_wc__db_init(svn_wc__db_t *db,
                 apr_pool_t *scratch_pool);
 
 
+/* Compute the LOCAL_RELPATH for the given LOCAL_ABSPATH.
+
+   The LOCAL_RELPATH is a relative path to the working copy's root. That
+   root will be located by this function, and the path will be relative to
+   that location. If LOCAL_ABSPATH is the wcroot directory, then "" will
+   be returned.
+
+   The LOCAL_RELPATH should ONLY be used for persisting paths to disk.
+   Those patsh should not be an abspath, otherwise the working copy cannot
+   be moved. The working copy library should not make these paths visible
+   in its API (which should all be abspaths), and it should not be using
+   relpaths for other processing.
+
+   LOCAL_RELPATH will be allocated in RESULT_POOL. All other (temporary)
+   allocations will be made in SCRATCH_POOL.
+
+   ### note: with per-dir .svn directories, these relpaths will effectively
+   ### be the basename. it gets interesting in single-db mode
+*/
+svn_error_t *
+svn_wc__db_to_relpath(const char **local_relpath,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+
+/* Compute the LOCAL_ABSPATH for a LOCAL_RELPATH located within the working
+   copy identified by WRI_ABSPATH.
+
+   This is the reverse of svn_wc__db_to_relpath. It should be used for
+   returning a persisted relpath back into an abspath.
+
+   LOCAL_ABSPATH will be allocated in RESULT_POOL. All other (temporary)
+   allocations will be made in SCRATCH_POOL.
+*/
+svn_error_t *
+svn_wc__db_from_relpath(const char **local_abspath,
+                        svn_wc__db_t *db,
+                        const char *wri_abspath,
+                        const char *local_relpath,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
 /* @} */
 
 /* Different kinds of trees
