@@ -384,7 +384,7 @@ process_committed_leaf(svn_wc__db_t *db,
   /* ### this goes away once props are fully in the database  */
   {
     const char *revert_props_abspath;
-    const svn_skel_t *work_item;
+    svn_skel_t *work_item;
 
     /* ### this breaks the abstraction of svn_wc__props_delete, but
        ### screw it. this is transitional code.  */
@@ -406,7 +406,7 @@ process_committed_leaf(svn_wc__db_t *db,
       /* Queue a removal any "revert" text base now.  */
       {
         const char *revert_abspath;
-        const svn_skel_t *work_item;
+        svn_skel_t *work_item;
 
         SVN_ERR(svn_wc__text_revert_path(&revert_abspath, db, local_abspath,
                                          scratch_pool));

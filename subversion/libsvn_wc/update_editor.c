@@ -2876,7 +2876,7 @@ prop_hash_from_array(const apr_array_header_t *prop_list,
    ### breaks the props encapsulation by using svn_wc__prop_path, but this
    ### function will only last until we move props into the database.  */
 static svn_error_t *
-build_write_base_props(const svn_skel_t **work_item,
+build_write_base_props(svn_skel_t **work_item,
                        const char *local_abspath,
                        svn_wc__db_kind_t kind,
                        apr_hash_t *base_props,
@@ -2900,7 +2900,7 @@ build_write_base_props(const svn_skel_t **work_item,
    ### breaks the props encapsulation by using svn_wc__prop_path, but this
    ### function will only last until we move props into the database.  */
 static svn_error_t *
-build_write_actual_props(const svn_skel_t **work_item,
+build_write_actual_props(svn_skel_t **work_item,
                          const char *local_abspath,
                          svn_wc__db_kind_t kind,
                          apr_hash_t *actual_props,
@@ -3098,7 +3098,7 @@ close_directory(void *dir_baton,
       apr_time_t changed_date;
       const char *changed_author;
       apr_hash_t *props;
-      const svn_skel_t *work_items;
+      svn_skel_t *work_items;
 
       /* ### we know a base node already exists. it was created in
          ### open_directory or add_directory.  let's just preserve the
@@ -4476,7 +4476,7 @@ merge_file(svn_boolean_t *install_pristine,
               const char *merge_left;
               svn_boolean_t delete_left = FALSE;
               const char *path_ext = "";
-              const svn_skel_t *work_item;
+              svn_skel_t *work_item;
 
               /* If we have any file extensions we're supposed to
                  preserve in generated conflict file names, then find
@@ -4703,7 +4703,7 @@ close_file(void *file_baton,
   const char *install_from;
   apr_hash_t *current_base_props = NULL;
   apr_hash_t *current_actual_props = NULL;
-  const svn_skel_t *work_items;
+  svn_skel_t *work_items;
 
   if (fb->skip_this)
     {
@@ -5047,7 +5047,7 @@ close_file(void *file_baton,
   if (install_pristine)
     {
       svn_boolean_t record_fileinfo;
-      const svn_skel_t *work_item;
+      svn_skel_t *work_item;
 
       /* If we are installing from the pristine contents, then go ahead and
          record the fileinfo. That will be the "proper" values. Installing
@@ -5073,7 +5073,7 @@ close_file(void *file_baton,
   if (new_text_base_abspath == NULL
       && lock_state == svn_wc_notify_lock_state_unlocked)
     {
-      const svn_skel_t *work_item;
+      svn_skel_t *work_item;
 
       /* If a lock was removed and we didn't update the text contents, we
          might need to set the file read-only.
@@ -5100,7 +5100,7 @@ close_file(void *file_baton,
                                        fb->local_abspath, pool));
       if (strcmp(install_from, revert_base_abspath) != 0)
         {
-          const svn_skel_t *work_item;
+          svn_skel_t *work_item;
 
           SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
                                                install_from,
@@ -5112,7 +5112,7 @@ close_file(void *file_baton,
 
   if (fb->copied_text_base_abspath)
     {
-      const svn_skel_t *work_item;
+      svn_skel_t *work_item;
 
       SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
                                            fb->copied_text_base_abspath,
@@ -6067,7 +6067,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     source_abspath = tmp_text_base_abspath;
 
   {
-    const svn_skel_t *work_item;
+    svn_skel_t *work_item;
     svn_boolean_t record_fileinfo;
 
     /* If new contents were provided, then we do NOT want to record the

@@ -322,7 +322,7 @@ run_revert(svn_wc__db_t *db,
       if (reinstall_working)
         {
           svn_boolean_t use_commit_times;
-          const svn_skel_t *wi_file_install;
+          svn_skel_t *wi_file_install;
 
           use_commit_times = svn_skel__parse_int(arg1->next->next->next,
                                                  scratch_pool) != 0;
@@ -1940,7 +1940,7 @@ run_file_install(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__wq_build_file_install(const svn_skel_t **work_item,
+svn_wc__wq_build_file_install(svn_skel_t **work_item,
                               svn_wc__db_t *db,
                               const char *local_abspath,
                               const char *source_abspath,
@@ -1949,22 +1949,19 @@ svn_wc__wq_build_file_install(const svn_skel_t **work_item,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
-  svn_skel_t *build_item = svn_skel__make_empty_list(result_pool);
+  *work_item = svn_skel__make_empty_list(result_pool);
 
   /* If a SOURCE_ABSPATH was provided, then put it into the skel. If this
      value is not provided, then the file's pristine contents will be used.  */
   if (source_abspath != NULL)
     svn_skel__prepend_str(apr_pstrdup(result_pool, source_abspath),
-                          build_item, result_pool);
+                          *work_item, result_pool);
 
-  svn_skel__prepend_int(record_fileinfo, build_item, result_pool);
-  svn_skel__prepend_int(use_commit_times, build_item, result_pool);
+  svn_skel__prepend_int(record_fileinfo, *work_item, result_pool);
+  svn_skel__prepend_int(use_commit_times, *work_item, result_pool);
   svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
-                        build_item, result_pool);
-  svn_skel__prepend_str(OP_FILE_INSTALL, build_item, result_pool);
-
-  /* Done. Assign to the const-ful WORK_ITEM.  */
-  *work_item = build_item;
+                        *work_item, result_pool);
+  svn_skel__prepend_str(OP_FILE_INSTALL, *work_item, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1996,20 +1993,17 @@ run_file_remove(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__wq_build_file_remove(const svn_skel_t **work_item,
+svn_wc__wq_build_file_remove(svn_skel_t **work_item,
                              svn_wc__db_t *db,
                              const char *local_abspath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  svn_skel_t *build_item = svn_skel__make_empty_list(result_pool);
+  *work_item = svn_skel__make_empty_list(result_pool);
 
   svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
-                        build_item, result_pool);
-  svn_skel__prepend_str(OP_FILE_REMOVE, build_item, result_pool);
-
-  /* Done. Assign to the const-ful WORK_ITEM.  */
-  *work_item = build_item;
+                        *work_item, result_pool);
+  svn_skel__prepend_str(OP_FILE_REMOVE, *work_item, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -2020,7 +2014,7 @@ svn_wc__wq_build_file_remove(const svn_skel_t **work_item,
 /* OP_SYNC_FILE_FLAGS  */
 
 /* Process the OP_SYNC_FILE_FLAGS work item WORK_ITEM.
- * See svn_wc__wq_build_file_remove() which generates this work item.
+ * See svn_wc__wq_build_sync_file_flags() which generates this work item.
  * Implements (struct work_item_dispatch).func. */
 static svn_error_t *
 run_sync_file_flags(svn_wc__db_t *db,
@@ -2039,20 +2033,17 @@ run_sync_file_flags(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__wq_build_sync_file_flags(const svn_skel_t **work_item,
+svn_wc__wq_build_sync_file_flags(svn_skel_t **work_item,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
-  svn_skel_t *build_item = svn_skel__make_empty_list(result_pool);
+  *work_item = svn_skel__make_empty_list(result_pool);
 
   svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
-                        build_item, result_pool);
-  svn_skel__prepend_str(OP_SYNC_FILE_FLAGS, build_item, result_pool);
-
-  /* Done. Assign to the const-ful WORK_ITEM.  */
-  *work_item = build_item;
+                        *work_item, result_pool);
+  svn_skel__prepend_str(OP_SYNC_FILE_FLAGS, *work_item, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -2102,27 +2093,24 @@ run_prej_install(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__wq_build_prej_install(const svn_skel_t **work_item,
+svn_wc__wq_build_prej_install(svn_skel_t **work_item,
                               svn_wc__db_t *db,
                               const char *local_abspath,
                               const svn_skel_t *conflict_skel,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
-  svn_skel_t *build_item = svn_skel__make_empty_list(result_pool);
+  *work_item = svn_skel__make_empty_list(result_pool);
 
   /* ### gotta have this, today  */
   SVN_ERR_ASSERT(conflict_skel != NULL);
 
   if (conflict_skel != NULL)
     /* ### woah! this needs to dup the skel into RESULT_POOL  */
-    svn_skel__prepend((svn_skel_t *)conflict_skel, build_item);
+    svn_skel__prepend((svn_skel_t *)conflict_skel, *work_item);
   svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
-                        build_item, result_pool);
-  svn_skel__prepend_str(OP_PREJ_INSTALL, build_item, result_pool);
-
-  /* Done. Assign to the const-ful WORK_ITEM.  */
-  *work_item = build_item;
+                        *work_item, result_pool);
+  svn_skel__prepend_str(OP_PREJ_INSTALL, *work_item, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -2177,12 +2165,12 @@ run_write_old_props(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__wq_build_write_old_props(const svn_skel_t **work_item,
+svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
                                  const char *props_abspath,
                                  apr_hash_t *props,
                                  apr_pool_t *result_pool)
 {
-  svn_skel_t *build_item = svn_skel__make_empty_list(result_pool);
+  *work_item = svn_skel__make_empty_list(result_pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(props_abspath));
 
@@ -2191,14 +2179,11 @@ svn_wc__wq_build_write_old_props(const svn_skel_t **work_item,
       svn_skel_t *props_skel;
 
       SVN_ERR(svn_skel__unparse_proplist(&props_skel, props, result_pool));
-      svn_skel__prepend(props_skel, build_item);
+      svn_skel__prepend(props_skel, *work_item);
     }
   svn_skel__prepend_str(apr_pstrdup(result_pool, props_abspath),
-                        build_item, result_pool);
-  svn_skel__prepend_str(OP_WRITE_OLD_PROPS, build_item, result_pool);
-
-  /* Done. Assign to the const-ful WORK_ITEM.  */
-  *work_item = build_item;
+                        *work_item, result_pool);
+  svn_skel__prepend_str(OP_WRITE_OLD_PROPS, *work_item, result_pool);
 
   return SVN_NO_ERROR;
 }

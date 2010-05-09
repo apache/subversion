@@ -103,7 +103,7 @@ svn_wc__wq_run(svn_wc__db_t *db,
    temporary file, and an OP_FILE_REMOVE will be queued to later remove it.
 */
 svn_error_t *
-svn_wc__wq_build_file_install(const svn_skel_t **work_item,
+svn_wc__wq_build_file_install(svn_skel_t **work_item,
                               svn_wc__db_t *db,
                               const char *local_abspath,
                               const char *source_abspath,
@@ -116,7 +116,7 @@ svn_wc__wq_build_file_install(const svn_skel_t **work_item,
 /* Build a work item (returned in *WORK_ITEM) that will remove a single
    file.  */
 svn_error_t *
-svn_wc__wq_build_file_remove(const svn_skel_t **work_item,
+svn_wc__wq_build_file_remove(svn_skel_t **work_item,
                              svn_wc__db_t *db,
                              const char *local_abspath,
                              apr_pool_t *result_pool,
@@ -127,7 +127,7 @@ svn_wc__wq_build_file_remove(const svn_skel_t **work_item,
    target node's readonly and executable flags with the values defined
    by its properties and lock status.  */
 svn_error_t *
-svn_wc__wq_build_sync_file_flags(const svn_skel_t **work_item,
+svn_wc__wq_build_sync_file_flags(svn_skel_t **work_item,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
                                  apr_pool_t *result_pool,
@@ -139,7 +139,7 @@ svn_wc__wq_build_sync_file_flags(const svn_skel_t **work_item,
    be taken from CONFLICT_SKEL, or if NULL, then from wc_db for the
    given DB/LOCAL_ABSPATH.  */
 svn_error_t *
-svn_wc__wq_build_prej_install(const svn_skel_t **work_item,
+svn_wc__wq_build_prej_install(svn_skel_t **work_item,
                               svn_wc__db_t *db,
                               const char *local_abspath,
                               const svn_skel_t *conflict_skel,
@@ -152,7 +152,7 @@ svn_wc__wq_build_prej_install(const svn_skel_t **work_item,
 
    ### this will go away when we fully move to in-db properties.  */
 svn_error_t *
-svn_wc__wq_build_write_old_props(const svn_skel_t **work_item,
+svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
                                  const char *props_abspath,
                                  apr_hash_t *props,
                                  apr_pool_t *result_pool);
