@@ -253,80 +253,22 @@ log_do_modify_entry(struct log_runner *loggy,
                     const char *name,
                     const char **atts)
 {
-  svn_error_t *err;
   apr_hash_t *ah = svn_xml_make_att_hash(atts, loggy->pool);
   const char *local_abspath;
   svn_wc_entry_t *entry;
   int modify_flags;
-  const char *valuestr;
 
   local_abspath = svn_dirent_join(loggy->adm_abspath, name, loggy->pool);
 
   /* Convert the attributes into an entry structure. */
   SVN_ERR(svn_wc__atts_to_entry(&entry, &modify_flags, ah, loggy->pool));
 
-  /* svn_wc__atts_to_entry will no-op if the TEXT_TIME timestamp is
-     SVN_WC__TIMESTAMP_WC, so look for that case and fill in the proper
-     value. */
-  valuestr = apr_hash_get(ah, SVN_WC__ENTRY_ATTR_TEXT_TIME,
-                          APR_HASH_KEY_STRING);
-  if ((modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
-      && (! strcmp(valuestr, SVN_WC__TIMESTAMP_WC)))
-    {
-      apr_time_t text_time;
-
-      err = svn_io_file_affected_time(&text_time, local_abspath, loggy->pool);
-      if (err)
-        return svn_error_createf
-          (SVN_ERR_WC_BAD_ADM_LOG, err,
-           _("Error getting 'affected time' on '%s'"),
-           svn_dirent_local_style(local_abspath, loggy->pool));
-
-      entry->text_time = text_time;
-    }
-
-  valuestr = apr_hash_get(ah, SVN_WC__ENTRY_ATTR_WORKING_SIZE,
-                          APR_HASH_KEY_STRING);
-  if ((modify_flags & SVN_WC__ENTRY_MODIFY_WORKING_SIZE)
-      && (! strcmp(valuestr, SVN_WC__WORKING_SIZE_WC)))
-    {
-      apr_finfo_t finfo;
-      const svn_wc_entry_t *tfile_entry;
-
-      err = svn_wc__get_entry(&tfile_entry, loggy->db, local_abspath, TRUE,
-                              svn_node_file, FALSE,
-                              loggy->pool, loggy->pool);
-      if (err)
-        SIGNAL_ERROR(loggy, err);
-
-      if (! tfile_entry)
-        return SVN_NO_ERROR;
-
-      err = svn_io_stat(&finfo, local_abspath, APR_FINFO_MIN | APR_FINFO_LINK,
-                        loggy->pool);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          svn_error_clear(err);
-          finfo.size = 0;
-        }
-      else if (err)
-        return svn_error_createf
-          (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-            _("Error getting file size on '%s'"),
-            svn_dirent_local_style(local_abspath, loggy->pool));
-
-      entry->working_size = finfo.size;
-    }
-
   /* ### this function never needs to modify a parent stub.
      ### NOTE: this call to entry_modify MAY create a new node.  */
-  err = svn_wc__entry_modify(loggy->db, local_abspath, svn_node_unknown,
-                             entry, modify_flags, loggy->pool);
-  if (err)
-    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
-                             _("Error modifying entry for '%s'"), name);
-
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__entry_modify(loggy->db, local_abspath,
+                                               svn_node_unknown,
+                                               entry, modify_flags,
+                                               loggy->pool));
 }
 
 /* */
@@ -857,63 +799,6 @@ svn_wc__loggy_move(svn_skel_t **work_item,
                         loggy_path1,
                         SVN_WC__LOG_ATTR_DEST,
                         loggy_path2,
-                        NULL);
-
-  return svn_error_return(svn_wc__wq_build_loggy(work_item,
-                                                 db, adm_abspath, log_accum,
-                                                 result_pool));
-}
-
-
-svn_error_t *
-svn_wc__loggy_set_entry_timestamp_from_wc(svn_skel_t **work_item,
-                                          svn_wc__db_t *db,
-                                          const char *adm_abspath,
-                                          const char *local_abspath,
-                                          apr_pool_t *result_pool)
-{
-  svn_stringbuf_t *log_accum = NULL;
-  const char *loggy_path1;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(loggy_path(&loggy_path1, local_abspath, adm_abspath, result_pool));
-  svn_xml_make_open_tag(&log_accum,
-                        result_pool,
-                        svn_xml_self_closing,
-                        SVN_WC__LOG_MODIFY_ENTRY,
-                        SVN_WC__LOG_ATTR_NAME,
-                        loggy_path1,
-                        SVN_WC__ENTRY_ATTR_TEXT_TIME,
-                        SVN_WC__TIMESTAMP_WC,
-                        NULL);
-
-  return svn_error_return(svn_wc__wq_build_loggy(work_item,
-                                                 db, adm_abspath, log_accum,
-                                                 result_pool));
-}
-
-svn_error_t *
-svn_wc__loggy_set_entry_working_size_from_wc(svn_skel_t **work_item,
-                                             svn_wc__db_t *db,
-                                             const char *adm_abspath,
-                                             const char *local_abspath,
-                                             apr_pool_t *result_pool)
-{
-  svn_stringbuf_t *log_accum = NULL;
-  const char *loggy_path1;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(loggy_path(&loggy_path1, local_abspath, adm_abspath, result_pool));
-  svn_xml_make_open_tag(&log_accum,
-                        result_pool,
-                        svn_xml_self_closing,
-                        SVN_WC__LOG_MODIFY_ENTRY,
-                        SVN_WC__LOG_ATTR_NAME,
-                        loggy_path1,
-                        SVN_WC__ENTRY_ATTR_WORKING_SIZE,
-                        SVN_WC__WORKING_SIZE_WC,
                         NULL);
 
   return svn_error_return(svn_wc__wq_build_loggy(work_item,

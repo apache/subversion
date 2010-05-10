@@ -130,27 +130,6 @@ svn_wc__loggy_move(svn_skel_t **work_item,
                    apr_pool_t *result_pool);
 
 
-svn_error_t *
-svn_wc__loggy_set_entry_timestamp_from_wc(svn_skel_t **work_item,
-                                          svn_wc__db_t *db,
-                                          const char *adm_abspath,
-                                          const char *local_abspath,
-                                          apr_pool_t *result_pool);
-
-
-/* Queue log instructions to set the file size of PATH
-   in the entries' WORKING_SIZE field.
-
-   ADM_ABSPATH is the absolute path for the admin directory for PATH.
-*/
-svn_error_t *
-svn_wc__loggy_set_entry_working_size_from_wc(svn_skel_t **work_item,
-                                             svn_wc__db_t *db,
-                                             const char *adm_abspath,
-                                             const char *local_abspath,
-                                             apr_pool_t *result_pool);
-
-
 /* Queue instructions to set the timestamp of PATH to
    the time TIMESTR.
 

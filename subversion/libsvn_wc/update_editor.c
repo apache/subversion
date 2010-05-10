@@ -4683,8 +4683,9 @@ merge_file(svn_skel_t **work_items,
     }
 #endif
 
-  /* Log commands to handle text-timestamp and working-size,
-     if the file is - or will be - unmodified and schedule-normal */
+  /* Installing from a pristine will handle timestamps and recording.
+     However, if we are NOT creating a new working copy file, then create
+     work items to handle text-timestamp and working-size.  */
   if (!*install_pristine
       && !is_locally_modified
       && (fb->adding_file || entry->schedule == svn_wc_schedule_normal))
@@ -4700,19 +4701,11 @@ merge_file(svn_skel_t **work_items,
           *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
         }
 
-      if ((new_text_base_tmp_abspath || magic_props_changed)
-          && !fb->deleted)
-        {
-          /* Adjust entries file to match working file */
-          SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(
-                    &work_item, eb->db, pb->local_abspath,
-                    fb->local_abspath, pool));
-          *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
-        }
-
-      SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(
-                &work_item, eb->db, pb->local_abspath,
-                fb->local_abspath, pool));
+      /* ### what if the file is locally-deleted? or if there is an
+         ### obstruction. OP_RECORD_FILEINFO will deal with a missing
+         ### file, but what if this is NOT our file? (ie. obstruction)  */
+      SVN_ERR(svn_wc__wq_build_record_fileinfo(eb->db, fb->local_abspath,
+                                               pool));
       *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
     }
 

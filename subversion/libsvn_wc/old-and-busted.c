@@ -73,6 +73,8 @@
 #define ENTRIES_ATTR_COPYFROM_URL       "copyfrom-url"
 #define ENTRIES_ATTR_COPYFROM_REV       "copyfrom-rev"
 #define ENTRIES_ATTR_CHECKSUM           "checksum"
+#define ENTRIES_ATTR_WORKING_SIZE       "working-size"
+#define ENTRIES_ATTR_TEXT_TIME          "text-time"
 
 /* Attribute values used in our old XML entries file.  */
 #define ENTRIES_VALUE_FILE     "file"
@@ -924,26 +926,14 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                        name));
 
   /* Attempt to set up timestamps. */
+  /* ### not used by loggy; no need to set MODIFY_FLAGS  */
   {
     const char *text_timestr;
 
-    text_timestr = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_TEXT_TIME,
+    text_timestr = apr_hash_get(atts, ENTRIES_ATTR_TEXT_TIME,
                                 APR_HASH_KEY_STRING);
     if (text_timestr)
-      {
-        if (strcmp(text_timestr, SVN_WC__TIMESTAMP_WC) == 0)
-          {
-            /* Special case:  a magic string that means 'get this value
-               from the working copy' -- we ignore it here, trusting
-               that the caller of this function know what to do about
-               it.  */
-          }
-        else
-          SVN_ERR(svn_time_from_cstring(&entry->text_time, text_timestr,
-                                        pool));
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
-      }
+      SVN_ERR(svn_time_from_cstring(&entry->text_time, text_timestr, pool));
 
     /* Note: we do not persist prop_time, so there is no need to attempt
        to parse a new prop_time value from the log. Certainly, on any
@@ -1004,23 +994,14 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
      going to ignore them. */
 
   /* Translated size */
+  /* ### not used by loggy; no need to set MODIFY_FLAGS  */
   {
-    const char *val
-      = apr_hash_get(atts,
-                     SVN_WC__ENTRY_ATTR_WORKING_SIZE,
-                     APR_HASH_KEY_STRING);
+    const char *val = apr_hash_get(atts, ENTRIES_ATTR_WORKING_SIZE,
+                                   APR_HASH_KEY_STRING);
     if (val)
       {
-        if (strcmp(val, SVN_WC__WORKING_SIZE_WC) == 0)
-          {
-            /* Special case (same as the timestamps); ignore here
-               these will be handled elsewhere */
-          }
-        else
-          /* Cast to off_t; it's safe: we put in an off_t to start with... */
-          entry->working_size = (apr_off_t)apr_strtoi64(val, NULL, 0);
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE;
+        /* Cast to off_t; it's safe: we put in an off_t to start with... */
+        entry->working_size = (apr_off_t)apr_strtoi64(val, NULL, 0);
       }
   }
 
