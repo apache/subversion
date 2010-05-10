@@ -1469,6 +1469,7 @@ insert_working_node(void *baton,
   SVN_ERR(svn_sqlite__bind_properties(stmt, 18, piwb->props, scratch_pool));
 
   /* Do not bind 'keep_local' (19).  */
+  /* 'symlink_target' (20) is bound above.  */
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
@@ -2759,7 +2760,6 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
   insert_working_baton_t iwb;
-  apr_int64_t original_repos_id;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(props != NULL);
@@ -2775,10 +2775,6 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(create_repos_id(&original_repos_id,
-                          original_root_url, original_uuid,
-                          pdh->wcroot->sdb, scratch_pool));
-
   blank_iwb(&iwb);
 
   iwb.presence = svn_wc__db_status_normal;
@@ -2790,10 +2786,16 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
   iwb.changed_rev = changed_rev;
   iwb.changed_date = changed_date;
   iwb.changed_author = changed_author;
-  iwb.original_repos_id = original_repos_id;
-  iwb.original_repos_relpath = original_repos_relpath;
-  iwb.original_revnum = original_revision;
   iwb.moved_here = FALSE;
+
+  if (original_root_url != NULL)
+    {
+      SVN_ERR(create_repos_id(&iwb.original_repos_id,
+                              original_root_url, original_uuid,
+                              pdh->wcroot->sdb, scratch_pool));
+      iwb.original_repos_relpath = original_repos_relpath;
+      iwb.original_revnum = original_revision;
+    }
 
   iwb.children = children;
   iwb.depth = depth;
@@ -2853,7 +2855,6 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
   insert_working_baton_t iwb;
-  apr_int64_t original_repos_id;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(props != NULL);
@@ -2867,10 +2868,6 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(create_repos_id(&original_repos_id,
-                          original_root_url, original_uuid,
-                          pdh->wcroot->sdb, scratch_pool));
-
   blank_iwb(&iwb);
 
   iwb.presence = svn_wc__db_status_normal;
@@ -2882,10 +2879,16 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
   iwb.changed_rev = changed_rev;
   iwb.changed_date = changed_date;
   iwb.changed_author = changed_author;
-  iwb.original_repos_id = original_repos_id;
-  iwb.original_repos_relpath = original_repos_relpath;
-  iwb.original_revnum = original_revision;
   iwb.moved_here = FALSE;
+
+  if (original_root_url != NULL)
+    {
+      SVN_ERR(create_repos_id(&iwb.original_repos_id,
+                              original_root_url, original_uuid,
+                              pdh->wcroot->sdb, scratch_pool));
+      iwb.original_repos_relpath = original_repos_relpath;
+      iwb.original_revnum = original_revision;
+    }
 
   iwb.checksum = checksum;
 
@@ -2919,7 +2922,6 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
   insert_working_baton_t iwb;
-  apr_int64_t original_repos_id;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(props != NULL);
@@ -2933,10 +2935,6 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(create_repos_id(&original_repos_id,
-                          original_root_url, original_uuid,
-                          pdh->wcroot->sdb, scratch_pool));
-
   blank_iwb(&iwb);
 
   iwb.presence = svn_wc__db_status_normal;
@@ -2948,10 +2946,16 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
   iwb.changed_rev = changed_rev;
   iwb.changed_date = changed_date;
   iwb.changed_author = changed_author;
-  iwb.original_repos_id = original_repos_id;
-  iwb.original_repos_relpath = original_repos_relpath;
-  iwb.original_revnum = original_revision;
   iwb.moved_here = FALSE;
+
+  if (original_root_url != NULL)
+    {
+      SVN_ERR(create_repos_id(&iwb.original_repos_id,
+                              original_root_url, original_uuid,
+                              pdh->wcroot->sdb, scratch_pool));
+      iwb.original_repos_relpath = original_repos_relpath;
+      iwb.original_revnum = original_revision;
+    }
 
   iwb.target = target;
 

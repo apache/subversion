@@ -5894,7 +5894,12 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   svn_checksum_t *base_checksum;
   struct last_change_info *last_change = NULL;
   const char *source_abspath = NULL;
+  svn_skel_t *all_work_items;
   svn_skel_t *work_item;
+  const char *original_root_url;
+  const char *original_repos_relpath;
+  const char *original_uuid;
+  apr_hash_t *actual_props;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(new_base_contents != NULL);
@@ -5905,20 +5910,36 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* Fabricate the anticipated new URL of the target and check the
      copyfrom URL to be in the same repository. */
-  {
-    const char *repos_root;
+  if (copyfrom_url != NULL)
+    {
+      const char *relative_url;
 
-    /* Find the repository_root via the parent directory, which
-       is always versioned before this function is called */
-    SVN_ERR(svn_wc__node_get_repos_info(&repos_root, NULL, wc_ctx,
-                                        dir_abspath, TRUE, FALSE, pool, pool));
+      /* Find the repository_root via the parent directory, which
+         is always versioned before this function is called */
+      SVN_ERR(svn_wc__node_get_repos_info(&original_root_url,
+                                          &original_uuid,
+                                          wc_ctx,
+                                          dir_abspath,
+                                          TRUE /* scan_added */,
+                                          FALSE /* scan_deleted */,
+                                          pool, pool));
 
-    if (copyfrom_url && !svn_uri_is_ancestor(repos_root, copyfrom_url))
-      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                               _("Copyfrom-url '%s' has different repository"
-                                 " root than '%s'"),
-                                 copyfrom_url, repos_root);
-  }
+      if (!svn_uri_is_ancestor(original_root_url, copyfrom_url))
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("Copyfrom-url '%s' has different repository"
+                                   " root than '%s'"),
+                                 copyfrom_url, original_root_url);
+
+      relative_url = svn_uri_skip_ancestor(original_root_url, copyfrom_url);
+      original_repos_relpath = svn_path_uri_decode(relative_url, pool);
+    }
+  else
+    {
+      original_root_url = NULL;
+      original_repos_relpath = NULL;
+      original_uuid = NULL;
+      copyfrom_rev = SVN_INVALID_REVNUM;  /* Just to be sure.  */
+    }
 
   /* If we're replacing the file then we need to save the destination file's
      original text base and prop base before replacing it. This allows us to
@@ -5971,59 +5992,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       }
   }
 
-  /* Schedule this for addition first, before the entry exists.
-   * Otherwise we'll get bounced out with an error about scheduling
-   * an already-versioned item for addition.
-   */
-  {
-    svn_wc_entry_t tmp_entry;
-    int modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE;
-
-    tmp_entry.schedule = svn_wc_schedule_add;
-
-    if (copyfrom_url)
-      {
-        SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(copyfrom_rev));
-
-        tmp_entry.copyfrom_url = copyfrom_url;
-        tmp_entry.copyfrom_rev = copyfrom_rev;
-        tmp_entry.copied = TRUE;
-
-        modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL
-          | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
-          | SVN_WC__ENTRY_MODIFY_COPIED;
-      }
-
-    SVN_ERR(svn_wc__loggy_entry_modify(&work_item, db, dir_abspath,
-                                       local_abspath, &tmp_entry,
-                                       modify_flags, pool));
-    SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
-  }
-
-  /* ### Clear working node status in preparation for writing a new node. */
-  {
-    svn_wc_entry_t tmp_entry;
-
-    tmp_entry.kind = svn_node_file;
-    /* Indicate the file was locally modified and we didn't get to
-       calculate the true value, but we can't set it to UNKNOWN (-1),
-       because that would indicate absense of this value.
-       If it isn't locally modified,
-       we'll overwrite with the actual value later. */
-    tmp_entry.working_size = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN;
-    /* The same is true for the TEXT_TIME field, except that that doesn't
-       have an explicid 'changed' value, so we set the value to 'undefined'. */
-    tmp_entry.text_time = 0;
-
-    SVN_ERR(svn_wc__loggy_entry_modify(&work_item, db, dir_abspath,
-                                       local_abspath,  &tmp_entry,
-                                       SVN_WC__ENTRY_MODIFY_KIND
-                                         | SVN_WC__ENTRY_MODIFY_TEXT_TIME
-                                         | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
-                                       pool));
-    SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
-  }
-
   /* Update LAST_CHANGE to reflect the entry props in NEW_BASE_PROPS, and
      filter NEW_BASE_PROPS so it contains only regular props. */
   {
@@ -6043,10 +6011,37 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   }
 
   /* Add some work items to install the properties.  */
-  SVN_ERR(svn_wc__install_props(db, local_abspath, svn_wc__db_kind_file,
-                                new_base_props,
-                                new_props ? new_props : new_base_props,
-                                TRUE, pool));
+  {
+    SVN_ERR(build_write_base_props(&all_work_items,
+                                   local_abspath, svn_wc__db_kind_file,
+                                   new_base_props, pool));
+
+    if (new_props == NULL)
+      {
+        actual_props = NULL;
+      }
+    else
+      {
+        apr_array_header_t *prop_diffs;
+
+        SVN_ERR(svn_prop_diffs(&prop_diffs, new_props, new_base_props,
+                               pool));
+        if (prop_diffs->nelts == 0)
+          actual_props = NULL;
+        else
+          actual_props = new_props;
+      }
+
+    /* ### ideally, this would be queued to go along with the call to
+       ### db_op_set_props(), but we need correct ACTUAL props for some
+       ### of the work associated with creation of the WORKING node.
+       ### so... we'll lump it all together, and queue it on the set_props
+       ### (ie. all database state is correct/final).  */
+    SVN_ERR(build_write_actual_props(&work_item, local_abspath,
+                                     svn_wc__db_kind_file,
+                                     actual_props, pool));
+    all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+  }
 
   /* Copy NEW_BASE_CONTENTS into a temporary file so our log can refer to
      it, and set TMP_TEXT_BASE_ABSPATH to its path.  Compute its MD5
@@ -6093,36 +6088,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__loggy_move(&work_item, db, dir_abspath,
                                  tmp_text_base_abspath, text_base_abspath,
                                  pool));
-      SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
-
-      /* ### execute the work items which construct the node, allowing the
-         ### wc_db operation to tweak the WORKING_NODE row. these values
-         ### should be set some other way.  */
-      SVN_ERR(svn_wc__wq_run(db, dir_abspath,
-                             cancel_func, cancel_baton,
-                             pool));
-      SVN_ERR(svn_wc__db_temp_op_set_working_checksum(db, local_abspath,
-                                                      base_checksum, pool));
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
     }
-
-  /* ### HACK: The following code should be performed in the same transaction as the install */
-  if (last_change)
-    {
-      /* ### execute the work items which construct the node, allowing the
-         ### wc_db operation to tweak the WORKING_NODE row. these values
-         ### should be set some other way.  */
-      SVN_ERR(svn_wc__wq_run(db, dir_abspath,
-                             cancel_func, cancel_baton,
-                             pool));
-      SVN_ERR(svn_wc__db_temp_op_set_working_last_change(
-                db, local_abspath,
-                last_change->cmt_rev,
-                last_change->cmt_date,
-                last_change->cmt_author,
-                pool));
-    }
-  
-  /* ### /HACK */
 
   /* For added files without NEW_CONTENTS, then generate the working file
      from the provided "pristine" contents.  */
@@ -6148,11 +6115,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                           FALSE /* use_commit_times */,
                                           record_fileinfo,
                                           pool, pool));
-    /* ### we should pass WORK_ITEM to some wc_db api that constructs
-       ### this new node. but alas, we do so much of this in pieces,
-       ### and not using wc_db apis. so just manually add the work item
-       ### into the queue.  */
-    SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
+    all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
 
     /* If we installed from somewhere besides the official pristine, then
        it is a temporary file, which needs to be removed.  */
@@ -6161,13 +6124,36 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
         SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
                                              db, source_abspath,
                                              pool, pool));
-        /* ### we should pass WORK_ITEM to some wc_db api that constructs
-           ### this new node. but alas, we do so much of this in pieces,
-           ### and not using wc_db apis. so just manually add the work item
-           ### into the queue.  */
-        SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, pool));
+        all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
       }
   }
+
+  /* ### ideally, we would have a single DB operation, and queue the work
+     ### items on that. for now, we'll queue them with the second call.  */
+
+  SVN_ERR(svn_wc__db_op_copy_file(db, local_abspath,
+                                  new_base_props,
+                                  last_change
+                                    ? last_change->cmt_rev
+                                    : SVN_INVALID_REVNUM,
+                                  last_change ? last_change->cmt_date : 0,
+                                  last_change ? last_change->cmt_author : NULL,
+                                  original_repos_relpath,
+                                  original_root_url,
+                                  original_uuid,
+                                  copyfrom_rev,
+                                  base_checksum,
+                                  NULL /* conflict */,
+                                  NULL /* work_items */,
+                                  pool));
+
+  /* ### if below fails, then the above db change would remain :-(  */
+
+  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
+                                  actual_props,
+                                  NULL /* conflict */,
+                                  all_work_items,
+                                  pool));
 
   return svn_error_return(svn_wc__wq_run(db, dir_abspath,
                                          cancel_func, cancel_baton,
