@@ -4903,15 +4903,13 @@ close_file(void *file_baton,
     apr_hash_t *props;
     apr_array_header_t *prop_diffs;
 
-    /* ### grr. the props changes need to occur before the merge_file()
-       ### queued work. we need merge_file() to return a set of work
-       ### items so that we can order them correctly. for now, get the
-       ### new props into their old files. the in-database values are
-       ### going to occur later (skew!), but we'll get that fixed before
-       ### switching to db properties.  */
-    SVN_ERR(svn_wc__db_wq_add(eb->db, fb->local_abspath, all_work_items,
-                              pool));
-
+    /* ### grr. the BASE/ACTUAL props changes need to occur before the
+       ### merge_file() work. we may be able to solve this by shifting
+       ### some of the code blocks in this function up to here. in any
+       ### case, get the old-style props files written now, before
+       ### merge_file. the in-database values are going to occur later
+       ### (skew!), but we'll get that fixed before switching over to
+       ### db properties.  */
     props = new_actual_props;
     SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
                            pool));
@@ -4922,10 +4920,7 @@ close_file(void *file_baton,
                                      svn_wc__db_kind_file,
                                      props,
                                      pool));
-    SVN_ERR(svn_wc__db_wq_add(eb->db, fb->local_abspath, work_item, pool));
-
-    /* ### nothing for add_file to queue up.  */
-    all_work_items = NULL;
+    all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
   }
 
   /* This writes a whole bunch of log commands to install wcprops.  */
