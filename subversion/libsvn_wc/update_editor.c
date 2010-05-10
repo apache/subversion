@@ -4704,7 +4704,8 @@ merge_file(svn_skel_t **work_items,
       /* ### what if the file is locally-deleted? or if there is an
          ### obstruction. OP_RECORD_FILEINFO will deal with a missing
          ### file, but what if this is NOT our file? (ie. obstruction)  */
-      SVN_ERR(svn_wc__wq_build_record_fileinfo(eb->db, fb->local_abspath,
+      SVN_ERR(svn_wc__wq_build_record_fileinfo(&work_item,
+                                               fb->local_abspath,
                                                pool));
       *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
     }
