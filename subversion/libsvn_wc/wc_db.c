@@ -6912,6 +6912,44 @@ svn_wc__db_temp_op_set_working_last_change(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_temp_op_set_working_checksum(svn_wc__db_t *db,
+                                        const char *local_abspath,
+                                        const svn_checksum_t *checksum,
+                                        apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  svn_sqlite__stmt_t *stmt;
+  const char *local_relpath;
+  int affected;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_UPDATE_WORKING_CHECKSUM));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                            pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 3, checksum, scratch_pool));
+
+  SVN_ERR(svn_sqlite__update(&affected, stmt));
+
+  if (affected != 1)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' has no WORKING_NODE"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
+}
+
 struct start_directory_update_baton
 {
   svn_wc__db_t *db;
