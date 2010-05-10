@@ -48,6 +48,7 @@
 #include "entries.h"
 #include "lock.h"
 #include "workqueue.h"
+#include "conflicts.h"
 
 #include "svn_private_config.h"
 
@@ -88,12 +89,8 @@ restore_file(svn_wc__db_t *db,
                          scratch_pool));
 
   /* Remove any text conflict */
-  SVN_ERR(svn_wc__internal_resolved_conflict(
-                    db, local_abspath, svn_depth_empty, TRUE, NULL, FALSE,
-                    svn_wc_conflict_choose_merged, NULL, NULL, NULL, NULL,
-                    scratch_pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_wc__resolve_text_conflict(db, local_abspath,
+                                                        scratch_pool));
 }
 
 /* Try to restore LOCAL_ABSPATH of node type KIND and if successfull,
