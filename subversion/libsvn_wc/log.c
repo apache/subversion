@@ -772,17 +772,7 @@ svn_wc__loggy_entry_modify(svn_skel_t **work_item,
   SVN_ERR_ASSERT(modify_flags != 0);
 
   /* ### this code has a limited set of modifications. enforce it.  */
-  SVN_ERR_ASSERT((modify_flags & ~(
-                    /* from update_editor.c  */
-                    SVN_WC__ENTRY_MODIFY_SCHEDULE
-                    | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
-                    | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
-                    | SVN_WC__ENTRY_MODIFY_COPIED
-                    | SVN_WC__ENTRY_MODIFY_KIND
-                    | SVN_WC__ENTRY_MODIFY_TEXT_TIME
-                    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE
-                    | SVN_WC__ENTRY_MODIFY_CHECKSUM
-
+  SVN_ERR_ASSERT((modify_flags & ~(0
                     /* from props.c  */
                     | SVN_WC__ENTRY_MODIFY_PREJFILE
 
@@ -794,35 +784,6 @@ svn_wc__loggy_entry_modify(svn_skel_t **work_item,
 #define ADD_ENTRY_ATTR(attr_flag, attr_name, value) \
    if (modify_flags & (attr_flag)) \
      apr_hash_set(prop_hash, (attr_name), APR_HASH_KEY_STRING, value)
-
-  /* ### it is always a file  */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_KIND)
-    SVN_ERR_ASSERT(entry->kind == svn_node_file);
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_KIND,
-                 SVN_WC__ENTRY_ATTR_KIND,
-                 SVN_WC__ENTRIES_ATTR_FILE_STR);
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
-    SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_add);
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                 SVN_WC__ENTRY_ATTR_SCHEDULE,
-                 SVN_WC__ENTRY_VALUE_ADD);
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_COPIED)
-    SVN_ERR_ASSERT(entry->copied);
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_COPIED,
-                 SVN_WC__ENTRY_ATTR_COPIED,
-                 "true");
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_COPYFROM_URL)
-    SVN_ERR_ASSERT(entry->copyfrom_url != NULL);
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_COPYFROM_URL,
-                 SVN_WC__ENTRY_ATTR_COPYFROM_URL,
-                 entry->copyfrom_url);
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_COPYFROM_REV,
-                 SVN_WC__ENTRY_ATTR_COPYFROM_REV,
-                 apr_psprintf(result_pool, "%ld", entry->copyfrom_rev));
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICT_OLD)
     SVN_ERR_ASSERT(entry->conflict_old != NULL);
@@ -845,23 +806,6 @@ svn_wc__loggy_entry_modify(svn_skel_t **work_item,
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_PREJFILE,
                  SVN_WC__ENTRY_ATTR_PREJFILE,
                  entry->prejfile);
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
-    SVN_ERR_ASSERT(entry->text_time == 0);
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_TEXT_TIME,
-                 SVN_WC__ENTRY_ATTR_TEXT_TIME,
-                 svn_time_to_cstring(entry->text_time, result_pool));
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_CHECKSUM,
-                 SVN_WC__ENTRY_ATTR_CHECKSUM,
-                 entry->checksum);
-
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_WORKING_SIZE)
-    SVN_ERR_ASSERT(entry->working_size == SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN);
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
-                 SVN_WC__ENTRY_ATTR_WORKING_SIZE,
-                 apr_psprintf(result_pool, "%" APR_OFF_T_FMT,
-                              entry->working_size));
 
 #undef ADD_ENTRY_ATTR
 
