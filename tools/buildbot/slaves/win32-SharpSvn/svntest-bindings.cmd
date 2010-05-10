@@ -23,3 +23,17 @@ SETLOCAL ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 CALL ..\svn-config.cmd
 IF ERRORLEVEL 1 EXIT /B 1
 
+IF EXIST "%TESTDIR%\swig" rmdir /s /q "%TESTDIR%\swig"
+mkdir "%TESTDIR%\swig\py-release\libsvn"
+mkdir "%TESTDIR%\swig\py-release\svn"
+
+xcopy "release\subversion\bindings\swig\python\*.pyd" "%TESTDIR%\swig\py-release\libsvn\*.pyd"
+xcopy "release\subversion\bindings\swig\python\libsvn_swig_py\*.dll" "%TESTDIR%\swig\py-release\libsvn\*.dll"
+xcopy "subversion\bindings\swig\python\*.py" "%TESTDIR%\swig\py-release\libsvn\*.py"
+xcopy "subversion\bindings\swig\python\svn\*.py" "%TESTDIR%\swig\py-release\svn\*.py"
+
+PATH %PATH%;%TESTDIR%\bin
+SET PYTHONPATH=%TESTDIR%\swig\py-release
+
+python subversion\bindings\swig\python\tests\run_all.py
+IF ERRORLEVEL 1 EXIT /B 1
