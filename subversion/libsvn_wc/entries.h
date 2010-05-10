@@ -37,12 +37,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
-/* String representations for svn_node_kind.  This maybe should be
-   abstracted farther out? */
-#define SVN_WC__ENTRIES_ATTR_FILE_STR   "file"
-#define SVN_WC__ENTRIES_ATTR_DIR_STR    "dir"
-
 
 /* The names of the fields used for storing entries' information.
    Used for the names of the XML attributes in XML entries files
@@ -50,23 +44,12 @@ extern "C" {
    and for error reporting when reading a non-XML entries file.
    ### If you add or remove items here, you probably want to make sure
    to do the same for the SVN_WC__ENTRY_MODIFY_* #defines as well. */
-#define SVN_WC__ENTRY_ATTR_KIND               "kind"
 #define SVN_WC__ENTRY_ATTR_TEXT_TIME          "text-time"
-#define SVN_WC__ENTRY_ATTR_CHECKSUM           "checksum"
-#define SVN_WC__ENTRY_ATTR_SCHEDULE           "schedule"
-#define SVN_WC__ENTRY_ATTR_COPIED             "copied"
-#define SVN_WC__ENTRY_ATTR_COPYFROM_URL       "copyfrom-url"
-#define SVN_WC__ENTRY_ATTR_COPYFROM_REV       "copyfrom-rev"
 #define SVN_WC__ENTRY_ATTR_CONFLICT_OLD       "conflict-old" /* saved old file */
 #define SVN_WC__ENTRY_ATTR_CONFLICT_NEW       "conflict-new" /* saved new file */
 #define SVN_WC__ENTRY_ATTR_CONFLICT_WRK       "conflict-wrk" /* saved wrk file */
 #define SVN_WC__ENTRY_ATTR_PREJFILE           "prop-reject-file"
 #define SVN_WC__ENTRY_ATTR_WORKING_SIZE       "working-size"
-
-/* Attribute values for 'schedule' */
-#define SVN_WC__ENTRY_VALUE_ADD        "add"
-#define SVN_WC__ENTRY_VALUE_DELETE     "delete"
-#define SVN_WC__ENTRY_VALUE_REPLACE    "replace"
 
 
 /* Set *NEW_ENTRY to a new entry, taking attributes from ATTS, whose

@@ -67,6 +67,19 @@
 #define ENTRIES_ATTR_CMT_AUTHOR         "last-author"
 #define ENTRIES_ATTR_REVISION           "revision"
 #define ENTRIES_ATTR_URL                "url"
+#define ENTRIES_ATTR_KIND               "kind"
+#define ENTRIES_ATTR_SCHEDULE           "schedule"
+#define ENTRIES_ATTR_COPIED             "copied"
+#define ENTRIES_ATTR_COPYFROM_URL       "copyfrom-url"
+#define ENTRIES_ATTR_COPYFROM_REV       "copyfrom-rev"
+#define ENTRIES_ATTR_CHECKSUM           "checksum"
+
+/* Attribute values used in our old XML entries file.  */
+#define ENTRIES_VALUE_FILE     "file"
+#define ENTRIES_VALUE_DIR      "dir"
+#define ENTRIES_VALUE_ADD      "add"
+#define ENTRIES_VALUE_DELETE   "delete"
+#define ENTRIES_VALUE_REPLACE  "replace"
 
 
 /* */
@@ -459,9 +472,9 @@ read_entry(svn_wc_entry_t **new_entry,
     SVN_ERR(read_val(&kindstr, buf, end));
     if (kindstr)
       {
-        if (strcmp(kindstr, SVN_WC__ENTRIES_ATTR_FILE_STR) == 0)
+        if (strcmp(kindstr, ENTRIES_VALUE_FILE) == 0)
           entry->kind = svn_node_file;
-        else if (strcmp(kindstr, SVN_WC__ENTRIES_ATTR_DIR_STR) == 0)
+        else if (strcmp(kindstr, ENTRIES_VALUE_DIR) == 0)
           entry->kind = svn_node_dir;
         else
           return svn_error_createf
@@ -499,11 +512,11 @@ read_entry(svn_wc_entry_t **new_entry,
     entry->schedule = svn_wc_schedule_normal;
     if (schedulestr)
       {
-        if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_ADD) == 0)
+        if (strcmp(schedulestr, ENTRIES_VALUE_ADD) == 0)
           entry->schedule = svn_wc_schedule_add;
-        else if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_DELETE) == 0)
+        else if (strcmp(schedulestr, ENTRIES_VALUE_DELETE) == 0)
           entry->schedule = svn_wc_schedule_delete;
-        else if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_REPLACE) == 0)
+        else if (strcmp(schedulestr, ENTRIES_VALUE_REPLACE) == 0)
           entry->schedule = svn_wc_schedule_replace;
         else
           return svn_error_createf(
@@ -690,11 +703,10 @@ read_entry(svn_wc_entry_t **new_entry,
 
 
 /* If attribute ATTR_NAME appears in hash ATTS, set *ENTRY_FLAG to its
- * boolean value and add MODIFY_FLAG into *MODIFY_FLAGS, else set *ENTRY_FLAG
- * false.  ENTRY_NAME is the name of the WC-entry. */
+   boolean value, else set *ENTRY_FLAG false.  ENTRY_NAME is the name
+   of the WC-entry. */
 static svn_error_t *
 do_bool_attr(svn_boolean_t *entry_flag,
-             int *modify_flags, int modify_flag,
              apr_hash_t *atts, const char *attr_name,
              const char *entry_name)
 {
@@ -712,9 +724,6 @@ do_bool_attr(svn_boolean_t *entry_flag,
           (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
            _("Entry '%s' has invalid '%s' value"),
            (entry_name ? entry_name : SVN_WC_ENTRY_THIS_DIR), attr_name);
-
-      if (modify_flags)
-        *modify_flags |= modify_flag;
     }
   return SVN_NO_ERROR;
 }
@@ -722,12 +731,26 @@ do_bool_attr(svn_boolean_t *entry_flag,
 
 /* */
 static const char *
-extract_string(int *modify_flags,
-               apr_hash_t *atts,
+extract_string(apr_hash_t *atts,
                const char *att_name,
-               int flag,
-               svn_boolean_t normalize,
                apr_pool_t *result_pool)
+{
+  const char *value = apr_hash_get(atts, att_name, APR_HASH_KEY_STRING);
+
+  if (value == NULL)
+    return NULL;
+
+  return apr_pstrdup(result_pool, value);
+}
+
+
+/* Like extract_string(), but normalizes empty strings to NULL.  */
+static const char *
+extract_string_normalize(int *modify_flags,
+                         apr_hash_t *atts,
+                         const char *att_name,
+                         int flag,
+                         apr_pool_t *result_pool)
 {
   const char *value = apr_hash_get(atts, att_name, APR_HASH_KEY_STRING);
 
@@ -737,7 +760,7 @@ extract_string(int *modify_flags,
   if (modify_flags)
     *modify_flags |= flag;
 
-  if (normalize && *value == '\0')
+  if (*value == '\0')
     return NULL;
 
   return apr_pstrdup(result_pool, value);
@@ -785,16 +808,13 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
   /* Attempt to set up url path (again, see resolve_to_defaults).
 
      ### not used by loggy; no need to set MODIFY_FLAGS  */
-  entry->url = extract_string(NULL, atts,
-                              ENTRIES_ATTR_URL, 0,
-                              FALSE, pool);
+  entry->url = extract_string(atts, ENTRIES_ATTR_URL, pool);
 
   /* Set up repository root.  Make sure it is a prefix of url.
 
      ### not used by loggy; no need to set MODIFY_FLAGS  */
-  entry->repos = extract_string(NULL, atts,
-                                ENTRIES_ATTR_REPOS, 0,
-                                FALSE, pool);
+  entry->repos = extract_string(atts, ENTRIES_ATTR_REPOS, pool);
+
   if (entry->url && entry->repos
       && !svn_uri_is_ancestor(entry->repos, entry->url))
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
@@ -803,113 +823,105 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                              name ? name : SVN_WC_ENTRY_THIS_DIR);
 
   /* Set up kind. */
+  /* ### not used by loggy; no need to set MODIFY_FLAGS  */
   {
     const char *kindstr
-      = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_KIND, APR_HASH_KEY_STRING);
+      = apr_hash_get(atts, ENTRIES_ATTR_KIND, APR_HASH_KEY_STRING);
 
     entry->kind = svn_node_none;
     if (kindstr)
       {
-        if (strcmp(kindstr, SVN_WC__ENTRIES_ATTR_FILE_STR) == 0)
+        if (strcmp(kindstr, ENTRIES_VALUE_FILE) == 0)
           entry->kind = svn_node_file;
-        else if (strcmp(kindstr, SVN_WC__ENTRIES_ATTR_DIR_STR) == 0)
+        else if (strcmp(kindstr, ENTRIES_VALUE_DIR) == 0)
           entry->kind = svn_node_dir;
         else
           return svn_error_createf
             (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
              _("Entry '%s' has invalid node kind"),
              (name ? name : SVN_WC_ENTRY_THIS_DIR));
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_KIND;
       }
   }
 
   /* Look for a schedule attribute on this entry. */
+  /* ### not used by loggy; no need to set MODIFY_FLAGS  */
   {
     const char *schedulestr
-      = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_SCHEDULE, APR_HASH_KEY_STRING);
+      = apr_hash_get(atts, ENTRIES_ATTR_SCHEDULE, APR_HASH_KEY_STRING);
 
     entry->schedule = svn_wc_schedule_normal;
     if (schedulestr)
       {
-        if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_ADD) == 0)
+        if (strcmp(schedulestr, ENTRIES_VALUE_ADD) == 0)
           entry->schedule = svn_wc_schedule_add;
-        else if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_DELETE) == 0)
+        else if (strcmp(schedulestr, ENTRIES_VALUE_DELETE) == 0)
           entry->schedule = svn_wc_schedule_delete;
-        else if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_REPLACE) == 0)
+        else if (strcmp(schedulestr, ENTRIES_VALUE_REPLACE) == 0)
           entry->schedule = svn_wc_schedule_replace;
         else if (strcmp(schedulestr, "") == 0)
           entry->schedule = svn_wc_schedule_normal;
         else
-          return svn_error_createf
-            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
-             _("Entry '%s' has invalid '%s' value"),
-             (name ? name : SVN_WC_ENTRY_THIS_DIR),
-             SVN_WC__ENTRY_ATTR_SCHEDULE);
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
+          return svn_error_createf(
+                   SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+                   _("Entry '%s' has invalid 'schedule' value"),
+                   (name ? name : SVN_WC_ENTRY_THIS_DIR));
       }
   }
 
   /* Is this entry in a state of mental torment (conflict)? */
-  entry->prejfile = extract_string(modify_flags, atts,
-                                   SVN_WC__ENTRY_ATTR_PREJFILE,
-                                   SVN_WC__ENTRY_MODIFY_PREJFILE,
-                                   TRUE, pool);
-  entry->conflict_old = extract_string(modify_flags, atts,
-                                       SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
-                                       SVN_WC__ENTRY_MODIFY_CONFLICT_OLD,
-                                       TRUE, pool);
-  entry->conflict_new = extract_string(modify_flags, atts,
-                                       SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
-                                       SVN_WC__ENTRY_MODIFY_CONFLICT_NEW,
-                                       TRUE, pool);
-  entry->conflict_wrk = extract_string(modify_flags, atts,
-                                       SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
-                                       SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
-                                       TRUE, pool);
+  entry->prejfile = extract_string_normalize(
+                      modify_flags, atts,
+                      SVN_WC__ENTRY_ATTR_PREJFILE,
+                      SVN_WC__ENTRY_MODIFY_PREJFILE,
+                      pool);
+  entry->conflict_old = extract_string_normalize(
+                          modify_flags, atts,
+                          SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
+                          SVN_WC__ENTRY_MODIFY_CONFLICT_OLD,
+                          pool);
+  entry->conflict_new = extract_string_normalize(
+                          modify_flags, atts,
+                          SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
+                          SVN_WC__ENTRY_MODIFY_CONFLICT_NEW,
+                          pool);
+  entry->conflict_wrk = extract_string_normalize(
+                          modify_flags, atts,
+                          SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
+                          SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
+                          pool);
 
   /* Is this entry copied? */
-  SVN_ERR(do_bool_attr(&entry->copied,
-                       modify_flags, SVN_WC__ENTRY_MODIFY_COPIED,
-                       atts, SVN_WC__ENTRY_ATTR_COPIED, name));
+  /* ### not used by loggy; no need to set MODIFY_FLAGS  */
+  SVN_ERR(do_bool_attr(&entry->copied, atts, ENTRIES_ATTR_COPIED, name));
 
-  entry->copyfrom_url = extract_string(modify_flags, atts,
-                                       SVN_WC__ENTRY_ATTR_COPYFROM_URL,
-                                       SVN_WC__ENTRY_MODIFY_COPYFROM_URL,
-                                       FALSE, pool);
+  /* ### not used by loggy; no need to set MODIFY_FLAGS  */
+  entry->copyfrom_url = extract_string(atts, ENTRIES_ATTR_COPYFROM_URL, pool);
 
+  /* ### not used by loggy; no need to set MODIFY_FLAGS  */
   {
     const char *revstr;
 
-    revstr = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV,
+    revstr = apr_hash_get(atts, ENTRIES_ATTR_COPYFROM_REV,
                           APR_HASH_KEY_STRING);
     if (revstr)
-      {
-        entry->copyfrom_rev = SVN_STR_TO_REV(revstr);
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
-      }
+      entry->copyfrom_rev = SVN_STR_TO_REV(revstr);
   }
 
   /* Is this entry deleted?
 
      ### not used by loggy; no need to set MODIFY_FLAGS  */
-  SVN_ERR(do_bool_attr(&entry->deleted,
-                       NULL, 0,
-                       atts, ENTRIES_ATTR_DELETED, name));
+  SVN_ERR(do_bool_attr(&entry->deleted, atts, ENTRIES_ATTR_DELETED, name));
 
   /* Is this entry absent?
 
      ### not used by loggy; no need to set MODIFY_FLAGS  */
-  SVN_ERR(do_bool_attr(&entry->absent,
-                       NULL, 0,
-                       atts, ENTRIES_ATTR_ABSENT, name));
+  SVN_ERR(do_bool_attr(&entry->absent, atts, ENTRIES_ATTR_ABSENT, name));
 
   /* Is this entry incomplete?
 
      ### not used by loggy; no need to set MODIFY_FLAGS  */
-  SVN_ERR(do_bool_attr(&entry->incomplete,
-                       NULL, 0,
-                       atts, ENTRIES_ATTR_INCOMPLETE, name));
+  SVN_ERR(do_bool_attr(&entry->incomplete, atts, ENTRIES_ATTR_INCOMPLETE,
+                       name));
 
   /* Attempt to set up timestamps. */
   {
@@ -940,17 +952,13 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
   }
 
   /* Checksum. */
-  entry->checksum = extract_string(modify_flags, atts,
-                                   SVN_WC__ENTRY_ATTR_CHECKSUM,
-                                   SVN_WC__ENTRY_MODIFY_CHECKSUM,
-                                   FALSE, pool);
+  /* ### not used by loggy; no need to set MODIFY_FLAGS  */
+  entry->checksum = extract_string(atts, ENTRIES_ATTR_CHECKSUM, pool);
 
   /* UUID.
 
      ### not used by loggy; no need to set MODIFY_FLAGS  */
-  entry->uuid = extract_string(NULL, atts,
-                               ENTRIES_ATTR_UUID,
-                               0, FALSE, pool);
+  entry->uuid = extract_string(atts, ENTRIES_ATTR_UUID, pool);
 
   /* Setup last-committed values. */
   {
@@ -973,21 +981,13 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     else
       entry->cmt_rev = SVN_INVALID_REVNUM;
 
-    entry->cmt_author = extract_string(NULL, atts,
-                                       ENTRIES_ATTR_CMT_AUTHOR,
-                                       0, FALSE, pool);
+    entry->cmt_author = extract_string(atts, ENTRIES_ATTR_CMT_AUTHOR, pool);
   }
 
   /* ### not used by loggy; no need to set MODIFY_FLAGS  */
-  entry->lock_token = extract_string(NULL, atts,
-                                     ENTRIES_ATTR_LOCK_TOKEN,
-                                     0, FALSE, pool);
-  entry->lock_owner = extract_string(NULL, atts,
-                                     ENTRIES_ATTR_LOCK_OWNER,
-                                     0, FALSE, pool);
-  entry->lock_comment = extract_string(NULL, atts,
-                                       ENTRIES_ATTR_LOCK_COMMENT,
-                                       0, FALSE, pool);
+  entry->lock_token = extract_string(atts, ENTRIES_ATTR_LOCK_TOKEN, pool);
+  entry->lock_owner = extract_string(atts, ENTRIES_ATTR_LOCK_OWNER, pool);
+  entry->lock_comment = extract_string(atts, ENTRIES_ATTR_LOCK_COMMENT, pool);
   {
     const char *cdate_str =
       apr_hash_get(atts, ENTRIES_ATTR_LOCK_CREATION_DATE, APR_HASH_KEY_STRING);
