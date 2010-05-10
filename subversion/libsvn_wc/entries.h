@@ -107,17 +107,16 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_FORCE              0x00020000
 
 
-/* TODO ### Rewrite doc string to mention DB, LOCAL_ABSPATH; not ADM_ACCESS, NAME.
-
-   Modify an entry for NAME in access baton ADM_ACCESS by folding in
+/* Modify the entry for LOCAL_ABSPATH in DB by folding in
    ("merging") changes, and sync those changes to disk.  New values
    for the entry are pulled from their respective fields in ENTRY, and
    MODIFY_FLAGS is a bitmask to specify which of those fields to pay
    attention to, formed from the values SVN_WC__ENTRY_MODIFY_....
-   ADM_ACCESS must hold a write lock.
 
-   NAME can be NULL to specify that the caller wishes to modify the
-   "this dir" entry in ADM_ACCESS.
+   ### Old doc: "ADM_ACCESS must hold a write lock."
+
+   If LOCAL_ABSPATH specifies a directory, its full entry will be modified.
+   To modify its "parent stub" entry, use svn_wc__entry_modify_stub().
 
    "Folding in" a change means, in most cases, simply replacing the field
    with the new value. However, for the "schedule" field, unless
@@ -152,9 +151,9 @@ svn_wc__entry_modify_stub(svn_wc__db_t *db,
  * make this the entry's new url.  If NEW_REV is valid, make this the
  * entry's working revision.
  *
- * If ALLOW_REMOVAL is TRUE the tweaks might cause the entry NAME to
- * be removed from the hash, if ALLOW_REMOVAL is FALSE this will not
- * happen.
+ * If ALLOW_REMOVAL is TRUE the tweaks might cause the entry for
+ * LOCAL_ABSPATH to be removed from the WC; if ALLOW_REMOVAL is FALSE this
+ * will not happen.
  *
  * THIS_DIR should be true if the LOCAL_ABSPATH refers to a directory, and
  * the information to be edited is not in the stub entry.
@@ -182,7 +181,7 @@ svn_wc__tweak_entry(svn_wc__db_t *db,
  * to handle, than detecting the error and clearing it).
  *
  * If you know the entry is a FILE or DIR, then specify that in KIND. If you
- * are unsure, then specific 'svn_node_unknown' for KIND. This value will be
+ * are unsure, then specify 'svn_node_unknown' for KIND. This value will be
  * used to optimize the access to the entry, so it is best to know the kind.
  * If you specify FILE/DIR, and the entry is *something else*, then
  * SVN_ERR_NODE_UNEXPECTED_KIND will be returned.

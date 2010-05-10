@@ -1325,8 +1325,9 @@ read_entries(apr_hash_t **entries,
 }
 
 
-/* For a given LOCAL_ABSPATH, using DB, return the directory in which the
-   entry information is located, and the entry name to access that entry.
+/* For a given LOCAL_ABSPATH, using DB, set *ADM_ABSPATH to the directory in
+   which the entry information is located, and *ENTRY_NAME to the entry name
+   to access that entry.
 
    KIND and NEED_PARENT_STUB are as in svn_wc__get_entry().
 
