@@ -135,21 +135,6 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
    changing the working file. */
 svn_boolean_t svn_wc__has_magic_property(const apr_array_header_t *properties);
 
-/* Add a working queue item to install PROPS and, if INSTALL_PRISTINE_PROPS is
-   true, BASE_PROPS for the LOCAL_ABSPATH in DB, updating the node to reflect
-   the changes.  PRISTINE_PROPS must be supplied even if INSTALL_PRISTINE_PROPS
-   is false. If FORCE_BASE_INSTALL properties are always installed in BASE_NODE,
-   even though WORKING is used as pristine for the current node.
-   Use SCRATCH_POOL for temporary allocations. */
-svn_error_t *
-svn_wc__install_props(svn_wc__db_t *db,
-                      const char *local_abspath,
-                      svn_wc__db_kind_t kind,
-                      apr_hash_t *pristine_props,
-                      apr_hash_t *props,
-                      svn_boolean_t install_pristine_props,
-                      apr_pool_t *scratch_pool);
-
 
 /* Delete PROPS_KIND props for LOCAL_ABSPATH */
 svn_error_t *

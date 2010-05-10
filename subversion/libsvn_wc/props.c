@@ -332,14 +332,20 @@ svn_wc__load_revert_props(apr_hash_t **revert_props_p,
 }
 
 
-svn_error_t *
-svn_wc__install_props(svn_wc__db_t *db,
-                      const char *local_abspath,
-                      svn_wc__db_kind_t kind,
-                      apr_hash_t *pristine_props,
-                      apr_hash_t *props,
-                      svn_boolean_t install_pristine_props,
-                      apr_pool_t *scratch_pool)
+/* Add a working queue item to install PROPS and, if INSTALL_PRISTINE_PROPS is
+   TRUE, BASE_PROPS for the LOCAL_ABSPATH in DB, updating the node to reflect
+   the changes.  PRISTINE_PROPS must be supplied even if INSTALL_PRISTINE_PROPS
+   is FALSE.
+
+   Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+queue_install_props(svn_wc__db_t *db,
+                    const char *local_abspath,
+                    svn_wc__db_kind_t kind,
+                    apr_hash_t *pristine_props,
+                    apr_hash_t *props,
+                    svn_boolean_t install_pristine_props,
+                    apr_pool_t *scratch_pool)
 {
   apr_array_header_t *prop_diffs;
   const char *prop_abspath;
@@ -657,9 +663,9 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
       /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
       SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
 
-      SVN_ERR(svn_wc__install_props(wc_ctx->db, local_abspath, kind,
-                                    new_base_props, new_actual_props,
-                                    base_merge, pool));
+      SVN_ERR(queue_install_props(wc_ctx->db, local_abspath, kind,
+                                  new_base_props, new_actual_props,
+                                  base_merge, pool));
 
       SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
                              cancel_func, cancel_baton,
