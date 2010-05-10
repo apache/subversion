@@ -158,6 +158,17 @@ svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
                                  apr_pool_t *result_pool);
 
 
+/* Build a work item that will record file information of LOCAL_ABSPATH
+   into the TRANSLATED_SIZE and LAST_MOD_TIME of the node via the
+   svn_wc__db_global_record_fileinfo() function.
+
+   ### it is unclear whether this should survive.  */
+svn_error_t *
+svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool);
+
+
 /* Record a work item to revert LOCAL_ABSPATH.  */
 svn_error_t *
 svn_wc__wq_add_revert(svn_boolean_t *will_revert,

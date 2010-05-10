@@ -64,6 +64,7 @@
 #define OP_SYNC_FILE_FLAGS "sync-file-flags"
 #define OP_PREJ_INSTALL "prej-install"
 #define OP_WRITE_OLD_PROPS "write-old-props"
+#define OP_RECORD_FILEINFO "record-fileinfo"
 
 
 /* For work queue debugging. Generates output about its operation.  */
@@ -108,6 +109,39 @@ sync_file_flags(svn_wc__db_t *db,
   SVN_ERR(svn_wc__maybe_set_executable(NULL, db, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+get_and_record_fileinfo(svn_wc__db_t *db,
+                        const char *local_abspath,
+                        svn_boolean_t ignore_enoent,
+                        apr_pool_t *scratch_pool)
+{
+  apr_time_t last_mod_time;
+  apr_finfo_t finfo;
+  svn_error_t *err;
+
+  err = svn_io_file_affected_time(&last_mod_time, local_abspath,
+                                  scratch_pool);
+  if (err)
+    {
+      if (!ignore_enoent || !APR_STATUS_IS_ENOENT(err->apr_err))
+        return svn_error_return(err);
+
+      /* No biggy. Just skip all this.  */
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_io_stat(&finfo, local_abspath,
+                      APR_FINFO_MIN | APR_FINFO_LINK,
+                      scratch_pool));
+
+  return svn_error_return(svn_wc__db_global_record_fileinfo(
+                            db, local_abspath,
+                            finfo.size, last_mod_time,
+                            scratch_pool));
 }
 
 
@@ -1910,22 +1944,9 @@ run_file_install(svn_wc__db_t *db,
   /* ### this should happen before we rename the file into place.  */
   if (record_fileinfo)
     {
-      apr_time_t last_mod_time;
-      apr_finfo_t finfo;
-
-      /* loggy_set_entry_timestamp_from_wc()  */
-      SVN_ERR(svn_io_file_affected_time(&last_mod_time,
-                                        local_abspath,
-                                        scratch_pool));
-
-      /* loggy_set_entry_working_size_from_wc()  */
-      SVN_ERR(svn_io_stat(&finfo, local_abspath,
-                          APR_FINFO_MIN | APR_FINFO_LINK,
-                          scratch_pool));
-
-      SVN_ERR(svn_wc__db_global_record_fileinfo(db, local_abspath,
-                                                finfo.size, last_mod_time,
-                                                scratch_pool));
+      SVN_ERR(get_and_record_fileinfo(db, local_abspath,
+                                      FALSE /* ignore_enoent */,
+                                      scratch_pool));
 
       /* ### there used to be a call to entry_modify() above, to set the
          ### TRANSLATED_SIZE and LAST_MOD_TIME values. that function elided
@@ -2120,6 +2141,7 @@ svn_wc__wq_build_prej_install(svn_skel_t **work_item,
 
 /* OP_WRITE_OLD_PROPS  */
 
+
 static svn_error_t *
 run_write_old_props(svn_wc__db_t *db,
                     const svn_skel_t *work_item,
@@ -2191,6 +2213,46 @@ svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
 
 /* ------------------------------------------------------------------------ */
 
+/* OP_RECORD_FILEINFO  */
+
+
+static svn_error_t *
+run_record_fileinfo(svn_wc__db_t *db,
+                    const svn_skel_t *work_item,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_abspath;
+
+  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+
+  return svn_error_return(get_and_record_fileinfo(db, local_abspath,
+                                                  TRUE /* ignore_enoent */,
+                                                  scratch_pool));
+}
+
+
+svn_error_t *
+svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool)
+{
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
+                        *work_item, result_pool);
+  svn_skel__prepend_str(OP_RECORD_FILEINFO, *work_item, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_REVERT, run_revert },
   { OP_PREPARE_REVERT_FILES, run_prepare_revert_files },
@@ -2205,6 +2267,7 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_SYNC_FILE_FLAGS, run_sync_file_flags },
   { OP_PREJ_INSTALL, run_prej_install },
   { OP_WRITE_OLD_PROPS, run_write_old_props },
+  { OP_RECORD_FILEINFO, run_record_fileinfo },
 
   /* Sentinel.  */
   { NULL }

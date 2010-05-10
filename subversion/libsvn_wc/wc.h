@@ -61,7 +61,7 @@ extern "C" {
  * For example, ".svn/props/foo" became ".svn/props/foo.svn-work".
  *
  * The change from 2 to 3 was the introduction of the entry attribute
- * SVN_WC__ENTRY_ATTR_ABSENT.
+ * old-and-busted.c::ENTRIES_ATTR_ABSENT.
  *
  * The change from 3 to 4 was the renaming of the magic "svn:this_dir"
  * entry name to "".
@@ -266,29 +266,6 @@ struct svn_wc_traversal_info_t
 };
 
 
-
-/*** Timestamps. ***/
-
-/* A special timestamp value which means "use the timestamp from the
-   working copy".  This is sometimes used in a log entry like:
-
-   <modify-entry name="foo.c" revision="5" timestamp="working"/>
- */
-#define SVN_WC__TIMESTAMP_WC   "working"
-
-
-
-/*** Filesizes. ***/
-
-/* A special filesize value which means "use the filesize from the
-   working copy".  This is sometimes used in a log entry like:
-
-   <modify-entry name="foo.c" revision="5" working-size="working"/>
- */
-#define SVN_WC__WORKING_SIZE_WC   "working"
-
-
-
 /*** Names and file/dir operations in the administrative area. ***/
 
 /** The files within the administrative subdir. **/
