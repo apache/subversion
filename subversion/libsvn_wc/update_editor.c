@@ -4636,10 +4636,6 @@ merge_file(svn_skel_t **work_items,
         }
     }
 
-  /* ### dang. gotta queue the existing work before the stuff below.  */
-  SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, *work_items, pool));
-  *work_items = NULL;
-
   /* Deal with installation of the new textbase, if appropriate. */
 #ifndef SVN_EXPERIMENTAL_PRISTINE
   if (new_text_base_tmp_abspath)
@@ -4651,7 +4647,7 @@ merge_file(svn_skel_t **work_items,
                                  new_text_base_tmp_abspath,
                                  fb->text_base_abspath,
                                  pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item, pool));
+      *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
     }
 #endif
 
@@ -4669,8 +4665,7 @@ merge_file(svn_skel_t **work_items,
                     &work_item, eb->db, pb->local_abspath,
                     fb->local_abspath, fb->last_changed_date,
                     pool));
-          SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item,
-                                    pool));
+          *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
         }
 
       if ((new_text_base_tmp_abspath || magic_props_changed)
@@ -4680,14 +4675,13 @@ merge_file(svn_skel_t **work_items,
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc(
                     &work_item, eb->db, pb->local_abspath,
                     fb->local_abspath, pool));
-          SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item,
-                                    pool));
+          *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
         }
 
       SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc(
                 &work_item, eb->db, pb->local_abspath,
                 fb->local_abspath, pool));
-      SVN_ERR(svn_wc__db_wq_add(eb->db, pb->local_abspath, work_item, pool));
+      *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
     }
 
   /* Set the returned content state. */
@@ -6109,7 +6103,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     source_abspath = tmp_text_base_abspath;
 
   {
-    svn_skel_t *work_item;
     svn_boolean_t record_fileinfo;
 
     /* If new contents were provided, then we do NOT want to record the
