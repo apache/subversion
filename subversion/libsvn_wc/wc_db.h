@@ -2284,15 +2284,6 @@ svn_wc__db_temp_op_set_working_incomplete(svn_wc__db_t *db,
                                           apr_pool_t *scratch_pool);
 
 
-/* Update changed information in WORKING_NODE with the supplied values */
-svn_error_t *
-svn_wc__db_temp_op_set_working_last_change(svn_wc__db_t *db,
-                                           const char *local_abspath,
-                                           svn_revnum_t changed_rev,
-                                           apr_time_t changed_date,
-                                           const char *changed_author,
-                                           apr_pool_t *scratch_pool);
-
 /* Set the pristine text checksum of the WORKING_NODE of LOCAL_ABSPATH in DB
    to CHECKSUM. */
 svn_error_t *
