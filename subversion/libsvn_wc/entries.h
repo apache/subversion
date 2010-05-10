@@ -67,7 +67,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_REVISION           0x00000001
 #define SVN_WC__ENTRY_MODIFY_URL                0x00000002
 #define SVN_WC__ENTRY_MODIFY_KIND               0x00000004
-#define SVN_WC__ENTRY_MODIFY_TEXT_TIME          0x00000008
+/* ### gap  */
 #define SVN_WC__ENTRY_MODIFY_CHECKSUM           0x00000010
 #define SVN_WC__ENTRY_MODIFY_SCHEDULE           0x00000020
 #define SVN_WC__ENTRY_MODIFY_COPIED             0x00000040
@@ -79,7 +79,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_CONFLICT_WRK       0x00001000
 #define SVN_WC__ENTRY_MODIFY_PREJFILE           0x00002000
 #define SVN_WC__ENTRY_MODIFY_ABSENT             0x00004000
-#define SVN_WC__ENTRY_MODIFY_WORKING_SIZE       0x00008000
+/* ### gap  */
 #define SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL      0x00010000
 
 /* ...ORed together with this to mean: just set the schedule to the new
