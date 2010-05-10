@@ -579,20 +579,8 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   #                    ^
   #       With r7 dropped, r8 and r9 in the incoming
   #       dump becomes r7 and r8 in the loaded repos.
-
-  
+ 
   # Check the resulting mergeinfo.
-  #
-  # Currently this test fails with this resulting mergeinfo:
-  #
-  #   Properties on 'branches/B1':
-  #     svn:mergeinfo
-  #       /trunk:6,8
-  #   Properties on 'branches/B1/B/E':
-  #     svn:mergeinfo
-  #       /trunk/B/E:5-6,8-9
-  #                       ^
-  #            Not remapped to 7-8!
   url = sbox.repo_url + "/branches"
   expected_output = svntest.verify.UnorderedOutput([
     url + "/B1 - /trunk:6,8\n",
@@ -612,7 +600,7 @@ test_list = [ None,
               dumpfilter_with_targets,
               dumpfilter_with_patterns,
               filter_mergeinfo_revs_outside_of_dump_stream,
-              XFail(dropped_but_not_renumbered_empty_revs),
+              dropped_but_not_renumbered_empty_revs,
               ]
 
 if __name__ == '__main__':

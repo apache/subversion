@@ -62,6 +62,11 @@ struct parse_baton
      contents are allocated in POOL. */
   apr_hash_t *rev_map;
 
+  /* The most recent (youngest) revision from the dump stream mapped in
+     REV_MAP.  If no revisions have been mapped yet, this is set to
+     SVN_INVALID_REVNUM. */
+  svn_revnum_t last_rev_mapped;
+
   /* The oldest old revision loaded from the dump stream.  If no revisions
      have been loaded yet, this is set to SVN_INVALID_REVNUM. */
   svn_revnum_t oldest_old_rev;
@@ -1424,6 +1429,31 @@ close_revision(void *baton)
      correct repository revision to copy from. */
   apr_hash_set(pb->rev_map, old_rev, sizeof(svn_revnum_t), new_rev);
 
+  /* If the incoming dump stream has non-contiguous revisions (e.g. from
+     using svndumpfilter --drop-empty-revs without --renumber-revs) then
+     we must account for the missing gaps in PB->REV_MAP.  Otherwise we
+     might not be able to map all mergeinfo source revisions to the correct
+     revisions in the target repos. */
+  if (pb->last_rev_mapped != SVN_INVALID_REVNUM
+      && *old_rev != pb->last_rev_mapped + 1)
+    {
+      int i;
+
+      /* Map all dropped revisions between PB->LAST_REV_MAPPED and OLD_REV. */
+      for (i = pb->last_rev_mapped + 1; i < *old_rev; i++)
+        {
+          svn_revnum_t *gap_rev_old = apr_palloc(pb->pool,
+                                                 sizeof(*gap_rev_old));
+          svn_revnum_t *gap_rev_new = apr_palloc(pb->pool,
+                                                 sizeof(*gap_rev_new));
+          *gap_rev_old = i;
+          *gap_rev_new = pb->last_rev_mapped;
+          apr_hash_set(pb->rev_map, gap_rev_old, sizeof(svn_revnum_t),
+                       gap_rev_new);
+        }
+    }
+  pb->last_rev_mapped = *old_rev;
+
   /* Deltify the predecessors of paths changed in this revision. */
   SVN_ERR(svn_fs_deltify_revision(pb->fs, *new_rev, rb->pool));
 
@@ -1492,6 +1522,7 @@ svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **callbacks,
   pb->pool = pool;
   pb->rev_map = apr_hash_make(pool);
   pb->oldest_old_rev = SVN_INVALID_REVNUM;
+  pb->last_rev_mapped = SVN_INVALID_REVNUM;
 
   *callbacks = parser;
   *parse_baton = pb;
