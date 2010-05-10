@@ -2698,9 +2698,7 @@ fold_entry(svn_wc_entry_t *cur_entry,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_ABSENT)
     cur_entry->absent = entry->absent;
 
-  /* Text/prop modification times */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
-    cur_entry->text_time = entry->text_time;
+  /* text_time, prop_time no longer passed to entry_modify()  */
 
   /* Conflict stuff */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICT_OLD)
@@ -2765,8 +2763,7 @@ fold_entry(svn_wc_entry_t *cur_entry,
       cur_entry->copyfrom_url = NULL;
     }
 
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_WORKING_SIZE)
-    cur_entry->working_size = entry->working_size;
+  /* working_size is no longer passed to entry_modify()  */
 
   /* keep_local makes sense only when we are going to delete directory. */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE
