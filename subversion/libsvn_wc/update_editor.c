@@ -6055,7 +6055,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   if (copyfrom_url != NULL)
     {
       const char *text_base_abspath;
-      svn_wc_entry_t tmp_entry;
 
       /* Write out log commands to set up the new text base and its checksum.
          (Install it as the normal text base, not the 'revert base'.) */
@@ -6066,13 +6065,14 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                  pool));
       SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
 
-      tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
-
-      SVN_ERR(svn_wc__loggy_entry_modify(&work_item, db, dir_abspath,
-                                         local_abspath, &tmp_entry,
-                                         SVN_WC__ENTRY_MODIFY_CHECKSUM,
-                                         pool));
-      SVN_ERR(svn_wc__db_wq_add(db, dir_abspath, work_item, pool));
+      /* ### execute the work items which construct the node, allowing the
+         ### wc_db operation to tweak the WORKING_NODE row. these values
+         ### should be set some other way.  */
+      SVN_ERR(svn_wc__wq_run(db, dir_abspath,
+                             cancel_func, cancel_baton,
+                             pool));
+      SVN_ERR(svn_wc__db_temp_op_set_working_checksum(db, local_abspath,
+                                                      base_checksum, pool));
     }
 
   /* ### HACK: The following code should be performed in the same transaction as the install */

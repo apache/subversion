@@ -468,6 +468,10 @@ where wc_id = ?1 and local_relpath = ?2;
 update working_node set changed_rev = ?3, changed_date = ?4, changed_author = ?5
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_WORKING_CHECKSUM
+update working_node set checksum = ?3
+where wc_id = ?1 and local_relpath = ?2;
+
 
 /* ------------------------------------------------------------------------- */
 
