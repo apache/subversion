@@ -1002,25 +1002,69 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                    apr_pool_t *scratch_pool);
 
 
-/* ### svn cp URL WCPATH ... copies pure repos into wc. only this "root"
-   ### metadata is present. caller needs to "set" all information recursively.
-   ### and caller definitely has to populate ACTUAL. */
-/* ### mark node as absent? adding children or props: auto-convert away
-   ### from absent? ... or not "absent" but an "incomplete" status? */
-/* ### this needs to be split out into four functions to add nodes of each
-   ### kind. records copyfrom_* history, changed_* values, incomplete
-   ### children, properties, checksum values, etc. clients should construct
-   ### the full copied tree (maybe DEPTH can be used to avoid creating
-   ### nodes for all children?). for the child nodes, their copyfrom_*
-   ### information should be NULL.  */
+/* Record a copy at LOCAL_ABSPATH from a repository directory.
+
+   This copy is NOT recursive. It simply establishes this one node.
+   CHILDREN must be provided, and incomplete nodes will be constructed
+   for them.
+
+   ### arguments docco.  */
 svn_error_t *
-svn_wc__db_op_copy_url(svn_wc__db_t *db,
+svn_wc__db_op_copy_dir(svn_wc__db_t *db,
                        const char *local_abspath,
-                       const char *copyfrom_repos_relpath,
-                       const char *copyfrom_root_url,
-                       const char *copyfrom_uuid,
-                       svn_revnum_t copyfrom_revision,
+                       const apr_hash_t *props,
+                       svn_revnum_t changed_rev,
+                       apr_time_t changed_date,
+                       const char *changed_author,
+                       const char *original_repos_relpath,
+                       const char *original_root_url,
+                       const char *original_uuid,
+                       svn_revnum_t original_revision,
+                       const apr_array_header_t *children,
+                       svn_depth_t depth,
+                       const svn_skel_t *conflict,
+                       const svn_skel_t *work_items,
                        apr_pool_t *scratch_pool);
+
+
+/* Record a copy at LOCAL_ABSPATH from a repository file.
+
+   ### arguments docco.  */
+svn_error_t *
+svn_wc__db_op_copy_file(svn_wc__db_t *db,
+                        const char *local_abspath,
+                        const apr_hash_t *props,
+                        svn_revnum_t changed_rev,
+                        apr_time_t changed_date,
+                        const char *changed_author,
+                        const char *original_repos_relpath,
+                        const char *original_root_url,
+                        const char *original_uuid,
+                        svn_revnum_t original_revision,
+                        const svn_checksum_t *checksum,
+                        const svn_skel_t *conflict,
+                        const svn_skel_t *work_items,
+                        apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
+                           const char *local_abspath,
+                           const apr_hash_t *props,
+                           svn_revnum_t changed_rev,
+                           apr_time_t changed_date,
+                           const char *changed_author,
+                           const char *original_repos_relpath,
+                           const char *original_root_url,
+                           const char *original_uuid,
+                           svn_revnum_t original_revision,
+                           const char *target,
+                           const svn_skel_t *conflict,
+                           const svn_skel_t *work_items,
+                           apr_pool_t *scratch_pool);
+
+
+/* ### do we need svn_wc__db_op_copy_absent() ??  */
 
 
 /* ### add a new versioned directory. a list of children is NOT passed

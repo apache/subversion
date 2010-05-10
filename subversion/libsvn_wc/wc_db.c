@@ -1766,6 +1766,8 @@ svn_wc__db_to_relpath(const char **local_relpath,
 {
   svn_wc__db_pdh_t *pdh;
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
   SVN_ERR(parse_local_abspath(&pdh, local_relpath, db, local_abspath,
                               svn_sqlite__mode_readonly,
                               result_pool, scratch_pool));
@@ -1785,6 +1787,10 @@ svn_wc__db_from_relpath(const char **local_abspath,
 {
   svn_wc__db_pdh_t *pdh;
   const char *unused_relpath;
+
+#if 0
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(local_abspath));
+#endif
 
   SVN_ERR(parse_local_abspath(&pdh, &unused_relpath, db, wri_abspath,
                               svn_sqlite__mode_readonly,
@@ -2734,21 +2740,229 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__db_op_copy_url(svn_wc__db_t *db,
+svn_wc__db_op_copy_dir(svn_wc__db_t *db,
                        const char *local_abspath,
-                       const char *copyfrom_repos_relpath,
-                       const char *copyfrom_root_url,
-                       const char *copyfrom_uuid,
-                       svn_revnum_t copyfrom_revision,
+                       const apr_hash_t *props,
+                       svn_revnum_t changed_rev,
+                       apr_time_t changed_date,
+                       const char *changed_author,
+                       const char *original_repos_relpath,
+                       const char *original_root_url,
+                       const char *original_uuid,
+                       svn_revnum_t original_revision,
+                       const apr_array_header_t *children,
+                       svn_depth_t depth,
+                       const svn_skel_t *conflict,
+                       const svn_skel_t *work_items,
                        apr_pool_t *scratch_pool)
 {
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(copyfrom_repos_relpath != NULL);
-  SVN_ERR_ASSERT(svn_uri_is_absolute(copyfrom_root_url));
-  SVN_ERR_ASSERT(copyfrom_uuid != NULL);
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(copyfrom_revision));
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  insert_working_baton_t iwb;
+  apr_int64_t original_repos_id;
 
-  NOT_IMPLEMENTED();
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(props != NULL);
+  /* ### any assertions for CHANGED_* ?  */
+  /* ### any assertions for ORIGINAL_* ?  */
+#if 0
+  SVN_ERR_ASSERT(children != NULL);
+#endif
+  SVN_ERR_ASSERT(conflict == NULL);  /* ### can't handle yet  */
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(create_repos_id(&original_repos_id,
+                          original_root_url, original_uuid,
+                          pdh->wcroot->sdb, scratch_pool));
+
+  blank_iwb(&iwb);
+
+  iwb.presence = svn_wc__db_status_normal;
+  iwb.kind = svn_wc__db_kind_dir;
+  iwb.wc_id = pdh->wcroot->wc_id;
+  iwb.local_relpath = local_relpath;
+
+  iwb.props = props;
+  iwb.changed_rev = changed_rev;
+  iwb.changed_date = changed_date;
+  iwb.changed_author = changed_author;
+  iwb.original_repos_id = original_repos_id;
+  iwb.original_repos_relpath = original_repos_relpath;
+  iwb.original_revnum = original_revision;
+  iwb.moved_here = FALSE;
+
+  iwb.children = children;
+  iwb.depth = depth;
+
+  iwb.work_items = work_items;
+
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                       insert_working_node, &iwb,
+                                       scratch_pool));
+  flush_entries(pdh);
+
+  /* Add a parent stub.  */
+  {
+    svn_error_t *err;
+
+    err = navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                             scratch_pool);
+    if (err)
+      {
+        /* Prolly fell off the top of the wcroot. Just call it a day.  */
+        svn_error_clear(err);
+        return SVN_NO_ERROR;
+      }
+
+    blank_iwb(&iwb);
+
+    iwb.presence = svn_wc__db_status_normal;
+    iwb.kind = svn_wc__db_kind_subdir;
+    iwb.wc_id = pdh->wcroot->wc_id;
+    iwb.local_relpath = svn_dirent_basename(local_abspath, scratch_pool);
+
+    /* No children or work items, so a txn is not needed.  */
+    SVN_ERR(insert_working_node(&iwb, pdh->wcroot->sdb, scratch_pool));
+    flush_entries(pdh);
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_op_copy_file(svn_wc__db_t *db,
+                        const char *local_abspath,
+                        const apr_hash_t *props,
+                        svn_revnum_t changed_rev,
+                        apr_time_t changed_date,
+                        const char *changed_author,
+                        const char *original_repos_relpath,
+                        const char *original_root_url,
+                        const char *original_uuid,
+                        svn_revnum_t original_revision,
+                        const svn_checksum_t *checksum,
+                        const svn_skel_t *conflict,
+                        const svn_skel_t *work_items,
+                        apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  insert_working_baton_t iwb;
+  apr_int64_t original_repos_id;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(props != NULL);
+  /* ### any assertions for CHANGED_* ?  */
+  /* ### any assertions for ORIGINAL_* ?  */
+  SVN_ERR_ASSERT(checksum != NULL);
+  SVN_ERR_ASSERT(conflict == NULL);  /* ### can't handle yet  */
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(create_repos_id(&original_repos_id,
+                          original_root_url, original_uuid,
+                          pdh->wcroot->sdb, scratch_pool));
+
+  blank_iwb(&iwb);
+
+  iwb.presence = svn_wc__db_status_normal;
+  iwb.kind = svn_wc__db_kind_file;
+  iwb.wc_id = pdh->wcroot->wc_id;
+  iwb.local_relpath = local_relpath;
+
+  iwb.props = props;
+  iwb.changed_rev = changed_rev;
+  iwb.changed_date = changed_date;
+  iwb.changed_author = changed_author;
+  iwb.original_repos_id = original_repos_id;
+  iwb.original_repos_relpath = original_repos_relpath;
+  iwb.original_revnum = original_revision;
+  iwb.moved_here = FALSE;
+
+  iwb.checksum = checksum;
+
+  iwb.work_items = work_items;
+
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                       insert_working_node, &iwb,
+                                       scratch_pool));
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
+                           const char *local_abspath,
+                           const apr_hash_t *props,
+                           svn_revnum_t changed_rev,
+                           apr_time_t changed_date,
+                           const char *changed_author,
+                           const char *original_repos_relpath,
+                           const char *original_root_url,
+                           const char *original_uuid,
+                           svn_revnum_t original_revision,
+                           const char *target,
+                           const svn_skel_t *conflict,
+                           const svn_skel_t *work_items,
+                           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  insert_working_baton_t iwb;
+  apr_int64_t original_repos_id;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(props != NULL);
+  /* ### any assertions for CHANGED_* ?  */
+  /* ### any assertions for ORIGINAL_* ?  */
+  SVN_ERR_ASSERT(target != NULL);
+  SVN_ERR_ASSERT(conflict == NULL);  /* ### can't handle yet  */
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(create_repos_id(&original_repos_id,
+                          original_root_url, original_uuid,
+                          pdh->wcroot->sdb, scratch_pool));
+
+  blank_iwb(&iwb);
+
+  iwb.presence = svn_wc__db_status_normal;
+  iwb.kind = svn_wc__db_kind_symlink;
+  iwb.wc_id = pdh->wcroot->wc_id;
+  iwb.local_relpath = local_relpath;
+
+  iwb.props = props;
+  iwb.changed_rev = changed_rev;
+  iwb.changed_date = changed_date;
+  iwb.changed_author = changed_author;
+  iwb.original_repos_id = original_repos_id;
+  iwb.original_repos_relpath = original_repos_relpath;
+  iwb.original_revnum = original_revision;
+  iwb.moved_here = FALSE;
+
+  iwb.target = target;
+
+  iwb.work_items = work_items;
+
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                       insert_working_node, &iwb,
+                                       scratch_pool));
+  flush_entries(pdh);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2791,7 +3005,7 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
                              scratch_pool);
     if (err)
       {
-        /* Prolly fell off teh top of the wcroot. Just call it a day.  */
+        /* Prolly fell off the top of the wcroot. Just call it a day.  */
         svn_error_clear(err);
         return SVN_NO_ERROR;
       }
