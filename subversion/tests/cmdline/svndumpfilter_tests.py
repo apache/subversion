@@ -593,8 +593,6 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   #       /trunk/B/E:5-6,8-9
   #                       ^
   #            Not remapped to 7-8!
-  #
-  # We need to fix svndumpfilter to address this or svnadmin load...or both.
   url = sbox.repo_url + "/branches"
   expected_output = svntest.verify.UnorderedOutput([
     url + "/B1 - /trunk:6,8\n",
