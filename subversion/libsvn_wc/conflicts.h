@@ -278,6 +278,13 @@ svn_wc__conflict_skel_add_obstruction(svn_skel_t *conflict_skel,
                                       apr_pool_t *scratch_pool);
 
 
+/* Resolve text conflicts on the given node.  */
+svn_error_t *
+svn_wc__resolve_text_conflict(svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
