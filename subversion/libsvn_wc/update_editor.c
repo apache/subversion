@@ -4562,6 +4562,7 @@ merge_file(svn_skel_t **work_items,
                  ###   made atomically.  */
               /* ### this should return a work_items  */
               SVN_ERR(svn_wc__internal_merge(
+                        &work_item,
                         &merge_outcome,
                         eb->db,
                         merge_left, NULL,
@@ -4573,7 +4574,8 @@ merge_file(svn_skel_t **work_items,
                         eb->diff3_cmd, NULL, fb->propchanges,
                         eb->conflict_func, eb->conflict_baton,
                         eb->cancel_func, eb->cancel_baton,
-                        pool));
+                        pool, pool));
+              *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
 
               /* If we created a temporary left merge file, get rid of it. */
               if (delete_left)
