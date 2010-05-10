@@ -1211,37 +1211,17 @@ prep_directory(struct dir_baton *db,
 }
 
 
-/* Container for the common "Entry props" */
-struct last_change_info
-{
-  /** last revision this was changed */
-  svn_revnum_t cmt_rev;
+/* Find the last-change info within ENTRY_PROPS, and return then in the
+   CHANGED_* parameters. Each parameter will be initialized to its "none"
+   value, and will contain the relavent info if found.
 
-  /** last date this was changed */
-  apr_time_t cmt_date;
-
-  /** last commit author of this item */
-  const char *cmt_author;
-};
-
-/* Update the fields of *LAST_CHANGE to represent the last-change info found
-   in ENTRY_PROPS, an array of svn_prop_t* entry props.  Update each field
-   separately, ignoring any unexpected properties and any properties with
-   null values (except the lock token as described below).
-
-   If ENTRY_PROPS contains a lock token property with a null value, remove
-   the lock info directly from LOCAL_ABSPATH in DB and set *LOCK_STATE (if
-   LOCK_STATE is non-NULL) to svn_wc_notify_lock_state_unlocked, else set
-   *LOCK_STATE (if LOCK_STATE is non-NULL) to svn_wc_lock_state_unchanged.
-   ENTRY_PROPS must not contain a lock token with a non-null value.
-
-   If *LAST_CHANGE was NULL, first set it to a new structure allocated from
-   RESULT_POOL and initialize each field to its appropriate null or invalid
-   value.
- */
+   CHANGED_AUTHOR will be allocated in RESULT_POOL. SCRATCH_POOL will be
+   used for some temporary allocations.
+*/
 static svn_error_t *
-accumulate_last_change(struct last_change_info **last_change,
-                       svn_wc_notify_lock_state_t *lock_state,
+accumulate_last_change(svn_revnum_t *changed_rev,
+                       apr_time_t *changed_date,
+                       const char **changed_author,
                        svn_wc__db_t *db,
                        const char *local_abspath,
                        const apr_array_header_t *entry_props,
@@ -1250,25 +1230,14 @@ accumulate_last_change(struct last_change_info **last_change,
 {
   int i;
 
-  if (lock_state)
-    *lock_state = svn_wc_notify_lock_state_unchanged;
+  *changed_rev = SVN_INVALID_REVNUM;
+  *changed_date = 0;
+  *changed_author = NULL;
 
   for (i = 0; i < entry_props->nelts; ++i)
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(entry_props, i, svn_prop_t);
-      const char *val;
 
-      /* The removal of the lock-token entryprop means that the lock was
-         defunct, so remove it directly. */
-      if (! strcmp(prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
-        {
-          SVN_ERR_ASSERT(prop->value == NULL);
-          SVN_ERR(svn_wc__db_lock_remove(db, local_abspath, scratch_pool));
-
-          if (lock_state)
-            *lock_state = svn_wc_notify_lock_state_unlocked;
-          continue;
-        }
       /* A prop value of NULL means the information was not
          available.  We don't remove this field from the entries
          file; we have convention just leave it empty.  So let's
@@ -1276,21 +1245,14 @@ accumulate_last_change(struct last_change_info **last_change,
       if (! prop->value)
         continue;
 
-      val = prop->value->data;
-
-      if (*last_change == NULL)
-        {
-          *last_change = apr_pcalloc(result_pool, sizeof(**last_change));
-          (*last_change)->cmt_rev = SVN_INVALID_REVNUM;
-        }
-
       if (! strcmp(prop->name, SVN_PROP_ENTRY_LAST_AUTHOR))
-        (*last_change)->cmt_author = apr_pstrdup(result_pool, val);
+        *changed_author = apr_pstrdup(result_pool, prop->value->data);
       else if (! strcmp(prop->name, SVN_PROP_ENTRY_COMMITTED_REV))
-        (*last_change)->cmt_rev = SVN_STR_TO_REV(val);
+        *changed_rev = SVN_STR_TO_REV(prop->value->data);
       else if (! strcmp(prop->name, SVN_PROP_ENTRY_COMMITTED_DATE))
-        SVN_ERR(svn_time_from_cstring(&((*last_change)->cmt_date), val,
+        SVN_ERR(svn_time_from_cstring(changed_date, prop->value->data,
                                       scratch_pool));
+
       /* Starting with Subversion 1.7 we ignore the SVN_PROP_ENTRY_UUID
          property here. */
     }
@@ -2939,13 +2901,15 @@ close_directory(void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
-  struct last_change_info *last_change = NULL;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   apr_array_header_t *entry_props, *wc_props, *regular_props;
   apr_hash_t *base_props;
   apr_hash_t *actual_props;
   apr_hash_t *new_base_props = NULL, *new_actual_props = NULL;
   struct bump_dir_info *bdi;
+  svn_revnum_t new_changed_rev;
+  apr_time_t new_changed_date;
+  const char *new_changed_author;
 
   /* Skip if we're in a conflicted tree. */
   if (db->skip_this)
@@ -3082,8 +3046,10 @@ close_directory(void *dir_baton,
           SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
         }
 
-      SVN_ERR(accumulate_last_change(&last_change, NULL, eb->db,
-                                     db->local_abspath, entry_props,
+      SVN_ERR(accumulate_last_change(&new_changed_rev,
+                                     &new_changed_date,
+                                     &new_changed_author,
+                                     eb->db, db->local_abspath, entry_props,
                                      pool, pool));
 
       /* Handle the wcprops. */
@@ -3103,7 +3069,7 @@ close_directory(void *dir_baton,
     {
       /* And we should not have received any changes!  */
       SVN_ERR_ASSERT(db->propchanges->nelts == 0);
-      /* ... which also implies LAST_CHANGE == NULL,
+      /* ... which also implies NEW_CHANGED_* are not set,
          and NEW_BASE_PROPS == NULL.  */
     }
   else
@@ -3128,12 +3094,12 @@ close_directory(void *dir_baton,
                                        pool, pool));
 
       /* If we received any changed_* values, then use them.  */
-      if (last_change)
-        {
-          changed_rev = last_change->cmt_rev;
-          changed_date = last_change->cmt_date;
-          changed_author = last_change->cmt_author;
-        }
+      if (SVN_IS_VALID_REVNUM(new_changed_rev))
+        changed_rev = new_changed_rev;
+      if (new_changed_date != 0)
+        changed_date = new_changed_date;
+      if (new_changed_author != NULL)
+        changed_author = new_changed_author;
 
       /* Do we have new properties to install? Or shall we simply retain
          the prior set of properties? If we're installing new properties,
@@ -4744,7 +4710,6 @@ close_file(void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
-  struct last_change_info *last_change = NULL;
   svn_wc_notify_state_t content_state, prop_state;
   svn_wc_notify_lock_state_t lock_state;
   svn_checksum_t *expected_md5_checksum = NULL;
@@ -4763,6 +4728,9 @@ close_file(void *file_baton,
   apr_hash_t *current_actual_props = NULL;
   svn_skel_t *all_work_items;
   svn_skel_t *work_item;
+  svn_revnum_t new_changed_rev;
+  apr_time_t new_changed_date;
+  const char *new_changed_author;
 
   if (fb->skip_this)
     {
@@ -4843,11 +4811,36 @@ close_file(void *file_baton,
                                &regular_props, pool));
 
   /* Extract the changed_* and lock state information.  */
-  SVN_ERR(accumulate_last_change(&last_change, &lock_state,
+  SVN_ERR(accumulate_last_change(&new_changed_rev,
+                                 &new_changed_date,
+                                 &new_changed_author,
                                  eb->db, fb->local_abspath,
                                  entry_props,
                                  pool, pool));
-  SVN_ERR_ASSERT(last_change != NULL);  /* files should always have.. */
+
+  /* Determine whether the file has become unlocked.  */
+  {
+    int i;
+
+    lock_state = svn_wc_notify_lock_state_unchanged;
+
+    for (i = 0; i < entry_props->nelts; ++i)
+      {
+        const svn_prop_t *prop = &APR_ARRAY_IDX(entry_props, i, svn_prop_t);
+
+        /* If we see a change to the LOCK_TOKEN entry prop, then the only
+           possible change is its REMOVAL. Thus, the lock has been removed,
+           and we should likewise remove our cached copy of it.  */
+        if (! strcmp(prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
+          {
+            SVN_ERR_ASSERT(prop->value == NULL);
+            SVN_ERR(svn_wc__db_lock_remove(eb->db, fb->local_abspath, pool));
+
+            lock_state = svn_wc_notify_lock_state_unlocked;
+            break;
+          }
+      }
+  }
 
   /* Install all kinds of properties.  It is important to do this before
      any file content merging, since that process might expand keywords, in
@@ -4998,9 +4991,9 @@ close_file(void *file_baton,
                                      eb->repos_root, eb->repos_uuid,
                                      *eb->target_revision,
                                      new_base_props,
-                                     last_change->cmt_rev,
-                                     last_change->cmt_date,
-                                     last_change->cmt_author,
+                                     new_changed_rev,
+                                     new_changed_date,
+                                     new_changed_author,
                                      new_checksum,
                                      SVN_INVALID_FILESIZE,
                                      NULL /* conflict */,
@@ -5886,7 +5879,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
   const char *tmp_text_base_abspath;
   svn_checksum_t *base_checksum;
-  struct last_change_info *last_change = NULL;
   const char *source_abspath = NULL;
   svn_skel_t *all_work_items;
   svn_skel_t *work_item;
@@ -5894,6 +5886,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   const char *original_repos_relpath;
   const char *original_uuid;
   apr_hash_t *actual_props;
+  svn_revnum_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(new_base_contents != NULL);
@@ -5986,7 +5981,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       }
   }
 
-  /* Update LAST_CHANGE to reflect the entry props in NEW_BASE_PROPS, and
+  /* Set CHANGED_* to reflect the entry props in NEW_BASE_PROPS, and
      filter NEW_BASE_PROPS so it contains only regular props. */
   {
     apr_array_header_t *regular_props;
@@ -6000,7 +5995,10 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     new_base_props = prop_hash_from_array(regular_props, pool);
 
     /* Get the change_* info from the entry props.  */
-    SVN_ERR(accumulate_last_change(&last_change, NULL, db, local_abspath,
+    SVN_ERR(accumulate_last_change(&changed_rev,
+                                   &changed_date,
+                                   &changed_author,
+                                   db, local_abspath,
                                    entry_props, pool, pool));
   }
 
@@ -6127,11 +6125,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(svn_wc__db_op_copy_file(db, local_abspath,
                                   new_base_props,
-                                  last_change
-                                    ? last_change->cmt_rev
-                                    : SVN_INVALID_REVNUM,
-                                  last_change ? last_change->cmt_date : 0,
-                                  last_change ? last_change->cmt_author : NULL,
+                                  changed_rev,
+                                  changed_date,
+                                  changed_author,
                                   original_repos_relpath,
                                   original_root_url,
                                   original_uuid,
