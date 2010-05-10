@@ -562,7 +562,7 @@ build(action_code_t action,
   else
     {
       /* We shouldn't get here. */
-      abort();
+      SVN_ERR_MALFUNCTION();
     }
 
   return SVN_NO_ERROR;
