@@ -31,8 +31,10 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_wc.h"
+
 #include "private/svn_sqlite.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_skel.h"
 
 #include "wc_db.h"
 
@@ -380,8 +382,8 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
 
 
 /* Merge the difference between LEFT_ABSPATH and RIGHT_ABSPATH into
-   TARGET_ABSPATH, accumulating instructions to update the working
-   copy into LOG_ACCUM.
+   TARGET_ABSPATH, return the appropriate work queue operations in
+   *WORK_ITEMS.
 
    Note that, in the case of updating, the update can have sent new
    properties, which could affect the way the wc target is
@@ -419,9 +421,13 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
 
    For a complete description, see svn_wc_merge3() for which this is
    the (loggy) implementation.
+
+   *WORK_ITEMS will be allocated in RESULT_POOL. All temporary allocations
+   will be performed in SCRATCH_POOL.
 */
 svn_error_t *
-svn_wc__internal_merge(enum svn_wc_merge_outcome_t *merge_outcome,
+svn_wc__internal_merge(svn_skel_t **work_items,
+                       enum svn_wc_merge_outcome_t *merge_outcome,
                        svn_wc__db_t *db,
                        const char *left_abspath,
                        const svn_wc_conflict_version_t *left_version,
@@ -440,7 +446,8 @@ svn_wc__internal_merge(enum svn_wc_merge_outcome_t *merge_outcome,
                        void *conflict_baton,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* A default error handler for svn_wc_walk_entries3().  Returns ERR in
    all cases. */
