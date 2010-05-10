@@ -482,7 +482,127 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
-   
+
+#----------------------------------------------------------------------
+# More testing for issue #3020 'Reflect dropped/renumbered revisions in
+# svn:mergeinfo data during svnadmin load'
+#
+# Using svndumpfilter with the --drop-empty-revs option, but without the
+# --renumber-revs option, can create a dump with non-contiguous revisions.
+# Such dumps should not interfere with the correct remapping of mergeinfo
+# source revisions.
+def dropped_but_not_renumbered_empty_revs(sbox):
+  "mergeinfo maps correctly when dropping revs"
+
+  test_create(sbox)
+
+  # The dump file mergeinfo_included_full.dump represents this repository:
+  # 
+  #
+  #                       __________________________________________
+  #                      |                                         |
+  #                      |             ____________________________|_____
+  #                      |            |                            |     |
+  # trunk---r2---r3-----r5---r6-------r8---r9--------------->      |     |
+  #   r1             |        |     |       |                      |     |
+  # intial           |        |     |       |______                |     |
+  # import         copy       |   copy             |            merge   merge
+  #                  |        |     |            merge           (r5)   (r8)
+  #                  |        |     |            (r9)              |     |
+  #                  |        |     |              |               |     |
+  #                  |        |     V              V               |     |
+  #                  |        | branches/B2-------r11---r12---->   |     |
+  #                  |        |     r7              |____|         |     |
+  #                  |        |                        |           |     |
+  #                  |      merge                      |___        |     |
+  #                  |      (r6)                           |       |     |
+  #                  |        |_________________           |       |     |
+  #                  |                          |        merge     |     |
+  #                  |                          |      (r11-12)    |     |
+  #                  |                          |          |       |     |
+  #                  V                          V          V       |     |
+  #              branches/B1-------------------r10--------r13-->   |     |
+  #                  r4                                            |     |
+  #                   |                                            V     V
+  #                  branches/B1/B/E------------------------------r14---r15->
+  #                  
+  #
+  # The mergeinfo on mergeinfo_included_full.dump is:
+  #
+  #   Properties on 'branches/B1':
+  #     svn:mergeinfo
+  #       /branches/B2:11-12
+  #       /trunk:6,9
+  #   Properties on 'branches/B1/B/E':
+  #     svn:mergeinfo
+  #       /branches/B2/B/E:11-12
+  #       /trunk/B/E:5-6,8-9
+  #   Properties on 'branches/B2':
+  #     svn:mergeinfo
+  #       /trunk:9
+  #
+  # Use svndumpfilter to filter mergeinfo_included_full.dump, excluding
+  # branches/B2, while dropping, but not renumbering, empty revisions.
+  #
+  # Load the filtered dump into an empty repository.  Since we are excluding
+  # /branches/B2 and dropping empty revs, revisions 7, 11, and 12 won't be
+  # included in the filtered dump.
+  full_dump = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnadmin_tests_data',
+                                   'mergeinfo_included_full.dump')
+  full_dump_contents = open(full_dump).read()
+  filtered_dumpfile, filtered_out = filter_and_return_output(
+      full_dump_contents,
+      8192, # Set a sufficiently large bufsize to avoid a deadlock
+      "exclude", "branches/B2",
+      "--skip-missing-merge-sources", "--drop-empty-revs")
+
+  # Now load the filtered dump into an empty repository.
+  load_and_verify_dumpstream(sbox, [], [], None, filtered_dumpfile,
+                             '--ignore-uuid')
+
+  # The mergeinfo in the newly loaded repos should have no references to the
+  # dropped branch and the remaining merge source revs should be remapped to
+  # reflect the fact that the loaded repository no longer has any empty
+  # revisions:
+  #
+  #   Properties on 'branches/B1':
+  #     svn:mergeinfo
+  #       /trunk:6,8
+  #                ^
+  #       With r7 dropped, r9 in the incoming
+  #       dump becomes r8 in the loaded repos.
+  #
+  #   Properties on 'branches/B1/B/E':
+  #     svn:mergeinfo
+  #       /trunk/B/E:5-8
+  #                    ^
+  #       With r7 dropped, r8 and r9 in the incoming
+  #       dump becomes r7 and r8 in the loaded repos.
+
+  
+  # Check the resulting mergeinfo.
+  #
+  # Currently this test fails with this resulting mergeinfo:
+  #
+  #   Properties on 'branches/B1':
+  #     svn:mergeinfo
+  #       /trunk:6,8
+  #   Properties on 'branches/B1/B/E':
+  #     svn:mergeinfo
+  #       /trunk/B/E:5-6,8-9
+  #                       ^
+  #            Not remapped to 7-8!
+  #
+  # We need to fix svndumpfilter to address this or svnadmin load...or both.
+  url = sbox.repo_url + "/branches"
+  expected_output = svntest.verify.UnorderedOutput([
+    url + "/B1 - /trunk:6,8\n",
+    url + "/B1/B/E - /trunk/B/E:5-8\n"])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url)
+
 ########################################################################
 # Run the tests
 
@@ -494,6 +614,7 @@ test_list = [ None,
               dumpfilter_with_targets,
               dumpfilter_with_patterns,
               filter_mergeinfo_revs_outside_of_dump_stream,
+              XFail(dropped_but_not_renumbered_empty_revs),
               ]
 
 if __name__ == '__main__':
