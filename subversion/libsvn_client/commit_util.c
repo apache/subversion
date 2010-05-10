@@ -383,7 +383,7 @@ harvest_committables(apr_hash_t *committables,
   const char *entry_url;
   const char *entry_lock_token;
   const char *cf_url = NULL;
-  svn_revnum_t cf_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t entry_rev, cf_rev = SVN_INVALID_REVNUM;
   const svn_string_t *propval;
   svn_boolean_t is_special;
   svn_boolean_t is_file_external;
@@ -583,14 +583,42 @@ harvest_committables(apr_hash_t *committables,
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           adds_only = TRUE;
         }
+      else
+        {
+          /* ### svn_wc__node_get_copyfrom_info has pre-wc-ng
+             behaviour for is_copy_target.  That's wrong in this case
+             so lets fix it. */
+          const char *parent_copyfrom_url;
+          svn_revnum_t parent_copyfrom_rev;
+          const char *parent_abspath = svn_dirent_dirname(local_abspath,
+                                                          scratch_pool);
+
+          SVN_ERR(svn_wc__node_get_copyfrom_info(&parent_copyfrom_url,
+                                                 &parent_copyfrom_rev,
+                                                 NULL,
+                                                 ctx->wc_ctx, parent_abspath,
+                                                 scratch_pool, scratch_pool));
+          if (parent_copyfrom_rev != node_copyfrom_rev)
+            {
+              state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
+              state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
+              cf_url = node_copyfrom_url;
+              cf_rev = node_copyfrom_rev;
+              adds_only = FALSE;
+            }
+        }
     }
+
+  SVN_ERR(svn_wc__node_get_base_rev(&entry_rev, ctx->wc_ctx, local_abspath,
+                                    scratch_pool));
 
   /* Check for the copied-subtree addition case.  */
   if ((entry->copied || copy_mode)
       && (! entry->deleted)
-      && (entry->schedule == svn_wc_schedule_normal))
+      && (entry->schedule == svn_wc_schedule_normal)
+      && (entry_rev != SVN_INVALID_REVNUM))
     {
-      svn_revnum_t p_rev = entry->revision - 1; /* arbitrary non-equal value */
+      svn_revnum_t p_rev = entry_rev - 1; /* arbitrary non-equal value */
       svn_boolean_t wc_root = FALSE;
 
       /* If this is not a WC root then its parent's revision is
@@ -600,7 +628,10 @@ harvest_committables(apr_hash_t *committables,
       if (! wc_root)
         {
           if (parent_entry)
-            p_rev = parent_entry->revision;
+            SVN_ERR(svn_wc__node_get_base_rev(&p_rev, ctx->wc_ctx,
+                                              svn_dirent_dirname(local_abspath,
+                                                                 scratch_pool),
+                                              scratch_pool));
         }
       else if (! copy_mode)
         return svn_error_createf
@@ -610,12 +641,12 @@ harvest_committables(apr_hash_t *committables,
 
       /* If the ENTRY's revision differs from that of its parent, we
          have to explicitly commit ENTRY as a copy. */
-      if (entry->revision != p_rev)
+      if (entry_rev != p_rev)
         {
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
           adds_only = FALSE;
-          cf_rev = entry->revision;
+          cf_rev = entry_rev;
           if (copy_mode)
             cf_url = entry_url;
           else if (copyfrom_url)
@@ -716,7 +747,7 @@ harvest_committables(apr_hash_t *committables,
         {
           /* Finally, add the committable item. */
           SVN_ERR(add_committable(committables, local_abspath, db_kind, url,
-                                  entry->revision,
+                                  entry_rev,
                                   cf_url,
                                   cf_rev,
                                   state_flags));

@@ -3009,7 +3009,6 @@ def merge_dir_and_file_replace(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/C'                    : Item(verb='Sending'),
     'A/C/foo'                : Item(verb='Replacing'),
-    'A/C/foo/bar'            : Item(verb='Adding'),
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -3028,6 +3027,16 @@ def merge_dir_and_file_replace(sbox):
                                         expected_output,
                                         expected_status,
                                         None, wc_dir)
+
+  # Confirm the files are present in the repository.
+  new_file_2_url = sbox.repo_url + '/A/C/foo/new file 2'
+  svntest.actions.run_and_verify_svn(None, ["New text in new file 2.\n"],
+                                     [], 'cat',
+                                     new_file_2_url)
+  new_file_3_url = sbox.repo_url + '/A/C/foo/bar/new file 3'
+  svntest.actions.run_and_verify_svn(None, ["Initial text in new file 3.\n"],
+                                     [], 'cat',
+                                     new_file_3_url)
 
 #----------------------------------------------------------------------
 def merge_file_with_space_in_its_name(sbox):
