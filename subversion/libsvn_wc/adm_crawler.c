@@ -134,8 +134,6 @@ restore_node(svn_boolean_t *restored,
           notify->kind = svn_node_file;
           (*notify_func)(notify_baton, notify, scratch_pool);
         }
-
-      /* Keep missing = FALSE */
     }
 
   return SVN_NO_ERROR;
@@ -307,31 +305,40 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                      NULL, NULL, NULL, NULL, NULL, &this_depth,
                                      NULL, NULL, NULL, &this_lock,
                                      db, this_abspath, iterpool, iterpool);
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+            return svn_error_return(err);
 
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        svn_error_clear(err);
-      else
-        SVN_ERR(err);
+          /* THIS_ABSPATH was listed as a BASE child of DIR_ABSPATH. Yet,
+             we just got an error trying to read it. What gives? :-P
 
-      /* ### While still using parent stubs: Fetch info from the stub.
-             Handles the error case above */
-      {
-        svn_boolean_t not_present;
+             This happens when THIS_ABSPATH is a subdirectory that is
+             marked in the parent stub as "not-present". The subdir is
+             then removed. Later, an addition is scheduled, putting the
+             subdirectory back, but ONLY containing WORKING nodes.
 
-        SVN_ERR(svn_wc__db_temp_is_dir_deleted(&not_present, &this_rev, db,
-                                               this_abspath, iterpool));
+             Thus, the BASE fetch comes out of the subdir, and fails.
 
-        if (not_present || err)
+             For this case, we go ahead and treat this as a simple
+             not-present, and ignore whatever is in the subdirectory.  */
+          svn_error_clear(err);
+
           this_status = svn_wc__db_status_not_present;
 
-        if (!SVN_IS_VALID_REVNUM(this_rev))
-          this_rev = dir_rev; /* Obstructed node */
-      } /* /Stub handling */
+          /* Note: the other THIS_* local variables pass to base_get_info
+             are NOT set at this point. But we don't need them...  */
+        }
 
-      if (this_depth == svn_depth_unknown)
-        this_depth = svn_depth_infinity;
+      /* Note: some older code would attempt to check the parent stub
+         of subdirectories for the not-present state. That check was
+         redundant since a not-present directory has no BASE nodes
+         within it which may report another status.
 
-      SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(this_rev));
+         There might be NO BASE node (per the condition above), but the
+         typical case is that base_get_info() reads the parent stub
+         because there is no subdir (with administrative data). Thus, we
+         already have all the information we need. No further testing.  */
 
       /* First check for exclusion */
       if (this_status == svn_wc__db_status_excluded)
@@ -367,20 +374,23 @@ report_revisions_and_depths(svn_wc__db_t *db,
         }
 
       /*** The Big Tests: ***/
-      if (this_status == svn_wc__db_status_absent ||
-          this_status == svn_wc__db_status_excluded ||
-          this_status == svn_wc__db_status_not_present)
+      if (this_status == svn_wc__db_status_absent
+          || this_status == svn_wc__db_status_not_present)
         {
-          /* If the entry is 'deleted' or 'absent', make sure the server
+          /* If the entry is 'absent' or 'not-present', make sure the server
              knows it's gone...
              ...unless we're reporting everything, in which case we're
-             going to report it missing later anyway. */
+             going to report it missing later anyway.
+
+             This instructs the server to send it back to us, if it is
+             now available (an addition after a not-present state), or if
+             it is now authorized (change in authz for the absent item).  */
           if (! report_everything)
             SVN_ERR(reporter->delete_path(report_baton, this_path, iterpool));
           continue;
         }
 
-      /* Is the entry on disk? */
+      /* Is the entry NOT on the disk? We may be able to restore it.  */
       if (apr_hash_get(dirents, child, APR_HASH_KEY_STRING) == NULL)
         {
           svn_boolean_t missing = FALSE;
@@ -410,10 +420,10 @@ report_revisions_and_depths(svn_wc__db_t *db,
               if (dirent_kind == svn_node_none)
                 {
                   svn_boolean_t restored;
+
                   SVN_ERR(restore_node(&restored, db, this_abspath, wrk_kind,
                                        use_commit_times, notify_func,
                                        notify_baton, iterpool));
-
                   if (!restored)
                     missing = TRUE;
                 }
@@ -453,6 +463,13 @@ report_revisions_and_depths(svn_wc__db_t *db,
           else
             this_switched = FALSE;
         }
+
+      /* Tweak THIS_DEPTH to a useful value.  */
+      if (this_depth == svn_depth_unknown)
+        this_depth = svn_depth_infinity;
+
+      /* We better have a revision.  */
+      SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(this_rev));
 
       /*** Files ***/
       if (this_kind == svn_wc__db_kind_file ||
