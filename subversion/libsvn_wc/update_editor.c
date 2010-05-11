@@ -3576,8 +3576,8 @@ add_file_with_history(const char *path,
       if (src_entry->schedule == svn_wc_schedule_replace
           && src_entry->copyfrom_url)
         {
-          SVN_ERR(svn_wc__load_revert_props(&base_props, db,
-                                            src_local_abspath, pool, subpool));
+          SVN_ERR(svn_wc__get_revert_props(&base_props, db,
+                                           src_local_abspath, pool, subpool));
           /* The old working props are lost, just like the old
              working file text is.  Just use the base props. */
           working_props = base_props;
