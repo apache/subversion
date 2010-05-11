@@ -1155,6 +1155,7 @@ svn_wc__upgrade_sdb(int *result_format,
                                                        scratch_pool);
           SVN_ERR(svn_io_dir_make(pristine_dir, APR_OS_DEFAULT, scratch_pool));
         }
+        /* ### Format 17 is not yet in use, so can have other changes too. */
         ++start_format;
 
 #if 0
