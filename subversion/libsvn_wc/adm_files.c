@@ -253,21 +253,33 @@ svn_wc__text_revert_path(const char **result_abspath,
 
 
 svn_error_t *
-svn_wc__get_revert_contents(svn_stream_t **contents,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
+svn_wc__get_pristine_base_contents(svn_stream_t **contents,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
 {
   const char *revert_base;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
+  /* If there's a WC-1 "revert base", open that. */
   SVN_ERR(svn_wc__text_revert_path(&revert_base, db, local_abspath,
                                    scratch_pool));
+  err = svn_stream_open_readonly(contents, revert_base,
+                                 result_pool, scratch_pool);
+  if (err)
+    {
+      svn_error_clear(err);
 
-  return svn_error_return(svn_stream_open_readonly(contents, revert_base,
-                                                   result_pool, scratch_pool));
+      /* There's no "revert base", so open the "normal base". */
+      SVN_ERR(svn_wc__text_base_path(&revert_base, db, local_abspath, FALSE,
+                                     scratch_pool));
+      err = svn_stream_open_readonly(contents, revert_base,
+                                     result_pool, scratch_pool);
+    }
+  return err;
 }
 
 
