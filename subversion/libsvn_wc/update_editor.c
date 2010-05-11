@@ -3565,13 +3565,17 @@ add_file_with_history(const char *path,
       SVN_ERR(svn_wc__get_entry(&src_entry, db, src_local_abspath, FALSE,
                             svn_node_file, FALSE, subpool, subpool));
 
+      SVN_ERR(svn_wc__get_pristine_base_contents(&source_text_base,
+                                                 db, src_local_abspath,
+                                                 subpool, subpool));
+
+      /* If this has no base, should we use an empty stream?
+       * This assert wants to verify that there are no such callers. */
+      SVN_ERR_ASSERT(source_text_base != NULL);
+
       if (src_entry->schedule == svn_wc_schedule_replace
           && src_entry->copyfrom_url)
         {
-          SVN_ERR(svn_wc__get_pristine_base_contents(&source_text_base,
-                                                     db, src_local_abspath,
-                                                     subpool, subpool));
-
           SVN_ERR(svn_wc__load_revert_props(&base_props, db,
                                             src_local_abspath, pool, subpool));
           /* The old working props are lost, just like the old
@@ -3580,14 +3584,6 @@ add_file_with_history(const char *path,
         }
       else
         {
-          SVN_ERR(svn_wc__get_pristine_contents(&source_text_base, db,
-                                                src_local_abspath,
-                                                subpool, subpool));
-
-          /* If this has no base, should we use an empty stream?
-           * This assert wants to verify that there are no such callers. */
-          SVN_ERR_ASSERT(source_text_base != NULL);
-          
           SVN_ERR(svn_wc__get_pristine_props(&base_props,
                                              db, src_local_abspath,
                                              pool, subpool));
@@ -4040,7 +4036,6 @@ open_file(const char *path,
    applicable), but allocate OLD_TEXT_BASE_ABSPATH in RESULT_POOL. */
 static svn_error_t *
 choose_base_paths(const char **old_text_base_abspath,
-                  svn_boolean_t *replaced_p,
                   svn_wc__db_t *db,
                   const char *local_abspath,
                   apr_pool_t *result_pool,
@@ -4060,9 +4055,6 @@ choose_base_paths(const char **old_text_base_abspath,
   else
     SVN_ERR(svn_wc__text_base_path(old_text_base_abspath,
                                    db, local_abspath, FALSE, result_pool));
-
-  if (replaced_p)
-    *replaced_p = replaced;
 
   return SVN_NO_ERROR;
 }
@@ -4117,7 +4109,6 @@ apply_textdelta(void *file_baton,
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
   svn_error_t *err;
   const char *checksum;
-  svn_boolean_t replaced;
   svn_stream_t *source;
   svn_stream_t *target;
 
@@ -4135,7 +4126,6 @@ apply_textdelta(void *file_baton,
      matches the expected base checksum. */
 
   SVN_ERR(choose_base_paths(&fb->text_base_abspath,
-                            &replaced,
                             fb->edit_baton->db, fb->local_abspath,
                             fb->pool, pool));
 
@@ -4174,18 +4164,11 @@ apply_textdelta(void *file_baton,
 
   if (! fb->adding_file)
     {
-      if (replaced)
-        SVN_ERR(svn_wc__get_pristine_base_contents(&source, fb->edit_baton->db,
-                                                   fb->local_abspath,
-                                                   handler_pool, handler_pool));
-      else
-        {
-          SVN_ERR(svn_wc__get_pristine_contents(&source, fb->edit_baton->db,
-                                                fb->local_abspath,
-                                                handler_pool, handler_pool));
-          if (source == NULL)
-            source = svn_stream_empty(handler_pool);
-        }
+      SVN_ERR(svn_wc__get_pristine_base_contents(&source, fb->edit_baton->db,
+                                                 fb->local_abspath,
+                                                 handler_pool, handler_pool));
+      if (source == NULL)
+        source = svn_stream_empty(handler_pool);
     }
   else
     {
@@ -4751,7 +4734,6 @@ close_file(void *file_baton,
 
       /* Set up the base paths like apply_textdelta does. */
       SVN_ERR(choose_base_paths(&fb->text_base_abspath,
-                                NULL,
                                 eb->db, fb->local_abspath,
                                 fb->pool, pool));
 
