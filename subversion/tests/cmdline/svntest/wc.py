@@ -73,7 +73,7 @@ import svntest
 # Working revision, last-changed revision, and last author are whitespace
 # only if the item is missing.
 #
-_re_parse_status = re.compile('^([?!MACDRUG_ ][MACDRUG_ ])'
+_re_parse_status = re.compile('^([?!MACDRUGI_~ ][MACDRUG_ ])'
                               '([L ])'
                               '([+ ])'
                               '([SX ])'
@@ -312,11 +312,14 @@ class State:
         else:
           # when reading the entry structures, we don't examine for text or
           # property mods, so clear those flags. we also do not examine the
-          # filesystem, so we cannot detect missing files.
-          if item.status[0] in 'M!':
+          # filesystem, so we cannot detect missing or obstructed files.
+          if item.status[0] in 'M!~':
             item.status = ' ' + item.status[1]
           if item.status[1] == 'M':
             item.status = item.status[0] + ' '
+          # under wc-ng terms, we may report a different revision than the
+          # backwards-compatible code should report. if there is a special
+          # value for compatibility, then use it.
           if item.entry_rev is not None:
             item.wc_rev = item.entry_rev
             item.entry_rev = None
