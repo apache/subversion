@@ -4028,10 +4028,6 @@ open_file(const char *path,
    text-base path, or (if the entry is replaced with history) the (permanent)
    revert-base path.
 
-   If REPLACED_P is non-NULL, set *REPLACED_P to whether or not the
-   entry is replaced (which also implies whether or not it needs to
-   use the revert base).
-
    Use SCRATCH_POOL for temporary allocation and for *CHECKSUM_P (if
    applicable), but allocate OLD_TEXT_BASE_ABSPATH in RESULT_POOL. */
 static svn_error_t *
