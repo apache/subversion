@@ -444,64 +444,6 @@ get_prop_mimetype(apr_hash_t *props)
 }
 
 
-/* Set *MIMETYPE to the BASE version of the svn:mime-type property of
-   file LOCAL_ABSPATH, using DB, or to NULL if no such property exists.
-   BASEPROPS is optional: if present, use it to cache the BASE properties
-   of the file.
-
-   Return the property value and property hash allocated in RESULT_POOL,
-   use SCRATCH_POOL for temporary accesses.
-*/
-static svn_error_t *
-get_base_mimetype(const char **mimetype,
-                  apr_hash_t **baseprops,
-                  svn_wc__db_t *db,
-                  const char *local_abspath,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
-{
-  apr_hash_t *props;
-
-  SVN_ERR(svn_wc__get_pristine_props(&props, db, local_abspath,
-                                     result_pool, scratch_pool));
-
-  if (baseprops != NULL)
-    *baseprops = props;
-
-  *mimetype = get_prop_mimetype(props);
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Set *MIMETYPE to the WORKING version of the svn:mime-type property
-   of file LOCAL_ABSPATH, using DB, or to NULL if no such property exists.
-   WORKINGPROPS is optional: if present, use it to cache the WORKING
-   properties of the file.
-
-   Return the property value and property hash allocated in POOL.
-*/
-static svn_error_t *
-get_working_mimetype(const char **mimetype,
-                     apr_hash_t **workingprops,
-                     svn_wc__db_t *db,
-                     const char *local_abspath,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
-{
-  apr_hash_t *props;
-
-  SVN_ERR(svn_wc__get_actual_props(&props, db, local_abspath,
-                                   result_pool, scratch_pool));
-
-  if (workingprops != NULL)
-    *workingprops = props;
-
-  *mimetype = get_prop_mimetype(props);
-
-  return SVN_NO_ERROR;
-}
-
 /* Return the property hash resulting from combining PROPS and PROPCHANGES.
  *
  * A note on pool usage: The returned hash and hash keys are allocated in
@@ -662,8 +604,9 @@ file_diff(struct dir_baton *db,
       apr_hash_t *baseprops;
 
       /* Get svn:mime-type from pristine props (in BASE or WORKING) of PATH. */
-      SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
-                                local_abspath, pool, pool));
+      SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
+                                         pool, pool));
+      base_mimetype = get_prop_mimetype(baseprops);
 
       SVN_ERR(eb->callbacks->file_deleted(NULL, NULL, NULL, path,
                                           textbase,
@@ -698,8 +641,9 @@ file_diff(struct dir_baton *db,
       apr_array_header_t *propchanges;
 
       /* Get svn:mime-type from ACTUAL props of PATH. */
-      SVN_ERR(get_working_mimetype(&working_mimetype, &workingprops,
-                                   eb->db, local_abspath, pool, pool));
+      SVN_ERR(svn_wc__get_actual_props(&workingprops, eb->db, local_abspath,
+                                       pool, pool));
+      working_mimetype = get_prop_mimetype(workingprops);
 
       /* Set the original properties to empty, then compute "changes" from
          that. Essentially, all ACTUAL props will be "added".  */
@@ -763,7 +707,6 @@ file_diff(struct dir_baton *db,
           SVN_ERR(svn_wc__load_revert_props(&baseprops,
                                             eb->db, local_abspath,
                                             pool, pool));
-          base_mimetype = get_prop_mimetype(baseprops);
         }
       else
         {
@@ -773,11 +716,14 @@ file_diff(struct dir_baton *db,
                          || status == svn_wc__db_status_copied
                          || status == svn_wc__db_status_moved_here);
 
-          SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
-                                    local_abspath, pool, pool));
+          SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
+                                             pool, pool));
         }
-      SVN_ERR(get_working_mimetype(&working_mimetype, &workingprops,
-                                   eb->db, local_abspath, pool, pool));
+      base_mimetype = get_prop_mimetype(baseprops);
+
+      SVN_ERR(svn_wc__get_actual_props(&workingprops, eb->db, local_abspath,
+                                       pool, pool));
+      working_mimetype = get_prop_mimetype(workingprops);
 
       SVN_ERR(svn_prop_diffs(&propchanges, workingprops, baseprops, pool));
 
@@ -1020,11 +966,12 @@ report_wc_file_as_added(struct dir_baton *db,
   emptyprops = apr_hash_make(pool);
 
   if (eb->use_text_base)
-    SVN_ERR(get_base_mimetype(&mimetype, &wcprops, eb->db, local_abspath,
-                              pool, pool));
+    SVN_ERR(svn_wc__get_pristine_props(&wcprops, eb->db, local_abspath,
+                                       pool, pool));
   else
-    SVN_ERR(get_working_mimetype(&mimetype, &wcprops, eb->db, local_abspath,
-                                 pool, pool));
+    SVN_ERR(svn_wc__get_actual_props(&wcprops, eb->db, local_abspath,
+                                     pool, pool));
+  mimetype = get_prop_mimetype(wcprops);
 
   SVN_ERR(svn_prop_diffs(&propchanges,
                          wcprops, emptyprops, pool));
@@ -1263,8 +1210,9 @@ delete_entry(const char *path,
           SVN_ERR(svn_wc__text_base_path(&textbase, eb->db, local_abspath,
                                          FALSE, pool));
 
-          SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops, eb->db,
-                                    local_abspath, pool, pool));
+          SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
+                                             pool, pool));
+          base_mimetype = get_prop_mimetype(baseprops);
 
           SVN_ERR(eb->callbacks->file_deleted(NULL, NULL, NULL, full_path,
                                               textbase,
