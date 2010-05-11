@@ -6513,17 +6513,14 @@ svn_wc_merge(const char *left,
  * representing the original set of properties that @a propchanges is
  * working against.  @a wc_ctx contains a lock for @a local_abspath.
  *
- * If @a base_merge is @c FALSE only the working properties will be changed,
- * if it is @c TRUE both the base and working properties will be changed.
+ * Only the working properties will be changed.
  *
  * If @a state is non-NULL, set @a *state to the state of the properties
  * after the merge.
  *
  * If conflicts are found when merging working properties, they are
  * described in a temporary .prej file (or appended to an already-existing
- * .prej file), and the entry is marked "conflicted".  Base properties
- * are changed unconditionally, if @a base_merge is @c TRUE, they never result
- * in a conflict.
+ * .prej file), and the entry is marked "conflicted".
  *
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
  * points during the operation.  If it returns an error (typically
@@ -6542,7 +6539,6 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                     const svn_wc_conflict_version_t *right_version,
                     apr_hash_t *baseprops,
                     const apr_array_header_t *propchanges,
-                    svn_boolean_t base_merge,
                     svn_boolean_t dry_run,
                     svn_wc_conflict_resolver_func_t conflict_func,
                     void *conflict_baton,
@@ -6550,8 +6546,14 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                     void *cancel_baton,
                     apr_pool_t *scratch_pool);
 
+
 /** Similar to svn_wc_merge_props3, but takes an access baton and relative
- * path, no cancel_function and no left and right version.
+ * path, no cancel_function, and no left and right version.
+ *
+ * This function has the @a base_merge parameter which (when TRUE) will
+ * apply @a propchanges to this node's pristine set of properties. This
+ * functionality is not supported on newer APIs -- pristine information
+ * should only be changed through an update editor drive.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
