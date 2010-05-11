@@ -4726,8 +4726,7 @@ close_file(void *file_baton,
       new_text_base_md5_checksum = fb->copied_text_base_md5_checksum;
       new_text_base_sha1_checksum = fb->copied_text_base_sha1_checksum;
       new_text_base_abspath = fb->copied_text_base_abspath;
-      SVN_ERR_ASSERT(! new_text_base_abspath
-                     || svn_dirent_is_absolute(new_text_base_abspath));
+      SVN_ERR_ASSERT(svn_dirent_is_absolute(new_text_base_abspath));
     }
   else
     {
