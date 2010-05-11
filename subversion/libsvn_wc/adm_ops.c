@@ -1092,8 +1092,9 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 
   if (kind == svn_wc__db_kind_dir)
     {
-      svn_revnum_t base_rev;
-      SVN_ERR(svn_wc__db_temp_is_dir_deleted(&was_deleted, &base_rev,
+      svn_revnum_t unused_base_rev;
+
+      SVN_ERR(svn_wc__db_temp_is_dir_deleted(&was_deleted, &unused_base_rev,
                                              db, local_abspath, pool));
 
       if (was_add && !was_deleted)
