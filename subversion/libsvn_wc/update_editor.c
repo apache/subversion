@@ -3568,9 +3568,9 @@ add_file_with_history(const char *path,
       if (src_entry->schedule == svn_wc_schedule_replace
           && src_entry->copyfrom_url)
         {
-          SVN_ERR(svn_wc__get_revert_contents(&source_text_base, db,
-                                              src_local_abspath, subpool,
-                                              subpool));
+          SVN_ERR(svn_wc__get_pristine_base_contents(&source_text_base,
+                                                     db, src_local_abspath,
+                                                     subpool, subpool));
 
           SVN_ERR(svn_wc__load_revert_props(&base_props, db,
                                             src_local_abspath, pool, subpool));
@@ -4175,9 +4175,9 @@ apply_textdelta(void *file_baton,
   if (! fb->adding_file)
     {
       if (replaced)
-        SVN_ERR(svn_wc__get_revert_contents(&source, fb->edit_baton->db,
-                                            fb->local_abspath,
-                                            handler_pool, handler_pool));
+        SVN_ERR(svn_wc__get_pristine_base_contents(&source, fb->edit_baton->db,
+                                                   fb->local_abspath,
+                                                   handler_pool, handler_pool));
       else
         {
           SVN_ERR(svn_wc__get_pristine_contents(&source, fb->edit_baton->db,

@@ -70,9 +70,17 @@ svn_wc__text_base_path(const char **result_abspath,
                        svn_boolean_t tmp,
                        apr_pool_t *pool);
 
-/* Set *CONTENTS to a readonly stream on the LOCAL_ABSPATH's base file.
- * For more detail, please see the description of
- * svn_wc_get_pristine_contents2().*/
+/* Set *CONTENTS to a readonly stream on the pristine text of the working
+ * version of the file LOCAL_ABSPATH in DB.  If the file is locally copied
+ * or moved to this path, this means the pristine text of the copy source,
+ * even if the file replaces a previously existing base node at this path.
+ *
+ * Set *CONTENTS to NULL if there is no pristine text because the file is
+ * locally added (even if it replaces an existing base node).  Return an
+ * error if there is no pristine text for any other reason.
+ *
+ * For more detail, see the description of svn_wc_get_pristine_contents2().
+ */
 svn_error_t *
 svn_wc__get_pristine_contents(svn_stream_t **contents,
                               svn_wc__db_t *db,
@@ -81,15 +89,21 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                               apr_pool_t *scratch_pool);
 
 
-
-/* Set *CONTENTS to a readonly stream on the LOCAL_ABSPATH's revert file.
- * Return an error if it doesn't have a revert file. */
+/* Set *CONTENTS to a readonly stream on the pristine text of the base
+ * version of LOCAL_ABSPATH in DB.  If LOCAL_ABSPATH is locally replaced,
+ * this is distinct from svn_wc__get_pristine_contents(), otherwise it is
+ * the same.
+ *
+ * (In WC-1 terminology, this was known as "the revert base" if the node is
+ * replaced by a copy, otherwise simply as "the base".)
+ *
+ * The base version of LOCAL_ABSPATH must be a file. */
 svn_error_t *
-svn_wc__get_revert_contents(svn_stream_t **contents,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+svn_wc__get_pristine_base_contents(svn_stream_t **contents,
+                                   svn_wc__db_t *db,
+                                   const char *local_abspath,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
 
 
 /* Set *RESULT_ABSPATH to the absolute path to LOCAL_ABSPATH's revert file. */
