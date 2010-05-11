@@ -4026,16 +4026,17 @@ open_file(const char *path,
 /* For the given LOCAL_ABSPATH, set *OLD_TEXT_BASE_ABSPATH to the path of
    the text-base file it should revert to: that is the (permanent)
    text-base path, or (if the entry is replaced with history) the (permanent)
-   revert-base path.
+   revert-base path.  Note: This function deals with the WC-1 concept of a
+   pair of deterministic paths for the two possible pristine texts of a node.
 
-   Use SCRATCH_POOL for temporary allocation and for *CHECKSUM_P (if
-   applicable), but allocate OLD_TEXT_BASE_ABSPATH in RESULT_POOL. */
+   Allocate OLD_TEXT_BASE_ABSPATH in RESULT_POOL.  Use SCRATCH_POOL for
+   temporary allocation. */
 static svn_error_t *
-choose_base_paths(const char **old_text_base_abspath,
-                  svn_wc__db_t *db,
-                  const char *local_abspath,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
+get_pristine_base_path(const char **old_text_base_abspath,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   const svn_wc_entry_t *entry;
   svn_boolean_t replaced;
@@ -4061,11 +4062,11 @@ choose_base_paths(const char **old_text_base_abspath,
  * checksum is not known.  Allocate *MD5_CHECKSUM in RESULT_POOL.
  * LOCAL_ABSPATH must be a file. */
 static svn_error_t *
-get_revert_base_checksum(const char **md5_checksum,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+get_pristine_base_checksum(const char **md5_checksum,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   const svn_checksum_t *checksum;
@@ -4121,17 +4122,17 @@ apply_textdelta(void *file_baton,
      text base hasn't been corrupted, and that its checksum
      matches the expected base checksum. */
 
-  SVN_ERR(choose_base_paths(&fb->text_base_abspath,
-                            fb->edit_baton->db, fb->local_abspath,
-                            fb->pool, pool));
+  SVN_ERR(get_pristine_base_path(&fb->text_base_abspath,
+                                 fb->edit_baton->db, fb->local_abspath,
+                                 fb->pool, pool));
 
   /* The incoming delta is targeted against BASE_CHECKSUM. Make sure that
      it matches our recorded checksum.  (In WC-1, we could not do this test
      for replaced nodes because we didn't store the checksum of the "revert
      base".  In WC-NG, we do and we can.) */
-  SVN_ERR(get_revert_base_checksum(&checksum,
-                                   fb->edit_baton->db, fb->local_abspath,
-                                   fb->pool, pool));
+  SVN_ERR(get_pristine_base_checksum(&checksum,
+                                     fb->edit_baton->db, fb->local_abspath,
+                                     fb->pool, pool));
   if (checksum && base_checksum
       && strcmp(base_checksum, checksum) != 0)
     {
@@ -4729,9 +4730,9 @@ close_file(void *file_baton,
                      && fb->copied_text_base_abspath);
 
       /* Set up the base paths like apply_textdelta does. */
-      SVN_ERR(choose_base_paths(&fb->text_base_abspath,
-                                eb->db, fb->local_abspath,
-                                fb->pool, pool));
+      SVN_ERR(get_pristine_base_path(&fb->text_base_abspath,
+                                     eb->db, fb->local_abspath,
+                                     fb->pool, pool));
 
       new_text_base_md5_checksum = fb->copied_text_base_md5_checksum;
       new_text_base_sha1_checksum = fb->copied_text_base_sha1_checksum;
