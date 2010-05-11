@@ -993,10 +993,6 @@ struct file_baton
      within a locally deleted tree. */
   svn_boolean_t deleted;
 
-  /* The path to the current (### "current" means what?) text base, if any.
-     This gets set if there are file content changes. */
-  const char *text_base_abspath;
-
   /* The path to the incoming text base (that is, to a text-base-file-
      in-progress in the tmp area).  This gets set if there are file
      content changes. */
@@ -4122,10 +4118,6 @@ apply_textdelta(void *file_baton,
      text base hasn't been corrupted, and that its checksum
      matches the expected base checksum. */
 
-  SVN_ERR(get_pristine_base_path(&fb->text_base_abspath,
-                                 fb->edit_baton->db, fb->local_abspath,
-                                 fb->pool, pool));
-
   /* The incoming delta is targeted against BASE_CHECKSUM. Make sure that
      it matches our recorded checksum.  (In WC-1, we could not do this test
      for replaced nodes because we didn't store the checksum of the "revert
@@ -4300,6 +4292,7 @@ merge_file(svn_skel_t **work_items,
   svn_boolean_t magic_props_changed;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   svn_skel_t *work_item;
+  const char *text_base_abspath;
 
   /*
      When this function is called on file F, we assume the following
@@ -4309,10 +4302,7 @@ merge_file(svn_skel_t **work_items,
            NEW_TEXT_BASE_TMP_ABSPATH
 
          - The .svn/entries file still reflects the old version of F.
-
-         ### there is no fb->old_text_base_path
-         - fb->old_text_base_path is the old pristine F.
-           (This is only set if there's a new text base).
+           (We can still access the old pristine base text of F.)
 
      The goal is to update the local working copy of F to reflect
      the changes received from the repository, preserving any local
@@ -4392,6 +4382,10 @@ merge_file(svn_skel_t **work_items,
   if (entry && entry->schedule == svn_wc_schedule_replace
       && ! entry->file_external_path)  /* ### EBUG */
     is_replaced = TRUE;
+
+  SVN_ERR(get_pristine_base_path(&text_base_abspath,
+                                 eb->db, fb->local_abspath,
+                                 fb->pool, pool));
 
   /* For 'textual' merging, we implement this matrix.
 
@@ -4525,7 +4519,7 @@ merge_file(svn_skel_t **work_items,
               else if (fb->copied_text_base_abspath)
                 merge_left = fb->copied_text_base_abspath;
               else
-                merge_left = fb->text_base_abspath;
+                merge_left = text_base_abspath;
 
               /* Merge the changes from the old textbase to the new
                  textbase into the file we're updating.
@@ -4623,7 +4617,7 @@ merge_file(svn_skel_t **work_items,
        * if the node is replaced, else the usual text-base path. */
       SVN_ERR(svn_wc__loggy_move(&work_item, eb->db, pb->local_abspath,
                                  new_text_base_tmp_abspath,
-                                 fb->text_base_abspath,
+                                 text_base_abspath,
                                  pool));
       *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
     }
@@ -4726,13 +4720,8 @@ close_file(void *file_baton,
   /* Was this an add-with-history, with no apply_textdelta? */
   if (fb->added_with_history && ! fb->received_textdelta)
     {
-      SVN_ERR_ASSERT(! fb->text_base_abspath && ! fb->new_text_base_tmp_abspath
+      SVN_ERR_ASSERT(! fb->new_text_base_tmp_abspath
                      && fb->copied_text_base_abspath);
-
-      /* Set up the base paths like apply_textdelta does. */
-      SVN_ERR(get_pristine_base_path(&fb->text_base_abspath,
-                                     eb->db, fb->local_abspath,
-                                     fb->pool, pool));
 
       new_text_base_md5_checksum = fb->copied_text_base_md5_checksum;
       new_text_base_sha1_checksum = fb->copied_text_base_sha1_checksum;
