@@ -4953,6 +4953,72 @@ close_file(void *file_baton,
                      fb, new_text_base_abspath, pool));
   all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
 
+  if (install_pristine)
+    {
+      svn_boolean_t record_fileinfo;
+
+      /* If we are installing from the pristine contents, then go ahead and
+         record the fileinfo. That will be the "proper" values. Installing
+         from some random file means the fileinfo does NOT correspond to
+         the pristine (in which case, the fileinfo will be cleared for
+         safety's sake).  */
+      record_fileinfo = install_from == NULL;
+
+      SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                            eb->db,
+                                            fb->local_abspath,
+                                            install_from,
+                                            eb->use_commit_times,
+                                            record_fileinfo,
+                                            pool, pool));
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+    }
+
+  /* Now that all the state has settled, should we update the readonly
+     status of the working file? The LOCK_STATE will signal what we should
+     do for this node.  */
+  if (new_text_base_abspath == NULL
+      && lock_state == svn_wc_notify_lock_state_unlocked)
+    {
+      /* If a lock was removed and we didn't update the text contents, we
+         might need to set the file read-only.
+
+         Note: this will also update the executable flag, but ... meh.  */
+      SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, eb->db,
+                                               fb->local_abspath,
+                                               pool, pool));
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+    }
+
+  /* Clean up any temporary files.  */
+
+  /* For the INSTALL_FROM file, be careful that it doesn't refer to the
+     working file, or the revert text base. (sigh)  Hopefully, this will
+     be cleared up in the future.  */
+  if (install_from != NULL
+      && strcmp(install_from, fb->local_abspath) != 0)
+    {
+      const char *revert_base_abspath;
+
+      SVN_ERR(svn_wc__text_revert_path(&revert_base_abspath, eb->db,
+                                       fb->local_abspath, pool));
+      if (strcmp(install_from, revert_base_abspath) != 0)
+        {
+          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
+                                               install_from,
+                                               pool, pool));
+          all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+        }
+    }
+
+  if (fb->copied_text_base_abspath)
+    {
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
+                                           fb->copied_text_base_abspath,
+                                           pool, pool));
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+    }
+
   /* ### NOTE: from this point onwards, we make several changes to the
      ### database in a non-transactional way. we also queue additional
      ### work after these changes. some revamps need to be performed to
@@ -5092,79 +5158,6 @@ close_file(void *file_baton,
   SVN_ERR(svn_wc__wq_run(eb->db, fb->dir_baton->local_abspath,
                          eb->cancel_func, eb->cancel_baton,
                          pool));
-
-  /* We'll gather all the work items into one group.  */
-  all_work_items = NULL;
-
-  if (install_pristine)
-    {
-      svn_boolean_t record_fileinfo;
-
-      /* If we are installing from the pristine contents, then go ahead and
-         record the fileinfo. That will be the "proper" values. Installing
-         from some random file means the fileinfo does NOT correspond to
-         the pristine (in which case, the fileinfo will be cleared for
-         safety's sake).  */
-      record_fileinfo = install_from == NULL;
-
-      SVN_ERR(svn_wc__wq_build_file_install(&work_item,
-                                            eb->db,
-                                            fb->local_abspath,
-                                            install_from,
-                                            eb->use_commit_times,
-                                            record_fileinfo,
-                                            pool, pool));
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-    }
-
-  /* Now that all the state has settled, should we update the readonly
-     status of the working file? The LOCK_STATE will signal what we should
-     do for this node.  */
-  if (new_text_base_abspath == NULL
-      && lock_state == svn_wc_notify_lock_state_unlocked)
-    {
-      /* If a lock was removed and we didn't update the text contents, we
-         might need to set the file read-only.
-
-         Note: this will also update the executable flag, but ... meh.  */
-      SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, eb->db,
-                                               fb->local_abspath,
-                                               pool, pool));
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-    }
-
-  /* Clean up any temporary files.  */
-
-  /* For the INSTALL_FROM file, be careful that it doesn't refer to the
-     working file, or the revert text base. (sigh)  Hopefully, this will
-     be cleared up in the future.  */
-  if (install_from != NULL
-      && strcmp(install_from, fb->local_abspath) != 0)
-    {
-      const char *revert_base_abspath;
-
-      SVN_ERR(svn_wc__text_revert_path(&revert_base_abspath, eb->db,
-                                       fb->local_abspath, pool));
-      if (strcmp(install_from, revert_base_abspath) != 0)
-        {
-          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
-                                               install_from,
-                                               pool, pool));
-          all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-        }
-    }
-
-  if (fb->copied_text_base_abspath)
-    {
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
-                                           fb->copied_text_base_abspath,
-                                           pool, pool));
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-    }
-
-  /* Time to add all the work.  */
-  SVN_ERR(svn_wc__db_wq_add(eb->db, fb->dir_baton->local_abspath,
-                            all_work_items, pool));
 
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
