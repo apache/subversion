@@ -54,6 +54,7 @@ Blanket commit access:
          neels   Neels J. Hofmeyr <neels@elego.de>
      jwhitlock   Jeremy Whitlock <jcscoobyrs@gmail.com>
        sbutler   Stephen Butler <sbutler@elego.de>
+        dannas   Daniel Näslund <dannas@elego.de>
 
 [[END ACTIVE FULL COMMITTERS.  LEAVE THIS LINE HERE; SCRIPTS LOOK FOR IT.]]
 
@@ -175,8 +176,6 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
        cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff 
                                                               br.)
         holden   Holden Karau <holden@pigscanfly.ca>         (scheme-bindings br.)
-        dannas   Daniel Näslund <dannas@elego.de>            (svn-patch-
-                                                              improvements br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 
