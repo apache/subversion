@@ -628,6 +628,41 @@ def warn_on_reserved_name(sbox):
     'lock', reserved_path)
 
 
+def propvalue_normalized(sbox):
+  "'ps svn:special' should normalize to '*'"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add a "symlink"
+  iota2_path = sbox.ospath('iota2')
+  svntest.main.file_write(iota2_path, "This is the file 'iota2'.\n")
+  svntest.main.run_svn(None, 'add', iota2_path)
+  svntest.main.run_svn(None, 'propset', 'svn:special', 'yes', iota2_path)
+
+  # Property value should be SVN_PROP_BOOLEAN_TRUE
+  svntest.actions.run_and_verify_svn(None, '*', [],
+                                     'propget', '--strict', 'svn:special',
+                                     iota2_path)
+
+  # Commit and check again.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota2' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'iota2' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        wc_dir)
+
+  svntest.main.run_svn(None, 'update')
+  svntest.actions.run_and_verify_svn(None, '*', [],
+                                     'propget', '--strict', 'svn:special',
+                                     iota2_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -650,6 +685,7 @@ test_list = [ None,
               replace_symlink_with_dir,
               SkipUnless(update_obstructing_symlink, svntest.main.is_posix_os),
               warn_on_reserved_name,
+              Skip(XFail(propvalue_normalized), svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':
