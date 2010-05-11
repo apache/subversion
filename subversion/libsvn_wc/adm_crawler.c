@@ -468,8 +468,13 @@ report_revisions_and_depths(svn_wc__db_t *db,
       if (this_depth == svn_depth_unknown)
         this_depth = svn_depth_infinity;
 
-      /* We better have a revision.  */
-      SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(this_rev));
+      /* Obstructed nodes might report SVN_INVALID_REVNUM. Tweak it.
+
+         ### it seems that obstructed nodes should be handled quite a
+         ### bit differently. maybe reported as missing, like not-present
+         ### or absent nodes?  */
+      if (!SVN_IS_VALID_REVNUM(this_rev))
+        this_rev = dir_rev;
 
       /*** Files ***/
       if (this_kind == svn_wc__db_kind_file ||
@@ -846,6 +851,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   SVN_ERR(reporter->set_path(report_baton, "", target_rev, target_depth,
                              start_empty, NULL, scratch_pool));
 
+  /* ### status can NEVER be deleted. should examine why this was
+     ### ever here. we may have remapped into wc-ng incorrectly.  */
   if (status != svn_wc__db_status_deleted)
     {
       apr_finfo_t info;
