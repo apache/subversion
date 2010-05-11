@@ -43,6 +43,9 @@ defined by the repository could easily lead to working copy corruption
 (as seen in issue #953), and potentially lead to improper changes
 applied against a repository.
 
+No good use is known, even in legacy code, for setting the BASE_MERGE
+parameter to TRUE.
+
 
 == Impact on API Users ==
 
