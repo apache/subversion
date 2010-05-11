@@ -332,6 +332,9 @@ svn_wc__load_revert_props(apr_hash_t **revert_props_p,
 }
 
 
+/* See props.h  */
+#ifdef SVN__SUPPORT_BASE_MERGE
+
 /* Add a working queue item to install PROPS and, if INSTALL_PRISTINE_PROPS is
    TRUE, BASE_PROPS for the LOCAL_ABSPATH in DB, updating the node to reflect
    the changes.  PRISTINE_PROPS must be supplied even if INSTALL_PRISTINE_PROPS
@@ -395,6 +398,9 @@ queue_install_props(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+
+#endif /* SVN__SUPPORT_BASE_MERGE  */
+
 
 /* */
 static svn_error_t *
@@ -577,20 +583,20 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
 
 
 svn_error_t *
-svn_wc_merge_props3(svn_wc_notify_state_t *state,
-                    svn_wc_context_t *wc_ctx,
-                    const char *local_abspath,
-                    const svn_wc_conflict_version_t *left_version,
-                    const svn_wc_conflict_version_t *right_version,
-                    apr_hash_t *baseprops,
-                    const apr_array_header_t *propchanges,
-                    svn_boolean_t base_merge,
-                    svn_boolean_t dry_run,
-                    svn_wc_conflict_resolver_func_t conflict_func,
-                    void *conflict_baton,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *pool /* scratch_pool */)
+svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            const svn_wc_conflict_version_t *left_version,
+                            const svn_wc_conflict_version_t *right_version,
+                            apr_hash_t *baseprops,
+                            const apr_array_header_t *propchanges,
+                            svn_boolean_t base_merge,
+                            svn_boolean_t dry_run,
+                            svn_wc_conflict_resolver_func_t conflict_func,
+                            void *conflict_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool /* scratch_pool */)
 {
   svn_boolean_t hidden;
   int i;
@@ -604,7 +610,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
      may be NULL. */
 
   /* Checks whether the node exists and returns the hidden flag */
-  SVN_ERR(svn_wc__db_node_hidden(&hidden, wc_ctx->db, local_abspath, pool));
+  SVN_ERR(svn_wc__db_node_hidden(&hidden, db, local_abspath, pool));
   if (hidden)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              _("The node '%s' was not found."),
@@ -625,20 +631,20 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                                  svn_dirent_local_style(local_abspath, pool));
     }
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, FALSE, pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, pool));
 
-  SVN_ERR(svn_wc__get_pristine_props(&base_props, wc_ctx->db, local_abspath,
+  SVN_ERR(svn_wc__get_pristine_props(&base_props, db, local_abspath,
                                      pool, pool));
   if (base_props == NULL)
     base_props = apr_hash_make(pool);  /* some nodes have no pristines  */
-  SVN_ERR(svn_wc__get_actual_props(&actual_props, wc_ctx->db, local_abspath,
+  SVN_ERR(svn_wc__get_actual_props(&actual_props, db, local_abspath,
                                    pool, pool));
 
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
   SVN_ERR(svn_wc__merge_props(state,
                               &new_base_props, &new_actual_props,
-                              wc_ctx->db, local_abspath, kind,
+                              db, local_abspath, kind,
                               left_version, right_version,
                               baseprops /* server_baseprops */,
                               base_props,
@@ -658,21 +664,85 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
         dir_abspath = svn_dirent_dirname(local_abspath, pool);
 
       /* Verify that we're holding this directory's write lock.  */
-      SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, pool));
+      SVN_ERR(svn_wc__write_check(db, dir_abspath, pool));
 
       /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
       SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
 
-      SVN_ERR(queue_install_props(wc_ctx->db, local_abspath, kind,
+/* See props.h  */
+#ifdef SVN__SUPPORT_BASE_MERGE
+      SVN_ERR(queue_install_props(db, local_abspath, kind,
                                   new_base_props, new_actual_props,
                                   base_merge, pool));
+#else
+      if (base_merge)
+        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                U_("base_merge=TRUE is no longer supported"));
 
-      SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
+      {
+        apr_array_header_t *prop_diffs;
+        const char *props_abspath;
+        svn_skel_t *work_item;
+
+        SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
+                               pool));
+
+        /* Save the actual properties file if it differs from base. */
+        if (prop_diffs->nelts == 0)
+          new_actual_props = NULL; /* Remove actual properties*/
+
+        /* For the old school: write the properties into the "working"
+           (aka ACTUAL) location. Note that PROPS may be NULL, indicating
+           a removal of the props file.  */
+        SVN_ERR(svn_wc__prop_path(&props_abspath, local_abspath, kind,
+                                  svn_wc__props_working, pool));
+        SVN_ERR(svn_wc__wq_build_write_old_props(&work_item,
+                                                 props_abspath,
+                                                 new_actual_props,
+                                                 pool));
+
+        SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, new_actual_props,
+                                        NULL /* conflict */,
+                                        work_item, pool));
+      }
+#endif
+
+      SVN_ERR(svn_wc__wq_run(db, local_abspath,
                              cancel_func, cancel_baton,
                              pool));
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_merge_props3(svn_wc_notify_state_t *state,
+                    svn_wc_context_t *wc_ctx,
+                    const char *local_abspath,
+                    const svn_wc_conflict_version_t *left_version,
+                    const svn_wc_conflict_version_t *right_version,
+                    apr_hash_t *baseprops,
+                    const apr_array_header_t *propchanges,
+                    svn_boolean_t dry_run,
+                    svn_wc_conflict_resolver_func_t conflict_func,
+                    void *conflict_baton,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool)
+{
+  return svn_error_return(svn_wc__perform_props_merge(
+                            state,
+                            wc_ctx->db,
+                            local_abspath,
+                            left_version, right_version,
+                            baseprops,
+                            propchanges,
+                            FALSE /* base_merge */,
+                            dry_run,
+                            conflict_func, conflict_baton,
+                            cancel_func, cancel_baton,
+                            scratch_pool));
 }
 
 

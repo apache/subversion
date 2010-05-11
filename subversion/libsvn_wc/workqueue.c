@@ -1616,6 +1616,9 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
 
 /* OP_INSTALL_PROPERTIES */
 
+/* See props.h  */
+#ifdef SVN__SUPPORT_BASE_MERGE
+
 /* Process the OP_INSTALL_PROPERTIES work item WORK_ITEM.
  * See svn_wc__wq_add_install_properties() which generates this work item.
  * Implements (struct work_item_dispatch).func. */
@@ -1717,6 +1720,8 @@ svn_wc__wq_add_install_properties(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+
+#endif /* SVN__SUPPORT_BASE_MERGE  */
 
 
 /* ------------------------------------------------------------------------ */
@@ -2260,7 +2265,6 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_LOGGY, run_loggy },
   { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
   { OP_POSTCOMMIT, run_postcommit },
-  { OP_INSTALL_PROPERTIES, run_install_properties },
   { OP_DELETE, run_delete },
   { OP_FILE_INSTALL, run_file_install },
   { OP_FILE_REMOVE, run_file_remove },
@@ -2268,6 +2272,11 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_PREJ_INSTALL, run_prej_install },
   { OP_WRITE_OLD_PROPS, run_write_old_props },
   { OP_RECORD_FILEINFO, run_record_fileinfo },
+
+/* See props.h  */
+#ifdef SVN__SUPPORT_BASE_MERGE
+  { OP_INSTALL_PROPERTIES, run_install_properties },
+#endif
 
   /* Sentinel.  */
   { NULL }

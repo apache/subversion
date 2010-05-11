@@ -232,12 +232,16 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
                           svn_boolean_t keep_changelist,
                           apr_pool_t *scratch_pool);
 
+
+/* See props.h  */
+#ifdef SVN__SUPPORT_BASE_MERGE
 svn_error_t *
 svn_wc__wq_add_install_properties(svn_wc__db_t *db,
                                   const char *local_abspath,
                                   apr_hash_t *pristine_props,
                                   apr_hash_t *actual_props,
                                   apr_pool_t *scratch_pool);
+#endif
 
 /* Add a work item to delete a node.
 

@@ -1140,7 +1140,7 @@ merge_props_changed(const char *local_dir_abspath,
                                                   subpool));
 
       err = svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath, NULL, NULL,
-                                original_props, props, FALSE, merge_b->dry_run,
+                                original_props, props, merge_b->dry_run,
                                 ctx->conflict_func, ctx->conflict_baton,
                                 ctx->cancel_func, ctx->cancel_baton,
                                 subpool);
