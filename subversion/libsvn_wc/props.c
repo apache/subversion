@@ -294,11 +294,11 @@ svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
 
 
 svn_error_t *
-svn_wc__load_revert_props(apr_hash_t **revert_props_p,
-                          svn_wc__db_t *db,
-                          const char *local_abspath,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
+svn_wc__get_revert_props(apr_hash_t **revert_props_p,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   if (revert_props_p)
     {

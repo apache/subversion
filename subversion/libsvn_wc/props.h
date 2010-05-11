@@ -170,7 +170,7 @@ svn_wc__working_props_committed(svn_wc__db_t *db,
                                 apr_pool_t *scratch_pool);
 
 
-/* Internal version of svn_wc_get_pristine_props.  */
+/* Internal version of svn_wc_get_pristine_props().  */
 svn_error_t *
 svn_wc__get_pristine_props(apr_hash_t **props,
                            svn_wc__db_t *db,
@@ -179,7 +179,7 @@ svn_wc__get_pristine_props(apr_hash_t **props,
                            apr_pool_t *scratch_pool);
 
 
-/* Internal version of svn_wc_prop_list2.  */
+/* Internal version of svn_wc_prop_list2().  */
 svn_error_t *
 svn_wc__get_actual_props(apr_hash_t **props,
                          svn_wc__db_t *db,
@@ -192,11 +192,11 @@ svn_wc__get_actual_props(apr_hash_t **props,
    Returned hash/values are allocated in RESULT_POOL. All temporary
    allocations are made in SCRATCH_POOL.  */
 svn_error_t *
-svn_wc__load_revert_props(apr_hash_t **revert_props_p,
-                          svn_wc__db_t *db,
-                          const char *local_abspath,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
+svn_wc__get_revert_props(apr_hash_t **revert_props_p,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 /* Set *MARKED to indicate whether the versioned file at LOCAL_ABSPATH in DB
  * has a "binary" file type, as indicated by its working svn:mime-type
