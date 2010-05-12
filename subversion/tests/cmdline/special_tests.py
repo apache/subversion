@@ -641,7 +641,8 @@ def propvalue_normalized(sbox):
   svntest.main.run_svn(None, 'propset', 'svn:special', 'yes', iota2_path)
 
   # Property value should be SVN_PROP_BOOLEAN_TRUE
-  svntest.actions.run_and_verify_svn(None, '*', [],
+  expected_propval = ['*']
+  svntest.actions.run_and_verify_svn(None, expected_propval, [],
                                      'propget', '--strict', 'svn:special',
                                      iota2_path)
 
@@ -658,7 +659,7 @@ def propvalue_normalized(sbox):
                                         wc_dir)
 
   svntest.main.run_svn(None, 'update')
-  svntest.actions.run_and_verify_svn(None, '*', [],
+  svntest.actions.run_and_verify_svn(None, expected_propval, [],
                                      'propget', '--strict', 'svn:special',
                                      iota2_path)
 
@@ -685,7 +686,7 @@ test_list = [ None,
               replace_symlink_with_dir,
               SkipUnless(update_obstructing_symlink, svntest.main.is_posix_os),
               warn_on_reserved_name,
-              Skip(XFail(propvalue_normalized), svntest.main.is_posix_os),
+              Skip(propvalue_normalized, svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':

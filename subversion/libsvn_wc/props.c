@@ -2571,9 +2571,9 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
       new_value = svn_stringbuf_create_from_string(propval, pool);
       svn_stringbuf_strip_whitespace(new_value);
     }
-  else if (strcmp(propname, SVN_PROP_EXECUTABLE) == 0
-        || strcmp(propname, SVN_PROP_NEEDS_LOCK) == 0)
+  else if (svn_prop_is_boolean(propname))
     {
+      /* SVN_PROP_EXECUTABLE, SVN_PROP_NEEDS_LOCK, SVN_PROP_SPECIAL */
       new_value = svn_stringbuf_create_from_string(&boolean_value, pool);
     }
   else if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
