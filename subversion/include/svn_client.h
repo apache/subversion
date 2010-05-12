@@ -2392,6 +2392,8 @@ svn_client_diff5(const apr_array_header_t *diff_options,
  * Similar to svn_client_diff5(), but with @a show_copies_as_adds set to
  * @c FALSE.
  *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ *
  * @since New in 1.5.
  */
 SVN_DEPRECATED
