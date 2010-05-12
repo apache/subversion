@@ -46,12 +46,20 @@
 /* Baton for log_entry_receiver() and log_entry_receiver_xml(). */
 struct log_receiver_baton
 {
-  /* Check for cancellation on each invocation of a log receiver. */
-  svn_cancel_func_t cancel_func;
-  void *cancel_baton;
+  /* Client context. */
+  svn_client_ctx_t *ctx;
+
+  /* The URL target of the log operation. */
+  const char *target_url;
 
   /* Don't print log message body nor its line count. */
   svn_boolean_t omit_log_message;
+
+  /* Whether to show diffs in the log. */
+  svn_boolean_t show_diff;
+
+  /* Diff arguments received from command line. */
+  const char *diff_extensions;
 
   /* Stack which keeps track of merge revision nesting, using svn_revnum_t's */
   apr_array_header_t *merge_stack;
@@ -156,8 +164,8 @@ log_entry_receiver(void *baton,
   /* Number of lines in the msg. */
   int lines;
 
-  if (lb->cancel_func)
-    SVN_ERR(lb->cancel_func(lb->cancel_baton));
+  if (lb->ctx->cancel_func)
+    SVN_ERR(lb->ctx->cancel_func(lb->ctx->cancel_baton));
 
   svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
 
@@ -256,7 +264,54 @@ log_entry_receiver(void *baton,
       SVN_ERR(svn_cmdline_printf(pool, "\n%s\n", message));
     }
 
+  /* Print a diff if requested. */
+  if (lb->show_diff)
+    {
+      apr_file_t *outfile;
+      apr_file_t *errfile;
+      apr_array_header_t *diff_options;
+      apr_status_t status;
+      svn_opt_revision_t start_revision;
+      svn_opt_revision_t end_revision;
+
+      if ((status = apr_file_open_stdout(&outfile, pool)))
+        return svn_error_wrap_apr(status, _("Can't open stdout"));
+      if ((status = apr_file_open_stderr(&errfile, pool)))
+        return svn_error_wrap_apr(status, _("Can't open stderr"));
+
+      /* Fall back to "" to get options initialized either way. */
+      {
+        const char *optstr = lb->diff_extensions ? lb->diff_extensions : "";
+        diff_options = svn_cstring_split(optstr, " \t\n\r", TRUE, pool);
+      }
+
+      start_revision.kind = svn_opt_revision_number;
+      start_revision.value.number = log_entry->revision - 1;
+      end_revision.kind = svn_opt_revision_number;
+      end_revision.value.number = log_entry->revision;
+
+      SVN_ERR(svn_cmdline_printf(pool, _("\n")));
+      SVN_ERR(svn_client_diff5(diff_options,
+                               lb->target_url,
+                               &start_revision,
+                               lb->target_url,
+                               &end_revision,
+                               NULL,
+                               svn_depth_infinity,
+                               FALSE, /* ignore ancestry */
+                               TRUE, /* no diff deleted */
+                               FALSE, /* show copies as adds */
+                               FALSE, /* ignore content type */
+                               svn_cmdline_output_encoding(pool),
+                               outfile,
+                               errfile,
+                               NULL,
+                               lb->ctx, pool));
+      SVN_ERR(svn_cmdline_printf(pool, _("\n")));
+    }
+
   SVN_ERR(svn_cmdline_fflush(stdout));
+  SVN_ERR(svn_cmdline_fflush(stderr));
 
   if (log_entry->has_children)
     APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
@@ -314,8 +369,8 @@ log_entry_receiver_xml(void *baton,
   const char *date;
   const char *message;
 
-  if (lb->cancel_func)
-    SVN_ERR(lb->cancel_func(lb->cancel_baton));
+  if (lb->ctx->cancel_func)
+    SVN_ERR(lb->ctx->cancel_func(lb->ctx->cancel_baton));
 
   svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
 
@@ -463,6 +518,26 @@ svn_cl__log(apr_getopt_t *os,
                                 _("'with-revprop' option only valid in"
                                   " XML mode"));
     }
+  else
+    {
+      if (opt_state->show_diff)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("'show-diff' option is not supported in "
+                                  "XML mode"));
+    }
+
+  if (opt_state->quiet && opt_state->show_diff)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("'quiet' and 'show-diff' options are "
+                              "mutually exclusive"));
+  if (opt_state->diff_cmd && (! opt_state->show_diff))
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("'diff-cmd' option requires 'show-diff' "
+                              "option"));
+  if (opt_state->extensions && (! opt_state->show_diff))
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("'extensions' option requires 'show-diff' "
+                              "option"));
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -511,9 +586,12 @@ svn_cl__log(apr_getopt_t *os,
         }
     }
 
-  lb.cancel_func = ctx->cancel_func;
-  lb.cancel_baton = ctx->cancel_baton;
+  lb.ctx = ctx;
   lb.omit_log_message = opt_state->quiet;
+  SVN_ERR(svn_client_url_from_path2(&lb.target_url, true_path, ctx,
+                                    pool, pool));
+  lb.show_diff = (! opt_state->quiet) && opt_state->show_diff;
+  lb.diff_extensions = opt_state->extensions;
   lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
   lb.pool = pool;
 

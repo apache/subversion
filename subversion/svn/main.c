@@ -120,6 +120,7 @@ typedef enum {
   opt_include_pattern,
   opt_exclude_pattern,
   opt_ignore_whitespaces,
+  opt_show_diff,
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -384,6 +385,10 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("don't take whitespaces into account when,\n"
                        "                             "
                        "determining where a patch should be applied")},
+  {"show-diff", opt_show_diff, 0,
+                       N_("produce diff output\n"
+                       "                             "
+                       "[alias: --diff]")},
   /* Long-opt Aliases
    *
    * These have NULL desriptions, but an option code that matches some
@@ -410,6 +415,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"ik",            opt_ignore_keywords, 0, NULL},
   {"ip",            opt_include_pattern, 1, NULL},
   {"ep",            opt_exclude_pattern, 1, NULL},
+  {"diff",          opt_show_diff, 0, NULL},
 
   {0,               0, 0, 0},
 };
@@ -704,7 +710,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project/foo.c\n"
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
-     opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop},
+     opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
+     opt_show_diff, opt_diff_cmd, 'x'},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -1781,6 +1788,9 @@ main(int argc, const char *argv[])
         break;
       case opt_ignore_whitespaces:
           opt_state.ignore_whitespaces = TRUE;
+          break;
+      case opt_show_diff:
+          opt_state.show_diff = TRUE;
           break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

@@ -228,6 +228,7 @@ typedef struct svn_cl__opt_state_t
   apr_array_header_t *exclude_patterns; /* targets to exclude from operation */
   svn_boolean_t ignore_whitespaces; /* don't account for whitespaces when
                                        patching */
+  svn_boolean_t show_diff;        /* produce diff output */
 } svn_cl__opt_state_t;
 
 
