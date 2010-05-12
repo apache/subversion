@@ -358,10 +358,32 @@ create_physical_lock(const char *abspath, apr_pool_t *scratch_pool)
 }
 
 
-/* */
+/* Wipe out all the obsolete files/dirs from the administrative area.  */
 static void
-wipe_wcprops(const char *wcroot_abspath, apr_pool_t *scratch_pool)
+wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
 {
+  /* Zap unused files.  */
+  svn_error_clear(svn_io_remove_file2(
+                    svn_wc__adm_child(wcroot_abspath,
+                                      SVN_WC__ADM_FORMAT,
+                                      scratch_pool),
+                    TRUE, scratch_pool));
+  svn_error_clear(svn_io_remove_file2(
+                    svn_wc__adm_child(wcroot_abspath,
+                                      SVN_WC__ADM_ENTRIES,
+                                      scratch_pool),
+                    TRUE, scratch_pool));
+  svn_error_clear(svn_io_remove_file2(
+                    svn_wc__adm_child(wcroot_abspath,
+                                      ADM_EMPTY_FILE,
+                                      scratch_pool),
+                    TRUE, scratch_pool));
+  svn_error_clear(svn_io_remove_file2(
+                    svn_wc__adm_child(wcroot_abspath,
+                                      ADM_README,
+                                      scratch_pool),
+                    TRUE, scratch_pool));
+
   /* For formats <= SVN_WC__WCPROPS_MANY_FILES_VERSION, we toss the wcprops
      for the directory itself, and then all the wcprops for the files.  */
   svn_error_clear(svn_io_remove_file2(
@@ -380,6 +402,11 @@ wipe_wcprops(const char *wcroot_abspath, apr_pool_t *scratch_pool)
                     svn_wc__adm_child(wcroot_abspath,
                                       WCPROPS_ALL_DATA,
                                       scratch_pool),
+                    TRUE, scratch_pool));
+
+  /* Remove the old-style lock file LAST.  */
+  svn_error_clear(svn_io_remove_file2(
+                    build_lockfile_path(wcroot_abspath, scratch_pool),
                     TRUE, scratch_pool));
 }
 
@@ -509,17 +536,6 @@ upgrade_to_wcng(svn_wc__db_t *db,
                                          dir_abspath, entries,
                                          scratch_pool));
 
-  SVN_ERR(svn_io_remove_file2(svn_wc__adm_child(dir_abspath,
-                                                SVN_WC__ADM_FORMAT,
-                                                scratch_pool),
-                              TRUE,
-                              scratch_pool));
-  SVN_ERR(svn_io_remove_file2(svn_wc__adm_child(dir_abspath,
-                                                SVN_WC__ADM_ENTRIES,
-                                                scratch_pool),
-                              FALSE,
-                              scratch_pool));
-
   /* ### Note that lots of this content is cribbed from the old format updater.
      ### The following code will change as the wc-ng format changes and more
      ### stuff gets migrated to the sqlite format. */
@@ -542,20 +558,6 @@ upgrade_to_wcng(svn_wc__db_t *db,
                                                  scratch_pool));
     }
 
-  /* Zap any wcprops files.  */
-  wipe_wcprops(dir_abspath, scratch_pool);
-
-  /* We don't want README.txt or empty-file after format 7.  */
-  if (old_format <= 7)
-    {
-      svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(dir_abspath, ADM_EMPTY_FILE, scratch_pool),
-          TRUE, scratch_pool));
-      svn_error_clear(svn_io_remove_file2(
-          svn_wc__adm_child(dir_abspath, ADM_README, scratch_pool),
-          TRUE, scratch_pool));
-    }
-
   SVN_ERR(svn_wc__db_upgrade_finish(dir_abspath, sdb, scratch_pool));
 
   /* All subdir access batons (and locks!) will be closed. Of course, they
@@ -564,9 +566,9 @@ upgrade_to_wcng(svn_wc__db_t *db,
   /* ### well, actually.... we don't recursively delete subdir locks here,
      ### we rely upon their own upgrade processes to do it. */
   SVN_ERR(svn_wc__db_wclock_remove(db, dir_abspath, scratch_pool));
-  SVN_ERR(svn_io_remove_file2(build_lockfile_path(dir_abspath, scratch_pool),
-                              FALSE,
-                              scratch_pool));
+
+  /* Zap all the obsolete files. This removes the old-style lock file.  */
+  wipe_obsolete_files(dir_abspath, scratch_pool);
 
   /* ### need to (eventually) delete the .svn subdir.  */
 
@@ -1101,7 +1103,6 @@ svn_wc__upgrade_sdb(int *result_format,
         SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_13,
                                              (void *)wcroot_abspath,
                                              scratch_pool));
-
         /* If the transaction succeeded, then we don't need the wcprops
            files. We stopped writing them partway through format 12, but
            we may be upgrading from an "early 12" and need to toss those
@@ -1109,12 +1110,10 @@ svn_wc__upgrade_sdb(int *result_format,
            possible that current/real data is sitting within the database.
            This is why STMT_UPGRADE_TO_13 just clears the 'dav_cache'
            column -- we cannot definitely state that the column values
-           are Proper.  */
-        /* ### what happens if this throws an error? meaning: next time thru
-           ### the upgrade cycle, we start at format 13? there could be
-           ### stray files. maybe just always wipe these during any
-           ### format upgrade.  */
-        wipe_wcprops(wcroot_abspath, scratch_pool);
+           are Proper.
+
+           They're removed by wipe_obsolete_files(), below.  */
+
         ++start_format;
 
       case 13:
@@ -1122,13 +1121,9 @@ svn_wc__upgrade_sdb(int *result_format,
         SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_14,
                                              (void *)wcroot_abspath,
                                              scratch_pool));
-
         /* If the transaction succeeded, then any lock has been migrated,
-           and we can toss the physical file.  */
-        svn_error_clear(svn_io_remove_file2(
-                          build_lockfile_path(wcroot_abspath, scratch_pool),
-                          TRUE,
-                          scratch_pool));
+           and we can toss the physical file (below).  */
+
         ++start_format;
 
       case 14:
@@ -1145,6 +1140,7 @@ svn_wc__upgrade_sdb(int *result_format,
                                              scratch_pool));
         ++start_format;
 
+#if 0
       case 16:
         /* Create a '.svn/pristine' directory.  */
         {
@@ -1156,7 +1152,6 @@ svn_wc__upgrade_sdb(int *result_format,
         /* ### Format 17 is not yet in use, so can have other changes too. */
         ++start_format;
 
-#if 0
       case YYY-1:
         /* Move the properties into the database.  */
         SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_YYY,
@@ -1174,6 +1169,9 @@ svn_wc__upgrade_sdb(int *result_format,
 
       /* ### future bumps go here.  */
     }
+
+  /* Zap anything that might be remaining or escaped our notice.  */
+  wipe_obsolete_files(wcroot_abspath, scratch_pool);
 
   *result_format = start_format;
 
