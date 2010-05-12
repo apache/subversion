@@ -1849,6 +1849,51 @@ def prop_reject_grind(sbox):
   ### note that del.add has been erroneously deleted!
 
 
+def obstructed_subdirs(sbox):
+  """test properties of obstructed subdirectories"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # at one point during development, obstructed subdirectories threw
+  # errors trying to fetch property information during 'svn status'.
+  # this test ensures we won't run into that problem again.
+
+  C_path = sbox.ospath('A/C')
+  sbox.simple_propset('red', 'blue', C_path)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/C', props={'red': 'blue'})
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, load_props=True)
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
+
+  # Remove the subdir from disk, and validate the status
+  svntest.main.safe_rmtree(C_path)
+
+  expected_disk.remove('A/C')
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, load_props=True)
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/C', status='! ', wc_rev='?')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Drop an empty file there to obstruct the now-deleted subdir
+  open(C_path, 'w')
+
+  expected_disk.add({'A/C': Item(contents='')})
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, load_props=True)
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
+
+  # NOTE: r943346 fixes a problem with reporter processing, which
+  #   is necessary for this status to complete properly.
+  expected_status.tweak('A/C', status='~ ', wc_rev='?')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -1891,6 +1936,7 @@ test_list = [ None,
               XFail(post_revprop_change_hook, svntest.main.is_ra_type_dav),
               rm_of_replaced_file,
               prop_reject_grind,
+              obstructed_subdirs,
              ]
 
 if __name__ == '__main__':
