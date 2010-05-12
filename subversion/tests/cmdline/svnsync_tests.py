@@ -55,12 +55,18 @@ def build_repos(sbox):
   svntest.main.create_repos(sbox.repo_dir)
 
 
-def run_sync(url, expected_error=None):
+def run_sync(url, source_url=None, expected_error=None):
   "Synchronize the mirror repository with the master"
-  exit_code, output, errput = svntest.main.run_svnsync(
-    "synchronize", url,
-    "--username", svntest.main.wc_author,
-    "--password", svntest.main.wc_passwd)
+  if source_url is not None:
+    exit_code, output, errput = svntest.main.run_svnsync(
+      "synchronize", url, source_url,
+      "--username", svntest.main.wc_author,
+      "--password", svntest.main.wc_passwd)
+  else: # Allow testing of old source-URL-less syntax
+    exit_code, output, errput = svntest.main.run_svnsync(
+      "synchronize", url,
+      "--username", svntest.main.wc_author,
+      "--password", svntest.main.wc_passwd)
   if errput:
     if expected_error is None:
       raise SVNUnexpectedStderr(errput)
@@ -75,10 +81,10 @@ def run_sync(url, expected_error=None):
     # should be: ['Committed revision 1.\n', 'Committed revision 2.\n']
     raise SVNUnexpectedStdout("Missing stdout")
 
-def run_copy_revprops(url, expected_error=None):
+def run_copy_revprops(url, source_url, expected_error=None):
   "Copy revprops to the mirror repository from the master"
   exit_code, output, errput = svntest.main.run_svnsync(
-    "copy-revprops", url,
+    "copy-revprops", url, source_url,
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd)
   if errput:
@@ -164,8 +170,8 @@ or another dump file."""
     repo_url = repo_url + subdir
   run_init(dest_sbox.repo_url, repo_url)
 
-  run_sync(dest_sbox.repo_url)
-  run_copy_revprops(dest_sbox.repo_url)
+  run_sync(dest_sbox.repo_url, repo_url)
+  run_copy_revprops(dest_sbox.repo_url, repo_url)
 
   # Remove some SVNSync-specific housekeeping properties from the
   # mirror repository in preparation for the comparison dump.
@@ -308,7 +314,7 @@ def detect_meddling(sbox):
                                      '-m', 'msg',
                                      dest_sbox.wc_dir)
 
-  run_sync(dest_sbox.repo_url,
+  run_sync(dest_sbox.repo_url, None,
            ".*Destination HEAD \\(2\\) is not the last merged revision \\(1\\).*")
 
 #----------------------------------------------------------------------

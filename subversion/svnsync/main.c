@@ -107,27 +107,37 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
       { SVNSYNC_OPTS_DEFAULT, 'q', svnsync_opt_allow_non_empty,
         svnsync_opt_disable_locking } },
     { "synchronize", synchronize_cmd, { "sync" },
-      N_("usage: svnsync synchronize DEST_URL\n"
+      N_("usage: svnsync synchronize DEST_URL [SOURCE_URL]\n"
          "\n"
          "Transfer all pending revisions to the destination from the source\n"
-         "with which it was initialized.\n"),
+         "with which it was initialized.\n"
+         "\n"
+         "If SOURCE_URL is provided, use that as the source repository URL,\n"
+         "ignoring what is recorded in the destination repository as the\n"
+         "source URL.  Specifying SOURCE_URL is recommended in particular\n"
+         "if untrusted users/administrators may have write access to the\n"
+         "DEST_URL repository.\n"),
       { SVNSYNC_OPTS_DEFAULT, 'q', svnsync_opt_disable_locking } },
     { "copy-revprops", copy_revprops_cmd, { 0 },
-      N_("usage: svnsync copy-revprops DEST_URL [REV[:REV2]]\n"
+      N_("usage:\n"
+         "\n"
+         "    1. svnsync copy-revprops DEST_URL [SOURCE_URL]\n"
+         "    2. svnsync copy-revprops DEST_URL REV[:REV2]\n"
          "\n"
          "Copy the revision properties in a given range of revisions to the\n"
-         "destination from the source with which it was initialized.\n"
+         "destination from the source with which it was initialized.  If the\n"
+         "revision range is not specified, it defaults to all revisions in\n"
+         "the DEST_URL repository.  Note also that the 'HEAD' revision is the\n"
+         "latest in DEST_URL, not necessarily the latest in SOURCE_URL.\n"
          "\n"
-         "If REV and REV2 are provided, copy properties for the revisions\n"
-         "specified by that range, inclusively.  If only REV is provided,\n"
-         "copy properties for that revision alone.  If REV is not provided,\n"
-         "copy properties for all revisions previously transferred to the\n"
-         "destination.\n"
+         "If SOURCE_URL is provided, use that as the source repository URL,\n"
+         "ignoring what is recorded in the destination repository as the\n"
+         "source URL.  Specifying SOURCE_URL is recommended in particular\n"
+         "if untrusted users/administrators may have write access to the\n"
+         "DEST_URL repository.\n"
          "\n"
-         "REV and REV2 must be revisions which were previously transferred\n"
-         "to the destination.  You may use \"HEAD\" for either revision to\n"
-         "mean \"the last revision transferred\".\n"),
-      { SVNSYNC_OPTS_DEFAULT, 'q', svnsync_opt_disable_locking } },
+         "Form 2 is deprecated syntax, equivalent to specifying \"-rREV[:REV2]\".\n"),
+      { SVNSYNC_OPTS_DEFAULT, 'q', 'r', svnsync_opt_disable_locking } },
     { "info", info_cmd, { 0 },
       N_("usage: svnsync info DEST_URL\n"
          "\n"
@@ -146,6 +156,14 @@ static const apr_getopt_option_t svnsync_options[] =
   {
     {"quiet",          'q', 0,
                        N_("print as little as possible") },
+    {"revision",       'r', 1, 
+                       N_("operate on revision ARG (or range ARG1:ARG2)\n"
+                          "                             "
+                          "A revision argument can be one of:\n"
+                          "                             "
+                          "    NUMBER       revision number\n"
+                          "                             "
+                          "    'HEAD'       latest in repository") },
     {"allow-non-empty", svnsync_opt_allow_non_empty, 0,
                        N_("allow a non-empty destination repository") },
     {"non-interactive", svnsync_opt_non_interactive, 0,
@@ -214,6 +232,8 @@ typedef struct {
   svn_boolean_t allow_non_empty;
   svn_boolean_t version;
   svn_boolean_t help;
+  svn_opt_revision_t start_rev;
+  svn_opt_revision_t end_rev;
 } opt_baton_t;
 
 
@@ -840,10 +860,12 @@ commit_callback(const svn_commit_info_t *commit_info,
 
 
 /* Set *FROM_SESSION to an RA session associated with the source
- * repository of the synchronization, as determined by reading
- * svn:sync- properties from the destination repository (associated
- * with TO_SESSION).  Set LAST_MERGED_REV to the value of the property
- * which records the most recently synchronized revision.
+ * repository of the synchronization.  If FROM_URL is non-NULL, use it
+ * as the source repository URL; otherwise, determine the source
+ * repository URL by reading svn:sync- properties from the destination
+ * repository (associated with TO_SESSION).  Set LAST_MERGED_REV to
+ * the value of the property which records the most recently
+ * synchronized revision.
  *
  * CALLBACKS is a vtable of RA callbacks to provide when creating
  * *FROM_SESSION.  CONFIG is a configuration hash.
@@ -851,28 +873,34 @@ commit_callback(const svn_commit_info_t *commit_info,
 static svn_error_t *
 open_source_session(svn_ra_session_t **from_session,
                     svn_string_t **last_merged_rev,
+                    const char *from_url,
                     svn_ra_session_t *to_session,
                     svn_ra_callbacks2_t *callbacks,
                     apr_hash_t *config,
                     void *baton,
                     apr_pool_t *pool)
 {
-  svn_string_t *from_url, *from_uuid;
+  svn_string_t *from_url_str, *from_uuid_str;
 
   SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
-                          &from_url, pool));
+                          &from_url_str, pool));
   SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_UUID,
-                          &from_uuid, pool));
+                          &from_uuid_str, pool));
   SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_LAST_MERGED_REV,
                           last_merged_rev, pool));
 
-  if (! from_url || ! from_uuid || ! *last_merged_rev)
+  if (! from_url_str || ! from_uuid_str || ! *last_merged_rev)
     return svn_error_create
       (APR_EINVAL, NULL,
        _("Destination repository has not been initialized"));
 
+  /* ### TODO: Should we validate that FROM_URL_STR->data matches any
+     provided FROM_URL here?  */
+  if (! from_url)
+    from_url = from_url_str->data;
+
   /* Open the session to copy the revision data. */
-  SVN_ERR(svn_ra_open3(from_session, from_url->data, from_uuid->data,
+  SVN_ERR(svn_ra_open3(from_session, from_url, from_uuid_str->data,
                        callbacks, baton, config, pool));
 
   return SVN_NO_ERROR;
@@ -1137,8 +1165,8 @@ do_synchronize(svn_ra_session_t *to_session,
   replay_baton_t *rb;
   int normalized_rev_props_count = 0;
 
-  SVN_ERR(open_source_session(&from_session,
-                              &last_merged_rev, to_session,
+  SVN_ERR(open_source_session(&from_session, &last_merged_rev,
+                              baton->from_url, to_session,
                               &(baton->source_callbacks), baton->config,
                               baton, pool));
 
@@ -1267,7 +1295,7 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   opt_baton_t *opt_baton = b;
   apr_array_header_t *targets;
   subcommand_baton_t *baton;
-  const char *to_url;
+  const char *to_url, *from_url;
 
   SVN_ERR(svn_opt__args_to_target_array(&targets, os,
                                         apr_array_make(pool, 0,
@@ -1275,16 +1303,27 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
                                         pool));
   if (targets->nelts < 1)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
-  if (targets->nelts > 1)
+  if (targets->nelts > 2)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
   to_url = APR_ARRAY_IDX(targets, 0, const char *);
-
   if (! svn_path_is_url(to_url))
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("Path '%s' is not a URL"), to_url);
 
-  baton = make_subcommand_baton(opt_baton, to_url, NULL, 0, 0, pool);
+  if (targets->nelts == 2)
+    {
+      from_url = APR_ARRAY_IDX(targets, 1, const char *);
+      if (! svn_path_is_url(from_url))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Path '%s' is not a URL"), from_url);
+    }
+  else
+    {
+      from_url = NULL; /* we'll read it from the destination repos */
+    }
+
+  baton = make_subcommand_baton(opt_baton, to_url, from_url, 0, 0, pool);
   SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL,
                        &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
@@ -1315,7 +1354,7 @@ do_copy_revprops(svn_ra_session_t *to_session,
   int normalized_rev_props_count = 0;
 
   SVN_ERR(open_source_session(&from_session, &last_merged_rev,
-                              to_session,
+                              baton->from_url, to_session,
                               &(baton->source_callbacks), baton->config,
                               baton, pool));
 
@@ -1355,6 +1394,78 @@ do_copy_revprops(svn_ra_session_t *to_session,
 }
 
 
+/* Set *START_REVNUM to the revision number associated with
+   START_REVISION, or to SVN_INVALID_REVNUM if START_REVISION
+   represents "HEAD"; if END_REVISION is specified, set END_REVNUM to
+   the revision number associated with END_REVISION or to
+   SVN_INVALID_REVNUM if END_REVISION represents "HEAD"; otherwise set
+   END_REVNUM to the same value as START_REVNUM.
+
+   As a special case, if neither START_REVISION nor END_REVISION is
+   specified, set *START_REVNUM to 0 and set *END_REVNUM to
+   SVN_INVALID_REVNUM.
+
+   Freak out if either START_REVISION or END_REVISION represents an
+   explicit but invalid revision number. */
+static svn_error_t *
+resolve_revnums(svn_revnum_t *start_revnum,
+                svn_revnum_t *end_revnum,
+                svn_opt_revision_t start_revision,
+                svn_opt_revision_t end_revision)
+{
+  svn_revnum_t start_rev, end_rev;
+
+  /* Special case: neither revision is specified?  This is like
+     -r0:HEAD. */
+  if ((start_revision.kind == svn_opt_revision_unspecified) &&
+      (end_revision.kind == svn_opt_revision_unspecified))
+    {
+      start_rev = 0;
+      end_rev = SVN_INVALID_REVNUM;
+      return SVN_NO_ERROR;
+    }
+
+  /* Get the start revision, which must be either HEAD or a number
+     (which is required to be a valid one). */
+  if (start_revision.kind == svn_opt_revision_head)
+    {
+      start_rev = SVN_INVALID_REVNUM;
+    }
+  else
+    {
+      start_rev = start_revision.value.number;
+      if (! SVN_IS_VALID_REVNUM(start_rev))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Invalid revision number (%ld)"),
+                                 start_rev);
+    }
+
+  /* Get the end revision, which must be unspecified (meaning,
+     "same as the start_rev"), HEAD, or a number (which is
+     required to be a valid one). */
+  if (end_revision.kind == svn_opt_revision_unspecified)
+    {
+      end_rev = start_rev;
+    }
+  else if (end_revision.kind == svn_opt_revision_head)
+    {
+      end_rev = SVN_INVALID_REVNUM;
+    }
+  else
+    {
+      end_rev = end_revision.value.number;
+      if (! SVN_IS_VALID_REVNUM(end_rev))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Invalid revision number (%ld)"),
+                                 end_rev);
+    }
+  
+  *start_revnum = start_rev;
+  *end_revnum = end_rev;
+  return SVN_NO_ERROR;
+}
+
+
 /* SUBCOMMAND: copy-revprops */
 static svn_error_t *
 copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
@@ -1363,7 +1474,8 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   opt_baton_t *opt_baton = b;
   apr_array_header_t *targets;
   subcommand_baton_t *baton;
-  const char *to_url;
+  const char *to_url = NULL;
+  const char *from_url;
   svn_opt_revision_t start_revision, end_revision;
   svn_revnum_t start_rev = 0, end_rev = SVN_INVALID_REVNUM;
 
@@ -1373,77 +1485,80 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   if (os->argc - os->ind < 1)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
-  /* If there are two args, the last one is a revision range.  We'll
-     effectively pop it from the end of the list.  Why?  Because
-     svn_opt__args_to_target_array() does waaaaay too many useful
-     things for us not to use it.  */
+  /* If there are two args, the last one is either a revision range or
+     the source URL.  */
   if (os->argc - os->ind == 2)
     {
-      const char *rev_str = os->argv[--(os->argc)];
+      const char *arg_str = os->argv[os->argc - 1];
+      const char *utf_arg_str;
 
-      start_revision.kind = svn_opt_revision_unspecified;
-      end_revision.kind = svn_opt_revision_unspecified;
-      if ((svn_opt_parse_revision(&start_revision, &end_revision,
-                                  rev_str, pool) != 0)
-          || ((start_revision.kind != svn_opt_revision_number)
-              && (start_revision.kind != svn_opt_revision_head))
-          || ((end_revision.kind != svn_opt_revision_number)
-              && (end_revision.kind != svn_opt_revision_head)
-              && (end_revision.kind != svn_opt_revision_unspecified)))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("'%s' is not a valid revision range"),
-                                 rev_str);
+      SVN_ERR(svn_utf_cstring_to_utf8(&utf_arg_str, arg_str, pool));
 
-      /* Get the start revision, which must be either HEAD or a number
-         (which is required to be a valid one). */
-      if (start_revision.kind == svn_opt_revision_head)
+      if (! svn_path_is_url(utf_arg_str))
         {
-          start_rev = SVN_INVALID_REVNUM;
-        }
-      else
-        {
-          start_rev = start_revision.value.number;
-          if (! SVN_IS_VALID_REVNUM(start_rev))
+          /* This is the old "... TO_URL REV[:REV2]" syntax.
+             Revisions come only from this argument.  (We effectively
+             pop that last argument from the end of the argument list
+             so svn_opt__args_to_target_array() can do its thang.) */
+          os->argc--;
+
+          if ((opt_baton->start_rev.kind != svn_opt_revision_unspecified)
+              || (opt_baton->end_rev.kind != svn_opt_revision_unspecified))
+            return svn_error_create(
+                SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                _("Cannot specify revisions via both command-line arguments "
+                  "and the --revision (-r) option"));
+
+          start_revision.kind = svn_opt_revision_unspecified;
+          end_revision.kind = svn_opt_revision_unspecified;
+          if (svn_opt_parse_revision(&start_revision, &end_revision,
+                                     arg_str, pool) != 0)
             return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("Invalid revision number (%ld)"),
-                                     start_rev);
-        }
+                                     _("Invalid revision range '%s' provided"),
+                                     arg_str);
 
-      /* Get the end revision, which must be unspecified (meaning,
-         "same as the start_rev"), HEAD, or a number (which is
-         required to be a valid one). */
-      if (end_revision.kind == svn_opt_revision_unspecified)
-        {
-          end_rev = start_rev;
-        }
-      else if (end_revision.kind == svn_opt_revision_head)
-        {
-          end_rev = SVN_INVALID_REVNUM;
-        }
-      else
-        {
-          end_rev = end_revision.value.number;
-          if (! SVN_IS_VALID_REVNUM(end_rev))
-            return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("Invalid revision number (%ld)"),
-                                     end_rev);
+          SVN_ERR(resolve_revnums(&start_rev, &end_rev,
+                                  start_revision, end_revision));
+
+          SVN_ERR(svn_opt__args_to_target_array(
+                      &targets, os,
+                      apr_array_make(pool, 1, sizeof(const char *)), pool));
+          if (targets->nelts != 1)
+            return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+          to_url = APR_ARRAY_IDX(targets, 0, const char *);
+          from_url = NULL;
         }
     }
+  
+  if (! to_url)
+    {
+      /* This is the "... TO_URL SOURCE_URL" syntax.  Revisions
+         come only from the --revision parameter.  */
+      SVN_ERR(resolve_revnums(&start_rev, &end_rev,
+                              opt_baton->start_rev, opt_baton->end_rev));
 
-  SVN_ERR(svn_opt__args_to_target_array(&targets, os,
-                                        apr_array_make(pool, 1,
-                                                       sizeof(const char *)),
-                                        pool));
-  if (targets->nelts != 1)
-    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
-
-  to_url = APR_ARRAY_IDX(targets, 0, const char *);
+      SVN_ERR(svn_opt__args_to_target_array(
+                  &targets, os,
+                  apr_array_make(pool, 2, sizeof(const char *)), pool));
+      if (targets->nelts < 1)
+        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+      if (targets->nelts > 2)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+      to_url = APR_ARRAY_IDX(targets, 0, const char *);
+      if (targets->nelts == 2)
+        from_url = APR_ARRAY_IDX(targets, 1, const char *);
+      else
+        from_url = NULL;
+    }
 
   if (! svn_path_is_url(to_url))
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("Path '%s' is not a URL"), to_url);
-
-  baton = make_subcommand_baton(opt_baton, to_url, NULL,
+  if (from_url && (! svn_path_is_url(from_url)))
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Path '%s' is not a URL"), from_url);
+      
+  baton = make_subcommand_baton(opt_baton, to_url, from_url,
                                 start_rev, end_rev, pool);
   SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL,
                        &(baton->sync_callbacks), baton, baton->config, pool));
@@ -1598,7 +1713,10 @@ main(int argc, const char *argv[])
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
 
+  /* Initialize the option baton. */
   memset(&opt_baton, 0, sizeof(opt_baton));
+  opt_baton.start_rev.kind = svn_opt_revision_unspecified;
+  opt_baton.end_rev.kind = svn_opt_revision_unspecified;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -1707,6 +1825,35 @@ main(int argc, const char *argv[])
 
           case 'q':
             opt_baton.quiet = TRUE;
+            break;
+
+          case 'r':
+            if (svn_opt_parse_revision(&opt_baton.start_rev,
+                                       &opt_baton.end_rev,
+                                       opt_arg, pool) != 0)
+              {
+                const char *utf8_opt_arg;
+                err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
+                if (! err)
+                  err = svn_error_createf(
+                            SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Syntax error in revision argument '%s'"),
+                            utf8_opt_arg);
+                return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+              }
+
+            /* We only allow numbers and 'HEAD'. */
+            if (((opt_baton.start_rev.kind != svn_opt_revision_number) &&
+                 (opt_baton.start_rev.kind != svn_opt_revision_head))
+                || ((opt_baton.end_rev.kind != svn_opt_revision_number) &&
+                    (opt_baton.end_rev.kind != svn_opt_revision_head) &&
+                    (opt_baton.end_rev.kind != svn_opt_revision_unspecified)))
+              {
+                err = svn_error_createf(
+                          SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                          _("Invalid revision range '%s' provided"), opt_arg);
+                return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+              }
             break;
 
           case '?':
