@@ -1735,7 +1735,13 @@ def mixed_wc_to_url(sbox):
 
   wc_dir = sbox.wc_dir
   Z_url = sbox.repo_url + '/A/D/Z'
+  Z2_url = sbox.repo_url + '/A/D/Z2'
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  X_path = os.path.join(wc_dir, 'A', 'D', 'G', 'X')
+  Y_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Y')
+  E_path = os.path.join(wc_dir, 'A', 'D', 'G', 'X', 'E')
+  alpha_path = os.path.join(wc_dir, 'A', 'D', 'G', 'X', 'E', 'alpha')
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
 
@@ -1752,10 +1758,46 @@ def mixed_wc_to_url(sbox):
   # Make another modification to A/D/G/rho, but don't commit it.
   svntest.main.file_append(rho_path, "Second modification to rho.\n")
 
+  # Copy into the source, delete part of the copy, add a non-copied directory
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', B_path, X_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', alpha_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', Y_path)
+
   # Now copy local A/D/G to create new directory A/D/Z the repository.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', '-m', "Make a copy.",
                                      G_path, Z_url)
+  expected_output = svntest.verify.UnorderedOutput([
+    'A + A/D/Z/\n',
+    '    (from A/D/G/:r1)\n',
+    'A + A/D/Z/X/\n',
+    '    (from A/B/:r1)\n',
+    'D   A/D/Z/X/E/alpha\n',
+    'A   A/D/Z/Y/\n',
+    'D   A/D/Z/pi\n',
+    'D   A/D/Z/rho\n',
+    'A + A/D/Z/rho\n',
+    '    (from A/D/G/rho:r3)\n',
+    ])
+  svntest.actions.run_and_verify_svnlook(None, expected_output, [],
+                                         'changed', sbox.repo_dir,
+                                         '--copy-info')
+
+  # Copy from copied source
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', '-m', "Make a copy.",
+                                     E_path, Z2_url)
+  expected_output = svntest.verify.UnorderedOutput([
+    'A + A/D/Z2/\n',
+    '    (from A/B/E/:r1)\n',
+    'D   A/D/Z2/alpha\n',
+    ])
+  svntest.actions.run_and_verify_svnlook(None, expected_output, [],
+                                         'changed', sbox.repo_dir,
+                                         '--copy-info')
 
   # Check out A/D/Z.  If it has pi, that's a bug; or if its rho does
   # not have the second local mod, that's also a bug.
