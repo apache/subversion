@@ -2734,12 +2734,45 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
                           svn_wc__db_checkmode_t mode,
                           apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  const char *pristine_abspath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  svn_node_kind_t kind_on_disk;
+
   SVN_ERR_ASSERT(present != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
   SVN_ERR_ASSERT(sha1_checksum != NULL);
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
-  NOT_IMPLEMENTED();
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
+                              svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  /* Check that there is an entry in the PRISTINE table. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_PRISTINE_MD5_CHECKSUM));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* Check that the pristine text file exists. */
+  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh, sha1_checksum,
+                             FALSE /* create_subdir */,
+                             scratch_pool, scratch_pool));
+  SVN_ERR(svn_io_check_path(pristine_abspath, &kind_on_disk, scratch_pool));
+
+  if (kind_on_disk != (have_row ? svn_node_file : svn_node_none))
+    return svn_error_createf(SVN_ERR_WC_DB_ERROR, svn_sqlite__reset(stmt),
+                             _("The pristine text with checksum '%s' was "
+                               "found in the DB or on disk but not both"),
+                             svn_checksum_to_cstring_display(sha1_checksum,
+                                                             scratch_pool));
+
+  *present = have_row;
+  return SVN_NO_ERROR;
 }
 
 
