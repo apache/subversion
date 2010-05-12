@@ -2166,16 +2166,14 @@ svn_wc__db_temp_set_keep_local(svn_wc__db_t *db,
                                apr_pool_t *scratch_pool);
 
 /* Removes all references of LOCAL_ABSPATH from its working copy
-   using DB. When FLUSH_ENTRY_CACHE is set to TRUE, flush the related
-   entries caches. */
+   using DB. */
 svn_error_t *
 svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 apr_pool_t *scratch_pool);
 
 /* Sets the depth of LOCAL_ABSPATH in its working copy to DEPTH
-   using DB. When FLUSH_ENTRY_CACHE is set to TRUE, flush the related
-   entries caches. */
+   using DB. */
 svn_error_t *
 svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
                                  const char *local_abspath,
