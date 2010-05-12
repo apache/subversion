@@ -863,7 +863,7 @@ svn_error_t *
 svn_wc__db_pristine_read(svn_stream_t **contents,
                          svn_wc__db_t *db,
                          const char *wri_abspath,
-                         const svn_checksum_t *checksum,
+                         const svn_checksum_t *sha1_checksum,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
@@ -947,7 +947,7 @@ svn_error_t *
 svn_wc__db_pristine_check(svn_boolean_t *present,
                           svn_wc__db_t *db,
                           const char *wri_abspath,
-                          const svn_checksum_t *checksum,
+                          const svn_checksum_t *sha1_checksum,
                           svn_wc__db_checkmode_t mode,
                           apr_pool_t *scratch_pool);
 
@@ -961,7 +961,7 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
 svn_error_t *
 svn_wc__db_pristine_repair(svn_wc__db_t *db,
                            const char *wri_abspath,
-                           const svn_checksum_t *checksum,
+                           const svn_checksum_t *sha1_checksum,
                            apr_pool_t *scratch_pool);
 
 
