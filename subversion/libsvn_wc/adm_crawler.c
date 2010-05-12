@@ -535,8 +535,26 @@ report_revisions_and_depths(svn_wc__db_t *db,
                && (depth > svn_depth_files
                    || depth == svn_depth_unknown))
         {
-          svn_boolean_t is_incomplete = (this_status == svn_wc__db_status_incomplete);
-          svn_boolean_t start_empty = is_incomplete;
+          svn_boolean_t is_incomplete;
+          svn_boolean_t start_empty;
+
+          /* If the subdir and its administrative area are not present,
+             then do NOT bother to report this node, much less recurse
+             into the thing.
+
+             Note: if the there is nothing on the disk, then we may have
+             reported it missing further above.
+
+             ### hmm. but what if we have a *file* obstructing the dir?
+             ### the code above will not report it, and we'll simply
+             ### skip it right here. I guess with an obstruction, we
+             ### can't really do anything with info the server might
+             ### send, so maybe this is just fine.  */
+          if (this_status == svn_wc__db_status_obstructed)
+            continue;
+
+          is_incomplete = (this_status == svn_wc__db_status_incomplete);
+          start_empty = is_incomplete;
 
           if (depth_compatibility_trick
               && this_depth <= svn_depth_files
