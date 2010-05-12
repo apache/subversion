@@ -2030,16 +2030,27 @@ svn_wc__get_pristine_props(apr_hash_t **props,
 #endif
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_absent
-      || status == svn_wc__db_status_not_present
-      || status == svn_wc__db_status_obstructed
-      || status == svn_wc__db_status_obstructed_add)
+      || status == svn_wc__db_status_not_present)
     {
       *props = NULL;
       return SVN_NO_ERROR;
     }
-  if (status == svn_wc__db_status_obstructed_delete)
+
+  /* The node is obstructed:
+
+     - subdir is missing, obstructed by a file, or missing admin area
+     - a file is obstructed by a versioned subdir   (### not reported)
+
+     Thus, properties are not available for this node. Returning NULL
+     would indicate "not defined" for its state. For obstructions, we
+     cannot *determine* whether properties should be here or not.
+
+     ### it would be nice to report an obstruction, rather than simply
+     ### PROPERTY_NOT_FOUND. but this is transitional until single-db.  */
+  if (status == svn_wc__db_status_obstructed_delete
+      || status == svn_wc__db_status_obstructed
+      || status == svn_wc__db_status_obstructed_add)
     return svn_error_createf(SVN_ERR_PROPERTY_NOT_FOUND, NULL,
-                             /* ### temporary until single-db  */
                              U_("Directory '%s' is missing on disk, so the "
                                 "properties are not available."),
                              svn_dirent_local_style(local_abspath,

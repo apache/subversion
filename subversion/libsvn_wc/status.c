@@ -293,6 +293,7 @@ assemble_status(svn_wc_status3_t **status,
                 apr_pool_t *scratch_pool)
 {
   svn_wc_status3_t *stat;
+  svn_wc__db_status_t db_status;
   svn_wc__db_kind_t db_kind;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
@@ -303,10 +304,8 @@ assemble_status(svn_wc_status3_t **status,
   svn_revnum_t changed_rev;
   const char *changed_author;
   apr_time_t changed_date;
+  svn_boolean_t base_shadowed;
   svn_boolean_t conflicted;
-#ifdef HAVE_SYMLINK
-  svn_boolean_t wc_special;
-#endif /* HAVE_SYMLINK */
 
   /* Defaults for two main variables. */
   enum svn_wc_status_kind final_text_status = svn_wc_status_normal;
@@ -403,27 +402,14 @@ assemble_status(svn_wc_status3_t **status,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__db_read_info(NULL, &db_kind, &revision, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(&db_status, &db_kind, &revision,
+                               NULL, NULL, NULL,
                                &changed_rev, &changed_date, &changed_author,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, &conflicted,
+                               NULL, NULL, NULL, NULL,
+                               &base_shadowed, &conflicted,
                                &lock, db, local_abspath, result_pool,
                                scratch_pool));
-
-  /* Someone either deleted the administrative directory in the versioned
-     subdir, or deleted the directory altogether and created a new one.
-     In any case, what is currently there is in the way.
-   */
-  if (db_kind == svn_wc__db_kind_dir)
-    {
-      if (path_kind == svn_node_dir)
-        {
-          if (svn_wc__adm_missing(db, local_abspath, scratch_pool))
-            final_text_status = svn_wc_status_obstructed;
-        }
-      else if (path_kind != svn_node_none)
-        final_text_status = svn_wc_status_obstructed;
-    }
 
   /** File externals are switched files, but they are not shown as
       such.  To be switched it must have both an URL and a parent with
@@ -446,11 +432,65 @@ assemble_status(svn_wc_status3_t **status,
                           scratch_pool), entry->url) != 0);
     }
 
-  if (final_text_status != svn_wc_status_obstructed)
+  /* Examine whether our directory metadata is present, and compensate
+     if it is missing.
+
+     There are a several kinds of obstruction that we detect here:
+
+     - versioned subdir is missing
+     - the versioned subdir's admin area is missing
+     - the versioned subdir has been replaced with a file/symlink
+
+     Net result: the target is obstructed and the metadata is unavailable.
+
+     Note: wc_db can also detect a versioned file that has been replaced
+     with a versioned subdir (moved from somewhere). We don't look for
+     that right away because the file's metadata is still present, so we
+     can examine properties and conflicts and whatnot.
+
+     ### note that most obstruction concepts disappear in single-db mode
+  */
+  if (db_kind == svn_wc__db_kind_dir)
+    {
+      if (db_status == svn_wc__db_status_incomplete)
+        {
+          /* Highest precedence.  */
+          final_text_status = svn_wc_status_incomplete;
+        }
+      else if (db_status == svn_wc__db_status_obstructed_delete)
+        {
+          /* Deleted directories are never reported as missing.  */
+          if (path_kind == svn_node_none)
+            final_text_status = svn_wc_status_deleted;
+          else
+            final_text_status = svn_wc_status_obstructed;
+        }
+      else if (db_status == svn_wc__db_status_obstructed
+               || db_status == svn_wc__db_status_obstructed_add)
+        {
+          /* A present or added directory should be on disk, so it is
+             reported missing or obstructed.  */
+          if (path_kind == svn_node_none)
+            final_text_status = svn_wc_status_missing;
+          else
+            final_text_status = svn_wc_status_obstructed;
+        }
+    }
+
+  /* If FINAL_TEXT_STATUS is still normal, after the above checks, then
+     we should proceed to refine the status.
+
+     If it was changed, then the subdir is incomplete or missing/obstructed.
+     It means that no further information is available, and we should skip
+     all this work.  */
+  if (final_text_status == svn_wc_status_normal)
     {
       svn_boolean_t has_props;
       svn_boolean_t prop_modified_p = FALSE;
       svn_boolean_t text_modified_p = FALSE;
+#ifdef HAVE_SYMLINK
+      svn_boolean_t wc_special;
+#endif /* HAVE_SYMLINK */
 
       /* Implement predecence rules: */
 
@@ -554,6 +594,9 @@ assemble_status(svn_wc_status3_t **status,
             of medium precedence.  They also override any C or M that may
             be in the prop_status field at this point, although they do not
             override a C text status.*/
+
+      /* ### db_status, base_shadowed, and fetching base_status can
+         ### fully replace entry->schedule here.  */
 
       if (entry->schedule == svn_wc_schedule_add
           && final_text_status != svn_wc_status_conflicted)
@@ -689,6 +732,8 @@ send_status_structure(const struct walk_status_baton *wb,
 {
   svn_wc_status3_t *statstruct;
 
+  SVN_ERR_ASSERT(entry != NULL);
+
   SVN_ERR(assemble_status(&statstruct, wb->db, local_abspath, entry,
                           parent_entry, path_kind, path_special, get_all,
                           is_ignored, wb->repos_locks, wb->repos_root,
@@ -821,9 +866,15 @@ send_unversioned_item(const struct walk_status_baton *wb,
 
   is_external = is_external_path(wb->externals, local_abspath, pool);
 
-  SVN_ERR(assemble_status(&status, wb->db, local_abspath, NULL, NULL,
-                          path_kind, path_special, FALSE, ignore,
-                          wb->repos_locks, wb->repos_root, pool, pool));
+  SVN_ERR(assemble_status(&status, wb->db, local_abspath,
+                          NULL /* entry */,
+                          NULL /* parent_entry */,
+                          path_kind, path_special,
+                          FALSE /* get_all */,
+                          ignore,
+                          NULL /* repos_locks */,
+                          wb->repos_root,
+                          pool, pool));
 
   if (is_external)
     status->text_status = svn_wc_status_external;
