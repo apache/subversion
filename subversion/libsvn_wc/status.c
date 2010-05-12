@@ -620,6 +620,7 @@ assemble_status(svn_wc_status3_t **status,
   stat->lock_creation_date = lock ? lock->date : 0;
   stat->conflicted = conflicted;
   stat->versioned = TRUE;
+  stat->changelist = changelist;
 
   *status = stat;
 
@@ -680,6 +681,7 @@ assemble_unversioned(svn_wc_status3_t **status,
   /* For the case of an incoming delete to a locally deleted path during
      an update, we get a tree conflict. */
   stat->conflicted = (tree_conflict != NULL);
+  stat->changelist = NULL;
 
   *status = stat;
   return SVN_NO_ERROR;
@@ -2582,6 +2584,10 @@ svn_wc_dup_status3(const svn_wc_status3_t *orig_stat,
   if (orig_stat->lock_comment)
     new_stat->lock_comment
       = apr_pstrdup(pool, orig_stat->lock_comment);
+
+  if (orig_stat->changelist)
+    new_stat->changelist
+      = apr_pstrdup(pool, orig_stat->changelist);
 
   /* Return the new hotness. */
   return new_stat;
