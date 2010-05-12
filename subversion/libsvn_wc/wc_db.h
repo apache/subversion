@@ -2172,6 +2172,12 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 apr_pool_t *scratch_pool);
 
+/* Remove the WORKING_NODE row of LOCAL_ABSPATH in DB. */
+svn_error_t *
+svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *scratch_pool);
+
 /* Sets the depth of LOCAL_ABSPATH in its working copy to DEPTH
    using DB. */
 svn_error_t *

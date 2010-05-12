@@ -5079,23 +5079,12 @@ close_file(void *file_baton,
                                    pool));
     }
 
-  /* This file was locally-added. This file is now being added by the
-     update. We can toss the local-add, turning this into a local-edit.  */
+  /* If this file was locally-added and is now being added by the update, we
+     can toss the local-add, turning this into a local-edit.  */
   if (fb->add_existed && fb->adding_file)
     {
-      /* ### temporary hack. we should simply delete the WORKING_NODE.  */
-
-      svn_wc_entry_t tmp_entry;
-
-      /* ### we need to use FORCE to ensure transition to normal. otherwise,
-         ### it would remain in the added state.  */
-      tmp_entry.schedule = svn_wc_schedule_normal;
-      SVN_ERR(svn_wc__entry_modify(eb->db, fb->local_abspath,
-                                   svn_node_file,
-                                   &tmp_entry,
-                                   SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                     | SVN_WC__ENTRY_MODIFY_FORCE,
-                                   pool));
+      SVN_ERR(svn_wc__db_temp_op_remove_working(eb->db, fb->local_abspath,
+                                                pool));
     }
 
   /* Now we need to update the ACTUAL tree, with the result of the

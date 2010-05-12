@@ -3767,6 +3767,49 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
 }
 
 
+svn_error_t *
+svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  svn_sqlite__stmt_t *stmt;
+  svn_sqlite__db_t *sdb;
+  apr_int64_t wc_id;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
+                              svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  flush_entries(pdh);
+
+  /* Check if we should remove it from the parent db instead */
+  if (*local_relpath == '\0')
+    {
+      SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
+                                 scratch_pool));
+      VERIFY_USABLE_PDH(pdh);
+
+      local_relpath = svn_dirent_basename(local_abspath, NULL);
+
+      flush_entries(pdh);
+    }
+
+  sdb = pdh->wcroot->sdb;
+  wc_id = pdh->wcroot->wc_id;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 update_depth_values(svn_wc__db_pdh_t *pdh,
                     const char *local_relpath,
