@@ -1254,7 +1254,6 @@ svn_wc__internal_merge(svn_skel_t **work_items,
   apr_pool_t *pool = scratch_pool;  /* ### temporary rename  */
   const char *working_abspath;
   const char *detranslated_target_abspath;
-  const char *dir_abspath;
   svn_boolean_t is_binary = FALSE;
   const svn_prop_t *mimeprop;
   svn_skel_t *work_item;
@@ -1266,8 +1265,6 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                  || svn_dirent_is_absolute(copyfrom_abspath));
 
   *work_items = NULL;
-
-  dir_abspath = svn_dirent_dirname(target_abspath, pool);
 
   /* Sanity check:  the merge target must be under revision control,
    * unless the merge target is a copyfrom text, which lives in a
