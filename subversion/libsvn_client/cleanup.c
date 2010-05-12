@@ -62,7 +62,7 @@ svn_client_cleanup(const char *path,
 /* callback baton for fetch_repos_info */
 struct repos_info_baton
 {
-  apr_pool_t *pool;
+  apr_pool_t *state_pool;
   svn_client_ctx_t *ctx;
   const char *last_repos;
   const char *last_uuid;
@@ -75,8 +75,8 @@ fetch_repos_info(const char **repos_root,
                  const char **repos_uuid,
                  void *baton,
                  const char *url,
-                 apr_pool_t *scratch_pool,
-                 apr_pool_t *result_pool)
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   struct repos_info_baton *ri = baton;
   apr_pool_t *subpool;
@@ -98,8 +98,8 @@ fetch_repos_info(const char **repos_root,
   SVN_ERR(svn_ra_get_uuid2(ra_session, repos_uuid, result_pool));
 
   /* Store data for further calls */
-  ri->last_repos = apr_pstrdup(ri->pool, *repos_root);
-  ri->last_uuid = apr_pstrdup(ri->pool, *repos_uuid);
+  ri->last_repos = apr_pstrdup(ri->state_pool, *repos_root);
+  ri->last_uuid = apr_pstrdup(ri->state_pool, *repos_uuid);
 
   svn_pool_destroy(subpool);
 
@@ -117,7 +117,8 @@ svn_client_upgrade(const char *path,
   apr_pool_t *iterpool;
   svn_opt_revision_t rev = {svn_opt_revision_unspecified, {0}};
   struct repos_info_baton info_baton;
-  info_baton.pool = scratch_pool;
+
+  info_baton.state_pool = scratch_pool;
   info_baton.ctx = ctx;
   info_baton.last_repos = NULL;
   info_baton.last_uuid = NULL;

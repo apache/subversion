@@ -6727,8 +6727,9 @@ typedef svn_error_t * (*svn_wc_upgrade_get_repos_info_t)(
                                     const char **repos_uuid,
                                     void *baton,
                                     const char *url,
-                                    apr_pool_t *scratch_pool,
-                                    apr_pool_t *result_pool);
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
 
 /**
  * Upgrade the working copy at @a local_abspath to the latest metadata
@@ -6759,7 +6760,8 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
                void *notify_baton,
-               apr_pool_t *pool);
+               apr_pool_t *scratch_pool);
+
 
 /** Relocation validation callback typedef.
  *
