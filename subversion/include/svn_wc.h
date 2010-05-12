@@ -3436,10 +3436,12 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
  * @defgroup svn_wc_status Working copy status.
  * @{
  *
- * We have two functions for getting working copy status: one function
- * for getting the status of exactly one thing, and another for
- * getting the statuses of (potentially) multiple things.
+ * We have three functions for getting working copy status: one function
+ * for getting the status of exactly one thing, another for
+ * getting the statuses of (potentially) multiple things and a third for
+ * gettting the working copy out-of-dateness with respect to the repository.
  *
+ * Why do we have two different functions for getting working copy status?
  * The concept of depth, as explained in the documentation for
  * svn_depth_t, may be useful in understanding this.  Suppose we're
  * getting the status of directory D:
@@ -3451,12 +3453,10 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
  * become cumbersome: you'd have to roll through a hash to find one
  * lone status.
  *
- * So we have svn_wc_status() for depth-empty (just D itself), and
- * svn_wc_get_status_editor() for depth-immediates and depth-infinity,
- * since the latter two involve multiple return values.
- *
- * @note The status structures may contain a @c NULL ->entry field.
- * This indicates an item that is not versioned in the working copy.
+ * So we have svn_wc_status3() for depth-empty (just D itself), and
+ * svn_wc_walk_status() for depth-immediates and depth-infinity,
+ * since the latter two involve multiple return values. And for
+ * out-of-dateness information we have svn_wc_get_status_editor5().
  */
 
 /** The type of status for the working copy. */
@@ -3650,8 +3650,10 @@ typedef struct svn_wc_status3_t
 } svn_wc_status3_t;
 
 /**
- * ### The diffs are not yet known.
- * Same as svn_wc_status3_t, but without ...
+ * ### All diffs are not yet known.
+ * Same as svn_wc_status3_t, but without the #svn_boolean_t 'versioned'
+ * field. Instead an item that is not versioned has the 'entry' field set to
+ * @c NULL.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.6 API.
