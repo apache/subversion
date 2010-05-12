@@ -293,6 +293,7 @@ assemble_status(svn_wc_status3_t **status,
   svn_revnum_t changed_rev;
   const char *changed_author;
   apr_time_t changed_date;
+  const char *changelist;
   svn_boolean_t base_shadowed;
   svn_boolean_t conflicted;
 
@@ -311,12 +312,11 @@ assemble_status(svn_wc_status3_t **status,
   SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, db, local_abspath,
                                            scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_read_info(&db_status, &db_kind, &revision,
-                               NULL, NULL, NULL,
-                               &changed_rev, &changed_date, &changed_author,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               &base_shadowed, &conflicted,
+  SVN_ERR(svn_wc__db_read_info(&db_status, &db_kind, &revision, NULL, NULL,
+                               NULL, &changed_rev, &changed_date,
+                               &changed_author, NULL, NULL, NULL, NULL,
+                               NULL, &changelist, NULL, NULL, NULL, NULL,
+                               NULL, NULL, &base_shadowed, &conflicted,
                                &lock, db, local_abspath, result_pool,
                                scratch_pool));
 
@@ -580,9 +580,9 @@ assemble_status(svn_wc_status3_t **status,
         && (! locked_p)
         && (! switched_p)
         && (! file_external_p)
-        && (! entry->lock_token)
+        && (! lock) 
         && (! repos_lock)
-        && (! entry->changelist)
+        && (! changelist)
         && (! tree_conflict))
       {
         *status = NULL;
