@@ -177,7 +177,6 @@ print_status(void *baton,
   apr_time_t changed_date;
   const char *changed_author;
   const char *local_abspath;
-  const char *changelist;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, sb->cl_pool));
   tweaked_status = svn_wc_dup_status3(status, sb->cl_pool);
@@ -202,17 +201,14 @@ print_status(void *baton,
       tweaked_status->changed_author = changed_author;
     }
 
-  SVN_ERR(svn_wc__node_get_changelist(&changelist, sb->ctx->wc_ctx, local_abspath,
-                                      pool, pool));
-
   /* If the path is part of a changelist, then we don't print
      the item, but instead dup & cache the status structure for later. */
-  if (changelist)
+  if (status->changelist)
     {
       /* The hash maps a changelist name to an array of status_cache
          structures. */
       apr_array_header_t *path_array;
-      const char *cl_key = apr_pstrdup(sb->cl_pool, changelist);
+      const char *cl_key = apr_pstrdup(sb->cl_pool, status->changelist);
       struct status_cache *scache = apr_pcalloc(sb->cl_pool, sizeof(*scache));
       scache->path = apr_pstrdup(sb->cl_pool, path);
       scache->status = svn_wc_dup_status3(tweaked_status, sb->cl_pool);

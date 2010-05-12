@@ -3644,6 +3644,9 @@ typedef struct svn_wc_status3_t
   /** If the path is under version control, versioned is TRUE. */
   svn_boolean_t versioned;
 
+  /** Which changelist this item is part of, or NULL if not part of any. */
+  const char *changelist;
+
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
 } svn_wc_status3_t;
 
