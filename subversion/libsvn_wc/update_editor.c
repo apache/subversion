@@ -4717,27 +4717,38 @@ close_file(void *file_baton,
     SVN_ERR(svn_checksum_parse_hex(&expected_md5_checksum, svn_checksum_md5,
                                    expected_md5_digest, pool));
 
-  /* Was this an add-with-history, with no apply_textdelta? */
-  if (fb->added_with_history && ! fb->received_textdelta)
+  /* Retrieve the new text-base file's path and checksums.  If it was an
+   * add-with-history, with no apply_textdelta, then that means the text-base
+   * of the copied file, else the new text-base created by apply_textdelta(),
+   * if any. */
+  if (fb->received_textdelta)
     {
-      SVN_ERR_ASSERT(! fb->new_text_base_tmp_abspath
-                     && fb->copied_text_base_abspath);
-
-      new_text_base_md5_checksum = fb->copied_text_base_md5_checksum;
-      new_text_base_sha1_checksum = fb->copied_text_base_sha1_checksum;
-      new_text_base_abspath = fb->copied_text_base_abspath;
-      SVN_ERR_ASSERT(svn_dirent_is_absolute(new_text_base_abspath));
-    }
-  else
-    {
-      /* Pull the actual checksum from the file_baton, computed during
-         the application of a text delta. */
       new_text_base_md5_checksum = fb->new_text_base_md5_checksum;
       new_text_base_sha1_checksum = fb->new_text_base_sha1_checksum;
       new_text_base_abspath = fb->new_text_base_tmp_abspath;
+      SVN_ERR_ASSERT(new_text_base_md5_checksum &&
+                     new_text_base_sha1_checksum &&
+                     new_text_base_abspath);
+    }
+  else if (fb->added_with_history)
+    {
+      SVN_ERR_ASSERT(! fb->new_text_base_tmp_abspath);
+      new_text_base_md5_checksum = fb->copied_text_base_md5_checksum;
+      new_text_base_sha1_checksum = fb->copied_text_base_sha1_checksum;
+      new_text_base_abspath = fb->copied_text_base_abspath;
+      SVN_ERR_ASSERT(new_text_base_md5_checksum &&
+                     new_text_base_sha1_checksum &&
+                     new_text_base_abspath);
+    }
+  else
+    {
+      SVN_ERR_ASSERT(! fb->new_text_base_tmp_abspath
+                     && ! fb->copied_text_base_abspath);
+      new_text_base_md5_checksum = NULL;
+      new_text_base_sha1_checksum = NULL;
+      new_text_base_abspath = NULL;
     }
 
-  /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (new_text_base_abspath && expected_md5_checksum
       && !svn_checksum_match(expected_md5_checksum, new_text_base_md5_checksum))
     return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
