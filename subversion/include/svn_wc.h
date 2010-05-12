@@ -3550,11 +3550,9 @@ typedef struct svn_wc_status3_t
   enum svn_wc_status_kind repos_prop_status;
 
   /** The entry's lock in the repository, if any. */
-  svn_lock_t *repos_lock;
+  const svn_lock_t *repos_lock;
 
-  /** Set to the URI (actual or expected) of the item.
-   * @since New in 1.3
-   */
+  /** Set to the URI (actual or expected) of the item. */
   const char *url;
 
   /**
@@ -3763,7 +3761,6 @@ typedef struct svn_wc_status2_t
    */
   enum svn_wc_status_kind pristine_prop_status;
 
-  /* NOTE! Please update svn_wc_dup_status2() when adding new fields here. */
 } svn_wc_status2_t;
 
 
