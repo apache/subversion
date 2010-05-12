@@ -1104,3 +1104,22 @@ svn_wc__node_check_conflicts(svn_boolean_t *prop_conflicted,
     }
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__db_temp_get_keep_local(svn_boolean_t *keep_local,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool)
+{
+  svn_boolean_t is_deleted;
+
+  SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, wc_ctx, local_abspath,
+                                         scratch_pool));
+  if (is_deleted)
+    SVN_ERR(svn_wc__db_temp_determine_keep_local(keep_local, wc_ctx->db,
+                                                 local_abspath, scratch_pool));
+  else
+    *keep_local = FALSE;
+
+  return SVN_NO_ERROR;
+}

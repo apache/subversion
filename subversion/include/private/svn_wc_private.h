@@ -702,6 +702,14 @@ svn_wc__temp_mark_missing_not_present(const char *local_abspath,
                                       svn_wc_context_t *wc_ctx,
                                       apr_pool_t *scratch_pool);
 
+/* Return the @a *keep_local flag for local_abspath. (This flag will
+   go away once we have a consolidated administrative area) */
+svn_error_t *
+svn_wc__db_temp_get_keep_local(svn_boolean_t *keep_local,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
