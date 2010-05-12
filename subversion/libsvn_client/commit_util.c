@@ -388,6 +388,8 @@ harvest_committables(apr_hash_t *committables,
   svn_boolean_t is_special;
   svn_boolean_t is_file_external;
   svn_boolean_t is_added;
+  const char *node_copyfrom_url;
+  svn_revnum_t node_copyfrom_rev;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -562,8 +564,6 @@ harvest_committables(apr_hash_t *committables,
   if (is_added)
     {
       svn_boolean_t is_copy_target;
-      const char *node_copyfrom_url;
-      svn_revnum_t node_copyfrom_rev;
 
       SVN_ERR(svn_wc__node_get_copyfrom_info(&node_copyfrom_url,
                                              &node_copyfrom_rev,
@@ -586,8 +586,9 @@ harvest_committables(apr_hash_t *committables,
       else
         {
           /* ### svn_wc__node_get_copyfrom_info has pre-wc-ng
-             behaviour for is_copy_target.  That's wrong in this case
-             so lets fix it. */
+             behaviour for is_copy_target.  In this case we really
+             want all the copy targets, even those where just the
+             copfrom revision is different. */
           const char *parent_copyfrom_url;
           svn_revnum_t parent_copyfrom_rev;
           const char *parent_abspath = svn_dirent_dirname(local_abspath,
@@ -608,54 +609,45 @@ harvest_committables(apr_hash_t *committables,
             }
         }
     }
+  else
+    {
+      node_copyfrom_url = NULL;
+      node_copyfrom_rev = SVN_INVALID_REVNUM;
+    }
 
   SVN_ERR(svn_wc__node_get_base_rev(&entry_rev, ctx->wc_ctx, local_abspath,
                                     scratch_pool));
 
-  /* Check for the copied-subtree addition case.  */
-  if ((entry->copied || copy_mode)
-      && (! entry->deleted)
-      && (entry->schedule == svn_wc_schedule_normal)
-      && (entry_rev != SVN_INVALID_REVNUM))
+  /* Further additions occur in copy mode. */
+  if (copy_mode && !(state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
-      svn_revnum_t p_rev = entry_rev - 1; /* arbitrary non-equal value */
-      svn_boolean_t wc_root = FALSE;
+      svn_revnum_t p_rev;
 
-      /* If this is not a WC root then its parent's revision is
-         admissible for comparative purposes. */
-      SVN_ERR(svn_wc_is_wc_root2(&wc_root, ctx->wc_ctx, local_abspath,
-                                 scratch_pool));
-      if (! wc_root)
-        {
-          if (parent_entry)
-            SVN_ERR(svn_wc__node_get_base_rev(&p_rev, ctx->wc_ctx,
-                                              svn_dirent_dirname(local_abspath,
-                                                                 scratch_pool),
-                                              scratch_pool));
-        }
-      else if (! copy_mode)
-        return svn_error_createf
-          (SVN_ERR_WC_CORRUPT, NULL,
-           _("Did not expect '%s' to be a working copy root"),
-           svn_dirent_local_style(local_abspath, scratch_pool));
+      if (parent_entry)
+        SVN_ERR(svn_wc__node_get_base_rev(&p_rev, ctx->wc_ctx,
+                                          svn_dirent_dirname(local_abspath,
+                                                             scratch_pool),
+                                          scratch_pool));
 
-      /* If the ENTRY's revision differs from that of its parent, we
-         have to explicitly commit ENTRY as a copy. */
-      if (entry_rev != p_rev)
+      if (!parent_entry || entry_rev != p_rev)
         {
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
-          state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
-          adds_only = FALSE;
-          cf_rev = entry_rev;
-          if (copy_mode)
-            cf_url = entry_url;
-          else if (copyfrom_url)
-            cf_url = copyfrom_url;
-          else /* ### See issue #830 */
-            return svn_error_createf
-              (SVN_ERR_BAD_URL, NULL,
-               _("Commit item '%s' has copy flag but no copyfrom URL"),
-               svn_dirent_local_style(local_abspath, scratch_pool));
+          if (node_copyfrom_url)
+            {
+              state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
+              cf_url = node_copyfrom_url;
+              cf_rev = node_copyfrom_rev;
+              adds_only = FALSE;
+            }
+          else if (entry_rev != SVN_INVALID_REVNUM)
+            {
+              state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
+              cf_url = entry_url;
+              cf_rev = entry_rev;
+              adds_only = FALSE;
+            }
+          else
+            adds_only = TRUE;
         }
     }
 
