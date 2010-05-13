@@ -1328,6 +1328,12 @@ delete_entry(const char *path,
     {
       svn_error_clear(err);
 
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+      /* An error has been registered on the connection. Reset the thing
+         so that we can use it again.  */
+      serf_connection_reset(handler->conn->conn);
+#endif
+
       handler->body_delegate = create_delete_body;
       handler->body_delegate_baton = delete_ctx;
       handler->body_type = "text/xml";
@@ -2026,6 +2032,12 @@ abort_edit(void *edit_baton,
      trying to delete it. */
   if (! (ctx->activity_url || ctx->txn_url))
     return SVN_NO_ERROR;
+
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+  /* An error occurred on conns[0]. serf 0.4.0 remembers that the connection
+     had a problem. We need to reset it, in order to use it again.  */
+  serf_connection_reset(ctx->session->conns[0]->conn);
+#endif
 
   /* DELETE our aborted activity */
   handler = apr_pcalloc(pool, sizeof(*handler));
