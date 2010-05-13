@@ -3290,8 +3290,8 @@ absent_directory(const char *path,
 
 
 /* Beginning at DIR_ABSPATH (from repository with uuid DIR_REPOS_UUID and
-   with repos_relpath dir_repos_relpath) within a working copy, search the
-   working copy for an pre-existing versioned file which is exactly equal
+   with repos_relpath DIR_REPOS_RELPATH) within a working copy, search the
+   working copy for a pre-existing versioned file which is exactly equal
    to COPYFROM_PATH@COPYFROM_REV.
 
    If the file isn't found, set *RETURN_ABSPATH to NULL.
@@ -3316,7 +3316,7 @@ locate_copyfrom(svn_wc__db_t *db,
                 apr_pool_t *scratch_pool)
 {
   const char *ancestor_abspath, *ancestor_relpath;
-  const char *copyfrom_relpath, *copyfrom_dir, *copyfrom_basename;
+  const char *copyfrom_relpath;
   apr_size_t levels_up;
   const char *file_abspath;
   svn_error_t *err;
@@ -3331,8 +3331,6 @@ locate_copyfrom(svn_wc__db_t *db,
   *return_abspath = NULL;
 
   copyfrom_relpath = copyfrom_path+1; /* Skip the initial '/' */
-  svn_relpath_split(copyfrom_relpath, &copyfrom_dir, &copyfrom_basename,
-                    scratch_pool);
 
   /* Subtract the dest_dir's URL from the repository "root" URL to get
      the absolute FS path represented by dest_dir. */
@@ -3450,8 +3448,8 @@ locate_copyfrom(svn_wc__db_t *db,
 
     SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &wc_rev, NULL, NULL, NULL,
                                      &change_rev, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, db, file_abspath,
-                                 scratch_pool, scratch_pool));
+                                     NULL, NULL, NULL, db, file_abspath,
+                                     scratch_pool, scratch_pool));
 
     if (!SVN_IS_VALID_REVNUM(wc_rev) || !SVN_IS_VALID_REVNUM(change_rev))
       return SVN_NO_ERROR;
