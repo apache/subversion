@@ -3738,6 +3738,11 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
   flush_entries(pdh);
 
   /* Check if we should remove it from the parent db instead */
+  /* (In theory, we should remove it from the parent db *as well*.  However,
+     we must be looking at a separate per-directory database, and deleting
+     the "this-dir" entry implies the caller is about to delete this whole
+     directory including the database from disk, so we don't bother deleting
+     the rows from here as well.) */
   if (*local_relpath == '\0')
     {
       SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
@@ -3774,8 +3779,6 @@ svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
 {
   svn_wc__db_pdh_t *pdh;
   svn_sqlite__stmt_t *stmt;
-  svn_sqlite__db_t *sdb;
-  apr_int64_t wc_id;
   const char *local_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -3787,7 +3790,12 @@ svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
 
   flush_entries(pdh);
 
-  /* Check if we should remove it from the parent db instead */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_DELETE_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* Check if we should remove it from the parent db as well. */
   if (*local_relpath == '\0')
     {
       SVN_ERR(navigate_to_parent(&pdh, db, pdh, svn_sqlite__mode_readwrite,
@@ -3797,14 +3805,12 @@ svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
       local_relpath = svn_dirent_basename(local_abspath, NULL);
 
       flush_entries(pdh);
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                        STMT_DELETE_WORKING_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
     }
-
-  sdb = pdh->wcroot->sdb;
-  wc_id = pdh->wcroot->wc_id;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
 }
