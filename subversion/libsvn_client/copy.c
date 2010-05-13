@@ -1425,10 +1425,9 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 {
   svn_revnum_t src_revnum = pair->src_revnum;
   apr_hash_t *src_mergeinfo;
-  const char *dst_abspath;
+  const char *dst_abspath = pair->dst_abspath_or_url;
 
-  SVN_ERR(svn_dirent_get_absolute(&dst_abspath, pair->dst_abspath_or_url,
-                                  pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
 
   if (pair->src_kind == svn_node_dir)
     {
