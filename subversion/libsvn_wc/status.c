@@ -284,6 +284,7 @@ assemble_status(svn_wc_status3_t **status,
   svn_wc_status3_t *stat;
   svn_wc__db_status_t db_status;
   svn_wc__db_kind_t db_kind;
+  const char *url;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
   const svn_wc_conflict_description2_t *tree_conflict;
@@ -320,25 +321,22 @@ assemble_status(svn_wc_status3_t **status,
                                &lock, db, local_abspath, result_pool,
                                scratch_pool));
 
+  SVN_ERR(svn_wc__internal_node_get_url(&url, db, local_abspath,
+                                        result_pool, scratch_pool));
+
   /** File externals are switched files, but they are not shown as
       such.  To be switched it must have both an URL and a parent with
-      an URL, at the very least.  If this is the root folder on the
-      (virtual) disk, entry and parent_entry will be equal. */
+      an URL, at the very least. */
   if (entry->file_external_path)
     {
       file_external_p = TRUE;
     }
-  else if (entry->url && parent_entry && parent_entry->url &&
-           entry != parent_entry)
+  else
     {
-      /* An item is switched if:
-         parent-url + basename(path) != entry->url  */
-      switched_p = (strcmp(
-                     svn_uri_join(parent_entry->url,
-                          svn_path_uri_encode(svn_dirent_basename(
-                                                local_abspath, NULL),
-                                              scratch_pool),
-                          scratch_pool), entry->url) != 0);
+      svn_boolean_t is_wc_root; /* Not used. */
+
+      SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, &switched_p, db,
+                                    local_abspath, scratch_pool));
     }
 
   /* Examine whether our directory metadata is present, and compensate
@@ -603,7 +601,7 @@ assemble_status(svn_wc_status3_t **status,
   stat->file_external = file_external_p;
   stat->copied = entry->copied;
   stat->repos_lock = repos_lock;
-  stat->url = (entry->url ? entry->url : NULL);
+  stat->url = url;
   stat->revision = revision;
   stat->changed_rev = changed_rev;
   stat->changed_author = changed_author;
