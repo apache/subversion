@@ -389,7 +389,7 @@ svn_client_uuid_from_path2(const char **uuid,
 {
   return svn_error_return(
     svn_wc__node_get_repos_info(NULL, uuid, ctx->wc_ctx, local_abspath,
-                                FALSE, FALSE, result_pool, scratch_pool));
+                                TRUE, TRUE, result_pool, scratch_pool));
 }
 
 
