@@ -187,9 +187,8 @@ enable_sasl = False
 use_jsvn = False
 
 # Global variable indicating which DAV library to use if both are available
-# ('neon', 'serf'). The default is neon for backward compatibility of the
-# test suite.
-preferred_http_library = 'neon'
+# ('neon', 'serf').
+preferred_http_library = 'serf'
 
 # Global variable: Number of shards to use in FSFS
 # 'None' means "use FSFS's default"
