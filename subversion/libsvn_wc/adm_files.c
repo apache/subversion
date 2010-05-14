@@ -212,17 +212,15 @@ svn_error_t *
 svn_wc__text_base_path(const char **result_abspath,
                        svn_wc__db_t *db,
                        const char *local_abspath,
-                       svn_boolean_t tmp,
                        apr_pool_t *pool)
 {
   const char *newpath, *base_name;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(! tmp);
 
   svn_dirent_split(local_abspath, &newpath, &base_name, pool);
   *result_abspath = simple_extend(newpath,
-                                  tmp,
+                                  FALSE,
                                   SVN_WC__ADM_TEXT_BASE,
                                   base_name,
                                   SVN_WC__BASE_EXT,
@@ -292,7 +290,7 @@ svn_wc__get_pristine_base_contents(svn_stream_t **contents,
       svn_error_clear(err);
 
       /* There's no "revert base", so open the "normal base". */
-      SVN_ERR(svn_wc__text_base_path(&revert_base, db, local_abspath, FALSE,
+      SVN_ERR(svn_wc__text_base_path(&revert_base, db, local_abspath,
                                      scratch_pool));
       err = svn_stream_open_readonly(contents, revert_base,
                                      result_pool, scratch_pool);

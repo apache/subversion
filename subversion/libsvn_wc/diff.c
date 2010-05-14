@@ -567,8 +567,7 @@ file_diff(struct dir_baton *db,
   {
     svn_node_kind_t kind;
 
-    SVN_ERR(svn_wc__text_base_path(&textbase, eb->db, local_abspath, FALSE,
-                                   pool));
+    SVN_ERR(svn_wc__text_base_path(&textbase, eb->db, local_abspath, pool));
     SVN_ERR(svn_io_check_path(textbase, &kind, pool));
     if (kind == svn_node_none)
       SVN_ERR(svn_wc__text_revert_path(&textbase, eb->db, local_abspath,
@@ -978,8 +977,7 @@ report_wc_file_as_added(struct dir_baton *db,
 
 
   if (eb->use_text_base)
-    SVN_ERR(svn_wc__text_base_path(&source_file, eb->db, local_abspath, FALSE,
-                                   pool));
+    SVN_ERR(svn_wc__text_base_path(&source_file, eb->db, local_abspath, pool));
   else
     source_file = path;
 
@@ -1208,7 +1206,7 @@ delete_entry(const char *path,
           const char *base_mimetype;
 
           SVN_ERR(svn_wc__text_base_path(&textbase, eb->db, local_abspath,
-                                         FALSE, pool));
+                                         pool));
 
           SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
                                              pool, pool));
@@ -1578,7 +1576,7 @@ close_file(void *file_baton,
   temp_file_path = fb->temp_file_path;
   if (!temp_file_path)
     SVN_ERR(svn_wc__text_base_path(&temp_file_path, eb->db, fb->local_abspath,
-                                   FALSE, fb->pool));
+                                   fb->pool));
 
   /* If the file isn't in the working copy (either because it was added
      in the BASE->repos diff or because we're diffing against WORKING
@@ -1642,7 +1640,7 @@ close_file(void *file_baton,
     {
       if (eb->use_text_base)
         SVN_ERR(svn_wc__text_base_path(&localfile, eb->db, fb->local_abspath,
-                                       FALSE, fb->pool));
+                                       fb->pool));
       else
         /* a detranslated version of the working file */
         SVN_ERR(svn_wc__internal_translated_file(
