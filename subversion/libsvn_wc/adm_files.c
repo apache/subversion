@@ -275,6 +275,36 @@ svn_wc__get_pristine_base_contents(svn_stream_t **contents,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool)
 {
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+  svn_wc__db_kind_t kind;
+  svn_wc__db_status_t status;
+  const svn_checksum_t *checksum;
+
+  SVN_ERR(svn_wc__db_base_get_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, &checksum,
+                                   NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
+  if (checksum && checksum->kind != svn_checksum_sha1)
+    SVN_ERR(svn_wc__db_pristine_get_sha1(&checksum, db, local_abspath,
+                                         checksum,
+                                         scratch_pool, scratch_pool));
+  if (kind != svn_wc__db_kind_file)
+    return svn_error_createf
+      (SVN_ERR_WC_NOT_FILE, NULL,
+       _("base node of '%s' is not a file"),
+       svn_dirent_local_style(local_abspath, scratch_pool));
+  if (status != svn_wc__db_status_normal)
+    {
+      SVN_ERR_ASSERT(checksum == NULL);
+      *contents = NULL;
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR_ASSERT(checksum != NULL);
+  SVN_ERR(svn_wc__db_pristine_read(contents, db, local_abspath,
+                                   checksum, result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+#else
   const char *revert_base;
   svn_error_t *err;
 
@@ -296,6 +326,7 @@ svn_wc__get_pristine_base_contents(svn_stream_t **contents,
                                      result_pool, scratch_pool);
     }
   return err;
+#endif
 }
 
 
