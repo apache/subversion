@@ -201,7 +201,13 @@ def pre_obliterate_hook(sbox):
 # Run the tests
 
 def supports_obliterate():
-  return svntest.main.is_ra_type_file() and not svntest.main.is_fs_type_fsfs()
+  if svntest.main.is_ra_type_file() and not svntest.main.is_fs_type_fsfs():
+    code, output, error = svntest.main.run_svn(None, "help")
+    for line in output:
+      if line.find("obliterate") != -1:
+        return True
+  return False
+    
 
 # list all tests here, starting with None:
 test_list = [ None,
