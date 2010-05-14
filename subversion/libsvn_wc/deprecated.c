@@ -3813,7 +3813,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
    Keeping this name is sufficient for the 1.6 libsvn_client to link
    against the 1.7 libraries.  This is only needed for pre-release
    testing, it's not needed when all the Subversion libraries are
-   upgraded together together. */
+   upgraded together. */
 svn_error_t *
 svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
                                  const char *path,
