@@ -61,14 +61,23 @@ svn_wc__sync_text_base(const char *local_abspath,
                        apr_pool_t *pool);
 
 
-/* Set *RESULT_ABSPATH to the absolute path to LOCAL_ABSPATH's text-base file,
-   or, if TMP is set, to its temporary text-base file. */
+/* Set *RESULT_ABSPATH to the absolute path to where LOCAL_ABSPATH's
+   text-base file is or should be created.  The file does not necessarily
+   exist.  TMP must be FALSE. */
 svn_error_t *
 svn_wc__text_base_path(const char **result_abspath,
                        svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t tmp,
                        apr_pool_t *pool);
+
+/* Set *RESULT_ABSPATH to the deterministic absolute path to where
+   LOCAL_ABSPATH's temporary text-base file is or should be created. */
+svn_error_t *
+svn_wc__text_base_deterministic_tmp_path(const char **result_abspath,
+                                         svn_wc__db_t *db,
+                                         const char *local_abspath,
+                                         apr_pool_t *pool);
 
 /* Set *CONTENTS to a readonly stream on the pristine text of the working
  * version of the file LOCAL_ABSPATH in DB.  If the file is locally copied
@@ -139,7 +148,8 @@ svn_error_t *svn_wc__open_adm_stream(svn_stream_t **stream,
    associated with the versioned file LOCAL_ABSPATH in DB.  Set *STREAM to
    the opened stream and *TEMP_BASE_ABSPATH to the path to the temporary
    file.  The temporary file will have an arbitrary unique name, in contrast
-   to the deterministic name that svn_wc__text_base_path(tmp=TRUE) returns.
+   to the deterministic name that svn_wc__text_base_deterministic_tmp_path()
+   returns.
 
    Arrange that, on stream closure, *MD5_CHECKSUM and *SHA1_CHECKSUM will be
    set to the MD-5 and SHA-1 checksums respectively of that file.

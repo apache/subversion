@@ -457,8 +457,9 @@ process_committed_leaf(svn_wc__db_t *db,
   {
     svn_node_kind_t new_base_kind;
 
-    SVN_ERR(svn_wc__text_base_path(&tmp_text_base_abspath, db, local_abspath,
-                                   TRUE, scratch_pool));
+    SVN_ERR(svn_wc__text_base_deterministic_tmp_path(&tmp_text_base_abspath,
+                                                     db, local_abspath,
+                                                     scratch_pool));
     SVN_ERR(svn_io_check_path(tmp_text_base_abspath, &new_base_kind,
                               scratch_pool));
     if (new_base_kind != svn_node_file)
