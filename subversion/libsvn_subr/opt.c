@@ -1065,6 +1065,23 @@ svn_opt_print_help3(apr_getopt_t *os,
   return SVN_NO_ERROR;
 }
 
+/* svn_opt__eat_peg_revisions was added to the 1.6 branch and, despite
+   its double underscore name, it is called from the application
+   layer.  So to remain ABI compatibilty with 1.6 the name must
+   continue to exist.  Adding this name is sufficient for the 1.6
+   client to link against the 1.7 libraries. */
+svn_error_t *
+svn_opt__eat_peg_revisions(apr_array_header_t **true_targets_p,
+                           const apr_array_header_t *targets,
+                           apr_pool_t *pool);
+svn_error_t *
+svn_opt__eat_peg_revisions(apr_array_header_t **true_targets_p,
+                           const apr_array_header_t *targets,
+                           apr_pool_t *pool)
+{
+  return svn_opt_eat_peg_revisions(true_targets_p, targets, pool);
+}
+
 svn_error_t *
 svn_opt_eat_peg_revisions(apr_array_header_t **true_targets_p,
                           const apr_array_header_t *targets,
