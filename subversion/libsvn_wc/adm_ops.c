@@ -2274,8 +2274,7 @@ svn_wc_get_pristine_copy_path(const char *path,
                           TRUE, TRUE, pool, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc__text_base_path(pristine_path, db, local_abspath,
-                                 FALSE, pool));
+  SVN_ERR(svn_wc__text_base_path(pristine_path, db, local_abspath, pool));
 
   return svn_error_return(svn_wc__db_close(db));
 }
@@ -2364,7 +2363,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
     const char *text_base;
     svn_error_t *err;
 
-    SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
+    SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath,
                                    scratch_pool));
     SVN_ERR_ASSERT(text_base != NULL);
 
@@ -2457,7 +2456,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
         }
 
       SVN_ERR(svn_wc__text_base_path(&text_base_file, db, local_abspath,
-                                     FALSE, scratch_pool));
+                                     scratch_pool));
 
       /* Remove prop/NAME, prop-base/NAME.svn-base. */
       SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,

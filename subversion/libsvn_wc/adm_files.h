@@ -63,12 +63,11 @@ svn_wc__sync_text_base(const char *local_abspath,
 
 /* Set *RESULT_ABSPATH to the absolute path to where LOCAL_ABSPATH's
    text-base file is or should be created.  The file does not necessarily
-   exist.  TMP must be FALSE. */
+   exist. */
 svn_error_t *
 svn_wc__text_base_path(const char **result_abspath,
                        svn_wc__db_t *db,
                        const char *local_abspath,
-                       svn_boolean_t tmp,
                        apr_pool_t *pool);
 
 /* Set *RESULT_ABSPATH to the deterministic absolute path to where

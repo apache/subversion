@@ -298,7 +298,7 @@ run_revert(svn_wc__db_t *db,
           SVN_ERR(svn_wc__text_revert_path(&revert_base_path, db,
                                            local_abspath, scratch_pool));
           SVN_ERR(svn_wc__text_base_path(&text_base_path, db, local_abspath,
-                                         FALSE, scratch_pool));
+                                         scratch_pool));
           SVN_ERR(move_if_present(revert_base_path, text_base_path,
                                   scratch_pool));
 
@@ -487,7 +487,7 @@ verify_pristine_present(svn_wc__db_t *db,
   svn_node_kind_t check_kind;
 
   /* Verify that one of the two text bases are present.  */
-  SVN_ERR(svn_wc__text_base_path(&base_abspath, db, local_abspath, FALSE,
+  SVN_ERR(svn_wc__text_base_path(&base_abspath, db, local_abspath,
                                  scratch_pool));
   SVN_ERR(svn_io_check_path(base_abspath, &check_kind, scratch_pool));
   if (check_kind == svn_node_file)
@@ -658,7 +658,7 @@ run_prepare_revert_files(svn_wc__db_t *db,
       const char *text_base;
       const char *text_revert;
 
-      SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath, FALSE,
+      SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath,
                                      scratch_pool));
       SVN_ERR(svn_wc__text_revert_path(&text_revert, db, local_abspath,
                                        scratch_pool));
@@ -1413,8 +1413,8 @@ log_do_committed(svn_wc__db_t *db,
           /* If the working file was overwritten (due to re-translation)
              or touched (due to +x / -x), then use *that* textual
              timestamp instead. */
-          SVN_ERR(svn_wc__text_base_path(&base_abspath, db,
-                                         local_abspath, FALSE, pool));
+          SVN_ERR(svn_wc__text_base_path(&base_abspath, db, local_abspath,
+                                         pool));
           SVN_ERR(svn_io_stat(&basef_finfo, base_abspath,
                               APR_FINFO_MIN | APR_FINFO_LINK,
                               pool));
@@ -1768,7 +1768,7 @@ run_delete(svn_wc__db_t *db,
           const char *text_base, *text_revert;
 
           SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath,
-                                         FALSE, scratch_pool));
+                                         scratch_pool));
           SVN_ERR(svn_wc__text_revert_path(&text_revert, db,
                                            local_abspath, scratch_pool));
           SVN_ERR(move_if_present(text_revert, text_base, scratch_pool));

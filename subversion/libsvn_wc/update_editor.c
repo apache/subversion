@@ -4045,7 +4045,7 @@ get_pristine_base_path(const char **old_text_base_abspath,
                                      db, local_abspath, result_pool));
   else
     SVN_ERR(svn_wc__text_base_path(old_text_base_abspath,
-                                   db, local_abspath, FALSE, result_pool));
+                                   db, local_abspath, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -6034,7 +6034,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       /* Write out log commands to set up the new text base and its checksum.
          (Install it as the normal text base, not the 'revert base'.) */
       SVN_ERR(svn_wc__text_base_path(&text_base_abspath, db, local_abspath,
-                                     FALSE, pool));
+                                     pool));
       SVN_ERR(svn_wc__loggy_move(&work_item, db, dir_abspath,
                                  tmp_text_base_abspath, text_base_abspath,
                                  pool));
