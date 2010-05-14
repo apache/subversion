@@ -3828,16 +3828,13 @@ fold_change(apr_hash_t *changes,
 {
   apr_pool_t *pool = apr_hash_pool_get(changes);
   svn_fs_path_change2_t *old_change, *new_change;
-  const char *path = NULL;
+  const char *path;
 
   if ((old_change = apr_hash_get(changes, change->path, APR_HASH_KEY_STRING)))
     {
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
 
-      /* Since the path already exists in the hash, we don't have to
-         dup the allocation for the path itself. */
-      path = change->path;
       /* Sanity check:  only allow NULL node revision ID in the
          `reset' case. */
       if ((! change->noderev_id) && (change->kind != svn_fs_path_change_reset))
@@ -3960,13 +3957,18 @@ fold_change(apr_hash_t *changes,
           new_change->copyfrom_rev = SVN_INVALID_REVNUM;
           new_change->copyfrom_path = NULL;
         }
-      path = apr_pstrdup(pool, change->path);
     }
 
   if (new_change)
     new_change->node_kind = change->node_kind;
 
-  /* Add (or update) this path. */
+  /* Add (or update) this path.
+
+     Note: this key might already be present, and it would be nice to
+     re-use its value, but there is no way to fetch it. The API makes no
+     guarantees that this (new) key will not be retained. Thus, we (again)
+     copy the key into the target pool to ensure a proper lifetime.  */
+  path = apr_pstrdup(pool, change->path);
   apr_hash_set(changes, path, APR_HASH_KEY_STRING, new_change);
 
   /* Update the copyfrom cache, if any. */
