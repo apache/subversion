@@ -1,5 +1,5 @@
 /*
- * version.c: mod_dav_svn versioning provider functions for Subversion
+ * dated-rev.c: mod_dav_svn REPORT handler for mapping a date to a revision
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

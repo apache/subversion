@@ -1,5 +1,6 @@
 /*
- * file_revs.c: handle the file-revs-report request and response
+ * file-revs.c: mod_dav_svn REPORT handler for transmitting a chain of
+ *              file revisions
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

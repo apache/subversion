@@ -1,5 +1,5 @@
 /*
- * update.c: handle the update-report request and response
+ * update.c: mod_dav_svn REPORT handler for transmitting tree deltas
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

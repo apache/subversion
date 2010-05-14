@@ -1,5 +1,6 @@
 /*
- * get-locations.c:  generate the 'get locations' report response.
+ * get-locations.c: mod_dav_svn REPORT handler for finding repos locations
+ *                  (path/revision pairs) in an object's history.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
