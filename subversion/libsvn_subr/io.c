@@ -786,6 +786,23 @@ svn_io_copy_file(const char *src,
   return svn_error_return(svn_io_file_rename(dst_tmp, dst, pool));
 }
 
+/* Wrapper for apr_file_perms_set(). */
+svn_error_t *
+file_perms_set(const char *fname, apr_fileperms_t perms,
+               apr_pool_t *pool)
+{
+  const char *fname_apr;
+  apr_status_t status;
+
+  SVN_ERR(cstring_from_utf8(&fname_apr, fname, pool));
+
+  status = apr_file_perms_set(fname_apr, perms);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't set permissions on '%s'"),
+                              fname);
+  else
+    return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_io_copy_perms(const char *src,
@@ -815,7 +832,7 @@ svn_io_copy_perms(const char *src,
     SVN_ERR(svn_io_file_open(&src_file, src, APR_READ, APR_OS_DEFAULT, pool));
     SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, src_file, pool));
     SVN_ERR(svn_io_file_close(src_file, pool));
-    err = svn_io_file_perms_set(dst, finfo.protection, pool);
+    err = file_perms_set(dst, finfo.protection, pool);
     if (err)
       {
         /* We shouldn't be able to get APR_INCOMPLETE or APR_ENOTIMPL
@@ -1812,27 +1829,6 @@ svn_stringbuf_from_file(svn_stringbuf_t **result,
   return svn_stringbuf_from_file2(result, filename, pool);
 }
 
-
-/* Get the name of FILE, or NULL if FILE is an unnamed stream. */
-static svn_error_t *
-file_name_get(const char **fname_utf8, apr_file_t *file, apr_pool_t *pool)
-{
-  apr_status_t apr_err;
-  const char *fname;
-
-  apr_err = apr_file_name_get(&fname, file);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't get file name"));
-
-  if (fname)
-    SVN_ERR(svn_path_cstring_to_utf8(fname_utf8, fname, pool));
-  else
-    *fname_utf8 = NULL;
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
                            apr_file_t *file,
@@ -2717,7 +2713,7 @@ do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
   if (! status)
     return SVN_NO_ERROR;
 
-  err = file_name_get(&name, file, pool);
+  err = svn_io_file_name_get(&name, file, pool);
   if (err)
     name = NULL;
   svn_error_clear(err);
@@ -2904,7 +2900,7 @@ svn_io_read_length_line(apr_file_t *file, char *buf, apr_size_t *limit,
         }
     }
 
-  err = file_name_get(&name, file, pool);
+  err = svn_io_file_name_get(&name, file, pool);
   if (err)
     name = NULL;
   svn_error_clear(err);
@@ -3530,9 +3526,9 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
 }
 
 /* Wrapper for apr_file_mktemp(). */
-svn_error_t *
-svn_io_file_mktemp(apr_file_t **new_file, const char *templ,
-                  apr_int32_t flags, apr_pool_t *pool)
+static svn_error_t *
+file_mktemp(apr_file_t **new_file, const char *templ,
+            apr_int32_t flags, apr_pool_t *pool)
 {
   const char *templ_apr;
   apr_status_t status;
@@ -3567,26 +3563,14 @@ svn_io_file_name_get(const char **filename,
   if (status)
     return svn_error_wrap_apr(status, _("Can't get file name"));
 
-  return svn_error_return(cstring_to_utf8(filename, fname_apr, pool));
-}
-
-/* Wrapper for apr_file_perms_set(). */
-svn_error_t *
-svn_io_file_perms_set(const char *fname, apr_fileperms_t perms,
-                      apr_pool_t *pool)
-{
-  const char *fname_apr;
-  apr_status_t status;
-
-  SVN_ERR(cstring_from_utf8(&fname_apr, fname, pool));
-
-  status = apr_file_perms_set(fname_apr, perms);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't set permissions on '%s'"),
-                              fname);
+  if (fname_apr)
+    SVN_ERR(svn_path_cstring_to_utf8(filename, fname_apr, pool));
   else
-    return SVN_NO_ERROR;
+    *filename = NULL;
+
+  return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_io_open_unique_file3(apr_file_t **file,
@@ -3641,11 +3625,11 @@ svn_io_open_unique_file3(apr_file_t **file,
         break;
     }
 
-  SVN_ERR(svn_io_file_mktemp(&tempfile, path, flags, result_pool));
+  SVN_ERR(file_mktemp(&tempfile, path, flags, result_pool));
   SVN_ERR(svn_io_file_name_get(&tempname, tempfile, scratch_pool));
 
 #ifndef WIN32
-  /* ### svn_io_file_mktemp() creates files with mode 0600.
+  /* ### file_mktemp() creates files with mode 0600.
    * ### As of r40264, tempfiles created by svn_io_open_unique_file3()
    * ### often end up being copied or renamed into the working copy.
    * ### This will cause working files having mode 0600 while users might
@@ -3655,7 +3639,7 @@ svn_io_open_unique_file3(apr_file_t **file,
    * ### So we tweak perms of the tempfile here, but only if the umask
    * ### allows it. */
   SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
-  SVN_ERR(svn_io_file_perms_set(tempname, perms, scratch_pool));
+  SVN_ERR(file_perms_set(tempname, perms, scratch_pool));
 #endif
 
   if (file)
