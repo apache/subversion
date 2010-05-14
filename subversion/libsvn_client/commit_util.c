@@ -1013,9 +1013,9 @@ svn_client__harvest_committables(apr_hash_t **committables,
 
   for (i = 0; i < targets->nelts; ++i)
     {
-      const svn_wc_entry_t *entry;
       const char *url, *target_abspath;
       svn_boolean_t is_added;
+      svn_node_kind_t kind;
       svn_error_t *err;
 
       svn_pool_clear(iterpool);
@@ -1025,30 +1025,28 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                        APR_ARRAY_IDX(targets, i, const char *),
                                        iterpool);
 
-      /* No entry?  This TARGET isn't even under version control! */
-      err = svn_wc__get_entry_versioned(&entry, ctx->wc_ctx, target_abspath,
-                                        svn_node_unknown,
-                                        FALSE /* show_hidden */,
-                                        FALSE /* need_parent_stub */,
-                                        iterpool, iterpool);
-      /* If a target of the commit is a tree-conflicted node that
-       * has no entry (e.g. locally deleted), issue a proper tree-
-       * conflicts error instead of a "not under version control". */
-      if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
+      SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath,
+                               FALSE, /* show_hidden */
+                               iterpool));
+      if (kind == svn_node_none)
         {
+          /* If a target of the commit is a tree-conflicted node that
+           * has no entry (e.g. locally deleted), issue a proper tree-
+           * conflicts error instead of a "not under version control". */
           const svn_wc_conflict_description2_t *conflict;
           svn_wc__get_tree_conflict(&conflict, ctx->wc_ctx, target_abspath,
                                     pool, iterpool);
           if (conflict != NULL)
-            {
-              svn_error_clear(err);
-              return svn_error_createf(
+            return svn_error_createf(
                        SVN_ERR_WC_FOUND_CONFLICT, NULL,
                        _("Aborting commit: '%s' remains in conflict"),
                        svn_dirent_local_style(conflict->local_abspath, pool));
-            }
+          else
+            return svn_error_createf(
+                       SVN_ERR_ILLEGAL_TARGET, NULL,
+                       _("'%s' is not under version control"),
+                       svn_dirent_local_style(target_abspath, pool));
         }
-      SVN_ERR(err);
 
       SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, target_abspath,
                                    iterpool, iterpool));
@@ -1088,17 +1086,6 @@ svn_client__harvest_committables(apr_hash_t **committables,
                            apr_pstrdup(pool, target_abspath));
             }
         }
-
-      /* If this entry is marked as 'copied' but scheduled normally, then
-         it should be the child of something else marked for addition with
-         history. */
-      if ((entry->copied) && (entry->schedule == svn_wc_schedule_normal))
-        return svn_error_createf
-          (SVN_ERR_ILLEGAL_TARGET, NULL,
-           _("Entry for '%s' is marked as 'copied' but is not itself scheduled"
-             "\nfor addition.  Perhaps you're committing a target that is\n"
-             "inside an unversioned (or not-yet-versioned) directory?"),
-           svn_dirent_local_style(target_abspath, pool));
 
       /* Handle our TARGET. */
       /* Make sure this isn't inside a working copy subtree that is
