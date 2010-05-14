@@ -1455,7 +1455,7 @@ find_dir_url(const struct dir_baton *db, apr_pool_t *pool)
 {
   /* If we have no name, we're the root, return the anchor URL. */
   if (! db->name)
-    return db->edit_baton->anchor_status->entry->url;
+    return db->edit_baton->anchor_status->url;
   else
     {
       const char *url;
@@ -1463,11 +1463,11 @@ find_dir_url(const struct dir_baton *db, apr_pool_t *pool)
       const svn_wc_status3_t *status = apr_hash_get(pb->statii,
                                                     db->local_abspath,
                                                     APR_HASH_KEY_STRING);
-      /* Note that status->entry->url is NULL in the case of a missing
+      /* Note that status->url is NULL in the case of a missing
        * directory, which means we need to recurse up another level to
        * get a useful URL. */
-      if (status && status->entry && status->entry->url)
-        return status->entry->url;
+      if (status)
+        return status->url;
 
       url = find_dir_url(pb, pool);
       if (url)
