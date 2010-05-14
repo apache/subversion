@@ -323,15 +323,13 @@ assemble_status(svn_wc_status3_t **status,
 
   SVN_ERR(svn_wc__internal_node_get_url(&url, db, local_abspath,
                                         result_pool, scratch_pool));
+  SVN_ERR(svn_wc__internal_is_file_external(&file_external_p, db,
+                                            local_abspath, scratch_pool));
 
   /** File externals are switched files, but they are not shown as
       such.  To be switched it must have both an URL and a parent with
       an URL, at the very least. */
-  if (entry->file_external_path)
-    {
-      file_external_p = TRUE;
-    }
-  else
+  if (! file_external_p)
     {
       svn_boolean_t is_wc_root; /* Not used. */
 
