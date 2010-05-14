@@ -101,10 +101,10 @@ svn_wc_set_adm_dir(const char *name, apr_pool_t *pool)
         adm_dir_name = *dir_name;
         return SVN_NO_ERROR;
       }
-  return svn_error_createf
-    (SVN_ERR_BAD_FILENAME, NULL,
-     _("'%s' is not a valid administrative directory name"),
-     svn_dirent_local_style(name, pool));
+  return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
+                           _("'%s' is not a valid administrative "
+                             "directory name"),
+                           svn_dirent_local_style(name, pool));
 }
 
 
@@ -290,10 +290,10 @@ svn_wc__get_pristine_base_contents(svn_stream_t **contents,
                                          checksum,
                                          scratch_pool, scratch_pool));
   if (kind != svn_wc__db_kind_file)
-    return svn_error_createf
-      (SVN_ERR_WC_NOT_FILE, NULL,
-       _("base node of '%s' is not a file"),
-       svn_dirent_local_style(local_abspath, scratch_pool));
+    return svn_error_createf(SVN_ERR_WC_NOT_FILE, NULL,
+                             _("base node of '%s' is not a file"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
   if (status != svn_wc__db_status_normal)
     {
       SVN_ERR_ASSERT(checksum == NULL);
@@ -541,10 +541,10 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
     {
       if (entry->revision != revision)
         return
-          svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("Revision %ld doesn't match existing revision %ld in '%s'"),
-           revision, entry->revision, local_abspath);
+          svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                            _("Revision %ld doesn't match existing "
+                              "revision %ld in '%s'"),
+                            revision, entry->revision, local_abspath);
 
       /* The caller gives us a URL which should match the entry. However,
          some callers compensate for an old problem in entry->url and pass
@@ -559,10 +559,10 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
               || strcmp(entry->uuid, repos_uuid) != 0))
         {
           return
-            svn_error_createf
-            (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-             _("URL '%s' doesn't match existing URL '%s' in '%s'"),
-             url, entry->url, local_abspath);
+            svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                              _("URL '%s' doesn't match existing "
+                                "URL '%s' in '%s'"),
+                              url, entry->url, local_abspath);
         }
     }
 
