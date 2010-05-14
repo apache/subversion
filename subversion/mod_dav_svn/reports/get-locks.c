@@ -1,5 +1,5 @@
 /*
- * version.c: mod_dav_svn versioning provider functions for Subversion
+ * get-locks.c: mod_dav_svn REPORT handler for querying filesystem locks
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

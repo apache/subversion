@@ -1,5 +1,5 @@
 /*
- * replay.c :  routines for replaying revisions
+ * replay.c: mod_dav_svn REPORT handler for replaying revisions
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

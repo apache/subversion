@@ -1,5 +1,5 @@
 /*
- * mergeinfo.c :  routines for getting mergeinfo
+ * mergeinfo.c: mod_dav_svn REPORT handler for querying mergeinfo
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

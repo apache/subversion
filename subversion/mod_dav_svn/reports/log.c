@@ -1,5 +1,5 @@
 /*
- * log.c: handle the log-report request and response
+ * log.c: mod_dav_svn REPORT handler for querying revision log info
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
