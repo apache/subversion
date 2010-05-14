@@ -218,6 +218,7 @@ svn_wc__text_base_path(const char **result_abspath,
   const char *newpath, *base_name;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(! tmp);
 
   svn_dirent_split(local_abspath, &newpath, &base_name, pool);
   *result_abspath = simple_extend(newpath,
@@ -226,6 +227,23 @@ svn_wc__text_base_path(const char **result_abspath,
                                   base_name,
                                   SVN_WC__BASE_EXT,
                                   pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__text_base_deterministic_tmp_path(const char **result_abspath,
+                                         svn_wc__db_t *db,
+                                         const char *local_abspath,
+                                         apr_pool_t *pool)
+{
+  const char *newpath, *base_name;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  svn_dirent_split(local_abspath, &newpath, &base_name, pool);
+  *result_abspath = simple_extend(newpath, TRUE, SVN_WC__ADM_TEXT_BASE,
+                                  base_name, SVN_WC__BASE_EXT, pool);
 
   return SVN_NO_ERROR;
 }

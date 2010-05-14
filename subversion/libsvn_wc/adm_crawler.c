@@ -1117,8 +1117,9 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
     {
       svn_stream_t *tempstream;
 
-      SVN_ERR(svn_wc__text_base_path(tempfile, db, local_abspath, TRUE,
-                                     result_pool));
+      SVN_ERR(svn_wc__text_base_deterministic_tmp_path(tempfile,
+                                                       db, local_abspath,
+                                                       result_pool));
 
       /* Make an untranslated copy of the working file in the
          administrative tmp area because a) we need to detranslate eol
