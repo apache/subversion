@@ -105,6 +105,8 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
  * (In WC-1 terminology, this was known as "the revert base" if the node is
  * replaced by a copy, otherwise simply as "the base".)
  *
+ * If the base version of LOCAL_ABSPATH is not present (e.g. because the
+ * file is locally added), set *CONTENTS to NULL.
  * The base version of LOCAL_ABSPATH must be a file. */
 svn_error_t *
 svn_wc__get_pristine_base_contents(svn_stream_t **contents,
