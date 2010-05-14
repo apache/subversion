@@ -3808,3 +3808,41 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
   return SVN_NO_ERROR;
 }
 
+/* This double underscore name is used by the 1.6 libsvn_client.
+   Keeping this name is sufficient for the 1.6 libsvn_client to link
+   against the 1.7 libraries. */
+svn_error_t *
+svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
+                                 const char *path,
+                                 svn_wc_adm_access_t *adm_access,
+                                 svn_boolean_t show_hidden,
+                                 const char *caller_filename,
+                                 int caller_lineno,
+                                 apr_pool_t *pool);
+svn_error_t *
+svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
+                                 const char *path,
+                                 svn_wc_adm_access_t *adm_access,
+                                 svn_boolean_t show_hidden,
+                                 const char *caller_filename,
+                                 int caller_lineno,
+                                 apr_pool_t *pool)
+{
+  svn_wc_context_t *wc_ctx;
+  const char *local_abspath;
+
+  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__get_entry_versioned(entry, wc_ctx, local_abspath,
+                                      svn_node_unknown, show_hidden,
+                                      FALSE, /* NEED_PARENT_STUB */
+                                      pool, pool));
+
+  SVN_ERR(svn_wc_context_destroy(wc_ctx));
+
+  return SVN_NO_ERROR;
+}
