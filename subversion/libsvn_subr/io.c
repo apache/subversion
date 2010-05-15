@@ -787,7 +787,7 @@ svn_io_copy_file(const char *src,
 }
 
 /* Wrapper for apr_file_perms_set(). */
-svn_error_t *
+static svn_error_t *
 file_perms_set(const char *fname, apr_fileperms_t perms,
                apr_pool_t *pool)
 {
