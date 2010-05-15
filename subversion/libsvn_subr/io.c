@@ -3539,13 +3539,11 @@ file_mktemp(apr_file_t **new_file, const char *directory,
             apr_int32_t flags, apr_pool_t *pool)
 {
 #ifndef WIN32
+  const char *templ = svn_dirent_join(directory, "svn-XXXXXX", pool);
   const char *templ_apr;
   apr_status_t status;
 
-  SVN_ERR(svn_path_cstring_from_utf8(&templ_apr,
-                                     svn_dirent_join(dirpath, "svn-XXXXXX",
-                                                     scratch_pool),
-                                     pool));
+  SVN_ERR(svn_path_cstring_from_utf8(&templ_apr, templ, pool));
 
   /* ### svn_path_cstring_from_utf8() guarantees to make a copy of the
          data available in POOL and we need a non-const pointer here,
