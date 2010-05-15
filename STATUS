@@ -202,7 +202,7 @@ Candidate changes:
    Justification:
      We force users to run using unpatched versions without this patch.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, danielsh
 
 Veto-blocked changes:
 =====================
