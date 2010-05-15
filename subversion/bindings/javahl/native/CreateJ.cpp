@@ -771,7 +771,7 @@ CreateJ::RevisionRangeList(apr_array_header_t *ranges)
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      env->CallObjectMethod(jranges, add_mid, jrange);
+      env->CallBooleanMethod(jranges, add_mid, jrange);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
