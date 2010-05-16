@@ -4749,9 +4749,19 @@ svn_wc__db_read_props(apr_hash_t **props,
     return SVN_NO_ERROR;
 
   /* No local changes. Return the pristine props for this node.  */
-  return svn_error_return(
-      svn_wc__db_read_pristine_props(props, db, local_abspath,
-                                     result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_pristine_props(props, db, local_abspath,
+                                         result_pool, scratch_pool));
+  if (*props == NULL)
+    {
+      /* Pristine properties are not defined for this node.
+         ### we need to determine whether this node is in a state that
+         ### allows for ACTUAL properties (ie. not deleted). for now,
+         ### just say all nodes, no matter the state, have at least an
+         ### empty set of props.  */
+      *props = apr_hash_make(result_pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
