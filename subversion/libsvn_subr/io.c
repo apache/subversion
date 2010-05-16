@@ -3533,35 +3533,41 @@ static volatile apr_uint32_t tempname_counter = 0;
 #endif
 
 /* Creates a new temporary file in DIRECTORY with apr flags FLAGS.
-   Set *NEW_FILE to the file handle */
+   Set *NEW_FILE to the file handle and *NEW_FILE_NAME to its name.
+   Perform temporary allocations in SCRATCH_POOL and the result in
+   RESULT_POOL. */
 static svn_error_t *
-file_mktemp(apr_file_t **new_file, const char *directory,
-            apr_int32_t flags, apr_pool_t *pool)
+temp_file_create(apr_file_t **new_file,
+                 const char **new_file_name,
+                 const char *directory,
+                 apr_int32_t flags,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
 #ifndef WIN32
-  const char *templ = svn_dirent_join(directory, "svn-XXXXXX", pool);
+  const char *templ = svn_dirent_join(directory, "svn-XXXXXX", scratch_pool);
   const char *templ_apr;
   apr_status_t status;
 
-  SVN_ERR(svn_path_cstring_from_utf8(&templ_apr, templ, pool));
+  SVN_ERR(svn_path_cstring_from_utf8(&templ_apr, templ, scratch_pool));
 
   /* ### svn_path_cstring_from_utf8() guarantees to make a copy of the
          data available in POOL and we need a non-const pointer here,
-         as apr changes the template to return the new filename. 
-
-         But we can't provide the filename to our caller as that might need
-         more bytes then there are XXXXs after converting it back to utf-8. */
-  status = apr_file_mktemp(new_file, (char *)templ_apr, flags, pool);
+         as apr changes the template to return the new filename. */
+  status = apr_file_mktemp(new_file, (char *)templ_apr, flags, result_pool);
 
   if (status)
     return svn_error_wrap_apr(status, _("Can't create temporary file from "
                               "template '%s'"), templ);
-  else
-    return SVN_NO_ERROR;
+  
+  /* Translate the returned path back to utf-8 before returning it */
+  return svn_error_return(svn_path_cstring_to_utf8(new_file_name,
+                                                   templ_apr,
+                                                   result_pool));
 #else
   /* The Windows implementation of apr_file_mktemp doesn't handle access
      denied errors correctly. Therefore we implement our own temp file
-     creation function here */
+     creation function here. */
 
   /* ### Most of this is borrowed from the svn_io_open_uniquely_named(),
      ### the function we used before. But we try to guess a more unique
@@ -3573,6 +3579,7 @@ file_mktemp(apr_file_t **new_file, const char *directory,
                + GetCurrentProcessId();
   int i;
 
+  /* ### Maybe use an iterpool? */
   for (i = 0; i <= 99999; i++)
     {
       apr_uint32_t unique_nr;
@@ -3587,13 +3594,13 @@ file_mktemp(apr_file_t **new_file, const char *directory,
          disk io) */
       unique_nr = baseNr + 3 * i;
 
-      unique_name = apr_psprintf(pool, "%s/svn-%X", directory,
+      unique_name = apr_psprintf(scratch_pool, "%s/svn-%X", directory,
                                  unique_nr);
 
-      SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name, pool));
+      SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name, scratch_pool));
 
       apr_err = file_open(&try_file, unique_name_apr, flags,
-                          APR_OS_DEFAULT, FALSE, pool);
+                          APR_OS_DEFAULT, FALSE, scratch_pool);
 
       if (APR_STATUS_IS_EEXIST(apr_err))
           continue;
@@ -3607,7 +3614,7 @@ file_mktemp(apr_file_t **new_file, const char *directory,
             {
               apr_finfo_t finfo;
               apr_status_t apr_err_2 = apr_stat(&finfo, unique_name_apr,
-                                                APR_FINFO_TYPE, pool);
+                                                APR_FINFO_TYPE, scratch_pool);
 
               if (!apr_err_2 && finfo.filetype == APR_DIR)
                 continue;
@@ -3630,11 +3637,20 @@ file_mktemp(apr_file_t **new_file, const char *directory,
             }
 
           return svn_error_wrap_apr(apr_err, _("Can't open '%s'"),
-                                    svn_dirent_local_style(unique_name, pool));
+                                    svn_dirent_local_style(unique_name,
+                                                           scratch_pool));
         }
       else
         {
-          *new_file = try_file;
+          /* Move file to the right pool */
+          apr_err = apr_file_setaside(new_file, try_file, result_pool);
+
+          if (apr_err)
+            return svn_error_wrap_apr(apr_err, _("Can't set aside '%s'"),
+                                      svn_dirent_local_style(unique_name,
+                                                             scratch_pool));
+
+          *new_file_name = apr_pstrdup(result_pool, unique_name);
 
           return SVN_NO_ERROR;
         }
@@ -3643,7 +3659,7 @@ file_mktemp(apr_file_t **new_file, const char *directory,
   return svn_error_createf(SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                            NULL,
                            _("Unable to make name in '%s'"),
-                           svn_dirent_local_style(directory, pool));
+                           svn_dirent_local_style(directory, scratch_pool));
 #endif
 }
 
@@ -3719,8 +3735,8 @@ svn_io_open_unique_file3(apr_file_t **file,
         break;
     }
 
-  SVN_ERR(file_mktemp(&tempfile, dirpath, flags, result_pool));
-  SVN_ERR(svn_io_file_name_get(&tempname, tempfile, scratch_pool));
+  SVN_ERR(temp_file_create(&tempfile, &tempname, dirpath, flags,
+                           result_pool, scratch_pool));
 
 #ifndef WIN32
   /* ### file_mktemp() creates files with mode 0600.
@@ -3742,14 +3758,14 @@ svn_io_open_unique_file3(apr_file_t **file,
     SVN_ERR(svn_io_file_close(tempfile, scratch_pool));
 
   if (unique_path)
-    *unique_path = apr_pstrdup(result_pool, tempname);
+    *unique_path = tempname; /* Was allocated in result_pool */
 
   if (baton)
     {
       if (unique_path)
         baton->name = *unique_path;
       else
-        baton->name = apr_pstrdup(result_pool, tempname);
+        baton->name = tempname; /* Was allocated in result_pool */
     }
 
   return SVN_NO_ERROR;
