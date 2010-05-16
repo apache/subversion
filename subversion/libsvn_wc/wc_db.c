@@ -7373,7 +7373,6 @@ make_copy_txn(void *baton,
   svn_boolean_t add_working_not_present = FALSE;
   const apr_array_header_t *children;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  svn_wc__db_kind_t kind;
   int i;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WORKING_NODE));
@@ -7387,7 +7386,6 @@ make_copy_txn(void *baton,
       svn_wc__db_status_t working_status;
 
       working_status = svn_sqlite__column_token(stmt, 0, presence_map);
-      kind = svn_sqlite__column_token(stmt, 1, kind_map);
       SVN_ERR(svn_sqlite__reset(stmt));
 
       SVN_ERR_ASSERT(working_status == svn_wc__db_status_normal
@@ -7422,7 +7420,6 @@ make_copy_txn(void *baton,
         return svn_error_return(svn_sqlite__reset(stmt));
 
       base_status = svn_sqlite__column_token(stmt, 2, presence_map);
-      kind = svn_sqlite__column_token(stmt, 3, kind_map);
 
       SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -7540,10 +7537,9 @@ make_copy_txn(void *baton,
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
-  /* And now, do the same for the parent stub :( If we kind from the
-     working node could the base node be different?  Not until we move
-     to a single db and then the parent stubs should go away. */
-  if (kind == svn_wc__db_kind_dir)
+#ifndef SINGLE_DB
+  /* ### And now, do the same for the parent stub */
+  if (*mcb->local_relpath == '\0')
     {
       if (remove_working)
         {
@@ -7619,6 +7615,7 @@ make_copy_txn(void *baton,
           SVN_ERR(svn_sqlite__step_done(stmt));
         }
     }
+#endif
 
   /* Remove the BASE_NODE if the caller asked us to do that */
   if (mcb->remove_base)
@@ -7635,8 +7632,9 @@ make_copy_txn(void *baton,
 
       SVN_ERR(svn_sqlite__step_done(stmt));
 
+#ifndef SINGLE_DB
       /* Remove BASE_NODE_STUB */
-      if (kind == svn_wc__db_kind_dir)
+      if (*mcb->local_relpath == '\0')
         {
           SVN_ERR(navigate_to_parent(&pdh, mcb->db, mcb->pdh,
                                      svn_sqlite__mode_readwrite,
@@ -7650,6 +7648,7 @@ make_copy_txn(void *baton,
                                     pdh->wcroot->wc_id, local_relpath));
           SVN_ERR(svn_sqlite__step_done(stmt));
         }
+#endif
     }
 
   svn_pool_destroy(iterpool);
