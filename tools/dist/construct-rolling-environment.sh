@@ -25,21 +25,6 @@ AUTOCONF=autoconf-2.64
 LIBTOOL=libtool-1.5.26
 SWIG=swig-1.3.36
 
-APR=apr-1.3.8
-APR_UTIL=apr-util-1.3.9
-NEON=neon-0.29.0
-SERF=serf-0.3.0
-ZLIB=zlib-1.2.5
-SQLITE_VERSION=3.6.20
-SQLITE=sqlite-amalgamation-$SQLITE_VERSION
-
-HTTPD=httpd-2.2.14
-HTTPD_OOPS=
-APR_ICONV=apr-iconv-1.2.1
-APR_ICONV_OOPS=
-
-WIN32_APR_VIA_HTTPD=1
-
 LOCATION=${LOCATION-US}
 
 usage() {
@@ -50,11 +35,7 @@ Change to a directory in which you would like to create a Subversion
 rolling environment, and run:
   construct-rolling-environment.sh prefix
 to download, build, and install autoconf, libtool, and swig into a prefix
-subdirectory. Run:
-  construct-rolling-environment.sh deps
-to download and extract the various bundled dependencies needed to build
-tarballs and zipfiles into unix-dependencies and win32-dependencies
-subdirectories.
+subdirectory.
 
 Downloaded files and temporary build directories will be located within
 a temp subdirectory.
@@ -120,69 +101,10 @@ create_prefix() {
     cd ..
 }
 
-create_deps() {
-    wget -nc $APACHE_MIRROR/apr/$APR.tar.bz2
-    wget -nc $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
-    if [ -n "$WIN32_APR_VIA_HTTPD" ]; then
-      wget -nc $APACHE_MIRROR/httpd/$HTTPD-win32-src$HTTPD_OOPS.zip
-    else
-      wget -nc $APACHE_MIRROR/apr/$APR-win32-src.zip
-      wget -nc $APACHE_MIRROR/apr/$APR_UTIL-win32-src.zip
-      wget -nc $APACHE_MIRROR/apr/$APR_ICONV-win32-src$APR_ICONV_OOPS.zip
-    fi
-    wget -nc http://webdav.org/neon/$NEON.tar.gz
-    wget -nc http://serf.googlecode.com/files/$SERF.tar.bz2
-    wget -nc http://www.zlib.net/$ZLIB.tar.bz2
-    wget -nc http://www.sqlite.org/$SQLITE.tar.gz
-
-    mkdir $BASEDIR/unix-dependencies
-    cd $BASEDIR/unix-dependencies
-    tar zxvf $TEMPDIR/$NEON.tar.gz
-    tar jxvf $TEMPDIR/$ZLIB.tar.bz2
-    tar jxvf $TEMPDIR/$SERF.tar.bz2
-    tar zxvf $TEMPDIR/$SQLITE.tar.gz
-    mv $NEON neon
-    mv $ZLIB zlib
-    mv $SERF serf
-    mv sqlite-$SQLITE_VERSION sqlite-amalgamation
-    tar jxvf $TEMPDIR/$APR.tar.bz2
-    tar jxvf $TEMPDIR/$APR_UTIL.tar.bz2
-    mv $APR apr
-    mv $APR_UTIL apr-util
-    cd $TEMPDIR
-
-    mkdir $BASEDIR/win32-dependencies
-    cd $BASEDIR/win32-dependencies
-    tar zxvf $TEMPDIR/$NEON.tar.gz
-    tar jxvf $TEMPDIR/$ZLIB.tar.bz2
-    tar jxvf $TEMPDIR/$SERF.tar.bz2
-    tar zxvf $TEMPDIR/$SQLITE.tar.gz
-    mv $NEON neon
-    mv $ZLIB zlib
-    mv $SERF serf
-    mv sqlite-$SQLITE_VERSION sqlite-amalgamation
-    if [ -n "$WIN32_APR_VIA_HTTPD" ]; then
-      unzip $TEMPDIR/$HTTPD-win32-src$HTTPD_OOPS.zip
-      for i in apr apr-util apr-iconv; do
-        mv $HTTPD/srclib/$i .
-      done
-      rm -rf $HTTPD
-    else
-      unzip $TEMPDIR/$APR-win32-src.zip
-      unzip $TEMPDIR/$APR_UTIL-win32-src.zip
-      unzip $TEMPDIR/$APR_ICONV-win32-src$APR_ICONV_OOPS.zip
-      mv $APR apr
-      mv $APR_UTIL apr-util
-      mv $APR_ICONV apr-iconv
-    fi
-    cd $TEMPDIR
-}
-
 if [ "$#" -ne 1 ]; then
     usage
 fi
 case $1 in
     prefix) setup; create_prefix ;;
-    deps) setup; create_deps ;;
     *) usage ;;
 esac
