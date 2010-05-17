@@ -378,6 +378,7 @@ process_committed_leaf(svn_wc__db_t *db,
                                 scratch_pool));
     }
 
+#ifndef USE_DB_PROPS
   /* Queue a removal of any "revert" properties now. These correspond to
      the BASE properties, but hidden by new pristine props in WORKING.
      Regardless, the commit will be installing new BASE props.  */
@@ -399,6 +400,7 @@ process_committed_leaf(svn_wc__db_t *db,
                                          scratch_pool, scratch_pool));
     SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
   }
+#endif
 
   /* ### this picks up file and symlink  */
   if (kind != svn_wc__db_kind_dir)
@@ -1557,6 +1559,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                      &tmp_entry, modify_flags, pool));
     }
 
+#ifndef USE_DB_PROPS
   /* If this is a replacement without history, we need to reset the
      properties for PATH. */
   /* ### this is totally bogus. we clear these cuz turds might have been
@@ -1566,6 +1569,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       && copyfrom_url == NULL)
     SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
                                  pool));
+#endif
 
   if (is_replace)
     {
@@ -2458,11 +2462,13 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
       SVN_ERR(svn_wc__text_base_path(&text_base_file, db, local_abspath,
                                      scratch_pool));
 
+#ifndef USE_DB_PROPS
       /* Remove prop/NAME, prop-base/NAME.svn-base. */
       SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
                                    scratch_pool));
       SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_base,
                                    scratch_pool));
+#endif
 
       /* Remove NAME from PATH's entries file: */
       SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,

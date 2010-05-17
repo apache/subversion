@@ -236,6 +236,7 @@ run_revert(svn_wc__db_t *db,
             db, local_abspath,
             scratch_pool, scratch_pool));
 
+#ifndef USE_DB_PROPS
   /* Move the "revert" props over/on the "base" props.  */
   if (replaced)
     {
@@ -259,11 +260,14 @@ run_revert(svn_wc__db_t *db,
                                                 scratch_pool));
 #endif
     }
+#endif
 
   /* The "working" props contain changes. Nuke 'em from orbit.  */
+#ifndef USE_DB_PROPS
   SVN_ERR(svn_wc__prop_path(&working_props_path, local_abspath,
                             kind, svn_wc__props_working, scratch_pool));
   SVN_ERR(svn_io_remove_file2(working_props_path, TRUE, scratch_pool));
+#endif
 
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, NULL, NULL, NULL,
                                   scratch_pool));
@@ -668,6 +672,7 @@ run_prepare_revert_files(svn_wc__db_t *db,
 
   /* Set up the revert props.  */
 
+#ifndef USE_DB_PROPS
   SVN_ERR(svn_wc__prop_path(&revert_prop_abspath, local_abspath, kind,
                             svn_wc__props_revert, scratch_pool));
   SVN_ERR(svn_wc__prop_path(&base_prop_abspath, local_abspath, kind,
@@ -691,6 +696,7 @@ run_prepare_revert_files(svn_wc__db_t *db,
       SVN_ERR(svn_io_set_file_read_only(revert_prop_abspath, FALSE,
                                         scratch_pool));
     }
+#endif
 
   /* Put some blank properties into the WORKING node.  */
   /* ### this seems bogus. something else should come along and put the
@@ -1755,6 +1761,7 @@ run_delete(svn_wc__db_t *db,
 
   if (was_replaced && was_copied)
     {
+#ifndef USE_DB_PROPS
       const char *props_base, *props_revert;
 
       SVN_ERR(svn_wc__prop_path(&props_base, local_abspath, kind,
@@ -1762,6 +1769,7 @@ run_delete(svn_wc__db_t *db,
       SVN_ERR(svn_wc__prop_path(&props_revert, local_abspath, kind,
                                 svn_wc__props_revert, scratch_pool));
       SVN_ERR(move_if_present(props_revert, props_base, scratch_pool));
+#endif
 
       if (kind != svn_wc__db_kind_dir)
         {
@@ -1774,6 +1782,7 @@ run_delete(svn_wc__db_t *db,
           SVN_ERR(move_if_present(text_revert, text_base, scratch_pool));
         }
     }
+#ifndef USE_DB_PROPS
   if (was_added)
     {
       const char *props_base, *props_working;
@@ -1786,6 +1795,7 @@ run_delete(svn_wc__db_t *db,
       SVN_ERR(svn_io_remove_file2(props_base, TRUE, scratch_pool));
       SVN_ERR(svn_io_remove_file2(props_working, TRUE, scratch_pool));
     }
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -2197,6 +2207,9 @@ svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
                                  apr_hash_t *props,
                                  apr_pool_t *result_pool)
 {
+#ifdef USE_DB_PROPS
+  *work_item = NULL;
+#else
   *work_item = svn_skel__make_empty_list(result_pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(props_abspath));
@@ -2211,6 +2224,7 @@ svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
   svn_skel__prepend_str(apr_pstrdup(result_pool, props_abspath),
                         *work_item, result_pool);
   svn_skel__prepend_str(OP_WRITE_OLD_PROPS, *work_item, result_pool);
+#endif
 
   return SVN_NO_ERROR;
 }
