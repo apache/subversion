@@ -422,6 +422,7 @@ assemble_status(svn_wc_status3_t **status,
       /* ### we could compute this ourself, based on the prop hashes
          ### fetched above. but for now, there is some trickery we may
          ### need to rely upon in ths function. keep it for now.  */
+      /* ### see r944980 as an example of the brittleness of this stuff.  */
       SVN_ERR(svn_wc__props_modified(&prop_modified_p, db, local_abspath,
                                      scratch_pool));
 
