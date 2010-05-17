@@ -6130,6 +6130,17 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
 
 
 svn_error_t *
+svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
+                               apr_hash_t *base_props,
+                               apr_hash_t *revert_props,
+                               apr_hash_t *working_props,
+                               apr_pool_t *scratch_pool)
+{
+  NOT_IMPLEMENTED();
+}
+
+
+svn_error_t *
 svn_wc__db_upgrade_get_repos_id(apr_int64_t *repos_id,
                                 svn_sqlite__db_t *sdb,
                                 const char *repos_root_url,

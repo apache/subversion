@@ -404,6 +404,20 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
                                       scratch_pool),
                     TRUE, scratch_pool));
 
+#if 0  /* ### NOT READY TO WIPE THESE FILES!!  */
+  /* Remove the old properties files... whole directories at a time.  */
+  svn_error_clear(svn_io_remove_dir2(
+                    svn_wc__adm_child(wcroot_abspath,
+                                      PROPS_SUBDIR,
+                                      scratch_pool),
+                    FALSE, NULL, NULL, scratch_pool));
+  svn_error_clear(svn_io_remove_dir2(
+                    svn_wc__adm_child(wcroot_abspath,
+                                      PROP_BASE_SUBDIR,
+                                      scratch_pool),
+                    FALSE, NULL, NULL, scratch_pool));
+#endif
+
   /* Remove the old-style lock file LAST.  */
   svn_error_clear(svn_io_remove_file2(
                     build_lockfile_path(wcroot_abspath, scratch_pool),
@@ -897,6 +911,64 @@ bump_to_16(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
 #if 0 /* ### no props migration yet */
 
+/* Migrate the properties for one node (LOCAL_ABSPATH).  */
+static svn_error_t *
+migrate_node_props(const char *wcroot_abspath,
+                   const char *name,
+                   svn_sqlite__db_t *sdb,
+                   apr_pool_t *scratch_pool)
+{
+  const char *basedir_abspath;
+  const char *propsdir_abspath;
+  const char *base_abspath;  /* old name. nowadays: "pristine"  */
+  const char *revert_abspath;  /* old name. nowadays: "BASE"  */
+  const char *working_abspath;  /* old name. nowadays: "ACTUAL"  */
+  apr_hash_t *base_props;
+  apr_hash_t *revert_props;
+  apr_hash_t *working_props;
+
+  propsdir_abspath = svn_wc__adm_child(wcroot_abspath, PROPS_SUBDIR,
+                                       scratch_pool);
+  basedir_abspath = svn_wc__adm_child(wcroot_abspath, PROP_BASE_SUBDIR,
+                                      scratch_pool);
+
+  /* ### fix all these paths for NAME=="" (the directory)  */
+
+  base_abspath = svn_dirent_join(basedir_abspath,
+                                 apr_pstrcat(scratch_pool,
+                                             name,
+                                             SVN_WC__BASE_EXT,
+                                             NULL);
+                                 scratch_pool);
+
+  revert_abspath = svn_dirent_join(basedir_abspath,
+                                   apr_pstrcat(scratch_pool,
+                                               name,
+                                               SVN_WC__REVERT_EXT,
+                                               NULL);
+                                   scratch_pool);
+
+  working_abspath = svn_dirent_join(propsdir_abspath,
+                                    apr_pstrcat(scratch_pool,
+                                                name,
+                                                SVN_WC__WORK_EXT,
+                                                NULL);
+                                    scratch_pool);
+
+  SVN_ERR(read_propfile(&base_props, base_abspath,
+                        scratch_pool, scratch_pool));
+  SVN_ERR(read_propfile(&revert_props, revert_abspath,
+                        scratch_pool, scratch_pool));
+  SVN_ERR(read_propfile(&working_props, working_abspath,
+                        scratch_pool, scratch_pool));
+
+  return svn_error_return(svn_wc__db_upgrade_apply_props(
+                            sdb,
+                            base_props, revert_props, working_props,
+                            scratch_pool));
+}
+
+
 /* */
 static svn_error_t *
 migrate_props(const char *wcroot_abspath,
@@ -925,8 +997,6 @@ migrate_props(const char *wcroot_abspath,
   */
   const apr_array_header_t *children;
   apr_pool_t *iterpool;
-  const char *props_dirpath;
-  const char *props_base_dirpath;
   svn_wc__db_t *db;
   int i;
 
@@ -941,93 +1011,15 @@ migrate_props(const char *wcroot_abspath,
   SVN_ERR(svn_wc__db_read_children(&children, db, wcroot_abspath,
                                    scratch_pool, scratch_pool));
 
-  /* Set up some data structures */
-  iterpool = svn_pool_create(scratch_pool);
-  props_dirpath = svn_wc__adm_child(wcroot_abspath, PROPS_SUBDIR, scratch_pool);
-  props_base_dirpath = svn_wc__adm_child(wcroot_abspath, PROP_BASE_SUBDIR,
-                                         scratch_pool);
-
   /* Iterate over the children, as described above */
   for (i = 0; i < children->nelts; i++)
     {
-      const char *child_relpath = APR_ARRAY_IDX(children, i, const char *);
-      const char *child_abspath;
-      const char *prop_base_path, *prop_working_path, *prop_revert_path;
-      svn_boolean_t pristine_is_working;
-      svn_boolean_t replaced;
-      apr_hash_t *working_props;
-      apr_hash_t *base_props;
+      const char *name = APR_ARRAY_IDX(children, i, const char *);
 
       svn_pool_clear(iterpool);
 
-      /* Several useful paths. */
-      child_abspath = svn_dirent_join(wcroot_abspath, child_relpath, iterpool);
-      prop_base_path = svn_dirent_join(props_base_dirpath,
-                                       apr_pstrcat(iterpool,
-                                                   child_relpath,
-                                                   SVN_WC__BASE_EXT,
-                                                   NULL),
-                                       iterpool);
-      prop_working_path = svn_dirent_join(props_dirpath,
-                                          apr_pstrcat(iterpool,
-                                                      child_relpath,
-                                                      SVN_WC__WORK_EXT,
-                                                      NULL),
-                                          iterpool);
-      prop_revert_path = svn_dirent_join(props_base_dirpath,
-                                         apr_pstrcat(iterpool,
-                                                     child_relpath,
-                                                     SVN_WC__REVERT_EXT,
-                                                     NULL),
-                                         iterpool);
-
-      SVN_ERR(read_propfile(&base_props, prop_base_path, iterpool, iterpool));
-      SVN_ERR_ASSERT(base_props != NULL);
-
-      SVN_ERR(read_propfile(&revert_props, prop_revert_path,
-                            iterpool, iterpool));
-      if (revert_props != NULL)
-        {
-          SVN_ERR(svn_wc__db_temp_base_set_props(db, child_abspath,
-                                                 revert_props, iterpool));
-          SVN_ERR(svn_wc__db_temp_working_set_props(db, child_abspath,
-                                                    base_props, iterpool));
-        }
-      else
-        {
-          /* Try writing to the WORKING tree first.  */
-          err = svn_wc__db_temp_working_set_props(db, local_abspath,
-                                                  base_props,
-                                                  scratch_pool);
-          if (err)
-            {
-              if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-                return svn_error_return(err);
-              svn_error_clear(err);
-
-              /* The WORKING node is not present. Try writing to the
-                 BASE node now.  */
-              SVN_ERR(svn_wc__db_temp_base_set_props(db, local_abspath,
-                                                     base_props,
-                                                     scratch_pool));
-            }
-        }
-
-      /* If the properties file does not exist, then that simply means
-         there were no changes made. Avoid setting new props in that case.  */
-      SVN_ERR(read_propfile(&working_props, prop_working_path,
-                            iterpool, iterpool));
-      if (working_props != NULL)
-        {
-          SVN_ERR(svn_wc__db_op_set_props(db, child_abspath, working_props,
-                                          NULL, NULL, iterpool));
-        }
+      SVN_ERR(migrate_node_props(wcroot_abspath, name, sdb, iterpool));
     }
-
-  /* Now delete the old directories. */
-  SVN_ERR(svn_io_remove_dir2(props_dirpath, TRUE, NULL, NULL, iterpool));
-  SVN_ERR(svn_io_remove_dir2(props_base_dirpath, TRUE, NULL, NULL,
-                             iterpool));
 
 #if 0
   /* ### we are not (yet) taking out a write lock  */
