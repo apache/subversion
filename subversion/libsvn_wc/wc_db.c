@@ -6137,6 +6137,15 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
                                apr_pool_t *scratch_pool)
 {
   NOT_IMPLEMENTED();
+
+  /* ### working_props: use set_props_txn.
+     ### if working_props == NULL, then skip. what if they equal the
+     ### pristine props? we should probably do the compare here.
+     ###
+     ### base props go into WORKING_NODE if avail, otherwise BASE.
+     ###
+     ### revert only goes into BASE. (and WORKING better be there!)
+  */
 }
 
 
