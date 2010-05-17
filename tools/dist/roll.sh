@@ -49,14 +49,12 @@ export PATH="$SVNRM_BIN:$PATH"
 
 mkdir deploy
 
-(cd unix-dependencies &&
-  `dirname $0`/dist.sh -v $VERSION -pr $BRANCH -r $REV $EXTRA &&
-  mv subversion-* ../deploy/ &&
-  mv svn_version.h.dist ../deploy/) || exit $?
+(`dirname $0`/dist.sh -v $VERSION -pr $BRANCH -r $REV $EXTRA &&
+  mv subversion-* deploy/ &&
+  mv svn_version.h.dist deploy/) || exit $?
 
-(cd win32-dependencies &&
-  `dirname $0`/dist.sh -v $VERSION -pr $BRANCH -r $REV -zip $EXTRA &&
-  mv subversion-* ../deploy/ &&
+(`dirname $0`/dist.sh -v $VERSION -pr $BRANCH -r $REV -zip $EXTRA &&
+  mv subversion-* deploy/ &&
   rm svn_version.h.dist) || exit $?
 
 (cd deploy &&

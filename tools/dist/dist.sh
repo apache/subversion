@@ -25,7 +25,7 @@
 #                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL] 
 #                  [-apri PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
 #                  [-serf PATH-TO-SERF] [-zlib PATH-TO-ZLIB]
-#                  [-sqlite PATH-TO-SQLITE] [-zip] [-sign] [-nodeps]
+#                  [-sqlite PATH-TO-SQLITE] [-zip] [-sign]
 #
 #   Create a distribution tarball, labelling it with the given VERSION.
 #   The tarball will be constructed from the root located at REPOS-PATH,
@@ -62,7 +62,7 @@ USAGE="USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH \
 [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|-pre PRE_NUM] \
 [-apr APR_PATH ] [-apru APR_UTIL_PATH] [-apri APR_ICONV_PATH] \
 [-neon NEON_PATH ] [-serf SERF_PATH] [-zlib ZLIB_PATH] \
-[-sqlite SQLITE_PATH] [-zip] [-sign] [-nodeps]
+[-sqlite SQLITE_PATH] [-zip] [-sign]
  EXAMPLES: ./dist.sh -v 0.36.0 -r 8278 -pr branches/foo
            ./dist.sh -v 0.36.0 -r 8278 -pr trunk
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0
@@ -101,7 +101,6 @@ do
         ARG_PREV=$ARG
         ;;
       -zip) ZIP=1 ;;
-      -nodeps) NODEPS=1 ;;
       -sign) SIGN=1 ;;
       *)
         echo " $USAGE"
@@ -199,10 +198,8 @@ if [ $? -ne 0 ]; then
 fi
 
 DISTNAME="subversion-${VERSION}${VER_NUMTAG}"
-DEPSNAME="subversion-deps-${VERSION}${VER_NUMTAG}"
 DIST_SANDBOX=.dist_sandbox
 DISTPATH="$DIST_SANDBOX/$DISTNAME"
-DEPSPATH="$DIST_SANDBOX/deps/$DISTNAME"
 
 echo "Distribution will be named: $DISTNAME"
 echo "     constructed from path: /$REPOS_PATH"
@@ -210,7 +207,6 @@ echo " constructed from revision: $REVISION"
 
 rm -rf "$DIST_SANDBOX"
 mkdir "$DIST_SANDBOX"
-mkdir -p "$DEPSPATH"
 echo "Removed and recreated $DIST_SANDBOX"
 
 LC_ALL=C
@@ -251,61 +247,6 @@ if test -z "$PYTHON"; then
   echo "to the Python executable, and re-run dist.sh"
   exit 1
 fi
-
-install_dependency()
-{
-  DEP_NAME=$1
-  if [ -z $2 ]; then
-    DEP_PATH=/dev/null
-  else
-    DEP_PATH=$2
-  fi
-
-  if [ -d $DEP_PATH ]; then
-    if [ -d $DEP_PATH/.svn ]; then
-      echo "Exporting local $DEP_NAME into sandbox"
-      ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS "$DEP_PATH" "$DISTPATH/$DEP_NAME"
-    else
-      echo "Copying local $DEP_NAME into sandbox"
-      cp -r "$DEP_PATH" "$DISTPATH/$DEP_NAME" 
-      (cd "$DISTPATH/$DEP_NAME" && [ -f Makefile ] && make distclean)
-      echo "Removing all CVS/ and .cvsignore files from $DEP_NAME..."
-      find "$DISTPATH/$DEP_NAME" -name CVS -type d -print | xargs rm -fr
-      find "$DISTPATH/$DEP_NAME" -name .cvsignore -print | xargs rm -f
-      find "$DISTPATH/$DEP_NAME" -name '*.o' -print | xargs rm -f
-    fi
-  else
-    # Not having the dependency directories isn't fatal if -nodeps passed.
-    if [ -z "$NODEPS" ]; then
-      echo "Missing dependency directory!"
-      exit 2
-    fi
-  fi
-}
-
-move_dependency()
-{
-  DEP_NAME=$1
-
-  SOURCE_PATH="$DISTPATH/$DEP_NAME"
-  DEST_PATH="$DEPSPATH/$DEP_NAME"
-
-  rm -rf "$DEST_PATH"
-  mv "$SOURCE_PATH" "$DEST_PATH"
-}
-
-install_dependency apr "$APR_PATH"
-install_dependency apr-util "$APRU_PATH"
-
-if [ -n "$ZIP" ]; then
-  install_dependency apr-iconv "$APRI_PATH"
-fi
-
-install_dependency neon "$NEON_PATH"
-install_dependency serf "$SERF_PATH"
-install_dependency zlib "$ZLIB_PATH"
-install_dependency sqlite-amalgamation "$SQLITE_PATH"
-
 
 find "$DISTPATH" -name config.nice -print | xargs rm -f
 
@@ -361,18 +302,6 @@ done
 echo "Removing any autom4te.cache directories that might exist..."
 find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;
 
-# Now that the dependencies have been configured/cleaned properly,
-# move them into their separate tree for packaging.
-move_dependency apr
-move_dependency apr-util
-if [ -n "$ZIP" ]; then
-  move_dependency apr-iconv
-fi
-move_dependency neon
-move_dependency serf
-move_dependency zlib
-move_dependency sqlite-amalgamation
-
 if [ -z "$ZIP" ]; then
   # Do not use tar, it's probably GNU tar which produces tar files that are
   # not compliant with POSIX.1 when including filenames longer than 100 chars.
@@ -382,14 +311,9 @@ if [ -z "$ZIP" ]; then
   echo "Rolling $DISTNAME.tar ..."
   (cd "$DIST_SANDBOX" > /dev/null && pax -x ustar -w "$DISTNAME") > \
     "$DISTNAME.tar"
-  echo "Rolling $DEPSNAME.tar ..."
-  (cd "$DIST_SANDBOX/deps" > /dev/null && pax -x ustar -w "$DISTNAME") > \
-    "$DEPSNAME.tar"
 
   echo "Compressing to $DISTNAME.tar.bz2 ..."
   bzip2 -9fk "$DISTNAME.tar"
-  echo "Compressing to $DEPSNAME.tar.bz2 ..."
-  bzip2 -9fk "$DEPSNAME.tar"
 
   # Use the gzip -n flag - this prevents it from storing the original name of
   # the .tar file, and far more importantly, the mtime of the .tar file, in the
@@ -402,15 +326,10 @@ if [ -z "$ZIP" ]; then
   # not any of its contents, so there will be no effect on end-users.
   echo "Compressing to $DISTNAME.tar.gz ..."
   gzip -9nf "$DISTNAME.tar"
-  echo "Compressing to $DEPSNAME.tar.gz ..."
-  gzip -9nf "$DEPSNAME.tar"
 else
   echo "Rolling $DISTNAME.zip ..."
   (cd "$DIST_SANDBOX" > /dev/null && zip -q -r - "$DISTNAME") > \
     "$DISTNAME.zip"
-  echo "Rolling $DEPSNAME.zip ..."
-  (cd "$DIST_SANDBOX/deps" > /dev/null && zip -q -r - "$DISTNAME") > \
-    "$DEPSNAME.zip"
 fi
 echo "Removing sandbox..."
 rm -rf "$DIST_SANDBOX"
@@ -445,27 +364,27 @@ sign_file()
 echo ""
 echo "Done:"
 if [ -z "$ZIP" ]; then
-  ls -l "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
-  sign_file $DISTNAME.tar.gz $DISTNAME.tar.bz2 $DEPSNAME.tar.bz2 $DEPSNAME.tar.gz
+  ls -l "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
+  sign_file $DISTNAME.tar.gz $DISTNAME.tar.bz2
   echo ""
   echo "md5sums:"
-  md5sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
+  md5sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
   type sha1sum > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     echo ""
     echo "sha1sums:"
-    sha1sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
+    sha1sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
   fi
 else
-  ls -l "$DISTNAME.zip" "$DEPSNAME.zip"
-  sign_file $DISTNAME.zip $DEPSNAME.zip
+  ls -l "$DISTNAME.zip"
+  sign_file $DISTNAME.zip
   echo ""
   echo "md5sum:"
-  md5sum "$DISTNAME.zip" "$DEPSNAME.zip"
+  md5sum "$DISTNAME.zip"
   type sha1sum > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     echo ""
     echo "sha1sum:"
-    sha1sum "$DISTNAME.zip" "$DEPSNAME.zip"
+    sha1sum "$DISTNAME.zip"
   fi
 fi
