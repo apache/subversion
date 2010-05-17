@@ -4270,21 +4270,6 @@ dav_svn__create_version_resource(dav_resource **version_res,
    many different kinds of operations as specified by the body of the
    POST request itself.
 
-   ### TODO: Define what the format of those POST bodies might be.  If
-   ### XML, we have access to Apache's streamy XML parsing code, but
-   ### ... it's XML.  Meh.  If skels, we get skels!  But we need to
-   ### write our own streamy skel parsing routine around a brigade
-   ### read loop.  Ewww...
-   ###
-   ### Today we only support transaction creation requests, but we
-   ### could conceivable support the likes of a multi-path lock
-   ### and/or unlock request, or some other thing for which stock
-   ### WebDAV doesn't work or doesn't work well enough.
-   ###
-   ### Fortunately, today we don't use the POST body at all, and we'll
-   ### be able to get away with not defining the body format in the
-   ### future thanks to the following:
-
    As a special consideration, an empty POST body is interpreted as a
    simple request to create a new commit transaction based on the HEAD
    revision.  The new transaction name will be returned via a custom
@@ -4295,27 +4280,89 @@ int dav_svn__method_post(request_rec *r)
   dav_resource *resource;
   dav_error *derr;
   const char *txn_name;
+  const char *content_type;
 
-  derr = get_resource(r, dav_svn__get_root_dir(r),
-                      "ignored", 0, &resource);
+  content_type = apr_table_get(r->headers_in, "Content-Type");
+
+  derr = get_resource(r, dav_svn__get_root_dir(r), "ignored", 0, &resource);
   if (derr != NULL)
-    return derr->status;
+    {
+      ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                    "Error fetching resource for POST request.");
+      return derr->status;
+    }
 
-  if (resource->info->restype != DAV_SVN_RESTYPE_ME)
-    return HTTP_BAD_REQUEST;
+  if (resource->info->restype == DAV_SVN_RESTYPE_ME)
+    {
+      /* XML request type.  Parse the document, and dispatch to
+         working functions based on the outermost tag. */
+      if (content_type && (strcmp(content_type, "text/xml") == 0))
+        {
+          int result;
+          apr_xml_doc *doc;
 
-  /* Create a Subversion repository transaction based on HEAD. */
-  derr = dav_svn__create_txn(resource->info->repos, &txn_name, resource->pool);
-  if (derr)
-    return dav_svn__error_response_tag(r, derr);
+          /* Parse the XML. */
+          if ((result = ap_xml_parse_input(r, &doc)) != OK)
+            return result;
 
-  /* Build a "201 Created" response with header that tells the client
-     our new transaction's name. */
-  apr_table_set(resource->info->r->headers_out, SVN_DAV_TXN_NAME_HEADER,
-                txn_name);
-  r->status = HTTP_CREATED;
+          /* Uh-ohs.  No XML document!  */
+          if (! doc)
+            {
+              ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                            "XML POST request body must specify a report.");
+              return HTTP_BAD_REQUEST;
+            }
 
-  return OK;
+          /* Okey dokey.  We've got an XML document.  Let's hand off
+             to helper functions to do the dirty work.  */
+          if (doc->root->ns == dav_svn__find_ns(doc->namespaces,
+                                                SVN_XML_NAMESPACE))
+            {
+              if (strcmp(doc->root->name, "create-transaction") == 0)
+                {
+                  return dav_svn__create_transaction_post(resource, doc,
+                                                          r->output_filters);
+                }
+              /*
+              else if (strcmp(doc->root->name, "lock-paths") == 0)
+                {
+                  return dav_svn__lock_paths_post(resource, doc,
+                                                  r->output_filters);
+                }
+              else if (strcmp(doc->root->name, "lock-paths") == 0)
+                {
+                  return dav_svn__unlock_paths_post(resource, doc,
+                                                    r->output_filters);
+                }
+              */
+            }
+
+          /* Hrm.  Nobody handled the request.  Must be something we
+             don't understand. */
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                        "Unsupported POST operation type.");
+          return HTTP_NOT_IMPLEMENTED;
+        }
+      else if (content_type)
+        {
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                        "Unsupported POST content-type.");
+          return HTTP_BAD_REQUEST;
+        }
+
+      /* ### Some 1.7-dev clients expect an empty POST request to
+         ### create a new transaction, so we'll support that as a sort
+         ### of default operation for POST against the "me resource".  */
+      return dav_svn__create_transaction_post(resource, NULL,
+                                              r->output_filters);
+    }
+  else
+    {
+      ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                   "Invalid POST target resource.");
+      return HTTP_BAD_REQUEST;
+    }
+  /* ### shouldn't get here ### */
 }
 
 
