@@ -2715,8 +2715,13 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
   else if (err)
     return err;
 
+#ifdef USE_DB_PROPS
   SVN_ERR(load_actual_props(&localprops, db, local_abspath,
                             scratch_pool, scratch_pool));
+#else
+  SVN_ERR(load_props(&localprops, db, local_abspath, svn_wc__props_working,
+                     scratch_pool));
+#endif
 
   /* If the WORKING props are not present, then no modifications have
      occurred. */
@@ -2744,6 +2749,7 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
   /* The WORKING props are present, so let's dig in and see what the
      differences are. On really old WCs, they might be the same. On
      newer WCs, the file would have been removed if there was no delta. */
+#ifdef USE_DB_PROPS
   SVN_ERR(load_pristine_props(&baseprops, db, local_abspath,
                               scratch_pool, scratch_pool));
   if (baseprops == NULL)
@@ -2753,6 +2759,10 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
       *modified_p = apr_hash_count(localprops) > 0;
       return SVN_NO_ERROR;
     }
+#else
+  SVN_ERR(load_props(&baseprops, db, local_abspath, svn_wc__props_base,
+                     scratch_pool));
+#endif
 
   SVN_ERR(svn_prop_diffs(&local_propchanges, localprops, baseprops,
                          scratch_pool));
