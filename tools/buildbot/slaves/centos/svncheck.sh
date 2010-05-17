@@ -33,8 +33,25 @@ echo "========= mount RAM disc"
 mkdir -p subversion/tests/cmdline/svn-test-work
 test -e ../mount-ramdrive && ../mount-ramdrive
 
-echo "========= make davautocheck"
-make davautocheck FS_TYPE=$1 CLEANUP=1 || exit $?
+echo "========= make"
+case "$2" in
+  ""|ra_dav|ra_neon)
+    make davautocheck FS_TYPE=$1 HTTP_LIBRARY=neon CLEANUP=1 || exit $?
+    ;;
+  ra_serf)
+    make davautocheck FS_TYPE=$1 HTTP_LIBRARY=serf CLEANUP=1 || exit $?
+    ;;
+  ra_svn)
+    make svnserveautocheck FS_TYPE="$1" CLEANUP=1 || exit $?
+    ;;
+  ra_local)
+    make check FS_TYPE="$1" CLEANUP=1 || exit $?
+    ;;
+  *)
+    echo "Bad RA specifier (arg #2): '$2'."
+    exit 1
+  ;;
+esac
 
 # the bindings are checked with svncheck-bindings.sh
 exit 0
