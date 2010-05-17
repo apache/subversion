@@ -59,9 +59,6 @@ echo '----------------building environment------------------'
 if [ ! -d "prefix" ]; then
   ../construct-rolling-environment.sh prefix
 fi;
-if [ ! -d "unix-dependencies" ]; then
-  ../construct-rolling-environment.sh deps
-fi
 
 # Roll the tarballs
 echo '-------------------rolling tarball--------------------'
