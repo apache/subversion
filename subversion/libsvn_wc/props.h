@@ -50,6 +50,10 @@ extern "C" {
 #undef SVN__SUPPORT_BASE_MERGE
 
 
+/* EXPERIMENTAL: use in-database props  */
+#undef USE_DB_PROPS
+
+
 typedef enum svn_wc__props_kind_t
 {
   svn_wc__props_base = 0,

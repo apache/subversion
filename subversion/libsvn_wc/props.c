@@ -64,7 +64,6 @@
 #include "svn_private_config.h"
 
 /* #define TEST_DB_PROPS */
-/* #define USE_DB_PROPS */
 
 
 /* Forward declaration.  */
@@ -73,6 +72,8 @@ message_from_skel(const svn_skel_t *skel,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
 
+
+#ifndef USE_DB_PROPS
 
 /* Get PATH's properies of PROPS_KIND, and put them into *HASH.
    PATH should be of kind NODE_KIND. */
@@ -130,6 +131,8 @@ load_props(apr_hash_t **hash,
 
   return svn_stream_close(stream);
 }
+
+#endif /* USE_DB_PROPS  */
 
 
 static svn_error_t *
@@ -337,11 +340,11 @@ svn_wc__get_revert_props(apr_hash_t **revert_props_p,
   if (replaced)
     {
 #ifdef USE_DB_PROPS
-      SVN_ERR(load_props(revert_props_p, db, local_abspath,
-                         svn_wc__props_revert, result_pool));
-#else
       SVN_ERR(svn_wc__db_base_get_props(revert_props_p, db, local_abspath,
                                         result_pool, scratch_pool));
+#else
+      SVN_ERR(load_props(revert_props_p, db, local_abspath,
+                         svn_wc__props_revert, result_pool));
 #endif
     }
   else
@@ -503,6 +506,9 @@ svn_wc__working_props_committed(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 apr_pool_t *scratch_pool)
 {
+#ifdef USE_DB_PROPS
+  return SVN_NO_ERROR;
+#else
   svn_wc__db_kind_t kind;
   const char *working;
   const char *base;
@@ -522,6 +528,7 @@ svn_wc__working_props_committed(svn_wc__db_t *db,
   /* svn_io_file_rename() retains a read-only bit, so there's no
      need to explicitly set it. */
   return svn_error_return(svn_io_file_rename(working, base, scratch_pool));
+#endif
 }
 
 
@@ -531,6 +538,9 @@ svn_wc__props_delete(svn_wc__db_t *db,
                      svn_wc__props_kind_t props_kind,
                      apr_pool_t *pool)
 {
+#ifdef USE_DB_PROPS
+  return SVN_NO_ERROR;
+#else
   const char *props_file;
   svn_wc__db_kind_t kind;
 
@@ -540,6 +550,7 @@ svn_wc__props_delete(svn_wc__db_t *db,
   SVN_ERR(svn_wc__prop_path(&props_file, local_abspath, kind, props_kind,
                             pool));
   return svn_error_return(svn_io_remove_file2(props_file, TRUE, pool));
+#endif
 }
 
 
@@ -2704,8 +2715,8 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
   else if (err)
     return err;
 
-  SVN_ERR(load_props(&localprops, db, local_abspath, svn_wc__props_working,
-                     scratch_pool));
+  SVN_ERR(load_actual_props(&localprops, db, local_abspath,
+                            scratch_pool, scratch_pool));
 
   /* If the WORKING props are not present, then no modifications have
      occurred. */
@@ -2733,8 +2744,15 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
   /* The WORKING props are present, so let's dig in and see what the
      differences are. On really old WCs, they might be the same. On
      newer WCs, the file would have been removed if there was no delta. */
-  SVN_ERR(load_props(&baseprops, db, local_abspath, svn_wc__props_base,
-                     scratch_pool));
+  SVN_ERR(load_pristine_props(&baseprops, db, local_abspath,
+                              scratch_pool, scratch_pool));
+  if (baseprops == NULL)
+    {
+      /* No pristines are defined. Let's say mods exist if there are any
+         ACTUAL props on this node.  */
+      *modified_p = apr_hash_count(localprops) > 0;
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(svn_prop_diffs(&local_propchanges, localprops, baseprops,
                          scratch_pool));
