@@ -470,8 +470,8 @@ harvest_committables(apr_hash_t *committables,
         }
     }
 
-  SVN_ERR(svn_wc__db_temp_get_keep_local(&keep_local, ctx->wc_ctx,
-                                         local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__temp_get_keep_local(&keep_local, ctx->wc_ctx,
+                                      local_abspath, scratch_pool));
   if (! keep_local)
     SVN_ERR(bail_on_tree_conflicted_children(ctx->wc_ctx, local_abspath,
                                              db_kind, depth, changelists,

@@ -1106,10 +1106,10 @@ svn_wc__node_check_conflicts(svn_boolean_t *prop_conflicted,
 }
 
 svn_error_t *
-svn_wc__db_temp_get_keep_local(svn_boolean_t *keep_local,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool)
+svn_wc__temp_get_keep_local(svn_boolean_t *keep_local,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool)
 {
   svn_boolean_t is_deleted;
 
