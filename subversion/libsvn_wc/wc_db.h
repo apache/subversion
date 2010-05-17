@@ -1998,6 +1998,14 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
                                    apr_pool_t *scratch_pool);
 
 
+svn_error_t *
+svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
+                               apr_hash_t *base_props,
+                               apr_hash_t *revert_props,
+                               apr_hash_t *working_props,
+                               apr_pool_t *scratch_pool);
+
+
 /* Get the repository identifier corresponding to REPOS_ROOT_URL from the
    database in SDB. The value is returned in *REPOS_ID. All allocations
    are allocated in SCRATCH_POOL.
