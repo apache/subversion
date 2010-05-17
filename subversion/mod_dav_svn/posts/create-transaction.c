@@ -31,7 +31,7 @@
 #include "../dav_svn.h"
 
 
-/* Respond to a S:dated-rev-report request. */
+/* Respond to a S:create-transaction POST request. */
 int
 dav_svn__create_transaction_post(const dav_resource *resource,
                                  const apr_xml_doc *doc,
