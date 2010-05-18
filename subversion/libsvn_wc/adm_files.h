@@ -133,6 +133,31 @@ svn_error_t *svn_wc__prop_path(const char **prop_path,
                                svn_wc__props_kind_t props_kind,
                                apr_pool_t *pool);
 
+/* Set *RESULT_ABSPATH to the absolute path to a readable file containing
+   the WORKING_NODE pristine text of LOCAL_ABSPATH in DB.
+
+   The implementation might create the file as an independent copy on
+   demand, or it might return the path to a shared file.  The file will
+   remain readable until RESULT_POOL is cleared or until LOCAL_ABSPATH's WC
+   metadata is next changed, whichever is sooner.
+     (### The latter doesn't sound like a totally reasonable condition.)
+   After that, if the implementation provided a separate file then the file
+   will automatically be removed, or if it provided a shared file then
+   no guarantees are made about it after this time.
+
+   ### The present implementation just returns the path to the file in the
+     pristine store and does not make any attempt to ensure its lifetime is
+     as promised.
+
+   If the node LOCAL_ABSPATH has no pristine text, return an error.
+
+   Allocate *RESULT_PATH in RESULT_POOL.  */
+svn_error_t *
+svn_wc__get_working_node_pristine_file(const char **result_abspath,
+                                       svn_wc__db_t *db,
+                                       const char *local_abspath,
+                                       apr_pool_t *result_pool);
+
 
 
 /*** Opening all kinds of adm files ***/

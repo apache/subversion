@@ -1205,8 +1205,9 @@ delete_entry(const char *path,
           apr_hash_t *baseprops = NULL;
           const char *base_mimetype;
 
-          SVN_ERR(svn_wc__text_base_path(&textbase, eb->db, local_abspath,
-                                         pool));
+          SVN_ERR(svn_wc__get_working_node_pristine_file(&textbase,
+                                                         eb->db, local_abspath,
+                                                         pool, pool));
 
           SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
                                              pool, pool));
@@ -1575,8 +1576,9 @@ close_file(void *file_baton,
      the same as BASE. */
   temp_file_path = fb->temp_file_path;
   if (!temp_file_path)
-    SVN_ERR(svn_wc__text_base_path(&temp_file_path, eb->db, fb->local_abspath,
-                                   fb->pool));
+    SVN_ERR(svn_wc__get_working_node_pristine_file(&temp_file_path,
+                                                   eb->db, fb->local_abspath,
+                                                   fb->pool, fb->pool));
 
   /* If the file isn't in the working copy (either because it was added
      in the BASE->repos diff or because we're diffing against WORKING
@@ -1639,8 +1641,9 @@ close_file(void *file_baton,
   if (modified)
     {
       if (eb->use_text_base)
-        SVN_ERR(svn_wc__text_base_path(&localfile, eb->db, fb->local_abspath,
-                                       fb->pool));
+        SVN_ERR(svn_wc__get_working_node_pristine_file(&localfile, eb->db,
+                                                       fb->local_abspath,
+                                                       fb->pool, fb->pool));
       else
         /* a detranslated version of the working file */
         SVN_ERR(svn_wc__internal_translated_file(
