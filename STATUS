@@ -215,7 +215,7 @@ Candidate changes:
      This is not a backport branch. The fix is for 1.6.x only.
      Trunk will need a separate fix as part of wc-ng.
    Votes:
-     +1: stsp
+     +1: stsp, julianfoad
 
 Veto-blocked changes:
 =====================
