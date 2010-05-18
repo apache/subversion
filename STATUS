@@ -204,6 +204,19 @@ Candidate changes:
    Votes:
      +1: rhuijben, danielsh
 
+ * r945708
+   Fix issue #3469 "tree conflict inside of directory external causes
+   assertion to fail".
+   Justification:
+     Assertion failures are bad and tree-conflicted externals cannot
+     be reverted or resolved without this fix.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3469
+     This is not a backport branch. The fix is for 1.6.x only.
+     Trunk will need a separate fix as part of wc-ng.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
