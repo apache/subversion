@@ -2198,13 +2198,23 @@ revert_internal(const char *path,
   const svn_wc_entry_t *entry;
   svn_wc_adm_access_t *dir_access;
   svn_wc_conflict_description_t *tree_conflict;
+  svn_error_t *err;
 
   /* Check cancellation here, so recursive calls get checked early. */
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
   /* Fetch the access baton for this path. */
-  SVN_ERR(svn_wc_adm_probe_retrieve(&dir_access, parent_access, path, pool));
+  err = svn_wc_adm_probe_retrieve(&dir_access, parent_access, path, pool);
+  if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
+    {
+      /* The path is unversioned, or it could be an external.
+       * Do not recurse into it. */
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return err;
 
   /* Safeguard 1: the item must be versioned for any reversion to make sense,
      except that a tree conflict can exist on an unversioned item. */
