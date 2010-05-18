@@ -10399,6 +10399,8 @@ def new_subtrees_should_not_break_merge(sbox):
 def basic_reintegrate(sbox):
   "basic merge --reintegrate support"
 
+  # Also includes test for issue #3640 'moved target breaks reintegrate merge'
+
   # Make A_COPY branch in r2, and do a few more commits to A in r3-6.
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -10560,15 +10562,81 @@ def basic_reintegrate(sbox):
                                        None, True, True,
                                        '--reintegrate')
 
-  # Finally, commit the result of the merge (r9).
-  expected_output = wc.State(wc_dir, {
-    'A/mu'           : Item(verb='Sending'),
-    'A'              : Item(verb='Sending'),
+  # Test issue #3640:
+  # 
+  # Revert the merge then move A to A_MOVED in r9.  Repeat the merge, but
+  # targeting A_MOVED this time.  This should work with almost the same
+  # results.  The only differences being the inclusion of r9 in the
+  # mergeinfo and the A-->A_MOVED path difference.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 9.\n'],
+                                     [], 'move',
+                                     sbox.repo_url + '/A',
+                                     sbox.repo_url + '/A_MOVED',
+                                     '-m', 'Copy A to A_MOVED')
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  A_MOVED_path = os.path.join(wc_dir, "A_MOVED")
+  expected_output = wc.State(A_MOVED_path, {
+    'mu'           : Item(status='U '),
     })
-  expected_status.tweak('A', 'A/mu', wc_rev=9)
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
-
+  expected_mergeinfo_output = wc.State(A_MOVED_path, {
+    '' : Item(status=' G'),
+    })
+  expected_elision_output = wc.State(A_MOVED_path, {
+    })
+  expected_status = wc.State(A_MOVED_path, {
+    "B"            : Item(status='  '),
+    "B/lambda"     : Item(status='  '),
+    "B/E"          : Item(status='  '),
+    "B/E/alpha"    : Item(status='  '),
+    "B/E/beta"     : Item(status='  '),
+    "B/F"          : Item(status='  '),
+    "mu"           : Item(status='M '),
+    "C"            : Item(status='  '),
+    "D"            : Item(status='  '),
+    "D/gamma"      : Item(status='  '),
+    "D/G"          : Item(status='  '),
+    "D/G/pi"       : Item(status='  '),
+    "D/G/rho"      : Item(status='  '),
+    "D/G/tau"      : Item(status='  '),
+    "D/H"          : Item(status='  '),
+    "D/H/chi"      : Item(status='  '),
+    "D/H/omega"    : Item(status='  '),
+    "D/H/psi"      : Item(status='  '),
+    ""             : Item(status=' M'),
+  })
+  expected_status.tweak(wc_rev=9)
+  k_expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A_COPY:2-9'})
+  expected_skip = wc.State(A_MOVED_path, {})
+  # This test is currently marked as XFail as the reintegrate fails:
+  #
+  #   merge_tests-77>svn merge ^/A_COPY A --reintegrate
+  #   ..\..\..\subversion\svn\merge-cmd.c:70: (apr_err=155010)
+  #   ..\..\..\subversion\svn\util.c:1118: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\cmdline.c:269: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\cmdline.c:132: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\util.c:270: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\ra.c:430: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\url.c:106: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_client\url.c:151: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_wc\node.c:432: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_wc\wc_db.c:4678: (apr_err=155010)
+  #   ..\..\..\subversion\libsvn_wc\wc_db.c:4670: (apr_err=155010)
+  #   svn: The node 'C:\SVN\src-trunk\Debug\subversion\tests\cmdline\
+  #     svn-test-work\working_copies\merge_tests-77\A' was not found.
+  svntest.actions.run_and_verify_merge(A_MOVED_path, None, None,
+                                       sbox.repo_url + '/A_COPY', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       k_expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, True, True,
+                                       '--reintegrate')
+  
 def reintegrate_with_rename(sbox):
   "merge --reintegrate with renamed file on branch"
 
@@ -19141,8 +19209,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(new_subtrees_should_not_break_merge,
                          server_has_mergeinfo),
-              SkipUnless(basic_reintegrate,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(basic_reintegrate,
+                               server_has_mergeinfo)),
               reintegrate_with_rename,
               reintegrate_branch_never_merged_to,
               reintegrate_fail_on_modified_wc,
