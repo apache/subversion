@@ -328,7 +328,18 @@ svn_wc__do_update_cleanup(svn_wc__db_t *db,
 }
 
 
-/* CHECKSUM is the checksum of the new text base for LOCAL_ABSPATH, and must
+/* Queue work items that will finish a commit of the file or directory
+ * LOCAL_ABSPATH in DB:
+ *   - queue the removal of any "revert-base" props and text files;
+ *   - queue an update of the DB entry for this node
+ *
+ * ### The Pristine Store equivalent should be:
+ *   - remember the old BASE_NODE and WORKING_NODE pristine text c'sums;
+ *   - queue an update of the DB entry for this node (incl. updating the
+ *       BASE_NODE c'sum and setting the WORKING_NODE c'sum to NULL);
+ *   - queue deletion of the old pristine texts by the remembered checksums.
+ *
+ * CHECKSUM is the checksum of the new text base for LOCAL_ABSPATH, and must
  * be provided if there is one, else NULL. */
 static svn_error_t *
 process_committed_leaf(svn_wc__db_t *db,
@@ -412,9 +423,7 @@ process_committed_leaf(svn_wc__db_t *db,
 
         SVN_ERR(svn_wc__text_revert_path(&revert_abspath, db, local_abspath,
                                          scratch_pool));
-
-        SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                             db, revert_abspath,
+        SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, revert_abspath,
                                              scratch_pool, scratch_pool));
         SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
       }
@@ -455,7 +464,9 @@ process_committed_leaf(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
     }
 
-  /* Set TMP_TEXT_BASE_ABSPATH to the new text base to be installed, if any. */
+  /* Set TMP_TEXT_BASE_ABSPATH to the new text base to be installed, if any.
+     In effect, retrieve the temporary file that was laid down by
+     svn_wc__internal_transmit_text_deltas(). */
   {
     svn_node_kind_t new_base_kind;
 
