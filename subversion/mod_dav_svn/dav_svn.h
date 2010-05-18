@@ -594,7 +594,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
 };
 
 
-/* The various REPORT handlers, defined in reports/, and used by version.c.  */
+/* The various report handlers, defined in reports/, and used by version.c.  */
 dav_error *
 dav_svn__update_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
@@ -636,14 +636,6 @@ dav_error *
 dav_svn__get_deleted_rev_report(const dav_resource *resource,
                                 const apr_xml_doc *doc,
                                 ap_filter_t *output);
-
-/* The various POST handlers, defined in posts/, and used by
-   dav_svn__method_post(). */
-int
-dav_svn__create_transaction_post(const dav_resource *resource,
-                                 const apr_xml_doc *doc,
-                                 ap_filter_t *output);
-
 
 /*** authz.c ***/
 

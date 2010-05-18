@@ -1046,24 +1046,6 @@ post_headers_iterator_callback(void *baton,
 }
 
 
-static serf_bucket_t *
-create_post_body(void *baton,
-                 serf_bucket_alloc_t *alloc,
-                 apr_pool_t *pool)
-{
-  serf_bucket_t *body_bkt;
-
-  body_bkt = serf_bucket_aggregate_create(alloc);
-
-  svn_ra_serf__add_xml_header_buckets(body_bkt, alloc);
-  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "S:create-transaction",
-                                    "xmlns:S", SVN_XML_NAMESPACE, NULL);
-  svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "S:create-transaction");
-
-  return body_bkt;
-}
-
-
 /* A custom serf_response_handler_t which is mostly a wrapper around
    svn_ra_serf__handle_status_only -- it just notices POST response
    headers, too.
@@ -1123,10 +1105,6 @@ open_root(void *edit_baton,
 
       handler->response_handler = post_response_handler;
       handler->response_baton = prc;
-
-      handler->body_delegate = create_post_body;
-      handler->body_delegate_baton = post_ctx;
-      handler->body_type = "text/xml";
 
       svn_ra_serf__request_create(handler);
 
