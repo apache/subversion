@@ -331,6 +331,112 @@ svn_wc__get_pristine_base_contents(svn_stream_t **contents,
 
 
 svn_error_t *
+svn_wc__get_pristine_contents(svn_stream_t **contents,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+
+  SVN_ERR(svn_wc__db_read_info(&status, &kind,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
+
+  /* Sanity */
+  if (kind != svn_wc__db_kind_file)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("Can only get the pristine contents of files; "
+                               "'%s' is not a file"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  if (status == svn_wc__db_status_added)
+    {
+      /* For an added node, we return "no stream". Make sure this is not
+         copied-here or moved-here, in which case we return the copy/move
+         source's contents.  */
+      SVN_ERR(svn_wc__db_scan_addition(&status,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+      if (status == svn_wc__db_status_added)
+        {
+          /* Simply added. The pristine base does not exist. */
+          *contents = NULL;
+          return SVN_NO_ERROR;
+        }
+    }
+  else if (status == svn_wc__db_status_not_present)
+    /* We know that the delete of this node has been committed.
+       This should be the same as if called on an unknown path. */
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("Cannot get the pristine contents of '%s' "
+                               "because its delete is already committed"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+  else if (status == svn_wc__db_status_absent
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_incomplete)
+    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                             _("Cannot get the pristine contents of '%s' "
+                               "because it has an unexpected status"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+  else
+    /* We know that it is a file, so we can't hit the _obstructed stati.
+       Also, we should never see _base_deleted here. */
+    SVN_ERR_ASSERT(status != svn_wc__db_status_obstructed
+                   && status != svn_wc__db_status_obstructed_add
+                   && status != svn_wc__db_status_obstructed_delete
+                   && status != svn_wc__db_status_base_deleted);
+
+  /* ### TODO 1.7: use pristine store instead of this block: */
+  {
+    const char *text_base;
+    svn_error_t *err;
+
+    SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath,
+                                   scratch_pool));
+    SVN_ERR_ASSERT(text_base != NULL);
+
+    /* ### now for some ugly hackiness. right now, file externals will
+       ### sometimes put their pristine contents into the revert base,
+       ### because they think they're *replaced* nodes, rather than
+       ### simple BASE nodes. watch out for this scenario, and
+       ### compensate appropriately.  */
+    err = svn_stream_open_readonly(contents, text_base,
+                                   result_pool, scratch_pool);
+    if (err)
+      {
+        svn_boolean_t file_external;
+
+        if (!APR_STATUS_IS_ENOENT(err->apr_err))
+          return svn_error_return(err);
+
+        SVN_ERR(svn_wc__internal_is_file_external(&file_external,
+                                                  db, local_abspath,
+                                                  scratch_pool));
+        if (!file_external)
+          return svn_error_return(err);
+
+        svn_error_clear(err);
+
+        SVN_ERR(svn_wc__text_revert_path(&text_base, db, local_abspath,
+                                         scratch_pool));
+        return svn_stream_open_readonly(contents, text_base,
+                                   result_pool, scratch_pool);
+      }
+    return SVN_NO_ERROR;
+  }
+}
+
+
+svn_error_t *
 svn_wc__prop_path(const char **prop_path,
                   const char *path,
                   svn_wc__db_kind_t node_kind,
