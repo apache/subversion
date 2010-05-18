@@ -730,7 +730,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               XFail(SkipUnless(Skip(reintegrate_fails_if_no_root_access,
                                     svntest.main.is_ra_type_file),
-                               svntest.main.server_has_mergeinfo)),
+                               svntest.main.server_has_mergeinfo),
+                    svntest.main.is_ra_type_dav),
              ]
 
 if __name__ == '__main__':
