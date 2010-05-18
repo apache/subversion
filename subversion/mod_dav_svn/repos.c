@@ -4279,7 +4279,6 @@ int dav_svn__method_post(request_rec *r)
 {
   dav_resource *resource;
   dav_error *derr;
-  const char *txn_name;
   const char *content_type;
 
   content_type = apr_table_get(r->headers_in, "Content-Type");
