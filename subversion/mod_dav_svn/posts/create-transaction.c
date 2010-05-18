@@ -59,7 +59,7 @@ dav_svn__create_transaction_post(const dav_resource *resource,
   apr_err = ap_fprintf(output, bb,
                        DAV_XML_HEADER DEBUG_CR
                        "<S:transaction xmlns:S=\"" SVN_XML_NAMESPACE "\""
-                       ">%ld</S:transaction",
+                       ">%s</S:transaction",
                        apr_xml_quote_string(resource->pool, txn_name, 0));
   if (apr_err)
     derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
@@ -67,5 +67,11 @@ dav_svn__create_transaction_post(const dav_resource *resource,
                                 "Error writing POST response.",
                                 resource->pool);
       
-  return dav_svn__final_flush_or_error(r, bb, output, derr, resource->pool);
+  derr = dav_svn__final_flush_or_error(r, bb, output, derr, resource->pool);
+  if (derr)
+    {
+      /* ### We should at least log something. */
+      return HTTP_INTERNAL_SERVER_ERROR;
+    }
+  return DONE;
 }
