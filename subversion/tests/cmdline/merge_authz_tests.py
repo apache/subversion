@@ -627,6 +627,7 @@ def reintegrate_fails_if_no_root_access(sbox):
 
   # Change authz file so everybody has access to everything but the root.  
   if is_ra_type_svn() or is_ra_type_dav():
+    write_restrictive_svnserve_conf(sbox.repo_dir)
     write_authz_file(sbox, {"/"       : "* =",
                             "/A"      : "* = rw",
                             "/A_COPY" : "* = rw",
@@ -730,8 +731,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               XFail(SkipUnless(Skip(reintegrate_fails_if_no_root_access,
                                     svntest.main.is_ra_type_file),
-                               svntest.main.server_has_mergeinfo),
-                    svntest.main.is_ra_type_dav),
+                               svntest.main.server_has_mergeinfo)),
              ]
 
 if __name__ == '__main__':
