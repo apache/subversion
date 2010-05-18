@@ -1813,11 +1813,11 @@ revert_admin_things(svn_boolean_t *reverted,
 }
 
 
-/* Revert PATH of on-disk KIND.  ENTRY is the working copy entry for
-   PATH.  *DEPTH is the depth of the reversion crawl the caller is
+/* Revert LOCAL_ABSPATH in DB, where the on-disk node kind is DISK_KIND.
+   *DEPTH is the depth of the reversion crawl the caller is
    using; this function may choose to override that value as needed.
 
-   See svn_wc_revert3() for the interpretations of PARENT_ACCESS,
+   See svn_wc_revert4() for the interpretations of
    USE_COMMIT_TIMES, CANCEL_FUNC and CANCEL_BATON.
 
    Set *DID_REVERT to true if actually reverting anything, else do not
