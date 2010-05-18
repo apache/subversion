@@ -1,26 +1,5 @@
-# ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
-# ====================================================================
-
 require "fileutils"
 require "pathname"
-require "svn/util"
-require "tmpdir"
 
 require "my-assertions"
 
@@ -42,7 +21,7 @@ module SvnTestUtil
     @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
-    @wc_base_dir = File.join(Dir.tmpdir, "wc-tmp")
+    @wc_base_dir = "wc-tmp"
     @wc_path = File.join(@wc_base_dir, "wc")
     @full_wc_path = File.expand_path(@wc_path)
     @tmp_path = "tmp"
@@ -110,17 +89,17 @@ module SvnTestUtil
   end
 
   def setup_tmp(path=@tmp_path)
-    remove_recursively_with_retry(path)
+    FileUtils.rm_rf(path)
     FileUtils.mkdir_p(path)
   end
 
   def teardown_tmp(path=@tmp_path)
-    remove_recursively_with_retry(path)
+    FileUtils.rm_rf(path)
   end
 
   def setup_repository(path=@repos_path, config={}, fs_config={})
     require "svn/repos"
-    remove_recursively_with_retry(path)
+    FileUtils.rm_rf(path)
     FileUtils.mkdir_p(File.dirname(path))
     @repos = Svn::Repos.create(path, config, fs_config)
     @fs = @repos.fs
@@ -129,18 +108,18 @@ module SvnTestUtil
   def teardown_repository(path=@repos_path)
     @fs.close unless @fs.nil?
     @repos.close unless @repos.nil?
-    remove_recursively_with_retry(path)
+    Svn::Repos.delete(path) if File.exists?(path)
     @repos = nil
     @fs = nil
   end
 
   def setup_wc
     teardown_wc
-    make_context("") { |ctx| ctx.checkout(@repos_uri, @wc_path) }
+    make_context("").checkout(@repos_uri, @wc_path)
   end
 
   def teardown_wc
-    remove_recursively_with_retry(@wc_base_dir)
+    FileUtils.rm_rf(@wc_base_dir)
   end
 
   def setup_config
@@ -149,7 +128,7 @@ module SvnTestUtil
   end
 
   def teardown_config
-    remove_recursively_with_retry(@config_path)
+    FileUtils.rm_rf(@config_path)
   end
 
   def add_authentication
@@ -211,7 +190,7 @@ realm = #{@realm}
   end
 
   def normalize_line_break(str)
-    if Svn::Util.windows?
+    if windows?
       str.gsub(/\n/, "\r\n")
     else
       str
@@ -219,19 +198,12 @@ realm = #{@realm}
   end
 
   def setup_greek_tree
-    make_context("setup greek tree") { |ctx| @greek.setup(ctx) }
+    @greek.setup(make_context("setup greek tree"))
   end
 
-  def remove_recursively_with_retry(path)
-    retries = 0
-    while (retries+=1) < 100 && File.exist?(path)
-      begin
-        FileUtils.rm_r(path, :secure=>true)
-      rescue
-        sleep 0.1
-      end
-    end
-    assert(!File.exist?(path), "#{Dir.glob(path+'/**/*').join("\n")} should not exist after #{retries} attempts to delete")
+  module_function
+  def windows?
+    /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
   end
 
   module Svnserve
@@ -309,7 +281,7 @@ exit 1
     end
   end
 
-  if Svn::Util.windows?
+  if windows?
     require 'windows_util'
     include Windows::Svnserve
     extend Windows::SetupEnvironment

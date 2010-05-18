@@ -3,25 +3,17 @@
 #  log_tests.py:  testing "svn log"
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 ######################################################################
 
 # General modules
@@ -68,7 +60,6 @@ msg_separator = '------------------------------------' \
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 
@@ -414,7 +405,8 @@ def merge_history_repos(sbox):
 
 # For errors seen while parsing log data.
 class SVNLogParseError(Exception):
-  pass
+  def __init__(self, args=None):
+    self.args = args
 
 
 def parse_log_output(log_lines):
@@ -479,11 +471,8 @@ def parse_log_output(log_lines):
   # The log chain to return.
   chain = []
 
-  # Filter debug lines from the output.
-  log_lines = [line for line in log_lines if not line.startswith('DBG:')]
-
   this_item = None
-  while True:
+  while 1:
     try:
       this_line = log_lines.pop(0)
     except IndexError:
@@ -1433,35 +1422,22 @@ def log_xml_with_bad_data(sbox):
 
 def merge_sensitive_log_target_with_bogus_mergeinfo(sbox):
   "'svn log -g target_with_bogus_mergeinfo'"
-  # A test for issue #3172 'svn log -g' seems to encounter error on server':
-  # 'log -g' fails the moment it encounters a bogus mergeinfo which claims a
-  # merge from a non-existentpath@REV1-REV2.
-  #
-  # ### Present test: test that 'svn log -g' does not report an error.
-  # ### Desirable test: test that 'svn log -g' produces the results expected
-  #     from ignoring all such revisions and reporting on all revisions that
-  #     are valid.
-
-  # In r2, create /A/B-copied as a copy of something that existed at r1, and
-  # /A/B-new as something new.  Manually set mergeinfo on /A/C@2 saying it
-  # was merged from the non-existent r1 of /A/B-copied, and on /A/D@2 saying
-  # it was merged from the non-existent r1 of /A/B-new.
+  #Refer issue 3172 for details.
+  #Create greek tree
+  #svn ps 'svn:mergeinfo' '/A/B:0' A/D
+  #svn ci -m 'setting bogus mergeinfo'
+  #svn log -g -r2
   sbox.build()
   wc_path = sbox.wc_dir
-  B_copied_path = os.path.join(wc_path, 'A', 'B-copied')
-  B_new_path = os.path.join(wc_path, 'A', 'B-new')
-  B_path = os.path.join(wc_path, 'A', 'B')
-  C_path = os.path.join(wc_path, 'A', 'C')
   D_path = os.path.join(wc_path, 'A', 'D')
-  svntest.main.run_svn(None, 'cp', B_path, B_copied_path)
-  svntest.main.run_svn(None, 'ps', SVN_PROP_MERGEINFO, '/A/B-copied:1', C_path)
-  svntest.main.run_svn(None, 'mkdir', B_new_path)
-  svntest.main.run_svn(None, 'ps', SVN_PROP_MERGEINFO, '/A/B-new:1', D_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'setting bogus mergeinfo', wc_path)
-
-  # The tests: Check that 'svn log -g' doesn't error on these.
-  svntest.actions.run_and_verify_svn(None, None, [], 'log', '-g', C_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'log', '-g', D_path)
+  svntest.main.run_svn(None, 'ps', SVN_PROP_MERGEINFO, '/A/B:0', D_path)
+  #commit at r2
+  svntest.main.run_svn(None, 'ci', '-m', 'setting bogus mergeinfo', D_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None,
+                                                              [], 'log',
+                                                              '-g', D_path)
+  if len(err):
+    raise svntest.Failure("svn log -g target_with_bogus_mergeinfo fails")
 
 def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   "log -g and explicit mergeinfo replacing inherited"
@@ -1485,11 +1461,6 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
     'H/psi'   : Item(status='U '),
     'G/rho'   : Item(status='U '),
     'H/omega' : Item(status='U '),
-    })
-  expected_mergeinfo_output = wc.State(D_COPY_path, {
-    ''        : Item(status=' U'),
-    })
-  expected_elision_output = wc.State(D_COPY_path, {
     })
   expected_status = wc.State(D_COPY_path, {
     ''        : Item(status=' M', wc_rev=2),
@@ -1517,10 +1488,8 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
     })
   expected_skip = wc.State(D_COPY_path, { })
   svntest.actions.run_and_verify_merge(D_COPY_path, None, None,
-                                       sbox.repo_url + '/A/D', None,
+                                       sbox.repo_url + '/A/D',
                                        expected_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
@@ -1555,11 +1524,6 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   expected_output = wc.State(H_COPY_path, {
     'psi' : Item(status='U ')
     })
-  expected_mergeinfo_output = wc.State(H_COPY_path, {
-    ''    : Item(status=' G'),
-    })
-  expected_elision_output = wc.State(H_COPY_path, {
-    })
   expected_status = wc.State(H_COPY_path, {
     ''      : Item(status=' M', wc_rev=7),
     'psi'   : Item(status='M ', wc_rev=7),
@@ -1574,11 +1538,8 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
     })
   expected_skip = wc.State(H_COPY_path, { })
   svntest.actions.run_and_verify_merge(H_COPY_path, '3', '2',
-                                       sbox.repo_url + '/A/D/H', None,
-                                       expected_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
-                                       expected_disk,
+                                       sbox.repo_url + '/A/D/H',
+                                       expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1)
 
@@ -1703,7 +1664,7 @@ def log_of_local_copy(sbox):
                                      C_path, C_moved_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      psi_path, psi_moved_path)
-
+  
   # Get the logs for the move destinations.
   #
   # This was failing with:
@@ -1766,7 +1727,7 @@ test_list = [ None,
               retrieve_revprops,
               log_xml_with_bad_data,
               SkipUnless(merge_sensitive_log_target_with_bogus_mergeinfo,
-                              server_has_mergeinfo),
+                         server_has_mergeinfo),
               SkipUnless(merge_sensitive_log_added_mergeinfo_replaces_inherited,
                          server_has_mergeinfo),
               SkipUnless(merge_sensitive_log_propmod_merge_inheriting_path,

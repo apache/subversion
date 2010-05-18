@@ -1,67 +1,28 @@
 #!/usr/bin/env python
 #
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
-#
 # run_tests.py - run the tests in the regression test suite.
 #
 
-'''usage: python run_tests.py
-            [--verbose] [--log-to-stdout] [--cleanup] [--parallel]
-            [--url=<base-url>] [--http-library=<http-library>] [--enable-sasl]
-            [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
-            [--server-minor-version=<version>]
-            [--config-file=<file>]
-            <abs_srcdir> <abs_builddir>
-            <prog ...>
+'''usage: python run_tests.py [--url=<base-url>] [--fs-type=<fs-type>]
+                    [--verbose] [--cleanup] [--enable-sasl] [--parallel]
+                    [--http-library=<http-library>]
+                    [--config-file=<file>]
+                    [--server-minor-version=<version>] <abs_srcdir> <abs_builddir>
+                    <prog ...>
 
 The optional flags and the first two parameters are passed unchanged
 to the TestHarness constructor.  All other parameters are names of
 test programs.
-
-Each <prog> should be the full path (absolute or from the current directory)
-and filename of a test program, optionally followed by '#' and a comma-
-separated list of test numbers; the default is to run all the tests in it.
 '''
 
 import os, sys
-from datetime import datetime
+import time
 
 import getopt
 try:
   my_getopt = getopt.gnu_getopt
 except AttributeError:
   my_getopt = getopt.getopt
-
-class TextColors:
-  '''Some ANSI terminal constants for output color'''
-  ENDC = '\033[0;m'
-  FAILURE = '\033[1;31m'
-  SUCCESS = '\033[1;32m'
-
-  @classmethod
-  def disable(cls):
-    cls.ENDC = ''
-    cls.FAILURE = ''
-    cls.SUCCESS = ''
-
 
 class TestHarness:
   '''Test harness for Subversion tests.
@@ -76,9 +37,7 @@ class TestHarness:
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
-    LOGFILE is the name of the log file. If LOGFILE is None, let tests
-    print their output to stdout and stderr, and don't print a summary
-    at the end (since there's no log file to analyze).
+    LOGFILE is the name of the log file.
     BASE_URL is the base url for DAV tests.
     FS_TYPE is the FS type for repository creation.
     HTTP_LIBRARY is the HTTP library for DAV-based communications.
@@ -106,105 +65,54 @@ class TestHarness:
     self.list_tests = list_tests
     self.svn_bin = svn_bin
     self.log = None
-    if not sys.stdout.isatty() or sys.platform == 'win32':
-      TextColors.disable()
 
   def run(self, list):
-    '''Run all test programs given in LIST. Print a summary of results, if
-       there is a log file. Return zero iff all test programs passed.'''
+    'Run all test programs given in LIST.'
     self._open_log('w')
     failed = 0
     for cnt, prog in enumerate(list):
       failed = self._run_test(prog, cnt, len(list)) or failed
-
-    if self.log is None:
-      return failed
-
-    # Open the log in binary mode because it can contain binary data
-    # from diff_tests.py's testing of svnpatch. This may prevent
-    # readlines() from reading the whole log because it thinks it
-    # has encountered the EOF marker.
-    self._open_log('rb')
+    self._open_log('r')
     log_lines = self.log.readlines()
-
-    # Remove \r characters introduced by opening the log as binary
-    if sys.platform == 'win32':
-      log_lines = [x.replace('\r', '') for x in log_lines]
-
-    # Print the results, from least interesting to most interesting.
-
-    # Helper for Work-In-Progress indications for XFAIL tests.
-    wimptag = ' [[WIMP: '
-    def printxfail(x):
-      wip = x.find(wimptag)
-      if 0 > wip:
-        sys.stdout.write(x)
-      else:
-        sys.stdout.write('%s\n       [[%s'
-                         % (x[:wip], x[wip + len(wimptag):]))
-
-    passed = [x for x in log_lines if x[:6] == 'PASS: ']
-
+    # Print summaries from least interesting to most interesting.
     skipped = [x for x in log_lines if x[:6] == 'SKIP: ']
     if skipped:
       print('At least one test was SKIPPED, checking ' + self.logfile)
       for x in skipped:
         sys.stdout.write(x)
-
     xfailed = [x for x in log_lines if x[:6] == 'XFAIL:']
     if xfailed:
       print('At least one test XFAILED, checking ' + self.logfile)
       for x in xfailed:
-        printxfail(x)
-
-    xpassed = [x for x in log_lines if x[:6] == 'XPASS:']
-    if xpassed:
-      print('At least one test XPASSED, checking ' + self.logfile)
-      for x in xpassed:
-        printxfail(x)
-
+        sys.stdout.write(x)
     failed_list = [x for x in log_lines if x[:6] == 'FAIL: ']
     if failed_list:
       print('At least one test FAILED, checking ' + self.logfile)
       for x in failed_list:
         sys.stdout.write(x)
-
-    # Print summaries, from least interesting to most interesting.
-    print('Summary of test results:')
-    if passed:
-      print('  %d test%s PASSED'
-            % (len(passed), 's'*min(len(passed) - 1, 1)))
-    if skipped:
-      print('  %d test%s SKIPPED'
-            % (len(skipped), 's'*min(len(skipped) - 1, 1)))
-    if xfailed:
-      passwimp = [x for x in xfailed if 0 <= x.find(wimptag)]
-      if passwimp:
-        print('  %d test%s XFAILED (%d WORK-IN-PROGRESS)'
-              % (len(xfailed), 's'*min(len(xfailed) - 1, 1), len(passwimp)))
-      else:
-        print('  %d test%s XFAILED'
-              % (len(xfailed), 's'*min(len(xfailed) - 1, 1)))
+    xpassed = [x for x in log_lines if x[:6] == 'XPASS:']
     if xpassed:
-      failwimp = [x for x in xpassed if 0 <= x.find(wimptag)]
-      if failwimp:
-        print('  %d test%s XPASSED (%d WORK-IN-PROGRESS)'
-              % (len(xpassed), 's'*min(len(xpassed) - 1, 1), len(failwimp)))
-      else:
-        print('  %d test%s XPASSED'
-              % (len(xpassed), 's'*min(len(xpassed) - 1, 1)))
-    if failed_list:
-      print('  %d test%s FAILED'
-            % (len(failed_list), 's'*min(len(failed_list) - 1, 1)))
-
+      print('At least one test XPASSED, checking ' + self.logfile)
+      for x in xpassed:
+        sys.stdout.write(x)
+    if skipped or xfailed or failed_list or xpassed:
+      print('Summary of test results:')
+      if skipped:
+        print('  %d test%s SKIPPED' % (len(skipped), 's'*min(len(skipped), 1)))
+      if xfailed:
+        print('  %d test%s XFAILED' % (len(xfailed), 's'*min(len(xfailed), 1)))
+      if failed_list:
+        print('  %d test%s FAILED' % (len(failed_list),
+                                      's'*min(len(failed_list), 1)))
+      if xpassed:
+        print('  %d test%s XPASSED' % (len(xpassed), 's'*min(len(xpassed), 1)))
     self._close_log()
     return failed
 
   def _open_log(self, mode):
     'Open the log file with the required MODE.'
-    if self.logfile:
-      self._close_log()
-      self.log = open(self.logfile, mode)
+    self._close_log()
+    self.log = open(self.logfile, mode)
 
   def _close_log(self):
     'Close the log file.'
@@ -221,26 +129,14 @@ class TestHarness:
       else:
         return arg
 
-    if self.log:
-      log = self.log
-    else:
-      log = sys.stdout
-
-    test_nums = None
-    if '#' in prog:
-      prog, test_nums = prog.split('#')
-
     progdir, progbase = os.path.split(prog)
-    if self.log:
-      # Using write here because we don't want even a trailing space
-      test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
-      sys.stdout.write('Running tests in %s' % (test_info, ))
-      sys.stdout.write('.'*(35 - len(test_info)))
+    # Using write here because we don't want even a trailing space
+    sys.stdout.write('Running all tests in %s [%d/%d]...' % (
+      progbase, test_nr + 1, total_tests))
+    self.log.write('START: %s\n' % progbase)
+    self.log.flush()
 
-    log.write('START: %s\n' % progbase)
-    log.flush()
-
-    start_time = datetime.now()
+    start_time = time.time()
     if progbase[-3:] == '.py':
       progname = sys.executable
       cmdline = [quote(progname),
@@ -282,10 +178,6 @@ class TestHarness:
     if self.fsfs_packing is not None:
       cmdline.append('--fsfs-packing')
 
-    if test_nums:
-      test_nums = test_nums.split(',')
-      cmdline.extend(test_nums)
-
     old_cwd = os.getcwd()
     try:
       os.chdir(progdir)
@@ -296,30 +188,25 @@ class TestHarness:
     else:
       os.chdir(old_cwd)
 
-    # We always return 1 for failed tests. Some other failure than 1
+    # We always return 1 for failed tests, if some other failure than 1
     # probably means the test didn't run at all and probably didn't
-    # output any failure info. In that case, log a generic failure message.
-    # ### Even if failure==1 it could be that the test didn't run at all.
-    if failed and failed != 1:
-      if self.log:
-        log.write('FAIL:  %s: Unknown test failure; see tests.log.\n' % progbase)
-        log.flush()
-      else:
-        log.write('FAIL:  %s: Unknown test failure.\n' % progbase)
-
-    # Log the elapsed time.
-    elapsed_time = str(datetime.now() - start_time)
-    log.write('END: %s\n' % progbase)
-    log.write('ELAPSED: %s %s\n' % (progbase, elapsed_time))
-    log.write('\n')
-
-    # If we printed a "Running all tests in ..." line, add the test result.
+    # output any failure info.
+    if failed == 1:
+      print('FAILURE')
+    elif failed:
+      self.log.write('FAIL:  %s: Unknown test failure see tests.log.\n\n' % progbase)
+      self.log.flush()
+      print('FAILURE')
+    else:
+      print('success')
+    elapsed_time = time.strftime('%H:%M:%S', 
+                   time.gmtime(time.time() - start_time))
     if self.log:
-      if failed:
-        print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
-      else:
-        print(TextColors.SUCCESS + 'success' + TextColors.ENDC)
-
+      self.log.write('END: %s\n' % progbase)
+      self.log.write('ELAPSED: %s %s\n\n' % (progbase, elapsed_time))
+    else:
+      print('END: %s\n' % progbase)
+      print('ELAPSED: %s %s\n' % (progbase, elapsed_time))
     return failed
 
   def _run_prog(self, progname, arglist):
@@ -332,24 +219,20 @@ class TestHarness:
       os.close(stdout)
       os.close(stderr)
 
-    if self.log:
-      sys.stdout.flush()
-      sys.stderr.flush()
-      self.log.flush()
-      old_stdout = os.dup(1)
-      old_stderr = os.dup(2)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    self.log.flush()
+    old_stdout = os.dup(1)
+    old_stderr = os.dup(2)
     try:
-      if self.log:
-        os.dup2(self.log.fileno(), 1)
-        os.dup2(self.log.fileno(), 2)
+      os.dup2(self.log.fileno(), 1)
+      os.dup2(self.log.fileno(), 2)
       rv = os.spawnv(os.P_WAIT, progname, arglist)
     except:
-      if self.log:
-        restore_streams(old_stdout, old_stderr)
+      restore_streams(old_stdout, old_stderr)
       raise
     else:
-      if self.log:
-        restore_streams(old_stdout, old_stderr)
+      restore_streams(old_stdout, old_stderr)
       return rv
 
 
@@ -359,8 +242,7 @@ def main():
                            ['url=', 'fs-type=', 'verbose', 'cleanup',
                             'http-library=', 'server-minor-version=',
                             'fsfs-packing', 'fsfs-sharding=',
-                            'enable-sasl', 'parallel', 'config-file=',
-                            'log-to-stdout'])
+                            'enable-sasl', 'parallel', 'config-file='])
   except getopt.GetoptError:
     args = []
 
@@ -370,9 +252,8 @@ def main():
 
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
     server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
-    config_file, log_to_stdout = \
-            None, None, None, None, None, None, None, None, None, None, None, \
-            None
+    config_file = \
+            None, None, None, None, None, None, None, None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -396,17 +277,11 @@ def main():
       parallel = 1
     elif opt in ['--config-file']:
       config_file = val
-    elif opt in ['--log-to-stdout']:
-      log_to_stdout = 1
     else:
       raise getopt.GetoptError
 
-  if log_to_stdout:
-    logfile = None
-  else:
-    logfile = os.path.abspath('tests.log')
-
-  th = TestHarness(args[0], args[1], logfile,
+  th = TestHarness(args[0], args[1],
+                   os.path.abspath('tests.log'),
                    base_url, fs_type, http_library, server_minor_version,
                    verbose, cleanup, enable_sasl, parallel, config_file,
                    fsfs_sharding, fsfs_packing)

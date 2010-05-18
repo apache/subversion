@@ -1,22 +1,17 @@
 /* dag.h : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -282,16 +277,6 @@ svn_error_t *svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
                                          apr_pool_t *pool);
 
 
-/* Replace the transaction in revision REPLACING_REV with the uncommitted
- * transaction TXN, and promote TXN to a committed transaction. See also
- * svn_fs_base__dag_commit_txn(). */
-svn_error_t *
-svn_fs_base__dag_commit_obliteration_txn(svn_revnum_t replacing_rev,
-                                         svn_fs_txn_t *txn,
-                                         trail_t *trail,
-                                         apr_pool_t *scratch_pool);
-
-
 
 /* Directories.  */
 
@@ -365,12 +350,9 @@ svn_error_t *svn_fs_base__dag_clone_child(dag_node_t **child_p,
 /* Delete the directory entry named NAME from PARENT, as part of
    TRAIL.  PARENT must be mutable.  NAME must be a single path
    component; it cannot be a slash-separated directory path.  If the
-   entry being deleted points to a mutable node revision, also remove
-   that node revision and (if it is a directory) all mutable node
-   revisions reachable from it.  Also delete the node-origins record
-   for each deleted node revision that had no predecessor.
-
-   TXN_ID is the Subversion transaction under which this occurs.
+   node being deleted is a mutable directory, remove all mutable nodes
+   reachable from it.  TXN_ID is the Subversion transaction under
+   which this occurs.
 
    If return SVN_ERR_FS_NO_SUCH_ENTRY, then there is no entry NAME in
    PARENT.  */
@@ -383,12 +365,9 @@ svn_error_t *svn_fs_base__dag_delete(dag_node_t *parent,
 
 /* Delete the node revision assigned to node ID from FS's `nodes'
    table, as part of TRAIL.  Also delete any mutable representations
-   and strings associated with that node revision.  Also delete the
-   node-origins record for this node revision's node id, if this node
-   revision had no predecessor.
-
-   ID may refer to a file or directory, which must be mutable.  TXN_ID
-   is the Subversion transaction under which this occurs.
+   and strings associated with that node revision.  ID may refer to a
+   file or directory, which must be mutable.  TXN_ID is the Subversion
+   transaction under which this occurs.
 
    NOTE: If ID represents a directory, and that directory has mutable
    children, you risk orphaning those children by leaving them
@@ -404,12 +383,9 @@ svn_error_t *svn_fs_base__dag_remove_node(svn_fs_t *fs,
 /* Delete all mutable node revisions reachable from node ID, including
    ID itself, from FS's `nodes' table, as part of TRAIL.  Also delete
    any mutable representations and strings associated with that node
-   revision.  Also delete the node-origins record for each deleted
-   node revision that had no predecessor.
-
-   ID may refer to a file or directory, which may be mutable or
-   immutable.  TXN_ID is the Subversion transaction under which this
-   occurs.  */
+   revision.  ID may refer to a file or directory, which may be
+   mutable or immutable.  TXN_ID is the Subversion transaction under
+   which this occurs.  */
 svn_error_t *svn_fs_base__dag_delete_if_mutable(svn_fs_t *fs,
                                                 const svn_fs_id_t *id,
                                                 const char *txn_id,
@@ -558,15 +534,6 @@ svn_error_t *svn_fs_base__dag_deltify(dag_node_t *target,
                                       trail_t *trail,
                                       apr_pool_t *pool);
 
-/* Obliterate NODE's data by constructing a new representation that
-   consists of a no-change delta from PRED_NODE, and changing NODE to
-   use that new rep, and leaving the old rep alone in case it is used
-   by other nodes.  If PRED_NODE is null
-   then construct a representation with an empty fulltext instead. */
-svn_error_t *svn_fs_base__dag_obliterate_rep(dag_node_t *node,
-                                             dag_node_t *pred_node,
-                                             trail_t *trail,
-                                             apr_pool_t *pool);
 
 /* Index NODE's backing data representations by their checksum.  Do
    this as part of TRAIL.  Use POOL for allocations. */

@@ -3,25 +3,17 @@
 #  getopt_tests.py:  testing the svn command line processing
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
+# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 ######################################################################
 
 # General modules
@@ -78,9 +70,8 @@ rep_lines_res = [
                  (re.compile(r'version \d+\.\d+\.\d+ \(.*\)'),
                   'version X.Y.Z '),
                  # The copyright end date keeps changing; fix forever.
-                 (re.compile(r'Copyright \(C\) 20\d\d The Apache '
-                              'Software Foundation\.'),
-                  'Copyright (C) YYYY The Apache Software Foundation'),
+                 (re.compile(r'Copyright \(C\) 2000-\d+ CollabNet\.'),
+                  'Copyright (C) YYYY-YYYY CollabNet'),
                  # In 'svn --version --quiet', we print only the version
                  # number in a single line.
                  (re.compile(r'^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$'), 'X.Y.Z\n'),
@@ -205,7 +196,7 @@ test_list = [ None,
               getopt__help,
               getopt_help,
               getopt_help_bogus_cmd,
-              getopt_help_log_switch,
+              getopt_help_log_switch
             ]
 
 if __name__ == '__main__':

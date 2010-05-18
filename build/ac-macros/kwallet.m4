@@ -1,21 +1,3 @@
-dnl ===================================================================
-dnl   Licensed to the Apache Software Foundation (ASF) under one
-dnl   or more contributor license agreements.  See the NOTICE file
-dnl   distributed with this work for additional information
-dnl   regarding copyright ownership.  The ASF licenses this file
-dnl   to you under the Apache License, Version 2.0 (the
-dnl   "License"); you may not use this file except in compliance
-dnl   with the License.  You may obtain a copy of the License at
-dnl
-dnl     http://www.apache.org/licenses/LICENSE-2.0
-dnl
-dnl   Unless required by applicable law or agreed to in writing,
-dnl   software distributed under the License is distributed on an
-dnl   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-dnl   KIND, either express or implied.  See the License for the
-dnl   specific language governing permissions and limitations
-dnl   under the License.
-dnl ===================================================================
 dnl
 dnl  SVN_LIB_KWALLET
 dnl
@@ -33,7 +15,7 @@ AC_DEFUN(SVN_LIB_KWALLET,
   AC_MSG_CHECKING([whether to look for KWallet])
   if test "$svn_lib_kwallet" != "no"; then
     AC_MSG_RESULT([yes])
-    if test "$svn_enable_shared" = "yes"; then
+    if test "$enable_shared" = "yes"; then
       if test "$APR_HAS_DSO" = "yes"; then
         if test "$USE_NLS" = "yes"; then
           if test -n "$PKG_CONFIG"; then
@@ -43,36 +25,36 @@ AC_DEFUN(SVN_LIB_KWALLET,
                 AC_MSG_RESULT([yes])
                 if test "$svn_lib_kwallet" != "yes"; then
                   AC_MSG_CHECKING([for kde4-config])
-                  KDE4_CONFIG="$svn_lib_kwallet/bin/kde4-config"
-                  if test -f "$KDE4_CONFIG" && test -x "$KDE4_CONFIG"; then
+                  kde4_config="$svn_lib_kwallet/bin/kde4-config"
+                  if test -f "$kde4_config" && test -x "$kde4_config"; then
+                    HAVE_KDE4_CONFIG="yes"
                     AC_MSG_RESULT([yes])
                   else
-                    KDE4_CONFIG=""
                     AC_MSG_RESULT([no])
                   fi
                 else
-                  AC_PATH_PROG(KDE4_CONFIG, kde4-config)
+                  AC_CHECK_PROG(HAVE_KDE4_CONFIG, kde4-config, yes)
+                  kde4_config="kde4-config"
                 fi
-                if test -n "$KDE4_CONFIG"; then
+                if test "$HAVE_KDE4_CONFIG" = "yes"; then
                   AC_MSG_CHECKING([for KWallet])
                   old_CXXFLAGS="$CXXFLAGS"
                   old_LDFLAGS="$LDFLAGS"
                   old_LIBS="$LIBS"
                   for d in [`$PKG_CONFIG --cflags QtCore QtDBus QtGui`]; do
-                    if test -n ["`echo "$d" | $EGREP -- '^-D[^[:space:]]*'`"]; then
+                    if test -n ["`echo "$d" | $GREP -- '^-D[^[:space:]]*'`"]; then
                       CPPFLAGS="$CPPFLAGS $d"
                     fi
                   done
                   qt_include_dirs="`$PKG_CONFIG --cflags-only-I QtCore QtDBus QtGui`"
-                  kde_dir="`$KDE4_CONFIG --prefix`"
+                  kde_dir="`$kde4_config --prefix`"
                   SVN_KWALLET_INCLUDES="$DBUS_CPPFLAGS $qt_include_dirs -I$kde_dir/include"
                   qt_libs_other_options="`$PKG_CONFIG --libs-only-other QtCore QtDBus QtGui`"
                   SVN_KWALLET_LIBS="$DBUS_LIBS -lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui $qt_libs_other_options"
                   CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
                   LIBS="$LIBS $SVN_KWALLET_LIBS"
                   qt_lib_dirs="`$PKG_CONFIG --libs-only-L QtCore QtDBus QtGui`"
-                  kde_lib_suffix="`$KDE4_CONFIG --libsuffix`"
-                  LDFLAGS="$old_LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS($qt_lib_dirs -L$kde_dir/lib$kde_lib_suffix)`"
+                  LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`$kde4_config --libsuffix`"
                   AC_LANG(C++)
                   AC_LINK_IFELSE([
 #include <kwallet.h>

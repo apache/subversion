@@ -4,29 +4,21 @@
 #                      tree already exits.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
+# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 ######################################################################
 
 # General modules
-import sys, re, os, time, subprocess
+import sys, re, os, time
 
 # Our testing module
 import svntest
@@ -312,7 +304,7 @@ def forced_checkout_with_versioned_obstruction(sbox):
     "Expected error during co", None, svntest.verify.AnyOutput,
     "co", "--force", repo_url, other_wc_dir)
 
-  test_stderr("(Failed to add directory|UUID mismatch:).*'.*A'", serr)
+  test_stderr("UUID mismatch: existing directory '.*A'", serr)
 
   #ensure that other_wc_dir_A is not affected by this forced checkout.
   svntest.actions.run_and_verify_svn("empty status output", None,
@@ -824,87 +816,6 @@ def co_with_obstructing_local_adds(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
-# Test if checking out from a Windows driveroot is supported.
-def checkout_wc_from_drive(sbox):
-  "checkout from the root of a Windows drive"
-
-  def find_the_next_available_drive_letter():
-    "find the first available drive"
-
-    # get the list of used drive letters, use some Windows specific function.
-    try:
-      import win32api
-
-      drives=win32api.GetLogicalDriveStrings()
-      drives=drives.split('\000')
-
-      for d in range(ord('G'), ord('Z')+1):
-        drive = chr(d)
-        if not drive + ':\\' in drives:
-          return drive
-    except ImportError:
-      # In ActiveState python x64 win32api is not available
-      for d in range(ord('G'), ord('Z')+1):
-        drive = chr(d)
-        if not os.path.isdir(drive + ':\\'):
-          return drive
-
-    return None
-
-  # Skip the test if not on Windows
-  if not svntest.main.windows:
-    raise svntest.Skip
-
-  # just create an empty folder, we'll checkout later.
-  sbox.build(create_wc = False)
-  svntest.main.safe_rmtree(sbox.wc_dir)
-  os.mkdir(sbox.wc_dir)
-
-  # create a virtual drive to the working copy folder
-  drive = find_the_next_available_drive_letter()
-  if drive is None:
-    raise svntest.Skip
-
-  subprocess.call(['subst', drive +':', sbox.repo_dir])
-  repo_url = 'file:///' + drive + ':/'
-  wc_dir = sbox.wc_dir
-  was_cwd = os.getcwd()
-
-  try:
-    expected_wc = svntest.main.greek_state.copy()
-    expected_output = wc.State(wc_dir, {
-      'A'                 : Item(status='A '),
-      'A/D'               : Item(status='A '),
-      'A/D/H'             : Item(status='A '),
-      'A/D/H/psi'         : Item(status='A '),
-      'A/D/H/chi'         : Item(status='A '),
-      'A/D/H/omega'       : Item(status='A '),
-      'A/D/G'             : Item(status='A '),
-      'A/D/G/tau'         : Item(status='A '),
-      'A/D/G/pi'          : Item(status='A '),
-      'A/D/G/rho'         : Item(status='A '),
-      'A/D/gamma'         : Item(status='A '),
-      'A/C'               : Item(status='A '),
-      'A/mu'              : Item(status='A '),
-      'A/B'               : Item(status='A '),
-      'A/B/E'             : Item(status='A '),
-      'A/B/E/alpha'       : Item(status='A '),
-      'A/B/E/beta'        : Item(status='A '),
-      'A/B/F'             : Item(status='A '),
-      'A/B/lambda'        : Item(status='A '),
-      'iota'              : Item(status='A '),
-    })
-    svntest.actions.run_and_verify_checkout(repo_url, wc_dir,
-                                            expected_output, expected_wc,
-                                            None, None, None, None,
-                                            '--force')
-
-  finally:
-    os.chdir(was_cwd)
-    # cleanup the virtual drive
-    subprocess.call(['subst', '/D', drive +':'])
-
-#----------------------------------------------------------------------
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -921,7 +832,6 @@ test_list = [ None,
               checkout_peg_rev,
               checkout_peg_rev_date,
               co_with_obstructing_local_adds,
-              checkout_wc_from_drive
             ]
 
 if __name__ == "__main__":

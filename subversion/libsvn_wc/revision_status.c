@@ -2,165 +2,96 @@
  * revision_status.c: report the revision range and status of a working copy
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
 #include "svn_wc.h"
-#include "svn_dirent_uri.h"
-#include "wc_db.h"
-#include "wc.h"
-#include "props.h"
-
-#include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
 
+
 /* A baton for analyze_status(). */
-struct walk_baton
+struct status_baton
 {
   svn_wc_revision_status_t *result;           /* where to put the result */
   svn_boolean_t committed;           /* examine last committed revisions */
-  const char *local_abspath;         /* path whose URL we're looking for */
-  svn_wc__db_t *db;
+  const char *wc_path;               /* path whose URL we're looking for */
+  const char *wc_url;    /* URL for the path whose URL we're looking for */
+  apr_pool_t *pool;         /* pool in which to store alloc-needy things */
 };
 
-/* An svn_wc__node_found_func_t callback function for analyzing the wc
- * status of LOCAL_ABSPATH.  Update the status information in BATON->result.
- * BATON is a 'struct walk_baton'.
- *
- * Implementation note: Since it can be invoked for a lot of paths in
- * a wc but some data, i.e. if the wc is switched or has modifications, is
- * expensive to calculate, we optimize by checking if those values are
- * already set before runnning the db operations.
- *
- * Temporary allocations are made in SCRATCH_POOL. */
+/* An svn_wc_status_func3_t callback function for analyzing status
+   structures. */
 static svn_error_t *
-analyze_status(const char *local_abspath,
-               void *baton,
-               apr_pool_t *scratch_pool)
+analyze_status(void *baton,
+               const char *path,
+               svn_wc_status2_t *status,
+               apr_pool_t *pool)
 {
-  struct walk_baton *wb = baton;
-  svn_revnum_t changed_rev;
-  svn_revnum_t revision;
-  svn_revnum_t item_rev; 
-  svn_depth_t depth;
-  svn_wc__db_status_t status;
+  struct status_baton *sb = baton;
 
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, 
-                               NULL, NULL, &changed_rev, 
-                               NULL, NULL, NULL, &depth, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, wb->db,
-                               local_abspath, scratch_pool, scratch_pool));
-
-  /* We need the excluded and absent paths when checking for sparse
-   * checkouts. But only for that. To collect those we're walking all the
-   * hidden nodes. */
-  if (status == svn_wc__db_status_excluded 
-      || status == svn_wc__db_status_absent)
-    {
-      wb->result->sparse_checkout = TRUE;
-      return SVN_NO_ERROR;
-    }
-  else if (status == svn_wc__db_status_not_present)
-    {
-      return SVN_NO_ERROR;
-    }
-  else if (status == svn_wc__db_status_added
-           || status == svn_wc__db_status_obstructed_add
-           || status == svn_wc__db_status_deleted
-           || status == svn_wc__db_status_obstructed_delete)
-    {
-      wb->result->modified = TRUE; 
-    }
-
-  if (! wb->result->switched)
-    {
-      svn_boolean_t wc_root;
-      svn_boolean_t switched;
-
-      SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, &switched, wb->db,
-                                    local_abspath, scratch_pool));
-
-      wb->result->switched |= switched;
-    }
-
-  item_rev = (wb->committed
-              ? changed_rev
-              : revision);
+  if (! status->entry)
+    return SVN_NO_ERROR;
 
   /* Added files have a revision of no interest */
-  if (item_rev != SVN_INVALID_REVNUM)
+  if (status->text_status != svn_wc_status_added)
     {
+      svn_revnum_t item_rev = (sb->committed
+                               ? status->entry->cmt_rev
+                               : status->entry->revision);
 
-      if (wb->result->min_rev == SVN_INVALID_REVNUM
-          || item_rev < wb->result->min_rev)
-        wb->result->min_rev = item_rev;
+      if (sb->result->min_rev == SVN_INVALID_REVNUM
+          || item_rev < sb->result->min_rev)
+        sb->result->min_rev = item_rev;
 
-      if (wb->result->max_rev == SVN_INVALID_REVNUM
-          || item_rev > wb->result->max_rev)
-        wb->result->max_rev = item_rev;
+      if (sb->result->max_rev == SVN_INVALID_REVNUM
+          || item_rev > sb->result->max_rev)
+        sb->result->max_rev = item_rev;
     }
 
-  if (! wb->result->modified)
-    {
-      svn_boolean_t props_mod;
+  sb->result->switched |= status->switched;
+  sb->result->modified |= (status->text_status != svn_wc_status_normal);
+  sb->result->modified |= (status->prop_status != svn_wc_status_normal
+                           && status->prop_status != svn_wc_status_none);
+  sb->result->sparse_checkout |= (status->entry->depth != svn_depth_infinity);
 
-      SVN_ERR(svn_wc__props_modified(&props_mod, wb->db, local_abspath,
-                                     scratch_pool));
-      wb->result->modified |= props_mod;
-    }
+  if (sb->wc_path
+      && (! sb->wc_url)
+      && (strcmp(path, sb->wc_path) == 0)
+      && (status->entry))
+    sb->wc_url = apr_pstrdup(sb->pool, status->entry->url);
 
-  if (! wb->result->modified)
-    {
-      svn_boolean_t text_mod;
-
-      SVN_ERR(svn_wc__internal_text_modified_p(&text_mod, wb->db,
-                                               local_abspath,
-                                               FALSE,
-                                               TRUE,
-                                               scratch_pool));
-      wb->result->modified |= text_mod; 
-    }
-
-  wb->result->sparse_checkout |= (depth != svn_depth_infinity 
-                                  && depth != svn_depth_unknown);
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
-                        svn_wc_context_t *wc_ctx,
-                        const char *local_abspath,
-                        const char *trail_url,
-                        svn_boolean_t committed,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
+svn_wc_revision_status(svn_wc_revision_status_t **result_p,
+                       const char *wc_path,
+                       const char *trail_url,
+                       svn_boolean_t committed,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *pool)
 {
-  struct walk_baton wb;
-  const char *url;
-  svn_wc_revision_status_t *result = apr_palloc(result_pool, sizeof(*result));
+  struct status_baton sb;
+  const char *target;
+  svn_wc_adm_access_t *anchor_access, *target_access;
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  svn_revnum_t edit_revision;
+  svn_wc_revision_status_t *result = apr_palloc(pool, sizeof(**result_p));
   *result_p = result;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* set result as nil */
   result->min_rev  = SVN_INVALID_REVNUM;
@@ -170,39 +101,49 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
   result->sparse_checkout = FALSE;
 
   /* initialize walking baton */
-  wb.result = result;
-  wb.committed = committed;
-  wb.local_abspath = local_abspath;
-  wb.db = wc_ctx->db;
+  sb.result = result;
+  sb.committed = committed;
+  sb.wc_path = wc_path;
+  sb.wc_url = NULL;
+  sb.pool = pool;
 
-  SVN_ERR(svn_wc__internal_node_get_url(&url, wc_ctx->db, local_abspath,
-                                        result_pool, scratch_pool));
+  SVN_ERR(svn_wc_adm_open_anchor(&anchor_access, &target_access, &target,
+                                 wc_path, FALSE, -1,
+                                 cancel_func, cancel_baton,
+                                 pool));
 
-  if (trail_url != NULL)
+  SVN_ERR(svn_wc_get_status_editor4(&editor, &edit_baton, NULL,
+                                    &edit_revision, anchor_access, target,
+                                    svn_depth_infinity,
+                                    TRUE  /* get_all */,
+                                    FALSE /* no_ignore */,
+                                    NULL  /* ignore_patterns */,
+                                    analyze_status, &sb,
+                                    cancel_func, cancel_baton,
+                                    NULL  /* traversal_info */,
+                                    pool));
+
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  SVN_ERR(svn_wc_adm_close2(anchor_access, pool));
+
+  if ((! result->switched) && (trail_url != NULL))
     {
       /* If the trailing part of the URL of the working copy directory
          does not match the given trailing URL then the whole working
          copy is switched. */
-      if (! url)
+      if (! sb.wc_url)
         {
           result->switched = TRUE;
         }
       else
         {
           apr_size_t len1 = strlen(trail_url);
-          apr_size_t len2 = strlen(url);
-          if ((len1 > len2) || strcmp(url + len2 - len1, trail_url))
+          apr_size_t len2 = strlen(sb.wc_url);
+          if ((len1 > len2) || strcmp(sb.wc_url + len2 - len1, trail_url))
             result->switched = TRUE;
         }
     }
-
-  SVN_ERR(svn_wc__node_walk_children(wc_ctx,
-                                     local_abspath,
-                                     TRUE /* show_hidden */,
-                                     analyze_status, &wb,
-                                     svn_depth_infinity,
-                                     cancel_func, cancel_baton,
-                                     scratch_pool));
 
   return SVN_NO_ERROR;
 }

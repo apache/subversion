@@ -2,22 +2,17 @@
  * main.c: Subversion server administration tool.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -31,7 +26,6 @@
 #include "svn_opt.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_config.h"
 #include "svn_repos.h"
@@ -123,7 +117,7 @@ parse_local_repos_path(apr_getopt_t *os,
     {
       const char * path = os->argv[os->ind++];
       SVN_ERR(svn_utf_cstring_to_utf8(repos_path, path, pool));
-      *repos_path = svn_dirent_internal_style(*repos_path, pool);
+      *repos_path = svn_path_internal_style(*repos_path, pool);
     }
 
   if (*repos_path == NULL)
@@ -230,8 +224,7 @@ enum
     svnadmin__wait,
     svnadmin__pre_1_4_compatible,
     svnadmin__pre_1_5_compatible,
-    svnadmin__pre_1_6_compatible,
-    svnadmin__pre_1_7_compatible
+    svnadmin__pre_1_6_compatible
   };
 
 /* Option codes and descriptions.
@@ -317,10 +310,6 @@ static const apr_getopt_option_t options_table[] =
      N_("use format compatible with Subversion versions\n"
         "                             earlier than 1.6")},
 
-    {"pre-1.7-compatible",     svnadmin__pre_1_7_compatible, 0,
-     N_("use format compatible with Subversion versions\n"
-        "                             earlier than 1.7")},
-
     {NULL}
   };
 
@@ -341,8 +330,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "Create a new, empty repository at REPOS_PATH.\n"),
    {svnadmin__bdb_txn_nosync, svnadmin__bdb_log_keep,
     svnadmin__config_dir, svnadmin__fs_type, svnadmin__pre_1_4_compatible,
-    svnadmin__pre_1_5_compatible, svnadmin__pre_1_6_compatible,
-    svnadmin__pre_1_7_compatible} },
+    svnadmin__pre_1_5_compatible, svnadmin__pre_1_6_compatible } },
 
   {"deltify", subcommand_deltify, {0}, N_
    ("usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
@@ -494,7 +482,6 @@ struct svnadmin_opt_state
   svn_boolean_t pre_1_4_compatible;                 /* --pre-1.4-compatible */
   svn_boolean_t pre_1_5_compatible;                 /* --pre-1.5-compatible */
   svn_boolean_t pre_1_6_compatible;                 /* --pre-1.6-compatible */
-  svn_boolean_t pre_1_7_compatible;                 /* --pre-1.7-compatible */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
@@ -582,11 +569,6 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   if (opt_state->pre_1_6_compatible)
     apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
-                 APR_HASH_KEY_STRING,
-                 "1");
-
-  if (opt_state->pre_1_7_compatible)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_7_COMPATIBLE,
                  APR_HASH_KEY_STRING,
                  "1");
 
@@ -915,10 +897,10 @@ list_dblogs(apr_getopt_t *os, void *baton, svn_boolean_t only_unused,
   for (i = 0; i < logfiles->nelts; i++)
     {
       const char *log_utf8;
-      log_utf8 = svn_dirent_join(opt_state->repository_path,
-                                 APR_ARRAY_IDX(logfiles, i, const char *),
-                                 pool);
-      log_utf8 = svn_dirent_local_style(log_utf8, pool);
+      log_utf8 = svn_path_join(opt_state->repository_path,
+                               APR_ARRAY_IDX(logfiles, i, const char *),
+                               pool);
+      log_utf8 = svn_path_local_style(log_utf8, pool);
       SVN_ERR(svn_cmdline_printf(pool, "%s\n", log_utf8));
     }
 
@@ -1022,7 +1004,7 @@ set_revprop(const char *prop_name, const char *filename,
   const char *filename_utf8;
 
   SVN_ERR(svn_utf_cstring_to_utf8(&filename_utf8, filename, pool));
-  filename_utf8 = svn_dirent_internal_style(filename_utf8, pool);
+  filename_utf8 = svn_path_internal_style(filename_utf8, pool);
 
   SVN_ERR(svn_stringbuf_from_file2(&file_contents, filename_utf8, pool));
 
@@ -1238,6 +1220,7 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   apr_array_header_t *targets;
   svn_repos_t *repos;
   const char *fs_path = "/";
+  svn_fs_t *fs;
   apr_hash_t *locks;
   apr_hash_index_t *hi;
 
@@ -1251,16 +1234,22 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     fs_path = APR_ARRAY_IDX(targets, 0, const char *);
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  fs = svn_repos_fs(repos);
 
   /* Fetch all locks on or below the root directory. */
   SVN_ERR(svn_repos_fs_get_locks(&locks, repos, fs_path, NULL, NULL, pool));
 
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
-      const char *cr_date, *exp_date = "";
-      const char *path = svn__apr_hash_index_key(hi);
-      svn_lock_t *lock = svn__apr_hash_index_val(hi);
+      const void *key;
+      void *val;
+      const char *path, *cr_date, *exp_date = "";
+      svn_lock_t *lock;
       int comment_lines = 0;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      path = key;
+      lock = val;
 
       cr_date = svn_time_to_human_cstring(lock->creation_date, pool);
 
@@ -1582,9 +1571,6 @@ main(int argc, const char *argv[])
       case svnadmin__pre_1_6_compatible:
         opt_state.pre_1_6_compatible = TRUE;
         break;
-      case svnadmin__pre_1_7_compatible:
-        opt_state.pre_1_7_compatible = TRUE;
-        break;
       case svnadmin__fs_type:
         err = svn_utf_cstring_to_utf8(&opt_state.fs_type, opt_arg, pool);
         if (err)
@@ -1596,7 +1582,7 @@ main(int argc, const char *argv[])
         if (err)
           return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
         opt_state.parent_dir
-          = svn_dirent_internal_style(opt_state.parent_dir, pool);
+          = svn_path_internal_style(opt_state.parent_dir, pool);
         break;
       case svnadmin__use_pre_commit_hook:
         opt_state.use_pre_commit_hook = TRUE;
@@ -1624,7 +1610,7 @@ main(int argc, const char *argv[])
         break;
       case svnadmin__config_dir:
         opt_state.config_dir =
-          apr_pstrdup(pool, svn_dirent_canonicalize(opt_arg, pool));
+          apr_pstrdup(pool, svn_path_canonicalize(opt_arg, pool));
         break;
       case svnadmin__wait:
         opt_state.wait = TRUE;

@@ -1,22 +1,3 @@
-dnl ===================================================================
-dnl   Licensed to the Apache Software Foundation (ASF) under one
-dnl   or more contributor license agreements.  See the NOTICE file
-dnl   distributed with this work for additional information
-dnl   regarding copyright ownership.  The ASF licenses this file
-dnl   to you under the Apache License, Version 2.0 (the
-dnl   "License"); you may not use this file except in compliance
-dnl   with the License.  You may obtain a copy of the License at
-dnl
-dnl     http://www.apache.org/licenses/LICENSE-2.0
-dnl
-dnl   Unless required by applicable law or agreed to in writing,
-dnl   software distributed under the License is distributed on an
-dnl   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-dnl   KIND, either express or implied.  See the License for the
-dnl   specific language governing permissions and limitations
-dnl   under the License.
-dnl ===================================================================
-dnl
 # Miscellaneous additional macros for Subversion's own use.
 
 # SVN_CONFIG_NICE(FILENAME)
@@ -169,36 +150,5 @@ AC_DEFUN(SVN_MAYBE_ADD_TO_CFLAGS,
   else
     AC_MSG_RESULT([no])
     CFLAGS="$svn_maybe_add_to_cflags_saved_flags"
-  fi
-])
-
-dnl SVN_REMOVE_STANDARD_LIB_DIRS(OPTIONS)
-dnl
-dnl Remove standard library search directories.
-dnl OPTIONS is a list of compiler/linker options.
-dnl This macro prints input options except -L options whose arguments are
-dnl standard library search directories (e.g. /usr/lib).
-dnl
-dnl This macro is used to avoid linking against Subversion libraries
-dnl potentially placed in standard library search directories.
-AC_DEFUN([SVN_REMOVE_STANDARD_LIB_DIRS],
-[
-  input_flags="$1"
-  output_flags=""
-  filtered_dirs="/lib /lib64 /usr/lib /usr/lib64"
-  for flag in $input_flags; do
-    filter="no"
-    for dir in $filtered_dirs; do
-      if test "$flag" = "-L$dir" || test "$flag" = "-L$dir/"; then
-        filter="yes"
-        break
-      fi
-    done
-    if test "$filter" = "no"; then
-      output_flags="$output_flags $flag"
-    fi
-  done
-  if test -n "$output_flags"; then
-    printf "%s" "${output_flags# }"
   fi
 ])

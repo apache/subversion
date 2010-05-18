@@ -1,20 +1,4 @@
 #!/usr/bin/env python
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 
 import csvn.core
 from csvn.repos import *
@@ -33,11 +17,11 @@ print("Repos UUID: %s" % repos.uuid())
 txn = repos.txn()
 
 # You can create a file from a Python string
-open("/tmp/contents.txt", "w").write("Hello world one!")
+file("/tmp/contents.txt", "w").write("Hello world one!")
 txn.upload("file1.txt", local_path="/tmp/contents.txt")
 
 # ... or from a Python file
-open("/tmp/contents.txt", "w").write("Hello world two!")
+file("/tmp/contents.txt", "w").write("Hello world two!")
 txn.upload("file2.txt", local_path="/tmp/contents.txt")
 
 # Create some directories
@@ -63,7 +47,7 @@ txn.copy(src_path="file1.txt", dest_path="file3.txt")
 txn.copy(src_path="file2.txt", dest_path="file4.txt")
 
 # Modify some files while we're at it
-open("/tmp/contents.txt", "w").write("Hello world one and a half!")
+file("/tmp/contents.txt", "w").write("Hello world one and a half!")
 txn.upload("file1.txt", local_path="/tmp/contents.txt")
 
 # Commit our changes

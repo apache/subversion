@@ -2,22 +2,17 @@
  * activity.c: DeltaV activity handling
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -31,7 +26,6 @@
 #include "svn_checksum.h"
 #include "svn_error.h"
 #include "svn_io.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_props.h"
@@ -153,6 +147,7 @@ dav_svn__delete_activity(const dav_svn_repos *repos, const char *activity_id)
 {
   dav_error *err = NULL;
   const char *pathname;
+  svn_fs_txn_t *txn;
   const char *txn_name;
   svn_error_t *serr;
 
@@ -169,14 +164,44 @@ dav_svn__delete_activity(const dav_svn_repos *repos, const char *activity_id)
     }
 
   /* After this point, we have to cleanup the value and database. */
+
+  /* An empty txn_name indicates the transaction has been committed,
+     so don't try to clean it up. */
   if (*txn_name)
     {
-      if ((err = dav_svn__abort_txn(repos, txn_name, repos->pool)))
-        return err;
+      /* Now, we attempt to delete TXN_NAME from the Subversion
+         repository.  If we fail only because the transaction doesn't
+         exist, don't sweat it (but then, also don't try to remove it). */
+      if ((serr = svn_fs_open_txn(&txn, repos->fs, txn_name, repos->pool)))
+        {
+          if (serr->apr_err == SVN_ERR_FS_NO_SUCH_TRANSACTION)
+            {
+              svn_error_clear(serr);
+              serr = SVN_NO_ERROR;
+            }
+          else
+            {
+              err = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                         "could not open transaction.",
+                                         repos->pool);
+              return err;
+            }
+        }
+      else
+        {
+          serr = svn_fs_abort_txn(txn, repos->pool);
+          if (serr)
+            {
+              err = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                         "could not abort transaction.",
+                                         repos->pool);
+              return err;
+            }
+        }
     }
 
   /* Finally, we remove the activity from the activities database. */
-  serr = svn_io_remove_file2(pathname, FALSE, repos->pool);
+  serr = svn_io_remove_file(pathname, repos->pool);
   if (serr)
     err = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "unable to remove activity.",
@@ -210,7 +235,7 @@ dav_svn__store_activity(const dav_svn_repos *repos,
 
   /* ### is there another directory we already have and can write to? */
   err = svn_io_write_unique(&tmp_path,
-                            svn_dirent_dirname(final_path, repos->pool),
+                            svn_path_dirname(final_path, repos->pool),
                             activity_contents, strlen(activity_contents),
                             svn_io_file_del_none, repos->pool);
   if (err)
@@ -227,7 +252,7 @@ dav_svn__store_activity(const dav_svn_repos *repos,
   err = svn_io_file_rename(tmp_path, final_path, repos->pool);
   if (err)
     {
-      svn_error_clear(svn_io_remove_file2(tmp_path, TRUE, repos->pool));
+      svn_error_clear(svn_io_remove_file(tmp_path, repos->pool));
       return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
                                   "could not replace files.",
                                   repos->pool);
@@ -238,9 +263,9 @@ dav_svn__store_activity(const dav_svn_repos *repos,
 
 
 dav_error *
-dav_svn__create_txn(const dav_svn_repos *repos,
-                    const char **ptxn_name,
-                    apr_pool_t *pool)
+dav_svn__create_activity(const dav_svn_repos *repos,
+                         const char **ptxn_name,
+                         apr_pool_t *pool)
 {
   svn_revnum_t rev;
   svn_fs_txn_t *txn;
@@ -279,37 +304,5 @@ dav_svn__create_txn(const dav_svn_repos *repos,
                                   repos->pool);
     }
 
-  return NULL;
-}
-
-
-dav_error *
-dav_svn__abort_txn(const dav_svn_repos *repos,
-                   const char *txn_name,
-                   apr_pool_t *pool)
-{
-  svn_error_t *serr;
-  svn_fs_txn_t *txn;
-
-  /* If we fail only because the transaction doesn't exist, don't
-     sweat it (but then, also don't try to remove it). */
-  if ((serr = svn_fs_open_txn(&txn, repos->fs, txn_name, pool)))
-    {
-      if (serr->apr_err == SVN_ERR_FS_NO_SUCH_TRANSACTION)
-        {
-          svn_error_clear(serr);
-          serr = SVN_NO_ERROR;
-        }
-      else
-        {
-          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "could not open transaction.", pool);
-        }
-    }
-  else if ((serr = svn_fs_abort_txn(txn, pool)))
-    {
-      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  "could not abort transaction.", pool);
-    }
   return NULL;
 }

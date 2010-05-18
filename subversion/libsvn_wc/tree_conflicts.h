@@ -2,36 +2,24 @@
  * tree_conflicts.h: declarations related to tree conflicts
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
 #ifndef SVN_LIBSVN_WC_TREE_CONFLICTS_H
 #define SVN_LIBSVN_WC_TREE_CONFLICTS_H
 
-#include <apr_pools.h>
-#include <apr_tables.h>
-
-#include "svn_string.h"
-#include "svn_wc.h"
-
-#include "private/svn_token.h"
-#include "private/svn_skel.h"
+#include "wc.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,56 +48,71 @@ extern "C" {
  */
 
 
-svn_error_t *
-svn_wc__serialize_conflict(svn_skel_t **skel,
-                           const svn_wc_conflict_description2_t *conflict,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
 
-
+/* Like svn_wc__add_tree_conflict(), but append to the log accumulator
+ * LOG_ACCUM a command to rewrite the entry field, and do not flush the log.
+ * This function is meant to be used in the working copy library where
+ * log accumulators are usually readily available.
+ *
+ * If *LOG_ACCUM is NULL then set *LOG_ACCUM to a new stringbug allocated in
+ * POOL, else append to the existing stringbuf there.
+ *
+ * @since New in 1.6.
+ */
 svn_error_t *
-svn_wc__deserialize_conflict(const svn_wc_conflict_description2_t **conflict,
-                             const svn_skel_t *skel,
-                             const char *dir_path,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
+svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
+                                const svn_wc_conflict_description_t *conflict,
+                                svn_wc_adm_access_t *adm_access,
+                                apr_pool_t *pool);
+
+/* Like svn_wc__del_tree_conflict(), but append to the log accumulator
+ * LOG_ACCUM a command to rewrite the entry field, and do not flush the log.
+ * This function is meant to be used in the working copy library where
+ * log accumulators are usually readily available.
+ *
+ * If *LOG_ACCUM is NULL then set *LOG_ACCUM to a new stringbug allocated in
+ * POOL, else append to the existing stringbuf there.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
+                                const char *victim_path,
+                                svn_wc_adm_access_t *adm_access,
+                                apr_pool_t *pool);
 
 /*
  * Encode tree conflict descriptions into a single string.
  *
  * Set *CONFLICT_DATA to a string, allocated in POOL, that encodes the tree
  * conflicts in CONFLICTS in a form suitable for storage in a single string
- * field in a WC entry. CONFLICTS is a hash of zero or more pointers to
- * svn_wc_conflict_description2_t objects, index by their basenames. All of the
- * conflict victim paths must be siblings.
+ * field in a WC entry. CONFLICTS is an array of zero or more pointers to
+ * svn_wc_conflict_description_t objects. All of the conflict victim paths
+ * must be siblings.
  *
  * Do all allocations in POOL.
  *
  * @see svn_wc__read_tree_conflicts()
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_wc__write_tree_conflicts(const char **conflict_data,
-                             apr_hash_t *conflicts,
+                             apr_array_header_t *conflicts,
                              apr_pool_t *pool);
 
 /*
- * Read tree conflict descriptions from @a conflict_data.  Set @a *conflicts
- * to a hash of pointers to svn_wc_conflict_description2_t objects indexed by
- * svn_wc_conflict_description2_t.local_abspath, all newly allocated in @a
- * pool.  @a dir_path is the path to the working copy directory whose conflicts
- * are being read.  The conflicts read are the tree conflicts on the immediate
- * child nodes of @a dir_path.  Do all allocations in @a pool.
+ * Search in CONFLICTS (an array of svn_wc_conflict_description_t tree
+ * conflicts) for a conflict with the given VICTIM_BASENAME.
+ *
+ * This function is used in a unit test in tests/libsvn_wc.
+ *
+ * @since New in 1.6.
  */
-svn_error_t *
-svn_wc__read_tree_conflicts(apr_hash_t **conflicts,
-                            const char *conflict_data,
-                            const char *dir_path,
-                            apr_pool_t *pool);
-
-/* Token mapping tables.  */
-extern const svn_token_map_t svn_wc__operation_map[];
-extern const svn_token_map_t svn_wc__conflict_action_map[];
-extern const svn_token_map_t svn_wc__conflict_reason_map[];
+svn_boolean_t
+svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
+                             const char *victim_basename,
+                             apr_pool_t *pool);
 
 
 #ifdef __cplusplus

@@ -1,12 +1,12 @@
 ;;; dsvn.el --- Subversion interface
 
-;; Copyright 2006-2010 Virtutech AB
-;; Copyright 2010 Intel
+;; Copyright 2006-2008 Virtutech AB
 
-;; Author: David K√•gedal <davidk@lysator.liu.se>
-;;	   Mattias Engdeg√•rd <mattiase@acm.org>
-;; Maintainer: Mattias Engdeg√•rd <mattiase@acm.org>
+;; Author: David KÂgedal <david@virtutech.com>
+;;	Mattias EngdegÂrd <mattias@virtutech.com>
+;; Maintainer: David KÂgedal <david@virtutech.com>
 ;; Created: 27 Jan 2006
+;; Version: 1.8
 ;; Keywords: docs
 
 ;; This program is free software; you can redistribute it and/or
@@ -317,7 +317,7 @@ during the run."
         (setq svn-todo-queue (cdr svn-todo-queue))
 	(let ((command (car cmd-info))
 	      (args (cadr cmd-info))
-	      (file-filter (car (cddr cmd-info))))
+	      (file-filter (caddr cmd-info)))
 	  (set (make-local-variable 'svn-file-filter) file-filter)
 	  (svn-run command args))))))
 
@@ -333,13 +333,10 @@ Argument ARG are the command line arguments."
   (save-some-buffers)
   (let ((status-buf (current-buffer))
         (commit-buf (get-buffer-create "*svn commit*"))
-        (window-conf (and svn-restore-windows (current-window-configuration)))
-        (listfun (lambda () (with-current-buffer log-edit-parent-buffer
-                              (svn-action-files)))))
+        (window-conf (and svn-restore-windows (current-window-configuration))))
     (log-edit 'svn-confirm-commit t
-              (if (< emacs-major-version 23)
-                  listfun
-                (list (cons 'log-edit-listfun listfun)))
+              (lambda () (with-current-buffer log-edit-parent-buffer
+                           (svn-action-files)))
               commit-buf)
     (set (make-local-variable 'saved-window-configuration) window-conf)))
 
@@ -724,19 +721,14 @@ name or revision number)."
 	 " to save changes.\n\n")
 	(mapc (lambda (prop)
 		(let* ((value (cdr prop))
-		       (lines nil)
-		       (len (length value))
-		       (ofs 0))
-		  ;; Split value in lines - we can't use split-string because
-		  ;; its behaviour is not consistent across Emacs versions.
-		  (while (<= ofs len)
-		    (let* ((nl (or (string-match "\n" value ofs) len)))
-		      (setq lines (cons (substring value ofs nl) lines))
-		      (setq ofs (+ nl 1))))
-		  (setq lines (nreverse lines))
-		  ;; The lines list now contains one string per line, and
-		  ;; an empty list at the end if the string finished in a \n.
-
+		       (lines (split-string value "\n")))
+		  ;; split-string ignores single leading and trailing
+		  ;; delimiters, so add them explicitly
+		  (when (not (equal value ""))
+		    (when (equal (substring value 0 1) "\n")
+		      (setq lines (cons "" lines)))
+		    (when (equal (substring value -1) "\n")
+		      (setq lines (append lines (list "")))))
 		  (insert (car prop) ":")
 		  (if (> (length lines) 1)
 		      (progn
@@ -1044,12 +1036,6 @@ outside."
           (svn-update-status-msg (point) "")
           (forward-line))))))
 
-;; Translate backslashes to forward slashes, because that is what
-;; Emacs uses internally even on Windows and it permits us to compare
-;; file name strings.
-(defun svn-normalise-path (path)
-  (replace-regexp-in-string "\\\\" "/" path t t))
-
 (defun svn-status-filter (proc str)
   (save-excursion
     (set-buffer (process-buffer proc))
@@ -1060,7 +1046,7 @@ outside."
       (while (cond ((looking-at
                      "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? \\([^ ].*\\)\n")
                     (let ((status (match-string 1))
-                          (filename (svn-normalise-path (match-string 2))))
+                          (filename (match-string 2)))
                       (delete-region (match-beginning 0)
                                      (match-end 0))
                       (svn-insert-file filename status))
@@ -1087,7 +1073,7 @@ outside."
       (while (looking-at
               "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\)[ C]? \\([* ]\\) \\(........\\) \\(........\\) \\(............\\) \\([^ ].*\\)\n")
         (let ((status (match-string 1))
-              (filename (svn-normalise-path (match-string 6))))
+              (filename (match-string 6)))
           (delete-region (match-beginning 0)
                          (match-end 0))
 	  (when (or (not svn-file-filter)
@@ -1186,7 +1172,7 @@ With prefix arg, prompt for REVISION."
                (let* ((status (match-string 1))
                       (file-status (elt status 0))
                       (prop-status (elt status 1))
-                      (filename (svn-normalise-path (match-string 2))))
+                      (filename (match-string 2)))
                  (delete-region (match-beginning 0)
                                 (match-end 0))
                  (svn-insert-file
@@ -1664,7 +1650,7 @@ argument."
               ;; What format is this, really?
               "\\([AD]  \\).....  \\(.*\\)\n")
         (let ((status (concat (match-string 1) "   "))
-              (filename (svn-normalise-path (match-string 2))))
+              (filename (match-string 2)))
           (delete-region (match-beginning 0)
                          (match-end 0))
           (svn-insert-file filename status))))))
@@ -1689,25 +1675,14 @@ argument."
 
 (defun svn-delete-dir-tree (file)
   "Remove a file or directory tree."
-  (cond ((file-symlink-p file)
-	 ;; In Emacs 21, delete-file refuses to delete a symlink to a
-	 ;; directory. We work around it by overwriting the symlink
-	 ;; with a dangling link first. (We can't do that in later
-	 ;; Emacs versions, because make-symbolic-link may decide to
-	 ;; create the link inside the old link target directory.)
-	 (when (<= emacs-major-version 21)
-	   (make-symbolic-link "/a/file/that/does/not/exist" file t))
-	 (delete-file file))
-
-	((file-directory-p file)
-	 (mapc #'(lambda (f)
-		   (unless (or (equal f ".") (equal f ".."))
-		     (svn-delete-dir-tree (concat file "/" f))))
-	       (directory-files file))
-	 (delete-directory file))
-
-	(t 				; regular file
-	 (delete-file file))))
+  (if (file-directory-p file)
+      (progn
+	(mapc #'(lambda (f)
+		  (unless (or (equal f ".") (equal f ".."))
+		    (svn-delete-dir-tree (concat file "/" f))))
+	      (directory-files file))
+	(delete-directory file))
+    (delete-file file)))
 
 (defun svn-remove-file ()
   "Remove the selected files and directories."
@@ -1821,7 +1796,7 @@ argument."
       (while (looking-at
               "\\([AD]     \\)    \\(.*\\)\n")
         (let ((status (match-string 1))
-              (filename (svn-normalise-path (match-string 2))))
+              (filename (match-string 2)))
           (if (string= status "A     ")
               (setq status "A  +  "))
           (delete-region (match-beginning 0)
@@ -2002,7 +1977,7 @@ files instead."
 
 (defun svn-merge-columns-list (columns fmt)
   (let ((first-lines (mapcar #'car columns)))
-    (and (eval `(or ,@first-lines))
+    (and (eval `(or ',@first-lines))
 	 (cons (mapconcat (lambda (str) (format fmt (or str "")))
 			  first-lines " | ")
 	       (svn-merge-columns-list (mapcar #'cdr columns) fmt)))))
@@ -2013,36 +1988,51 @@ files instead."
 	     "\n"))
 
 (defun svn-status-help ()
-  "Display keyboard help for the svn-status buffer."
+  "Display keyboard help for svn status buffer."
   (interactive)
-  (message (svn-merge-columns
-	    (list (svn-format-help-column
-		   '((svn-commit "commit marked files")
-		     (svn-add-file "add marked files")
-		     (svn-remove-file "remove marked files")
-		     (svn-revert "revert marked files")
-		     (svn-update-current "update working copy")
-		     (svn-resolve "resolve conflicts")
-		     (svn-move "rename/move files")
-		     (svn-switch "switch working tree")
-		     (svn-merge "merge into WC")
-		     (svn-propedit "edit properties")))
-		  (svn-format-help-column
-		   '((svn-mark-forward "mark and go down")
-		     (svn-unmark-backward "go up and unmark")
-		     (svn-unmark-forward  "unmark and go down")
-		     (svn-toggle-mark "toggle mark")
-		     (svn-unmark-all "unmark all")))
-		  (svn-format-help-column
-		   '((svn-find-file "visit file")
-		     (svn-find-file-other-window "visit file other win")
-		     (svn-diff-file "show file diff")
-		     (svn-file-log "show file log")
-		     (svn-refresh "refresh all files")
-		     (svn-refresh-file "refresh marked files")
-		     (svn-refresh-one "refresh named file")
-		     (svn-expunge "expunge unchanged"))))
-	    24)))
+  (let* ((buf (get-buffer-create "*svn-keyboard-help*"))
+	 (help-text
+	  (svn-merge-columns
+	   (list (svn-format-help-column
+		  '((svn-commit "commit marked files")
+		    (svn-add-file "add marked files")
+		    (svn-remove-file "remove marked files")
+		    (svn-revert "revert marked files")
+		    (svn-update-current "update working copy")
+		    (svn-resolve "resolve conflicts")
+		    (svn-move "rename/move files")
+		    (svn-switch "switch working tree")
+		    (svn-merge "merge into WC")
+		    (svn-propedit "edit properties")))
+		 (svn-format-help-column
+		  '((svn-mark-forward "mark and go down")
+		    (svn-unmark-backward "go up and unmark")
+		    (svn-unmark-forward  "unmark and go down")
+		    (svn-toggle-mark "toggle mark")
+		    (svn-unmark-all "unmark all")))
+		 (svn-format-help-column
+		  '((svn-find-file "visit file")
+		    (svn-find-file-other-window "visit file other win")
+		    (svn-diff-file "show file diff")
+		    (svn-file-log "show file log")
+		    (svn-refresh "refresh all files")
+		    (svn-refresh-file "refresh marked files")
+		    (svn-refresh-one "refresh named file")
+		    (svn-expunge "expunge unchanged"))))
+	   24)))
+    (with-current-buffer buf
+      (setq buffer-read-only t)
+      (let ((inhibit-read-only t))
+	(erase-buffer)
+	(insert help-text)
+	(goto-char 1))
+      (set-buffer-modified-p nil))
+    (unless (get-buffer-window buf)
+      (let ((nlines (with-current-buffer buf
+		      (count-lines 1 (buffer-size)))))
+	(set-window-buffer
+	 (split-window-vertically (- 0 nlines 1))
+	 buf)))))
 
 ;;; Hooks
 
@@ -2124,20 +2114,15 @@ where the file information is."
 
 (add-hook 'vc-checkin-hook 'svn-after-commit)
 
-(defun svn-after-vc-command (command file-or-files flags)
+(defun svn-after-vc-command (command file flags)
   (when (and (string= command "svn")
              ;; Ignore command that do not modify file
              (not (member (car flags) '("ann" "annotate" "blame"
                                         "diff" "praise" "status"))))
-    (mapc (lambda (file)
-	    (svn-foreach-svn-buffer
-	     file
-	     (lambda (local-file-name file-pos)
-	       (svn-refresh-item local-file-name t))))
-	  ;; In emacs versions prior to 23, the argument is a single file.
-	  (if (listp file-or-files)
-	      file-or-files
-	    (list file-or-files)))))
+    (svn-foreach-svn-buffer
+     file
+     (lambda (local-file-name file-pos)
+       (svn-refresh-item local-file-name t)))))
 
 (add-hook 'vc-post-command-functions 'svn-after-vc-command)
 

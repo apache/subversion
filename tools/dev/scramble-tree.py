@@ -1,25 +1,5 @@
 #!/usr/bin/env python
 #
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
-#
 # scramble-tree.py:  (See scramble-tree.py --help.)
 #
 # Makes multiple random file changes to a directory tree, for testing.
@@ -60,12 +40,7 @@ try:
 except AttributeError:
   my_getopt = getopt.getopt
 import random
-try:
-  # Python >=2.5
-  from hashlib import md5 as hashlib_md5
-except ImportError:
-  # Python <2.5
-  from md5 import md5 as hashlib_md5
+import md5
 import base64
 
 
@@ -120,14 +95,13 @@ class hashDir:
 
   def __init__(self, rootdir):
     self.allfiles = []
-    for dirpath, dirs, files in os.walk(rootdir):
-      self.walker_callback(len(rootdir), dirpath, dirs + files)
+    os.path.walk(rootdir, self.walker_callback, len(rootdir))
 
   def gen_seed(self):
     # Return a base64-encoded (kinda ... strip the '==\n' from the
     # end) MD5 hash of sorted tree listing.
     self.allfiles.sort()
-    return base64.encodestring(hashlib_md5(''.join(self.allfiles)).digest())[:-3]
+    return base64.encodestring(md5.md5(''.join(self.allfiles)).digest())[:-3]
 
   def walker_callback(self, baselen, dirname, fnames):
     if ((dirname == '.svn') or (dirname == 'CVS')):
@@ -301,8 +275,7 @@ def main():
   if seed is None:
     seed = hashDir(rootdir).gen_seed()
   scrambler = Scrambler(seed, vc_actions, dry_run, quiet)
-  for dirpath, dirs, files in os.walk(rootdir):
-    walker_callback(scrambler, dirpath, dirs + files)
+  os.path.walk(rootdir, walker_callback, scrambler)
   scrambler.enact(limit)
 
 if __name__ == '__main__':

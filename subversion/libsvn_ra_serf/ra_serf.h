@@ -2,22 +2,17 @@
  * ra_serf.h : Private declarations for the Serf-based DAV RA module.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2006-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -38,10 +33,6 @@
 #include "svn_dav.h"
 
 #include "private/svn_dav_protocol.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
 
 
 /* Enforce the minimum version of serf. */
@@ -66,16 +57,9 @@ extern "C" {
 /* Forward declarations. */
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
 typedef struct svn_ra_serf__auth_protocol_t svn_ra_serf__auth_protocol_t;
-
-typedef enum
-{
-  svn_ra_serf__authn_none      = 0x00,
-  svn_ra_serf__authn_basic     = 0x01,
-  svn_ra_serf__authn_digest    = 0x02,
-  svn_ra_serf__authn_ntlm      = 0x04,
-  svn_ra_serf__authn_negotiate = 0x08,
-  svn_ra_serf__authn_all       = 0xFF,
-} svn_ra_serf__authn_types;
+#ifdef SVN_RA_SERF_SSPI_ENABLED
+typedef struct serf_sspi_context_t serf_sspi_context_t;
+#endif
 
 /* A serf connection and optionally associated SSL context.  */
 typedef struct {
@@ -104,7 +88,7 @@ typedef struct {
   const char *auth_header;
 
   /* Current authorization value used for this connection; may be NULL */
-  const char *auth_value;
+  char *auth_value;
 
   /* Optional SSL context for this connection. */
   serf_ssl_context_t *ssl_context;
@@ -113,17 +97,19 @@ typedef struct {
 
   svn_ra_serf__session_t *session;
 
-  /* Baton used to store connection specific authn/authz data */
-  void *auth_context;
+#ifdef SVN_RA_SERF_SSPI_ENABLED
+  /* Optional SSPI context for this connection. */
+  serf_sspi_context_t *sspi_context;
 
-  /* Baton used to store proxy specific authn/authz data */
-  void *proxy_auth_context;
+  /* Optional SSPI context for the proxy on this connection. */
+  serf_sspi_context_t *proxy_sspi_context;
+#endif
 
   /* Current authorization header used for the proxy server; may be NULL */
   const char *proxy_auth_header;
 
   /* Current authorization value used for the proxy server; may be NULL */
-  const char *proxy_auth_value;
+  char *proxy_auth_value;
 
   /* user agent string */
   const char *useragent;
@@ -173,7 +159,7 @@ struct svn_ra_serf__session_t {
   /* Authentication related properties. */
   const char *realm;
   const char *auth_header;
-  const char *auth_value;
+  char *auth_value;
   svn_auth_iterstate_t *auth_state;
   int auth_attempts;
 
@@ -191,9 +177,6 @@ struct svn_ra_serf__session_t {
   /* vtable and info object handling the authentication */
   const svn_ra_serf__auth_protocol_t *auth_protocol;
 
-  /* List of authn types supported by the client.*/
-  svn_ra_serf__authn_types authn_types;
-
   /* Maps SVN_RA_CAPABILITY_foo keys to "yes" or "no" values.
      If a capability is not yet discovered, it is absent from the table.
      The table itself is allocated in the svn_ra_serf__session_t's pool;
@@ -208,7 +191,7 @@ struct svn_ra_serf__session_t {
 
   /* Proxy Authentication related properties */
   const char *proxy_auth_header;
-  const char *proxy_auth_value;
+  char *proxy_auth_value;
   const svn_ra_serf__auth_protocol_t *proxy_auth_protocol;
 
   const char *proxy_username;
@@ -221,35 +204,7 @@ struct svn_ra_serf__session_t {
 
   /* Repository UUID */
   const char *uuid;
-
-  /* Connection timeout value */
-  long timeout;
-
-  /*** HTTP v2 protocol stuff. ***
-   *
-   * We assume that if mod_dav_svn sends one of the special v2 OPTIONs
-   * response headers, it has sent all of them.  Specifically, we'll
-   * be looking at the presence of the "me resource" as a flag that
-   * the server supports v2 of our HTTP protocol.
-   */
-
-  /* The "me resource".  Typically used as a target for REPORTs that
-     are path-agnostic.  If we have this, we can speak HTTP v2 to the
-     server.  */
-  const char *me_resource;
-
-  /* Opaque URL "stubs".  If the OPTIONS response returns these, then
-     we know we're using HTTP protocol v2. */
-  const char *rev_stub;         /* for accessing revisions (i.e. revprops) */
-  const char *rev_root_stub;    /* for accessing REV/PATH pairs */
-  const char *txn_stub;         /* for accessing transactions (i.e. txnprops) */
-  const char *txn_root_stub;    /* for accessing TXN/PATH pairs */
-
-  /*** End HTTP v2 stuff ***/
-
 };
-
-#define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)
 
 /*
  * Structure which represents a DAV element with a NAMESPACE and NAME.
@@ -348,19 +303,10 @@ static const svn_ra_serf__dav_props_t href_props[] =
 
 /** Serf utility functions **/
 
-#if SERF_VERSION_AT_LEAST(0, 4, 0)
-apr_status_t
-svn_ra_serf__conn_setup(apr_socket_t *sock,
-                        serf_bucket_t **read_bkt,
-                        serf_bucket_t **write_bkt,
-                        void *baton,
-                        apr_pool_t *pool);
-#else
 serf_bucket_t *
 svn_ra_serf__conn_setup(apr_socket_t *sock,
                         void *baton,
                         apr_pool_t *pool);
-#endif
 
 serf_bucket_t*
 svn_ra_serf__accept_response(serf_request_t *request,
@@ -377,20 +323,12 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
 apr_status_t
 svn_ra_serf__cleanup_serf_session(void *data);
 
-/* Helper function to provide SSL client certificates.
- *
- * NOTE: This function sets the session's 'pending_error' member when
- *       returning an non-success status.
- */
+/* Helper function to provide SSL client certificates. */
 apr_status_t
 svn_ra_serf__handle_client_cert(void *data,
                                 const char **cert_path);
 
-/* Helper function to provide SSL client certificate passwords.
- *
- * NOTE: This function sets the session's 'pending_error' member when
- *       returning an non-success status.
- */
+/* Helper function to provide SSL client certificate passwords. */
 apr_status_t
 svn_ra_serf__handle_client_cert_pw(void *data,
                                    const char *cert_path,
@@ -422,26 +360,6 @@ svn_error_t *
 svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               svn_ra_serf__session_t *sess,
                               apr_pool_t *pool);
-
-/* Callback for response handlers */
-/* ### The return type should be changed to svn_error_t *,
-       but that is work in progress. */
-typedef svn_error_t *
-(*svn_ra_serf__response_handler_t)(serf_request_t *request,
-                                   serf_bucket_t *response,
-                                   void *handler_baton,
-                                   apr_pool_t *pool);
-
-/* Callback for setting up a complete serf request */
-typedef svn_error_t *
-(*svn_ra_serf__request_setup_t)(serf_request_t *request,
-                                void *setup_baton,
-                                serf_bucket_t **req_bkt,
-                                serf_response_acceptor_t *acceptor,
-                                void **acceptor_baton,
-                                svn_ra_serf__response_handler_t *handler,
-                                void **handler_baton,
-                                apr_pool_t *pool);
 
 /* Callback for when a request body is needed. */
 typedef serf_bucket_t*
@@ -489,7 +407,7 @@ typedef struct {
   const char *body_type;
 
   /* The handler and baton pair for our handler. */
-  svn_ra_serf__response_handler_t response_handler;
+  serf_response_handler_t response_handler;
   void *response_baton;
 
   /* The handler and baton pair to be executed when a non-recoverable error
@@ -505,8 +423,8 @@ typedef struct {
    * This just passes through serf's raw request creation parameters.
    * None of the other parameters will be utilized if this field is set.
    */
-  svn_ra_serf__request_setup_t setup;
-  void *setup_baton;
+  serf_request_setup_t delegate;
+  void *delegate_baton;
 
   /* This function and baton pair allows for custom request headers to
    * be set.
@@ -708,11 +626,10 @@ typedef struct {
 /*
  * Serf handler for @a request / @a response pair that takes in a
  * @a baton (@see svn_ra_serf__simple_request_context_t).
- * Implements svn_ra_serf__response_handler_t.
  *
  * Temporary allocations are made in @a pool.
  */
-svn_error_t *
+apr_status_t
 svn_ra_serf__handle_status_only(serf_request_t *request,
                                 serf_bucket_t *response,
                                 void *baton,
@@ -720,14 +637,14 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
 
 /*
  * Handler that discards the entire @a response body associated with a
- * @a request.  Implements svn_ra_serf__response_handler_t.
+ * @a request.
  *
  * If @a baton is a svn_ra_serf__server_error_t (i.e. non-NULL) and an
  * error is detected, it will be populated for later detection.
  *
  * All temporary allocations will be made in a @a pool.
  */
-svn_error_t *
+apr_status_t
 svn_ra_serf__handle_discard_body(serf_request_t *request,
                                  serf_bucket_t *response,
                                  void *baton,
@@ -736,7 +653,6 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
 /*
  * Handler that retrieves the embedded XML error response from the
  * the @a response body associated with a @a request.
- * Implements svn_ra_serf__response_handler_t.
  *
  * All temporary allocations will be made in a @a pool.
  */
@@ -748,13 +664,12 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
 /*
  * Handler that retrieves the embedded XML multistatus response from the
  * the @a RESPONSE body associated with a @a REQUEST. *DONE is set to TRUE.
- * Implements svn_ra_serf__response_handler_t.
  *
  * The @a BATON should be of type svn_ra_serf__simple_request_context_t.
  *
  * All temporary allocations will be made in a @a pool.
  */
-svn_error_t *
+apr_status_t
 svn_ra_serf__handle_multistatus_only(serf_request_t *request,
                                      serf_bucket_t *response,
                                      void *baton,
@@ -763,29 +678,17 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is
  * completed (i.e. an EOF is received), *DONE is set to TRUE.
- * Implements svn_ra_serf__response_handler_t.
  *
  * If an error occurs during processing RESP_ERR is invoked with the
  * RESP_ERR_BATON.
  *
  * Temporary allocations are made in POOL.
  */
-svn_error_t *
+apr_status_t
 svn_ra_serf__handle_xml_parser(serf_request_t *request,
                                serf_bucket_t *response,
                                void *handler_baton,
                                apr_pool_t *pool);
-
-/* serf_response_handler_t implementation that completely discards
- * the response.
- *
- * All temporary allocations will be made in @a pool.
- */
-apr_status_t
-svn_ra_serf__response_discard_handler(serf_request_t *request,
-                                      serf_bucket_t *response,
-                                      void *baton,
-                                      apr_pool_t *pool);
 
 /** XML helper functions. **/
 
@@ -1096,13 +999,13 @@ svn_ra_serf__get_options_done_ptr(svn_ra_serf__options_context_t *ctx);
 const char *
 svn_ra_serf__options_get_activity_collection(svn_ra_serf__options_context_t *ctx);
 
-svn_revnum_t
-svn_ra_serf__options_get_youngest_rev(svn_ra_serf__options_context_t *ctx);
+svn_error_t *
+svn_ra_serf__get_options_error(svn_ra_serf__options_context_t *ctx);
 
-/* Create an OPTIONS request.  When run, ask for an
-   activity-collection-set in the request body (retrievable via
-   accessor above) and also parse the server's capability headers into
-   the SESSION->capabilites hash. */
+svn_error_t *
+svn_ra_serf__get_options_parser_error(svn_ra_serf__options_context_t *ctx);
+
+/* Create an OPTIONS request */
 svn_error_t *
 svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
                                 svn_ra_serf__session_t *session,
@@ -1110,43 +1013,22 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
                                 const char *path,
                                 apr_pool_t *pool);
 
-/* Set @a VCC_URL to the default VCC for our repository based on @a
- * ORIG_PATH for the session @a SESSION, ensuring that the VCC URL and
- * repository root URLs are cached in @a SESSION.  Use @a CONN for any
- * required network communications if it is non-NULL; otherwise use the
- * default connection.
+/* Try to discover our current root @a VCC_URL and the resultant @a REL_PATH
+ * based on @a ORIG_PATH for the @a SESSION on @a CONN.
+ * REL_PATH will be URI decoded.
  *
- * All temporary allocations will be made in @a POOL. */
-svn_error_t *
-svn_ra_serf__discover_vcc(const char **vcc_url,
-                          svn_ra_serf__session_t *session,
-                          svn_ra_serf__connection_t *conn,
-                          apr_pool_t *pool);
-
-/* Set @a REPORT_TARGET to the URI of the resource at which generic
- * (path-agnostic) REPORTs should be aimed for @a SESSION.  Use @a
- * CONN for any required network communications if it is non-NULL;
- * otherwise use the default connection.
+ * @a REL_PATH may be NULL if the caller is not interested in the relative
+ * path.
  *
  * All temporary allocations will be made in @a POOL.
  */
 svn_error_t *
-svn_ra_serf__report_resource(const char **report_target,
-                             svn_ra_serf__session_t *session,
-                             svn_ra_serf__connection_t *conn,
-                             apr_pool_t *pool);
-
-/* Set @a REL_PATH to a path (not URI-encoded) relative to the root of
- * the repository pointed to by @a SESSION, based on original path
- * (URI-encoded) @a ORIG_PATH.  Use @a CONN for any required network
- * communications if it is non-NULL; otherwise use the default
- * connection.  Use POOL for allocations.  */
-svn_error_t *
-svn_ra_serf__get_relative_path(const char **rel_path,
-                               const char *orig_path,
-                               svn_ra_serf__session_t *session,
-                               svn_ra_serf__connection_t *conn,
-                               apr_pool_t *pool);
+svn_ra_serf__discover_root(const char **vcc_url,
+                           const char **rel_path,
+                           svn_ra_serf__session_t *session,
+                           svn_ra_serf__connection_t *conn,
+                           const char *orig_path,
+                           apr_pool_t *pool);
 
 /* Set *BC_URL to the baseline collection url, and set *BC_RELATIVE to
  * the path relative to that url for URL in REVISION using SESSION.
@@ -1174,24 +1056,6 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                svn_revnum_t *latest_revnum,
                                apr_pool_t *pool);
 
-/* Set YOUNGEST_REVNUM to the head revision of the repository opened
- * by SESSION.
- *
- * NOTE: this function will first attempt to return a *cached* revnum
- * within the session_t; if not available, it makes a network request
- * to discover it.  As such, this routine is best called by internal
- * routines which need a value for HEAD which is "recent enough".
- * Routines which absolutely need the latest value to be fetched by
- * network request should call svn_ra_serf__get_baseline_info() instead.
- *
- * Use POOL for all allocations.
- */
-svn_error_t *
-svn_ra_serf__get_youngest_rev(svn_revnum_t *youngest_revnum,
-                              svn_ra_serf__session_t *session,
-                              apr_pool_t *pool);
-
-
 /** RA functions **/
 
 svn_error_t *
@@ -1213,7 +1077,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *session,
                            apr_hash_t **locations,
                            const char *path,
                            svn_revnum_t peg_revision,
-                           const apr_array_header_t *location_revisions,
+                           apr_array_header_t *location_revisions,
                            apr_pool_t *pool);
 
 svn_error_t *
@@ -1375,14 +1239,6 @@ svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                                          svn_boolean_t include_descendants,
                                          apr_pool_t *pool);
 
-/* Exchange capabilities with the server, by sending an OPTIONS
-   request announcing the client's capabilities, and by filling
-   SERF_SESS->capabilities with the server's capabilities as read
-   from the response headers.  Use POOL only for temporary allocation. */
-svn_error_t *
-svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
-                                   apr_pool_t *pool);
-
 /* Implements the has_capability RA layer function. */
 svn_error_t *
 svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
@@ -1402,26 +1258,17 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
 /*** Authentication handler declarations ***/
 
 /**
- * Callback function that loads the credentials for Basic and Digest
- * authentications, both for server and proxy authentication.
- */
-apr_status_t
-svn_ra_serf__credentials_callback(char **username, char **password,
-                                  serf_request_t *request, void *baton,
-                                  int code, const char *authn_type,
-                                  const char *realm,
-                                  apr_pool_t *pool);
-/**
  * For each authentication protocol we need a handler function of type
  * svn_serf__auth_handler_func_t. This function will be called when an
  * authentication challenge is received in a session.
  */
 typedef svn_error_t *
-(*svn_serf__auth_handler_func_t)(svn_ra_serf__handler_t *ctx,
+(*svn_serf__auth_handler_func_t)(svn_ra_serf__session_t *session,
+                                 svn_ra_serf__connection_t *conn,
                                  serf_request_t *request,
                                  serf_bucket_t *response,
-                                 const char *auth_hdr,
-                                 const char *auth_attr,
+                                 char *auth_hdr,
+                                 char *auth_attr,
                                  apr_pool_t *pool);
 
 /**
@@ -1442,20 +1289,7 @@ typedef svn_error_t *
  */
 typedef svn_error_t *
 (*svn_serf__setup_request_func_t)(svn_ra_serf__connection_t *conn,
-                                  const char *method,
-                                  const char *uri,
                                   serf_bucket_t *hdrs_bkt);
-
-/**
- * This function will be called when a response is received, so that the
- * protocol handler can validate the Authentication related response headers
- * (if needed).
- */
-typedef svn_error_t *
-(*svn_serf__validate_response_func_t)(svn_ra_serf__handler_t *ctx,
-                                      serf_request_t *request,
-                                      serf_bucket_t *response,
-                                      apr_pool_t *pool);
 
 /**
  * svn_ra_serf__auth_protocol_t: vtable for an authn protocol provider.
@@ -1471,9 +1305,6 @@ struct svn_ra_serf__auth_protocol_t {
      sensitive match of the string sent in the HTTP authentication header. */
   const char *auth_name;
 
-  /* Internal code used for this authn type. */
-  svn_ra_serf__authn_types auth_type;
-
   /* The initialization function if any; otherwise, NULL */
   svn_serf__init_conn_func_t init_conn_func;
 
@@ -1482,9 +1313,6 @@ struct svn_ra_serf__auth_protocol_t {
 
   /* Function to set up the authentication header of a request */
   svn_serf__setup_request_func_t setup_request_func;
-
-  /* Function to validate the authentication header of a response */
-  svn_serf__validate_response_func_t validate_response_func;
 };
 
 /**
@@ -1494,7 +1322,8 @@ struct svn_ra_serf__auth_protocol_t {
  */
 svn_error_t *
 svn_ra_serf__handle_auth(int code,
-                         svn_ra_serf__handler_t *ctx,
+                         svn_ra_serf__session_t *session,
+                         svn_ra_serf__connection_t *conn,
                          serf_request_t *request,
                          serf_bucket_t *response,
                          apr_pool_t *pool);
@@ -1505,9 +1334,9 @@ svn_ra_serf__handle_auth(int code,
  * [PROTOCOL] [BASE64 AUTH DATA]
  */
 void
-svn_ra_serf__encode_auth_header(const char *protocol,
-                                const char **header,
-                                const char *data,
+svn_ra_serf__encode_auth_header(const char * protocol,
+                                char **header,
+                                const char * data,
                                 apr_size_t data_len,
                                 apr_pool_t *pool);
 
@@ -1521,8 +1350,5 @@ svn_ra_serf__encode_auth_header(const char *protocol,
 svn_error_t *
 svn_ra_serf__error_on_status(int status_code, const char *path);
 
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_RA_SERF_RA_SERF_H */

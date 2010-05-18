@@ -2,27 +2,21 @@
  * list.c:  list local and remote directory entries.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
 #include "svn_client.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_time.h"
@@ -86,11 +80,11 @@ get_dir_contents(apr_uint32_t dirent_fields,
 
       svn_pool_clear(iterpool);
 
-      path = svn_relpath_join(dir, item->key, iterpool);
+      path = svn_path_join(dir, item->key, iterpool);
 
       if (locks)
         {
-          const char *abs_path = svn_uri_join(fs_path, path, iterpool);
+          const char *abs_path = svn_path_join(fs_path, path, iterpool);
           lock = apr_hash_get(locks, abs_path, APR_HASH_KEY_STRING);
         }
       else
@@ -144,9 +138,8 @@ svn_client_list2(const char *path_or_url,
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
 
-  SVN_ERR(svn_client__path_relative_to_root(&fs_path, ctx->wc_ctx, url,
-                                            repos_root, TRUE, ra_session,
-                                            pool, pool));
+  SVN_ERR(svn_client__path_relative_to_root(&fs_path, url, repos_root,
+                                            TRUE, ra_session, NULL, pool));
 
   err = svn_ra_stat(ra_session, "", rev, &dirent, pool);
 
@@ -170,7 +163,7 @@ svn_client_list2(const char *path_or_url,
 
               /* Open another session to the path's parent.  This server
                  doesn't support svn_ra_reparent anyway, so don't try it. */
-              svn_uri_split(url, &parent_url, &base_name, pool);
+              svn_path_split(url, &parent_url, &base_name, pool);
 
               /* 'base_name' is now the last component of an URL, but we want
                  to use it as a plain file name. Therefore, we must URI-decode
@@ -179,7 +172,7 @@ svn_client_list2(const char *path_or_url,
 
               SVN_ERR(svn_client__open_ra_session_internal(&parent_session,
                                                            parent_url, NULL,
-                                                           NULL, FALSE,
+                                                           NULL, NULL, FALSE,
                                                            TRUE, ctx, pool));
 
               /* Get all parent's entries, no props. */
@@ -233,7 +226,7 @@ svn_client_list2(const char *path_or_url,
         dirent = NULL;
     }
   else if (err)
-    return svn_error_return(err);
+    return err;
 
   if (! dirent)
     return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
@@ -253,7 +246,7 @@ svn_client_list2(const char *path_or_url,
           locks = NULL;
         }
       else if (err)
-        return svn_error_return(err);
+        return err;
     }
   else
     locks = NULL;

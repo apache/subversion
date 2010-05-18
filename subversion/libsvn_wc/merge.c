@@ -2,28 +2,22 @@
  * merge.c:  merging changes into a working file
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
 #include "svn_wc.h"
 #include "svn_diff.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 
@@ -31,11 +25,8 @@
 #include "entries.h"
 #include "adm_files.h"
 #include "translate.h"
+#include "questions.h"
 #include "log.h"
-#include "lock.h"
-#include "workqueue.h"
-
-#include "private/svn_skel.h"
 
 #include "svn_private_config.h"
 
@@ -118,16 +109,12 @@ get_prop(const apr_array_header_t *prop_diff,
 
 */
 static svn_error_t *
-detranslate_wc_file(const char **detranslated_abspath,
-                    svn_wc__db_t *db,
-                    const char *target_abspath,
+detranslate_wc_file(const char **detranslated_file,
+                    const char *merge_target,
+                    svn_wc_adm_access_t *adm_access,
                     svn_boolean_t force_copy,
                     const apr_array_header_t *prop_diff,
-                    const char *source_abspath,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
+                    apr_pool_t *pool)
 {
   svn_boolean_t is_binary;
   const svn_prop_t *prop;
@@ -137,8 +124,9 @@ detranslate_wc_file(const char **detranslated_abspath,
   svn_boolean_t special;
 
   /* Decide if the merge target currently is a text or binary file. */
-  SVN_ERR(svn_wc__marked_as_binary(&is_binary, target_abspath, db,
-                                   scratch_pool));
+  SVN_ERR(svn_wc_has_binary_prop(&is_binary,
+                                 merge_target, adm_access, pool));
+
 
   /* See if we need to do a straight copy:
      - old and new mime-types are binary, or
@@ -160,16 +148,16 @@ detranslate_wc_file(const char **detranslated_abspath,
     {
       /* Old props indicate texty, new props indicate binary:
          detranslate keywords and old eol-style */
-      SVN_ERR(svn_wc__get_keywords(&keywords, db, target_abspath, NULL,
-                                   scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__get_special(&special, db, target_abspath, scratch_pool));
+      SVN_ERR(svn_wc__get_keywords(&keywords, merge_target,
+                                   adm_access, NULL, pool));
+      SVN_ERR(svn_wc__get_special(&special, merge_target, adm_access, pool));
     }
   else
     {
       /* New props indicate texty, regardless of old props */
 
       /* In case the file used to be special, detranslate specially */
-      SVN_ERR(svn_wc__get_special(&special, db, target_abspath, scratch_pool));
+      SVN_ERR(svn_wc__get_special(&special, merge_target, adm_access, pool));
 
       if (special)
         {
@@ -186,8 +174,8 @@ detranslate_wc_file(const char **detranslated_abspath,
               svn_subst_eol_style_from_value(&style, &eol, prop->value->data);
             }
           else if (!is_binary)
-            SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, target_abspath,
-                                          scratch_pool, scratch_pool));
+            SVN_ERR(svn_wc__get_eol_style(&style, &eol, merge_target,
+                                          adm_access, pool));
           else
             {
               eol = NULL;
@@ -197,8 +185,8 @@ detranslate_wc_file(const char **detranslated_abspath,
           /* In case there were keywords, detranslate with keywords
              (iff we were texty) */
           if (!is_binary)
-            SVN_ERR(svn_wc__get_keywords(&keywords, db, target_abspath, NULL,
-                                         scratch_pool, scratch_pool));
+            SVN_ERR(svn_wc__get_keywords(&keywords, merge_target,
+                                         adm_access, NULL, pool));
           else
             keywords = NULL;
         }
@@ -213,11 +201,10 @@ detranslate_wc_file(const char **detranslated_abspath,
       /* Force a copy into the temporary wc area to avoid having
          temporary files created below to appear in the actual wc. */
 
-      /* ### svn_subst_copy_and_translate4() also creates a tempfile
-         ### internally.  Anyway to piggyback on that? */
-      SVN_ERR(svn_io_open_unique_file3(NULL, &detranslated, NULL,
-                                      svn_io_file_del_on_pool_cleanup,
-                                      result_pool, scratch_pool));
+      SVN_ERR(svn_wc_create_tmp_file2
+              (NULL, &detranslated,
+               svn_wc_adm_access_path(adm_access),
+               svn_io_file_del_none, pool));
 
       /* Always 'repair' EOLs here, so that we can apply a diff that
          changes from inconsistent newlines and no 'svn:eol-style' to
@@ -229,21 +216,19 @@ detranslate_wc_file(const char **detranslated_abspath,
                && style != svn_subst_eol_style_none)
         return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
 
-      SVN_ERR(svn_subst_copy_and_translate4(source_abspath,
+      SVN_ERR(svn_subst_copy_and_translate3(merge_target,
                                             detranslated,
                                             eol,
                                             TRUE /* repair */,
                                             keywords,
                                             FALSE /* contract keywords */,
                                             special,
-                                            cancel_func, cancel_baton,
-                                            scratch_pool));
+                                            pool));
 
-      SVN_ERR(svn_dirent_get_absolute(detranslated_abspath, detranslated,
-                                      result_pool));
+      *detranslated_file = detranslated;
     }
   else
-    *detranslated_abspath = apr_pstrdup(result_pool, source_abspath);
+    *detranslated_file = merge_target;
 
   return SVN_NO_ERROR;
 }
@@ -253,14 +238,11 @@ detranslate_wc_file(const char **detranslated_abspath,
    correct eol style in NEW_TARGET, if an eol style
    change is contained in PROP_DIFF */
 static svn_error_t *
-maybe_update_target_eols(const char **new_target_abspath,
-                         svn_wc__db_t *db,
-                         const char *old_target_abspath,
+maybe_update_target_eols(const char **new_target,
+                         const char *old_target,
+                         svn_wc_adm_access_t *adm_access,
                          const apr_array_header_t *prop_diff,
-                         svn_cancel_func_t cancel_func,
-                         void *cancel_baton,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+                         apr_pool_t *pool)
 {
   const svn_prop_t *prop = get_prop(prop_diff, SVN_PROP_EOL_STYLE);
 
@@ -270,30 +252,56 @@ maybe_update_target_eols(const char **new_target_abspath,
       const char *tmp_new;
 
       svn_subst_eol_style_from_value(NULL, &eol, prop->value->data);
-      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_new, NULL,
-                                       svn_io_file_del_on_pool_cleanup,
-                                       result_pool, scratch_pool));
+      SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_new,
+                                      svn_wc_adm_access_path(adm_access),
+                                      svn_io_file_del_none,
+                                      pool));
 
       /* Always 'repair' EOLs here, so that we can apply a diff that
          changes from inconsistent newlines and no 'svn:eol-style' to
          consistent newlines and 'svn:eol-style' set.  */
-      SVN_ERR(svn_subst_copy_and_translate4(old_target_abspath,
+      SVN_ERR(svn_subst_copy_and_translate3(old_target,
                                             tmp_new,
-                                            eol,
-                                            TRUE /* repair */,
-                                            NULL /* keywords */,
-                                            FALSE /* expand */,
-                                            FALSE /* special */,
-                                            cancel_func, cancel_baton,
-                                            scratch_pool));
-      *new_target_abspath = apr_pstrdup(result_pool, tmp_new);
+                                            eol, TRUE /* repair EOLs */,
+                                            NULL, FALSE,
+                                            FALSE, pool));
+      *new_target = tmp_new;
     }
   else
-    *new_target_abspath = apr_pstrdup(result_pool, old_target_abspath);
+    *new_target = old_target;
 
   return SVN_NO_ERROR;
 }
 
+/* Like svn_wc_create_tmp_file2(), but adds TEMPLATE_PATH as the path
+   from which a meaningful-to-humans name is derived. */
+static svn_error_t *
+create_name_preserving_tmp_file(apr_file_t **fp,
+                                const char **new_name,
+                                const char *adm_path,
+                                const char *template_path,
+                                svn_io_file_del_t delete_when,
+                                apr_pool_t *pool)
+{
+  const char *temp_dir;
+  apr_file_t *file;
+  const char *base_name = svn_path_basename(template_path, pool);
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+
+  SVN_ERR_ASSERT(fp || new_name);
+
+  temp_dir = svn_wc__adm_child(adm_path, SVN_WC__ADM_TMP, pool);
+  SVN_ERR(svn_io_open_uniquely_named(&file, new_name,
+                                     temp_dir, base_name, ".tmp",
+                                     delete_when, pool, scratch_pool));
+  if (fp)
+    *fp = file;
+  else
+    SVN_ERR(svn_io_file_close(file, pool));
+
+  svn_pool_destroy(scratch_pool);
+  return SVN_NO_ERROR;
+}
 
 /* Helper for do_text_merge_internal() below. */
 static void
@@ -377,8 +385,8 @@ static svn_error_t*
 do_text_merge_external(svn_boolean_t *contains_conflicts,
                             apr_file_t *result_f,
                             const char *detranslated_target,
-                            const char *left_abspath,
-                            const char *right_abspath,
+                            const char *left,
+                            const char *right,
                             const char *target_label,
                             const char *left_label,
                             const char *right_label,
@@ -389,7 +397,7 @@ do_text_merge_external(svn_boolean_t *contains_conflicts,
   int exit_code;
 
   SVN_ERR(svn_io_run_diff3_2(&exit_code, ".",
-                             detranslated_target, left_abspath, right_abspath,
+                             detranslated_target, left, right,
                              target_label, left_label, right_label,
                              result_f, diff3_cmd,
                              merge_options, pool));
@@ -399,46 +407,33 @@ do_text_merge_external(svn_boolean_t *contains_conflicts,
   return SVN_NO_ERROR;
 }
 
-/* Return a work item to copy/translate the merge result, obtained during
-   interactive conflict resolution, to the file RESULT_TARGET. The merge
-   result is expected in the same directory as TARGET_ABSPATH, with the same
-   basename as TARGET_ABSPATH, with a ".edited" extension.
-
-   DB should have a write lock for the directory containing RESULT_TARGET.
-
-   *WORK_ITEM will be allocated in RESULT_POOL. All temporary allocations
-   will be allocated in SCRATCH_POOL.  */
+/* Loggy-copy the merge result obtained during interactive conflict
+ * resolution to the file RESULT_TARGET. The merge result is expected
+ * in the MERGE_DIRPATH directory with the name MERGE_FILENAME+".edited".
+ * Use LOG_ACCUM as log accumulator.  ADM_ACCESS is an access baton with
+ * a write lock for the directory containing RESULT_TARGET.
+ * Do all allocations in POOL.
+ */
 static svn_error_t*
-save_merge_result(svn_skel_t **work_item,
-                  svn_wc__db_t *db,
-                  const char *target_abspath,
+save_merge_result(svn_stringbuf_t **log_accum,
+                  svn_wc_adm_access_t *adm_access,
                   const char *result_target,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
+                  const char *merge_dirpath,
+                  const char *merge_filename,
+                  apr_pool_t *pool)
 {
-  const char *edited_copy_abspath;
-  const char *dir_abspath;
-  const char *merge_filename;
-
-  svn_dirent_split(target_abspath, &dir_abspath, &merge_filename,
-                   scratch_pool);
+  const char *edited_copy;
 
   /* ### Should use preserved-conflict-file-exts. */
-  /* Create the .edited file within this file's DIR_ABSPATH  */
   SVN_ERR(svn_io_open_uniquely_named(NULL,
-                                     &edited_copy_abspath,
-                                     dir_abspath,
+                                     &edited_copy,
+                                     merge_dirpath,
                                      merge_filename,
                                      ".edited",
                                      svn_io_file_del_none,
-                                     scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__loggy_translated_file(work_item,
-                                        db, dir_abspath,
-                                        edited_copy_abspath,
-                                        result_target,
-                                        target_abspath,
-                                        result_pool));
-
+                                     pool, pool));
+  SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                             result_target, edited_copy, pool));
   return SVN_NO_ERROR;
 }
 
@@ -452,42 +447,38 @@ save_merge_result(svn_skel_t **work_item,
  * diff3 implementation in case a 3-way  merge has to be carried out.
  * Do all allocations in POOL. */
 static svn_error_t*
-eval_conflict_func_result(svn_skel_t **work_items,
-                          enum svn_wc_merge_outcome_t *merge_outcome,
+eval_conflict_func_result(enum svn_wc_merge_outcome_t *merge_outcome,
                           svn_wc_conflict_result_t *result,
-                          svn_wc__db_t *db,
-                          const char *left_abspath,
-                          const char *right_abspath,
-                          const char *target_abspath,
+                          svn_stringbuf_t **log_accum,
+                          const char *left,
+                          const char *right,
+                          const char *merge_target,
                           const char *copyfrom_text,
-                          const char *adm_abspath,
+                          svn_wc_adm_access_t *adm_access,
                           const char *result_target,
                           const char *detranslated_target,
                           svn_diff_file_options_t *options,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
+                          apr_pool_t *pool)
 {
-  apr_pool_t *pool = scratch_pool;  /* ### temporary rename  */
-  const char *install_from = NULL;
-  svn_boolean_t remove_source = FALSE;
-
-  *work_items = NULL;
-
   switch (result->choice)
     {
       /* If the callback wants to use one of the fulltexts
          to resolve the conflict, so be it.*/
       case svn_wc_conflict_choose_base:
         {
-          install_from = left_abspath;
+          SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                     left, merge_target,
+                                     pool));
           *merge_outcome = svn_wc_merge_merged;
-          break;
+          return SVN_NO_ERROR;
         }
       case svn_wc_conflict_choose_theirs_full:
         {
-          install_from = right_abspath;
+          SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                     right, merge_target,
+                                     pool));
           *merge_outcome = svn_wc_merge_merged;
-          break;
+          return SVN_NO_ERROR;
         }
       case svn_wc_conflict_choose_mine_full:
         {
@@ -498,41 +489,40 @@ eval_conflict_func_result(svn_skel_t **work_items,
       case svn_wc_conflict_choose_theirs_conflict:
       case svn_wc_conflict_choose_mine_conflict:
         {
+          apr_file_t *chosen_f;
           const char *chosen_path;
-          const char *temp_dir;
           svn_stream_t *chosen_stream;
           svn_diff_t *diff;
-          svn_diff_conflict_display_style_t style;
+          svn_diff_conflict_display_style_t style =
+            result->choice == svn_wc_conflict_choose_theirs_conflict
+            ? svn_diff_conflict_display_latest
+            : svn_diff_conflict_display_modified;
 
-          style = result->choice == svn_wc_conflict_choose_theirs_conflict
-                    ? svn_diff_conflict_display_latest
-                    : svn_diff_conflict_display_modified;
-
-          SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, adm_abspath,
-                                                 pool, pool));
-          SVN_ERR(svn_stream_open_unique(&chosen_stream, &chosen_path,
-                                         temp_dir,
-                                         svn_io_file_del_none, pool, pool));
-
+          SVN_ERR(svn_wc_create_tmp_file2(&chosen_f,
+                                          &chosen_path,
+                                          svn_wc_adm_access_path(adm_access),
+                                          svn_io_file_del_none,
+                                          pool));
+          chosen_stream = svn_stream_from_aprfile2(chosen_f, FALSE,
+                                                   pool);
           SVN_ERR(svn_diff_file_diff3_2(&diff,
-                                        left_abspath,
-                                        detranslated_target, right_abspath,
+                                        left, detranslated_target, right,
                                         options, pool));
           SVN_ERR(svn_diff_file_output_merge2(chosen_stream, diff,
-                                              left_abspath,
+                                              left,
                                               detranslated_target,
-                                              right_abspath,
+                                              right,
                                               /* markers ignored */
                                               NULL, NULL,
                                               NULL, NULL,
                                               style,
                                               pool));
           SVN_ERR(svn_stream_close(chosen_stream));
-
-          install_from = chosen_path;
-          remove_source = TRUE;
+          SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                     chosen_path, merge_target,
+                                     pool));
           *merge_outcome = svn_wc_merge_merged;
-          break;
+          return SVN_NO_ERROR;
         }
 
         /* For the case of 3-way file merging, we don't
@@ -543,97 +533,64 @@ eval_conflict_func_result(svn_skel_t **work_items,
            good to use". */
       case svn_wc_conflict_choose_merged:
         {
-          /* Look for callback's own merged-file first:  */
-          install_from = (result->merged_file
-                            ? result->merged_file
-                            : result_target);
+          SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                     /* Look for callback's own
+                                        merged-file first: */
+                                     result->merged_file
+                                       ? result->merged_file
+                                       : result_target,
+                                     merge_target,
+                                     pool));
           *merge_outcome = svn_wc_merge_merged;
-          break;
+          return SVN_NO_ERROR;
         }
       case svn_wc_conflict_choose_postpone:
       default:
         {
-#if 0
-          /* ### what should this value be? no caller appears to initialize
-             ### it, so we really SHOULD be setting a value here.  */
-          *merge_outcome = svn_wc_merge_merged;
-#endif
-
           /* Issue #3354: We need to install the copyfrom_text,
            * which now carries conflicts, into ACTUAL, by copying
            * it to the merge target. */
           if (copyfrom_text)
             {
-              install_from = copyfrom_text;
-              break;
+              SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                         copyfrom_text, merge_target,
+                                         pool));
             }
 
           /* Assume conflict remains. */
           return SVN_NO_ERROR;
         }
     }
-
-  SVN_ERR_ASSERT(install_from != NULL);
-
-  {
-    svn_skel_t *work_item;
-
-    SVN_ERR(svn_wc__wq_build_file_install(&work_item,
-                                          db, target_abspath,
-                                          install_from,
-                                          FALSE /* use_commit_times */,
-                                          FALSE /* record_fileinfo */,
-                                          result_pool, scratch_pool));
-    *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
-
-    if (remove_source)
-      {
-        SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                             db, install_from,
-                                             result_pool, scratch_pool));
-        *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
-      }
-  }
-
-  return SVN_NO_ERROR;
 }
 
 /* Preserve the three pre-merge files, and modify the
    entry (mark as conflicted, track the preserved files). */
 static svn_error_t*
-preserve_pre_merge_files(svn_skel_t **work_items,
-                         svn_wc__db_t *db,
-                         const char *left_abspath,
-                         const char *right_abspath,
-                         const char *target_abspath,
+preserve_pre_merge_files(svn_stringbuf_t **log_accum,
+                         const char *left,
+                         const char *right,
+                         const char *merge_target,
+                         svn_wc_adm_access_t *adm_access,
                          const char *left_label,
                          const char *right_label,
                          const char *target_label,
-                         svn_cancel_func_t cancel_func,
-                         void *cancel_baton,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+                         const char *merge_dirpath,
+                         const char *merge_filename,
+                         apr_pool_t *pool)
 {
-  apr_pool_t *pool = scratch_pool;  /* ### temporary rename  */
   const char *left_copy, *right_copy, *target_copy;
   const char *tmp_left, *tmp_right, *detranslated_target_copy;
-  const char *dir_abspath, *target_name;
-  const char *temp_dir;
+  const char *parent, *target_base;
+  svn_wc_adm_access_t *parent_access;
+  const char *adm_path = svn_wc_adm_access_path(adm_access);
   svn_wc_entry_t tmp_entry;
-  svn_skel_t *work_item;
-
-  *work_items = NULL;
-
-  svn_dirent_split(target_abspath, &dir_abspath, &target_name, pool);
-  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, target_abspath,
-                                         pool, pool));
 
   /* I miss Lisp. */
 
   SVN_ERR(svn_io_open_uniquely_named(NULL,
                                      &left_copy,
-                                     dir_abspath,
-                                     target_name,
+                                     merge_dirpath,
+                                     merge_filename,
                                      left_label,
                                      svn_io_file_del_none,
                                      pool, pool));
@@ -642,8 +599,8 @@ preserve_pre_merge_files(svn_skel_t **work_items,
 
   SVN_ERR(svn_io_open_uniquely_named(NULL,
                                      &right_copy,
-                                     dir_abspath,
-                                     target_name,
+                                     merge_dirpath,
+                                     merge_filename,
                                      right_label,
                                      svn_io_file_del_none,
                                      pool, pool));
@@ -655,8 +612,8 @@ preserve_pre_merge_files(svn_skel_t **work_items,
 
   SVN_ERR(svn_io_open_uniquely_named(NULL,
                                      &target_copy,
-                                     dir_abspath,
-                                     target_name,
+                                     merge_dirpath,
+                                     merge_filename,
                                      target_label,
                                      svn_io_file_del_none,
                                      pool, pool));
@@ -664,29 +621,33 @@ preserve_pre_merge_files(svn_skel_t **work_items,
   /* We preserve all the files with keywords expanded and line
      endings in local (working) form. */
 
+  svn_path_split(target_copy, &parent, &target_base, pool);
+  SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent,
+                              pool));
+
   /* Log files require their paths to be in the subtree
      relative to the adm_access path they are executed in.
 
      Make our LEFT and RIGHT files 'local' if they aren't... */
-  if (! svn_dirent_is_ancestor(dir_abspath, left_abspath))
+  if (! svn_path_is_child(adm_path, left, pool))
     {
-      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_left, temp_dir,
-                                       svn_io_file_del_on_pool_cleanup,
-                                       pool, pool));
-      SVN_ERR(svn_io_copy_file(left_abspath, tmp_left, TRUE, pool));
+      SVN_ERR(svn_wc_create_tmp_file2
+              (NULL, &tmp_left,
+               adm_path, svn_io_file_del_none, pool));
+      SVN_ERR(svn_io_copy_file(left, tmp_left, TRUE, pool));
     }
   else
-    tmp_left = left_abspath;
+    tmp_left = left;
 
-  if (! svn_dirent_is_ancestor(dir_abspath, right_abspath))
+  if (! svn_path_is_child(adm_path, right, pool))
     {
-      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_right, temp_dir,
-                                       svn_io_file_del_on_pool_cleanup,
-                                       pool, pool));
-      SVN_ERR(svn_io_copy_file(right_abspath, tmp_right, TRUE, pool));
+      SVN_ERR(svn_wc_create_tmp_file2
+              (NULL, &tmp_right,
+               adm_path, svn_io_file_del_none, pool));
+      SVN_ERR(svn_io_copy_file(right, tmp_right, TRUE, pool));
     }
   else
-    tmp_right = right_abspath;
+    tmp_right = right;
 
   /* NOTE: Callers must ensure that the svn:eol-style and
      svn:keywords property values are correct in the currently
@@ -701,110 +662,106 @@ preserve_pre_merge_files(svn_skel_t **work_items,
      are written, so everything should be fine.  Really.  */
 
   /* Create LEFT and RIGHT backup files, in expanded form.
-     We use TARGET_ABSPATH's current properties to do the translation. */
+     We use merge_target's current properties to do the translation. */
   /* Derive the basenames of the 3 backup files. */
-  SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
+  SVN_ERR(svn_wc__loggy_translated_file(log_accum,
+                                        adm_access,
                                         left_copy, tmp_left,
-                                        target_abspath, result_pool));
-  *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
-
-  SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
+                                        merge_target, pool));
+  SVN_ERR(svn_wc__loggy_translated_file(log_accum,
+                                        adm_access,
                                         right_copy, tmp_right,
-                                        target_abspath, result_pool));
-  *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+                                        merge_target, pool));
 
-  /* Back up TARGET_ABSPATH through detranslation/retranslation:
+  /* Back up MERGE_TARGET through detranslation/retranslation:
      the new translation properties may not match the current ones */
-  SVN_ERR(svn_wc__internal_translated_file(
-           &detranslated_target_copy, target_abspath, db, target_abspath,
-           SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
-           cancel_func, cancel_baton,
-           pool, pool));
-  SVN_ERR(svn_wc__loggy_translated_file(&work_item, db, dir_abspath,
-                                        target_copy, detranslated_target_copy,
-                                        target_abspath, result_pool));
-  *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+  SVN_ERR(svn_wc_translated_file2(&detranslated_target_copy,
+                                  merge_target,
+                                  merge_target,
+                                  adm_access,
+                                  SVN_WC_TRANSLATE_TO_NF
+                                  | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
+                                  pool));
+  SVN_ERR(svn_wc__loggy_translated_file
+          (log_accum, adm_access,
+           target_copy, detranslated_target_copy, merge_target, pool));
 
-  tmp_entry.conflict_old = svn_dirent_is_child(dir_abspath, left_copy, pool);
-  tmp_entry.conflict_new = svn_dirent_is_child(dir_abspath, right_copy, pool);
-  tmp_entry.conflict_wrk = svn_dirent_basename(target_copy, pool);
+  tmp_entry.conflict_old
+    = svn_path_is_child(adm_path, left_copy, pool);
+  tmp_entry.conflict_new
+    = svn_path_is_child(adm_path, right_copy, pool);
+  tmp_entry.conflict_wrk = target_base;
 
-  /* Mark TARGET_ABSPATH's entry as "Conflicted", and start tracking
+  /* Mark merge_target's entry as "Conflicted", and start tracking
      the backup files in the entry as well. */
-  SVN_ERR(svn_wc__loggy_entry_modify(&work_item, db, dir_abspath,
-                                     target_abspath, &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
-                                       | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
-                                       | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
-                                     result_pool));
-  *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+  SVN_ERR(svn_wc__loggy_entry_modify
+          (log_accum, adm_access,
+           merge_target, &tmp_entry,
+           SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
+           | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
+           | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
+           pool));
 
   return SVN_NO_ERROR;
 }
 
 /* Helper for maybe_resolve_conflicts() below. */
-static const svn_wc_conflict_description_t *
-setup_text_conflict_desc(const char *left_abspath,
-                         const char *right_abspath,
-                         const char *target_abspath,
-                         const svn_wc_conflict_version_t *left_version,
-                         const svn_wc_conflict_version_t *right_version,
+static svn_wc_conflict_description_t *
+setup_text_conflict_desc(const char *left,
+                         const char *right,
+                         const char *merge_target,
+                         svn_wc_adm_access_t *adm_access,
+                         svn_wc_conflict_version_t *left_version,
+                         svn_wc_conflict_version_t *right_version,
                          const char *result_target,
                          const char *detranslated_target,
                          const svn_prop_t *mimeprop,
-                         svn_boolean_t is_binary,
                          apr_pool_t *pool)
 {
-  svn_wc_conflict_description2_t *cdesc;
+  svn_wc_conflict_description_t *cdesc;
 
-  cdesc = svn_wc_conflict_description_create_text2(target_abspath, pool);
+  cdesc = svn_wc_conflict_description_create_text(merge_target,
+                                                  adm_access,
+                                                  pool);
   cdesc->is_binary = FALSE;
   cdesc->mime_type = (mimeprop && mimeprop->value)
                      ? mimeprop->value->data : NULL,
-  cdesc->base_file = left_abspath;
-  cdesc->their_file = right_abspath;
+  cdesc->base_file = left;
+  cdesc->their_file = right;
   cdesc->my_file = detranslated_target;
   cdesc->merged_file = result_target;
 
   cdesc->src_left_version = left_version;
   cdesc->src_right_version = right_version;
 
-  return svn_wc__cd2_to_cd(cdesc, pool);
+  return cdesc;
 }
 
 /* XXX Insane amount of parameters... */
 static svn_error_t*
-maybe_resolve_conflicts(svn_skel_t **work_items,
-                        svn_wc__db_t *db,
-                        const char *left_abspath,
-                        const char *right_abspath,
-                        const char *target_abspath,
+maybe_resolve_conflicts(svn_stringbuf_t **log_accum,
+                        const char *left,
+                        const char *right,
+                        const char *merge_target,
                         const char *copyfrom_text,
+                        svn_wc_adm_access_t *adm_access,
                         const char *left_label,
                         const char *right_label,
                         const char *target_label,
+                        svn_wc_conflict_resolver_func_t conflict_func,
+                        void *conflict_baton,
                         enum svn_wc_merge_outcome_t *merge_outcome,
-                        const svn_wc_conflict_version_t *left_version,
-                        const svn_wc_conflict_version_t *right_version,
+                        svn_wc_conflict_version_t *left_version,
+                        svn_wc_conflict_version_t *right_version,
                         const char *result_target,
                         const char *detranslated_target,
                         const svn_prop_t *mimeprop,
+                        const char *merge_dirpath,
+                        const char *merge_filename,
                         svn_diff_file_options_t *options,
-                        svn_wc_conflict_resolver_func_t conflict_func,
-                        void *conflict_baton,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
+                        apr_pool_t *pool)
 {
-  apr_pool_t *pool = scratch_pool;  /* ### temporary rename  */
   svn_wc_conflict_result_t *result = NULL;
-  const char *dir_abspath;
-  svn_skel_t *work_item;
-
-  *work_items = NULL;
-
-  dir_abspath = svn_dirent_dirname(target_abspath, pool);
 
   /* Give the conflict resolution callback a chance to clean
      up the conflicts before we mark the file 'conflicted' */
@@ -817,53 +774,49 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
     }
   else
     {
-      const svn_wc_conflict_description_t *cdesc;
+      svn_wc_conflict_description_t *cdesc;
 
-      cdesc = setup_text_conflict_desc(left_abspath,
-                                       right_abspath,
-                                       target_abspath,
-                                       left_version,
-                                       right_version,
-                                       result_target,
-                                       detranslated_target,
-                                       mimeprop,
-                                       FALSE,
-                                       pool);
+      cdesc = setup_text_conflict_desc(left,
+                                      right,
+                                      merge_target,
+                                      adm_access,
+                                      left_version,
+                                      right_version,
+                                      result_target,
+                                      detranslated_target,
+                                      mimeprop,
+                                      pool);
 
       SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
       if (result == NULL)
         return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                 NULL, _("Conflict callback violated API:"
                                         " returned no results"));
-
       if (result->save_merged)
-        {
-          SVN_ERR(save_merge_result(work_items,
-                                    db,
-                                    target_abspath,
-                                    /* Look for callback's own
-                                       merged-file first: */
-                                    result->merged_file
-                                      ? result->merged_file
-                                      : result_target,
-                                    result_pool, scratch_pool));
-        }
+        SVN_ERR(save_merge_result(log_accum,
+                                  adm_access,
+                                  /* Look for callback's own
+                                     merged-file first: */
+                                  result->merged_file
+                                    ? result->merged_file
+                                    : result_target,
+                                  merge_dirpath,
+                                  merge_filename,
+                                  pool));
     }
 
-  SVN_ERR(eval_conflict_func_result(&work_item,
-                                    merge_outcome,
+  SVN_ERR(eval_conflict_func_result(merge_outcome,
                                     result,
-                                    db,
-                                    left_abspath,
-                                    right_abspath,
-                                    target_abspath,
+                                    log_accum,
+                                    left,
+                                    right,
+                                    merge_target,
                                     copyfrom_text,
-                                    dir_abspath,
+                                    adm_access,
                                     result_target,
                                     detranslated_target,
                                     options,
-                                    result_pool, scratch_pool));
-  *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+                                    pool));
 
   if (result->choice != svn_wc_conflict_choose_postpone)
     /* The conflicts have been dealt with, nothing else
@@ -871,17 +824,17 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
     return SVN_NO_ERROR;
 
   /* The conflicts have not been dealt with. */
-  SVN_ERR(preserve_pre_merge_files(&work_item,
-                                   db,
-                                   left_abspath,
-                                   right_abspath,
-                                   target_abspath,
+  SVN_ERR(preserve_pre_merge_files(log_accum,
+                                   left,
+                                   right,
+                                   merge_target,
+                                   adm_access,
                                    left_label,
                                    right_label,
                                    target_label,
-                                   cancel_func, cancel_baton,
-                                   result_pool, scratch_pool));
-  *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+                                   merge_dirpath,
+                                   merge_filename,
+                                   pool));
 
   *merge_outcome = svn_wc_merge_conflict;
 
@@ -890,51 +843,42 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
 
 /* XXX Insane amount of parameters... */
 static svn_error_t*
-merge_text_file(svn_skel_t **work_items,
-                enum svn_wc_merge_outcome_t *merge_outcome,
-                svn_wc__db_t *db,
-                const char *left_abspath,
-                const char *right_abspath,
-                const char *target_abspath,
+merge_text_file(const char *left,
+                const char *right,
+                const char *merge_target,
+                svn_wc_adm_access_t *adm_access,
                 const char *left_label,
                 const char *right_label,
                 const char *target_label,
                 svn_boolean_t dry_run,
                 const char *diff3_cmd,
                 const apr_array_header_t *merge_options,
-                const svn_wc_conflict_version_t *left_version,
-                const svn_wc_conflict_version_t *right_version,
-                const char *copyfrom_text,
-                const char *detranslated_target_abspath,
-                const svn_prop_t *mimeprop,
                 svn_wc_conflict_resolver_func_t conflict_func,
                 void *conflict_baton,
-                svn_cancel_func_t cancel_func,
-                void *cancel_baton,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
+                svn_stringbuf_t **log_accum,
+                enum svn_wc_merge_outcome_t *merge_outcome,
+                svn_wc_conflict_version_t *left_version,
+                svn_wc_conflict_version_t *right_version,
+                const char *copyfrom_text,
+                const char *detranslated_target,
+                const svn_prop_t *mimeprop,
+                const char *merge_dirpath,
+                const char *merge_filename,
+                apr_pool_t *pool)
 {
-  apr_pool_t *pool = scratch_pool;  /* ### temporary rename  */
   svn_diff_file_options_t *options;
   svn_boolean_t contains_conflicts;
   apr_file_t *result_f;
   const char *result_target;
-  const char *dir_abspath, *base_name;
-  const char *temp_dir;
-
-  *work_items = NULL;
-
-  svn_dirent_split(target_abspath, &dir_abspath, &base_name, pool);
 
   /* Open a second temporary file for writing; this is where diff3
      will write the merged results.  We want to use a tempfile
      with a name that reflects the original, in case this
      ultimately winds up in a conflict resolution editor.  */
-  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, target_abspath,
-                                         pool, pool));
-  SVN_ERR(svn_io_open_uniquely_named(&result_f, &result_target,
-                                     temp_dir, base_name, ".tmp",
-                                     svn_io_file_del_none, pool, pool));
+  SVN_ERR(create_name_preserving_tmp_file(&result_f, &result_target,
+                                          svn_wc_adm_access_path(adm_access),
+                                          merge_target, svn_io_file_del_none,
+                                          pool));
 
   options = svn_diff_file_options_create(pool);
 
@@ -945,9 +889,9 @@ merge_text_file(svn_skel_t **work_items,
   if (diff3_cmd)
       SVN_ERR(do_text_merge_external(&contains_conflicts,
                                      result_f,
-                                     detranslated_target_abspath,
-                                     left_abspath,
-                                     right_abspath,
+                                     detranslated_target,
+                                     left,
+                                     right,
                                      target_label,
                                      left_label,
                                      right_label,
@@ -957,9 +901,9 @@ merge_text_file(svn_skel_t **work_items,
   else /* Use internal merge. */
     SVN_ERR(do_text_merge(&contains_conflicts,
                           result_f,
-                          detranslated_target_abspath,
-                          left_abspath,
-                          right_abspath,
+                          detranslated_target,
+                          left,
+                          right,
                           target_label,
                           left_label,
                           right_label,
@@ -971,26 +915,27 @@ merge_text_file(svn_skel_t **work_items,
 
   if (contains_conflicts && ! dry_run)
     {
-      SVN_ERR(maybe_resolve_conflicts(work_items,
-                                      db,
-                                      left_abspath,
-                                      right_abspath,
-                                      target_abspath,
+      SVN_ERR(maybe_resolve_conflicts(log_accum,
+                                      left,
+                                      right,
+                                      merge_target,
                                       copyfrom_text,
+                                      adm_access,
                                       left_label,
                                       right_label,
                                       target_label,
+                                      conflict_func,
+                                      conflict_baton,
                                       merge_outcome,
                                       left_version,
                                       right_version,
                                       result_target,
-                                      detranslated_target_abspath,
+                                      detranslated_target,
                                       mimeprop,
+                                      merge_dirpath,
+                                      merge_filename,
                                       options,
-                                      conflict_func, conflict_baton,
-                                      cancel_func, cancel_baton,
-                                      result_pool, scratch_pool));
-
+                                      pool));
       if (*merge_outcome == svn_wc_merge_merged)
         return SVN_NO_ERROR;
     }
@@ -1001,88 +946,77 @@ merge_text_file(svn_skel_t **work_items,
   else
     {
       svn_boolean_t same, special;
-
       /* If 'special', then use the detranslated form of the
          target file.  This is so we don't try to follow symlinks,
          but the same treatment is probably also appropriate for
          whatever special file types we may invent in the future. */
-      SVN_ERR(svn_wc__get_special(&special, db, target_abspath, pool));
+      SVN_ERR(svn_wc__get_special(&special, merge_target,
+                                  adm_access, pool));
       SVN_ERR(svn_io_files_contents_same_p(&same, result_target,
                                            (special ?
-                                              detranslated_target_abspath :
-                                              target_abspath),
+                                              detranslated_target :
+                                              merge_target),
                                            pool));
 
       *merge_outcome = same ? svn_wc_merge_unchanged : svn_wc_merge_merged;
     }
 
   if (*merge_outcome != svn_wc_merge_unchanged && ! dry_run)
-    {
-      svn_skel_t *work_item;
-
-      /* replace TARGET_ABSPATH with the new merged file, expanding. */
-      SVN_ERR(svn_wc__wq_build_file_install(&work_item,
-                                            db, target_abspath,
-                                            result_target,
-                                            FALSE /* use_commit_times */,
-                                            FALSE /* record_fileinfo */,
-                                            result_pool, scratch_pool));
-      *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
-    }
-
+    /* replace MERGE_TARGET with the new merged file, expanding. */
+    SVN_ERR(svn_wc__loggy_copy(log_accum,
+                                   adm_access,
+                                   result_target, merge_target,
+                                   pool));
   return SVN_NO_ERROR;
 }
 
 
 /* XXX Insane amount of parameters... */
-static svn_error_t *
-merge_binary_file(svn_skel_t **work_items,
-                  enum svn_wc_merge_outcome_t *merge_outcome,
-                  svn_wc__db_t *db,
-                  const char *left_abspath,
-                  const char *right_abspath,
-                  const char *target_abspath,
+static svn_error_t*
+merge_binary_file(const char *left,
+                  const char *right,
+                  const char *merge_target,
+                  svn_wc_adm_access_t *adm_access,
                   const char *left_label,
                   const char *right_label,
                   const char *target_label,
-                  const svn_wc_conflict_version_t *left_version,
-                  const svn_wc_conflict_version_t *right_version,
-                  const char *detranslated_target_abspath,
-                  const svn_prop_t *mimeprop,
                   svn_wc_conflict_resolver_func_t conflict_func,
                   void *conflict_baton,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
+                  svn_stringbuf_t **log_accum,
+                  enum svn_wc_merge_outcome_t *merge_outcome,
+                  svn_wc_conflict_version_t *left_version,
+                  svn_wc_conflict_version_t *right_version,
+                  const char *detranslated_target,
+                  const svn_prop_t *mimeprop,
+                  const char *merge_dirpath,
+                  const char *merge_filename,
+                  apr_pool_t *pool)
 {
-  apr_pool_t *pool = scratch_pool;  /* ### temporary rename  */
   /* ### when making the binary-file backups, should we be honoring
      keywords and eol stuff?   */
   const char *left_copy, *right_copy;
-  const char *left_base, *right_base;
-  const char *merge_dirpath, *merge_filename;
+  const char *parent, *left_base, *right_base;
   svn_wc_entry_t tmp_entry;
-  svn_skel_t *work_item;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
-
-  *work_items = NULL;
-
-  svn_dirent_split(target_abspath, &merge_dirpath, &merge_filename, pool);
 
   /* Give the conflict resolution callback a chance to clean
      up the conflict before we mark the file 'conflicted' */
   if (conflict_func)
     {
       svn_wc_conflict_result_t *result = NULL;
-      const svn_wc_conflict_description_t *cdesc;
-      const char *install_from = NULL;
+      svn_wc_conflict_description_t *cdesc;
 
-      cdesc = setup_text_conflict_desc(left_abspath, right_abspath,
-                                       target_abspath,
-                                       left_version, right_version,
-                                       NULL /* result_target */,
-                                       detranslated_target_abspath,
-                                       mimeprop, TRUE, pool);
+      cdesc = svn_wc_conflict_description_create_text(merge_target,
+                                                      adm_access, pool);
+      cdesc->is_binary = TRUE;
+      cdesc->mime_type = (mimeprop && mimeprop->value)
+                         ? mimeprop->value->data : NULL,
+      cdesc->base_file = left;
+      cdesc->their_file = right;
+      cdesc->my_file = detranslated_target;
+      cdesc->merged_file = NULL;     /* notice there is NO merged file! */
+
+      cdesc->src_left_version = left_version;
+      cdesc->src_right_version = right_version;
 
       SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
       if (result == NULL)
@@ -1096,15 +1030,19 @@ merge_binary_file(svn_skel_t **work_items,
              unless the conflict-callback did the merging itself. */
           case svn_wc_conflict_choose_base:
             {
-              install_from = left_abspath;
+              SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                         left, merge_target,
+                                         pool));
               *merge_outcome = svn_wc_merge_merged;
-              break;
+              return SVN_NO_ERROR;
             }
           case svn_wc_conflict_choose_theirs_full:
             {
-              install_from = right_abspath;
+              SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                         right, merge_target,
+                                         pool));
               *merge_outcome = svn_wc_merge_merged;
-              break;
+              return SVN_NO_ERROR;
             }
             /* For a binary file, if the response is to use the
                user's file, we do nothing.  We also do nothing if
@@ -1128,9 +1066,12 @@ merge_binary_file(svn_skel_t **work_items,
                 }
               else
                 {
-                  install_from = result->merged_file;
+                  SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                             result->merged_file,
+                                             merge_target,
+                                             pool));
                   *merge_outcome = svn_wc_merge_merged;
-                  break;
+                  return SVN_NO_ERROR;
                 }
             }
           case svn_wc_conflict_choose_postpone:
@@ -1138,19 +1079,6 @@ merge_binary_file(svn_skel_t **work_items,
             {
               /* Assume conflict remains, fall through to code below. */
             }
-        }
-
-      if (install_from != NULL)
-        {
-          SVN_ERR(svn_wc__wq_build_file_install(work_items,
-                                                db, target_abspath,
-                                                install_from,
-                                                FALSE /* use_commit_times */,
-                                                FALSE /* record_fileinfo */,
-                                                result_pool, scratch_pool));
-
-          /* A merge choice was made, so we're done here.  */
-          return SVN_NO_ERROR;
         }
     }
 
@@ -1172,11 +1100,13 @@ merge_binary_file(svn_skel_t **work_items,
                                      pool, pool));
 
   /* create the backup files */
-  SVN_ERR(svn_io_copy_file(left_abspath, left_copy, TRUE, pool));
-  SVN_ERR(svn_io_copy_file(right_abspath, right_copy, TRUE, pool));
+  SVN_ERR(svn_io_copy_file(left,
+                           left_copy, TRUE, pool));
+  SVN_ERR(svn_io_copy_file(right,
+                           right_copy, TRUE, pool));
 
   /* Was the merge target detranslated? */
-  if (strcmp(target_abspath, detranslated_target_abspath) != 0)
+  if (merge_target != detranslated_target)
     {
       /* Create a .mine file too */
       const char *mine_copy;
@@ -1188,38 +1118,34 @@ merge_binary_file(svn_skel_t **work_items,
                                          target_label,
                                          svn_io_file_del_none,
                                          pool, pool));
-      SVN_ERR(svn_wc__loggy_move(work_items, db,
-                                 merge_dirpath,
-                                 detranslated_target_abspath,
+      SVN_ERR(svn_wc__loggy_move(log_accum,
+                                 adm_access,
+                                 detranslated_target,
                                  mine_copy,
-                                 result_pool));
-
-      mine_copy = svn_dirent_is_child(merge_dirpath,
-                                      mine_copy, pool);
+                                 pool));
+      mine_copy = svn_path_is_child(svn_wc_adm_access_path(adm_access),
+                                    mine_copy, pool);
       tmp_entry.conflict_wrk = mine_copy;
     }
   else
-    {
-      tmp_entry.conflict_wrk = NULL;
-    }
+    tmp_entry.conflict_wrk = NULL;
 
   /* Derive the basenames of the backup files. */
-  left_base = svn_dirent_basename(left_copy, pool);
-  right_base = svn_dirent_basename(right_copy, pool);
+  svn_path_split(left_copy, &parent, &left_base, pool);
+  svn_path_split(right_copy, &parent, &right_base, pool);
 
-  /* Mark target_abspath's entry as "Conflicted", and start tracking
+  /* Mark merge_target's entry as "Conflicted", and start tracking
      the backup files in the entry as well. */
   tmp_entry.conflict_old = left_base;
   tmp_entry.conflict_new = right_base;
-  SVN_ERR(svn_wc__loggy_entry_modify(
-            &work_item,
-            db, merge_dirpath, target_abspath,
-            &tmp_entry,
-            SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
-              | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
-              | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
-            result_pool));
-  *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+  SVN_ERR(svn_wc__loggy_entry_modify
+          (log_accum,
+           adm_access, merge_target,
+           &tmp_entry,
+           SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
+           | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
+           | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
+           pool));
 
   *merge_outcome = svn_wc_merge_conflict; /* a conflict happened */
 
@@ -1228,15 +1154,15 @@ merge_binary_file(svn_skel_t **work_items,
 
 /* XXX Insane amount of parameters... */
 svn_error_t *
-svn_wc__internal_merge(svn_skel_t **work_items,
+svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        enum svn_wc_merge_outcome_t *merge_outcome,
-                       svn_wc__db_t *db,
-                       const char *left_abspath,
-                       const svn_wc_conflict_version_t *left_version,
-                       const char *right_abspath,
-                       const svn_wc_conflict_version_t *right_version,
-                       const char *target_abspath,
-                       const char *copyfrom_abspath,
+                       const char *left,
+                       svn_wc_conflict_version_t *left_version,
+                       const char *right,
+                       svn_wc_conflict_version_t *right_version,
+                       const char *merge_target,
+                       const char *copyfrom_text,
+                       svn_wc_adm_access_t *adm_access,
                        const char *left_label,
                        const char *right_label,
                        const char *target_label,
@@ -1246,68 +1172,43 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                        const apr_array_header_t *prop_diff,
                        svn_wc_conflict_resolver_func_t conflict_func,
                        void *conflict_baton,
-                       svn_cancel_func_t cancel_func,
-                       void *cancel_baton,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
+                       apr_pool_t *pool)
 {
-  apr_pool_t *pool = scratch_pool;  /* ### temporary rename  */
-  const char *working_abspath;
-  const char *detranslated_target_abspath;
+  const char *merge_dirpath;
+  const char *merge_filename;
+  const char *detranslated_target, *working_text;
   svn_boolean_t is_binary = FALSE;
+  const svn_wc_entry_t *entry;
   const svn_prop_t *mimeprop;
-  svn_skel_t *work_item;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(left_abspath));
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(right_abspath));
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
-  SVN_ERR_ASSERT(copyfrom_abspath == NULL
-                 || svn_dirent_is_absolute(copyfrom_abspath));
-
-  *work_items = NULL;
 
   /* Sanity check:  the merge target must be under revision control,
    * unless the merge target is a copyfrom text, which lives in a
    * temporary file and does not exist in ACTUAL yet. */
-  if (!copyfrom_abspath)
+  SVN_ERR(svn_wc_entry(&entry, merge_target, adm_access, FALSE, pool));
+  if (! entry && ! copyfrom_text)
     {
-      svn_wc__db_kind_t kind;
-      svn_boolean_t hidden;
-      SVN_ERR(svn_wc__db_read_kind(&kind, db, target_abspath, TRUE, pool));
-
-      if (kind == svn_wc__db_kind_unknown)
-        {
-          *merge_outcome = svn_wc_merge_no_merge;
-          return SVN_NO_ERROR;
-        }
-
-      SVN_ERR(svn_wc__db_node_hidden(&hidden, db, target_abspath, pool));
-
-      if (hidden)
-        {
-          *merge_outcome = svn_wc_merge_no_merge;
-          return SVN_NO_ERROR;
-        }
+      *merge_outcome = svn_wc_merge_no_merge;
+      return SVN_NO_ERROR;
     }
+
+  svn_path_split(merge_target, &merge_dirpath, &merge_filename, pool);
 
   /* Decide if the merge target is a text or binary file. */
   if ((mimeprop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
       && mimeprop->value)
     is_binary = svn_mime_type_is_binary(mimeprop->value->data);
-  else if (! copyfrom_abspath)
-    SVN_ERR(svn_wc__marked_as_binary(&is_binary, target_abspath, db, pool));
+  else if (! copyfrom_text)
+    SVN_ERR(svn_wc_has_binary_prop(&is_binary, merge_target, adm_access, pool));
 
-  working_abspath = copyfrom_abspath ? copyfrom_abspath : target_abspath;
-  SVN_ERR(detranslate_wc_file(&detranslated_target_abspath, db, target_abspath,
+  working_text = copyfrom_text ? copyfrom_text : merge_target;
+  SVN_ERR(detranslate_wc_file(&detranslated_target, working_text, adm_access,
                               (! is_binary) && diff3_cmd != NULL,
-                              prop_diff, working_abspath,
-                              cancel_func, cancel_baton, pool, pool));
+                              prop_diff, pool));
 
   /* We cannot depend on the left file to contain the same eols as the
      right file. If the merge target has mods, this will mark the entire
      file as conflicted, so we need to compensate. */
-  SVN_ERR(maybe_update_target_eols(&left_abspath, db, left_abspath, prop_diff,
-                                   cancel_func, cancel_baton, pool, pool));
+  SVN_ERR(maybe_update_target_eols(&left, left, adm_access, prop_diff, pool));
 
   if (is_binary)
     {
@@ -1315,123 +1216,147 @@ svn_wc__internal_merge(svn_skel_t **work_items,
         /* in dry-run mode, binary files always conflict */
         *merge_outcome = svn_wc_merge_conflict;
       else
-        SVN_ERR(merge_binary_file(work_items,
-                                  merge_outcome,
-                                  db,
-                                  left_abspath,
-                                  right_abspath,
-                                  target_abspath,
-                                  left_label,
-                                  right_label,
-                                  target_label,
-                                  left_version,
-                                  right_version,
-                                  detranslated_target_abspath,
-                                  mimeprop,
-                                  conflict_func,
-                                  conflict_baton,
-                                  result_pool, scratch_pool));
+        merge_binary_file(left,
+                          right,
+                          merge_target,
+                          adm_access,
+                          left_label,
+                          right_label,
+                          target_label,
+                          conflict_func,
+                          conflict_baton,
+                          log_accum,
+                          merge_outcome,
+                          left_version,
+                          right_version,
+                          detranslated_target,
+                          mimeprop,
+                          merge_dirpath,
+                          merge_filename,
+                          pool);
     }
   else
-    {
-      SVN_ERR(merge_text_file(work_items,
-                              merge_outcome,
-                              db,
-                              left_abspath,
-                              right_abspath,
-                              target_abspath,
-                              left_label,
-                              right_label,
-                              target_label,
-                              dry_run,
-                              diff3_cmd,
-                              merge_options,
-                              left_version,
-                              right_version,
-                              copyfrom_abspath,
-                              detranslated_target_abspath,
-                              mimeprop,
-                              conflict_func, conflict_baton,
-                              cancel_func, cancel_baton,
-                              result_pool, scratch_pool));
-    }
+    SVN_ERR(merge_text_file(left,
+                            right,
+                            merge_target,
+                            adm_access,
+                            left_label,
+                            right_label,
+                            target_label,
+                            dry_run,
+                            diff3_cmd,
+                            merge_options,
+                            conflict_func,
+                            conflict_baton,
+                            log_accum,
+                            merge_outcome,
+                            left_version,
+                            right_version,
+                            copyfrom_text,
+                            detranslated_target,
+                            mimeprop,
+                            merge_dirpath,
+                            merge_filename,
+                            pool));
 
   /* Merging is complete.  Regardless of text or binariness, we might
      need to tweak the executable bit on the new working file, and
      possibly make it read-only. */
   if (! dry_run)
     {
-      SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db,
-                                               target_abspath,
-                                               result_pool, scratch_pool));
-      *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+      SVN_ERR(svn_wc__loggy_maybe_set_executable(log_accum, adm_access,
+                                                 merge_target, pool));
+      SVN_ERR(svn_wc__loggy_maybe_set_readonly(log_accum, adm_access,
+                                               merge_target, pool));
     }
 
   return SVN_NO_ERROR;
 }
 
+
 
 svn_error_t *
-svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
-              svn_wc_context_t *wc_ctx,
-              const char *left_abspath,
-              const char *right_abspath,
-              const char *target_abspath,
+svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
+              const char *left,
+              const char *right,
+              const char *merge_target,
+              svn_wc_adm_access_t *adm_access,
               const char *left_label,
               const char *right_label,
               const char *target_label,
-              const svn_wc_conflict_version_t *left_version,
-              const svn_wc_conflict_version_t *right_version,
               svn_boolean_t dry_run,
               const char *diff3_cmd,
               const apr_array_header_t *merge_options,
               const apr_array_header_t *prop_diff,
               svn_wc_conflict_resolver_func_t conflict_func,
               void *conflict_baton,
-              svn_cancel_func_t cancel_func,
-              void *cancel_baton,
-              apr_pool_t *scratch_pool)
+              apr_pool_t *pool)
 {
-  const char *dir_abspath = svn_dirent_dirname(target_abspath, scratch_pool);
-  svn_skel_t *work_items;
+  svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(left_abspath));
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(right_abspath));
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
-
-  /* Before we do any work, make sure we hold a write lock.  */
-  if (!dry_run)
-    SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, scratch_pool));
-
-  /* Queue all the work.  */
-  SVN_ERR(svn_wc__internal_merge(&work_items,
-                                 merge_outcome,
-                                 wc_ctx->db,
-                                 left_abspath, left_version,
-                                 right_abspath, right_version,
-                                 target_abspath,
+  /* ### TODO: Pass version info here. */
+  SVN_ERR(svn_wc__merge_internal(&log_accum, merge_outcome,
+                                 left, NULL,
+                                 right, NULL,
+                                 merge_target,
                                  NULL,
+                                 adm_access,
                                  left_label, right_label, target_label,
                                  dry_run,
                                  diff3_cmd,
                                  merge_options,
                                  prop_diff,
                                  conflict_func, conflict_baton,
-                                 cancel_func, cancel_baton,
-                                 scratch_pool, scratch_pool));
+                                 pool));
 
-  /* If this isn't a dry run, then run the work!  */
-  if (!dry_run)
-    {
-      SVN_ERR(svn_wc__db_wq_add(wc_ctx->db, target_abspath, work_items,
-                                scratch_pool));
-      SVN_ERR(svn_wc__wq_run(wc_ctx->db, target_abspath,
-                             cancel_func, cancel_baton,
-                             scratch_pool));
-    }
+  /* Write our accumulation of log entries into a log file */
+  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
 
-  return SVN_NO_ERROR;
+  return svn_wc__run_log(adm_access, NULL, pool);
 }
+
+
+svn_error_t *
+svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
+              const char *left,
+              const char *right,
+              const char *merge_target,
+              svn_wc_adm_access_t *adm_access,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              apr_pool_t *pool)
+{
+  return svn_wc_merge3(merge_outcome,
+                       left, right, merge_target, adm_access,
+                       left_label, right_label, target_label,
+                       dry_run, diff3_cmd, merge_options, NULL,
+                       NULL, NULL, pool);
+}
+
+svn_error_t *
+svn_wc_merge(const char *left,
+             const char *right,
+             const char *merge_target,
+             svn_wc_adm_access_t *adm_access,
+             const char *left_label,
+             const char *right_label,
+             const char *target_label,
+             svn_boolean_t dry_run,
+             enum svn_wc_merge_outcome_t *merge_outcome,
+             const char *diff3_cmd,
+             apr_pool_t *pool)
+{
+  return svn_wc_merge3(merge_outcome,
+                       left, right, merge_target, adm_access,
+                       left_label, right_label, target_label,
+                       dry_run, diff3_cmd, NULL, NULL, NULL,
+                       NULL, pool);
+}
+
 
 
 /* Constructor for the result-structure returned by conflict callbacks. */

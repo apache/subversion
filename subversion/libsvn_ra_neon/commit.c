@@ -2,22 +2,17 @@
  * commit.c :  routines for committing changes to the server
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -37,7 +32,6 @@
 #include "svn_io.h"
 #include "svn_ra.h"
 #include "../libsvn_ra/ra_loader.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_dav.h"
@@ -204,9 +198,9 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
          the version resource URL of RSRC. */
       if (parent && parent->vsn_url && parent->revision == rsrc->revision)
         {
-          rsrc->vsn_url = svn_path_url_add_component2(parent->vsn_url,
-                                                      rsrc->name,
-                                                      rsrc->pool);
+          rsrc->vsn_url = svn_path_url_add_component(parent->vsn_url,
+                                                     rsrc->name,
+                                                     rsrc->pool);
           return SVN_NO_ERROR;
         }
 
@@ -232,7 +226,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
                                              rsrc->revision,
                                              pool));
 
-      url = svn_path_url_add_component2(bc_url.data, bc_relative.data, pool);
+      url = svn_path_url_add_component(bc_url.data, bc_relative.data, pool);
     }
 
   /* Get the DAV:checked-in property, which contains the URL of the
@@ -326,8 +320,8 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
      the activity, and create the activity.  The URL for our activity
      will be ACTIVITY_COLL/UUID */
   SVN_ERR(get_activity_collection(cc, &activity_collection, FALSE, pool));
-  url = svn_path_url_add_component2(activity_collection->data,
-                                    uuid_buf, pool);
+  url = svn_path_url_add_component(activity_collection->data,
+                                   uuid_buf, pool);
   SVN_ERR(svn_ra_neon__simple_request(&code, cc->ras,
                                       "MKACTIVITY", url, NULL, NULL,
                                       201 /* Created */,
@@ -339,8 +333,8 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
   if (code == 404)
     {
       SVN_ERR(get_activity_collection(cc, &activity_collection, TRUE, pool));
-      url = svn_path_url_add_component2(activity_collection->data,
-                                        uuid_buf, pool);
+      url = svn_path_url_add_component(activity_collection->data,
+                                       uuid_buf, pool);
       SVN_ERR(svn_ra_neon__simple_request(&code, cc->ras,
                                           "MKACTIVITY", url, NULL, NULL,
                                           201, 0, pool));
@@ -374,7 +368,7 @@ static svn_error_t * add_child(version_rsrc_t **child,
   rsrc->pool = pool;
   rsrc->revision = revision;
   rsrc->name = name;
-  rsrc->url = svn_path_url_add_component2(parent->url, name, pool);
+  rsrc->url = svn_path_url_add_component(parent->url, name, pool);
   rsrc->local_path = svn_path_join(parent->local_path, name, pool);
 
   /* Case 1:  the resource is truly "new".  Either it was added as a
@@ -383,7 +377,7 @@ static svn_error_t * add_child(version_rsrc_t **child,
      URL by the rules of deltaV:  "copy structure is preserved below
      the WR you COPY to."  */
   if (created || (parent->vsn_url == NULL))
-    rsrc->wr_url = svn_path_url_add_component2(parent->wr_url, name, pool);
+    rsrc->wr_url = svn_path_url_add_component(parent->wr_url, name, pool);
 
   /* Case 2: the resource is already under version-control somewhere.
      This means it has a VR URL already, and the WR URL won't exist
@@ -700,7 +694,7 @@ static svn_error_t * commit_delete_entry(const char *path,
                                          apr_pool_t *pool)
 {
   resource_baton_t *parent = parent_baton;
-  const char *name = svn_relpath_basename(path, pool);
+  const char *name = svn_path_basename(path, pool);
   apr_hash_t *extra_headers = NULL;
   const char *child;
   int code;
@@ -722,7 +716,7 @@ static svn_error_t * commit_delete_entry(const char *path,
                             NULL, FALSE, pool));
 
   /* create the URL for the child resource */
-  child = svn_path_url_add_component2(parent->rsrc->wr_url, name, pool);
+  child = svn_path_url_add_component(parent->rsrc->wr_url, name, pool);
 
   /* Start out assuming that we're deleting a file;  try to lookup the
      path itself in the token-hash, and if found, attach it to the If:
@@ -737,8 +731,8 @@ static svn_error_t * commit_delete_entry(const char *path,
           const char *token_header_val;
           const char *token_uri;
 
-          token_uri = svn_path_url_add_component2(parent->cc->ras->url->data,
-                                                  path, pool);
+          token_uri = svn_path_url_add_component(parent->cc->ras->url->data,
+                                                 path, pool);
           token_header_val = apr_psprintf(pool, "<%s> (<%s>)",
                                           token_uri, token);
           extra_headers = apr_hash_make(pool);
@@ -849,7 +843,7 @@ static svn_error_t * commit_add_dir(const char *path,
   resource_baton_t *parent = parent_baton;
   resource_baton_t *child;
   int code;
-  const char *name = svn_relpath_basename(path, dir_pool);
+  const char *name = svn_path_basename(path, dir_pool);
   apr_pool_t *workpool = svn_pool_create(dir_pool);
   version_rsrc_t *rsrc = NULL;
 
@@ -897,9 +891,9 @@ static svn_error_t * commit_add_dir(const char *path,
          "source" argument to the COPY request.  The "Destination:"
          header given to COPY is simply the wr_url that is already
          part of the child object. */
-      copy_src = svn_path_url_add_component2(bc_url.data,
-                                             bc_relative.data,
-                                             workpool);
+      copy_src = svn_path_url_add_component(bc_url.data,
+                                            bc_relative.data,
+                                            workpool);
 
       /* Have neon do the COPY. */
       SVN_ERR(svn_ra_neon__copy(parent->cc->ras,
@@ -930,7 +924,7 @@ static svn_error_t * commit_open_dir(const char *path,
 {
   resource_baton_t *parent = parent_baton;
   resource_baton_t *child = apr_pcalloc(dir_pool, sizeof(*child));
-  const char *name = svn_relpath_basename(path, dir_pool);
+  const char *name = svn_path_basename(path, dir_pool);
   apr_pool_t *workpool = svn_pool_create(dir_pool);
   version_rsrc_t *rsrc = NULL;
 
@@ -995,13 +989,13 @@ static svn_error_t * commit_add_file(const char *path,
 {
   resource_baton_t *parent = parent_baton;
   resource_baton_t *file;
-  const char *name = svn_relpath_basename(path, file_pool);
+  const char *name = svn_path_basename(path, file_pool);
   apr_pool_t *workpool = svn_pool_create(file_pool);
   version_rsrc_t *rsrc = NULL;
 
   /*
   ** To add a new file into the repository, we CHECKOUT the parent
-  ** collection, then PUT the file as a member of the resulting working
+  ** collection, then PUT the file as a member of the resuling working
   ** collection.
   **
   ** If the file was copied from elsewhere, then we will use the COPY
@@ -1098,9 +1092,9 @@ static svn_error_t * commit_add_file(const char *path,
          "source" argument to the COPY request.  The "Destination:"
          header given to COPY is simply the wr_url that is already
          part of the file_baton. */
-      copy_src = svn_path_url_add_component2(bc_url.data,
-                                             bc_relative.data,
-                                             workpool);
+      copy_src = svn_path_url_add_component(bc_url.data,
+                                            bc_relative.data,
+                                            workpool);
 
       /* Have neon do the COPY. */
       SVN_ERR(svn_ra_neon__copy(parent->cc->ras,
@@ -1133,7 +1127,7 @@ static svn_error_t * commit_open_file(const char *path,
 {
   resource_baton_t *parent = parent_baton;
   resource_baton_t *file;
-  const char *name = svn_relpath_basename(path, file_pool);
+  const char *name = svn_path_basename(path, file_pool);
   apr_pool_t *workpool = svn_pool_create(file_pool);
   version_rsrc_t *rsrc = NULL;
 
@@ -1198,6 +1192,8 @@ commit_apply_txdelta(void *file_baton,
   resource_baton_t *file = file_baton;
   put_baton_t *baton;
   svn_stream_t *stream;
+  const char *tempfile_name;
+  svn_checksum_t *checksum;
 
   baton = apr_pcalloc(file->pool, sizeof(*baton));
   baton->ras = file->cc->ras;
@@ -1212,9 +1208,24 @@ commit_apply_txdelta(void *file_baton,
   /* ### oh, hell. Neon's request body support is either text (a C string),
      ### or a FILE*. since we are getting binary data, we must use a FILE*
      ### for now. isn't that special? */
-  SVN_ERR(svn_io_open_unique_file3(&baton->tmpfile, NULL, NULL,
-                                   svn_io_file_del_on_pool_cleanup,
-                                   file->pool, pool));
+
+  /* Create a temp file in the system area to hold the contents. Note that
+     we need a file since we will be rewinding it. The file will be closed
+     and deleted when the pool is cleaned up.  Avoid temp file name
+     collisions by requesting unique temp file name based on the checksum
+     of FILE->RSRC->LOCAL_PATH. */
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5,
+                       file->rsrc->local_path,
+                       strlen(file->rsrc->local_path),
+                       pool));
+  tempfile_name = apr_psprintf(pool, "tempfile.%s",
+                               svn_checksum_to_cstring_display(checksum,
+                                                               pool));  
+
+  SVN_ERR(svn_io_open_uniquely_named(&baton->tmpfile, NULL, NULL,
+                                     tempfile_name, ".tmp",
+                                     svn_io_file_del_on_pool_cleanup,
+                                     file->pool, pool));
 
   stream = svn_stream_create(baton, pool);
   svn_stream_set_write(stream, commit_stream_write);
@@ -1282,9 +1293,9 @@ static svn_error_t * commit_close_file(void *file_baton,
         svn_ra_neon__set_header
           (extra_headers, "If",
            apr_psprintf(pool, "<%s> (<%s>)",
-                        svn_path_url_add_component2(cc->ras->url->data,
-                                                    file->rsrc->url,
-                                                    request->pool),
+                        svn_path_url_add_component(cc->ras->url->data,
+                                                   file->rsrc->url,
+                                                   request->pool),
                         file->token));
 
       if (pb->base_checksum)

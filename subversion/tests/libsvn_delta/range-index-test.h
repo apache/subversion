@@ -2,22 +2,17 @@
  * range-index-test.c: An extension for random-test.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -134,8 +129,12 @@ check_copy_count(int src_cp, int tgt_cp)
 
 
 static svn_error_t *
-random_range_index_test(apr_pool_t *pool)
+random_range_index_test(const char **msg,
+                        svn_boolean_t msg_only,
+                        apr_pool_t *pool)
 {
+  static char msg_buff[256];
+
   unsigned long seed, bytes_range;
   int i, maxlen, iterations, dump_files, print_windows;
   const char *random_bytes;
@@ -146,9 +145,15 @@ random_range_index_test(apr_pool_t *pool)
      or something. */
   init_params(&seed, &maxlen, &iterations, &dump_files, &print_windows,
               &random_bytes, &bytes_range, pool);
+  sprintf(msg_buff, "random range index test, seed = %lu", seed);
+  *msg = msg_buff;
 
   /* ### This test is expected to fail randomly at the moment, so don't
      enable it by default. --xbc */
+  if (msg_only)
+    return SVN_NO_ERROR;
+  else
+    printf("SEED: %s\n", msg_buff);
 
   ndx = create_range_index(pool);
   for (i = 1; i <= iterations; ++i)

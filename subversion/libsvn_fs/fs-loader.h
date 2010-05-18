@@ -2,22 +2,17 @@
  * fs_loader.h:  Declarations for the FS loader library
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -167,9 +162,6 @@ typedef struct fs_vtable_t
   svn_error_t *(*begin_txn)(svn_fs_txn_t **txn_p, svn_fs_t *fs,
                             svn_revnum_t rev, apr_uint32_t flags,
                             apr_pool_t *pool);
-  svn_error_t *(*begin_obliteration_txn)(svn_fs_txn_t **txn_p, svn_fs_t *fs,
-                                         svn_revnum_t replacing_rev,
-                                         apr_pool_t *pool);
   svn_error_t *(*open_txn)(svn_fs_txn_t **txn, svn_fs_t *fs,
                            const char *name, apr_pool_t *pool);
   svn_error_t *(*purge_txn)(svn_fs_t *fs, const char *txn_id,
@@ -203,8 +195,6 @@ typedef struct txn_vtable_t
 {
   svn_error_t *(*commit)(const char **conflict_p, svn_revnum_t *new_rev,
                          svn_fs_txn_t *txn, apr_pool_t *pool);
-  svn_error_t *(*commit_obliteration)(svn_revnum_t replacing_rev,
-                                      svn_fs_txn_t *txn, apr_pool_t *pool);
   svn_error_t *(*abort)(svn_fs_txn_t *txn, apr_pool_t *pool);
   svn_error_t *(*get_prop)(svn_string_t **value_p, svn_fs_txn_t *txn,
                            const char *propname, apr_pool_t *pool);
@@ -214,7 +204,7 @@ typedef struct txn_vtable_t
                               const svn_string_t *value, apr_pool_t *pool);
   svn_error_t *(*root)(svn_fs_root_t **root_p, svn_fs_txn_t *txn,
                        apr_pool_t *pool);
-  svn_error_t *(*change_props)(svn_fs_txn_t *txn, const apr_array_header_t *props,
+  svn_error_t *(*change_props)(svn_fs_txn_t *txn, apr_array_header_t *props,
                                apr_pool_t *pool);
 } txn_vtable_t;
 
@@ -223,10 +213,7 @@ typedef struct txn_vtable_t
    roots may not all have the same vtable, we need a rule to determine
    which root's vtable is used.  The rule is: if one of the roots is
    named "target", we use that root's vtable; otherwise, we use the
-   first root argument's vtable.
-   These callbacks correspond to svn_fs_* functions in include/svn_fs.h,
-   see there for details.
-   Note: delete_node() corresponds to svn_fs_delete(). */
+   first root argument's vtable. */
 typedef struct root_vtable_t
 {
   /* Determining what has changed in a root */
@@ -405,7 +392,7 @@ struct svn_fs_txn_t
 
 struct svn_fs_root_t
 {
-  /* A pool managing this root (and only this root!) */
+  /* A pool managing this root */
   apr_pool_t *pool;
 
   /* The filesystem to which this root belongs */

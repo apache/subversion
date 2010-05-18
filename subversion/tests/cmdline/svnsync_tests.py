@@ -3,25 +3,17 @@
 #  svnsync_tests.py:  Tests SVNSync's repository mirroring capabilities.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
+# Copyright (c) 2005-2007 CollabNet.  All rights reserved.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 ######################################################################
 
 # General modules
@@ -39,7 +31,7 @@ Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
-Wimp = svntest.testcase.Wimp
+
 
 ######################################################################
 # Helper routines
@@ -55,18 +47,12 @@ def build_repos(sbox):
   svntest.main.create_repos(sbox.repo_dir)
 
 
-def run_sync(url, source_url=None, expected_error=None):
+def run_sync(url, expected_error=None):
   "Synchronize the mirror repository with the master"
-  if source_url is not None:
-    exit_code, output, errput = svntest.main.run_svnsync(
-      "synchronize", url, source_url,
-      "--username", svntest.main.wc_author,
-      "--password", svntest.main.wc_passwd)
-  else: # Allow testing of old source-URL-less syntax
-    exit_code, output, errput = svntest.main.run_svnsync(
-      "synchronize", url,
-      "--username", svntest.main.wc_author,
-      "--password", svntest.main.wc_passwd)
+  exit_code, output, errput = svntest.main.run_svnsync(
+    "synchronize", url,
+    "--username", svntest.main.wc_author,
+    "--password", svntest.main.wc_passwd)
   if errput:
     if expected_error is None:
       raise SVNUnexpectedStderr(errput)
@@ -81,10 +67,10 @@ def run_sync(url, source_url=None, expected_error=None):
     # should be: ['Committed revision 1.\n', 'Committed revision 2.\n']
     raise SVNUnexpectedStdout("Missing stdout")
 
-def run_copy_revprops(url, source_url, expected_error=None):
+def run_copy_revprops(url, expected_error=None):
   "Copy revprops to the mirror repository from the master"
   exit_code, output, errput = svntest.main.run_svnsync(
-    "copy-revprops", url, source_url,
+    "copy-revprops", url,
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd)
   if errput:
@@ -147,7 +133,7 @@ or another dump file."""
   svnsync_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnsync_tests_data')
   # Load the specified dump file into the master repository.
-  master_dumpfile_contents = open(os.path.join(svnsync_tests_dir,
+  master_dumpfile_contents = file(os.path.join(svnsync_tests_dir,
                                                dump_file_name),
                                   'rb').readlines()
   svntest.actions.run_and_verify_load(sbox.repo_dir, master_dumpfile_contents)
@@ -170,8 +156,8 @@ or another dump file."""
     repo_url = repo_url + subdir
   run_init(dest_sbox.repo_url, repo_url)
 
-  run_sync(dest_sbox.repo_url, repo_url)
-  run_copy_revprops(dest_sbox.repo_url, repo_url)
+  run_sync(dest_sbox.repo_url)
+  run_copy_revprops(dest_sbox.repo_url)
 
   # Remove some SVNSync-specific housekeeping properties from the
   # mirror repository in preparation for the comparison dump.
@@ -188,7 +174,7 @@ or another dump file."""
   # dump file (used to create the master repository) or another specified dump
   # file.
   if exp_dump_file_name:
-    exp_master_dumpfile_contents = open(os.path.join(svnsync_tests_dir,
+    exp_master_dumpfile_contents = file(os.path.join(svnsync_tests_dir,
                                         exp_dump_file_name)).readlines()
   else:
     exp_master_dumpfile_contents = master_dumpfile_contents
@@ -314,7 +300,7 @@ def detect_meddling(sbox):
                                      '-m', 'msg',
                                      dest_sbox.wc_dir)
 
-  run_sync(dest_sbox.repo_url, None,
+  run_sync(dest_sbox.repo_url,
            ".*Destination HEAD \\(2\\) is not the last merged revision \\(1\\).*")
 
 #----------------------------------------------------------------------
@@ -797,9 +783,8 @@ test_list = [ None,
               detect_meddling,
               Skip(basic_authz, svntest.main.is_ra_type_file),
               Skip(copy_from_unreadable_dir, svntest.main.is_ra_type_file),
-              Wimp("Needs local add below copy support in WC-NG",
-                   Skip(copy_with_mod_from_unreadable_dir,
-                        svntest.main.is_ra_type_file)),
+              Skip(copy_with_mod_from_unreadable_dir,
+                   svntest.main.is_ra_type_file),
               Skip(copy_with_mod_from_unreadable_dir_and_copy,
                    svntest.main.is_ra_type_file),
               url_encoding,

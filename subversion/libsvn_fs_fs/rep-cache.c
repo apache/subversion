@@ -1,22 +1,17 @@
 /* rep-sharing.c --- the rep-sharing cache for fsfs
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -35,45 +30,46 @@
 /* A few magic values */
 #define REP_CACHE_SCHEMA_FORMAT   1
 
-REP_CACHE_DB_SQL_DECLARE_STATEMENTS(statements);
+static const char * const upgrade_sql[] = { NULL,
+  REP_CACHE_DB_SQL
+  };
 
+/* These values are directly related to the statements contained in STATEMENTS
+   below.  If you add something to that array, you'd better do the same here.
+*/
+enum statement_keys {
+  STMT_GET_REP,
+  STMT_SET_REP
+};
 
-static svn_error_t *
-open_rep_cache(void *baton,
-               apr_pool_t *pool)
-{
-  svn_fs_t *fs = baton;
-  fs_fs_data_t *ffd = fs->fsap_data;
-  const char *db_path;
-  int version;
+static const char * const statements[] = {
+  "select revision, offset, size, expanded_size "
+  "from rep_cache "
+  "where hash = ?1",
 
-  /* Open (or create) the sqlite database.  It will be automatically
-     closed when fs->pool is destoyed. */
-  db_path = svn_dirent_join(fs->path, REP_CACHE_DB_NAME, pool);
-  SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
-                           svn_sqlite__mode_rwcreate, statements,
-                           0, NULL,
-                           fs->pool, pool));
+  "insert into rep_cache (hash, revision, offset, size, expanded_size) "
+  "values (?1, ?2, ?3, ?4, ?5);",
 
-  SVN_ERR(svn_sqlite__read_schema_version(&version, ffd->rep_cache_db, pool));
-  if (version < REP_CACHE_SCHEMA_FORMAT)
-    {
-      /* Must be 0 -- an uninitialized (no schema) database. Create
-         the schema. Results in schema version of 1.  */
-      SVN_ERR(svn_sqlite__exec_statements(ffd->rep_cache_db,
-                                          STMT_CREATE_SCHEMA));
-    }
+  NULL
+  };
 
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_fs_fs__open_rep_cache(svn_fs_t *fs,
                           apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  return svn_error_return(svn_atomic__init_once(&ffd->rep_cache_db_opened,
-                                                open_rep_cache, fs, pool));
+  const char *db_path;
+
+  /* Open (or create) the sqlite database.  It will be automatically
+     closed when fs->pool is destoyed. */
+  db_path = svn_path_join(fs->path, REP_CACHE_DB_NAME, pool);
+  SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
+                           svn_sqlite__mode_rwcreate, statements,
+                           REP_CACHE_SCHEMA_FORMAT,
+                           upgrade_sql, fs->pool, pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -86,9 +82,11 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR_ASSERT(ffd->rep_sharing_allowed);
-  if (! ffd->rep_cache_db)
-    SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
+  if (ffd->rep_cache_db == NULL)
+    {
+      *rep = NULL;
+      return SVN_NO_ERROR;
+    }
 
   /* We only allow SHA1 checksums in this table. */
   if (checksum->kind != svn_checksum_sha1)
@@ -126,9 +124,8 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
   representation_t *old_rep;
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR_ASSERT(ffd->rep_sharing_allowed);
-  if (! ffd->rep_cache_db)
-    SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
+  if (ffd->rep_cache_db == NULL)
+    return SVN_NO_ERROR;
 
   /* We only allow SHA1 checksums in this table. */
   if (rep->sha1_checksum == NULL)

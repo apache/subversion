@@ -2,22 +2,17 @@
  * kitchensink.c :  When no place else seems to fit...
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -178,32 +173,4 @@ svn_node_kind_from_word(const char *word)
   else
     /* This also handles word == "unknown" */
     return svn_node_unknown;
-}
-
-const char *
-svn_tristate_to_word(svn_tristate_t tristate)
-{
-  switch (tristate)
-    {
-      case svn_tristate_false:
-        return "false";
-      case svn_tristate_true:
-        return "true";
-      case svn_tristate_unknown:
-      default:
-        return NULL;
-    }
-}
-
-svn_tristate_t
-svn_tristate_from_word(const char *word)
-{
-  if (word == NULL)
-    return svn_tristate_unknown;
-  else if (strcmp(word, "true") == 0)
-    return svn_tristate_true;
-  else if (strcmp(word, "false") == 0)
-    return svn_tristate_false;
-
-  return svn_tristate_unknown;
 }

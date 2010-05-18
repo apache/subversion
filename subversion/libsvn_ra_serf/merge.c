@@ -2,22 +2,17 @@
  * merge.c :  MERGE response parsing functions for ra_serf
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -36,7 +31,7 @@
 #include "svn_config.h"
 #include "svn_delta.h"
 #include "svn_version.h"
-#include "svn_dirent_uri.h"
+#include "svn_path.h"
 #include "svn_props.h"
 
 #include "private/svn_dav_protocol.h"
@@ -292,46 +287,40 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
                          apr_hash_get(info->props,
                                       "post-commit-err", APR_HASH_KEY_STRING));
         }
-      else
+      else if (ctx->session->wc_callbacks->push_wc_prop)
         {
-          const char *href;
+          const char *href, *checked_in;
+          svn_string_t checked_in_str;
 
           href = apr_hash_get(info->props, "href", APR_HASH_KEY_STRING);
-          if (! svn_uri_is_ancestor(ctx->merge_url, href))
+          checked_in = apr_hash_get(info->props, "checked-in",
+                                    APR_HASH_KEY_STRING);
+
+          if (! svn_path_is_ancestor(ctx->merge_url, href))
             {
               /* ### need something better than APR_EGENERAL */
               return svn_error_createf(APR_EGENERAL, NULL,
-                                       _("A MERGE response for '%s' is not "
-                                         "a child of the destination ('%s')"),
+                                       _("A MERGE response for '%s' is not a child "
+                                         "of the destination ('%s')"),
                                        href, ctx->merge_url);
             }
+          href = svn_path_is_child(ctx->merge_url, href, NULL);
+          if (! href) /* the paths are equal */
+            href = "";
+
+          checked_in_str.data = checked_in;
+          checked_in_str.len = strlen(checked_in);
 
           /* We now need to dive all the way into the WC to update the
            * base VCC url.
            */
-          if ((! SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->session))
-              && ctx->session->wc_callbacks->push_wc_prop)
-            {
-              svn_string_t checked_in_str;
-              const char *checked_in;
+          SVN_ERR(ctx->session->wc_callbacks->push_wc_prop(
+                                       ctx->session->wc_callback_baton,
+                                       href,
+                                       SVN_RA_SERF__WC_CHECKED_IN_URL,
+                                       &checked_in_str,
+                                       info->pool));
 
-              /* From the above check, we know that CTX->MERGE_URL is
-                 an ancestor of HREF.  All that remains is to
-                 determine of HREF is the same as CTX->MERGE_URL, or --
-                 if not -- is relative value as a child thereof. */
-              href = svn_uri_is_child(ctx->merge_url, href, NULL);
-              if (! href)
-                href = "";
-
-              checked_in = apr_hash_get(info->props, "checked-in",
-                                        APR_HASH_KEY_STRING);
-              checked_in_str.data = checked_in;
-              checked_in_str.len = strlen(checked_in);
-
-              SVN_ERR(ctx->session->wc_callbacks->push_wc_prop(
-                ctx->session->wc_callback_baton, href,
-                SVN_RA_SERF__WC_CHECKED_IN_URL, &checked_in_str, info->pool));
-            }
         }
 
       svn_ra_serf__xml_pop_state(parser);
@@ -364,7 +353,7 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
       info->prop_val = apr_pstrmemdup(info->pool, info->prop_val,
                                       info->prop_val_len);
       if (strcmp(info->prop_name, "href") == 0)
-        info->prop_val = svn_uri_canonicalize(info->prop_val, info->pool);
+        info->prop_val = svn_path_canonicalize(info->prop_val, info->pool);
 
       /* Set our property. */
       apr_hash_set(info->props, info->prop_name, APR_HASH_KEY_STRING,
@@ -452,7 +441,7 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
       path.data = key;
       path.len = klen;
 
-      if (parent && !svn_uri_is_ancestor(parent, key))
+      if (parent && !svn_path_is_ancestor(parent, key))
         continue;
 
       svn_ra_serf__add_open_tag_buckets(body, alloc, "S:lock", NULL);

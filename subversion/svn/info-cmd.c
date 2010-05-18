@@ -2,22 +2,17 @@
  * info-cmd.c -- Display information about a resource
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2002-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -33,7 +28,6 @@
 #include "svn_pools.h"
 #include "svn_error_codes.h"
 #include "svn_error.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_xml.h"
@@ -95,7 +89,7 @@ print_info_xml(void *baton,
 
   /* "<entry ...>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
-                        "path", svn_dirent_local_style(target, pool),
+                        "path", svn_path_local_style(target, pool),
                         "kind", svn_cl__node_kind_str_xml(info->kind),
                         "revision", rev_str,
                         NULL);
@@ -239,13 +233,13 @@ print_info(void *baton,
            apr_pool_t *pool)
 {
   SVN_ERR(svn_cmdline_printf(pool, _("Path: %s\n"),
-                             svn_dirent_local_style(target, pool)));
+                             svn_path_local_style(target, pool)));
 
   /* ### remove this someday:  it's only here for cmdline output
      compatibility with svn 1.1 and older.  */
   if (info->kind != svn_node_dir)
     SVN_ERR(svn_cmdline_printf(pool, _("Name: %s\n"),
-                               svn_dirent_basename(target, pool)));
+                               svn_path_basename(target, pool)));
 
   if (info->URL)
     SVN_ERR(svn_cmdline_printf(pool, _("URL: %s\n"), info->URL));
@@ -370,24 +364,24 @@ print_info(void *baton,
       if (info->conflict_old)
         SVN_ERR(svn_cmdline_printf(pool,
                                    _("Conflict Previous Base File: %s\n"),
-                                   svn_dirent_local_style(info->conflict_old,
-                                                          pool)));
+                                   svn_path_local_style(info->conflict_old,
+                                                        pool)));
 
       if (info->conflict_wrk)
         SVN_ERR(svn_cmdline_printf
                 (pool, _("Conflict Previous Working File: %s\n"),
-                 svn_dirent_local_style(info->conflict_wrk, pool)));
+                 svn_path_local_style(info->conflict_wrk, pool)));
 
       if (info->conflict_new)
         SVN_ERR(svn_cmdline_printf(pool,
                                    _("Conflict Current Base File: %s\n"),
-                                   svn_dirent_local_style(info->conflict_new,
-                                                          pool)));
+                                   svn_path_local_style(info->conflict_new,
+                                                        pool)));
 
       if (info->prejfile)
         SVN_ERR(svn_cmdline_printf(pool, _("Conflict Properties File: %s\n"),
-                                   svn_dirent_local_style(info->prejfile,
-                                                          pool)));
+                                   svn_path_local_style(info->prejfile,
+                                                        pool)));
     }
 
   if (info->lock)
@@ -428,20 +422,14 @@ print_info(void *baton,
 
   if (info->tree_conflict)
     {
-      const char *desc;
-      const char *src_left_version;
-      const char *src_right_version;
+      const char *desc, *src_left_version, *src_right_version;
 
       SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
                 &desc, info->tree_conflict, pool));
-
       src_left_version =
-        svn_cl__node_description(info->tree_conflict->src_left_version,
-                                 info->repos_root_URL, pool);
-
+        svn_cl__node_description(info->tree_conflict->src_left_version, pool);
       src_right_version =
-        svn_cl__node_description(info->tree_conflict->src_right_version,
-                                 info->repos_root_URL, pool);
+        svn_cl__node_description(info->tree_conflict->src_right_version, pool);
 
       svn_cmdline_printf(pool,
                          "%s: %s\n",
@@ -546,22 +534,18 @@ svn_cl__info(apr_getopt_t *os,
               SVN_ERR(svn_cmdline_fprintf
                       (stderr, subpool,
                        _("%s:  (Not a versioned resource)\n\n"),
-                       svn_path_is_url(truepath)
-                         ? truepath
-                         : svn_dirent_local_style(truepath, pool)));
+                       svn_path_local_style(target, pool)));
             }
           else if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
             {
               SVN_ERR(svn_cmdline_fprintf
                       (stderr, subpool,
                        _("%s:  (Not a valid URL)\n\n"),
-                       svn_path_is_url(truepath)
-                         ? truepath
-                         : svn_dirent_local_style(truepath, pool)));
+                       svn_path_local_style(target, pool)));
             }
           else
             {
-              return svn_error_return(err);
+              return err;
             }
 
           svn_error_clear(err);

@@ -1,22 +1,17 @@
 /* key-test.c --- tests for the key gen functions
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -35,7 +30,10 @@
 
 
 static svn_error_t *
-key_test(apr_pool_t *pool)
+key_test(const char **msg,
+         svn_boolean_t msg_only,
+         svn_test_opts_t *opts,
+         apr_pool_t *pool)
 {
   int i;
   const char *keys[9][2] = {
@@ -49,6 +47,11 @@ key_test(apr_pool_t *pool)
     { "a9z", "aa0" },
     { "z", "10" }
   };
+
+  *msg = "testing sequential alphanumeric key generation";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   for (i = 0; i < 9; i++)
     {
@@ -83,7 +86,6 @@ key_test(apr_pool_t *pool)
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS2(key_test,
-                   "testing sequential alphanumeric key generation"),
+    SVN_TEST_PASS(key_test),
     SVN_TEST_NULL
   };

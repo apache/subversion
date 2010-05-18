@@ -2,22 +2,17 @@
  * compat.c:  compatibility compliance logic
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2004-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -26,7 +21,6 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_ra.h"
 #include "svn_io.h"
@@ -179,7 +173,7 @@ prev_log_path(const char **prev_path_p,
         return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                                  _("Missing changed-path information for "
                                    "'%s' in revision %ld"),
-                                 svn_dirent_local_style(path, pool), revision);
+                                 svn_path_local_style(path, pool), revision);
     }
 
   *prev_path_p = prev_path;
@@ -284,7 +278,7 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
                            apr_hash_t **locations_p,
                            const char *path,
                            svn_revnum_t peg_revision,
-                           const apr_array_header_t *location_revisions,
+                           apr_array_header_t *location_revisions,
                            apr_pool_t *pool)
 {
   apr_hash_t *locations = apr_hash_make(pool);
@@ -660,6 +654,7 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
   struct fr_log_message_baton lmb;
   struct rev *rev;
   apr_hash_t *last_props;
+  const char *last_path;
   svn_stream_t *last_stream;
   apr_pool_t *currpool, *lastpool;
 
@@ -704,6 +699,7 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
 
   /* We want the first txdelta to be against the empty file. */
   last_props = apr_hash_make(lastpool);
+  last_path = NULL;
   last_stream = svn_stream_empty(lastpool);
 
   /* Walk the revision list in chronological order, downloading each fulltext,
@@ -798,7 +794,6 @@ log_path_del_receiver(void *baton,
                       svn_log_entry_t *log_entry,
                       apr_pool_t *pool)
 {
-  log_path_del_rev_t *b = baton;
   apr_hash_index_t *hi;
 
   /* No paths were changed in this revision.  Nothing to do. */
@@ -815,11 +810,14 @@ log_path_del_receiver(void *baton,
 
       apr_hash_this(hi, (void *) &path, NULL, &val);
       log_item = val;
-      if (svn_path_compare_paths(b->path, path) == 0
-          && (log_item->action == 'D' || log_item->action == 'R'))
+      if (svn_path_compare_paths(((log_path_del_rev_t *) baton)->path,
+                                 path) == 0
+                                 && (log_item->action == 'D'
+                                     || log_item->action == 'R'))
         {
           /* Found the first deletion or replacement, we are done. */
-          b->revision_deleted = log_entry->revision;
+          ((log_path_del_rev_t *) baton)->revision_deleted =
+            log_entry->revision;
           break;
         }
     }

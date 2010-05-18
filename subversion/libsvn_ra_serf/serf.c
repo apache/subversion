@@ -2,22 +2,17 @@
  * serf.c :  entry point for ra_serf
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2006-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -40,7 +35,6 @@
 #include "svn_config.h"
 #include "svn_delta.h"
 #include "svn_version.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
 
@@ -49,6 +43,262 @@
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
+
+
+/** Capabilities exchange. */
+
+/* Both server and repository support the capability. */
+static const char *capability_yes = "yes";
+/* Either server or repository does not support the capability. */
+static const char *capability_no = "no";
+/* Server supports the capability, but don't yet know if repository does. */
+static const char *capability_server_yes = "server-yes";
+
+/* Baton type for parsing capabilities out of "OPTIONS" response headers. */
+struct capabilities_response_baton
+{
+  /* This session's capabilities table. */
+  apr_hash_t *capabilities;
+
+  /* Signaler for svn_ra_serf__context_run_wait(). */
+  svn_boolean_t done;
+
+  /* For temporary work only. */
+  apr_pool_t *pool;
+};
+
+
+/* This implements serf_bucket_headers_do_callback_fn_t.
+ * BATON is a 'struct capabilities_response_baton *'.
+ */
+static int
+capabilities_headers_iterator_callback(void *baton,
+                                       const char *key,
+                                       const char *val)
+{
+  struct capabilities_response_baton *crb = baton;
+
+  if (svn_cstring_casecmp(key, "dav") == 0)
+    {
+      /* Each header may contain multiple values, separated by commas, e.g.:
+           DAV: version-control,checkout,working-resource
+           DAV: merge,baseline,activity,version-controlled-collection
+           DAV: http://subversion.tigris.org/xmlns/dav/svn/depth */
+      apr_array_header_t *vals = svn_cstring_split(val, ",", TRUE, crb->pool);
+
+      /* Right now we only have a few capabilities to detect, so just
+         seek for them directly.  This could be written slightly more
+         efficiently, but that wouldn't be worth it until we have many
+         more capabilities. */
+
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
+        {
+          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_DEPTH,
+                       APR_HASH_KEY_STRING, capability_yes);
+        }
+
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
+        {
+          /* The server doesn't know what repository we're referring
+             to, so it can't just say capability_yes. */
+          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                       APR_HASH_KEY_STRING, capability_server_yes);
+        }
+
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
+        {
+          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+                       APR_HASH_KEY_STRING, capability_yes);
+        }
+
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
+        {
+          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
+                       APR_HASH_KEY_STRING, capability_yes);
+        }
+    }
+
+  return 0;
+}
+
+
+/* This implements serf_response_handler_t.
+ * HANDLER_BATON is a 'struct capabilities_response_baton *'.
+ */
+static apr_status_t
+capabilities_response_handler(serf_request_t *request,
+                              serf_bucket_t *response,
+                              void *handler_baton,
+                              apr_pool_t *pool)
+{
+  struct capabilities_response_baton *crb = handler_baton;
+  serf_bucket_t *hdrs = serf_bucket_response_get_headers(response);
+
+  /* Start out assuming all capabilities are unsupported. */
+  apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_DEPTH,
+               APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+               APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+               APR_HASH_KEY_STRING, capability_no);
+
+  /* Then see which ones we can discover. */
+  serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback, crb);
+
+  /* Bunch of exit conditions to set before we go. */
+  crb->done = TRUE;
+  serf_request_set_handler(request, svn_ra_serf__handle_discard_body, NULL);
+  return APR_SUCCESS;
+}
+
+
+/* Exchange capabilities with the server, by sending an OPTIONS
+   request announcing the client's capabilities, and by filling
+   SERF_SESS->capabilities with the server's capabilities as read
+   from the response headers.  Use POOL only for temporary allocation. */
+static svn_error_t *
+exchange_capabilities(svn_ra_serf__session_t *serf_sess, apr_pool_t *pool)
+{
+  svn_ra_serf__handler_t *handler;
+  struct capabilities_response_baton crb;
+
+  crb.pool = pool;
+  crb.done = FALSE;
+  crb.capabilities = serf_sess->capabilities;
+
+  /* No obvious advantage to using svn_ra_serf__create_options_req() here. */
+  handler = apr_pcalloc(pool, sizeof(*handler));
+  handler->method = "OPTIONS";
+  handler->path = serf_sess->repos_url_str;
+  handler->body_buckets = NULL;
+  handler->response_handler = capabilities_response_handler;
+  handler->response_baton = &crb;
+  handler->session = serf_sess;
+  handler->conn = serf_sess->conns[0];
+
+  /* Client capabilities are sent automagically with every request;
+     that's why we don't set up a handler->header_delegate above.
+     See issue #3255 for more. */
+  svn_ra_serf__request_create(handler);
+
+  return svn_ra_serf__context_run_wait(&(crb.done), serf_sess, pool);
+}
+
+
+svn_error_t *
+svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
+                            svn_boolean_t *has,
+                            const char *capability,
+                            apr_pool_t *pool)
+{
+  svn_ra_serf__session_t *serf_sess = ra_session->priv;
+  const char *cap_result;
+
+  /* This capability doesn't rely on anything server side. */
+  if (strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0)
+    {
+      *has = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  cap_result = apr_hash_get(serf_sess->capabilities,
+                            capability,
+                            APR_HASH_KEY_STRING);
+
+  /* If any capability is unknown, they're all unknown, so ask. */
+  if (cap_result == NULL)
+    SVN_ERR(exchange_capabilities(serf_sess, pool));
+
+  /* Try again, now that we've fetched the capabilities. */
+  cap_result = apr_hash_get(serf_sess->capabilities,
+                            capability, APR_HASH_KEY_STRING);
+
+  /* Some capabilities depend on the repository as well as the server.
+     NOTE: ../libsvn_ra_neon/session.c:svn_ra_neon__has_capability()
+     has a very similar code block.  If you change something here,
+     check there as well. */
+  if (cap_result == capability_server_yes)
+    {
+      if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+        {
+          /* Handle mergeinfo specially.  Mergeinfo depends on the
+             repository as well as the server, but the server routine
+             that answered our exchange_capabilities() call above
+             didn't even know which repository we were interested in
+             -- it just told us whether the server supports mergeinfo.
+             If the answer was 'no', there's no point checking the
+             particular repository; but if it was 'yes, we still must
+             change it to 'no' iff the repository itself doesn't
+             support mergeinfo. */
+          svn_mergeinfo_catalog_t ignored;
+          svn_error_t *err;
+          apr_array_header_t *paths = apr_array_make(pool, 1,
+                                                     sizeof(char *));
+          APR_ARRAY_PUSH(paths, const char *) = "";
+
+          err = svn_ra_serf__get_mergeinfo(ra_session, &ignored, paths, 0,
+                                           FALSE, FALSE, pool);
+
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+                {
+                  svn_error_clear(err);
+                  cap_result = capability_no;
+                }
+              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+                {
+                  /* Mergeinfo requests use relative paths, and
+                     anyway we're in r0, so this is a likely error,
+                     but it means the repository supports mergeinfo! */
+                  svn_error_clear(err);
+                  cap_result = capability_yes;
+                }
+              else
+                return err;
+            }
+          else
+            cap_result = capability_yes;
+
+          apr_hash_set(serf_sess->capabilities,
+                       SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
+                       cap_result);
+        }
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
+             _("Don't know how to handle '%s' for capability '%s'"),
+             capability_server_yes, capability);
+        }
+    }
+
+  if (cap_result == capability_yes)
+    {
+      *has = TRUE;
+    }
+  else if (cap_result == capability_no)
+    {
+      *has = FALSE;
+    }
+  else if (cap_result == NULL)
+    {
+      return svn_error_createf
+        (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
+         _("Don't know anything about capability '%s'"), capability);
+    }
+  else  /* "can't happen" */
+    {
+      /* Well, let's hope it's a string. */
+      return svn_error_createf
+        (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+         _("Attempt to fetch capability '%s' resulted in '%s'"),
+         capability, cap_result);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 
 static const svn_version_t *
@@ -79,57 +329,6 @@ ra_serf_get_schemes(apr_pool_t *pool)
   return serf_ssl;
 }
 
-/* Load the setting http-auth-types from the global or server specific
-   section, parse its value and set the types of authentication we should
-   accept from the server. */
-static svn_error_t *
-load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
-                     const char *server_group,
-                     svn_ra_serf__authn_types *authn_types)
-{
-  const char *http_auth_types = NULL;
-  *authn_types = svn_ra_serf__authn_none;
-
-  svn_config_get(config, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
-               SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
-
-  if (server_group)
-    {
-      svn_config_get(config, &http_auth_types, server_group,
-                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, http_auth_types);
-    }
-
-  if (http_auth_types)
-    {
-      char *token, *last;
-      char *auth_types_list = apr_palloc(pool, strlen(http_auth_types) + 1);
-      apr_collapse_spaces(auth_types_list, http_auth_types);
-      while ((token = apr_strtok(auth_types_list, ";", &last)) != NULL)
-        {
-          auth_types_list = NULL;
-          if (svn_cstring_casecmp("basic", token) == 0)
-            *authn_types |= svn_ra_serf__authn_basic;
-          else if (svn_cstring_casecmp("digest", token) == 0)
-            *authn_types |= svn_ra_serf__authn_digest;
-          else if (svn_cstring_casecmp("ntlm", token) == 0)
-            *authn_types |= svn_ra_serf__authn_ntlm;
-          else if (svn_cstring_casecmp("negotiate", token) == 0)
-            *authn_types |= svn_ra_serf__authn_negotiate;
-          else
-            return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                                     _("Invalid config: unknown http auth"
-                                       "type '%s'"), token);
-      }
-    }
-  else
-    {
-      /* Nothing specified by the user, so accept all types. */
-      *authn_types = svn_ra_serf__authn_all;
-    }
-
-  return SVN_NO_ERROR;
-}
-#define DEFAULT_HTTP_TIMEOUT 3600
 static svn_error_t *
 load_config(svn_ra_serf__session_t *session,
             apr_hash_t *config_hash,
@@ -139,70 +338,31 @@ load_config(svn_ra_serf__session_t *session,
   const char *server_group;
   const char *proxy_host = NULL;
   const char *port_str = NULL;
-  const char *timeout_str = NULL;
-  const char *exceptions;
   unsigned int proxy_port;
-  svn_boolean_t is_exception = FALSE;
 
-  if (config_hash)
-    {
-      config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_SERVERS,
-                            APR_HASH_KEY_STRING);
-      config_client = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_CONFIG,
-                                   APR_HASH_KEY_STRING);
-    }
-  else
-    {
-      config = NULL;
-      config_client = NULL;
-    }
+  config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_SERVERS,
+                        APR_HASH_KEY_STRING);
+  config_client = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_CONFIG,
+                               APR_HASH_KEY_STRING);
 
   SVN_ERR(svn_config_get_bool(config, &session->using_compression,
                               SVN_CONFIG_SECTION_GLOBAL,
                               SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
-  svn_config_get(config, &timeout_str, SVN_CONFIG_SECTION_GLOBAL,
-                 SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
 
-  if (session->wc_callbacks->auth_baton)
-    {
-      if (config_client)
-        {
-          svn_auth_set_parameter(session->wc_callbacks->auth_baton,
-                                 SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG,
-                                 config_client);
-        }
-      if (config)
-        {
-          svn_auth_set_parameter(session->wc_callbacks->auth_baton,
-                                 SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS,
-                                 config);
-        }
-    }
+  svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+                         SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG, config_client);
+  svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+                         SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS, config);
 
-  /* Use the default proxy-specific settings if and only if
-     "http-proxy-exceptions" is not set to exclude this host. */
-  svn_config_get(config, &exceptions, SVN_CONFIG_SECTION_GLOBAL,
-                 SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, NULL);
-  if (exceptions)
-    {
-      apr_array_header_t *l = svn_cstring_split(exceptions, ",", TRUE, pool);
-      is_exception = svn_cstring_match_glob_list(session->repos_url.hostname, l);
-    }
-  if (! is_exception)
-    {
-      /* Load the global proxy server settings, if set. */
-      svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
-      svn_config_get(config, &port_str, SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
-      svn_config_get(config, &session->proxy_username,
-                     SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
-      svn_config_get(config, &session->proxy_password,
-                     SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
-    }
-
+  /* Load the global proxy server settings, if set. */
+  svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
+  svn_config_get(config, &port_str, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
+  svn_config_get(config, &session->proxy_username, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
+  svn_config_get(config, &session->proxy_password, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
   /* Load the global ssl settings, if set. */
   SVN_ERR(svn_config_get_bool(config, &session->trust_default_ca,
                               SVN_CONFIG_SECTION_GLOBAL,
@@ -224,9 +384,6 @@ load_config(svn_ra_serf__session_t *session,
                                   server_group,
                                   SVN_CONFIG_OPTION_HTTP_COMPRESSION,
                                   session->using_compression));
-      svn_config_get(config, &timeout_str, server_group,
-                     SVN_CONFIG_OPTION_HTTP_TIMEOUT, timeout_str);
-
       svn_auth_set_parameter(session->wc_callbacks->auth_baton,
                              SVN_AUTH_PARAM_SERVER_GROUP, server_group);
 
@@ -248,24 +405,6 @@ load_config(svn_ra_serf__session_t *session,
       svn_config_get(config, &session->ssl_authorities, server_group,
                      SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES, NULL);
     }
-
-  /* Parse the connection timeout value, if any. */
-  if (timeout_str)
-    {
-      char *endstr;
-      const long int timeout = strtol(timeout_str, &endstr, 10);
-
-      if (*endstr)
-        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                                _("Invalid config: illegal character in "
-                                  "timeout value"));
-      if (timeout < 0)
-        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                                _("Invalid config: negative timeout value"));
-      session->timeout = apr_time_from_sec(timeout);
-    }
-  else
-    session->timeout = apr_time_from_sec(DEFAULT_HTTP_TIMEOUT);
 
   /* Convert the proxy port value, if any. */
   if (port_str)
@@ -303,19 +442,8 @@ load_config(svn_ra_serf__session_t *session,
   else
     session->using_proxy = FALSE;
 
-  /* Setup authentication. */
-  SVN_ERR(load_http_auth_types(pool, config, server_group,
-                               &session->authn_types));
-#if SERF_VERSION_AT_LEAST(0, 4, 0)
-  /* TODO: convert string authn types to SERF_AUTHN bitmask.
-     serf_config_authn_types(session->context, session->authn_types);*/
-  serf_config_credentials_callback(session->context,
-                                   svn_ra_serf__credentials_callback);
-#endif
-
   return SVN_NO_ERROR;
 }
-#undef DEFAULT_HTTP_TIMEOUT
 
 static void
 svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
@@ -343,7 +471,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   const char *client_string = NULL;
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
-  serf_sess->pool = svn_pool_create(pool);
+  apr_pool_create(&serf_sess->pool, pool);
   serf_sess->bkt_alloc = serf_bucket_allocator_create(serf_sess->pool, NULL,
                                                       NULL);
   serf_sess->cached_props = apr_hash_make(serf_sess->pool);
@@ -366,12 +494,14 @@ svn_ra_serf__open(svn_ra_session_t *session,
      older, for root paths url.path will be "", where serf requires "/". */
   if (url.path == NULL || url.path[0] == '\0')
     url.path = apr_pstrdup(serf_sess->pool, "/");
+
+  serf_sess->repos_url = url;
+  serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
+
   if (!url.port)
     {
       url.port = apr_uri_port_of_scheme(url.scheme);
     }
-  serf_sess->repos_url = url;
-  serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
   serf_sess->using_ssl = (svn_cstring_casecmp(url.scheme, "https") == 0);
 
   serf_sess->capabilities = apr_hash_make(serf_sess->pool);
@@ -434,15 +564,11 @@ svn_ra_serf__open(svn_ra_session_t *session,
     serf_sess->conns[0]->useragent = USER_AGENT;
 
   /* go ahead and tell serf about the connection. */
-  status =
-    serf_connection_create2(&serf_sess->conns[0]->conn,
-                            serf_sess->context,
-                            url,
-                            svn_ra_serf__conn_setup, serf_sess->conns[0],
-                            svn_ra_serf__conn_closed, serf_sess->conns[0],
-                            serf_sess->pool);
-  if (status)
-    return svn_error_wrap_apr(status, NULL);
+  serf_sess->conns[0]->conn =
+      serf_connection_create(serf_sess->context, serf_sess->conns[0]->address,
+                             svn_ra_serf__conn_setup, serf_sess->conns[0],
+                             svn_ra_serf__conn_closed, serf_sess->conns[0],
+                             serf_sess->pool);
 
   /* Set the progress callback. */
   serf_context_set_progress_cb(serf_sess->context, svn_ra_serf__progress,
@@ -452,7 +578,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   session->priv = serf_sess;
 
-  return svn_ra_serf__exchange_capabilities(serf_sess, pool);
+  return exchange_capabilities(serf_sess, pool);
 }
 
 static svn_error_t *
@@ -516,33 +642,20 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
-  const char *propfind_path;
+  const char *vcc_url;
 
   props = apr_hash_make(pool);
   *ret_props = apr_hash_make(pool);
 
-  if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
-    {
-      propfind_path = apr_psprintf(pool, "%s/%ld", session->rev_stub, rev);
-
-      /* svn_ra_serf__retrieve_props() wants to added the revision as
-         a Label to the PROPFIND, which isn't really necessary when
-         querying a rev-stub URI.  *Shrug*  Probably okay to leave the
-         Label, but whatever. */
-      rev = SVN_INVALID_REVNUM;
-    }
-  else
-    {
-      /* Use the VCC as the propfind target path. */
-      SVN_ERR(svn_ra_serf__discover_vcc(&propfind_path, session, NULL, pool));
-    }
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+                                     session, session->conns[0],
+                                     session->repos_url.path, pool));
 
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      propfind_path, rev, "0", all_props,
-                                      pool));
+                                      vcc_url, rev, "0", all_props, pool));
 
-  svn_ra_serf__walk_all_props(props, propfind_path, rev,
-                              svn_ra_serf__set_bare_props, *ret_props, pool);
+  svn_ra_serf__walk_all_props(props, vcc_url, rev, svn_ra_serf__set_bare_props,
+                              *ret_props, pool);
 
   return SVN_NO_ERROR;
 }
@@ -583,7 +696,7 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
   /* If we have a relative path, append it. */
   if (rel_path)
     {
-      path = svn_path_url_add_component2(path, rel_path, pool);
+      path = svn_path_url_add_component(path, rel_path, pool);
     }
 
   props = apr_hash_make(pool);
@@ -612,7 +725,7 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
        * the revision's baseline-collection.
        */
       prop_ctx = NULL;
-      path = svn_path_url_add_component2(basecoll_url, relative_url, pool);
+      path = svn_path_url_add_component(basecoll_url, relative_url, pool);
       revision = SVN_INVALID_REVNUM;
       svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
                                  path, revision, "0",
@@ -767,7 +880,7 @@ path_dirent_walker(void *baton,
 
       apr_hash_set(dirents->full_paths, path, path_len, entry);
 
-      base_name = svn_path_uri_decode(svn_uri_basename(path, pool), pool);
+      base_name = svn_path_uri_decode(svn_path_basename(path, pool), pool);
 
       apr_hash_set(dirents->base_paths, base_name, APR_HASH_KEY_STRING, entry);
     }
@@ -862,7 +975,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   /* If we have a relative path, URI encode and append it. */
   if (rel_path)
     {
-      path = svn_path_url_add_component2(path, rel_path, pool);
+      path = svn_path_url_add_component(path, rel_path, pool);
     }
 
   props = apr_hash_make(pool);
@@ -878,7 +991,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                                              session, NULL, path, revision,
                                              fetched_rev, pool));
 
-      path = svn_path_url_add_component2(basecoll_url, relative_url, pool);
+      path = svn_path_url_add_component(basecoll_url, relative_url, pool);
       revision = SVN_INVALID_REVNUM;
     }
 
@@ -900,7 +1013,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
        */
       dirent_walk.full_paths = apr_hash_make(pool);
       dirent_walk.base_paths = apr_hash_make(pool);
-      dirent_walk.orig_path = svn_uri_canonicalize(path, pool);
+      dirent_walk.orig_path = svn_path_canonicalize(path, pool);
 
       svn_ra_serf__walk_all_paths(props, revision, path_dirent_walker,
                                   &dirent_walk, pool);
@@ -938,7 +1051,10 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
   if (!session->repos_root_str)
     {
       const char *vcc_url;
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
+
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+                                         session, session->conns[0],
+                                         session->repos_url.path, pool));
     }
 
   *url = session->repos_root_str;
@@ -960,19 +1076,20 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
                       apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
+  apr_hash_t *props;
+
+  props = apr_hash_make(pool);
 
   if (!session->uuid)
     {
-      const char *vcc_url;
-
-      /* We should never get here if we have HTTP v2 support, because
-         any server with that support should be transmitting the
-         UUID in the initial OPTIONS response.  */
-      SVN_ERR_ASSERT(! SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session));
+      const char *vcc_url, *relative_url;
 
       /* We're not interested in vcc_url and relative_url, but this call also
          stores the repository's uuid in the session. */
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url,
+                                         &relative_url,
+                                         session, session->conns[0],
+                                         session->repos_url.path, pool));
       if (!session->uuid)
         {
           return svn_error_create(APR_EGENERAL, NULL,
@@ -1022,8 +1139,7 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__replay,
   svn_ra_serf__has_capability,
   svn_ra_serf__replay_range,
-  svn_ra_serf__get_deleted_rev,
-  NULL  /* svn_ra_serf__obliterate_path_rev */
+  svn_ra_serf__get_deleted_rev
 };
 
 svn_error_t *

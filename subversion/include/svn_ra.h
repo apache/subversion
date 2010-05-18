@@ -1,22 +1,17 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  *
@@ -71,7 +66,7 @@ svn_ra_version(void);
  * then it is returned in @a value. Otherwise, @a *value is set to @c NULL.
  */
 typedef svn_error_t *(*svn_ra_get_wc_prop_func_t)(void *baton,
-                                                  const char *path,
+                                                  const char *relpath,
                                                   const char *name,
                                                   const svn_string_t **value,
                                                   apr_pool_t *pool);
@@ -122,16 +117,14 @@ typedef svn_error_t *(*svn_ra_invalidate_wc_props_func_t)(void *baton,
 
 
 /** A function type for retrieving the youngest revision from a repos. */
-typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)(
-  void *session_baton,
-  svn_revnum_t *latest_revnum);
+typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)
+  (void *session_baton,
+   svn_revnum_t *latest_revnum);
 
 /** A function type which allows the RA layer to ask about any
  * customizations to the client name string.  This is primarily used
  * by HTTP-based RA layers wishing to extend the string reported to
  * Apache/mod_dav_svn via the User-agent HTTP header.
- *
- * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_ra_get_client_string_func_t)(void *baton,
                                                         const char **name,
@@ -154,15 +147,15 @@ typedef svn_error_t *(*svn_ra_get_client_string_func_t)(void *baton,
  *
  * @since New in 1.1.
  */
-typedef svn_error_t *(*svn_ra_file_rev_handler_t)(
-  void *baton,
-  const char *path,
-  svn_revnum_t rev,
-  apr_hash_t *rev_props,
-  svn_txdelta_window_handler_t *delta_handler,
-  void **delta_baton,
-  apr_array_header_t *prop_diffs,
-  apr_pool_t *pool);
+typedef svn_error_t *(*svn_ra_file_rev_handler_t)
+  (void *baton,
+   const char *path,
+   svn_revnum_t rev,
+   apr_hash_t *rev_props,
+   svn_txdelta_window_handler_t *delta_handler,
+   void **delta_baton,
+   apr_array_header_t *prop_diffs,
+   apr_pool_t *pool);
 
 /**
  * Callback function type for locking and unlocking actions.
@@ -221,13 +214,13 @@ typedef void (*svn_ra_progress_notify_func_t)(apr_off_t progress,
  *
  * @since New in 1.5.
  */
-typedef svn_error_t *(*svn_ra_replay_revstart_callback_t)(
-  svn_revnum_t revision,
-  void *replay_baton,
-  const svn_delta_editor_t **editor,
-  void **edit_baton,
-  apr_hash_t *rev_props,
-  apr_pool_t *pool);
+typedef svn_error_t *(*svn_ra_replay_revstart_callback_t)
+  (svn_revnum_t revision,
+   void *replay_baton,
+   const svn_delta_editor_t **editor,
+   void **edit_baton,
+   apr_hash_t *rev_props,
+   apr_pool_t *pool);
 
 /**
  * Callback function type for replay_range actions.
@@ -245,13 +238,13 @@ typedef svn_error_t *(*svn_ra_replay_revstart_callback_t)(
  *
  * @since New in 1.5.
  */
-typedef svn_error_t *(*svn_ra_replay_revfinish_callback_t)(
-  svn_revnum_t revision,
-  void *replay_baton,
-  const svn_delta_editor_t *editor,
-  void *edit_baton,
-  apr_hash_t *rev_props,
-  apr_pool_t *pool);
+typedef svn_error_t *(*svn_ra_replay_revfinish_callback_t)
+  (svn_revnum_t revision,
+   void *replay_baton,
+   const svn_delta_editor_t *editor,
+   void *edit_baton,
+   apr_hash_t *rev_props,
+   apr_pool_t *pool);
 
 
 /**
@@ -660,31 +653,6 @@ svn_ra_get_session_url(svn_ra_session_t *ra_session,
                        const char **url,
                        apr_pool_t *pool);
 
-
-/** Convert @a url into a path relative to the URL at which @a ra_session
- * is parented, setting @a *rel_path to that value.  If @a url is not
- * a child of the session URL, return @c SVN_ERR_RA_ILLEGAL_URL.
- *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_ra_get_path_relative_to_session(svn_ra_session_t *ra_session,
-                                    const char **rel_path,
-                                    const char *url,
-                                    apr_pool_t *pool);
-
-/** Convert @a url into a path relative to the repository root URL of
- * the repository with which @a ra_session is associated, setting @a
- * *rel_path to that value.  If @a url is not a child of repository
- * root URL, return @c SVN_ERR_RA_ILLEGAL_URL.
- *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_ra_get_path_relative_to_root(svn_ra_session_t *ra_session,
-                                 const char **rel_path,
-                                 const char *url,
-                                 apr_pool_t *pool);
 
 /**
  * Get the latest revision number from the repository of @a session.
@@ -1337,7 +1305,7 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * If @a limit is non-zero only invoke @a receiver on the first @a limit
  * logs.
  *
- * If @a discover_changed_paths, then each call to @a receiver passes a
+ * If @a discover_changed_paths, then each call to receiver passes a
  * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths argument;
  * the hash's keys are all the paths committed in that revision.
  * Otherwise, each call to receiver passes NULL for @a changed_paths.
@@ -1513,7 +1481,7 @@ svn_ra_get_locations(svn_ra_session_t *session,
                      apr_hash_t **locations,
                      const char *path,
                      svn_revnum_t peg_revision,
-                     const apr_array_header_t *location_revisions,
+                     apr_array_header_t *location_revisions,
                      apr_pool_t *pool);
 
 
@@ -1775,6 +1743,24 @@ svn_ra_replay(svn_ra_session_t *session,
               apr_pool_t *pool);
 
 /**
+ * Set @a *has to TRUE if the server represented by @a session has
+ * @a capability (one of the capabilities beginning with
+ * @c "SVN_RA_CAPABILITY_"), else set @a *has to FALSE.
+ *
+ * If @a capability isn't recognized, throw @c SVN_ERR_UNKNOWN_CAPABILITY,
+ * with the effect on @a *has undefined.
+ *
+ * Use @a pool for all allocation.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_ra_has_capability(svn_ra_session_t *session,
+                      svn_boolean_t *has,
+                      const char *capability,
+                      apr_pool_t *pool);
+
+/**
  * Given @a path at revision @a peg_revision, set @a *revision_deleted to the
  * revision @a path was first deleted, within the inclusive revision range
  * defined by @a peg_revision and @a end_revision.  @a path is relative
@@ -1796,30 +1782,6 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                        svn_revnum_t end_revision,
                        svn_revnum_t *revision_deleted,
                        apr_pool_t *pool);
-
-/**
- * @defgroup Capabilities Dynamically query the server's capabilities.
- *
- * @{
- */
-
-/**
- * Set @a *has to TRUE if the server represented by @a session has
- * @a capability (one of the capabilities beginning with
- * @c "SVN_RA_CAPABILITY_"), else set @a *has to FALSE.
- *
- * If @a capability isn't recognized, throw @c SVN_ERR_UNKNOWN_CAPABILITY,
- * with the effect on @a *has undefined.
- *
- * Use @a pool for all allocation.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_ra_has_capability(svn_ra_session_t *session,
-                      svn_boolean_t *has,
-                      const char *capability,
-                      apr_pool_t *pool);
 
 /**
  * The capability of understanding @c svn_depth_t (e.g., the server
@@ -1872,9 +1834,6 @@ svn_ra_has_capability(svn_ra_session_t *session,
  * because we pass a list of client capabilities to the start-commit
  * hook as a single, colon-separated string.
  */
-
-/** @} */
-
 
 /**
  * Append a textual list of all available RA modules to the stringbuf

@@ -3,25 +3,17 @@
 #  cat_tests.py:  testing cat cases.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 ######################################################################
 
 # General modules
@@ -113,12 +105,12 @@ def cat_skip_uncattable(sbox):
       continue
     item_to_cat = os.path.join(dir_path, file)
     if item_to_cat == new_file_path:
-      expected_err = ["svn: warning: '" + os.path.abspath(item_to_cat) + "'" + \
+      expected_err = ["svn: warning: '" + item_to_cat + "'" + \
                      " is not under version control\n"]
       svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                           'cat', item_to_cat)
     elif os.path.isdir(item_to_cat):
-      expected_err = ["svn: warning: '" + os.path.abspath(item_to_cat) + "'" + \
+      expected_err = ["svn: warning: '" + item_to_cat + "'" + \
                      " refers to a directory\n"]
       svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                           'cat', item_to_cat)
@@ -131,12 +123,12 @@ def cat_skip_uncattable(sbox):
   rho_path = os.path.join(G_path, 'rho')
 
   expected_out = ["This is the file 'rho'.\n"]
-  expected_err1 = ["svn: warning: '" + os.path.abspath(G_path) + "'"
+  expected_err1 = ["svn: warning: '" + G_path + "'"
                    + " refers to a directory\n"]
   svntest.actions.run_and_verify_svn2(None, expected_out, expected_err1, 0,
                                       'cat', rho_path, G_path)
 
-  expected_err2 = ["svn: warning: '" + os.path.abspath(new_file_path) + "'"
+  expected_err2 = ["svn: warning: '" + new_file_path + "'"
                    + " is not under version control\n"]
   svntest.actions.run_and_verify_svn2(None, expected_out, expected_err2, 0,
                                       'cat', rho_path, new_file_path)
@@ -145,33 +137,6 @@ def cat_skip_uncattable(sbox):
                                       expected_err1 + expected_err2, 0,
                                       'cat', rho_path, G_path, new_file_path)
 
-
-# Test for issue #3560 'svn_wc_status3() returns incorrect status for
-# unversioned files'.
-def cat_unversioned_file(sbox):
-  "cat an unversioned file parent dir thinks exists"
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  iota_path = os.path.join(wc_dir, 'iota')
-
-  # Delete a file an commit the deletion.
-  svntest.actions.run_and_verify_svn2(None, None, [], 0,
-                                      'delete', iota_path)
-  svntest.actions.run_and_verify_svn2(None, None, [], 0,
-                                      'commit', '-m', 'delete a file',
-                                      iota_path)
-
-  # Now try to cat the deleted file, it should be reported as unversioned.
-  expected_error = ["svn: warning: '" + os.path.abspath(iota_path) + "'"
-                    + " is not under version control\n"]
-  svntest.actions.run_and_verify_svn2(None, [], expected_error, 0,
-                                      'cat', iota_path)
-
-  # Put an unversioned file at 'iota' and try to cat it again, the result
-  # should still be the same.
-  svntest.main.file_write(iota_path, "This the unversioned file 'iota'.\n")
-  svntest.actions.run_and_verify_svn2(None, [], expected_error, 0,
-                                      'cat', iota_path)
 
 ########################################################################
 # Run the tests
@@ -184,7 +149,6 @@ test_list = [ None,
               cat_base,
               cat_nonexistent_file,
               cat_skip_uncattable,
-              cat_unversioned_file,
              ]
 
 if __name__ == '__main__':

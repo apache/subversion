@@ -1,22 +1,17 @@
     /* rev-table.c : working with the `revisions' table
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -77,7 +72,7 @@ svn_fs_bdb__get_rev(revision_t **revision_p,
   /* Turn the revision number into a Berkeley DB record number.
      Revisions are numbered starting with zero; Berkeley DB record
      numbers begin with one.  */
-  db_recno_t recno = (db_recno_t) rev + 1;
+  db_recno_t recno = rev + 1;
 
   svn_fs_base__trail_debug(trail, "revisions", "get");
   db_err = bfd->revisions->get(bfd->revisions, trail->db_txn,
@@ -132,7 +127,7 @@ svn_fs_bdb__put_rev(svn_revnum_t *rev,
       DBT query, result;
 
       /* Update the filesystem revision with the new skel. */
-      recno = (db_recno_t) *rev + 1;
+      recno = *rev + 1;
       svn_fs_base__trail_debug(trail, "revisions", "put");
       db_err = bfd->revisions->put
         (bfd->revisions, trail->db_txn,

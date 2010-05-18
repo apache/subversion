@@ -1,26 +1,7 @@
-#
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
 # Python parser for Subversion skels
 
 import string, re
+from types import *
 
 def parse(s):
   if s[0] != '(' and s[-1] != ')':
@@ -29,7 +10,7 @@ def parse(s):
   s = s[1:-1].lstrip()
   prev_accums = []
   accum = []
-  while True:
+  while 1:
     if len(s) == 0:
       return accum
     if s[0] in string.digits:
@@ -72,7 +53,7 @@ _ok_implicit = re.compile(r'^[A-Za-z]([^\(\) \r\n\t\f]*)$')
 def unparse(struc):
   accum = []
   for ent in struc:
-    if isinstance(ent, str):
+    if type(ent) == StringType:
       if len(ent) > 0 and _ok_implicit.match(ent[0]):
         accum.append(ent)
       else:
@@ -86,7 +67,7 @@ def unparse(struc):
 class Rev:
   def __init__(self, skelstring="(revision null)"):
     sk = parse(skelstring)
-    if len(sk) == 2 and sk[0] == "revision" and isinstance(sk[1], str):
+    if len(sk) == 2 and sk[0] == "revision" and type(sk[1]) == StringType:
       self.txn = sk[1]
     else:
       raise ValueError("Invalid revision skel: %s" % skelstring)
@@ -99,7 +80,7 @@ class Change:
   def __init__(self, skelstring="(change null null null 0  0 )"):
     sk = parse(skelstring)
     if len(sk) == 6 and sk[0] == "change" and type(sk[1]) == type(sk[2]) \
-        == type(sk[3]) == type(sk[4]) == type(sk[5]) == str:
+        == type(sk[3]) == type(sk[4]) == type(sk[5]) == StringType:
           self.path = sk[1]
           self.node = sk[2]
           self.kind = sk[3]
@@ -117,7 +98,7 @@ class Copy:
   def __init__(self, skelstring="(copy null null null)"):
     sk = parse(skelstring)
     if len(sk) == 4 and sk[0] in ("copy", "soft-copy") and type(sk[1]) \
-        == type(sk[2]) == type(sk[3]) == str:
+        == type(sk[2]) == type(sk[3]) == StringType:
           self.kind = sk[0]
           self.srcpath = sk[1]
           self.srctxn = sk[2]
@@ -132,10 +113,10 @@ class Copy:
 class Node:
   def __init__(self,skelstring="((file null null 1 0) null null)"):
     sk = parse(skelstring)
-    if (len(sk) == 3 or (len(sk) == 4 and isinstance(sk[3], str))) \
-        and isinstance(sk[0], list) and isinstance(sk[1], str) \
-        and isinstance(sk[2], str) and sk[0][0] in ("file", "dir") \
-        and type(sk[0][1]) == type(sk[0][2]) == type(sk[0][3]) == str:
+    if (len(sk) == 3 or (len(sk) == 4 and type(sk[3]) == StringType)) \
+        and type(sk[0]) == ListType and type(sk[1]) == StringType \
+        and type(sk[2]) == StringType and sk[0][0] in ("file", "dir") \
+        and type(sk[0][1]) == type(sk[0][2]) == type(sk[0][3]) == StringType:
           self.kind = sk[0][0]
           self.createpath = sk[0][1]
           self.prednode = sk[0][2]
@@ -161,8 +142,8 @@ class Txn:
   def __init__(self,skelstring="(transaction null null () ())"):
     sk = parse(skelstring)
     if len(sk) == 5 and sk[0] in ("transaction", "committed", "dead") \
-        and type(sk[1]) == type(sk[2]) == str \
-        and type(sk[3]) == type(sk[4]) == list and len(sk[3]) % 2 == 0:
+        and type(sk[1]) == type(sk[2]) == StringType \
+        and type(sk[3]) == type(sk[4]) == ListType and len(sk[3]) % 2 == 0:
           self.kind = sk[0]
           self.rootnode = sk[1]
           if self.kind == "committed":
@@ -200,10 +181,10 @@ class Rep:
   def __init__(self, skelstring="((fulltext 0  (md5 16 \0\0\0\0\0\0\0\0" \
           "\0\0\0\0\0\0\0\0)) null)"):
     sk = parse(skelstring)
-    if isinstance(sk[0], list) and len(sk[0]) == 3 \
-        and isinstance(sk[0][1], str) \
-        and isinstance(sk[0][2], list) and len(sk[0][2]) == 2 \
-        and type(sk[0][2][0]) == type(sk[0][2][1]) == str:
+    if type(sk[0]) == ListType and len(sk[0]) == 3 \
+        and type(sk[0][1]) == StringType \
+        and type(sk[0][2]) == ListType and len(sk[0][2]) == 2 \
+        and type(sk[0][2][0]) == type(sk[0][2][1]) == StringType:
           self.kind = sk[0][0]
           self.txn = sk[0][1]
           self.cksumtype = sk[0][2][0]

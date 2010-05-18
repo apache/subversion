@@ -2,22 +2,17 @@
  * get_deleted_rev.c :  ra_serf get_deleted_rev API implementation.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2008-2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -136,21 +131,24 @@ cdata_getdrev(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
+#define GETDREV_HEADER "<S:get-deleted-rev-report xmlns:S=\"" \
+        SVN_XML_NAMESPACE "\" xmlns:D=\"DAV:\">"
+#define GETDREV_FOOTER "</S:get-deleted-rev-report>"
+
 static serf_bucket_t*
 create_getdrev_body(void *baton,
                     serf_bucket_alloc_t *alloc,
                     apr_pool_t *pool)
 {
-  serf_bucket_t *buckets;
+  serf_bucket_t *buckets, *tmp;
   drev_context_t *drev_ctx = baton;
 
   buckets = serf_bucket_aggregate_create(alloc);
 
-  svn_ra_serf__add_open_tag_buckets(buckets, alloc,
-                                    "S:get-deleted-rev-report",
-                                    "xmlns:S", SVN_XML_NAMESPACE,
-                                    "xmlns:D", "DAV:",
-                                    NULL, NULL);
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(GETDREV_HEADER,
+                                      sizeof(GETDREV_HEADER) - 1,
+                                      alloc);
+  serf_bucket_aggregate_append(buckets, tmp);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:path", drev_ctx->path,
@@ -166,8 +164,10 @@ create_getdrev_body(void *baton,
                                apr_ltoa(pool, drev_ctx->end_revision),
                                alloc);
 
-  svn_ra_serf__add_close_tag_buckets(buckets, alloc,
-                                     "S:get-deleted-rev-report");
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(GETDREV_FOOTER,
+                                      sizeof(GETDREV_FOOTER)-1,
+                                      alloc);
+  serf_bucket_aggregate_append(buckets, tmp);
 
   return buckets;
 }
@@ -200,7 +200,7 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
                                          ras, NULL, NULL, peg_revision, NULL,
                                          pool));
 
-  req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
+  req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
   parser_ctx->pool = pool;

@@ -2,22 +2,17 @@
  * log.c :  routines for requesting and parsing log reports
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -188,11 +183,6 @@ log_start_element(int *elem, void *baton, int parent,
       lb->this_path_item->node_kind = svn_node_kind_from_word(
                                      svn_xml_get_attr_value("node-kind", atts));
       lb->this_path_item->copyfrom_rev = SVN_INVALID_REVNUM;
-
-      lb->this_path_item->text_modified = svn_tristate_from_word(
-                                     svn_xml_get_attr_value("text-mods", atts));
-      lb->this_path_item->props_modified = svn_tristate_from_word(
-                                     svn_xml_get_attr_value("prop-mods", atts));
 
       /* See documentation for `svn_repos_node_t' in svn_repos.h,
          and `svn_log_changed_path_t' in svn_types.h, for more
@@ -436,9 +426,9 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
             want_custom_revprops = TRUE;
         }
       if (revprops->nelts == 0)
-        {
-          svn_stringbuf_appendcstr(request_body, "<S:no-revprops/>");
-        }
+	{
+	  svn_stringbuf_appendcstr(request_body, "<S:no-revprops/>");
+	}
     }
   else
     {

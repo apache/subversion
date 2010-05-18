@@ -18,12 +18,12 @@ I.    A FEW POINTERS
 
       For an overview of the Subversion project, visit
 
-         http://subversion.apache.org/
+         http://subversion.tigris.org/
 
       Once you have a Subversion client you can get the latest version
       of the code with the command:
 
-         $ svn co http://svn.apache.org/repos/asf/subversion/trunk subversion
+         $ svn co http://svn.collab.net/repos/svn/trunk subversion
 
 
 
@@ -50,7 +50,7 @@ III.  PARTICIPATING IN THE SUBVERSION COMMUNITY
 
       Talk on IRC with developers:  irc.freenode.net, channel #svn-dev.
 
-      Read the FAQ:  http://subversion.apache.org/faq.html
+      Read the FAQ:  http://subversion.tigris.org/faq.html
 
 
 

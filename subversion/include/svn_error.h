@@ -1,28 +1,26 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  *
  * @file svn_error.h
  * @brief Common exception handling for Subversion.
  */
+
+
+
 
 #ifndef SVN_ERROR_H
 #define SVN_ERROR_H
@@ -41,14 +39,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-
-/* For the Subversion developers, this #define turns on extended "stack
-   traces" of any errors that get thrown. See the SVN_ERR() macro.  */
-#ifdef SVN_DEBUG
-#define SVN_ERR__TRACING
-#endif
-
 
 /** the best kind of (@c svn_error_t *) ! */
 #define SVN_NO_ERROR   0
@@ -274,7 +264,7 @@ svn_handle_warning(FILE *stream,
  *
  * @code
  *   if (a)
- *     SVN_ERR(some operation);
+ *     SVN_ERR (some operation);
  *   else
  *     foo;
  * @endcode
@@ -285,33 +275,8 @@ svn_handle_warning(FILE *stream,
   do {                                          \
     svn_error_t *svn_err__temp = (expr);        \
     if (svn_err__temp)                          \
-      return svn_error_return(svn_err__temp);   \
+      return svn_err__temp;                     \
   } while (0)
-
-/**
- * A statement macro for returning error values.
- *
- * This macro can be used when directly returning an error to ensure
- * that the call stack is recorded correctly.
- */
-#ifdef SVN_ERR__TRACING
-#define SVN_ERR__TRACED "traced call"
-
-#define svn_error_return(expr)  svn_error_quick_wrap((expr), SVN_ERR__TRACED)
-#else
-#define svn_error_return(expr)  (expr)
-#endif
-
-/**
- * Purge from @a ERR and its child chain any links associated with
- * error tracing placeholders, and return the new top-level error
- * chain item.  @a ERR should be considered unusable after passing
- * through this function, but should *not* be cleared (as the returned
- * error is shares memory with @a ERR).
- *
- * @since New in 1.6.
- */
-svn_error_t *svn_error_purge_tracing(svn_error_t *err);
 
 
 /** A statement macro, very similar to @c SVN_ERR.
@@ -323,8 +288,7 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
   do {                                                      \
     svn_error_t *svn_err__temp = (expr);                    \
     if (svn_err__temp)                                      \
-      return svn_error_return(svn_error_quick_wrap(         \
-                                 svn_err__temp, wrap_msg)); \
+      return svn_error_quick_wrap(svn_err__temp, wrap_msg); \
   } while (0)
 
 
@@ -387,8 +351,7 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
  */
 #define SVN_ERR_MALFUNCTION()                                      \
   do {                                                             \
-    return svn_error_return(svn_error__malfunction(                \
-                                 TRUE, __FILE__, __LINE__, NULL)); \
+    return svn_error__malfunction(TRUE, __FILE__, __LINE__, NULL); \
   } while (0)
 
 /** Similar to SVN_ERR_MALFUNCTION(), but without the option of returning

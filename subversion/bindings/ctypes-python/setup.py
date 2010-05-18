@@ -1,20 +1,4 @@
 #!/usr/bin/env python
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 
 import errno, os, re, sys, tempfile
 
@@ -254,10 +238,10 @@ class build(_build):
           sys.exit(2)
 
     if not self.dry_run:
-      r = re.compile(r"(\s+\w+)\.restype = POINTER\(svn_error_t\)")
-      out = open("svn_all2.py", "w")
-      for line in open("svn_all.py"):
-        line = r.sub("\\1.restype = POINTER(svn_error_t)\n\\1.errcheck = _svn_errcheck", line)
+      out = file("svn_all2.py", "w")
+      for line in file("svn_all.py"):
+        line = line.replace("restype = POINTER(svn_error_t)",
+                            "restype = SVN_ERR")
 
         if not line.startswith("FILE ="):
           out.write(line)
@@ -470,10 +454,9 @@ setup(cmdclass={'build': build, 'clean': clean},
       version='0.1',
       description='Python bindings for the Subversion version control system.',
       author='The Subversion Team',
-      author_email='dev@subversion.apache.org',
-      url='http://subversion.apache.org',
+      author_email='dev@subversion.tigris.org',
+      url='http://subversion.tigris.org',
       packages=['csvn', 'csvn.core', 'csvn.ext'],
-      license='Apache License, Version 2.0',
      )
 
 # TODO: We need to create our own bdist_rpm implementation so that we can pass

@@ -2,22 +2,17 @@
  * propdel-cmd.c -- Remove property from files/dirs
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -35,6 +30,10 @@
 #include "svn_utf.h"
 #include "svn_path.h"
 #include "cl.h"
+
+/* We shouldn't be including a private header here, but it is
+ * necessary for fixing issue #3416 */
+#include "private/svn_opt_private.h"
 
 #include "svn_private_config.h"
 
@@ -91,13 +90,13 @@ svn_cl__propdel(apr_getopt_t *os,
 
   if (! opt_state->quiet)
     {
-      SVN_ERR(svn_cl__get_notifier(&nwb.real_func, &nwb.real_baton, FALSE,
-                                   FALSE, FALSE, pool));
+      svn_cl__get_notifier(&nwb.real_func, &nwb.real_baton, FALSE,
+                           FALSE, FALSE, pool);
       ctx->notify_func2 = notify_wrapper;
       ctx->notify_baton2 = &nwb;
     }
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+  SVN_ERR(svn_opt__eat_peg_revisions(&targets, targets, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {
@@ -105,7 +104,7 @@ svn_cl__propdel(apr_getopt_t *os,
       const char *URL;
 
       SVN_ERR(svn_cl__revprop_prepare(&opt_state->start_revision, targets,
-                                      &URL, ctx, pool));
+                                      &URL, pool));
 
       /* Let libsvn_client do the real work. */
       SVN_ERR(svn_client_revprop_set2(pname_utf8, NULL, NULL,

@@ -2,22 +2,17 @@
  * opt-test.c -- test the option functions
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -30,7 +25,10 @@
 
 
 static svn_error_t *
-test_parse_peg_rev(apr_pool_t *pool)
+test_parse_peg_rev(const char **msg,
+                   svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
+                   apr_pool_t *pool)
 {
   apr_size_t i;
   static struct {
@@ -53,6 +51,10 @@ test_parse_peg_rev(apr_pool_t *pool)
     { "foo@/bar",             "foo@/bar",     {svn_opt_revision_unspecified} },
     { "foo@HEAD/bar",         "foo@HEAD/bar", {svn_opt_revision_unspecified} },
   };
+
+  *msg = "test svn_opt_parse_path";
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
@@ -90,7 +92,10 @@ test_parse_peg_rev(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_svn_opt_args_to_target_array2(apr_pool_t *pool)
+test_svn_opt_args_to_target_array2(const char **msg,
+                                   svn_boolean_t msg_only,
+                                   svn_test_opts_t *opts,
+                                   apr_pool_t *pool)
 {
   apr_size_t i;
   static struct {
@@ -115,6 +120,10 @@ test_svn_opt_args_to_target_array2(apr_pool_t *pool)
     { "foo@///bar",             "foo@/bar" },
     { "foo@HEAD///bar",         "foo@HEAD/bar" },
   };
+
+  *msg = "test svn_opt_args_to_target_array2";
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
@@ -191,9 +200,7 @@ test_svn_opt_args_to_target_array2(apr_pool_t *pool)
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS2(test_parse_peg_rev,
-                   "test svn_opt_parse_path"),
-    SVN_TEST_PASS2(test_svn_opt_args_to_target_array2,
-                   "test svn_opt_args_to_target_array2"),
+    SVN_TEST_PASS(test_parse_peg_rev),
+    SVN_TEST_PASS(test_svn_opt_args_to_target_array2),
     SVN_TEST_NULL
   };

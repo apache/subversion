@@ -2,22 +2,17 @@
  * status-cmd.c -- Display status information in current directory
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -34,13 +29,15 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_xml.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_cmdline.h"
 #include "cl.h"
 
+/* We shouldn't be including a private header here, but it is
+ * necessary for fixing issue #3416 */
+#include "private/svn_opt_private.h"
+
 #include "svn_private_config.h"
-#include "private/svn_wc_private.h"
 
 
 
@@ -61,45 +58,15 @@ struct status_baton
   svn_boolean_t had_print_error;  /* To avoid printing lots of errors if we get
                                      errors while printing to stdout */
   svn_boolean_t xml_mode;
-
-  /* Conflict stats. */
-  unsigned int text_conflicts;
-  unsigned int prop_conflicts;
-  unsigned int tree_conflicts;
-
-  svn_client_ctx_t *ctx;
 };
 
 
 struct status_cache
 {
   const char *path;
-  svn_wc_status3_t *status;
+  svn_wc_status2_t *status;
 };
 
-/* Print conflict stats accumulated in status baton SB.
- * Do temporary allocations in POOL. */
-static svn_error_t *
-print_conflict_stats(struct status_baton *sb, apr_pool_t *pool)
-{
-  if (sb->text_conflicts > 0 || sb->prop_conflicts > 0 ||
-      sb->tree_conflicts > 0)
-      SVN_ERR(svn_cmdline_printf(pool, "%s", _("Summary of conflicts:\n")));
-
-  if (sb->text_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf
-      (pool, _("  Text conflicts: %u\n"), sb->text_conflicts));
-
-  if (sb->prop_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf
-      (pool, _("  Property conflicts: %u\n"), sb->prop_conflicts));
-
-  if (sb->tree_conflicts > 0)
-    SVN_ERR(svn_cmdline_printf
-      (pool, _("  Tree conflicts: %u\n"), sb->tree_conflicts));
-
-  return SVN_NO_ERROR;
-}
 
 /* Prints XML target element with path attribute TARGET, using POOL for
    temporary allocations. */
@@ -143,22 +110,18 @@ print_finish_target_xml(svn_revnum_t repos_rev,
 static svn_error_t *
 print_status_normal_or_xml(void *baton,
                            const char *path,
-                           const svn_wc_status3_t *status,
+                           const svn_wc_status2_t *status,
                            apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
 
   if (sb->xml_mode)
-    return svn_cl__print_status_xml(path, status, sb->ctx, pool);
+    return svn_cl__print_status_xml(path, status, pool);
   else
     return svn_cl__print_status(path, status, sb->detailed,
                                 sb->show_last_committed,
                                 sb->skip_unrecognized,
                                 sb->repos_locks,
-                                &sb->text_conflicts,
-                                &sb->prop_conflicts,
-                                &sb->tree_conflicts,
-                                sb->ctx,
                                 pool);
 }
 
@@ -167,53 +130,24 @@ print_status_normal_or_xml(void *baton,
 static svn_error_t *
 print_status(void *baton,
              const char *path,
-             const svn_wc_status3_t *status,
+             svn_wc_status2_t *status,
              apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
-  svn_wc_status3_t *tweaked_status;
-  svn_revnum_t revision;
-  svn_revnum_t changed_rev;
-  apr_time_t changed_date;
-  const char *changed_author;
-  const char *local_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, sb->cl_pool));
-  tweaked_status = svn_wc_dup_status3(status, sb->cl_pool);
-
-  /* ### The revision information with associates are based on what
-   * ### _read_info() returns. The svn_wc_status_func4_t callback is
-   * ### suppposed to handle the gathering of additional information from the
-   * ### WORKING nodes on its own. Until we've agreed on how the CLI should
-   * ### handle the revision information, we use this appproach to stay compat
-   * ### with our testsuite. */
-  if (status->versioned)
-    {
-      SVN_ERR(svn_wc__node_get_working_rev_info(&revision, &changed_rev,
-                                                &changed_date,
-                                                &changed_author,
-                                                sb->ctx->wc_ctx,
-                                                local_abspath, sb->cl_pool,
-                                                pool));
-      tweaked_status->revision = revision;
-      tweaked_status->changed_rev = changed_rev;
-      tweaked_status->changed_date = changed_date;
-      tweaked_status->changed_author = changed_author;
-    }
-
-  /* If the path is part of a changelist, then we don't print
+  /* If there's a changelist attached to the entry, then we don't print
      the item, but instead dup & cache the status structure for later. */
-  if (status->changelist)
+  if (status->entry && status->entry->changelist)
     {
       /* The hash maps a changelist name to an array of status_cache
          structures. */
       apr_array_header_t *path_array;
-      const char *cl_key = apr_pstrdup(sb->cl_pool, status->changelist);
+      const char *cl_key = apr_pstrdup(sb->cl_pool, status->entry->changelist);
       struct status_cache *scache = apr_pcalloc(sb->cl_pool, sizeof(*scache));
       scache->path = apr_pstrdup(sb->cl_pool, path);
-      scache->status = svn_wc_dup_status3(tweaked_status, sb->cl_pool);
+      scache->status = svn_wc_dup_status2(status, sb->cl_pool);
 
-      path_array =
+      path_array = (apr_array_header_t *)
         apr_hash_get(sb->cached_changelists, cl_key, APR_HASH_KEY_STRING);
       if (path_array == NULL)
         {
@@ -227,38 +161,40 @@ print_status(void *baton,
       return SVN_NO_ERROR;
     }
 
-  return print_status_normal_or_xml(baton, path, tweaked_status, pool);
+  return print_status_normal_or_xml(baton, path, status, pool);
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__status(apr_getopt_t *os,
                void *baton,
-               apr_pool_t *scratch_pool)
+               apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  apr_pool_t *iterpool;
-  apr_hash_t *master_cl_hash = apr_hash_make(scratch_pool);
+  apr_pool_t *subpool;
+  apr_hash_t *master_cl_hash = apr_hash_make(pool);
   int i;
   svn_opt_revision_t rev;
   struct status_baton sb;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
-                                                      ctx, scratch_pool));
+                                                      ctx, pool));
 
   /* Add "." if user passed 0 arguments */
-  svn_opt_push_implicit_dot_target(targets, scratch_pool);
+  svn_opt_push_implicit_dot_target(targets, pool);
 
   /* We want our -u statuses to be against HEAD. */
   rev.kind = svn_opt_revision_head;
 
   /* The notification callback, leave the notifier as NULL in XML mode */
   if (! opt_state->xml)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, scratch_pool));
+    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                         FALSE, FALSE, pool);
+
+  subpool = svn_pool_create(pool);
 
   sb.had_print_error = FALSE;
 
@@ -268,7 +204,7 @@ svn_cl__status(apr_getopt_t *os,
          everything in a top-level element. This makes the output in
          its entirety a well-formed XML document. */
       if (! opt_state->incremental)
-        SVN_ERR(svn_cl__xml_print_header("status", scratch_pool));
+        SVN_ERR(svn_cl__xml_print_header("status", pool));
     }
   else
     {
@@ -284,31 +220,26 @@ svn_cl__status(apr_getopt_t *os,
   sb.repos_locks = opt_state->update;
   sb.xml_mode = opt_state->xml;
   sb.cached_changelists = master_cl_hash;
-  sb.cl_pool = scratch_pool;
-  sb.text_conflicts = 0;
-  sb.prop_conflicts = 0;
-  sb.tree_conflicts = 0;
-  sb.ctx = ctx;
+  sb.cl_pool = pool;
 
-  SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, scratch_pool));
+  SVN_ERR(svn_opt__eat_peg_revisions(&targets, targets, pool));
 
-  iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       svn_revnum_t repos_rev = SVN_INVALID_REVNUM;
 
-      svn_pool_clear(iterpool);
+      svn_pool_clear(subpool);
 
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
       if (opt_state->xml)
-        SVN_ERR(print_start_target_xml(svn_dirent_local_style(target, iterpool),
-                                       iterpool));
+        SVN_ERR(print_start_target_xml(svn_path_local_style(target, subpool),
+                                       subpool));
 
       /* Retrieve a hash of status structures with the information
          requested by the user. */
-      SVN_ERR(svn_cl__try(svn_client_status5(&repos_rev, target, &rev,
+      SVN_ERR(svn_cl__try(svn_client_status4(&repos_rev, target, &rev,
                                              print_status, &sb,
                                              opt_state->depth,
                                              opt_state->verbose,
@@ -316,14 +247,14 @@ svn_cl__status(apr_getopt_t *os,
                                              opt_state->no_ignore,
                                              opt_state->ignore_externals,
                                              opt_state->changelists,
-                                             ctx, iterpool),
+                                             ctx, subpool),
                           NULL, opt_state->quiet,
                           /* not versioned: */
-                          SVN_ERR_WC_NOT_WORKING_COPY,
+                          SVN_ERR_WC_NOT_DIRECTORY,
                           SVN_NO_ERROR));
 
       if (opt_state->xml)
-        SVN_ERR(print_finish_target_xml(repos_rev, iterpool));
+        SVN_ERR(print_finish_target_xml(repos_rev, subpool));
     }
 
   /* If any paths were cached because they were associatied with
@@ -334,14 +265,20 @@ svn_cl__status(apr_getopt_t *os,
       svn_stringbuf_t *buf;
 
       if (opt_state->xml)
-        buf = svn_stringbuf_create("", scratch_pool);
+        buf = svn_stringbuf_create("", pool);
 
-      for (hi = apr_hash_first(scratch_pool, master_cl_hash); hi;
+      for (hi = apr_hash_first(pool, master_cl_hash); hi;
            hi = apr_hash_next(hi))
         {
-          const char *changelist_name = svn__apr_hash_index_key(hi);
-          apr_array_header_t *path_array = svn__apr_hash_index_val(hi);
+          const char *changelist_name;
+          apr_array_header_t *path_array;
+          const void *key;
+          void *val;
           int j;
+
+          apr_hash_this(hi, &key, NULL, &val);
+          changelist_name = key;
+          path_array = val;
 
           /* ### TODO: For non-XML output, we shouldn't print the
              ### leading \n on the first changelist if there were no
@@ -349,14 +286,12 @@ svn_cl__status(apr_getopt_t *os,
           if (opt_state->xml)
             {
               svn_stringbuf_set(buf, "");
-              svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal,
-                                    "changelist", "name", changelist_name,
-                                    NULL);
+              svn_xml_make_open_tag(&buf, pool, svn_xml_normal, "changelist",
+                                    "name", changelist_name, NULL);
               SVN_ERR(svn_cl__error_checked_fputs(buf->data, stdout));
             }
           else
-            SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                       _("\n--- Changelist '%s':\n"),
+            SVN_ERR(svn_cmdline_printf(pool, _("\n--- Changelist '%s':\n"),
                                        changelist_name));
 
           for (j = 0; j < path_array->nelts; j++)
@@ -364,24 +299,21 @@ svn_cl__status(apr_getopt_t *os,
               struct status_cache *scache =
                 APR_ARRAY_IDX(path_array, j, struct status_cache *);
               SVN_ERR(print_status_normal_or_xml(&sb, scache->path,
-                                                 scache->status, scratch_pool));
+                                                 scache->status, pool));
             }
 
           if (opt_state->xml)
             {
               svn_stringbuf_set(buf, "");
-              svn_xml_make_close_tag(&buf, scratch_pool, "changelist");
+              svn_xml_make_close_tag(&buf, pool, "changelist");
               SVN_ERR(svn_cl__error_checked_fputs(buf->data, stdout));
             }
         }
     }
-  svn_pool_destroy(iterpool);
 
+  svn_pool_destroy(subpool);
   if (opt_state->xml && (! opt_state->incremental))
-    SVN_ERR(svn_cl__xml_print_footer("status", scratch_pool));
-
-  if (! opt_state->quiet && ! opt_state->xml)
-      SVN_ERR(print_conflict_stats(&sb, scratch_pool));
+    SVN_ERR(svn_cl__xml_print_footer("status", pool));
 
   return SVN_NO_ERROR;
 }

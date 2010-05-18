@@ -2,22 +2,17 @@
  * cat.c:  implementation of the 'cat' command
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -33,7 +28,6 @@
 #include "svn_subst.h"
 #include "svn_io.h"
 #include "svn_time.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_props.h"
 #include "client.h"
@@ -45,17 +39,18 @@
 /*** Code. ***/
 
 /* Helper function to handle copying a potentially translated version of
-   local file LOCAL_ABSPATH to OUTPUT.  REVISION must be one of the following:
-   BASE, COMMITTED, WORKING.  Uses SCRATCH_POOL for temporary allocations. */
+   local file PATH to OUTPUT.  REVISION must be one of the following: BASE,
+   COMMITTED, WORKING.  Uses POOL for temporary allocations. */
 static svn_error_t *
-cat_local_file(svn_wc_context_t *wc_ctx,
-               const char *local_abspath,
+cat_local_file(const char *path,
                svn_stream_t *output,
+               svn_wc_adm_access_t *adm_access,
                const svn_opt_revision_t *revision,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
-               apr_pool_t *scratch_pool)
+               apr_pool_t *pool)
 {
+  const svn_wc_entry_t *entry;
   apr_hash_t *kw = NULL;
   svn_subst_eol_style_t style;
   apr_hash_t *props;
@@ -64,46 +59,29 @@ cat_local_file(svn_wc_context_t *wc_ctx,
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
   svn_stream_t *input;
-  svn_node_kind_t kind;
 
   SVN_ERR_ASSERT(SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind));
 
-  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
-  if (kind == svn_node_unknown || kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-  if (kind != svn_node_file)
+  if (entry->kind != svn_node_file)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                              _("'%s' refers to a directory"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
+                             svn_path_local_style(path, pool));
 
   if (revision->kind != svn_opt_revision_working)
     {
-      SVN_ERR(svn_wc_get_pristine_contents2(&input, wc_ctx, local_abspath,
-                                            scratch_pool, scratch_pool));
-      if (input == NULL)
-        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                 _("'%s' has no base revision until it is committed"),
-                 svn_dirent_local_style(local_abspath, scratch_pool));
-
-      SVN_ERR(svn_wc_get_pristine_props(&props, wc_ctx, local_abspath,
-                                        scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc_get_pristine_contents(&input, path, pool, pool));
+      SVN_ERR(svn_wc_get_prop_diffs(NULL, &props, path, adm_access, pool));
     }
   else
     {
-      svn_wc_status3_t *status;
+      svn_wc_status2_t *status;
 
-      SVN_ERR(svn_stream_open_readonly(&input, local_abspath, scratch_pool,
-                                       scratch_pool));
+      SVN_ERR(svn_stream_open_readonly(&input, path, pool, pool));
 
-      SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, local_abspath, scratch_pool,
-                                scratch_pool));
-      SVN_ERR(svn_wc_status3(&status, wc_ctx, local_abspath, scratch_pool,
-                             scratch_pool));
+      SVN_ERR(svn_wc_prop_list(&props, path, adm_access, pool));
+      SVN_ERR(svn_wc_status2(&status, path, adm_access, pool));
       if (status->text_status != svn_wc_status_normal)
         local_mod = TRUE;
     }
@@ -122,27 +100,17 @@ cat_local_file(svn_wc_context_t *wc_ctx,
     {
       /* Use the modified time from the working copy if
          the file */
-      SVN_ERR(svn_io_file_affected_time(&tm, local_abspath, scratch_pool));
+      SVN_ERR(svn_io_file_affected_time(&tm, path, pool));
     }
   else
     {
-      SVN_ERR(svn_wc__node_get_changed_info(NULL, &tm, NULL, wc_ctx,
-                                            local_abspath, scratch_pool,
-                                            scratch_pool));
+      tm = entry->cmt_date;
     }
 
   if (keywords)
     {
-      svn_revnum_t changed_rev;
-      const char *rev_str;
+      const char *fmt;
       const char *author;
-      const char *url;
-
-      SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, NULL, &author, wc_ctx,
-                                            local_abspath, scratch_pool,
-                                            scratch_pool));
-      SVN_ERR(svn_wc__node_get_url(&url, wc_ctx, local_abspath, scratch_pool,
-                                   scratch_pool));
 
       if (local_mod)
         {
@@ -150,30 +118,31 @@ cat_local_file(svn_wc_context_t *wc_ctx,
              to the revision number, and set the author to
              "(local)" since we can't always determine the
              current user's username */
-          rev_str = apr_psprintf(scratch_pool, "%ldM", changed_rev);
+          fmt = "%ldM";
           author = _("(local)");
         }
       else
         {
-          rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
+          fmt = "%ld";
+          author = entry->cmt_author;
         }
 
-      SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, rev_str, url, tm,
-                                        author, scratch_pool));
+      SVN_ERR(svn_subst_build_keywords2
+              (&kw, keywords->data,
+               apr_psprintf(pool, fmt, entry->cmt_rev),
+               entry->url, tm, author, pool));
     }
 
   /* Our API contract says that OUTPUT will not be closed. The two paths
      below close it, so disown the stream to protect it. The input will
      be closed, which is good (since we opened it). */
-  output = svn_stream_disown(output, scratch_pool);
+  output = svn_stream_disown(output, pool);
 
   /* Wrap the output stream if translation is needed. */
   if (eol != NULL || kw != NULL)
-    output = svn_subst_stream_translated(output, eol, FALSE, kw, TRUE,
-                                         scratch_pool);
+    output = svn_subst_stream_translated(output, eol, FALSE, kw, TRUE, pool);
 
-  return svn_error_return(svn_stream_copy3(input, output, cancel_func,
-                                           cancel_baton, scratch_pool));
+  return svn_stream_copy3(input, output, cancel_func, cancel_baton, pool);
 }
 
 svn_error_t *
@@ -211,12 +180,17 @@ svn_client_cat2(svn_stream_t *out,
       && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(peg_revision->kind)
       && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
-      const char *local_abspath;
+      svn_wc_adm_access_t *adm_access;
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
-      return svn_error_return(
-        cat_local_file(ctx->wc_ctx, local_abspath, out, revision,
-                       ctx->cancel_func, ctx->cancel_baton, pool));
+      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL,
+                               svn_path_dirname(path_or_url, pool), FALSE,
+                               0, ctx->cancel_func, ctx->cancel_baton,
+                               pool));
+
+      SVN_ERR(cat_local_file(path_or_url, out, adm_access, revision,
+                             ctx->cancel_func, ctx->cancel_baton, pool));
+
+      return svn_wc_adm_close2(adm_access, pool);
     }
 
   /* Get an RA plugin for this filesystem object. */

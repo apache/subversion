@@ -1,13 +1,5 @@
      Oh Most High and Fragrant Emacs, please be in -*- text -*- mode!
 
-##############################################################################
-### The vast majority of this file is completely out-of-date as a result   ###
-### of the ongoing work known as WC-NG.  Please consult that documentation ###
-### for a more relevant and complete reference.                            ###
-### (See the files in notes/wc-ng )                                        ###
-##############################################################################
-
-
 This is the library described in the section "The working copy
 management library" of svn-design.texi.  It performs local operations
 in the working copy, tweaking administrative files and versioned data.
@@ -115,8 +107,6 @@ analogous to CVS/ subdirs.  See the separate sections below for more details.
             props/              /* tmp area for props */
        empty-file               /* Obsolete, no longer used, not present in
                                    post-1.3 working copies */
-       wc.db                    /* A SQLite database which contains *all* the
-                                   administrative information for a wc-ng. */
 
 `format':
    Says what version of the working copy adm format this is (so future
@@ -231,7 +221,7 @@ analogous to CVS/ subdirs.  See the separate sections below for more details.
        <mv name="tmp/prop-base/name"
            dest="prop-base/name">
 
-   The problem with the second way is that it violates the
+   The problem with the second way is that is violates the
    separability of .svn subdirectories -- a subdir should be operable
    independent of its location in the local filesystem.  
 

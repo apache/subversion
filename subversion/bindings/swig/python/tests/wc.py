@@ -1,23 +1,3 @@
-#
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
 from sys import version_info # For Python version check
 if version_info[0] >= 3:
   # Python >=3.0
@@ -25,7 +5,7 @@ if version_info[0] >= 3:
 else:
   # Python <3.0
   from cStringIO import StringIO
-import unittest, os, tempfile, setup_path, binascii
+import unittest, os, tempfile, shutil, types, setup_path, binascii
 import svn.diff
 from svn import core, repos, wc, client
 from svn import delta, ra
@@ -49,7 +29,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     self.repos = repos.open(REPOS_PATH)
     self.fs = repos.fs(self.repos)
 
-    self.path = core.svn_dirent_internal_style(tempfile.mktemp())
+    self.path = core.svn_path_canonicalize(tempfile.mktemp())
 
     client_ctx = client.create_context()
 
@@ -62,18 +42,13 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     self.wc = wc.adm_open3(None, self.path, True, -1, None)
 
   def test_entry(self):
-      wc.entry(self.path, self.wc, True)
+      wc_entry = wc.entry(self.path, self.wc, True)
 
   def test_lock(self):
-      readme_path = '%s/trunk/README.txt' % self.path
-
-      lock = core.svn_lock_create(core.Pool())
-      lock.token = 'http://svnbook.org/nightly/en/svn.advanced.locking.html'
-
-      wc.add_lock(readme_path, lock, self.wc)
+      lock = wc.add_lock(self.path, core.svn_lock_create(core.Pool()), self.wc)
       self.assertEqual(True, wc.adm_locked(self.wc))
       self.assertEqual(True, wc.locked(self.path))
-      wc.remove_lock(readme_path, self.wc)
+      wc.remove_lock(self.path, self.wc)
 
   def test_version(self):
       wc.version()
@@ -86,7 +61,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.failIf(wc.is_adm_dir(".foosvn"))
 
   def test_get_adm_dir(self):
-      self.assert_(isinstance(wc.get_adm_dir(), basestring))
+      self.assert_(isinstance(wc.get_adm_dir(), types.StringTypes))
 
   def test_set_adm_dir(self):
       self.assertRaises(SubversionException, wc.set_adm_dir, ".foobar")
@@ -112,13 +87,13 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
       class MyReporter:
           def __init__(self):
-              self.finished_report = False
+              self._finished_report = False
 
           def abort_report(self, pool):
               pass
 
           def finish_report(self, pool):
-              self.finished_report = True
+              self._finished_report = True
 
           def set_path(self, path, revision, start_empty, lock_token, pool):
               set_paths.append(path)
@@ -142,7 +117,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
                           True, True, False, notify, info)
 
       # Check that the report finished
-      self.assert_(reporter.finished_report)
+      self.assert_(reporter._finished_report)
       self.assertEqual([''], set_paths)
       self.assertEqual(1, len(infos))
 
@@ -175,7 +150,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
        target) = wc.adm_open_anchor(self.path, False, -1, None)
       (editor, edit_baton, set_locks_baton,
        edit_revision) = wc.get_status_editor2(anchor_access,
-                                              target,
+                                              self.path,
                                               None,  # SvnConfig
                                               True,  # recursive
                                               False, # get_all
@@ -333,7 +308,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     got_prop_changes = []
     def props_changed(path, propchanges):
       for (name, value) in propchanges.items():
-        (kind, _) = core.svn_property_kind(name)
+        (kind, unused_prefix_len) = core.svn_property_kind(name)
         if kind != core.svn_prop_regular_kind:
           continue
         got_prop_changes.append((path[len(self.path) + 1:], name, value))
@@ -441,8 +416,6 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def tearDown(self):
       wc.adm_close(self.wc)
       core.svn_io_remove_dir(self.path)
-      self.fs = None
-      self.repos = None
 
 def suite():
     return unittest.makeSuite(SubversionWorkingCopyTestCase, 'test')

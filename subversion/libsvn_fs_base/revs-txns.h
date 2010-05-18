@@ -1,22 +1,17 @@
 /* revs-txns.h : internal interface to revision and transactions operations
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2006, 2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -91,7 +86,7 @@ svn_error_t *svn_fs_base__txn_get_revision(svn_revnum_t *revision,
                                            apr_pool_t *pool);
 
 
-/* Retrieve information about the Subversion transaction TXN_NAME from
+/* Retrieve information about the Subversion transaction SVN_TXN from
    the `transactions' table of FS, as part of TRAIL.
    Set *ROOT_ID_P to the ID of the transaction's root directory.
    Set *BASE_ROOT_ID_P to the ID of the root directory of the
@@ -187,14 +182,6 @@ svn_error_t *svn_fs_base__begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs,
                                     svn_revnum_t rev, apr_uint32_t flags,
                                     apr_pool_t *pool);
 
-/* Begin a new transaction in filesystem FS, to replace an existing
-   revision REPLACING_REV.  The new transaction is returned in *TXN_P.
-   Allocate the new transaction structure from POOL. */
-svn_error_t *svn_fs_base__begin_obliteration_txn(svn_fs_txn_t **txn_p,
-                                                 svn_fs_t *fs,
-                                                 svn_revnum_t replacing_rev,
-                                                 apr_pool_t *pool);
-
 svn_error_t *svn_fs_base__open_txn(svn_fs_txn_t **txn, svn_fs_t *fs,
                                    const char *name, apr_pool_t *pool);
 
@@ -226,7 +213,7 @@ svn_error_t *svn_fs_base__change_txn_prop(svn_fs_txn_t *txn, const char *name,
                                           apr_pool_t *pool);
 
 svn_error_t *svn_fs_base__change_txn_props(svn_fs_txn_t *txn,
-                                           const apr_array_header_t *props,
+                                           apr_array_header_t *props,
                                            apr_pool_t *pool);
 
 

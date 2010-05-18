@@ -46,47 +46,26 @@ Valid options:
   -c [--change] ARG        : the change made in revision ARG
   --targets ARG            : pass contents of file ARG as additional args
   --stop-on-copy           : do not cross copies while traversing history
-                             [alias: --soc]
   --incremental            : give output suitable for concatenation
   --xml                    : output in XML
   -l [--limit] ARG         : maximum number of log entries
   --with-all-revprops      : retrieve all revision properties
   --with-no-revprops       : retrieve no revision properties
   --with-revprop ARG       : retrieve revision property ARG
-  --show-diff              : produce diff output
-                             [alias: --diff]
-  --diff-cmd ARG           : use ARG as diff command
-  -x [--extensions] ARG    : Default: '-u'. When Subversion is invoking an
-                             external diff program, ARG is simply passed along
-                             to the program. But when Subversion is using its
-                             default internal diff implementation, or when
-                             Subversion is displaying blame annotations, ARG
-                             could be any of the following:
-                                -u (--unified):
-                                   Output 3 lines of unified context.
-                                -b (--ignore-space-change):
-                                   Ignore changes in the amount of white space.
-                                -w (--ignore-all-space):
-                                   Ignore all white space.
-                                --ignore-eol-style:
-                                   Ignore changes in EOL style.
-                                -p (--show-c-function):
-                                   Show C function name in diff output.
 
 Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
-                             [alias: --nac]
   --non-interactive        : do no interactive prompting
   --trust-server-cert      : accept unknown SSL server certificates without
                              prompting (but only with '--non-interactive')
   --config-dir ARG         : read user configuration files from directory ARG
-                             [alias: --cd]
   --config-option ARG      : set user configuration option in the format:
                                  FILE:SECTION:OPTION=[VALUE]
                              For example:
                                  servers:global:http-library=serf
+
 
 switch (sw): Update the working copy to a different URL.
 usage: 1. switch URL[@PEGREV] [PATH]
@@ -117,19 +96,8 @@ usage: 1. switch URL[@PEGREV] [PATH]
      or hostname change) but your working copy still reflects the same
      directory within the same repository.
 
-     FROM is the root URL which will be relocated from.
-     You can use 'svn info' to determine the root URL of the current
-     working copy directory (look for 'URL:' in its output).
-
-     TO is the root URL which will be relocated to.
-
   See also 'svn help update' for a list of possible characters
   reporting the action taken.
-
-  Examples:
-    svn switch ^/branches/1.x-release
-    svn switch --relocate http://www.example.com/repo/project \
-                          svn://svn.example.com/repo/project
 
 Valid options:
   -r [--revision] ARG      : ARG (some commands also take ARG1:ARG2 range)
@@ -145,12 +113,10 @@ Valid options:
                             'immediates', or 'infinity')
   --set-depth ARG          : set new working copy depth to ARG ('exclude',
                             'empty', 'files', 'immediates', or 'infinity')
-                            [alias: --sd]
   -q [--quiet]             : print nothing, or only summary information
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
   --ignore-externals       : ignore externals definitions
-                             [alias: --ie]
   --force                  : force operation to run
   --accept ARG             : specify automatic conflict resolution action
                             ('postpone', 'base', 'mine-conflict',
@@ -161,14 +127,13 @@ Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
-                             [alias: --nac]
   --non-interactive        : do no interactive prompting
   --trust-server-cert      : accept unknown SSL server certificates without
                              prompting (but only with '--non-interactive')
   --config-dir ARG         : read user configuration files from directory ARG
-                             [alias: --cd]
   --config-option ARG      : set user configuration option in the format:
                                  FILE:SECTION:OPTION=[VALUE]
                              For example:
                                  servers:global:http-library=serf
+
 

@@ -2,22 +2,17 @@
  * error-test.c -- test the error functions
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2006 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -31,13 +26,21 @@
 #include "../svn_test.h"
 
 static svn_error_t *
-test_error_root_cause(apr_pool_t *pool)
+test_error_root_cause(const char **msg,
+                      svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
+                      apr_pool_t *pool)
 {
   apr_status_t secondary_err_codes[] = { SVN_ERR_STREAM_UNRECOGNIZED_DATA,
                                          SVN_ERR_STREAM_MALFORMED_DATA };
   apr_status_t root_cause_err_code = SVN_ERR_STREAM_UNEXPECTED_EOF;
   int i;
   svn_error_t *err, *root_err;
+
+  *msg = "test svn_error_root_cause";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Nest several errors. */
   err = svn_error_create(root_cause_err_code, NULL, "root cause");
@@ -71,7 +74,7 @@ test_error_root_cause(apr_pool_t *pool)
       svn_error_clear(err);
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                "svn_error_root_cause failed to locate the "
-                               "correct error from the chain");
+                               "correct error from teh chain");
     }
 
   svn_error_clear(err);
@@ -84,7 +87,6 @@ test_error_root_cause(apr_pool_t *pool)
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS2(test_error_root_cause,
-                   "test svn_error_root_cause"),
+    SVN_TEST_PASS(test_error_root_cause),
     SVN_TEST_NULL
   };

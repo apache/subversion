@@ -1,22 +1,17 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  *
@@ -28,19 +23,18 @@
 #define JNIUTIL_H
 
 #include <list>
-#include <vector>
-#include "Pool.h"
 struct apr_pool_t;
 struct svn_error;
 class JNIMutex;
 class SVNBase;
+class Pool;
 #include <jni.h>
 #include <fstream>
 #include <apr_time.h>
 #include <string>
 struct svn_error_t;
 
-#define JAVA_PACKAGE "org/apache/subversion/javahl"
+#define JAVA_PACKAGE "org/tigris/subversion/javahl"
 
 /**
  * Class to hold a number of JNI related utility methods.  No Objects
@@ -64,8 +58,8 @@ class JNIUtil
 
   static void throwNullPointerException(const char *message);
   static jbyteArray makeJByteArray(const signed char *data, int length);
-  static void setRequestPool(SVN::Pool *pool);
-  static SVN::Pool *getRequestPool();
+  static void setRequestPool(Pool *pool);
+  static Pool *getRequestPool();
   static jobject createDate(apr_time_t time);
   static void logMessage(const char *message);
   static int getLogLevel();
@@ -144,8 +138,6 @@ class JNIUtil
   static void assembleErrorMessage(svn_error_t *err, int depth,
                                    apr_status_t parent_apr_err,
                                    std::string &buffer);
-  static void putErrorsInTrace(svn_error_t *err,
-                               std::vector<jobject> &stackTrace);
   /**
    * Set the appropriate global or thread-local flag that an exception
    * has been thrown to @a flag.
@@ -246,38 +238,5 @@ class JNIUtil
       return ret_val ;                                  \
     }                                                   \
   } while (0)
-
-/**
- * The initial capacity of a create local reference frame.
- */
-#define LOCAL_FRAME_SIZE            16
-
-/**
- * A statement macro use to pop the reference frame and return NULL
- */
-#define POP_AND_RETURN(ret_val)         \
-  do                                    \
-    {                                   \
-      env->PopLocalFrame(NULL);         \
-      return ret_val ;                  \
-    }                                   \
-  while (0)
-
-/**
- * A statement macro use to pop the reference frame and return
- */
-#define POP_AND_RETURN_NOTHING()        \
-  do                                    \
-    {                                   \
-      env->PopLocalFrame(NULL);         \
-      return;                           \
-    }                                   \
-  while (0)
-
-
-/**
- * A useful macro.
- */
-#define POP_AND_RETURN_NULL             POP_AND_RETURN(NULL)
 
 #endif  // JNIUTIL_H

@@ -1,22 +1,17 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  *
@@ -116,18 +111,29 @@ svn_opt__arg_canonicalize_path(const char **path_out,
 svn_error_t *
 svn_opt__args_to_target_array(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
-                              const apr_array_header_t *known_targets,
+                              apr_array_header_t *known_targets,
                               apr_pool_t *pool);
 
-/**
- * Return a human-readable description of @a revision.  The result
- * will be allocated statically or from @a result_pool.
+/* Return, in @a *true_targets_p, a copy of @a targets with peg revision
+ * specifiers snipped off the end of each element.
  *
- * @since New in 1.7.
- */
-const char *
-svn_opt__revision_to_string(const svn_opt_revision_t *revision,
-                            apr_pool_t *result_pool);
+ * This function is useful for subcommands for which peg revisions
+ * do not make any sense. Such subcommands still need to allow peg
+ * revisions to be specified on the command line so that users of
+ * the command line client can consistently escape '@' characters
+ * in filenames by appending an '@' character, regardless of the
+ * subcommand being used.
+ *
+ * If a peg revision is present but cannot be parsed, an error is thrown.
+ * The user has likely forgotten to escape an '@' character in a filename.
+ *
+ * It is safe to pass the address of @a targets as @a true_targets_p.
+ *
+ * Do all allocations in @a pool. */
+svn_error_t *
+svn_opt__eat_peg_revisions(apr_array_header_t **true_targets_p,
+                           apr_array_header_t *targets,
+                           apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

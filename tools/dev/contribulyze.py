@@ -1,24 +1,4 @@
 #!/usr/bin/env python
-#
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
 
 # See usage() for details, or run with --help option.
 #
@@ -142,7 +122,7 @@ def html_footer():
   return '\n</body>\n</html>\n'
 
 
-class Contributor(object):
+class Contributor:
   # Map contributor names to contributor instances, so that there
   # exists exactly one instance associated with a given name.
   # Fold names with email addresses.  That is, if we see someone
@@ -150,6 +130,9 @@ class Contributor(object):
   # name and that same email address together, we create only one
   # instance, and store it under both the email and the real name.
   all_contributors = { }
+
+  # See __hash__() for why this is necessary.
+  hash_value = 1
 
   def __init__(self, username, real_name, email):
     """Instantiate a contributor.  Don't use this to generate a
@@ -164,6 +147,9 @@ class Contributor(object):
     # "Patch" represent all the revisions for which this contributor
     # contributed a patch.
     self.activities = { }
+    # Sigh.
+    self.unique_hash_value = Contributor.hash_value
+    Contributor.hash_value += 1
 
   def add_activity(self, field_name, log):
     """Record that this contributor was active in FIELD_NAME in LOG."""
@@ -254,6 +240,10 @@ class Contributor(object):
       return cmp(self.big_name(), other.big_name())
     else:
       return 0 - result
+
+  def __hash__(self):
+    """See LogMessage.__hash__() for why this exists."""
+    return self.hash_value
 
   @staticmethod
   def parse(name):
@@ -397,7 +387,8 @@ class Contributor(object):
     out.write('</table>\n\n')
     out.write('</div>\n\n')
 
-    sorted_logs = sorted(unique_logs.keys())
+    sorted_logs = list(unique_logs.keys())
+    sorted_logs.sort()
     for log in sorted_logs:
       out.write('<hr />\n')
       out.write('<div class="h3" id="%s" title="%s">\n' % (log.revision,
@@ -450,7 +441,7 @@ class Field:
     return s
 
 
-class LogMessage(object):
+class LogMessage:
   # Maps revision strings (e.g., "r12345") onto LogMessage instances,
   # holding all the LogMessage instances ever created.
   all_logs = { }
@@ -489,6 +480,18 @@ class LogMessage(object):
     if a < b: return 1
     else:     return 0
 
+  def __hash__(self):
+    """I don't really understand why defining __cmp__() but not
+    __hash__() renders an object type unfit to be a dictionary key,
+    especially in light of the recommendation that if a class defines
+    mutable objects and implements __cmp__() or __eq__(), then it
+    should not implement __hash__().  See these for details:
+    http://mail.python.org/pipermail/python-dev/2004-February/042580.html
+    http://mail.python.org/pipermail/python-bugs-list/2003-December/021314.html
+
+    In the meantime, I think it's safe to use the revision as a hash value."""
+    return int(self.revision[1:])
+
   def __str__(self):
     s = '=' * 15
     header = ' LOG: %s | %s ' % (self.revision, self.committer)
@@ -510,7 +513,7 @@ class LogMessage(object):
 log_separator = '-' * 72 + '\n'
 log_header_re = re.compile\
                 ('^(r[0-9]+) \| ([^|]+) \| ([^|]+) \| ([0-9]+)[^0-9]')
-field_re = re.compile('^(Patch|Review(ed)?|Suggested|Found) by:\s*\S.*$')
+field_re = re.compile('^(Patch|Review(ed)?|Suggested|Found) by:\s*(.*)')
 field_aliases = { 'Reviewed' : 'Review' }
 parenthetical_aside_re = re.compile('^\s*\(.*\)\s*$')
 
@@ -565,8 +568,6 @@ def graze(input):
                                          + (field.alias or field.name)
                                          + ' by:\s+|\s+)([^\s(].*)')
                 m = in_field_re.match(line)
-                if m is None:
-                  sys.stderr.write("Error matching: %s\n" % (line))
                 user, real, email = Contributor.parse(m.group(2))
                 if user == 'me':
                   user = log.committer
@@ -607,8 +608,8 @@ to help us keep track of whom to consider for commit access.  The list
 was generated from "svn&nbsp;log" output by <a
 href="http://svn.apache.org/repos/asf/subversion/trunk/tools/dev/contribulyze.py"
 >contribulyze.py</a>, which looks for log messages that use the <a
-href="http://subversion.apache.org/docs/community-guide/conventions.html#crediting"
->special contribution format</a>.</p>
+href="http://subversion.tigris.org/hacking.html#crediting">special
+contribution format</a>.</p>
 
 <p><i>Please do not use this list as a generic guide to who has
 contributed what to Subversion!</i> It omits existing <a
@@ -717,7 +718,7 @@ def usage():
   print('in which you can browse to see who contributed what.')
   print('')
   print('The log input should use the contribution-tracking format defined')
-  print('in http://subversion.apache.org/docs/community-guide/conventions.html#crediting.')
+  print('in http://subversion.tigris.org/hacking.html#crediting.')
   print('')
   print('Options:')
   print('')

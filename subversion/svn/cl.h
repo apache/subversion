@@ -2,22 +2,17 @@
  * cl.h:  shared stuff in the command line program
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -136,9 +131,9 @@ typedef struct svn_cl__opt_state_t
   /* An array of svn_opt_revision_range_t *'s representing revisions
      ranges indicated on the command-line via the -r and -c options.
      For each range in the list, if only one revision was provided
-     (-rN), its 'end' member remains 'svn_opt_revision_unspecified'.
-     This array always has at least one element, even if that is a
-     null range in which both ends are 'svn_opt_revision_unspecified'. */
+     (-rN), its 'end' member remains `svn_opt_revision_unspecified'.
+
+     NOTE: This is currently used only by merge subcommand. */
   apr_array_header_t *revision_ranges;
 
   /* These are simply a copy of the range start and end values present
@@ -184,7 +179,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_ignore;       /* disregard default ignores & svn:ignore's */
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
-  svn_boolean_t show_copies_as_adds; /* do not diff copies with their source */
   svn_boolean_t notice_ancestry; /* notice ancestry for diff-y operations */
   svn_boolean_t ignore_ancestry; /* ignore ancestry for merge-y operations */
   svn_boolean_t ignore_externals;/* ignore externals definitions */
@@ -193,7 +187,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t revprop;         /* operate on a revision property */
   const char *diff_cmd;          /* the external diff command to use */
   const char *merge_cmd;         /* the external merge command to use */
-  const char *editor_cmd;        /* the external editor command to use */
+  const char *editor_cmd;        /* external editor command. */
   svn_boolean_t record_only;     /* whether to record mergeinfo */
   const char *old_target;        /* diff target */
   const char *new_target;        /* diff target */
@@ -221,14 +215,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t reintegrate;     /* use "reintegrate" merge-source heuristic */
   svn_boolean_t trust_server_cert; /* trust server SSL certs that would
                                       otherwise be rejected as "untrusted" */
-  int strip_count; /* number of leading path components to strip */
-  svn_boolean_t ignore_keywords;  /* do not expand keywords */
-  svn_boolean_t reverse_diff;     /* reverse a diff (e.g. when patching) */
-  apr_array_header_t *include_patterns; /* targets to include in operation */
-  apr_array_header_t *exclude_patterns; /* targets to exclude from operation */
-  svn_boolean_t ignore_whitespaces; /* don't account for whitespaces when
-                                       patching */
-  svn_boolean_t show_diff;        /* produce diff output */
 } svn_cl__opt_state_t;
 
 
@@ -262,8 +248,6 @@ svn_opt_subcommand_t
   svn_cl__mergeinfo,
   svn_cl__mkdir,
   svn_cl__move,
-  svn_cl__obliterate,
-  svn_cl__patch,
   svn_cl__propdel,
   svn_cl__propedit,
   svn_cl__propget,
@@ -275,8 +259,7 @@ svn_opt_subcommand_t
   svn_cl__status,
   svn_cl__switch,
   svn_cl__unlock,
-  svn_cl__update,
-  svn_cl__upgrade;
+  svn_cl__update;
 
 
 /* See definition in main.c for documentation. */
@@ -384,22 +367,14 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
    unversioned items found in the working copy.
 
    When DETAILED is set, and REPOS_LOCKS is set, treat missing repository locks
-   as broken WC locks.
-
-   Increment *TEXT_CONFLICTS, *PROP_CONFLICTS, or *TREE_CONFLICTS if
-   a conflict was encountered.
-   */
+   as broken WC locks. */
 svn_error_t *
 svn_cl__print_status(const char *path,
-                     const svn_wc_status3_t *status,
+                     const svn_wc_status2_t *status,
                      svn_boolean_t detailed,
                      svn_boolean_t show_last_committed,
                      svn_boolean_t skip_unrecognized,
                      svn_boolean_t repos_locks,
-                     unsigned int *text_conflicts,
-                     unsigned int *prop_conflicts,
-                     unsigned int *tree_conflicts,
-                     svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
 
@@ -407,8 +382,7 @@ svn_cl__print_status(const char *path,
    allocations. */
 svn_error_t *
 svn_cl__print_status_xml(const char *path,
-                         const svn_wc_status3_t *status,
-                         svn_client_ctx_t *ctx,
+                         const svn_wc_status2_t *status,
                          apr_pool_t *pool);
 
 
@@ -446,14 +420,12 @@ svn_cl__print_xml_commit(svn_stringbuf_t **outstr,
    properties.  Ensure that REVISION is specified explicitly and is not
    relative to a working-copy item.  Ensure that exactly one target is
    specified in TARGETS.  Set *URL to the URL of the target.  Return an
-   appropriate error if any of those checks or operations fail. Use CTX for
-   accessing the working copy
+   appropriate error if any of those checks or operations fail.
  */
 svn_error_t *
 svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
-                        const apr_array_header_t *targets,
+                        apr_array_header_t *targets,
                         const char **URL,
-                        svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
 
 /* Search for a text editor command in standard environment variables,
@@ -550,19 +522,12 @@ svn_cl__merge_file_externally(const char *base_path,
  * If don't want a summary line at the end of notifications, set
  * SUPPRESS_FINAL_LINE.
  */
-svn_error_t *
-svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
-                     void **notify_baton_p,
-                     svn_boolean_t is_checkout,
-                     svn_boolean_t is_export,
-                     svn_boolean_t suppress_final_line,
-                     apr_pool_t *pool);
-
-/* Print conflict stats accumulated in NOTIFY_BATON.
- * Return any error encountered during printing.
- * Do all allocations in POOL.*/
-svn_error_t *
-svn_cl__print_conflict_stats(void *notify_baton, apr_pool_t *pool);
+void svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
+                          void **notify_baton_p,
+                          svn_boolean_t is_checkout,
+                          svn_boolean_t is_export,
+                          svn_boolean_t suppress_final_line,
+                          apr_pool_t *pool);
 
 
 /*** Log message callback stuffs. ***/
@@ -682,25 +647,19 @@ svn_cl__check_boolean_prop_val(const char *propname,
 
 /* De-streamifying wrapper around svn_client_get_changelists(), which
    is called for each target in TARGETS to populate *PATHS (a list of
-   paths assigned to one of the CHANGELISTS.
-   If all targets are to be included, may set *PATHS to TARGETS without
-   reallocating. */
+   paths assigned to one of the CHANGELISTS. */
 svn_error_t *
 svn_cl__changelist_paths(apr_array_header_t **paths,
                          const apr_array_header_t *changelists,
                          const apr_array_header_t *targets,
                          svn_depth_t depth,
                          svn_client_ctx_t *ctx,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool);
+                         apr_pool_t *pool);
 
-/* Like svn_client_args_to_target_array() but, if the only error is that some
- * arguments are reserved file names, then print warning messages for those
- * targets, store the rest of the targets in TARGETS_P and return success. */
 svn_error_t *
 svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             apr_getopt_t *os,
-                                            const apr_array_header_t *known_targets,
+                                            apr_array_header_t *known_targets,
                                             svn_client_ctx_t *ctx,
                                             apr_pool_t *pool);
 
@@ -714,28 +673,10 @@ svn_cl__indent_string(const char *str,
 
 
 /* Return a string showing NODE's kind, URL and revision, to the extent that
- * that information is available in NODE. If NODE itself is NULL, this prints
- * just a 'none' node kind.
- * WC_REPOS_ROOT_URL should reflect the target working copy's repository
- * root URL. If NODE is from that same URL, the printed URL is abbreviated
- * to caret notation (^/). WC_REPOS_ROOT_URL may be NULL, in which case
- * this function tries to print the conflicted node's complete URL. */
+ * that information is available in NODE. */
 const char *
 svn_cl__node_description(const svn_wc_conflict_version_t *node,
-                         const char *wc_repos_root_URL,
                          apr_pool_t *pool);
-
-/* Join a BASE path with a COMPONENT, allocating the result in POOL.
- * COMPONENT need not be a single single component: it can be any path,
- * absolute or relative to BASE.
- *
- * This function exists to gather the cases when it could not be determined
- * if BASE is an uri, dirent or relative.
- */
-const char *
-svn_cl__path_join(const char *base,
-                  const char *component,
-                  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

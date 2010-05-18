@@ -1,25 +1,5 @@
 #!/usr/bin/env python
 #
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
-#
 # gen-make.py -- generate makefiles for building Subversion
 #
 
@@ -63,7 +43,6 @@ def main(fname, gentype, verfname=None,
     generator.compute_hdr_deps()
 
   generator.write()
-  generator.write_sqlite_headers()
 
   if ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():
@@ -76,7 +55,7 @@ def main(fname, gentype, verfname=None,
     gen_keys = sorted(generator.__dict__.keys())
     for name in gen_keys:
       value = generator.__dict__[name]
-      if isinstance(value, list):
+      if type(value) == type([]):
         print(name + ": ")
         for i in value:
           print("  " + _objinfo(i))
@@ -84,7 +63,7 @@ def main(fname, gentype, verfname=None,
 
 
 def _objinfo(o):
-  if isinstance(o, str):
+  if type(o) == type(''):
     return repr(o)
   else:
     t = o.__class__.__name__
@@ -203,7 +182,7 @@ def _usage_exit():
   print("           only build static libraries")
   print("")
   print("  --vsnet-version=VER")
-  print("           generate for VS.NET version VER (2002, 2003, 2005, 2008 or 2010)")
+  print("           generate for VS.NET version VER (2002, 2003, 2005 or 2008)")
   print("           [only valid in combination with '-t vcproj']")
   print("")
   print("  --with-apr_memcache=DIR")

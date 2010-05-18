@@ -1,22 +1,3 @@
-# ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
-# ====================================================================
-
 require "my-assertions"
 require "util"
 
@@ -519,26 +500,20 @@ class SvnClientTest < Test::Unit::TestCase
     path = File.join(dir_path, file)
     content = "Hello"
 
-    wc_path2 = @wc_path + '2'
-    path2 = File.join(wc_path2, dir, file)
-    wc_path3 = @wc_path + '3'
-    path3 = File.join(wc_path3, dir, file)
-
     make_context(log) do |ctx|
       ctx.mkdir(dir_path)
       File.open(path, "w"){|f| f.print(content)}
       ctx.add(path)
       ctx.commit(@wc_path)
 
-      ctx.checkout(@repos_uri, wc_path2)
-      assert(File.exist?(path2))
+      FileUtils.rm_rf(@wc_path)
+      ctx.checkout(@repos_uri, @wc_path)
+      assert(File.exist?(path))
 
-      ctx.co(@repos_uri, wc_path3, nil, nil, false)
-      assert(!File.exist?(path3))
+      FileUtils.rm_rf(@wc_path)
+      ctx.co(@repos_uri, @wc_path, nil, nil, false)
+      assert(!File.exist?(path))
     end
-  ensure
-    remove_recursively_with_retry(wc_path3)
-    remove_recursively_with_retry(wc_path2)
   end
 
   def test_update
@@ -1016,32 +991,22 @@ class SvnClientTest < Test::Unit::TestCase
       end
       assert_equal_log_entries([
                                 [
-                                 {branch_path_relative_uri => ["M", nil, -1]},
-                                 rev2,
+                                 {branch_path_relative_uri => ["D", nil, -1]},
+                                 rev4,
                                  {
                                    "svn:author" => @author,
                                    "svn:log" => log,
                                  },
                                  false,
                                 ]
-                               ], merged_entries)
+                               ] * 2, merged_entries)
 
       ctx.propdel("svn:mergeinfo", trunk)
       merged_entries = []
       ctx.log_merged(trunk, rev4, branch_uri, rev4) do |entry|
         merged_entries << entry
       end
-      assert_equal_log_entries([
-                                [
-                                 {branch_path_relative_uri => ["M", nil, -1]},
-                                 rev2,
-                                 {
-                                   "svn:author" => @author,
-                                   "svn:log" => log,
-                                 },
-                                 false,
-                                ]
-                               ], merged_entries)
+      assert_equal_log_entries([], merged_entries)
 
       ctx.revert(trunk)
       File.open(trunk_path, "a") {|f| f.print(src)}
@@ -1116,11 +1081,15 @@ class SvnClientTest < Test::Unit::TestCase
       end
 
       ctx.set_cancel_func(nil)
+      access = Svn::Wc::AdmAccess.open(nil, @wc_path, true, -1)
       assert_nothing_raised do
         ctx.cleanup(@wc_path)
       end
       assert_nothing_raised do
         ctx.commit(@wc_path)
+      end
+      assert_raises(Svn::Error::SvnError) do
+        access.close
       end
     end
   end
@@ -2083,7 +2052,7 @@ class SvnClientTest < Test::Unit::TestCase
     assert_simple_provider(:add_simple_provider)
   end
 
-  if Svn::Client::Context.method_defined?(:add_windows_simple_provider)
+  if Svn::Core.respond_to?(:auth_get_windows_simple_provider)
     def test_windows_simple_provider
       assert_simple_provider(:add_windows_simple_provider)
     end
@@ -2287,44 +2256,43 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.commit(@wc_path)
 
       assert_equal({}, yield(ctx, changelist1))
-      assert_equal({nil=>[@wc_path,path1,path2].map{|f| File.expand_path(f)}}, yield(ctx, nil))
+      assert_equal({nil=>[@wc_path,path1,path2]}, yield(ctx, nil))
       assert_equal({}, yield(ctx, []))
       assert_equal({}, yield(ctx, [changelist1]))
       assert_equal({}, yield(ctx, [changelist2]))
       ctx.add_to_changelist(changelist1, path1)
-      assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)}}, yield(ctx, changelist1))
-      assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)},nil=>[@wc_path,path2].map{|f| File.expand_path(f)}}, yield(ctx, nil))
+      assert_equal({changelist1=>[path1]}, yield(ctx, changelist1))
+      assert_equal({changelist1=>[path1],nil=>[@wc_path,path2]}, yield(ctx, nil))
       assert_equal({}, yield(ctx, []))
-      assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)}}, yield(ctx, [changelist1]))
+      assert_equal({changelist1=>[path1]}, yield(ctx, [changelist1]))
       assert_equal({}, yield(ctx, [changelist2]))
 
       assert_equal({}, yield(ctx, changelist2))
       ctx.add_to_changelist(changelist2, [path1, path2])
-      assert_equal({changelist2=>[path1, path2].map{|f| File.expand_path(f)}}, yield(ctx, changelist2))
+      assert_equal({changelist2=>[path1, path2]}, yield(ctx, changelist2))
       assert_equal({}, yield(ctx, changelist1))
 
       ctx.add_to_changelist(changelist1, [path1, path2])
-      assert_equal({changelist1=>[path1, path2].map{|f| File.expand_path(f)}}, yield(ctx, changelist1))
+      assert_equal({changelist1=>[path1, path2]}, yield(ctx, changelist1))
       assert_equal({}, yield(ctx, changelist2))
 
       ctx.remove_from_changelists(changelist1, path1)
-      assert_equal({changelist1=>[path2].map{|f| File.expand_path(f)}}, yield(ctx, changelist1))
+      assert_equal({changelist1=>[path2]}, yield(ctx, changelist1))
       ctx.remove_from_changelists(changelist1, [path2])
       assert_equal({}, yield(ctx, changelist1))
 
       ctx.add_to_changelist(changelist1, path1)
       ctx.add_to_changelist(changelist2, path2)
-      assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)}}, yield(ctx, changelist1))
-      assert_equal({changelist2=>[path2].map{|f| File.expand_path(f)}}, yield(ctx, changelist2))
+      assert_equal({changelist1=>[path1]}, yield(ctx, changelist1))
+      assert_equal({changelist2=>[path2]}, yield(ctx, changelist2))
 
-      assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)}}, yield(ctx, changelist1))
-      assert_equal({changelist2=>[path2].map{|f| File.expand_path(f)}}, yield(ctx, changelist2))
-      assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)}}, yield(ctx, [changelist1]))
-      assert_equal({changelist2=>[path2].map{|f| File.expand_path(f)}}, yield(ctx, [changelist2]))
-      assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)},changelist2=>[path2].map{|f| File.expand_path(f)},nil=>[@wc_path].map{|f| File.expand_path(f)}},
-		   yield(ctx, nil))
+      assert_equal({changelist1=>[path1]}, yield(ctx, changelist1))
+      assert_equal({changelist2=>[path2]}, yield(ctx, changelist2))
+      assert_equal({changelist1=>[path1]}, yield(ctx, [changelist1]))
+      assert_equal({changelist2=>[path2]}, yield(ctx, [changelist2]))
+      assert_equal({changelist1=>[path1],changelist2=>[path2],nil=>[@wc_path]}, yield(ctx, nil))
       assert_equal({}, yield(ctx, []))
-      assert_equal({changelist1=>[path1].map{|f| File.expand_path(f)},changelist2=>[path2].map{|f| File.expand_path(f)}},
+      assert_equal({changelist1=>[path1],changelist2=>[path2]},
                    yield(ctx, [changelist1,changelist2]))
 
       ctx.remove_from_changelists(nil, [path1, path2])
@@ -2403,7 +2371,7 @@ class SvnClientTest < Test::Unit::TestCase
         ctx.ci(@wc_path)
       end
 
-      ctx.resolve(:path=>dir_path, :depth=>:infinity, :conflict_choice=>choice)
+      ctx.resolve(:path=>dir_path, :depth=>:infinite, :conflict_choice=>choice)
       yield ctx, path
     end
   end

@@ -3,25 +3,17 @@
 #  lock_tests.py:  testing versioned properties
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
+# Copyright (c) 2005-2006, 2008 CollabNet.  All rights reserved.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 ######################################################################
 
 # General modules
@@ -68,7 +60,7 @@ def lock_file(sbox):
                                      '-m', '', file_path)
 
   # --- Meanwhile, in our other working copy... ---
-  err_re = "((.*User 'jconstant' does not own lock on path.*)|(.*423 Locked.*))"
+  err_re = "((.*User jconstant does not own lock on path.*)|(.*423 Locked.*))"
 
   svntest.main.run_svn(None, 'update', wc_b)
   # -- Try to change a file --
@@ -88,7 +80,7 @@ def lock_file(sbox):
   # change the locked file's properties
   svntest.main.run_svn(None, 'propset', 'sneakyuser', 'Sally', file_path_b)
 
-  err_re = "((.*User 'jconstant' does not own lock on path.*)" + \
+  err_re = "((.*User jconstant does not own lock on path.*)" + \
              "|(.*At least one property change failed.*))"
 
   # attempt (and fail) to commit as user Sally
@@ -338,11 +330,17 @@ def enforce_lock(sbox):
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
+  # Set some binary properties.
+  propval_path = os.path.join(wc_dir, 'propval.tmp')
+
   # svn:needs-lock value should be forced to a '*'
-  svntest.actions.set_prop('svn:needs-lock', 'foo', iota_path)
-  svntest.actions.set_prop('svn:needs-lock', '*', lambda_path)
+  svntest.actions.set_prop(None, 'svn:needs-lock', 'foo', iota_path,
+                           propval_path)
+  svntest.actions.set_prop(None, 'svn:needs-lock', '*', lambda_path,
+                           propval_path)
   expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
-  svntest.actions.set_prop('svn:needs-lock', '      ', mu_path, expected_err)
+  svntest.actions.set_prop(expected_err, 'svn:needs-lock', '      ',
+                           mu_path, propval_path)
 
   # Check svn:needs-lock
   svntest.actions.check_prop('svn:needs-lock', iota_path, ['*'])
@@ -676,7 +674,7 @@ def lock_non_existent_file(sbox):
   exit_code, output, error = svntest.main.run_svn(1, 'lock',
                                                   '-m', '', file_path)
 
-  error_msg = "The node '%s' was not found." % os.path.abspath(file_path)
+  error_msg = "foo' is not under version control"
   for line in error:
     if line.find(error_msg) != -1:
       break
@@ -1122,18 +1120,48 @@ def repos_lock_with_info(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Get repository lock token
-  repos_lock_token \
-    = svntest.actions.run_and_parse_info(file_url)[0]['Lock Token']
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'info', file_url)
+  for line in output:
+    if line.find("Lock Token:") != -1:
+      repos_lock_token = line[12:]
+      break
+  else:
+    print("Error: Lock token not found")
+    raise svntest.Failure
 
   # info with revision option
-  expected_infos = [
-      { 'Lock Token' : repos_lock_token },
-    ]
-  svntest.actions.run_and_verify_info(expected_infos, file_path, '-r1')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'info',
+                                                              file_path, '-r1')
+
+  for line in output:
+    if line.find("Lock Token:") != -1:
+      lock_token = line[12:]
+      break
+  else:
+    print("Error: Lock token not found")
+    raise svntest.Failure
+
+  if (repos_lock_token != lock_token):
+    print("Error: expected repository lock information not found.")
+    raise svntest.Failure
 
   # info with peg revision
-  svntest.actions.run_and_verify_info(expected_infos, file_path + '@1')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'info',
+                                                              file_path + '@1')
+  for line in output:
+    if line.find("Lock Token:") != -1:
+      lock_token = line[12:]
+      break
+  else:
+    print("Error: Lock token not found")
+    raise svntest.Failure
 
+  if (repos_lock_token != lock_token):
+    print("Error: expected repository lock information not found.")
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 def unlock_already_unlocked_files(sbox):
@@ -1235,11 +1263,21 @@ def info_moved_path(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Get info for old iota at r1. This shouldn't give us any lock info.
-  expected_infos = [
-      { 'URL'           : '.*' ,
-        'Lock Token'    : None },
-    ]
-  svntest.actions.run_and_verify_info(expected_infos, fname2, '-r1')
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
+    None, None, [], 'info', fname2, '-r1')
+
+  # Since we want to make sure that there is *no* lock info, to make this
+  # more robust, we also check that the info command actually output some info.
+  got_url = 0
+  for line in output:
+    if line.find("URL:") >= 0:
+      got_url = 1
+    if line.find("Lock Token:") >= 0:
+      print(fname2 + " was reported as locked.")
+      raise svntest.Failure
+  if not got_url:
+    print("Info didn't output an URL.")
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 def ls_url_encoded(sbox):
@@ -1304,8 +1342,8 @@ def unlock_wrong_token(sbox):
                                      "--force", file_url)
 
   # Then, unlocking the WC path should fail.
-  ### The error message returned is actually this, but let's worry about that
-  ### another day...
+  # ### The error message returned is actually this, but let's worry about that
+  # ### another day...
   svntest.actions.run_and_verify_svn2(
     None, None, ".*((No lock on path)|(400 Bad Request))", 0,
     'unlock', file_path)
@@ -1390,87 +1428,6 @@ def lock_funky_comment_chars(sbox):
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '-m', 'lock & load', file_path)
 
-#----------------------------------------------------------------------
-# Check that the svn:needs-lock usage applies to a specific location
-# in a working copy, not to the working copy overall.
-def lock_twice_in_one_wc(sbox):
-  "try to lock a file twice in one working copy"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  mu2_path = os.path.join(wc_dir, 'A', 'B', 'mu')
-
-  # Create a needs-lock file
-  svntest.actions.set_prop('svn:needs-lock', '*', mu_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'commit', wc_dir, '-m', '')
-
-  # Mark the file readonly
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'update', wc_dir)
-
-  # Switch a second location for the same file in the same working copy
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'switch', sbox.repo_url + '/A',
-                                     os.path.join(wc_dir, 'A', 'B'))
-
-  # Lock location 1
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'lock', mu_path, '-m', 'Locked here')
-
-  # Locking in location 2 should fail ### Currently returns exitcode 0
-  svntest.actions.run_and_verify_svn2(None, None, ".*is already locked.*", 0,
-                                      'lock', '-m', '', mu2_path)
-
-  # Change the file anyway
-  os.chmod(mu2_path, 0700)
-  svntest.main.file_append(mu2_path, "Updated text")
-
-  # Commit should fail because it is locked in the other location
-  svntest.actions.run_and_verify_svn(None, None,
-                                     '.*(([Nn]o)|(Server)).*[lL]ock.*',
-                                     'commit', mu2_path, '-m', '')
-
-#----------------------------------------------------------------------
-# Test for issue #3524 'Locking path via ra_serf which doesn't exist in
-# HEAD triggers assert'
-def lock_path_not_in_head(sbox):
-  "lock path that does not exist in HEAD"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  D_path      = os.path.join(wc_dir, 'A', 'D')
-  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
-
-  # Commit deletion of A/D and A/B/lambda as r2, then update the WC
-  # back to r1.  Then attempt to lock some paths that no longer exist
-  # in HEAD.  These should fail gracefully.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'delete', lambda_path, D_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
-                                     '-m', 'Some deletions', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
-  expected_lock_fail_err_re = "svn: warning:.*" \
-  "((Path .* doesn't exist in HEAD revision)" \
-  "|(Lock request failed: 405 Method Not Allowed))"
-  # Issue #3524 These lock attemtps were triggering an assert over ra_serf:
-  #
-  # working_copies\lock_tests-37>svn lock A\D
-  # ..\..\..\subversion\libsvn_client\ra.c:275: (apr_err=235000)
-  # svn: In file '..\..\..\subversion\libsvn_ra_serf\util.c' line 1120:
-  #  assertion failed (ctx->status_code)
-  #
-  # working_copies\lock_tests-37>svn lock A\B\lambda
-  # ..\..\..\subversion\libsvn_client\ra.c:275: (apr_err=235000)
-  # svn: In file '..\..\..\subversion\libsvn_ra_serf\util.c' line 1120:
-  #  assertion failed (ctx->status_code)
-  svntest.actions.run_and_verify_svn2(None, None, expected_lock_fail_err_re,
-                                      0, 'lock', D_path)
-  svntest.actions.run_and_verify_svn2(None, None, expected_lock_fail_err_re,
-                                      0, 'lock', lambda_path)
 
 ########################################################################
 # Run the tests
@@ -1513,8 +1470,6 @@ test_list = [ None,
               XFail(unlocked_lock_of_other_user,
                     svntest.main.is_ra_type_dav),
               lock_funky_comment_chars,
-              lock_twice_in_one_wc,
-              lock_path_not_in_head,
             ]
 
 if __name__ == '__main__':

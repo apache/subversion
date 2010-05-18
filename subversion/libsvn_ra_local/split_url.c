@@ -2,22 +2,17 @@
  * checkout.c : read a repository and drive a checkout editor.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -106,7 +101,7 @@ svn_ra_local__split_URL(svn_repos_t **repos,
     char *dup_path = (char *)svn_path_uri_decode(path, pool);
     if (!hostname && dup_path[1] && strchr(valid_drive_letters, dup_path[1])
         && (dup_path[2] == ':' || dup_path[2] == '|')
-        && (dup_path[3] == '/' || dup_path[3] == '\0'))
+        && dup_path[3] == '/')
       {
         /* Skip the leading slash. */
         ++dup_path;
@@ -114,19 +109,6 @@ svn_ra_local__split_URL(svn_repos_t **repos,
         ++path;
         if (dup_path[1] == '|')
           dup_path[1] = ':';
-
-        if (dup_path[3] == '\0')
-          {
-            /* A valid dirent for the driveroot must be like "C:/" instead of
-               just "C:" or svn_dirent_join() will use the current directory
-               on the drive instead */
-
-            char *new_path = apr_pcalloc(pool, 4);
-            new_path[0] = dup_path[0];
-            new_path[1] = ':';
-            new_path[2] = '/';
-            new_path[3] = '\0';
-          }
       }
     if (hostname)
       /* We still know that the path starts with a slash. */

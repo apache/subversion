@@ -1,22 +1,17 @@
 /* strings-reps-test.c --- test `strings' and `representations' interfaces
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -96,12 +91,19 @@ txn_body_delete_rep(void *baton, trail_t *trail)
 /* Representation Table Test functions. */
 
 static svn_error_t *
-write_new_rep(const svn_test_opts_t *opts,
+write_new_rep(const char **msg,
+              svn_boolean_t msg_only,
+              svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
   struct rep_args args;
   const char *rep = "((fulltext 0 ) a83t2Z0q)";
   svn_fs_t *fs;
+
+  *msg = "write a new rep, get a new key back";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
@@ -126,7 +128,9 @@ write_new_rep(const svn_test_opts_t *opts,
 
 
 static svn_error_t *
-write_rep(const svn_test_opts_t *opts,
+write_rep(const char **msg,
+          svn_boolean_t msg_only,
+          svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   struct rep_args new_args;
@@ -134,6 +138,11 @@ write_rep(const svn_test_opts_t *opts,
   const char *new_rep = "((fulltext 0 ) a83t2Z0q)";
   const char *rep = "((fulltext 0 ) kfogel31337)";
   svn_fs_t *fs;
+
+  *msg = "write a new rep, then overwrite it";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
@@ -168,7 +177,9 @@ write_rep(const svn_test_opts_t *opts,
 
 
 static svn_error_t *
-read_rep(const svn_test_opts_t *opts,
+read_rep(const char **msg,
+         svn_boolean_t msg_only,
+         svn_test_opts_t *opts,
          apr_pool_t *pool)
 {
   struct rep_args new_args;
@@ -205,6 +216,11 @@ read_rep(const svn_test_opts_t *opts,
       if (*p == 'X')
         *p = '\0';
   }
+
+  *msg = "write and overwrite a new rep; confirm with reads";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
@@ -274,7 +290,9 @@ read_rep(const svn_test_opts_t *opts,
 
 
 static svn_error_t *
-delete_rep(const svn_test_opts_t *opts,
+delete_rep(const char **msg,
+           svn_boolean_t msg_only,
+           svn_test_opts_t *opts,
            apr_pool_t *pool)
 {
   struct rep_args new_args;
@@ -283,6 +301,11 @@ delete_rep(const svn_test_opts_t *opts,
   const char *new_rep = "((fulltext 0 ) a83t2Z0q)";
   svn_fs_t *fs;
   svn_error_t *err;
+
+  *msg = "write, then delete, a new rep; confirm deletion";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
@@ -505,12 +528,19 @@ static const char *bigstring3 =
 
 
 static svn_error_t *
-test_strings(const svn_test_opts_t *opts,
+test_strings(const char **msg,
+             svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
   struct string_args args;
   svn_fs_t *fs;
   svn_stringbuf_t *string;
+
+  *msg = "test many strings table functions together";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
@@ -604,11 +634,18 @@ test_strings(const svn_test_opts_t *opts,
 
 
 static svn_error_t *
-write_null_string(const svn_test_opts_t *opts,
+write_null_string(const char **msg,
+                  svn_boolean_t msg_only,
+                  svn_test_opts_t *opts,
                   apr_pool_t *pool)
 {
   struct string_args args;
   svn_fs_t *fs;
+
+  *msg = "write a null string";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
@@ -627,11 +664,18 @@ write_null_string(const svn_test_opts_t *opts,
 
 
 static svn_error_t *
-abort_string(const svn_test_opts_t *opts,
+abort_string(const char **msg,
+             svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
   struct string_args args, args2;
   svn_fs_t *fs;
+
+  *msg = "write a string, then abort during an overwrite";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
@@ -687,12 +731,19 @@ abort_string(const svn_test_opts_t *opts,
 }
 
 static svn_error_t *
-copy_string(const svn_test_opts_t *opts,
+copy_string(const char **msg,
+            svn_boolean_t msg_only,
+            svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   struct string_args args;
   svn_fs_t *fs;
   const char *old_key;
+
+  *msg = "create and copy a string";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
@@ -735,21 +786,13 @@ copy_string(const svn_test_opts_t *opts,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_OPTS_PASS(write_new_rep,
-                       "write a new rep, get a new key back"),
-    SVN_TEST_OPTS_PASS(write_rep,
-                       "write a new rep, then overwrite it"),
-    SVN_TEST_OPTS_PASS(read_rep,
-                       "write and overwrite a new rep; confirm with reads"),
-    SVN_TEST_OPTS_PASS(delete_rep,
-                       "write, then delete, a new rep; confirm deletion"),
-    SVN_TEST_OPTS_PASS(test_strings,
-                       "test many strings table functions together"),
-    SVN_TEST_OPTS_PASS(write_null_string,
-                       "write a null string"),
-    SVN_TEST_OPTS_PASS(abort_string,
-                       "write a string, then abort during an overwrite"),
-    SVN_TEST_OPTS_PASS(copy_string,
-                       "create and copy a string"),
+    SVN_TEST_PASS(write_new_rep),
+    SVN_TEST_PASS(write_rep),
+    SVN_TEST_PASS(read_rep),
+    SVN_TEST_PASS(delete_rep),
+    SVN_TEST_PASS(test_strings),
+    SVN_TEST_PASS(write_null_string),
+    SVN_TEST_PASS(abort_string),
+    SVN_TEST_PASS(copy_string),
     SVN_TEST_NULL
   };

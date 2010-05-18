@@ -1,22 +1,17 @@
 /* commit.c --- editor for committing changes to a filesystem.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -29,7 +24,6 @@
 #include "svn_compat.h"
 #include "svn_pools.h"
 #include "svn_error.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
@@ -131,9 +125,9 @@ out_of_date(const char *path, svn_node_kind_t kind)
                            (kind == svn_node_dir
                             ? _("Directory '%s' is out of date")
                             : kind == svn_node_file
-                            ? _("File '%s' is out of date")
-                            : _("'%s' is out of date")),
-                           path);
+			    ? _("File '%s' is out of date")
+			    : _("'%s' is out of date")),
+			   path);
 }
 
 
@@ -254,7 +248,7 @@ delete_entry(const char *path,
   if (SVN_IS_VALID_REVNUM(revision) && (revision < cr_rev))
     return out_of_date(full_path, kind);
 
-  /* This routine is a mindless wrapper.  We call svn_fs_delete()
+  /* This routine is a mindless wrapper.  We call svn_fs_delete_tree
      because that will delete files and recursively delete
      directories.  */
   return svn_fs_delete(eb->txn_root, full_path, pool);
@@ -306,7 +300,7 @@ add_directory(const char *path,
       const char *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
-      size_t repos_url_len;
+      int repos_url_len;
 
       /* Copy requires recursive write access to the destination path
          and write access to the parent path. */
@@ -451,7 +445,7 @@ add_file(const char *path,
       const char *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
-      size_t repos_url_len;
+      int repos_url_len;
 
       /* Copy requires recursive write to the destination path and
          parent path. */
@@ -602,10 +596,10 @@ close_file(void *file_baton,
         {
           return svn_error_createf
             (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             apr_psprintf(pool, "%s:\n%s\n%s\n",
-                          _("Checksum mismatch for resulting fulltext\n(%s)"),
-                          _("   expected:  %s"),
-                          _("     actual:  %s")),
+             _("Checksum mismatch for resulting fulltext\n"
+               "(%s):\n"
+               "   expected checksum:  %s\n"
+               "   actual checksum:    %s\n"),
              fb->path, svn_checksum_to_cstring_display(text_checksum, pool),
              svn_checksum_to_cstring_display(checksum, pool));
         }
@@ -676,16 +670,7 @@ close_edit(void *edit_baton,
              (to be reported back to the client, who will probably
              display it as a warning) and clear the error. */
           if (err->child && err->child->message)
-            {
-              svn_error_t *warning_err = err->child;
-#ifdef SVN_ERR__TRACING
-              /* Skip over any trace records.  */
-              while (warning_err->message != NULL
-                     && strcmp(warning_err->message, SVN_ERR__TRACED) == 0)
-                warning_err = warning_err->child;
-#endif
-              post_commit_err = apr_pstrdup(pool, warning_err->message);
-            }
+            post_commit_err = apr_pstrdup(pool, err->child->message);
 
           svn_error_clear(err);
           err = SVN_NO_ERROR;
@@ -710,7 +695,7 @@ close_edit(void *edit_baton,
              We ignore the possible error result from svn_fs_abort_txn();
              it's more important to return the original error. */
           svn_error_clear(svn_fs_abort_txn(eb->txn, pool));
-          return svn_error_return(err);
+          return err;
         }
     }
 
@@ -748,7 +733,7 @@ close_edit(void *edit_baton,
       }
   }
 
-  return svn_error_return(err);
+  return err;
 }
 
 
@@ -760,6 +745,33 @@ abort_edit(void *edit_baton,
   if ((! eb->txn) || (! eb->txn_owner))
     return SVN_NO_ERROR;
   return svn_fs_abort_txn(eb->txn, pool);
+}
+
+
+/* Copy REVPROP_TABLE and its data to POOL. */
+static apr_hash_t *
+revprop_table_dup(apr_hash_t *revprop_table,
+                  apr_pool_t *pool)
+{
+  apr_hash_t *new_revprop_table = NULL;
+  const void *key;
+  apr_ssize_t klen;
+  void *value;
+  const char *propname;
+  const svn_string_t *propval;
+  apr_hash_index_t *hi;
+
+  new_revprop_table =  apr_hash_make(pool);
+
+  for (hi = apr_hash_first(pool, revprop_table); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &key, &klen, &value);
+      propname = apr_pstrdup(pool, (const char *) key);
+      propval = svn_string_dup((const svn_string_t *) value, pool);
+      apr_hash_set(new_revprop_table, propname, klen, propval);
+    }
+
+  return new_revprop_table;
 }
 
 
@@ -817,7 +829,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
 
   /* Set up the edit baton. */
   eb->pool = subpool;
-  eb->revprop_table = svn_prop_hash_dup(revprop_table, subpool);
+  eb->revprop_table = revprop_table_dup(revprop_table, subpool);
   eb->commit_callback = callback;
   eb->commit_callback_baton = callback_baton;
   eb->authz_callback = authz_callback;
@@ -825,8 +837,8 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   eb->base_path = apr_pstrdup(subpool, base_path);
   eb->repos = repos;
   eb->repos_url = repos_url;
-  eb->repos_name = svn_dirent_basename(svn_repos_path(repos, subpool),
-                                       subpool);
+  eb->repos_name = svn_path_basename(svn_repos_path(repos, subpool),
+                                     subpool);
   eb->fs = svn_repos_fs(repos);
   eb->txn = txn;
   eb->txn_owner = txn == NULL;

@@ -2,22 +2,17 @@
  * cmdline.c :  Helpers for command-line programs.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2003-2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -31,8 +26,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#else
-#include <crtdbg.h>
 #endif
 
 #include <apr_errno.h>          /* for apr_strerror */
@@ -43,7 +36,6 @@
 
 #include "svn_cmdline.h"
 #include "svn_dso.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -126,27 +118,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 #ifdef SVN_USE_WIN32_CRASHHANDLER
   /* Attach (but don't load) the crash handler */
   SetUnhandledExceptionFilter(svn__unhandled_exception_filter);
-
-#if _MSC_VER >= 1400
-  /* ### This should work for VC++ 2002 (=1300) and later */
-  /* Show the abort message on STDERR instead of a dialog to allow
-     scripts (e.g. our testsuite) to continue after an abort without
-     user intervention. Allow overriding for easier debugging. */
-  if (!getenv("SVN_CMDLINE_USE_DIALOG_FOR_ABORT"))
-    {
-      /* In release mode: Redirect abort() errors to stderr */
-      _set_error_mode(_OUT_TO_STDERR);
-
-      /* In _DEBUG mode: Redirect all debug output (E.g. assert() to stderr.
-         (Ignored in releas builds) */
-      _CrtSetReportFile( _CRT_ASSERT, _CRTDBG_FILE_STDERR);
-      _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
-      _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
-      _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
-    }
-#endif /* _MSC_VER >= 1400 */
-
-#endif /* SVN_USE_WIN32_CRASHHANDLER */
+#endif
 
 #endif /* WIN32 */
 
@@ -275,7 +247,7 @@ svn_cmdline_path_local_style_from_utf8(const char **dest,
                                        apr_pool_t *pool)
 {
   return svn_cmdline_cstring_from_utf8(dest,
-                                       svn_dirent_local_style(src, pool),
+                                       svn_path_local_style(src, pool),
                                        pool);
 }
 
@@ -642,75 +614,4 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
   return;
 }
 
-svn_error_t *
-svn_cmdline__parse_config_option(apr_array_header_t *config_options,
-                                 const char *opt_arg,
-                                 apr_pool_t *pool)
-{
-  svn_cmdline__config_argument_t *config_option;
-  const char *first_colon, *second_colon, *equals_sign;
-  apr_size_t len = strlen(opt_arg);
-  if ((first_colon = strchr(opt_arg, ':')) && (first_colon != opt_arg))
-    {
-      if ((second_colon = strchr(first_colon + 1, ':')) &&
-          (second_colon != first_colon + 1))
-        {
-          if ((equals_sign = strchr(second_colon + 1, '=')) &&
-              (equals_sign != second_colon + 1))
-            {
-              config_option = apr_pcalloc(pool, sizeof(*config_option));
-              config_option->file = apr_pstrndup(pool, opt_arg,
-                                                 first_colon - opt_arg);
-              config_option->section = apr_pstrndup(pool, first_colon + 1,
-                                                    second_colon - first_colon - 1);
-              config_option->option = apr_pstrndup(pool, second_colon + 1,
-                                                   equals_sign - second_colon - 1);
 
-              if (! (strchr(config_option->option, ':')))
-                {
-                  config_option->value = apr_pstrndup(pool, equals_sign + 1,
-                                                      opt_arg + len - equals_sign - 1);
-                  APR_ARRAY_PUSH(config_options, svn_cmdline__config_argument_t *)
-                                       = config_option;
-                  return SVN_NO_ERROR;
-                }
-            }
-        }
-    }
-  return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                          _("Invalid syntax of argument of --config-option"));
-}
-
-svn_error_t *
-svn_cmdline__apply_config_options(apr_hash_t *config,
-                                  const apr_array_header_t *config_options,
-                                  const char *prefix,
-                                  const char *argument_name)
-{
-  int i;
-
-  for (i = 0; i < config_options->nelts; i++)
-   {
-     svn_config_t *cfg;
-     svn_cmdline__config_argument_t *arg =
-                          APR_ARRAY_IDX(config_options, i,
-                                        svn_cmdline__config_argument_t *);
-
-     cfg = apr_hash_get(config, arg->file, APR_HASH_KEY_STRING);
-
-     if (cfg)
-       {
-         svn_config_set(cfg, arg->section, arg->option, arg->value);
-       }
-     else
-       {
-         svn_error_t *err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-             _("Unrecognized file in argument of %s"), argument_name);
-
-         svn_handle_warning2(stderr, err, prefix);
-         svn_error_clear(err);
-       }
-    }
-
-  return SVN_NO_ERROR;
-}

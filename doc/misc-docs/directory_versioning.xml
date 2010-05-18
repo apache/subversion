@@ -1,0 +1,351 @@
+<chapter id="misc-docs-directory_versioning">
+  <title>Directory Versioning</title>
+
+  <simplesect>
+
+    <blockquote>
+      <para>The three cardinal virtues of a master technologist
+        are: laziness, impatience, and hubris." &mdash;Larry
+        Wall</para>
+    </blockquote>
+
+    <para>This describes some of the theoretical pitfalls around the
+      (possibly arrogant) notion that one can simply version
+      directories just as one versions files.</para>
+
+  </simplesect>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 1 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="misc-docs-directory_versioning-sect-1">
+    <title>Directory Revisions</title>
+    
+    <para>To begin, recall that the Subversion repository is an array
+      of trees.  Each tree represents the application of a new atomic
+      commit, and is called a <firstterm>revision</firstterm>.  This
+      is very different from a CVS repository, which stores file
+      histories in a collection of RCS files (and doesn't track
+      tree-structure.)</para>
+
+    <para>So when we refer to <quote>revision 4 of
+      <filename>foo.c</filename></quote> (written
+      <filename>foo.c:4</filename>) in CVS, this means the fourth
+      distinct version of <filename>foo.c</filename>&mdash;but in
+      Subversion this means <quote>the version of
+      <filename>foo.c</filename> in the fourth revision
+      (tree)</quote>.  It's quite possible that
+      <filename>foo.c</filename> has never changed at all since
+      revision 1!  In other words, in Subversion, different revision
+      numbers of the same versioned item do <emphasis>not</emphasis>
+      imply different contents.</para>
+
+    <para>Nevertheless, the content of <filename>foo.c:4</filename>
+      is still well-defined.  The file <filename>foo.c</filename> in
+      revision 4 has specific text and properties.</para>
+
+    <para>Suppose, now, that we extend this concept to directories.
+      If we have a directory <filename>DIR</filename>, define
+      <literal>DIR:N</literal> to be <quote>the directory DIR in the
+      fourth revision.</quote> The contents are defined to be a
+      particular set of directory entries (<literal>dirents</literal>)
+      and properties.</para>
+
+    <para>So far, so good.  The concept of versioning directories
+      seems fine in the repository&mdash;the repository is very
+      theoretically pure anyway.  However, because working copies
+      allow mixed revisions, it's easy to create problematic
+      use-cases.</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 2 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="misc-docs-directory_versioning-sect-2">
+    <title>The Lagging Directory</title>
+
+    <sect2 id="misc-docs-directory_versioning-sect-2.1">
+      <title>The Problem</title>
+
+      <para><emphasis>This is the first part of the <quote>Greg
+          Hudson</quote> problem, so named because he was the first
+          one to bring it up and define it well.</emphasis> :-)</para>
+
+      <para>Suppose our working copy has directory
+        <filename>DIR:1</filename> containing file
+        <filename>foo:1</filename>, along with some other files.  We
+        remove <filename>foo</filename> and commit.</para>
+
+      <para>Already, we have a problem: our working copy still claims
+        to have <filename>DIR:1</filename>.  But on the repository,
+        revision 1 of <filename>DIR</filename> is
+        <emphasis>defined</emphasis> to contain
+        <filename>foo</filename>&mdash;and our working copy
+        <filename>DIR</filename> clearly does not have it anymore.
+        How can we truthfully say that we still have
+        <filename>DIR:1</filename>?</para>
+
+      <para>One answer is to force <filename>DIR</filename> to be
+        updated when we commit <filename>foo</filename>'s deletion.
+        Assuming that our commit created revision 2, we would
+        immediately update our working copy to
+        <filename>DIR:2</filename>.  Then the client and server would
+        both agree that <filename>DIR:2</filename> does not contain
+        foo, and that <filename>DIR:2</filename> is indeed exactly
+        what is in the working copy.</para>
+
+      <para>This solution has nasty, un-user-friendly side effects,
+        though.  It's likely that other people may have committed
+        before us, possibly adding new properties to
+        <filename>DIR</filename>, or adding a new file
+        <filename>bar</filename>.  Now pretend our committed deletion
+        creates revision 5 in the repository.  If we instantly update
+        our local <filename>DIR</filename> to 5, that means
+        unexpectedly receiving a copy of <filename>bar</filename> and
+        some new propchanges.  This clearly violates a UI principle:
+        ``the client will never change your working copy until you ask
+        it to.''  Committing changes to the repository is a
+        server-write operation only; it should
+        <emphasis>not</emphasis> modify your working data!</para>
+
+      <para>Another solution is to do the naive thing: after
+        committing the deletion of <filename>foo</filename>, simply
+        stop tracking the file in the <filename>.svn</filename>
+        administrative directory.  The client then loses all knowledge
+        of the file.</para>
+
+      <para>But this doesn't work either: if we now update our working
+        copy, the communication between client and server is
+        incorrect.  The client still believes that it has
+        <filename>DIR:1</filename>&mdash;which is false, since a
+        <quote>true</quote> <filename>DIR:1</filename> contains
+        <filename>foo</filename>.  The client gives this incorrect
+        report to the repository, and the repository decides that in
+        order to update to revision 2, <filename>foo</filename> must
+        be deleted.  Thus the repository sends a bogus (or at least
+        unnecessary) deletion command.</para>
+
+    </sect2>
+
+    <sect2 id="misc-docs-directory_versioning-sect-2.2">
+      <title>The Solution</title>
+      
+      <para>After deleting <filename>foo</filename> and committing,
+        the file is <emphasis>not</emphasis> totally forgotten by the
+        <filename>.svn</filename> directory.  While the file is no
+        longer considered to be under version control, it is still
+        secretly remembered as having been
+        <quote>deleted</quote>.</para>
+
+      <para>When the user updates the working copy, the client
+        correctly informs the server that the file is already missing
+        from its local <filename>DIR:1</filename>; therefore the
+        repository doesn't try to re-delete it when patching the
+        client up to revision 2.</para>
+
+      <sidebar>
+        <title>Note to developers</title>
+
+        <para>How the <quote>deleted</quote>
+          flag works under the hood.</para>
+        
+        <itemizedlist>
+
+          <listitem>
+            <para>The <command>svn status</command> command won't
+              display a deleted item, unless you make the deleted item
+              the specific target of status.</para>
+          </listitem>
+
+          <listitem>
+            <para>When a deleted item's parent is updated, one of two
+            things will happen:</para>
+
+            <orderedlist>
+              <listitem>
+                <para>The repository will re-add the item, thereby
+                  overwriting the entire entry.  (no more
+                  <quote>deleted</quote> flag)</para>
+              </listitem>
+              <listitem>
+                <para>The repository will say nothing about the item,
+                  which means that it's fully aware that your item is
+                  gone, and this is the correct state to be in.  In
+                  this case, the entire entry is removed.  (no more
+                  <quote>deleted</quote> flag)</para>
+              </listitem>
+            </orderedlist>
+          </listitem>
+
+          <listitem>
+            <para>If a user schedules an item for addition that has
+              the same name as a <quote>deleted</quote> entry, then
+              entry will have both flags simultaneously.  This is
+              perfectly fine:</para>
+            
+            <orderedlist>
+              <listitem>
+                <para>The commit-crawler will notice both flags and
+                  do a <function>delete()</function> and then an
+                  <function>add()</function>.  This ensures that the
+                  transaction is built correctly. (without the
+                  <function>delete()</function>, the
+                  <function>add()</function> would be on top of an
+                  already-existing item.)</para>
+              </listitem>
+              <listitem>
+                <para>When the commit completes, the client rewrites
+                  the entry as normal.  (no more
+                  <quote>deleted</quote> flag)</para>
+              </listitem>
+            </orderedlist>
+          </listitem>
+
+        </itemizedlist>
+
+      </sidebar>
+
+    </sect2>
+
+  </sect1>
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 3 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="misc-docs-directory_versioning-sect-3">
+    <title>The Overeager Directory</title>
+    
+    <para><emphasis>This is the 2nd part of the <quote>Greg
+          Hudson</quote> problem.</emphasis></para>
+    
+    <sect2 id="misc-docs-directory_versioning-sect-3.1">
+      <title>The Problem</title>
+      
+      <para>Again, suppose our working copy has directory
+        <filename>DIR:1</filename> containing file
+        <filename>foo:1</filename>, along with some other files.
+        </para>
+
+      <para>Now, unbeknownst to us, somebody else adds a new file
+        <filename>bar</filename> to this directory, creating revision
+        2 (and <filename>DIR:2</filename>).</para>
+
+      <para>Now we add a property to <filename>DIR</filename> and
+        commit, which creates revision 3.  Our working-copy
+        <filename>DIR</filename> is now marked as being at revision
+        3.</para>
+
+      <para>Of course, this is false; our working copy does
+        <emphasis>not</emphasis> have <filename>DIR:3</filename>,
+        because the <quote>true</quote> <filename>DIR:3</filename> on
+        the repository contains the new file <filename>bar</filename>.
+        Our working copy has no knowledge of <filename>bar</filename>
+        at all.</para>
+
+      <para>Again, we can't follow our commit of
+        <filename>DIR</filename> with an automatic update (and
+        addition of <filename>bar</filename>).  As mentioned
+        previously, commits are a one-way write operation; they must
+        not change working copy data.</para>
+
+    </sect2>
+
+    <sect2 id="misc-docs-directory_versioning-sect-3.2">
+      <title>The Solution</title>
+      
+      <para>Let's enumerate exactly those times when a directory's
+        local revision number changes:</para>
+
+      <variablelist>
+
+        <varlistentry>
+          <term>When a directory is updated:</term>
+          <listitem>
+            <para>If the directory is either the direct target of an
+              update command, or is a child of an updated directory,
+              it will be bumped (along with many other siblings and
+              children) to a uniform revision number.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>When a directory is committed:</term>
+          <listitem>
+            <para>A directory can only be considered a
+              <quote>committed object</quote> if it has a new property
+              change.  (Otherwise, to <quote>commit a
+              directory</quote> really implies that its modified
+              children are being committed, and only such children
+              will have local revisions bumped.)</para>
+          </listitem>
+        </varlistentry>
+
+      </variablelist>
+      
+      <para>In this light, it's clear that our <quote>overeager
+        directory</quote> problem only happens in the second
+        situation&mdash;those times when we're committing directory
+        propchanges.</para>
+
+      <para>Thus the answer is simply not to allow property-commits on
+        directories that are out-of-date.  It sounds a bit
+        restrictive, but there's no other way to keep directory
+        revisions accurate.</para>
+
+      <sidebar>
+        <title>Note to developers</title>
+
+        <para>This restriction is enforced by the filesystem merge()
+          routine.</para>
+
+        <para>Once <function>merge()</function> has established that
+          {ancestor, source, target} are all different node-rev-ids,
+          it examines the property-keys of ancestor and target.  If
+          they're <emphasis>different</emphasis>, it returns a
+          conflict error.</para>
+      </sidebar>
+
+    </sect2>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 4 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="misc-docs-directory_versioning-sect-4">
+    <title>User Impact</title>
+
+    <para>Really, the Subversion client seems to have two
+      difficult&mdash;almost contradictory&mdash;goals.</para>
+
+    <para>First, it needs to make the user experience friendly, which
+      generally means being a bit <quote>sloppy</quote> about deciding
+      what a user can or cannot do.  This is why it allows
+      mixed-revision working copies, and why it tries to let users
+      execute local tree-changing operations (delete, add, move, copy)
+      in situations that aren't always perfectly, theoretically
+      <quote>safe</quote> or pure.
+      </para>
+
+    <para>Second, the client tries to keep the working copy in
+      correctly in sync with the repository using as little
+      communication as possible.  Of course, this is made much harder
+      by the first goal!</para>
+
+    <para>So in the end, there's a tension here, and the resolutions
+      to problems can vary.  In one case (the <quote>lagging
+      directory</quote>), the problem can be solved through a bit of
+      clever entry tracking in the client.  In the other case
+      (<quote>the overeager directory</quote>), the only solution is
+      to restrict some of the theoretical laxness allowed by the
+      client.</para>
+
+  </sect1>
+
+</chapter>
+
+<!--
+local variables: 
+sgml-parent-document: ("misc-docs.xml" "chapter")
+end:
+-->

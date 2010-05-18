@@ -1,22 +1,17 @@
 /* skel.c --- parsing and unparsing skeletons
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -69,8 +64,6 @@ static const enum char_type skel_char_type[256] = {
 
 
 /* ### WTF? since when is number conversion LOCALE DEPENDENT? */
-/* stsp: In C99, various numerical string properties such as decimal point,
- * thousands separator, and the plus/minus sign are locale dependent. */
 
 /* Converting text to numbers.  */
 
@@ -183,7 +176,7 @@ skel_err(const char *skel_type)
 
 
 static svn_boolean_t
-is_valid_proplist_skel(const svn_skel_t *skel)
+is_valid_proplist_skel(svn_skel_t *skel)
 {
   int len = svn_skel__list_length(skel);
 
@@ -592,43 +585,6 @@ svn_skel__prepend(svn_skel_t *skel, svn_skel_t *list_skel)
 }
 
 
-void svn_skel__prepend_int(apr_int64_t value,
-                           svn_skel_t *skel,
-                           apr_pool_t *result_pool)
-{
-  const char *str = apr_psprintf(result_pool, "%" APR_INT64_T_FMT, value);
-
-  svn_skel__prepend_str(str, skel, result_pool);
-}
-
-
-void svn_skel__prepend_str(const char *value,
-                           svn_skel_t *skel,
-                           apr_pool_t *result_pool)
-{
-  svn_skel_t *atom = svn_skel__str_atom(value, result_pool);
-
-  svn_skel__prepend(atom, skel);
-}
-
-
-void svn_skel__append(svn_skel_t *list_skel, const svn_skel_t *skel)
-{
-  SVN_ERR_ASSERT_NO_RETURN(list_skel != NULL && !list_skel->is_atom);
-
-  if (list_skel->children == NULL)
-    {
-      list_skel->children = (svn_skel_t *)skel;
-    }
-  else
-    {
-      list_skel = list_skel->children;
-      while (list_skel->next != NULL)
-        list_skel = list_skel->next;
-      list_skel->next = (svn_skel_t *)skel;
-    }
-}
-
 
 /* Examining skels.  */
 
@@ -666,19 +622,11 @@ svn_skel__list_length(const svn_skel_t *skel)
 
 /* Parsing and unparsing into high-level types. */
 
-apr_int64_t svn_skel__parse_int(const svn_skel_t *skel,
-                                apr_pool_t *scratch_pool)
-{
-  /* We need to duplicate the SKEL contents in order to get a NUL-terminated
-     version of it. The SKEL may not have valid memory at DATA[LEN].  */
-  return apr_atoi64(apr_pstrmemdup(scratch_pool, skel->data, skel->len));
-}
-
 
 svn_error_t *
 svn_skel__parse_proplist(apr_hash_t **proplist_p,
-                         const svn_skel_t *skel,
-                         apr_pool_t *pool /* result_pool */)
+                         svn_skel_t *skel,
+                         apr_pool_t *pool)
 {
   apr_hash_t *proplist = NULL;
   svn_skel_t *elt;
@@ -688,7 +636,8 @@ svn_skel__parse_proplist(apr_hash_t **proplist_p,
     return skel_err("proplist");
 
   /* Create the returned structure */
-  proplist = apr_hash_make(pool);
+  if (skel->children)
+    proplist = apr_hash_make(pool);
   for (elt = skel->children; elt; elt = elt->next->next)
     {
       svn_string_t *value = svn_string_ncreate(elt->next->data,

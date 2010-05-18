@@ -1,24 +1,4 @@
 #!/usr/bin/env python
-#
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
 
 import os, re, sys
 
@@ -35,8 +15,8 @@ def parse_translation(f):
 
     # Parse comments
     comments = []
-    while True:
-        if line.strip() == '' or line[:2] == '#~':
+    while 1:
+        if line.strip() == '':
             return comments, None, None, None
         elif line[0] == '#':
             comments.append(line[:-1])
@@ -48,7 +28,7 @@ def parse_translation(f):
     if line[:7] != 'msgid "' or line[-2] != '"':
         raise RuntimeError("parse error")
     msgid = line[6:-1]
-    while True:
+    while 1:
         line = f.readline()
         if line[0] != '"':
             break
@@ -60,7 +40,7 @@ def parse_translation(f):
         if line[-2] != '"':
             raise RuntimeError("parse error")
         msgid_plural = line[13:-1]
-        while True:
+        while 1:
             line = f.readline()
             if line[0] != '"':
                 break
@@ -72,7 +52,7 @@ def parse_translation(f):
         if line[:8] != 'msgstr "' or line[-2] != '"':
             raise RuntimeError("parse error")
         msgstr.append(line[7:-1])
-        while True:
+        while 1:
             line = f.readline()
             if len(line) == 0 or line[0] != '"':
                 break
@@ -81,14 +61,14 @@ def parse_translation(f):
         if line[:7] != 'msgstr[' or line[-2] != '"':
             raise RuntimeError("parse error")
         i = 0
-        while True:
+        while 1:
             matched_msgstr = msgstr_re.match(line)
             if matched_msgstr:
                 matched_msgstr_len = len(matched_msgstr.group(0))
                 msgstr.append(line[matched_msgstr_len-1:-1])
             else:
                 break
-            while True:
+            while 1:
                 line = f.readline()
                 if len(line) == 0 or line[0] != '"':
                     break
@@ -128,7 +108,7 @@ def main(argv):
 
     # Read the source po file into a hash
     source = {}
-    while True:
+    while 1:
         comments, msgid, msgid_plural, msgstr = parse_translation(sys.stdin)
         if not comments and msgid is None:
             break
@@ -146,7 +126,7 @@ def main(argv):
     string_count = 0
     update_count = 0
     untranslated = 0
-    while True:
+    while 1:
         comments, msgid, msgid_plural, msgstr = parse_translation(infile)
         if not comments and msgid is None:
             break

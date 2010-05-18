@@ -1,22 +1,3 @@
-# ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
-# ====================================================================
-
 require "my-assertions"
 require "util"
 
@@ -139,14 +120,12 @@ class SvnWcTest < Test::Unit::TestCase
       assert(!Svn::Wc.default_ignores({}).empty?)
       assert_equal(Svn::Wc.default_ignores({}), access.ignores({}))
       assert(access.wc_root?(@wc_path))
-      access.close
 
       access = Svn::Wc::AdmAccess.probe_open(nil, @wc_path, false, 5)
       assert_equal(@wc_path, access.path)
       assert_equal(dir_path, access.retrieve(dir_path).path)
       assert_equal(dir_path, access.probe_retrieve(dir_path).path)
       assert_equal(dir_path, access.probe_try(dir_path, false, 5).path)
-      access.close
 
       Svn::Wc::AdmAccess.probe_open(nil, @wc_path, false, 5) do |access|
         assert(!access.locked?)
@@ -333,6 +312,15 @@ class SvnWcTest < Test::Unit::TestCase
                      ],
                      ignored_errors.collect {|path, err| [path, err.class]})
       end
+
+      Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
+        assert_raises(Svn::Error::WcPathFound) do
+          access.mark_missing_deleted(path1)
+        end
+        FileUtils.rm(path1)
+        access.mark_missing_deleted(path1)
+        access.maybe_set_repos_root(path2, @repos_uri)
+      end
     end
   end
 
@@ -341,7 +329,7 @@ class SvnWcTest < Test::Unit::TestCase
     assert(File.exists?(adm_dir))
     FileUtils.rm_rf(adm_dir)
     assert(!File.exists?(adm_dir))
-    Svn::Wc.ensure_adm(@wc_path, @fs.uuid, @repos_uri, @repos_uri, 0)
+    Svn::Wc.ensure_adm(@wc_path, nil, @repos_uri, nil, 0)
     assert(File.exists?(adm_dir))
   end
 
@@ -561,9 +549,7 @@ EOE
 
   def test_translated_file2_eol
     assert_translated_eol(:translated_file2) do |file, source|
-      result = file.read
-      file.close
-      result
+      file.read
     end
   end
 
@@ -629,9 +615,7 @@ EOE
         stream.close
         nil
       else
-        result = stream.read
-        stream.close
-        result
+        stream.read
       end
     end
   end
@@ -824,7 +808,7 @@ EOE
         assert_equal(0, ctx.up(@wc_path, 0))
         assert(!File.exists?(path2))
         Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-          editor = access.update_editor('', 0)
+          editor = access.update_editor(@wc_path, 0)
           assert_equal(0, editor.target_revision)
 
           reporter = session.update2(rev2, "", editor)
@@ -868,10 +852,10 @@ EOE
           notify_func = Proc.new {|n| notification_count += 1}
           assert_raises(ArgumentError) do
             access.update_editor2(:target_revision => 0,
-                                  :target => '',
+                                  :target => @wc_path,
                                   :notify_fun => notify_func)
           end
-          editor = access.update_editor('', 0, true, nil, false, nil,
+          editor = access.update_editor(@wc_path, 0, true, nil, false, nil,
                                         notify_func)
           assert_equal(0, editor.target_revision)
 
@@ -909,7 +893,7 @@ EOE
 
         Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
           editor = access.update_editor2(
-              :target => '',
+              :target => @wc_path,
               :conflict_func => lambda{|n|
                 conflicted_paths[n.path]=true
                 Svn::Wc::CONFLICT_CHOOSE_MERGED
@@ -924,7 +908,7 @@ EOE
           assert_equal(rev2, editor.target_revision)
         end
 
-        assert_equal([File.expand_path(path)], conflicted_paths.keys);
+        assert_equal([path], conflicted_paths.keys);
       end
     end
   end
@@ -962,7 +946,7 @@ EOE
         assert_equal(rev2, ctx.switch(@wc_path, dir2_uri))
         assert(File.exists?(File.join(@wc_path, file2)))
         Svn::Wc::AdmAccess.open_anchor(@wc_path) do |access, dir_access, target|
-          editor = dir_access.switch_editor('', dir1_uri, rev2)
+          editor = dir_access.switch_editor(@wc_path, dir1_uri, rev2)
           assert_equal(rev2, editor.target_revision)
 
           reporter = session.switch2(rev1, dir1, dir1_uri, editor)
@@ -1008,7 +992,19 @@ EOE
           access.relocate(@wc_path, @repos_uri, dir2_uri) do |uuid, url, root_url|
             values << [uuid, url, root_url]
           end
-          assert(!values.empty?)
+          assert_equal([
+                        [@fs.uuid, dir2_uri, nil],
+                        [@fs.uuid, dir2_uri, dir2_uri],
+                        [@fs.uuid, "#{dir2_uri}/#{dir1}", nil],
+                        [@fs.uuid, "#{dir2_uri}/#{dir1}", dir2_uri],
+                        [@fs.uuid, "#{dir2_uri}/#{dir1}/#{file1}", nil],
+                        [@fs.uuid, "#{dir2_uri}/#{dir1}/#{file1}", dir2_uri],
+                        [@fs.uuid, "#{dir2_uri}/#{dir2}", nil],
+                        [@fs.uuid, "#{dir2_uri}/#{dir2}", dir2_uri],
+                        [@fs.uuid, "#{dir2_uri}/#{dir2}/#{file2}", nil],
+                        [@fs.uuid, "#{dir2_uri}/#{dir2}/#{file2}", dir2_uri],
+                       ],
+                       values)
           assert(dir2_uri, access.entry(@wc_path).url)
         end
       end
@@ -1045,15 +1041,15 @@ EOE
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
       access.set_changelist(path, "123", nil, notify_collector)
     end
-    assert_equal([[File.expand_path(path), nil]],
+    assert_equal([[path, nil]],
                  notifies.collect {|notify| [notify.path, notify.err]})
 
     notifies = []
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
       access.set_changelist(path, "456", nil, notify_collector)
     end
-    assert_equal([[File.expand_path(path), Svn::Error::WcChangelistMove],
-                  [File.expand_path(path), NilClass]],
+    assert_equal([[path, Svn::Error::WcChangelistMove],
+                  [path, NilClass]],
                  notifies.collect {|notify| [notify.path, notify.err.class]})
 
     notifies = []
@@ -1064,30 +1060,4 @@ EOE
       end
     end
   end
-
-
-  def test_context_new_default_config
-    assert_not_nil context = Svn::Wc::Context.new
-  ensure
-    context.destroy
-  end
-
-  def test_context_new_specified_config
-    config_file = File.join(@config_path, Svn::Core::CONFIG_CATEGORY_CONFIG)
-    config = Svn::Core::Config.read(config_file)
-    assert_not_nil context = Svn::Wc::Context.new(:config=>config)
-  ensure
-    context.destroy
-  end
-
-  def test_context_create
-    assert_nothing_raised do
-      result = Svn::Wc::Context.create do |context|
-        assert_not_nil context
-        assert_kind_of Svn::Wc::Context, context
-      end
-      assert_nil result;
-    end
-  end
-
 end

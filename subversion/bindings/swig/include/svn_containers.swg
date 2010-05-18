@@ -1,21 +1,16 @@
 /*
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  *
  * svn_containers.swg: This is a child file of svn_types.swg, and
@@ -55,7 +50,17 @@
 
 %hash_argout_typemap(dirents, svn_dirent_t *)
 %hash_argout_typemap(locks, svn_lock_t *)
+#ifdef SWIGPYTHON
+/* FIXME: We are effectively treating this hash as an opaque blob...
+   this is because we currently do not have suitable typemaps to convert
+   it back to an apr_hash_t * for use. */
+%typemap(argout) apr_hash_t **cfg_hash {
+  %append_output(svn_swig_NewPointerObj(*$1, $descriptor(apr_hash_t *),
+                                        _global_py_pool, args));
+}
+#else
 %hash_argout_typemap(cfg_hash, svn_config_t *)
+#endif
 
 /* -----------------------------------------------------------------------
    Output of apr_hash_t * <const char *, svn_string_t *>
@@ -194,8 +199,7 @@
       SWIG_fail;
   }
 
-  $1 = svn_swig_py_struct_ptr_hash_from_dict($input,
-    $descriptor(svn_log_changed_path_t *), _global_pool);
+  $1 = svn_swig_py_changed_path_hash_from_dict($input, _global_pool);
   if (PyErr_Occurred()) {
     SWIG_fail;
   }
@@ -204,44 +208,6 @@
 {
   %append_output(svn_swig_py_changed_path_hash_to_dict($1));
 }
-
-/* apr_hash_t * <const char *, svn_config_t *> */
-%typemap(in) apr_hash_t *config
-  (apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
-{
-  if (_global_pool == NULL)
-  {
-    if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
-                                    &_global_py_pool, &_global_pool))
-      SWIG_fail;
-  }
-
-  $1 = svn_swig_py_struct_ptr_hash_from_dict($input,
-    $descriptor(svn_config_t *), _global_pool);
-  if (PyErr_Occurred())
-    SWIG_fail;
-}
-
-%typemap(out) apr_hash_t *config
-{
-  /* HACK. We don't know which pool the config comes from, and we
-     can't copy it, because svn_config_t is not copyable. So we'll just
-     assume that it's the parent struct's pool. It shouldn't matter
-     anyway, because the only way a non-null config can end up in
-     svn_client_ctx_t is if we assigned it ourselves, in which case the copy
-     that's stored in the Python object will become the result; so this is just
-     a safety net. */
-  apr_pool_t *parent_pool;
-  PyObject *parent_py_pool;
-  
-  if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
-                                  &parent_py_pool, &parent_pool))
-    SWIG_fail;
-  
-  %append_output(svn_swig_py_convert_hash($1, $descriptor(svn_config_t *),
-    parent_py_pool));
-}
-
 #endif
 
 #ifdef SWIGRUBY
@@ -495,13 +461,10 @@
 
 #ifdef SWIGPYTHON
 %typemap(in) apr_array_header_t *location_revisions {
-    $1 = (apr_array_header_t *) svn_swig_py_seq_to_array($input,
-      sizeof(svn_revnum_t),
-      svn_swig_py_unwrap_revnum,
-      NULL,
-      _global_pool);
-    if (PyErr_Occurred())
-      SWIG_fail;
+    $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input,
+                                                             _global_pool);
+    if ($1 == NULL)
+        SWIG_fail;
 }
 #endif
 #ifdef SWIGRUBY
@@ -516,11 +479,16 @@
 
 #ifdef SWIGPYTHON
 %typemap(in) const apr_array_header_t *STRINGLIST {
-    $1 = (apr_array_header_t *) svn_swig_py_seq_to_array($input,
-      sizeof(const char *),
-      svn_swig_py_unwrap_string,
-      NULL,
-      _global_pool);
+    $1 = (apr_array_header_t *) svn_swig_py_strings_to_array($input,
+                                                             _global_pool);
+    if (PyErr_Occurred())
+      SWIG_fail;
+}
+%typemap(in) const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
+    $1 = ($input == Py_None) 
+           ? NULL
+           : (apr_array_header_t *)svn_swig_py_strings_to_array($input,
+                                                                _global_pool);
     if (PyErr_Occurred())
       SWIG_fail;
 }
@@ -576,13 +544,23 @@
 
 #ifdef SWIGPYTHON
 %typemap(in) apr_array_header_t *providers {
-    $1 = (apr_array_header_t *) svn_swig_py_seq_to_array($input,
-      sizeof(const svn_auth_provider_object_t *),
-      svn_swig_py_unwrap_struct_ptr,
-      $descriptor(svn_auth_provider_object_t *),
-      _global_pool);
-    if (PyErr_Occurred())
-      SWIG_fail;
+    svn_auth_provider_object_t *provider;
+    int targlen;
+    if (!PySequence_Check($input)) {
+        PyErr_SetString(PyExc_TypeError, "not a sequence");
+        SWIG_fail;
+    }
+    targlen = PySequence_Length($input);
+    $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
+    ($1)->nelts = targlen;
+    while (targlen--) {
+        provider = svn_swig_MustGetPtr(PySequence_GetItem($input, targlen),
+          $descriptor(svn_auth_provider_object_t *), $svn_argnum);
+        if (PyErr_Occurred()) {
+          SWIG_fail;
+        }
+        APR_ARRAY_IDX($1, targlen, svn_auth_provider_object_t *) = provider;
+    }
 }
 #endif
 
@@ -664,14 +642,10 @@
 */
 #ifdef SWIGPYTHON
 %typemap(in) apr_array_header_t *RANGELIST {
-    $1 = (apr_array_header_t *) svn_swig_py_seq_to_array($input,
-      sizeof(const svn_merge_range_t *),
-      svn_swig_py_unwrap_struct_ptr,
-      $descriptor(svn_merge_range_t *),
-      _global_pool);
-    if (PyErr_Occurred()) {
-      SWIG_fail;
-    }
+  $1 = svn_swig_py_rangelist_to_array($input, _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
 }
 #endif
 
@@ -695,14 +669,11 @@
 */
 #ifdef SWIGPYTHON
 %typemap(in) apr_array_header_t *REVISION_RANGE_LIST {
-    $1 = (apr_array_header_t *) svn_swig_py_seq_to_array($input,
-      sizeof(const svn_opt_revision_range_t *),
-      svn_swig_py_unwrap_struct_ptr,
-      $descriptor(svn_opt_revision_range_t *),
-      _global_pool);
-    if (PyErr_Occurred()) {
-      SWIG_fail;
-    }
+  $1 = (apr_array_header_t *) svn_swig_py_struct_ptr_list_to_array($input,
+    $descriptor(svn_opt_revision_range_t *), _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
 }
 #endif
 
@@ -814,12 +785,7 @@
 %typemap(in) apr_array_header_t **RANGELIST_INOUT ($*1_ltype temp)
 {
   $1 = &temp;
-  *$1 = (apr_array_header_t *) svn_swig_py_seq_to_array($input,
-    sizeof(const svn_merge_range_t *),
-    svn_swig_py_unwrap_struct_ptr,
-    $descriptor(svn_merge_range_t *),
-    _global_pool);
-      
+  *$1 = svn_swig_py_rangelist_to_array($input, _global_pool);
   if (PyErr_Occurred()) {
     SWIG_fail;
   }

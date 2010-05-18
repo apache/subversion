@@ -1,22 +1,17 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2006 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  *
@@ -87,11 +82,6 @@ ProgressListener::onProgress(apr_off_t progressVal, apr_off_t total,
 {
   JNIEnv *env = JNIUtil::getEnv();
 
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
-
   // As Java method IDs will not change during the time this library
   // is loaded, they can be cached.
   static jmethodID mid = 0;
@@ -100,33 +90,45 @@ ProgressListener::onProgress(apr_off_t progressVal, apr_off_t total,
       // Initialize the method ID.
       jclass clazz = env->FindClass(JAVA_PACKAGE"/ProgressListener");
       if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NOTHING();
+        return;
 
       mid = env->GetMethodID(clazz, "onProgress",
-                             "(L"JAVA_PACKAGE"/ProgressEvent;)V");
+                             "(Lorg/tigris/subversion/javahl/ProgressEvent;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        POP_AND_RETURN_NOTHING();
+        return;
+
+      env->DeleteLocalRef(clazz);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
     }
 
   static jmethodID midCT = 0;
   jclass clazz = env->FindClass(JAVA_PACKAGE"/ProgressEvent");
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
+    return;
 
   if (midCT == 0)
     {
       midCT = env->GetMethodID(clazz, "<init>", "(JJ)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
-        POP_AND_RETURN_NOTHING();
+        return;
     }
 
   // Call the Java method.
   jobject jevent = env->NewObject(clazz, midCT,
                                   (jlong) progressVal, (jlong) total);
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
+    return;
+
+  env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
 
   env->CallVoidMethod(m_progressListener, mid, jevent);
-  
-  POP_AND_RETURN_NOTHING();
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  env->DeleteLocalRef(jevent);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
 }

@@ -1,22 +1,3 @@
-# ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
-# ====================================================================
-
 require 'etc'
 require 'fileutils'
 
@@ -86,17 +67,17 @@ module SvnTestUtil
             service_control('delete') if service_exists?
             FileUtils.rm_rf(svnserve_dir)
           end
-
+          
           config = SetupEnvironment.gen_make_opts
           apr_version_include = Pathname.new(config["--with-apr"])  +
               'include' + 'apr_version.h'
           %r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)' =~ apr_version_include.read
           apr_major_version = $1 == '0' ? '' : "-#{$1}"
-
+          
           targets = %W(svnserve.exe libsvn_subr-1.dll libsvn_repos-1.dll
                        libsvn_fs-1.dll libsvn_delta-1.dll
-                       libaprutil#{apr_major_version}.dll
-                       libapr#{apr_major_version}.dll
+                       libaprutil#{apr_major_version}.dll 
+                       libapr#{apr_major_version}.dll 
                        libapriconv#{apr_major_version}.dll
                        libdb44.dll libdb44d.dll)
           ENV["PATH"].split(";").each do |path|
@@ -200,7 +181,7 @@ exit 1
               hash[key] = File.join(@@top_dir, $1)
             end
           end
-
+       
           lines.each do |line|
             name, value = line.chomp.split(/\s*=\s*/, 2)
             if value
@@ -231,7 +212,7 @@ add_path.call(#{dll_dir.dump})
 add_path.call(#{libsvn_swig_ruby_dll_dir.dump})
 EOC
       end
-
+      
       def add_depended_dll_path_to_dll_wrapper_util(top_dir, build_type, util)
         [
          ["apr", build_type],

@@ -1,22 +1,17 @@
 /* lock.c :  functions for manipulating filesystem locks.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -85,6 +80,7 @@ txn_body_lock(void *baton, trail_t *trail)
   struct lock_args *args = baton;
   svn_node_kind_t kind = svn_node_file;
   svn_lock_t *existing_lock;
+  const char *fs_username;
   svn_lock_t *lock;
 
   SVN_ERR(svn_fs_base__get_path_kind(&kind, args->path, trail, trail->pool));
@@ -97,22 +93,15 @@ txn_body_lock(void *baton, trail_t *trail)
   /* While our locking implementation easily supports the locking of
      nonexistent paths, we deliberately choose not to allow such madness. */
   if (kind == svn_node_none)
-    {
-      if (SVN_IS_VALID_REVNUM(args->current_rev))
-        return svn_error_createf(
-          SVN_ERR_FS_OUT_OF_DATE, NULL,
-          _("Path '%s' doesn't exist in HEAD revision"),
-          args->path);
-      else
-        return svn_error_createf(
-          SVN_ERR_FS_NOT_FOUND, NULL,
-          _("Path '%s' doesn't exist in HEAD revision"),
-          args->path);
-    }
+    return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                             "Path '%s' doesn't exist in HEAD revision",
+                             args->path);
 
   /* There better be a username attached to the fs. */
   if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
     return SVN_FS__ERR_NO_USER(trail->fs);
+  else
+    fs_username = trail->fs->access_ctx->username; /* for convenience */
 
   /* Is the caller attempting to lock an out-of-date working file? */
   if (SVN_IS_VALID_REVNUM(args->current_rev))
@@ -357,7 +346,7 @@ svn_fs_base__get_lock_helper(svn_lock_t **lock_p,
   else
     SVN_ERR(err);
 
-  return svn_error_return(err);
+  return err;
 }
 
 
@@ -455,7 +444,7 @@ verify_lock(svn_fs_t *fs,
   else if (strcmp(fs->access_ctx->username, lock->owner) != 0)
     return svn_error_createf
       (SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL,
-       _("User '%s' does not own lock on path '%s' (currently locked by '%s')"),
+       _("User %s does not own lock on path '%s' (currently locked by %s)"),
        fs->access_ctx->username, lock->path, lock->owner);
 
   else if (apr_hash_get(fs->access_ctx->lock_tokens, lock->token,

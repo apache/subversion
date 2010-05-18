@@ -3,25 +3,17 @@
 #  revert_tests.py:  testing 'svn revert'.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 ######################################################################
 
 # General modules
@@ -29,14 +21,12 @@ import re, os
 
 # Our testing module
 import svntest
-from svntest import wc, main, actions
-from svntest.actions import run_and_verify_svn
+from svntest import wc
 
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 
@@ -435,20 +425,12 @@ def revert_file_merge_replace_with_history(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G/rho': Item(status='R ')
     })
-  expected_mergeinfo_output = svntest.wc.State(wc_dir, {
-    '' : Item(status=' U')
-    })
-  expected_elision_output = svntest.wc.State(wc_dir, {
-    '' : Item(status=' U')
-    })
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
   expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n")
   svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
-                                       sbox.repo_url, None,
+                                       sbox.repo_url,
                                        expected_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip)
@@ -467,10 +449,12 @@ def revert_file_merge_replace_with_history(sbox):
   svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
   # Make sure the revert removed the copy from information.
-  expected_infos = [
-      { 'Copied' : None }
-    ]
-  svntest.actions.run_and_verify_info(expected_infos, rho_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'info', rho_path)
+  for line in output:
+    if line.find("Copied") != -1:
+      print("Error: Revert didn't get rid of copy from information")
+      raise svntest.Failure
 
 def revert_wc_to_wc_replace_with_props(sbox):
   "revert svn cp PATH PATH replace file with props"
@@ -681,22 +665,14 @@ def revert_replaced_with_history_file_1(sbox):
     'A/mu': Item(status='R '),
     'iota': Item(status='A ')
     })
-  expected_mergeinfo_output = svntest.wc.State(wc_dir, {
-    '': Item(status=' U'),
-    })
-  expected_elision_output = svntest.wc.State(wc_dir, {
-    '': Item(status=' U'),
-    })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/mu', status='R ', copied='+', wc_rev='-')
   expected_status.tweak('iota', status='A ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
   expected_disk = svntest.main.greek_state.copy()
   svntest.actions.run_and_verify_merge(wc_dir, '2', '1',
-                                       sbox.repo_url, None,
+                                       sbox.repo_url,
                                        expected_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip)
@@ -796,62 +772,49 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # now rollback to r1, thereby reinstating the old 'G'
+  ### Eventually, expected output for 'A/D/G' should be 'R '
+  ### (replaced) instead of 'A ' (added).  See issue #571 for details.
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G': Item(status='R '),
     'A/D/G/rho': Item(status='A '),
     'A/D/G/pi': Item(status='A '),
     'A/D/G/tau': Item(status='A '),
     })
-  expected_mergeinfo_output = svntest.wc.State(wc_dir, {
-    '': Item(status=' U'),
-    })
-  expected_elision_output = svntest.wc.State(wc_dir, {
-    '': Item(status=' U'),
-    })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak('A/D/G', status='R ', copied='+', wc_rev='-')
-  expected_status.tweak('A/D/G/rho',
-                        'A/D/G/pi',
-                        'A/D/G/tau',
-                        copied='+', wc_rev='-')
+  expected_status.tweak('A/D/G/rho', status='A ', copied='+', wc_rev='-')
+  expected_status.tweak('A/D/G/pi',  status='A ', copied='+', wc_rev='-')
+  expected_status.tweak('A/D/G/tau', status='A ', copied='+', wc_rev='-')
   expected_status.add({
-    'A/D/G/alpha' : Item(status='D ', wc_rev='3'),
-    'A/D/G/beta' : Item(status='D ', wc_rev='3'),
+    'A/D/G/alpha' : Item(status='D ', copied='+', wc_rev='-'),
+    'A/D/G/beta' : Item(status='D ', copied='+', wc_rev='-')
     })
-
   expected_skip = wc.State(wc_dir, { })
   expected_disk   = svntest.main.greek_state.copy()
   svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
-                                       sbox.repo_url, None,
+                                       sbox.repo_url,
                                        expected_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
                                        dry_run = 0)
 
   # now test if the revert works ok
-  revert_paths = [G_path,
-                  os.path.join(G_path, 'alpha'),
-                  os.path.join(G_path, 'beta')]
-
-  expected_output = svntest.verify.UnorderedOutput([
-    "Reverted '%s'\n" % path for path in revert_paths])
+  expected_output = svntest.verify.UnorderedOutput(
+   ["Reverted '" + G_path + "'\n",
+    "Reverted '" + os.path.join(G_path, 'pi') + "'\n",
+    "Reverted '" + os.path.join(G_path, 'rho') + "'\n",
+    "Reverted '" + os.path.join(G_path, 'tau') + "'\n",
+    "Reverted '" + os.path.join(G_path, 'alpha') + "'\n",
+    "Reverted '" + os.path.join(G_path, 'beta') + "'\n"])
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert", "-R",
                                      G_path)
 
-  ### GS (Oct 11): this is stupid. after a revert, there should be
-  ###              *NO* status whatsoever. ugh. this status behavior
-  ###              has been twiddled over the 1.6/1.7 dev cycle, but
-  ###              it "should" just disappear.
-
-  ### Is it a bug that we'd need to run revert twice to finish the job?
   expected_output = svntest.verify.UnorderedOutput(
-    ["A       " + os.path.join(G_path, "pi") + "\n",
-     "A       " + os.path.join(G_path, "rho") + "\n",
-     "A       " + os.path.join(G_path, "tau") + "\n"])
+    ["?       " + os.path.join(G_path, "pi") + "\n",
+     "?       " + os.path.join(G_path, "rho") + "\n",
+     "?       " + os.path.join(G_path, "tau") + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      "status", wc_dir)
 
@@ -953,26 +916,6 @@ def revert_tree_conflicts_in_updated_files(sbox):
   svntest.actions.run_and_verify_status(wc_dir_2, expected_status)
   svntest.actions.verify_disk(wc_dir_2, expected_disk)
 
-def revert_add_over_not_present_dir(sbox):
-  "reverting an add over not present directory"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  main.run_svn(None, 'rm', os.path.join(wc_dir, 'A/C'))
-  main.run_svn(None, 'ci', wc_dir, '-m', 'Deleted dir')
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.remove('A/C')
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  
-  main.run_svn(None, 'mkdir', os.path.join(wc_dir, 'A/C'))
-  
-  # This fails in the current WC-NG state (r927318).
-  main.run_svn(None, 'revert', os.path.join(wc_dir, 'A/C'))
-  
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
 
 ########################################################################
 # Run the tests
@@ -996,11 +939,9 @@ test_list = [ None,
               revert_propdel__file,
               revert_replaced_with_history_file_1,
               status_of_missing_dir_after_revert,
-              Wimp("revert behavior needs better definition",
-                   status_of_missing_dir_after_revert_replaced_with_history_dir),
+              status_of_missing_dir_after_revert_replaced_with_history_dir,
               revert_replaced_with_history_file_2,
               revert_tree_conflicts_in_updated_files,
-              XFail(revert_add_over_not_present_dir),
              ]
 
 if __name__ == '__main__':

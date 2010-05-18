@@ -1,24 +1,4 @@
 #!/usr/bin/perl -w
-#
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
 
 use Test::More tests => 118;
 use strict;
@@ -152,10 +132,10 @@ $ctx->log_msg(
            "kind() shows the node as a file");
         is($commit_item->url(),"$reposurl/dir1/new",
            'URL matches our repos url');
-        # revision is INVALID because the commit has not happened yet
+        # revision is 0 because the commit has not happened yet
         # and this is not a copy
-        is($commit_item->revision(),$SVN::Core::INVALID_REVNUM,
-           'Revision is INVALID since commit has not happened yet');
+        is($commit_item->revision(),0,
+           'Revision is 0 since commit has not happened yet');
         is($commit_item->copyfrom_url(),undef,
            'copyfrom_url is undef since file is not a copy');
         is($commit_item->state_flags(),$SVN::Client::COMMIT_ITEM_ADD |

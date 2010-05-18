@@ -1,22 +1,17 @@
 /* fs.h : interface to Subversion filesystem, private to libsvn_fs
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -30,7 +25,6 @@
 
 #include "svn_fs.h"
 #include "svn_config.h"
-#include "private/svn_atomic.h"
 #include "private/svn_cache.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
@@ -60,10 +54,6 @@ extern "C" {
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
 #define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Oldest revision which
                                                     has not been packed. */
-#define PATH_MIN_UNPACKED_REVPROP "min-unpacked-revprop" /* Oldest revision
-                                                            property which has
-                                                            not been packed. */
-#define PATH_REVPROPS_DB "revprops.db"
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -90,7 +80,7 @@ extern "C" {
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   5
+#define SVN_FS_FS__FORMAT_NUMBER   4
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -122,9 +112,6 @@ extern "C" {
 /* The minimum format number that stores node kinds in changed-paths lists. */
 #define SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT 4
 
-/* The minimum format number that supports packed revprop shards. */
-#define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 5
-
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
    by transaction id and filesystem UUID).  Objects of this type are
@@ -155,15 +142,6 @@ typedef struct fs_fs_shared_txn_data_t
   apr_pool_t *pool;
 } fs_fs_shared_txn_data_t;
 
-/* On most operating systems apr implements file locks per process, not
-   per file.  On Windows apr implements the locking as per file handle
-   locks, so we don't have to add our own mutex for just in-process
-   synchronization. */
-#if APR_HAS_THREADS && !defined(WIN32)
-#define SVN_FS_FS__USE_LOCK_MUTEX 1
-#else
-#define SVN_FS_FS__USE_LOCK_MUTEX 0
-#endif
 
 /* Private FSFS-specific data shared between all svn_fs_t objects that
    relate to a particular filesystem, as identified by filesystem UUID.
@@ -183,8 +161,7 @@ typedef struct
 #if APR_HAS_THREADS
   /* A lock for intra-process synchronization when accessing the TXNS list. */
   apr_thread_mutex_t *txn_list_lock;
-#endif
-#if SVN_FS_FS__USE_LOCK_MUTEX
+
   /* A lock for intra-process synchronization when grabbing the
      repository write lock. */
   apr_thread_mutex_t *fs_write_lock;
@@ -246,21 +223,8 @@ typedef struct
   /* The sqlite database used for rep caching. */
   svn_sqlite__db_t *rep_cache_db;
 
-  /* Thread-safe boolean */
-  svn_atomic_t rep_cache_db_opened;
-
-   /* The sqlite database used for revprops. */
-   svn_sqlite__db_t *revprop_db;
-
   /* The oldest revision not in a pack file. */
   svn_revnum_t min_unpacked_rev;
-
-   /* The oldest revision property not in a pack db. */
-   svn_revnum_t min_unpacked_revprop;
-
-  /* Whether rep-sharing is supported by the filesystem
-   * and allowed by the configuration. */
-  svn_boolean_t rep_sharing_allowed;
 } fs_fs_data_t;
 
 

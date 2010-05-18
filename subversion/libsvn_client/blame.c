@@ -2,22 +2,17 @@
  * blame.c:  return blame messages
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -31,12 +26,9 @@
 #include "svn_error.h"
 #include "svn_diff.h"
 #include "svn_pools.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_props.h"
 #include "svn_sorts.h"
-
-#include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
 
@@ -46,7 +38,8 @@
 struct rev
 {
   svn_revnum_t revision; /* the revision number */
-  apr_hash_t *rev_props; /* the revision properties */
+  const char *author;    /* the author of the revision */
+  const char *date;      /* the date of the revision */
   /* Used for merge reporting. */
   const char *path;      /* the absolute repository path */
 };
@@ -107,8 +100,8 @@ struct delta_baton {
   svn_txdelta_window_handler_t wrapped_handler;
   void *wrapped_baton;
   struct file_rev_baton *file_rev_baton;
-  svn_stream_t *source_stream;  /* the delta source */
-  svn_stream_t *stream;  /* the result of the delta */
+  apr_file_t *source_file;  /* the delta source */
+  apr_file_t *file;  /* the result of the delta */
   const char *filename;
 };
 
@@ -325,9 +318,9 @@ window_handler(svn_txdelta_window_t *window, void *baton)
      It is important to do this early, since otherwise, they will be deleted
      before all handles are closed, which leads to failures on some platforms
      when new tempfiles are to be created. */
-  if (dbaton->source_stream)
-    SVN_ERR(svn_stream_close(dbaton->source_stream));
-  SVN_ERR(svn_stream_close(dbaton->stream));
+  if (dbaton->source_file)
+    SVN_ERR(svn_io_file_close(dbaton->source_file, frb->currpool));
+  SVN_ERR(svn_io_file_close(dbaton->file, frb->currpool));
 
   /* If we are including merged revisions, we need to add each rev to the
      merged chain. */
@@ -381,7 +374,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 /* Throw an SVN_ERR_CLIENT_IS_BINARY_FILE error if PROP_DIFFS indicates a
    binary MIME type.  Else, return SVN_NO_ERROR. */
 static svn_error_t *
-check_mimetype(const apr_array_header_t *prop_diffs, const char *target,
+check_mimetype(apr_array_header_t *prop_diffs, const char *target,
                apr_pool_t *pool)
 {
   int i;
@@ -395,7 +388,7 @@ check_mimetype(const apr_array_header_t *prop_diffs, const char *target,
         return svn_error_createf
           (SVN_ERR_CLIENT_IS_BINARY_FILE, 0,
            _("Cannot calculate blame information for binary file '%s'"),
-           svn_dirent_local_style(target, pool));
+           svn_path_local_style(target, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -455,24 +448,24 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
 
   /* Prepare the text delta window handler. */
   if (frb->last_filename)
-    SVN_ERR(svn_stream_open_readonly(&delta_baton->source_stream, frb->last_filename,
-                                     frb->currpool, pool));
+    SVN_ERR(svn_io_file_open(&delta_baton->source_file, frb->last_filename,
+                             APR_READ, APR_OS_DEFAULT, frb->currpool));
   else
     /* Means empty stream below. */
-    delta_baton->source_stream = NULL;
-  last_stream = svn_stream_disown(delta_baton->source_stream, pool);
+    delta_baton->source_file = NULL;
+  last_stream = svn_stream_from_aprfile2(delta_baton->source_file, TRUE, pool);
 
   if (frb->include_merged_revisions && !frb->merged_revision)
     filepool = frb->filepool;
   else
     filepool = frb->currpool;
 
-  SVN_ERR(svn_stream_open_unique(&delta_baton->stream,
-                                 &delta_baton->filename,
-                                 NULL,
-                                 svn_io_file_del_on_pool_cleanup,
-                                 filepool, filepool));
-  cur_stream = svn_stream_disown(delta_baton->stream, filepool);
+  SVN_ERR(svn_io_open_unique_file3(&delta_baton->file,
+                                   &delta_baton->filename,
+                                   NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   filepool, filepool));
+  cur_stream = svn_stream_from_aprfile2(delta_baton->file, TRUE, frb->currpool);
 
   /* Get window handler for applying delta. */
   svn_txdelta_apply(last_stream, cur_stream, NULL, NULL,
@@ -486,7 +479,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   *content_delta_baton = delta_baton;
 
   /* Create the rev structure. */
-  frb->rev = apr_pcalloc(frb->mainpool, sizeof(struct rev));
+  frb->rev = apr_palloc(frb->mainpool, sizeof(struct rev));
 
   if (revnum < frb->start_rev)
     {
@@ -496,14 +489,28 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
       /* The file existed before start_rev; generate no blame info for
          lines from this revision (or before). */
       frb->rev->revision = SVN_INVALID_REVNUM;
+      frb->rev->author = NULL;
+      frb->rev->date = NULL;
     }
   else
     {
+      svn_string_t *str;
       SVN_ERR_ASSERT(revnum <= frb->end_rev);
 
       /* Set values from revision props. */
       frb->rev->revision = revnum;
-      frb->rev->rev_props = svn_prop_hash_dup(rev_props, frb->mainpool);
+
+      if ((str = apr_hash_get(rev_props, SVN_PROP_REVISION_AUTHOR,
+                              sizeof(SVN_PROP_REVISION_AUTHOR) - 1)))
+        frb->rev->author = apr_pstrdup(frb->mainpool, str->data);
+      else
+        frb->rev->author = NULL;
+
+      if ((str = apr_hash_get(rev_props, SVN_PROP_REVISION_DATE,
+                              sizeof(SVN_PROP_REVISION_DATE) - 1)))
+        frb->rev->date = apr_pstrdup(frb->mainpool, str->data);
+      else
+        frb->rev->date = NULL;
     }
 
   if (frb->include_merged_revisions)
@@ -584,14 +591,14 @@ normalize_blames(struct blame_chain *chain,
 }
 
 svn_error_t *
-svn_client_blame5(const char *target,
+svn_client_blame4(const char *target,
                   const svn_opt_revision_t *peg_revision,
                   const svn_opt_revision_t *start,
                   const svn_opt_revision_t *end,
                   const svn_diff_file_options_t *diff_options,
                   svn_boolean_t ignore_mime_type,
                   svn_boolean_t include_merged_revisions,
-                  svn_client_blame_receiver3_t receiver,
+                  svn_client_blame_receiver2_t receiver,
                   void *receiver_baton,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
@@ -604,17 +611,16 @@ svn_client_blame5(const char *target,
   apr_pool_t *iterpool;
   svn_stream_t *last_stream;
   svn_stream_t *stream;
-  const char *target_abspath_or_url;
 
   if (start->kind == svn_opt_revision_unspecified
       || end->kind == svn_opt_revision_unspecified)
     return svn_error_create
       (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
-
-  if (svn_path_is_url(target))
-    target_abspath_or_url = target;
-  else
-    SVN_ERR(svn_dirent_get_absolute(&target_abspath_or_url, target, pool));
+  else if (start->kind == svn_opt_revision_working
+           || end->kind == svn_opt_revision_working)
+    return svn_error_create
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("blame of the WORKING revision is not supported"));
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &end_revnum,
@@ -622,9 +628,8 @@ svn_client_blame5(const char *target,
                                            peg_revision, end,
                                            ctx, pool));
 
-  SVN_ERR(svn_client__get_revision_number(&start_revnum, NULL, ctx->wc_ctx,
-                                          target_abspath_or_url, ra_session,
-                                          start, pool));
+  SVN_ERR(svn_client__get_revision_number(&start_revnum, NULL, ra_session,
+                                          start, target, pool));
 
   if (end_revnum < start_revnum)
     return svn_error_create
@@ -653,7 +658,7 @@ svn_client_blame5(const char *target,
     }
 
   SVN_ERR(svn_io_temp_dir(&frb.tmp_path, pool));
-  frb.tmp_path = svn_dirent_join(frb.tmp_path, "tmp", pool),
+  frb.tmp_path = svn_path_join(frb.tmp_path, "tmp", pool),
 
   frb.mainpool = pool;
   /* The callback will flip the following two pools, because it needs
@@ -675,52 +680,6 @@ svn_client_blame5(const char *target,
                                 start_revnum - (start_revnum > 0 ? 1 : 0),
                                 end_revnum, include_merged_revisions,
                                 file_rev_handler, &frb, pool));
-
-  if (end->kind == svn_opt_revision_working)
-    {
-      /* If the local file is modified we have to call the handler on the
-         working copy file with keywords unexpanded */
-      svn_wc_status3_t *status;
-
-      SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, target_abspath_or_url, pool,
-                             pool));
-
-      if (status->text_status != svn_wc_status_normal)
-        {
-          apr_hash_t *props;
-          svn_stream_t *wcfile;
-          svn_string_t *keywords;
-          svn_stream_t *tempfile;
-          const char *temppath;
-          apr_hash_t *kw = NULL;
-
-          SVN_ERR(svn_wc_prop_list2(&props, ctx->wc_ctx, target_abspath_or_url,
-                                    pool, pool));
-          SVN_ERR(svn_stream_open_readonly(&wcfile, target, pool, pool));
-
-          keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
-                                  APR_HASH_KEY_STRING);
-
-          if (keywords)
-            SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, NULL, NULL,
-                                              0, NULL, pool));
-
-          wcfile = svn_subst_stream_translated(wcfile, "\n", TRUE, kw, FALSE,
-                                               pool);
-
-          SVN_ERR(svn_stream_open_unique(&tempfile, &temppath, NULL,
-                                         svn_io_file_del_on_pool_cleanup,
-                                         pool, pool));
-
-          SVN_ERR(svn_stream_copy3(wcfile, tempfile, ctx->cancel_func,
-                                   ctx->cancel_baton, pool));
-
-          SVN_ERR(add_file_blame(frb.last_filename, temppath, frb.chain, NULL,
-                                 frb.diff_options, pool));
-
-          frb.last_filename = temppath;
-        }
-    }
 
   /* Report the blame to the caller. */
 
@@ -757,19 +716,20 @@ svn_client_blame5(const char *target,
     {
       apr_off_t line_no;
       svn_revnum_t merged_rev;
-      const char *merged_path;
-      apr_hash_t *merged_rev_props;
+      const char *merged_author, *merged_date, *merged_path;
 
       if (walk_merged)
         {
           merged_rev = walk_merged->rev->revision;
-          merged_rev_props = walk_merged->rev->rev_props;
+          merged_author = walk_merged->rev->author;
+          merged_date = walk_merged->rev->date;
           merged_path = walk_merged->rev->path;
         }
       else
         {
           merged_rev = SVN_INVALID_REVNUM;
-          merged_rev_props = NULL;
+          merged_author = NULL;
+          merged_date = NULL;
           merged_path = NULL;
         }
 
@@ -785,17 +745,10 @@ svn_client_blame5(const char *target,
           if (ctx->cancel_func)
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
           if (!eof || sb->len)
-            {
-              if (walk->rev)
-                SVN_ERR(receiver(receiver_baton, line_no, walk->rev->revision,
-                                 walk->rev->rev_props, merged_rev,
-                                 merged_rev_props, merged_path,
-                                 sb->data, FALSE, iterpool));
-              else
-                SVN_ERR(receiver(receiver_baton, line_no, SVN_INVALID_REVNUM,
-                                 NULL, SVN_INVALID_REVNUM, NULL, NULL,
-                                 sb->data, TRUE, iterpool));
-            }
+            SVN_ERR(receiver(receiver_baton, line_no, walk->rev->revision,
+                             walk->rev->author, walk->rev->date,
+                             merged_rev, merged_author, merged_date,
+                             merged_path, sb->data, iterpool));
           if (eof) break;
         }
 

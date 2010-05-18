@@ -1,23 +1,3 @@
-#
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
 import os
 import sys
 import shutil
@@ -217,8 +197,6 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                      File('%(blddir)s/../tools/server-side/svnauthz-validate.pdb'),
                      File('%(blddir)s/../tools/server-side/svn-populate-node-origins-index.exe'),
                      File('%(blddir)s/../tools/server-side/svn-populate-node-origins-index.pdb'),
-                     File('%(blddir)s/../tools/dev/svnraisetreeconflict/svnraisetreeconflict.exe'),
-                     File('%(blddir)s/../tools/dev/svnraisetreeconflict/svnraisetreeconflict.pdb'),
                      File('%(blddir)s/mod_dav_svn/mod_dav_svn.so'),
                      File('%(blddir)s/mod_dav_svn/mod_dav_svn.pdb'),
                      File('%(blddir)s/mod_authz_svn/mod_authz_svn.so'),
@@ -465,7 +443,7 @@ def _make_dist(cfg):
       action = _disttree[reldir]
       if action is None:
         continue
-      if isinstance(action, tuple):
+      if type(action) == type(()):
         for subaction in action:
           subaction.run(dir, cfg)
       else:

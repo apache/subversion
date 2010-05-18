@@ -2,42 +2,25 @@
 # core.py: public Python interface for core components
 #
 # Subversion is a tool for revision control.
-# See http://subversion.apache.org for more information.
+# See http://subversion.tigris.org for more information.
 #
 ######################################################################
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# Copyright (c) 2003-2009 CollabNet.  All rights reserved.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
+#
 ######################################################################
 
 from libsvn.core import *
 import libsvn.core as _libsvncore
 import atexit as _atexit
-import sys
 
 class SubversionException(Exception):
-
-  # Python 2.6 deprecated BaseException.message, which we inadvertently use.
-  # We override it here, so the users of this class are spared from
-  # DeprecationWarnings.
-  # Note that BaseException.message is not deprecated in Python 2.5, and
-  # isn't present in all other versions.
-  if sys.version_info[0:2] == (2, 6):
-    message = None
-
   def __init__(self, message=None, apr_err=None, child=None,
                file=None, line=None):
     """Initialize a new Subversion exception object.
@@ -161,7 +144,7 @@ class Stream:
     if amt is None:
       # read the rest of the stream
       chunks = [ ]
-      while True:
+      while 1:
         data = svn_stream_read(self._stream, SVN_STREAM_CHUNK_SIZE)
         if not data:
           break

@@ -1,22 +1,17 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2006 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  *
@@ -56,27 +51,26 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
                                apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
-
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+  jclass clazz;
 
   // As Java method IDs will not change during the time this library
   // is loaded, they can be cached.
   static jmethodID callback = 0;
-  jclass clazz;
   if (callback == 0)
     {
       // Initialize the method ID.
-      clazz = env->FindClass(JAVA_PACKAGE "/callback/DiffSummaryCallback");
+      clazz = env->FindClass(JAVA_PACKAGE "/DiffSummaryReceiver");
       if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN(SVN_NO_ERROR);
+        return SVN_NO_ERROR;
 
       callback = env->GetMethodID(clazz, "onSummary",
-                                  "(L"JAVA_PACKAGE"/DiffSummary;)V");
+                                  "(Lorg/tigris/subversion/javahl/DiffSummary;)V");
       if (JNIUtil::isJavaExceptionThrown() || callback == 0)
-        POP_AND_RETURN(SVN_NO_ERROR);
+        return SVN_NO_ERROR;
+
+      env->DeleteLocalRef(clazz);
+      if (JNIUtil::isJavaExceptionThrown())
+        return SVN_NO_ERROR;
     }
 
   // Do some prep work for tranforming the DIFF parameter into a
@@ -84,41 +78,44 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
   static jmethodID ctor = 0;
   clazz = env->FindClass(JAVA_PACKAGE "/DiffSummary");
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
+    return SVN_NO_ERROR;
 
   if (ctor == 0)
     {
       ctor = env->GetMethodID(clazz, "<init>",
-                              "(Ljava/lang/String;"
-                              "L"JAVA_PACKAGE"/DiffSummary$DiffKind;Z"
-                              "L"JAVA_PACKAGE"/NodeKind;)V");
+                              "(Ljava/lang/String;IZI)V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
-        POP_AND_RETURN(SVN_NO_ERROR);
+        return SVN_NO_ERROR;
     }
   // Convert the arguments into their Java equivalent,
   jstring jPath = JNIUtil::makeJString(diff->path);
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
+    return SVN_NO_ERROR;
 
-  jobject jNodeKind = EnumMapper::mapNodeKind(diff->node_kind);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
-
-  jobject jSummarizeKind = EnumMapper::mapSummarizeKind(diff->summarize_kind);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
-
+  jint jNodeKind = EnumMapper::mapNodeKind(diff->node_kind);
   // Actually tranform the DIFF parameter into a Java equivalent.
-  jobject jDiffSummary = env->NewObject(clazz, ctor, jPath, jSummarizeKind,
+  jobject jDiffSummary = env->NewObject(clazz, ctor, jPath,
+                                        (jint) diff->summarize_kind,
                                         (jboolean) diff->prop_changed,
                                         jNodeKind);
   if (JNIUtil::isJavaExceptionThrown() || jDiffSummary == NULL)
-    POP_AND_RETURN(SVN_NO_ERROR);
+    return SVN_NO_ERROR;
+
+  env->DeleteLocalRef(jPath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
+  env->DeleteLocalRef(clazz);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
 
   // Invoke the Java DiffSummaryReceiver callback.
   env->CallVoidMethod(m_receiver, callback, jDiffSummary);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
+  env->DeleteLocalRef(jDiffSummary);
   // We return whether an exception was thrown or not.
 
-  env->PopLocalFrame(NULL);
   return SVN_NO_ERROR;
 }

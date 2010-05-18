@@ -2,22 +2,17 @@
  * diff.h :  private header file
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -91,7 +86,7 @@ typedef enum svn_diff__normalize_state_t
 svn_diff__lcs_t *
 svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               svn_diff__position_t *position_list2, /* pointer to tail (ring) */
-              apr_pool_t *pool);
+	      apr_pool_t *pool);
 
 
 /*
@@ -136,9 +131,8 @@ apr_uint32_t
 svn_diff__adler32(apr_uint32_t checksum, const char *data, apr_off_t len);
 
 
-/* Normalize the characters pointed to by the buffer BUF (of length *LENGTHP)
- * according to the options *OPTS, starting in the state *STATEP.
- *
+/* Normalize the characters pointed to by BUF of length *LENGTHP, starting
+ * in state *STATEP according to the OPTIONS.
  * Adjust *LENGTHP and *STATEP to be the length of the normalized buffer and
  * the final state, respectively.
  * Normalized data is written to the memory at *TGT. BUF and TGT may point

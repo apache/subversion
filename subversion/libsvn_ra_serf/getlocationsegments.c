@@ -3,22 +3,17 @@
  *                          RA functions for ra_serf
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -49,6 +44,9 @@ typedef struct {
 
   /* True iff we're looking at a child of the outer report tag */
   svn_boolean_t inside_report;
+
+  /* Return error code */
+  svn_error_t *error;
 
   int status_code;
 
@@ -143,6 +141,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   gls_ctx->receiver_baton = receiver_baton;
   gls_ctx->subpool = svn_pool_create(pool);
   gls_ctx->inside_report = FALSE;
+  gls_ctx->error = SVN_NO_ERROR;
   gls_ctx->done = FALSE;
 
   buckets = serf_bucket_aggregate_create(session->bkt_alloc);
@@ -177,7 +176,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
                                          NULL, NULL, peg_revision, NULL, pool));
 
-  req_url = svn_path_url_add_component2(basecoll_url, relative_url, pool);
+  req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
@@ -204,12 +203,19 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
 
   err = svn_ra_serf__context_run_wait(&gls_ctx->done, session, pool);
 
+  if (gls_ctx->error || parser_ctx->error)
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+      SVN_ERR(gls_ctx->error);
+      SVN_ERR(parser_ctx->error);
+    }
+
   if (gls_ctx->inside_report)
-    err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, err,
+    err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                             _("Location segment report failed on '%s'@'%ld'"),
                               path, peg_revision);
 
-  /* ### Leaks err */
   SVN_ERR(svn_ra_serf__error_on_status(gls_ctx->status_code, handler->path));
 
   svn_pool_destroy(gls_ctx->subpool);

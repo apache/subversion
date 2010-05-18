@@ -1,22 +1,17 @@
 /* trail.h : internal interface to backing out of aborted Berkeley DB txns
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004, 2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -119,29 +114,7 @@ extern "C" {
    SVN_NO_ERROR, `svn_fs_base__retry_txn' commits the trail's Berkeley DB
    transaction, thus making your DB changes permanent, leaves the
    trail's pool alone so all the objects it contains are still
-   around (unless you request otherwise), and returns SVN_NO_ERROR.
-
-
-   Keep the amount of work done in a trail small. C-Mike Pilato said to me:
-
-   I want to draw your attention to something that you may or may not realize
-   about designing for the BDB backend.  The 'trail' objects are (generally)
-   representative of Berkeley DB transactions -- that part I'm sure you know.
-   But you might not realize the value of keeping transactions as small as
-   possible.  Berkeley DB will accumulate locks (which I believe are
-   page-level, not as tight as row-level like you might hope) over the course
-   of a transaction, releasing those locks only at transaction commit/abort.
-   Berkeley DB backends are configured to have a maximum number of locks and
-   lockers allowed, and it's easier than you might think to hit the max-locks
-   thresholds (especially under high concurrency) and see an error (typically a
-   "Cannot allocate memory") result from that.
-
-   For example, in [a loop] you are writing a bunch of rows to the
-   `changes' table.  Could be 10.  Could be 100,000.  100,000 writes and
-   associated locks might be a problem or it might not.  But I use it as a way
-   to encourage you to think about reducing the amount of work you spend in any
-   one trail [...].
-*/
+   around (unless you request otherwise), and returns SVN_NO_ERROR.  */
 
 struct trail_t
 {

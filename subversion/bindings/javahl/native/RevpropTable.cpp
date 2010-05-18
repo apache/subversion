@@ -1,22 +1,17 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  *
@@ -25,9 +20,9 @@
  */
 
 #include "RevpropTable.h"
+#include "Pool.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
-#include "Array.h"
 #include <apr_tables.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
@@ -41,7 +36,7 @@ RevpropTable::~RevpropTable()
     JNIUtil::getEnv()->DeleteLocalRef(m_revpropTable);
 }
 
-const apr_hash_t *RevpropTable::hash(const SVN::Pool &pool)
+const apr_hash_t *RevpropTable::hash(const Pool &pool)
 {
   if (m_revprops.size() == 0)
     return NULL;
@@ -94,6 +89,21 @@ RevpropTable::RevpropTable(jobject jrevpropTable)
       if (JNIUtil::isExceptionThrown())
         return;
 
+      jclass setClazz = env->FindClass("java/util/Set");
+
+      if (toArray == 0)
+        {
+          toArray = env->GetMethodID(setClazz, "toArray",
+                                    "()[Ljava/lang/Object;");
+          if (JNIUtil::isExceptionThrown())
+            return;
+        }
+
+      jobjectArray jkeyArray = (jobjectArray) env->CallObjectMethod(jkeySet,
+                                                                    toArray);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
       if (get == 0)
         {
           get = env->GetMethodID(mapClazz, "get",
@@ -102,17 +112,22 @@ RevpropTable::RevpropTable(jobject jrevpropTable)
             return;
         }
 
-      Array keyArray(jkeySet);
-      std::vector<jobject> keys = keyArray.vector();
+      jint arraySize = env->GetArrayLength(jkeyArray);
+      if (JNIUtil::isExceptionThrown())
+        return;
 
-      for (std::vector<jobject>::const_iterator it = keys.begin();
-            it < keys.end(); ++it)
+      for (int i = 0; i < arraySize; ++i)
         {
-          JNIStringHolder propname((jstring)*it);
+          jobject jpropname = env->GetObjectArrayElement(jkeyArray, i);
           if (JNIUtil::isExceptionThrown())
             return;
 
-          jobject jpropval = env->CallObjectMethod(jrevpropTable, get, *it);
+          JNIStringHolder propname((jstring)jpropname);
+          if (JNIUtil::isExceptionThrown())
+            return;
+
+          jobject jpropval = env->CallObjectMethod(jrevpropTable, get,
+                                                   jpropname);
           if (JNIUtil::isExceptionThrown())
             return;
 
@@ -123,12 +138,20 @@ RevpropTable::RevpropTable(jobject jrevpropTable)
           m_revprops[std::string((const char *)propname)]
             = std::string((const char *)propval);
 
+          JNIUtil::getEnv()->DeleteLocalRef(jpropname);
+          if (JNIUtil::isExceptionThrown())
+            return;
+
           JNIUtil::getEnv()->DeleteLocalRef(jpropval);
           if (JNIUtil::isExceptionThrown())
             return;
         }
 
       JNIUtil::getEnv()->DeleteLocalRef(jkeySet);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      JNIUtil::getEnv()->DeleteLocalRef(jkeyArray);
       if (JNIUtil::isExceptionThrown())
         return;
     }

@@ -2,22 +2,17 @@
  * cmdline.c:  command-line processing
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -27,7 +22,6 @@
 /*** Includes. ***/
 #include "svn_client.h"
 #include "svn_error.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_utf.h"
@@ -104,35 +98,32 @@ check_root_url_of_target(const char **root_url,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *error;
   const char *tmp_root_url;
   const char *truepath;
   svn_opt_revision_t opt_rev;
 
   SVN_ERR(svn_opt_parse_path(&opt_rev, &truepath, target, pool));
-  if (!svn_path_is_url(truepath))
-    SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, pool));
 
-  err =  svn_client__get_repos_root(&tmp_root_url, truepath, &opt_rev,
-                                    ctx, pool, pool);
-
-  if (err)
+  if ((error = svn_client__get_repos_root(&tmp_root_url,
+                                          truepath,
+                                          &opt_rev,
+                                          NULL, ctx, pool)))
     {
       /* It is OK if the given target does not exist, it just means
        * we will not be able to determine the root url from this particular
        * argument.
        */
-      if ((err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-          || (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
+      if ((error->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+          || (error->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
         {
-          svn_error_clear(err);
+          svn_error_clear(error);
           return SVN_NO_ERROR;
         }
       else
-        return svn_error_return(err);
+        return error;
      }
-
-   if (*root_url != NULL)
+   else if (*root_url != NULL)
      {
        if (strcmp(*root_url, tmp_root_url) != 0)
          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -242,14 +233,14 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
             }
           else  /* not a url, so treat as a path */
             {
-              const char *base_name;
+              char *base_name;
 
               SVN_ERR(svn_opt__arg_canonicalize_path(&true_target,
                                                      true_target, pool));
 
               /* If the target has the same name as a Subversion
                  working copy administrative dir, skip it. */
-              base_name = svn_dirent_basename(true_target, pool);
+              base_name = svn_path_basename(true_target, pool);
 
               if (svn_wc_is_adm_dir(base_name, pool))
                 {
@@ -281,9 +272,7 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
        * arguments.
        */
       if (root_url == NULL)
-        SVN_ERR_W(svn_client_root_url_from_path(&root_url, "", ctx, pool),
-                  "Resolving '^/': no repository root found in the "
-                  "target arguments or in the current directory");
+        SVN_ERR(svn_client_root_url_from_path(&root_url, "", ctx, pool));
 
       *targets_p = apr_array_make(pool, output_targets->nelts,
                                   sizeof(const char *));
@@ -317,5 +306,5 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
   else
     *targets_p = output_targets;
 
-  return svn_error_return(err);
+  return err;
 }

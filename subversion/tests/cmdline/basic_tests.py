@@ -3,25 +3,17 @@
 #  basic_tests.py:  testing working-copy interactions with ra_local
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 ######################################################################
 
 # General modules
@@ -34,7 +26,6 @@ from svntest import wc
 # (abbreviation)
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
 Item = wc.StateItem
 
 ######################################################################
@@ -199,10 +190,8 @@ def basic_update(sbox):
   # path, are skipped and do not raise an error
   xx_path = os.path.join(wc_dir, 'xx', 'xx')
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    "update xx/xx",
-    ["Skipped '"+xx_path+"'\n",
-    "Summary of conflicts:\n",
-    "  Skipped paths: 1\n"], [], 'update', xx_path)
+    "update xx/xx", ["Skipped '"+xx_path+"'\n"], [],
+    'update', xx_path)
   exit_code, out, err = svntest.actions.run_and_verify_svn(
     "update xx/xx", [], [],
     'update', '--quiet', xx_path)
@@ -211,10 +200,7 @@ def basic_update(sbox):
   urls = ('http://localhost/a/b/c', 'http://localhost', 'svn://localhost')
   for url in urls:
     exit_code, out, err = svntest.actions.run_and_verify_svn(
-      "update " + url,
-      ["Skipped '"+url+"'\n",
-      "Summary of conflicts:\n",
-      "  Skipped paths: 1\n"], [],
+      "update " + url, ["Skipped '"+url+"'\n"], [],
       'update', url)
 
 #----------------------------------------------------------------------
@@ -326,15 +312,6 @@ def basic_mkdir_wc_with_parents(sbox):
   svntest.actions.run_and_verify_svn("mkdir dir/subdir", None, [],
                                      'mkdir', '--parents', Y_Z_path)
 
-  # Verify the WC status, because there was a regression in which parts of
-  # the WC were left locked.
-  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
-  expected_status.add({
-    'Y'      : Item(status='A ', wc_rev=0),
-    'Y/Z'    : Item(status='A ', wc_rev=0),
-    })
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
 
 #----------------------------------------------------------------------
 def basic_corruption(sbox):
@@ -378,13 +355,14 @@ def basic_corruption(sbox):
 
   # Modify mu's text-base, so we get a checksum failure the first time
   # we try to commit.
-  mu_tb_path = svntest.wc.text_base_path(mu_path)
-  tb_dir_path = os.path.dirname(mu_tb_path)
+  tb_dir_path = os.path.join(wc_dir, 'A',
+                             svntest.main.get_admin_name(), 'text-base')
+  mu_tb_path = os.path.join(tb_dir_path, 'mu.svn-base')
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
   mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
-  os.chmod(tb_dir_path, 0777)  ### What's a more portable way to do this?
-  os.chmod(mu_tb_path, 0666)   ### Would rather not use hardcoded numbers.
+  os.chmod(tb_dir_path, 0777)  # ### What's a more portable way to do this?
+  os.chmod(mu_tb_path, 0666)   # ### Would rather not use hardcoded numbers.
   shutil.copyfile(mu_tb_path, mu_saved_tb_path)
   svntest.main.file_append(mu_tb_path, 'Aaagggkkk, corruption!')
   os.chmod(tb_dir_path, tb_dir_saved_mode)
@@ -423,9 +401,9 @@ def basic_corruption(sbox):
 
   # Modify mu's text-base, so we get a checksum failure the first time
   # we try to update.
-  other_mu_path = os.path.join(other_wc, 'A', 'mu')
-  mu_tb_path = svntest.wc.text_base_path(other_mu_path)
-  tb_dir_path = os.path.dirname(mu_tb_path)
+  tb_dir_path = os.path.join(other_wc, 'A',
+                             svntest.main.get_admin_name(), 'text-base')
+  mu_tb_path = os.path.join(tb_dir_path, 'mu.svn-base')
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
   mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
@@ -651,8 +629,8 @@ def basic_conflict(sbox):
     # probably reveal the cause for the failure, if they were
     # uncommented:
     #
-    # print("Not all extra reject files have been accounted for:")
-    # print(extra_files)
+    # print "Not all extra reject files have been accounted for:"
+    # print extra_files
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
@@ -1751,10 +1729,18 @@ def info_nonhead(sbox):
                                         None,
                                         wc_dir)
   # Get info for old iota at r1.
-  expected_infos = [
-      { 'URL' : '.*' },
-    ]
-  svntest.actions.run_and_verify_info(expected_infos, furl + '@1', '-r1')
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(None, None,
+                                                                 [], 'info',
+                                                                 furl + '@1',
+                                                                 '-r1')
+  got_url = 0
+  for line in output:
+    if line.find("URL:") >= 0:
+      got_url = 1
+  if not got_url:
+    print("Info didn't output an URL.")
+    raise svntest.Failure
+
 
 
 #----------------------------------------------------------------------
@@ -1863,19 +1849,19 @@ def delete_keep_local(sbox):
 
 def delete_keep_local_twice(sbox):
   'delete file and directory with --keep-local twice'
-
+  
   sbox.build()
   wc_dir = sbox.wc_dir
-
+  
   dir = os.path.join(wc_dir, 'dir')
-
+  
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', dir)
-
+  
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
-
+  
   if not os.path.isdir(dir):
-    print('Directory was really deleted')
+    print 'Directory was really deleted'
     raise svntest.Failure
 
 def windows_paths_in_repos(sbox):
@@ -2147,8 +2133,8 @@ def automatic_conflict_resolution(sbox):
     # probably reveal the cause for the failure, if they were
     # uncommented:
     #
-    # print("Not all extra reject files have been accounted for:")
-    # print(extra_files)
+    # print "Not all extra reject files have been accounted for:"
+    # print extra_files
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
@@ -2454,7 +2440,7 @@ def basic_add_svn_format_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  entries_path = os.path.join(wc_dir, svntest.main.get_admin_name(), 'format')
+  entries_path = os.path.join(wc_dir, '.svn', 'format')
 
   output = svntest.actions.get_virginal_state(wc_dir, 1)
 
@@ -2465,37 +2451,6 @@ def basic_add_svn_format_file(sbox):
                                      'add', '--parents', entries_path)
 
   svntest.actions.run_and_verify_status(wc_dir, output)
-
-# Issue 2586, Unhelpful error message: Unrecognized URL scheme for ''
-def basic_mkdir_mix_targets(sbox):
-  "mkdir mix url and local path should error"
-
-  sbox.build()
-  Y_url = sbox.repo_url + '/Y'
-  expected_error = ".*Illegal repository URL 'subdir'"
-
-  svntest.actions.run_and_verify_svn(None, None, expected_error,
-                                     'mkdir', '-m', 'log_msg', Y_url, 'subdir')
-
-def delete_from_url_with_spaces(sbox):
-  "delete a directory with ' ' using its url"
-  
-  sbox.build()
-  sbox.simple_mkdir(os.path.join(sbox.wc_dir, 'Dir With Spaces'))
-  sbox.simple_mkdir(os.path.join(sbox.wc_dir, 'Dir With'))
-  sbox.simple_mkdir(os.path.join(sbox.wc_dir, 'Dir With/Spaces'))
-
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                      'ci', sbox.wc_dir, '-m', 'Added dir')
-  
-  # This fails on 1.6.11 with an escaping error.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                      'rm', sbox.repo_url + '/Dir%20With%20Spaces',
-                                      '-m', 'Deleted')
-
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                      'rm', sbox.repo_url + '/Dir%20With/Spaces',
-                                      '-m', 'Deleted')
 
 #----------------------------------------------------------------------
 
@@ -2552,8 +2507,6 @@ test_list = [ None,
               basic_relative_url_with_peg_revisions,
               basic_auth_test,
               basic_add_svn_format_file,
-              basic_mkdir_mix_targets,
-              delete_from_url_with_spaces,
              ]
 
 if __name__ == '__main__':

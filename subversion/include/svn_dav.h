@@ -1,22 +1,17 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  *
@@ -86,61 +81,6 @@ extern "C" {
     universe of svn_lock_t->owner.)  */
 #define SVN_DAV_LOCK_OWNER_HEADER "X-SVN-Lock-Owner"
 
-/** Assuming the OPTIONS was performed againts a resource within a
- * Subversion repository, then this header indicates the youngest
- * revision in the repository.  */
-#define SVN_DAV_YOUNGEST_REV_HEADER "SVN-Youngest-Rev"
-
-/** Assuming the OPTIONS was performed againts a resource within a
- * Subversion repository, then this header indicates the UUID of the
- * repository.  */
-#define SVN_DAV_REPOS_UUID_HEADER "SVN-Repository-UUID"
-
-/** Presence of this in a DAV header in an OPTIONS response indicates
- * that the server speaks HTTP protocol v2.  This header provides an
- * opaque URI that the client should send all custom REPORT requests
- * against.  */
-#define SVN_DAV_ME_RESOURCE_HEADER "SVN-Me-Resource"
-
-/** This header provides the repository root URI, suitable for use in
- * calculating the relative paths of other public URIs for this
- * repository into .  (HTTP protocol v2 only)  */
-#define SVN_DAV_ROOT_URI_HEADER "SVN-Repository-Root"
-
-/** This header provides an opaque URI that the client can append a
- * revision to, to construct a 'revision URL'.  This allows direct
- * read/write access to revprops via PROPFIND or PROPPATCH, and is
- * similar to libsvn_fs's revision objects (as distinct from "revision
- * roots").  (HTTP protocol v2 only)  */
-#define SVN_DAV_REV_STUB_HEADER "SVN-Rev-Stub"
-
-/** This header provides an opaque URI that the client can append
- * PEGREV/PATH to, in order to construct URIs of pegged objects in the
- * repository, similar to the use of a "revision root" in the
- * libsvn_fs API.  (HTTP protocol v2 only)  */
-#define SVN_DAV_REV_ROOT_STUB_HEADER "SVN-Rev-Root-Stub"
-
-/** This header provides an opaque URI which represents a Subversion
- * transaction (revision-in-progress) object.  It is suitable for use
- * in fetching and modifying transaction properties as part of a
- * commit process, similar to the svn_fs_txn_t object (as distinct
- * from a "txn root").  (HTTP protocol v2 only)  */
-#define SVN_DAV_TXN_STUB_HEADER "SVN-Txn-Stub"
-
-/** This header provides an opaque URI which represents the root
- * directory of a Subversion transaction (revision-in-progress),
- * similar to the concept of a "txn root" in the libsvn_fs API.  The
- * client can append additional path segments to it to access items
- * deeper in the transaction tree as part of a commit process.  (HTTP
- * protocol v2 only)  */
-#define SVN_DAV_TXN_ROOT_STUB_HEADER "SVN-Txn-Root-Stub"
-
-/** This header is used in the POST response to tell the client the
- * name of the Subversion transaction created by the request.  It can
- * then be appended to the transaction stub and transaction root stub
- * for access to the properties and paths, respectively, of the named
- * transaction.  (HTTP protocol v2 only)  */
-#define SVN_DAV_TXN_NAME_HEADER "SVN-Txn-Name"
 
 /**
  * @name Fulltext MD5 headers

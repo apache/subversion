@@ -3,22 +3,17 @@
  *                "we can't lose 'em, but we can shun 'em!"
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -426,95 +421,6 @@ svn_repos_dump_fs(svn_repos_t *repos,
   return svn_repos_dump_fs2(repos, stream, feedback_stream, start_rev,
                             end_rev, incremental, FALSE, cancel_func,
                             cancel_baton, pool);
-}
-
-/* Baton for repos_progress_handler */
-struct progress_baton
-{
-  svn_boolean_t dumping;
-  svn_stream_t *feedback_stream;
-};
-
-/* Implementation of svn_repos_progress_func_t to wrap the output to a
-   response stream for svn_repos_dump_fs2() and svn_repos_verify_fs() */
-static svn_error_t *
-repos_progress_handler(void * baton,
-                       svn_revnum_t revision,
-                       const char *warning_text,
-                       apr_pool_t *scratch_pool)
-{
-  struct progress_baton *pb = baton;
-
-  if (warning_text != NULL)
-    {
-      apr_size_t len = strlen(warning_text);
-      SVN_ERR(svn_stream_write(pb->feedback_stream, warning_text, &len));
-    }
-  else
-    SVN_ERR(svn_stream_printf(pb->feedback_stream, scratch_pool,
-                              pb->dumping
-                              ? _("* Dumped revision %ld.\n")
-                              : _("* Verified revision %ld.\n"),
-                              revision));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_repos_dump_fs2(svn_repos_t *repos,
-                   svn_stream_t *stream,
-                   svn_stream_t *feedback_stream,
-                   svn_revnum_t start_rev,
-                   svn_revnum_t end_rev,
-                   svn_boolean_t incremental,
-                   svn_boolean_t use_deltas,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
-                   apr_pool_t *pool)
-{
-  struct progress_baton pb;
-  pb.dumping = (stream != NULL); /* Show verify messages if stream is NULL */
-  pb.feedback_stream = feedback_stream;
-
-  return svn_error_return(svn_repos_dump_fs3(repos,
-                                             stream,
-                                             start_rev,
-                                             end_rev,
-                                             incremental,
-                                             use_deltas,
-                                             feedback_stream
-                                               ? repos_progress_handler
-                                               : NULL,
-                                             &pb,
-                                             cancel_func,
-                                             cancel_baton,
-                                             pool));
-}
-
-svn_error_t *
-svn_repos_verify_fs(svn_repos_t *repos,
-                    svn_stream_t *feedback_stream,
-                    svn_revnum_t start_rev,
-                    svn_revnum_t end_rev,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *pool)
-{
-  struct progress_baton pb;
-  pb.dumping = FALSE;
-  pb.feedback_stream = feedback_stream;
-
-  return svn_error_return(svn_repos_verify_fs2(repos,
-                                               start_rev,
-                                               end_rev,
-                                               feedback_stream
-                                                 ? repos_progress_handler
-                                                 : NULL,
-                                               &pb,
-                                               cancel_func,
-                                               cancel_baton,
-                                               pool));
 }
 
 /*** From load.c ***/

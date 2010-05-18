@@ -2,22 +2,17 @@
  * opt.c :  option and argument parsing for Subversion command lines
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -38,7 +33,6 @@
 #include "svn_types.h"
 #include "svn_opt.h"
 #include "svn_error.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_utf.h"
 #include "svn_time.h"
@@ -558,35 +552,6 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
   return SVN_NO_ERROR;
 }
 
-const char *
-svn_opt__revision_to_string(const svn_opt_revision_t *revision,
-                            apr_pool_t *result_pool)
-{
-  switch (revision->kind)
-    {
-      case svn_opt_revision_unspecified:
-        return "unspecified";
-      case svn_opt_revision_number:
-        return apr_psprintf(result_pool, "%ld", revision->value.number);
-      case svn_opt_revision_date:
-        /* ### svn_time_to_human_cstring()? */
-        return svn_time_to_cstring(revision->value.date, result_pool);
-      case svn_opt_revision_committed:
-        return "committed";
-      case svn_opt_revision_previous:
-        return "previous";
-      case svn_opt_revision_base:
-        return "base";
-      case svn_opt_revision_working:
-        return "working";
-      case svn_opt_revision_head:
-        return "head";
-      default:
-        return NULL;
-    }
-}
-
-
 
 /*** Parsing arguments. ***/
 #define DEFAULT_ARRAY_SIZE 5
@@ -686,7 +651,6 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
         {
           ret = 0;
           start_revision.kind = svn_opt_revision_unspecified;
-          start_revision.value.number = 0;
         }
       else  /* looking at non-empty peg revision */
         {
@@ -697,7 +661,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
             {
               /* URLs are URI-encoded, so we look for dates with
                  URI-encoded delimeters.  */
-              size_t rev_len = strlen(rev_str);
+              int rev_len = strlen(rev_str);
               if (rev_len > 6
                   && rev_str[0] == '%'
                   && rev_str[1] == '7'
@@ -739,7 +703,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
 svn_error_t *
 svn_opt__args_to_target_array(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
-                              const apr_array_header_t *known_targets,
+                              apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
   int i;
@@ -813,7 +777,7 @@ svn_opt__args_to_target_array(apr_array_header_t **targets_p,
 
           /* If the target has the same name as a Subversion
              working copy administrative dir, skip it. */
-          base_name = svn_dirent_basename(true_target, pool);
+          base_name = svn_path_basename(true_target, pool);
 
           /* FIXME:
              The canonical list of administrative directory names is
@@ -890,19 +854,18 @@ svn_opt__split_arg_at_peg_revision(const char **true_target,
                                    apr_pool_t *pool)
 {
   const char *peg_start = NULL; /* pointer to the peg revision, if any */
-  const char *ptr;
+  int j;
 
-  for (ptr = (utf8_target + strlen(utf8_target) - 1); ptr >= utf8_target;
-        --ptr)
+  for (j = (strlen(utf8_target) - 1); j >= 0; --j)
     {
       /* If we hit a path separator, stop looking.  This is OK
           only because our revision specifiers can't contain '/'. */
-      if (*ptr == '/')
+      if (utf8_target[j] == '/')
         break;
 
-      if (*ptr == '@')
+      if (utf8_target[j] == '@')
         {
-          peg_start = ptr;
+          peg_start = &utf8_target[j];
           break;
         }
     }
@@ -910,13 +873,13 @@ svn_opt__split_arg_at_peg_revision(const char **true_target,
   if (peg_start)
     {
       /* Error out if target is the empty string. */
-      if (ptr == utf8_target)
+      if (j == 0)
         return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                  _("'%s' is just a peg revision. "
                                    "Maybe try '%s@' instead?"),
                                  utf8_target, utf8_target);
 
-      *true_target = apr_pstrmemdup(pool, utf8_target, ptr - utf8_target);
+      *true_target = apr_pstrmemdup(pool, utf8_target, j);
       if (peg_revision)
         *peg_revision = apr_pstrdup(pool, peg_start);
     }
@@ -953,8 +916,8 @@ svn_opt__arg_canonicalize_url(const char **url_out, const char *url_in,
                              _("URL '%s' contains a '..' element"),
                              target);
 
-  /* Strip any trailing '/' and collapse other redundant elements. */
-  target = svn_uri_canonicalize(target, pool);
+  /* strip any trailing '/' and collapse other redundant elements */
+  target = svn_path_canonicalize(target, pool);
 
   *url_out = target;
   return SVN_NO_ERROR;
@@ -984,11 +947,11 @@ svn_opt__arg_canonicalize_path(const char **path_out, const char *path_in,
   else
     return svn_error_createf(apr_err, NULL,
                              _("Error resolving case of '%s'"),
-                             svn_dirent_local_style(path_in, pool));
+                             svn_path_local_style(path_in, pool));
 
   /* convert back to UTF-8. */
   SVN_ERR(svn_path_cstring_to_utf8(path_out, apr_target, pool));
-  *path_out = svn_dirent_canonicalize(*path_out, pool);
+  *path_out = svn_path_canonicalize(*path_out, pool);
 
   return SVN_NO_ERROR;
 }
@@ -1005,12 +968,11 @@ svn_opt__print_version_info(const char *pgm_name,
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s\n\n"), pgm_name,
                              SVN_VERSION, __DATE__, __TIME__));
-  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2010 The Apache Software Foundation.\n"
-                              "This software consists of"
-                              " contributions made by many people;\n"
-                              "see the NOTICE file for more information.\n"
+  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2000-2009 CollabNet.\n"
                               "Subversion is open source software, see"
-                              " http://subversion.apache.org/\n\n"),
+                              " http://subversion.tigris.org/\n"
+                              "This product includes software developed by "
+                              "CollabNet (http://www.Collab.Net/).\n\n"),
                             stdout, pool));
 
   if (footer)
@@ -1065,29 +1027,12 @@ svn_opt_print_help3(apr_getopt_t *os,
   return SVN_NO_ERROR;
 }
 
-/* svn_opt__eat_peg_revisions was added to the 1.6 branch and, despite
-   its double underscore name, it is called from the application
-   layer.  So to remain ABI compatibilty with 1.6 the name must
-   continue to exist.  Adding this name is sufficient for the 1.6
-   client to link against the 1.7 libraries. */
 svn_error_t *
 svn_opt__eat_peg_revisions(apr_array_header_t **true_targets_p,
-                           const apr_array_header_t *targets,
-                           apr_pool_t *pool);
-svn_error_t *
-svn_opt__eat_peg_revisions(apr_array_header_t **true_targets_p,
-                           const apr_array_header_t *targets,
+                           apr_array_header_t *targets,
                            apr_pool_t *pool)
 {
-  return svn_opt_eat_peg_revisions(true_targets_p, targets, pool);
-}
-
-svn_error_t *
-svn_opt_eat_peg_revisions(apr_array_header_t **true_targets_p,
-                          const apr_array_header_t *targets,
-                          apr_pool_t *pool)
-{
-  int i;
+  unsigned int i;
   apr_array_header_t *true_targets;
 
   true_targets = apr_array_make(pool, DEFAULT_ARRAY_SIZE, sizeof(const char *));

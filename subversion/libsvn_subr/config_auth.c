@@ -2,28 +2,23 @@
  * config_auth.c :  authentication files in the user config area
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
 
 
-#include "svn_dirent_uri.h"
+#include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_io.h"
 
@@ -52,7 +47,7 @@ auth_file_path(const char **path,
                                           SVN_CONFIG__AUTH_SUBDIR, pool));
   if (authdir_path)
     {
-      authdir_path = svn_dirent_join(authdir_path, cred_kind, pool);
+      authdir_path = svn_path_join(authdir_path, cred_kind, pool);
 
       /* Construct the basename of the creds file.  It's just the
          realmstring converted into an md5 hex string.  */
@@ -60,7 +55,7 @@ auth_file_path(const char **path,
                            strlen(realmstring), pool));
       hexname = svn_checksum_to_cstring(checksum, pool);
 
-      *path = svn_dirent_join(authdir_path, hexname, pool);
+      *path = svn_path_join(authdir_path, hexname, pool);
     }
   else
     *path = NULL;
@@ -98,7 +93,7 @@ svn_config_read_auth_data(apr_hash_t **hash,
 
       SVN_ERR_W(svn_hash_read2(*hash, stream, SVN_HASH_TERMINATOR, pool),
                 apr_psprintf(pool, _("Error parsing '%s'"),
-                             svn_dirent_local_style(auth_path, pool)));
+                             svn_path_local_style(auth_path, pool)));
 
       SVN_ERR(svn_stream_close(stream));
     }
@@ -138,7 +133,7 @@ svn_config_write_auth_data(apr_hash_t *hash,
   stream = svn_stream_from_aprfile2(authfile, FALSE, pool);
   SVN_ERR_W(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool),
             apr_psprintf(pool, _("Error writing hash to '%s'"),
-                         svn_dirent_local_style(auth_path, pool)));
+                         svn_path_local_style(auth_path, pool)));
 
   SVN_ERR(svn_stream_close(stream));
 

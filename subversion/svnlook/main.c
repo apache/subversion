@@ -2,22 +2,17 @@
  * main.c: Subversion server inspection tool.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -39,7 +34,6 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_error_codes.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_repos.h"
 #include "svn_fs.h"
@@ -68,7 +62,6 @@ static svn_opt_subcommand_t
   subcommand_date,
   subcommand_diff,
   subcommand_dirschanged,
-  subcommand_filesize,
   subcommand_help,
   subcommand_history,
   subcommand_info,
@@ -215,12 +208,6 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    N_("usage: svnlook dirs-changed REPOS_PATH\n\n"
       "Print the directories that were themselves changed (property edits)\n"
       "or whose file children were changed.\n"),
-   {'r', 't'} },
-
-  {"filesize", subcommand_filesize, {0},
-   N_("usage: svnlook filesize REPOS_PATH PATH_IN_REPOS\n\n"
-      "Print the size (in bytes) of the file located at PATH_IN_REPOS as\n"
-      "it is represented in the repository.\n"),
    {'r', 't'} },
 
   {"help", subcommand_help, {"?", "h"},
@@ -530,13 +517,13 @@ print_dirs_changed_tree(svn_repos_node_t *node,
 
   /* Recursively handle the node's children. */
   subpool = svn_pool_create(pool);
-  full_path = svn_dirent_join(path, tmp_node->name, subpool);
+  full_path = svn_path_join(path, tmp_node->name, subpool);
   SVN_ERR(print_dirs_changed_tree(tmp_node, full_path, subpool));
   while (tmp_node->sibling)
     {
       svn_pool_clear(subpool);
       tmp_node = tmp_node->sibling;
-      full_path = svn_dirent_join(path, tmp_node->name, subpool);
+      full_path = svn_path_join(path, tmp_node->name, subpool);
       SVN_ERR(print_dirs_changed_tree(tmp_node, full_path, subpool));
     }
   svn_pool_destroy(subpool);
@@ -609,13 +596,13 @@ print_changed_tree(svn_repos_node_t *node,
 
   /* Recursively handle the node's children. */
   subpool = svn_pool_create(pool);
-  full_path = svn_dirent_join(path, node->name, subpool);
+  full_path = svn_path_join(path, node->name, subpool);
   SVN_ERR(print_changed_tree(node, full_path, copy_info, subpool));
   while (node->sibling)
     {
       svn_pool_clear(subpool);
       node = node->sibling;
-      full_path = svn_dirent_join(path, node->name, subpool);
+      full_path = svn_path_join(path, node->name, subpool);
       SVN_ERR(print_changed_tree(node, full_path, copy_info, subpool));
     }
   svn_pool_destroy(subpool);
@@ -769,34 +756,6 @@ generate_label(const char **label,
   return SVN_NO_ERROR;
 }
 
-/* A helper function used by display_prop_diffs.
-   TOKEN is a string holding a property value.
-   If TOKEN is empty, or is already terminated by an EOL marker,
-   return TOKEN unmodified. Else, return a new string consisting
-   of the concatenation of TOKEN and the system's default EOL marker.
-   The new string is allocated from POOL. */
-static const svn_string_t *
-maybe_append_eol(const svn_string_t *token, apr_pool_t *pool)
-{
-  const char *curp;
-
-  if (token->len == 0)
-    return token;
-
-  curp = token->data + token->len - 1;
-  if (*curp == '\r')
-    {
-      return token;
-    }
-  else if (*curp != '\n')
-    {
-      return svn_string_createf(pool, "%s%s", token->data, APR_EOL_STR);
-    }
-  else
-    {
-      return token;
-    }
-}
 
 /*
  * Constant diff output separator strings
@@ -840,46 +799,39 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
         header_fmt = _("Modified: %s\n");
       SVN_ERR(svn_cmdline_printf(pool, header_fmt, pc->name));
 
-      /* Flush stdout before we open a stream to it below. */
-      SVN_ERR(svn_cmdline_fflush(stdout));
-
+      /* For now, we have a rather simple heuristic: if this is an
+         "svn:" property, then assume the value is UTF-8 and must
+         therefore be converted before printing.  Otherwise, just
+         print whatever's there and hope for the best.
+         ### We don't use svn_cmdline_printf here, since we don't know if the
+         values are UTF-8. */
       {
-        svn_stream_t *out;
-        svn_diff_t *diff;
-        svn_diff_file_options_t options;
-        const svn_string_t *tmp;
-        const svn_string_t *orig;
-        const svn_string_t *val;
+        svn_boolean_t val_to_utf8 = svn_prop_is_svn_prop(pc->name);
+        const char *printable_val;
 
-        SVN_ERR(svn_stream_for_stdout(&out, pool));
+        if (orig_value != NULL)
+          {
+            if (val_to_utf8)
+              SVN_ERR(svn_cmdline_cstring_from_utf8(&printable_val,
+                                                    orig_value->data, pool));
+            else
+              printable_val = orig_value->data;
+            printf("   - %s\n", printable_val);
+          }
 
-        /* The last character in a property is often not a newline.
-           Since the diff is not useful anyway for patching properties an
-           eol character is appended when needed to remove those pescious
-           ' \ No newline at end of file' lines. */
-        tmp = orig_value ? orig_value : svn_string_create("", pool);
-        orig = maybe_append_eol(tmp, pool);
-
-        tmp = pc->value ? pc->value :
-                                  svn_string_create("", pool);
-        val = maybe_append_eol(tmp, pool);
-
-        SVN_ERR(svn_diff_mem_string_diff(&diff, orig, val, &options, pool));
-
-        /* UNIX patch will try to apply a diff even if the diff header
-         * is missing. It tries to be helpful by asking the user for a
-         * target filename when it can't determine the target filename
-         * from the diff header. But there usually are no files which
-         * UNIX patch could apply the property diff to, so we use "##"
-         * instead of "@@" as the default hunk delimiter for property diffs.
-         * We also supress the diff header. */
-        SVN_ERR(svn_diff_mem_string_output_unified2(out, diff, FALSE, "##",
-                                           svn_dirent_local_style(path, pool),
-                                           svn_dirent_local_style(path, pool),
-                                           svn_cmdline_output_encoding(pool),
-                                           orig, val, pool));
+        if (pc->value != NULL)
+          {
+            if (val_to_utf8)
+              SVN_ERR(svn_cmdline_cstring_from_utf8
+                      (&printable_val, pc->value->data, pool));
+            else
+              printable_val = pc->value->data;
+            printf("   + %s\n", printable_val);
+          }
       }
     }
+
+  SVN_ERR(svn_cmdline_printf(pool, "\n"));
   return svn_cmdline_fflush(stdout);
 }
 
@@ -1090,9 +1042,9 @@ print_diff_tree(svn_fs_root_t *root,
 
   /* Make sure we delete any temporary files. */
   if (orig_path)
-    SVN_ERR(svn_io_remove_file2(orig_path, FALSE, pool));
+    SVN_ERR(svn_io_remove_file(orig_path, pool));
   if (new_path)
-    SVN_ERR(svn_io_remove_file2(new_path, FALSE, pool));
+    SVN_ERR(svn_io_remove_file(new_path, pool));
 
   /*** Now handle property diffs ***/
   if ((node->prop_mod) && (node->action != 'D'))
@@ -1125,16 +1077,16 @@ print_diff_tree(svn_fs_root_t *root,
   /* Recursively handle the node's children. */
   subpool = svn_pool_create(pool);
   SVN_ERR(print_diff_tree(root, base_root, node,
-                          svn_dirent_join(path, node->name, subpool),
-                          svn_dirent_join(base_path, node->name, subpool),
+                          svn_path_join(path, node->name, subpool),
+                          svn_path_join(base_path, node->name, subpool),
                           c, tmpdir, subpool));
   while (node->sibling)
     {
       svn_pool_clear(subpool);
       node = node->sibling;
       SVN_ERR(print_diff_tree(root, base_root, node,
-                              svn_dirent_join(path, node->name, subpool),
-                              svn_dirent_join(base_path, node->name, subpool),
+                              svn_path_join(path, node->name, subpool),
+                              svn_path_join(base_path, node->name, subpool),
                               c, tmpdir, subpool));
     }
   svn_pool_destroy(subpool);
@@ -1170,7 +1122,6 @@ print_tree(svn_fs_root_t *root,
   int i;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  const char* name;
 
   SVN_ERR(check_cancel(NULL));
 
@@ -1179,21 +1130,11 @@ print_tree(svn_fs_root_t *root,
     for (i = 0; i < indentation; i++)
       SVN_ERR(svn_cmdline_fputs(" ", stdout, pool));
 
-  /* ### The path format is inconsistent.. needs fix */
-  if (full_paths)
-    name = path;
-  else if (*path == '/')
-    name = svn_uri_basename(path, pool);
-  else
-    name = svn_relpath_basename(path, pool);
-
-  if (svn_path_is_empty(name))
-    name = "/"; /* basename of '/' is "" */
-
   /* Print the node. */
   SVN_ERR(svn_cmdline_printf(pool, "%s%s",
-                             name,
-                             is_dir && strcmp(name, "/") ? "/" : ""));
+                             full_paths ? path : svn_path_basename(path,
+                                                                   pool),
+                             is_dir && strcmp(path, "/") ? "/" : ""));
 
   if (show_ids)
     {
@@ -1218,13 +1159,13 @@ print_tree(svn_fs_root_t *root,
       subpool = svn_pool_create(pool);
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
-          svn_fs_dirent_t *entry = svn__apr_hash_index_val(hi);
+          void *val;
+          svn_fs_dirent_t *entry;
 
           svn_pool_clear(subpool);
-          SVN_ERR(print_tree(root,
-                             (*path == '/')
-                                 ? svn_uri_join(path, entry->name, pool)
-                                 : svn_relpath_join(path, entry->name, pool),
+          apr_hash_this(hi, NULL, NULL, &val);
+          entry = val;
+          SVN_ERR(print_tree(root, svn_path_join(path, entry->name, pool),
                              entry->id, (entry->kind == svn_node_dir),
                              indentation + 1, show_ids, full_paths,
                              recurse, subpool));
@@ -1390,27 +1331,6 @@ verify_path(svn_node_kind_t *kind,
 }
 
 
-/* Print the size (in bytes) of a file. */
-static svn_error_t *
-do_filesize(svnlook_ctxt_t *c, const char *path, apr_pool_t *pool)
-{
-  svn_fs_root_t *root;
-  svn_node_kind_t kind;
-  svn_filesize_t length;
-
-  SVN_ERR(get_root(&root, c, pool));
-  SVN_ERR(verify_path(&kind, root, path, pool));
-
-  if (kind != svn_node_file)
-    return svn_error_createf
-      (SVN_ERR_FS_NOT_FILE, NULL, _("Path '%s' is not a file"), path);
-
-  /* Else. */
-
-  SVN_ERR(svn_fs_file_length(&length, root, path, pool));
-  return svn_cmdline_printf(pool, "%" SVN_FILESIZE_T_FMT "\n", length);
-}
-
 /* Print the contents of the file at PATH in the repository.
    Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist, or with
    SVN_ERR_FS_NOT_FILE if PATH exists but is not a file. */
@@ -1420,6 +1340,8 @@ do_cat(svnlook_ctxt_t *c, const char *path, apr_pool_t *pool)
   svn_fs_root_t *root;
   svn_node_kind_t kind;
   svn_stream_t *fstream, *stdout_stream;
+  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
+  apr_size_t len = SVN__STREAM_CHUNK_SIZE;
 
   SVN_ERR(get_root(&root, c, pool));
   SVN_ERR(verify_path(&kind, root, path, pool));
@@ -1432,9 +1354,15 @@ do_cat(svnlook_ctxt_t *c, const char *path, apr_pool_t *pool)
 
   SVN_ERR(svn_fs_file_contents(&fstream, root, path, pool));
   SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
+  do
+    {
+      SVN_ERR(check_cancel(NULL));
+      SVN_ERR(svn_stream_read(fstream, buf, &len));
+      SVN_ERR(svn_stream_write(stdout_stream, buf, &len));
+    }
+  while (len == SVN__STREAM_CHUNK_SIZE);
 
-  return svn_stream_copy3(fstream, svn_stream_disown(stdout_stream, pool),
-                          check_cancel, NULL, pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -1729,10 +1657,16 @@ do_plist(svnlook_ctxt_t *c,
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *pname = svn__apr_hash_index_key(hi);
-      svn_string_t *propval = svn__apr_hash_index_val(hi);
+      const void *key;
+      void *val;
+      const char *pname;
+      svn_string_t *propval;
 
       SVN_ERR(check_cancel(NULL));
+
+      apr_hash_this(hi, &key, NULL, &val);
+      pname = key;
+      propval = val;
 
       /* Since we're already adding a trailing newline (and possible a
          colon and some spaces) anyway, just mimic the output of the
@@ -1752,11 +1686,12 @@ do_plist(svnlook_ctxt_t *c,
           else
             printf("  %s : %s\n", pname_stdout, propval->data);
         }
-      else if (xml)
-        svn_xml_make_open_tag(&sb, pool, svn_xml_self_closing, "property",
-                              "name", pname, NULL);
       else
-        printf("  %s\n", pname);
+        if (xml)
+          svn_xml_make_open_tag(&sb, pool, svn_xml_self_closing, "property",
+                                "name", pname, NULL);
+        else
+          printf("  %s\n", pname);
     }
   if (xml)
     {
@@ -1933,23 +1868,6 @@ subcommand_dirschanged(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_dirs_changed(c, pool));
-  return SVN_NO_ERROR;
-}
-
-/* This implements `svn_opt_subcommand_t'. */
-static svn_error_t *
-subcommand_filesize(apr_getopt_t *os, void *baton, apr_pool_t *pool)
-{
-  struct svnlook_opt_state *opt_state = baton;
-  svnlook_ctxt_t *c;
-
-  if (opt_state->arg1 == NULL)
-    return svn_error_createf
-      (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-       _("Missing repository path argument"));
-
-  SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
-  SVN_ERR(do_filesize(c, opt_state->arg1, pool));
   return SVN_NO_ERROR;
 }
 
@@ -2420,7 +2338,7 @@ main(int argc, const char *argv[])
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&repos_path,
                                               os->argv[os->ind++],
                                               pool));
-          repos_path = svn_dirent_internal_style(repos_path, pool);
+          repos_path = svn_path_internal_style(repos_path, pool);
         }
 
       if (repos_path == NULL)
@@ -2449,7 +2367,7 @@ main(int argc, const char *argv[])
         {
           SVN_INT_ERR(svn_utf_cstring_to_utf8
                       (&arg1, os->argv[os->ind++], pool));
-          arg1 = svn_dirent_internal_style(arg1, pool);
+          arg1 = svn_path_internal_style(arg1, pool);
         }
       opt_state.arg1 = arg1;
 
@@ -2458,7 +2376,7 @@ main(int argc, const char *argv[])
         {
           SVN_INT_ERR(svn_utf_cstring_to_utf8
                       (&arg2, os->argv[os->ind++], pool));
-          arg2 = svn_dirent_internal_style(arg2, pool);
+          arg2 = svn_path_internal_style(arg2, pool);
         }
       opt_state.arg2 = arg2;
     }

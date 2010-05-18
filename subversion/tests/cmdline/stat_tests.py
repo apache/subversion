@@ -3,32 +3,21 @@
 #  stat_tests.py:  testing the svn stat command
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 ######################################################################
 
 # General modules
-import os
-import re
-import time
-import datetime
+import os, re, time
 
 # Our testing module
 import svntest
@@ -605,6 +594,16 @@ def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
   if text_time != pre_text_time:
     raise svntest.Failure
 
+  # revert/cleanup change the text-time even though the text doesn't change
+  if cmd == 'cleanup':
+    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_dir)
+  else:
+    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_path)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  text_time = get_text_timestamp(wc_path)
+  if text_time == pre_text_time:
+    raise svntest.Failure
+
 
 # Is this really a status test?  I'm not sure, but I don't know where
 # else to put it.
@@ -636,9 +635,6 @@ def timestamp_behaviour(sbox):
   config_dir = os.path.join(os.path.abspath(svntest.main.temp_dir),
                             'use_commit_config')
   config_contents = '''\
-[auth]
-password-stores =
-
 [miscellany]
 use-commit-times = yes
 '''
@@ -657,52 +653,7 @@ use-commit-times = yes
       iota_text_timestamp[17:] != iota_last_changed[17:]):
     raise svntest.Failure
 
-  # remove iota, run an update to restore it, and check the times
-  os.remove(other_iota_path)
-  expected_output = svntest.wc.State(other_wc, {
-    'iota': Item(verb='Restored'),
-    })
-  expected_disk = svntest.main.greek_state.copy()
-  expected_status = svntest.actions.get_virginal_state(other_wc, 1)
-  svntest.actions.run_and_verify_update(other_wc, expected_output,
-                                        expected_disk, expected_status,
-                                        None, None, None, None, None, False,
-                                        other_wc, '--config-dir', config_dir)
-  iota_text_timestamp = get_text_timestamp(other_iota_path)
-  if (iota_text_timestamp[17] != ':' or
-      iota_text_timestamp[17:] != iota_last_changed[17:]):
-    raise svntest.Failure
-
-  iota_ts = iota_text_timestamp[19:44]
-
-  class TZ(datetime.tzinfo):
-    "A tzinfo to convert a time to iota's timezone."
-    def utcoffset(self, dt):
-      offset = (int(iota_ts[21:23]) * 60 + int(iota_ts[23:25]))
-      if iota_ts[20] == '-':
-        return datetime.timedelta(minutes=-offset)
-      return datetime.timedelta(minutes=offset)
-    def dst(self, dt):
-      return datetime.timedelta(0)
-
-  # get the timestamp on the file. whack any microseconds value, as svn
-  # doesn't record to that precision. we also use the TZ class to shift
-  # the timestamp into the same timezone as the expected timestamp.
-  mtime = datetime.datetime.fromtimestamp(os.path.getmtime(other_iota_path),
-                                          TZ()).replace(microsecond=0)
-  fmt = mtime.isoformat(' ')
-
-  # iota_ts looks like: 2009-04-13 14:30:57 +0200
-  #     fmt looks like: 2009-04-13 14:30:57+02:00
-  if (fmt[:19] != iota_ts[:19]
-      or fmt[19:22] != iota_ts[20:23]
-      or fmt[23:25] != iota_ts[23:25]):
-    # NOTE: the two strings below won't *exactly* match (see just above),
-    #   but the *numeric* portions of them should.
-    print("File timestamp on 'iota' does not match.")
-    print("  EXPECTED: %s" % iota_ts)
-    print("    ACTUAL: %s" % fmt)
-    raise svntest.Failure
+  ### FIXME: check the working file's timestamp as well
 
 #----------------------------------------------------------------------
 
@@ -922,11 +873,6 @@ def status_missing_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected, [],
                                      "status", "-u", wc_dir)
 
-  # Finally run an explicit status request directly on the missing directory.
-  svntest.actions.run_and_verify_svn(None,
-                                     ["!       " + a_d_g + "\n"],
-                                     [], "status", a_d_g)
-
 def status_add_plus_conflict(sbox):
   "status on conflicted added file"
   sbox.build()
@@ -981,8 +927,6 @@ def status_add_plus_conflict(sbox):
     "?       " + os.path.join(wc_dir, "trunk", "file.merge-right.r5") + "\n",
     "?       " + os.path.join(wc_dir, "trunk", "file.working") + "\n",
     "C  +    " + os.path.join(wc_dir, "trunk", "file") + "\n",
-    "Summary of conflicts:\n",
-    "  Text conflicts: 1\n",
   ]
   if svntest.main.server_has_mergeinfo():
     lines.append(" M      " + os.path.join(wc_dir, "trunk") + "\n")
@@ -1579,8 +1523,6 @@ def status_with_tree_conflicts(sbox):
           "      >   local edit, incoming delete upon update\n",
           "!     C %s\n" % tau,
           "      >   local delete, incoming delete upon update\n",
-          "Summary of conflicts:\n",
-          "  Tree conflicts: 3\n",
           ])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1597,8 +1539,6 @@ def status_with_tree_conflicts(sbox):
           "      >   local edit, incoming delete upon update\n",
           "!     C                                  %s\n" % tau,
           "      >   local delete, incoming delete upon update\n",
-          "Summary of conflicts:\n",
-          "  Tree conflicts: 3\n",
           ])
 
 

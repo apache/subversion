@@ -3,22 +3,17 @@
 # change-svn-wc-format.py: Change the format of a Subversion working copy.
 #
 # ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
+# Copyright (c) 2007-2008 CollabNet.  All rights reserved.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
+# This software consists of voluntary contributions made by many
+# individuals.  For exact contribution history, see the revision
+# history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
 import sys
@@ -36,8 +31,6 @@ except AttributeError:
 LATEST_FORMATS = { "1.4" : 8,
                    "1.5" : 9,
                    "1.6" : 10,
-                   # Do NOT add format 11 here.  See comment in must_retain_fields
-                   # for why.
                  }
 
 def usage_and_exit(error_msg=None):
@@ -111,7 +104,7 @@ class WCFormatConverter:
     else:
       if self.verbosity:
         print("Skipping file '%s'" % format.path)
-
+        
     if self.verbosity:
       print("Checking whether WC format can be converted")
     try:
@@ -132,8 +125,7 @@ class WCFormatConverter:
     """Walk all paths in a WC tree, and change their format to
     FORMAT_NBR.  Throw LossyConversionException or NotImplementedError
     if the WC format should not be converted, or is unrecognized."""
-    for dirpath, dirs, files in os.walk(self.root_path):
-      self.write_dir_format(format_nbr, dirpath, dirs + files)
+    os.path.walk(self.root_path, self.write_dir_format, format_nbr)
 
 class Entries:
   """Represents a .svn/entries file.
@@ -281,14 +273,7 @@ class Entry:
       8  : (30, 31, 33, 34, 35),
       # Not in 1.5: tree-conflicts, file-externals
       9  : (34, 35),
-      10 : (),
-      # Downgrading from format 11 (1.7-dev) to format 10 is not possible,
-      # because 11 does not use has-props and cachable-props (but 10 does).
-      # Naively downgrading in that situation causes properties to disappear
-      # from the wc.
-      #
-      # Downgrading from the 1.7 SQLite-based format to format 10 is not
-      # implemented.
+      10 : ()
       }
 
   def __init__(self):
@@ -360,8 +345,7 @@ class UnrecognizedWCFormatException(LocalException):
     self.format = format
     self.path = path
   def __str__(self):
-    return ("Unrecognized WC format %d in '%s'; "
-            "only formats 8, 9, and 10 can be supported") % (self.format, self.path)
+    return "Unrecognized WC format %d in '%s'" % (self.format, self.path)
 
 
 def main():
@@ -400,8 +384,7 @@ def main():
   try:
     new_format_nbr = LATEST_FORMATS[svn_version]
   except KeyError:
-    usage_and_exit("Unsupported version number '%s'; "
-                   "only 1.4, 1.5, and 1.6 can be supported" % svn_version)
+    usage_and_exit("Unsupported version number '%s'" % svn_version)
 
   try:
     converter.change_wc_format(new_format_nbr)

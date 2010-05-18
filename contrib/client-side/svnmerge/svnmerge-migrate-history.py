@@ -4,7 +4,7 @@
 #                              format to Subversion 1.5's format.
 #
 # ====================================================================
-# Copyright (c) 2007-2009 CollabNet.  All rights reserved.
+# Copyright (c) 2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -212,7 +212,7 @@ class Migrator:
       # natural history.  So, we also examine the natural history of
       # the merge sources, and use that as a filter for the explicit
       # mergeinfo we've calculated so far.
-      self.log("Filtering mergeinfo by reconstruction from source history ...")
+      self.log("Filtering mergeinfo by recontruction from source history ...")
       filtered_mergeinfo = {}
       for source_path, ranges in new_mergeinfo.items():
         ### If by some chance it is the case that /path:RANGE1 and
@@ -360,7 +360,7 @@ class Migrator:
     return mergeinfo
 
   def set_path_prefixes(self, prefixes):
-    "Decompose path prefixes into something meaningful for comparison."
+    "Decompose path prefixes into something meaningful for comparision."
     self.path_prefixes = []
     for prefix in prefixes:
       prefix_components = []

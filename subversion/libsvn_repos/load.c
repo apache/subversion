@@ -1,22 +1,17 @@
 /* load.c --- parsing a 'dumpfile'-formatted stream.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -55,21 +50,7 @@ struct parse_baton
   enum svn_repos_load_uuid uuid_action;
   const char *parent_dir;
   apr_pool_t *pool;
-
-  /* A hash mapping copy-from revisions and mergeinfo range revisions
-     (svn_revnum_t *) in the dump stream to their corresponding revisions
-     (svn_revnum_t *) in the loaded repository.  The hash and its
-     contents are allocated in POOL. */
   apr_hash_t *rev_map;
-
-  /* The most recent (youngest) revision from the dump stream mapped in
-     REV_MAP.  If no revisions have been mapped yet, this is set to
-     SVN_INVALID_REVNUM. */
-  svn_revnum_t last_rev_mapped;
-
-  /* The oldest old revision loaded from the dump stream.  If no revisions
-     have been loaded yet, this is set to SVN_INVALID_REVNUM. */
-  svn_revnum_t oldest_old_rev;
 };
 
 struct revision_baton
@@ -215,7 +196,7 @@ read_key_or_val(char **pbuf,
   SVN_ERR(svn_stream_read(stream, buf, &numread));
   *actual_length += numread;
   if (numread != len)
-    return svn_error_return(stream_ran_dry());
+    return stream_ran_dry();
   buf[len] = '\0';
 
   /* Suck up extra newline after key data */
@@ -223,9 +204,9 @@ read_key_or_val(char **pbuf,
   SVN_ERR(svn_stream_read(stream, &c, &numread));
   *actual_length += numread;
   if (numread != 1)
-    return svn_error_return(stream_ran_dry());
+    return stream_ran_dry();
   if (c != '\n')
-    return svn_error_return(stream_malformed());
+    return stream_malformed();
 
   *pbuf = buf;
   return SVN_NO_ERROR;
@@ -246,7 +227,7 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
 
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_orig->data, pool));
   prefixed_mergeinfo = apr_hash_make(pool);
-  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       const char *path, *merge_source;
@@ -257,7 +238,7 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
       /* The svn:mergeinfo property syntax demands absolute repository
          paths, so prepend a leading slash if PARENT_DIR lacks one.  */
       if (*parent_dir != '/')
-        path = svn_path_join_many(pool, "/", parent_dir,
+        path = svn_path_join_many(pool, "/", parent_dir, 
                                   merge_source + 1, NULL);
       else
         path = svn_path_join(parent_dir, merge_source + 1, pool);
@@ -283,7 +264,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
   apr_hash_index_t *hi;
 
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, initial_val->data, subpool));
-  for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const char *merge_source;
       apr_array_header_t *rangelist;
@@ -293,8 +274,8 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
       void *val;
 
       apr_hash_this(hi, &key, NULL, &val);
-      merge_source = key;
-      rangelist = val;
+      merge_source = (const char *) key;
+      rangelist = (apr_array_header_t *) val;
 
       /* Possibly renumber revisions in merge source's rangelist. */
       for (i = 0; i < rangelist->nelts; i++)
@@ -305,60 +286,18 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
           rev_from_map = apr_hash_get(pb->rev_map, &range->start,
                                       sizeof(svn_revnum_t));
           if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
-            {
               range->start = *rev_from_map;
-            }
-          else if (range->start == pb->oldest_old_rev - 1)
-            {
-              /* Since the start revision of svn_merge_range_t are not
-                 inclusive there is one possible valid start revision that
-                 won't be found in the PB->REV_MAP mapping of load stream
-                 revsions to loaded revisions: The revision immediately
-                 preceeding the oldest revision from the load stream.
-                 This is a valid revision for mergeinfo, but not a valid
-                 copy from revision (which PB->REV_MAP also maps for) so it
-                 will never be in the mapping.
-
-                 If that is what we have here, then find the mapping for the
-                 oldest rev from the load stream and subtract 1 to get the
-                 renumbered, non-inclusive, start revision. */
-              rev_from_map = apr_hash_get(pb->rev_map, &pb->oldest_old_rev,
-                                          sizeof(svn_revnum_t));
-              if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
-                range->start = *rev_from_map - 1;
-            }
-          else
-            {
-              /* If we can't remap the start revision then don't even bother
-                 trying to remap the end revision.  It's possible we might
-                 actually succeed at the latter, which can result in invalid
-                 mergeinfo with a start rev > end rev.  If that gets into the
-                 repository then a world of bustage breaks loose anytime that
-                 bogus mergeinfo is parsed.  See
-                 http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16.
-                 */
-              continue;
-            }
 
           rev_from_map = apr_hash_get(pb->rev_map, &range->end,
                                       sizeof(svn_revnum_t));
           if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
-            range->end = *rev_from_map;
-        }
-      apr_hash_set(final_mergeinfo, merge_source,
-                   APR_HASH_KEY_STRING, rangelist);
-    }
+              range->end = *rev_from_map;
+         }
+       apr_hash_set(final_mergeinfo, merge_source,
+                    APR_HASH_KEY_STRING, rangelist);
+     }
+
   SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
-
-  /* Mergeinfo revision sources for r0 and r1 are invalid; you can't merge r0
-     or r1.  However, svndumpfilter can be abused to produce r1 merge source
-     revs.  So if we encounter any, then strip them out, no need to put them
-     into the load target. */
-  SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(&final_mergeinfo,
-                                                    final_mergeinfo,
-                                                    1, 0, FALSE,
-                                                    subpool, subpool));
-
   SVN_ERR(svn_mergeinfo_to_string(final_val, final_mergeinfo, pool));
   svn_pool_destroy(subpool);
 
@@ -968,7 +907,7 @@ make_node_baton(apr_hash_t *headers,
   if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
                           APR_HASH_KEY_STRING)))
     {
-      nb->copyfrom_rev = SVN_STR_TO_REV(val);
+      nb->copyfrom_rev = (svn_revnum_t) atoi(val);
     }
   if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
                           APR_HASH_KEY_STRING)))
@@ -1042,7 +981,7 @@ new_revision_record(void **revision_baton,
      several separate operations. It is highly susceptible to race conditions.
      Calculate the revision 'offset' for finding copyfrom sources.
      It might be positive or negative. */
-  rb->rev_offset = (apr_int32_t) (rb->rev) - (head_rev + 1);
+  rb->rev_offset = (rb->rev) - (head_rev + 1);
 
   if (rb->rev > 0)
     {
@@ -1111,11 +1050,10 @@ maybe_add_with_history(struct node_baton *nb,
             return svn_error_createf
               (SVN_ERR_CHECKSUM_MISMATCH,
                NULL,
-               apr_psprintf(pool, "%s:\n%s\n%s\n",
-                            _("Copy source checksum mismatch on copy from '%s'@%ld\n"
-                              "to '%s' in rev based on r%ld"),
-                            _("   expected:  %s"),
-                            _("     actual:  %s")),
+               _("Copy source checksum mismatch on copy from '%s'@%ld\n"
+                 " to '%s' in rev based on r%ld:\n"
+                 "   expected:  %s\n"
+                 "     actual:  %s\n"),
                nb->copyfrom_path, src_rev,
                nb->path, rb->rev,
                svn_checksum_to_cstring_display(nb->copy_source_checksum, pool),
@@ -1397,7 +1335,7 @@ close_revision(void *baton)
       if (err)
         {
           svn_error_clear(svn_fs_abort_txn(rb->txn, rb->pool));
-          return svn_error_return(err);
+          return err;
         }
     }
 
@@ -1408,12 +1346,8 @@ close_revision(void *baton)
       if (conflict_msg)
         return svn_error_quick_wrap(err, conflict_msg);
       else
-        return svn_error_return(err);
+        return err;
     }
-
-  /* Stash the oldest "old" revision committed from the load stream. */
-  if (!SVN_IS_VALID_REVNUM(pb->oldest_old_rev))
-    pb->oldest_old_rev = *old_rev;
 
   /* Run post-commit hook, if so commanded.  */
   if (pb->use_post_commit_hook)
@@ -1428,31 +1362,6 @@ close_revision(void *baton)
      mapping, so that copyfrom instructions in the dump file can look up the
      correct repository revision to copy from. */
   apr_hash_set(pb->rev_map, old_rev, sizeof(svn_revnum_t), new_rev);
-
-  /* If the incoming dump stream has non-contiguous revisions (e.g. from
-     using svndumpfilter --drop-empty-revs without --renumber-revs) then
-     we must account for the missing gaps in PB->REV_MAP.  Otherwise we
-     might not be able to map all mergeinfo source revisions to the correct
-     revisions in the target repos. */
-  if (pb->last_rev_mapped != SVN_INVALID_REVNUM
-      && *old_rev != pb->last_rev_mapped + 1)
-    {
-      int i;
-
-      /* Map all dropped revisions between PB->LAST_REV_MAPPED and OLD_REV. */
-      for (i = pb->last_rev_mapped + 1; i < *old_rev; i++)
-        {
-          svn_revnum_t *gap_rev_old = apr_palloc(pb->pool,
-                                                 sizeof(*gap_rev_old));
-          svn_revnum_t *gap_rev_new = apr_palloc(pb->pool,
-                                                 sizeof(*gap_rev_new));
-          *gap_rev_old = i;
-          *gap_rev_new = pb->last_rev_mapped;
-          apr_hash_set(pb->rev_map, gap_rev_old, sizeof(svn_revnum_t),
-                       gap_rev_new);
-        }
-    }
-  pb->last_rev_mapped = *old_rev;
 
   /* Deltify the predecessors of paths changed in this revision. */
   SVN_ERR(svn_fs_deltify_revision(pb->fs, *new_rev, rb->pool));
@@ -1521,8 +1430,6 @@ svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **callbacks,
   pb->parent_dir = parent_dir;
   pb->pool = pool;
   pb->rev_map = apr_hash_make(pool);
-  pb->oldest_old_rev = SVN_INVALID_REVNUM;
-  pb->last_rev_mapped = SVN_INVALID_REVNUM;
 
   *callbacks = parser;
   *parse_baton = pb;

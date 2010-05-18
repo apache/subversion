@@ -1,22 +1,17 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  *
@@ -107,15 +102,6 @@ svn_prop_hash_dup(apr_hash_t *hash,
                   apr_pool_t *pool);
 
 /**
- * Return the value of property @a prop_name as it is in @a properties,
- * with values <tt>const svn_string_t</tt>. If @a prop_name is not
- * in @a properties or @ properties is NULL, return NULL.
- */
-const char *
-svn_prop_get_value(apr_hash_t *properties,
-                   const char *prop_name);
-
-/**
  * Subversion distinguishes among several kinds of properties,
  * particularly on the client-side.  There is no "unknown" kind; if
  * there's nothing special about a property name, the default category
@@ -189,6 +175,11 @@ svn_prop_needs_translation(const char *prop_name);
  * are uninterested.  If no props exist in a certain category, and the
  * property list argument for that category is non-NULL, then that
  * array will come back with <tt>->nelts == 0</tt>.
+ *
+ * ### Hmmm, maybe a better future interface is to return an array of
+ *     arrays, where the index into the array represents the index
+ *     into @c svn_prop_kind_t.  That way we can add more prop kinds
+ *     in the future without changing this interface...
  */
 svn_error_t *
 svn_categorize_props(const apr_array_header_t *proplist,
@@ -344,10 +335,15 @@ svn_prop_name_is_valid(const char *prop_name);
 
 /** Meta-data properties.
  *
+ * ====================================================================
+ * They are documented here to avoid name reuse in other branches;
+ * the "plain" subversion doesn't use them (yet?).
+ * ====================================================================
+ *
  * The following properties are used for storing meta-data about
  * individual entries in the meta-data branches of subversion,
  * see issue #1256 or browseable at
- * http://svn.apache.org/viewvc/subversion/branches/meta-data-versioning/ .
+ * http://svn.collab.net/viewvc/svn/branches/meta-data-versioning/ .
  * Furthermore @c svntar (http://svn.borg.ch/svntar/) and @c FSVS
  * (http://fsvs.tigris.org/) use these, too.
  *
@@ -393,12 +389,12 @@ svn_prop_name_is_valid(const char *prop_name);
 
 /** The property name *prefix* that makes a property a "WC property".
  *
- * For example, WebDAV RA implementations might store a versioned-resource
- * url as a WC prop like this:
+ * For example, WebDAV RA implementations might store a versioned-resource url as a WC
+ * prop like this:
  *
  * @verbatim
       name = svn:wc:dav_url
-      val  = http://www.example.com/repos/452348/e.289 @endverbatim
+      val  = http://www.lyra.org/repos/452348/e.289 @endverbatim
  *
  * The client will try to protect WC props by warning users against
  * changing them.  The client will also send them back to the RA layer

@@ -3,22 +3,17 @@
  *             or transaction
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -298,8 +293,7 @@ add_subdir(svn_fs_root_t *source_root,
 }
 
 static svn_boolean_t
-is_within_base_path(const char *path, const char *base_path,
-                    apr_ssize_t base_len)
+is_within_base_path(const char *path, const char *base_path, int base_len)
 {
   if (base_path[0] == '\0')
     return TRUE;
@@ -337,10 +331,10 @@ path_driver_cb_func(void **dir_baton,
 
   /* First, flush the copies stack so it only contains ancestors of path. */
   while (cb->copies->nelts > 0
-         && ! svn_dirent_is_ancestor(APR_ARRAY_IDX(cb->copies,
-                                                   cb->copies->nelts - 1,
-                                                   struct copy_info).path,
-                                     path))
+         && ! svn_path_is_ancestor(APR_ARRAY_IDX(cb->copies,
+                                               cb->copies->nelts - 1,
+                                               struct copy_info).path,
+                                 path))
     cb->copies->nelts--;
 
   change = apr_hash_get(cb->changed_paths, path, APR_HASH_KEY_STRING);
@@ -668,15 +662,7 @@ svn_repos_replay2(svn_fs_root_t *root,
   apr_hash_index_t *hi;
   apr_array_header_t *paths;
   struct path_driver_cb_baton cb_baton;
-  size_t base_path_len;
-
-  /* Special-case r0, which we know is an empty revision; if we don't
-     special-case it we might end up trying to compare it to "r-1". */
-  if (svn_fs_is_revision_root(root) && svn_fs_revision_root_revision(root) == 0)
-    {
-      SVN_ERR(editor->set_target_revision(edit_baton, 0, pool));
-      return SVN_NO_ERROR;
-    }
+  int base_path_len;
 
   /* Fetch the paths changed under ROOT. */
   SVN_ERR(svn_fs_paths_changed2(&fs_changes, root, pool));

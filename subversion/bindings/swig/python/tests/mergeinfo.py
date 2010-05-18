@@ -1,23 +1,3 @@
-#
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
 import unittest, os
 
 from sys import version_info # For Python version check
@@ -32,6 +12,7 @@ else:
     from StringIO import StringIO
 
 from svn import core, repos, fs
+from svn.core import SubversionException
 
 from trac.versioncontrol.tests.svn_fs import REPOS_PATH
 
@@ -59,7 +40,7 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
        tests 16.  If it needs to be updated (mergeinfo format changes, for
        example), we can go there to get a new version."""
     dumpfile = open(os.path.join(os.path.split(__file__)[0],
-                                 'data', 'mergeinfo.dump'), 'rb')
+                                 'data', 'mergeinfo.dump'))
     # Remove any existing repository to ensure a fresh start
     self.tearDown()
     self.repos = repos.svn_repos_create(REPOS_PATH, '', '', None, None)
@@ -70,8 +51,6 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     self.rev = fs.youngest_rev(self.fs)
 
   def tearDown(self):
-    self.fs = None
-    self.repos = None
     if os.path.exists(REPOS_PATH):
       repos.delete(REPOS_PATH)
 
@@ -100,13 +79,13 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
   def test_rangelist_reverse(self):
     mergeinfo = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
     rangelist = mergeinfo.get(self.MERGEINFO_SRC)
-    reversed_rl = core.svn_rangelist_reverse(rangelist)
+    reversed = core.svn_rangelist_reverse(rangelist)
     expected_ranges = ((42, 41), (27, 26), (9, 2))
-    for i in range(0, len(reversed_rl)):
-      self.assertEquals(reversed_rl[i].start, expected_ranges[i][0],
-                        "Unexpected range start: %d" % reversed_rl[i].start)
-      self.assertEquals(reversed_rl[i].end, expected_ranges[i][1],
-                        "Unexpected range end: %d" % reversed_rl[i].end)
+    for i in range(0, len(reversed)):
+      self.assertEquals(reversed[i].start, expected_ranges[i][0],
+                        "Unexpected range start: %d" % reversed[i].start)
+      self.assertEquals(reversed[i].end, expected_ranges[i][1],
+                        "Unexpected range end: %d" % reversed[i].end)
 
   def test_mergeinfo_sort(self):
     mergeinfo = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)

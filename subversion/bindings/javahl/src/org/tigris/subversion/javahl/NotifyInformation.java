@@ -1,22 +1,17 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2003-2005,2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  */
@@ -146,25 +141,6 @@ public class NotifyInformation extends EventObject
     }
 
     /**
-     * A backward-compat callback.
-     */
-    public NotifyInformation(
-                        org.apache.subversion.javahl.NotifyInformation aInfo)
-    {
-        this(aInfo.getPath(),
-             fromAAction(aInfo.getAction()),
-             NodeKind.fromApache(aInfo.getKind()), aInfo.getMimeType(),
-             aInfo.getLock() == null ? null : new Lock(aInfo.getLock()),
-             aInfo.getErrMsg(), fromAStatus(aInfo.getContentState()),
-             fromAStatus(aInfo.getPropState()),
-             aInfo.getLockState().ordinal(), aInfo.getRevision(),
-             aInfo.getChangelistName(),
-             aInfo.getMergeRange() == null ? null
-                : new RevisionRange(aInfo.getMergeRange()),
-             aInfo.getPathPrefix());
-    }
-
-    /**
      * @return The path of the item, which is the source of the event.
      */
     public String getPath()
@@ -269,46 +245,5 @@ public class NotifyInformation extends EventObject
     public String getPathPrefix()
     {
         return pathPrefix;
-    }
-
-    private static int
-    fromAStatus(org.apache.subversion.javahl.NotifyInformation.Status aStatus)
-    {
-        switch(aStatus)
-        {
-        default:
-        case inapplicable:
-            return NotifyStatus.inapplicable;
-        case unknown:
-            return NotifyStatus.unknown;
-        case unchanged:
-            return NotifyStatus.unchanged;
-        case missing:
-            return NotifyStatus.missing;
-        case obstructed:
-            return NotifyStatus.obstructed;
-        case changed:
-            return NotifyStatus.changed;
-        case merged:
-            return NotifyStatus.merged;
-        case conflicted:
-            return NotifyStatus.conflicted;
-        }
-    }
-
-    private static int
-    fromAAction(org.apache.subversion.javahl.NotifyInformation.Action aAction)
-    {
-        if (aAction == null)
-            return -1;
-
-        int order = aAction.ordinal();
-
-        /* The new class adds an item after changelist_clear, so adjust
-           accordingly. */
-        if (order < NotifyAction.changelist_clear)
-            return order;
-        else
-            return order - 1;
     }
 }

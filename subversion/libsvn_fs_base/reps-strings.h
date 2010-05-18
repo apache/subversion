@@ -1,22 +1,17 @@
 /* reps-strings.h : interpreting representations with respect to strings
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004, 2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -38,14 +33,14 @@ extern "C" {
 
 
 
-/* Get or create a mutable representation in FS, and set *NEW_REP_KEY to its
-   key.
+/* Get or create a mutable representation in FS, store the new rep's
+   key in *NEW_REP_KEY.
 
    TXN_ID is the id of the Subversion transaction under which this occurs.
 
-   If REP_KEY is not null and is already a mutable representation, set
-   *NEW_REP_KEY to REP_KEY, else create a brand new rep and set *NEW_REP_KEY
-   to its key, allocated in POOL. */
+   If REP_KEY is already a mutable representation, set *NEW_REP_KEY to
+   REP_KEY, else set *NEW_REP_KEY to a brand new rep key allocated in
+   POOL. */
 svn_error_t *svn_fs_base__get_mutable_rep(const char **new_rep_key,
                                           const char *rep_key,
                                           svn_fs_t *fs,
@@ -168,18 +163,6 @@ svn_error_t *svn_fs_base__rep_deltify(svn_fs_t *fs,
                                       trail_t *trail,
                                       apr_pool_t *pool);
 
-/* Obliterate KEY's data by creating a new rep that consists of a
-   no-change delta from PRED_KEY's data.  If PRED_KEY is null then
-   construct an empty fulltext instead of a delta.  KEY's old data
-   remains in the database in case some other key's data is derived
-   from it. */
-/* ### TODO: clarify.  What kind of objects are KEY and PRED_KEY, and what
-   does it do with the new rep? */
-svn_error_t *svn_fs_base__rep_obliterate(svn_fs_t *fs,
-                                         const char *key,
-                                         const char *pred_key,
-                                         trail_t *trail,
-                                         apr_pool_t *pool);
 
 
 #ifdef __cplusplus

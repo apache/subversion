@@ -2,22 +2,17 @@
  * win32_auth_sspi.c : authn implementation through SSPI
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -77,19 +72,11 @@ static svn_atomic_t sspi_initialized = 0;
 static PSecurityFunctionTable sspi = NULL;
 static unsigned int ntlm_maxtokensize = 0;
 
-/* Forward declare. ### a future rev should just move the func.  */
-static svn_error_t *
-sspi_get_credentials(char *token, apr_size_t token_len,
-                     const char **buf, apr_size_t *buf_len,
-                     serf_sspi_context_t *sspi_ctx,
-                     apr_pool_t *scratch_pool);
-
-
 /* Loads the SSPI function table we can use to call SSPI's public functions.
  * Accepted by svn_atomic__init_once()
  */
 static svn_error_t *
-initialize_sspi(void *baton, apr_pool_t* pool)
+initialize_sspi(apr_pool_t* pool)
 {
   sspi = InitSecurityInterface();
 
@@ -103,15 +90,12 @@ initialize_sspi(void *baton, apr_pool_t* pool)
 
 /* Calculates the maximum token size based on the authentication protocol. */
 static svn_error_t *
-sspi_maxtokensize(const char *auth_pkg,
-                  unsigned int *maxtokensize,
-                  apr_pool_t *scratch_pool)
+sspi_maxtokensize(char *auth_pkg, unsigned int *maxtokensize)
 {
   SECURITY_STATUS status;
   SecPkgInfo *sec_pkg_info = NULL;
-  SEC_CHAR *package_name = apr_pstrdup(scratch_pool, auth_pkg);
 
-  status = sspi->QuerySecurityPackageInfo(package_name,
+  status = sspi->QuerySecurityPackageInfo(auth_pkg,
                                           &sec_pkg_info);
   if (status == SEC_E_OK)
     {
@@ -127,25 +111,24 @@ sspi_maxtokensize(const char *auth_pkg,
 }
 
 svn_error_t *
-svn_ra_serf__init_sspi_connection(svn_ra_serf__session_t *session,
-                                  svn_ra_serf__connection_t *conn,
-                                  apr_pool_t *pool)
+init_sspi_connection(svn_ra_serf__session_t *session,
+                     svn_ra_serf__connection_t *conn,
+                     apr_pool_t *pool)
 {
   const char *tmp;
   apr_size_t tmp_len;
-  serf_sspi_context_t *sspi_context;
 
-  SVN_ERR(svn_atomic__init_once(&sspi_initialized,
-                                initialize_sspi, NULL, pool));
+  SVN_ERR(svn_atomic__init_once(&sspi_initialized, initialize_sspi, pool));
 
-  sspi_context = apr_palloc(pool, sizeof(*sspi_context));
-  sspi_context->ctx.dwLower = 0;
-  sspi_context->ctx.dwUpper = 0;
-  sspi_context->state = sspi_auth_not_started;
-  conn->auth_context = sspi_context;
+  conn->sspi_context = (serf_sspi_context_t*)
+    apr_palloc(pool, sizeof(serf_sspi_context_t));
+  conn->sspi_context->ctx.dwLower = 0;
+  conn->sspi_context->ctx.dwUpper = 0;
+  conn->sspi_context->state = sspi_auth_not_started;
 
   /* Setup the initial request to the server with an SSPI header */
-  SVN_ERR(sspi_get_credentials(NULL, 0, &tmp, &tmp_len, sspi_context, pool));
+  SVN_ERR(sspi_get_credentials(NULL, 0, &tmp, &tmp_len,
+                               conn->sspi_context));
   svn_ra_serf__encode_auth_header("NTLM", &conn->auth_value, tmp, tmp_len,
                                   pool);
   conn->auth_header = "Authorization";
@@ -156,26 +139,22 @@ svn_ra_serf__init_sspi_connection(svn_ra_serf__session_t *session,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-do_auth(serf_sspi_context_t *sspi_context,
-        svn_ra_serf__connection_t *conn,
-        const char *auth_name,
-        const char **auth_value,
-        const char *auth_attr,
-        const char **auth_header,
-        const char *auth_header_value,
-        apr_pool_t *pool)
+svn_error_t *
+handle_sspi_auth(svn_ra_serf__session_t *session,
+                 svn_ra_serf__connection_t *conn,
+                 serf_request_t *request,
+                 serf_bucket_t *response,
+                 char *auth_hdr,
+                 char *auth_attr,
+                 apr_pool_t *pool)
 {
   const char *tmp;
-  char *token = NULL;
+  char *base64_token, *token = NULL, *last;
   apr_size_t tmp_len, token_len = 0;
-  const char *space;
 
-  space = strchr(auth_attr, ' ');
-  if (space)
+  base64_token = apr_strtok(auth_attr, " ", &last);
+  if (base64_token)
     {
-      const char *base64_token = apr_pstrmemdup(pool,
-                                                auth_attr, space - auth_attr);
       token_len = apr_base64_decode_len(base64_token);
       token = apr_palloc(pool, token_len);
       apr_base64_decode(token, base64_token);
@@ -184,47 +163,27 @@ do_auth(serf_sspi_context_t *sspi_context,
   /* We can get a whole batch of 401 responses from the server, but we should
      only start the authentication phase once, so if we started authentication
      ignore all responses with initial NTLM authentication header. */
-  if (!token && sspi_context->state != sspi_auth_not_started)
+  if (!token && conn->sspi_context->state != sspi_auth_not_started)
     return SVN_NO_ERROR;
 
   SVN_ERR(sspi_get_credentials(token, token_len, &tmp, &tmp_len,
-                               sspi_context, pool));
+                               conn->sspi_context));
 
-  svn_ra_serf__encode_auth_header(auth_name, auth_value, tmp, tmp_len, pool);
-  *auth_header = auth_header_value;
+  svn_ra_serf__encode_auth_header(session->auth_protocol->auth_name,
+                                  &conn->auth_value, tmp, tmp_len, pool);
+  conn->auth_header = "Authorization";
 
   /* If the handshake is finished tell serf it can send as much requests as it
      likes. */
-  if (sspi_context->state == sspi_auth_completed)
+  if (conn->sspi_context->state == sspi_auth_completed)
     serf_connection_set_max_outstanding_requests(conn->conn, 0);
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_ra_serf__handle_sspi_auth(svn_ra_serf__handler_t *ctx,
-                              serf_request_t *request,
-                              serf_bucket_t *response,
-                              const char *auth_hdr,
-                              const char *auth_attr,
-                              apr_pool_t *pool)
-{
-  /* ### the name is stored in the session, but auth context in connection?  */
-  return do_auth(ctx->conn->auth_context,
-                 ctx->conn,
-                 ctx->session->auth_protocol->auth_name,
-                 &ctx->conn->auth_value,
-                 auth_attr,
-                 &ctx->conn->auth_header,
-                 "Authorization",
-                 pool);
-}
-
-svn_error_t *
-svn_ra_serf__setup_request_sspi_auth(svn_ra_serf__connection_t *conn,
-                                     const char *method,
-                                     const char *uri,
-                                     serf_bucket_t *hdrs_bkt)
+setup_request_sspi_auth(svn_ra_serf__connection_t *conn,
+                        serf_bucket_t *hdrs_bkt)
 {
   /* Take the default authentication header for this connection, if any. */
   if (conn->auth_header && conn->auth_value)
@@ -237,15 +196,9 @@ svn_ra_serf__setup_request_sspi_auth(svn_ra_serf__connection_t *conn,
   return SVN_NO_ERROR;
 }
 
-/* Provides the necessary information for the http authentication headers
-   for both the initial request to open an authentication connection, as
-   the response to the server's authentication challenge.
- */
-static svn_error_t *
-sspi_get_credentials(char *token, apr_size_t token_len,
-                     const char **buf, apr_size_t *buf_len,
-                     serf_sspi_context_t *sspi_ctx,
-                     apr_pool_t *scratch_pool)
+svn_error_t *
+sspi_get_credentials(char *token, apr_size_t token_len, const char **buf,
+                     apr_size_t *buf_len, serf_sspi_context_t *sspi_ctx)
 {
   SecBuffer in_buf, out_buf;
   SecBufferDesc in_buf_desc, out_buf_desc;
@@ -257,8 +210,7 @@ sspi_get_credentials(char *token, apr_size_t token_len,
   CtxtHandle *ctx = &(sspi_ctx->ctx);
 
   if (ntlm_maxtokensize == 0)
-    sspi_maxtokensize("NTLM", &ntlm_maxtokensize, scratch_pool);
-
+    sspi_maxtokensize("NTLM", &ntlm_maxtokensize);
   /* Prepare inbound buffer. */
   in_buf.BufferType = SECBUFFER_TOKEN;
   in_buf.cbBuffer   = token_len;
@@ -341,25 +293,24 @@ sspi_get_credentials(char *token, apr_size_t token_len,
 /* Proxy authentication */
 
 svn_error_t *
-svn_ra_serf__init_proxy_sspi_connection(svn_ra_serf__session_t *session,
-                                        svn_ra_serf__connection_t *conn,
-                                        apr_pool_t *pool)
+init_proxy_sspi_connection(svn_ra_serf__session_t *session,
+                           svn_ra_serf__connection_t *conn,
+                           apr_pool_t *pool)
 {
   const char *tmp;
   apr_size_t tmp_len;
-  serf_sspi_context_t *sspi_context;
 
-  SVN_ERR(svn_atomic__init_once(&sspi_initialized,
-                                initialize_sspi, NULL, pool));
+  SVN_ERR(svn_atomic__init_once(&sspi_initialized, initialize_sspi, pool));
 
-  sspi_context = apr_palloc(pool, sizeof(*sspi_context));
-  sspi_context->ctx.dwLower = 0;
-  sspi_context->ctx.dwUpper = 0;
-  sspi_context->state = sspi_auth_not_started;
-  conn->proxy_auth_context = sspi_context;
+  conn->proxy_sspi_context = (serf_sspi_context_t*)
+    apr_palloc(pool, sizeof(serf_sspi_context_t));
+  conn->proxy_sspi_context->ctx.dwLower = 0;
+  conn->proxy_sspi_context->ctx.dwUpper = 0;
+  conn->proxy_sspi_context->state = sspi_auth_not_started;
 
   /* Setup the initial request to the server with an SSPI header */
-  SVN_ERR(sspi_get_credentials(NULL, 0, &tmp, &tmp_len, sspi_context, pool));
+  SVN_ERR(sspi_get_credentials(NULL, 0, &tmp, &tmp_len,
+                               conn->proxy_sspi_context));
   svn_ra_serf__encode_auth_header("NTLM", &conn->proxy_auth_value, tmp,
                                   tmp_len,
                                   pool);
@@ -372,29 +323,50 @@ svn_ra_serf__init_proxy_sspi_connection(svn_ra_serf__session_t *session,
 }
 
 svn_error_t *
-svn_ra_serf__handle_proxy_sspi_auth(svn_ra_serf__handler_t *ctx,
-                                    serf_request_t *request,
-                                    serf_bucket_t *response,
-                                    const char *auth_hdr,
-                                    const char *auth_attr,
-                                    apr_pool_t *pool)
+handle_proxy_sspi_auth(svn_ra_serf__session_t *session,
+                       svn_ra_serf__connection_t *conn,
+                       serf_request_t *request,
+                       serf_bucket_t *response,
+                       char *auth_hdr,
+                       char *auth_attr,
+                       apr_pool_t *pool)
 {
-  /* ### the name is stored in the session, but auth context in connection?  */
-  return do_auth(ctx->conn->proxy_auth_context,
-                 ctx->conn,
-                 ctx->session->proxy_auth_protocol->auth_name,
-                 &ctx->conn->proxy_auth_value,
-                 auth_attr,
-                 &ctx->conn->proxy_auth_header,
-                 "Proxy-Authorization",
-                 pool);
+  const char *tmp;
+  char *base64_token, *token = NULL, *last;
+  apr_size_t tmp_len, token_len = 0;
+
+  base64_token = apr_strtok(auth_attr, " ", &last);
+  if (base64_token)
+    {
+      token_len = apr_base64_decode_len(base64_token);
+      token = apr_palloc(pool, token_len);
+      apr_base64_decode(token, base64_token);
+    }
+
+  /* We can get a whole batch of 401 responses from the server, but we should
+     only start the authentication phase once, so if we started authentication
+     ignore all responses with initial NTLM authentication header. */
+  if (!token && conn->proxy_sspi_context->state != sspi_auth_not_started)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(sspi_get_credentials(token, token_len, &tmp, &tmp_len,
+                               conn->proxy_sspi_context));
+
+  svn_ra_serf__encode_auth_header(session->proxy_auth_protocol->auth_name,
+                                  &conn->proxy_auth_value, tmp, tmp_len, pool);
+  conn->proxy_auth_header = "Proxy-Authorization";
+
+  /* If the handshake is finished tell serf it can send as much requests as it
+     likes. */
+  if (conn->proxy_sspi_context->state == sspi_auth_completed)
+    serf_connection_set_max_outstanding_requests(conn->conn, 0);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_ra_serf__setup_request_proxy_sspi_auth(svn_ra_serf__connection_t *conn,
-                                           const char *method,
-                                           const char *uri,
-                                           serf_bucket_t *hdrs_bkt)
+setup_request_proxy_sspi_auth(svn_ra_serf__connection_t *conn,
+                              serf_bucket_t *hdrs_bkt)
 {
   /* Take the default authentication header for this connection, if any. */
   if (conn->proxy_auth_header && conn->proxy_auth_value)

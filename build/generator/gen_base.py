@@ -1,24 +1,4 @@
 #
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
-#
 # gen_base.py -- infrastructure for generating makefiles, dependencies, etc.
 #
 
@@ -210,14 +190,6 @@ class GeneratorBase:
         for include_file in include_deps.query(native_path(source.filename)):
           self.graph.add(DT_OBJECT, objectfile, build_path(include_file))
 
-  def write_sqlite_headers(self):
-    "Transform sql files into header files"
-
-    import transform_sql
-    for hdrfile, sqlfile in self.graph.get_deps(DT_SQLHDR):
-      assert len(sqlfile) == 1
-      transform_sql.main(sqlfile[0], open(hdrfile, 'w'))
-
 
 class DependencyGraph:
   """Record dependencies between build items.
@@ -270,7 +242,6 @@ dep_types = [
   'DT_SWIG_C',   # a swig-generated .c file, depending upon .i filename(s)
   'DT_LINK',     # a libtool-linked filename, depending upon object fnames
   'DT_NONLIB',   # filename depends on object fnames, but isn't linked to them
-  'DT_SQLHDR',   # header generated from a .sql file
   ]
 
 # create some variables for these
@@ -314,7 +285,7 @@ class SourceFile(DependencyNode):
 class SWIGSource(SourceFile):
   def __init__(self, filename):
     SourceFile.__init__(self, filename, build_path_dirname(filename))
-
+  pass
 
 lang_abbrev = {
   'python' : 'py',
@@ -563,7 +534,7 @@ class TargetSWIG(TargetLib):
 
     assert iname[-2:] == '.i'
     cname = iname[:-2] + '.c'
-    oname = iname[:-2] + self.gen_obj._extension_map['pyd', 'object']
+    oname = iname[:-2] + self.gen_obj._extension_map['lib', 'object']
 
     # Extract SWIG module name from .i file name
     module_name = iname[:4] != 'svn_' and iname[:-2] or iname[4:-2]
@@ -574,7 +545,6 @@ class TargetSWIG(TargetLib):
     elif self.lang == "perl":
       lib_filename = '_' + module_name.capitalize() + lib_extension
     else:
-      lib_extension = self.gen_obj._extension_map['pyd', 'target']
       lib_filename = '_' + module_name + lib_extension
 
     self.name = self.lang + '_' + module_name
@@ -710,9 +680,7 @@ class TargetJavaClasses(TargetJava):
     self.output_dir = self.classes
 
   def add_dependencies(self):
-    sources = []
-    for p in self.path.split():
-      sources.extend(_collect_paths(self.sources, p))
+    sources =_collect_paths(self.sources, self.path)
 
     for src, reldir in sources:
       if src[-5:] == '.java':
@@ -750,7 +718,7 @@ class TargetJavaClasses(TargetJava):
     # collect all the paths where stuff might get built
     ### we should collect this from the dependency nodes rather than
     ### the sources. "what dir are you going to put yourself into?"
-    self.gen_obj.target_dirs.extend(self.path.split())
+    self.gen_obj.target_dirs.append(self.path)
     self.gen_obj.target_dirs.append(self.classes)
     for pattern in self.sources.split():
       dirname = build_path_dirname(pattern)
@@ -758,24 +726,6 @@ class TargetJavaClasses(TargetJava):
         self.gen_obj.target_dirs.append(build_path_join(self.path, dirname))
 
     self.gen_obj.graph.add(DT_INSTALL, self.name, self)
-
-class TargetSQLHeader(Target):
-  def __init__(self, name, options, gen_obj):
-    Target.__init__(self, name, options, gen_obj)
-    self.sources = options.get('sources')
-
-  def add_dependencies(self):
-
-    sources = _collect_paths(self.sources, self.path)
-    assert len(sources) == 1  # support for just one source, for now
-
-    source, reldir = sources[0]
-    assert reldir == ''  # no support for reldir right now
-    assert source.endswith('.sql')
-
-    output = source[:-4] + '.h'
-
-    self.gen_obj.graph.add(DT_SQLHDR, output, source)
 
 
 _build_types = {
@@ -793,7 +743,6 @@ _build_types = {
   'javah' : TargetJavaHeaders,
   'java' : TargetJavaClasses,
   'i18n' : TargetI18N,
-  'sql-header' : TargetSQLHeader,
   }
 
 
@@ -879,7 +828,7 @@ def _collect_paths(pats, path=None):
       pattern = build_path_join(path, base_pat)
     else:
       pattern = base_pat
-    files = sorted(glob.glob(native_path(pattern))) or [pattern]
+    files = glob.glob(native_path(pattern)) or [pattern]
 
     if path is None:
       # just append the names to the result list
@@ -971,9 +920,7 @@ class IncludeDependencyInfo:
                  self._domain["apr.swg"][0]: '%',
                  fname: '%' }
         for h in self._deps[fname].keys():
-          if (_is_public_include(h)
-              or h == os.path.join('subversion', 'include', 'private',
-                                    'svn_debug.h')):
+          if _is_public_include(h):
             hdrs[_swig_include_wrapper(h)] = '%'
           else:
             raise RuntimeError("Public include '%s' depends on '%s', " \
@@ -985,7 +932,7 @@ class IncludeDependencyInfo:
       self._deps[fname] = {}
 
     # Keep recomputing closures until we see no more changes
-    while True:
+    while 1:
       changes = 0
       for fname in self._deps.keys():
         changes = self._include_closure(self._deps[fname]) or changes

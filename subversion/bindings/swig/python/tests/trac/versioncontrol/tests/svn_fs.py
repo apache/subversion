@@ -1,51 +1,15 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
 #
 # Copyright (C) 2005 Edgewall Software
 # Copyright (C) 2005 Christopher Lenz <cmlenz@gmx.de>
 #
-# All rights reserved.
+# This software is licensed as described in the file
+# LICENSE_FOR_PYTHON_BINDINGS, which you should have received as part
+# of this distribution.  The terms are also available at
+# < http://subversion.tigris.org/license-for-python-bindings.html >.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions
-# are met:
-#
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    the documentation and/or other materials provided with the
-#    distribution.
-# 3. The name of the author may not be used to endorse or promote
-#    products derived from this software without specific prior written
-#    permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS
-# OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
-# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-# GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-# IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# Author: Christopher Lenz <cmlenz@gmx.de>
 
 import os.path
 import stat
@@ -71,11 +35,8 @@ from trac.test import TestSetup
 from trac.versioncontrol import Changeset, Node
 from trac.versioncontrol.svn_fs import SubversionRepository
 
-temp_path = tempfile.mktemp("-trac-svnrepos")
-REPOS_PATH = core.svn_dirent_internal_style(temp_path)
-REPOS_URL = pathname2url(temp_path)
-del temp_path
-
+REPOS_PATH = tempfile.mktemp("-trac-svnrepos")
+REPOS_URL = pathname2url(REPOS_PATH)
 if REPOS_URL.startswith("///"):
   # Don't add extra slashes if they're already present.
   # (This is important for Windows compatibility).
@@ -90,7 +51,7 @@ class SubversionRepositoryTestSetup(TestSetup):
 
     def setUp(self):
         dumpfile = open(os.path.join(os.path.split(__file__)[0],
-                                     'svnrepos.dump'), 'rb')
+                                     'svnrepos.dump'))
 
         # Remove the trac-svnrepos directory, so that we can
         # ensure a fresh start.

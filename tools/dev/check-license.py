@@ -18,28 +18,19 @@
 
 import sys, os, re
 
-# Note: Right now, OLD_LICENSE and NEW_LICENSE are the same, because
-# r38370 updated all the license blocks.  In the future, if we update
-# the license block again, change just NEW_LICENSE and use this script.
-
 OLD_LICENSE = '''\
  \* ====================================================================
- \*    Licensed to the Subversion Corporation \(SVN Corp\.\) under one
- \*    or more contributor license agreements\.  See the NOTICE file
- \*    distributed with this work for additional information
- \*    regarding copyright ownership\.  The SVN Corp\. licenses this file
- \*    to you under the Apache License, Version 2\.0 \(the
- \*    "License"\); you may not use this file except in compliance
- \*    with the License\.  You may obtain a copy of the License at
+ \* Copyright \(c\) (200[0-9]|200[0-9]-200[0-9]) CollabNet.  All rights reserved.
  \*
- \*      http://www\.apache\.org/licenses/LICENSE-2\.0
+ \* This software is licensed as described in the file COPYING, which
+ \* you should have received as part of this distribution\.  The terms
+ \* are also available at http://subversion.tigris.org/license-1\.html\.
+ \* If newer versions of this license are posted there, you may use a
+ \* newer version instead, at your option\.
  \*
- \*    Unless required by applicable law or agreed to in writing,
- \*    software distributed under the License is distributed on an
- \*    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- \*    KIND, either express or implied\.  See the License for the
- \*    specific language governing permissions and limitations
- \*    under the License\.
+ \* This software consists of voluntary contributions made by many
+ \* individuals\.  For exact contribution history, see the revision
+ \* history and logs, available at http://subversion.tigris.org/\.
  \* ====================================================================
 '''
 
@@ -49,22 +40,17 @@ SH_OLD_LICENSE = re.subn(r'(?m)^ \\\*', '#', OLD_LICENSE)[0]
 # is used for matching; NEW_LICENSE is inserted as-is.
 NEW_LICENSE = '''\
  * ====================================================================
- *    Licensed to the Subversion Corporation (SVN Corp.) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The SVN Corp. licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
 '''
 
@@ -131,8 +117,7 @@ def main():
   for f in sys.argv[1:]:
     if os.path.isdir(f):
       baton = file_func
-      for dirpath, dirs, files in os.walk(f):
-        visit(baton, dirpath, dirs + files)
+      os.path.walk(f, visit, baton)
     else:
       baton = file_func
       dir, i = os.path.split(f)

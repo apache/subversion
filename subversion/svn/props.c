@@ -2,22 +2,17 @@
  * props.c: Utility functions for property handling
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -47,9 +42,8 @@
 
 svn_error_t *
 svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
-                        const apr_array_header_t *targets,
+                        apr_array_header_t *targets,
                         const char **URL,
-                        svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
   const char *target;
@@ -71,7 +65,7 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
   /* (The docs say the target must be either a URL or implicit '.', but
      explicit WC targets are also accepted.) */
   target = APR_ARRAY_IDX(targets, 0, const char *);
-  SVN_ERR(svn_client_url_from_path2(URL, target, ctx, pool, pool));
+  SVN_ERR(svn_client_url_from_path(URL, target, pool));
   if (*URL == NULL)
     return svn_error_create
       (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -90,9 +84,15 @@ svn_cl__print_prop_hash(apr_hash_t *prop_hash,
 
   for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi))
     {
-      const char *pname = svn__apr_hash_index_key(hi);
-      svn_string_t *propval = svn__apr_hash_index_val(hi);
+      const void *key;
+      void *val;
+      const char *pname;
+      svn_string_t *propval;
       const char *pname_stdout;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      pname = key;
+      propval = val;
 
       if (svn_prop_needs_translation(pname))
         SVN_ERR(svn_subst_detranslate_string(&propval, propval,
@@ -131,8 +131,14 @@ svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
 
   for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi))
     {
-      const char *pname = svn__apr_hash_index_key(hi);
-      svn_string_t *propval = svn__apr_hash_index_val(hi);
+      const void *key;
+      void *val;
+      const char *pname;
+      svn_string_t *propval;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      pname = key;
+      propval = val;
 
       if (names_only)
         {

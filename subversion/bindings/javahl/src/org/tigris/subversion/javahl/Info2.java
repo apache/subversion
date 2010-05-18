@@ -1,22 +1,17 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2003-2005,2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  */
@@ -245,33 +240,6 @@ public class Info2 implements java.io.Serializable
         this.reposSize = reposSize;
         this.depth = depth;
         this.treeConflict = treeConflict;
-    }
-
-    /**
-     * A backward-compat constructor.
-     */
-    public Info2(org.apache.subversion.javahl.Info2 aInfo)
-    {
-        this(aInfo.getPath(), aInfo.getUrl(), aInfo.getRev(),
-             NodeKind.fromApache(aInfo.getKind()),
-             aInfo.getReposRootUrl(), aInfo.getReposUUID(),
-             aInfo.getLastChangedRev(),
-             aInfo.getLastChangedDate() == null ? 0
-                : aInfo.getLastChangedDate().getTime() * 1000,
-             aInfo.getLastChangedAuthor(),
-             aInfo.getLock() == null ? null : new Lock(aInfo.getLock()),
-             aInfo.isHasWcInfo(), aInfo.getSchedule().ordinal(),
-             aInfo.getCopyFromUrl(), aInfo.getCopyFromRev(),
-             aInfo.getTextTime() == null ? 0
-                : aInfo.getTextTime().getTime() * 1000,
-             aInfo.getPropTime() == null ? 0
-                : aInfo.getPropTime().getTime() * 1000, aInfo.getChecksum(),
-             aInfo.getConflictOld(), aInfo.getConflictNew(),
-             aInfo.getConflictWrk(), aInfo.getPrejfile(),
-             aInfo.getChangelistName(), aInfo.getWorkingSize(),
-             aInfo.getReposSize(), Depth.fromADepth(aInfo.getDepth()),
-             aInfo.getConflictDescriptor() == null ? null
-                : new ConflictDescriptor(aInfo.getConflictDescriptor()));
     }
 
     /**

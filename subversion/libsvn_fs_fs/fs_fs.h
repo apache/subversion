@@ -1,22 +1,17 @@
 /* fs_fs.h : interface to the native filesystem layer
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -75,8 +70,8 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
                          svn_boolean_t include_mergeinfo,
                          apr_pool_t *pool);
 
-/* Read a node-revision from STREAM. Set *NODEREV to the new structure,
-   allocated in POOL. */
+/* Reads the node-revision *NODEREV from the stream STREAM.  Temporary
+   allocations are from POOL. */
 svn_error_t *
 svn_fs_fs__read_noderev(node_revision_t **noderev,
                         svn_stream_t *stream,
@@ -146,6 +141,13 @@ svn_error_t *svn_fs_fs__get_proplist(apr_hash_t **proplist,
                                      node_revision_t *noderev,
                                      apr_pool_t *pool);
 
+/* Set the revision property list of revision REV in filesystem FS to
+   PROPLIST.  Use POOL for temporary allocations. */
+svn_error_t *svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
+                                              svn_revnum_t rev,
+                                              apr_hash_t *proplist,
+                                              apr_pool_t *pool);
+
 /* Set *PROPLIST to be an apr_hash_t containing the property list of
    revision REV as seen in filesystem FS.  Use POOL for temporary
    allocations. */
@@ -207,7 +209,7 @@ svn_error_t *svn_fs_fs__change_txn_prop(svn_fs_txn_t *txn,
 /* Change transaction properties in transaction TXN based on PROPS.
    Perform temporary allocations from POOL. */
 svn_error_t *svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
-                                         const apr_array_header_t *props,
+                                         apr_array_header_t *props,
                                          apr_pool_t *pool);
 
 /* Return whether or not the given FS supports mergeinfo metadata. */
@@ -318,15 +320,6 @@ svn_error_t *svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                                svn_fs_t *fs,
                                svn_fs_txn_t *txn,
                                apr_pool_t *pool);
-
-/* Commit the obliteration transaction TXN in filesystem FS for
-   revision number REV.  If the transaction is out of date (### meaning what?), return
-   the error SVN_ERR_FS_TXN_OUT_OF_DATE.  Use POOL for temporary
-   allocations. */
-svn_error_t *svn_fs_fs__commit_obliteration(svn_revnum_t rev,
-                                            svn_fs_t *fs,
-                                            svn_fs_txn_t *txn,
-                                            apr_pool_t *pool);
 
 /* Return the next available copy_id in *COPY_ID for the transaction
    TXN_ID in filesystem FS.  Allocate space in POOL. */
@@ -472,16 +465,6 @@ svn_error_t *svn_fs_fs__get_txn_ids(const svn_fs_id_t **root_id_p,
 svn_error_t *svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs,
                                   svn_revnum_t rev, apr_uint32_t flags,
                                   apr_pool_t *pool);
-
-/* Begin a new transaction in filesystem FS, intended to replace the
-   existing revision REPLACING_REV.  The new transaction will be based on
-   revision (REPLACING_REV - 1) but will have content identical to revision
-   REPLACING_REV.  Set *TXN_P to the new transaction structure, allocated
-   in POOL. */
-svn_error_t *svn_fs_fs__begin_obliteration_txn(svn_fs_txn_t **txn_p,
-                                               svn_fs_t *fs,
-                                               svn_revnum_t replacing_rev,
-                                               apr_pool_t *pool);
 
 /* Find the value of the property named PROPNAME in transaction TXN.
    Return the contents in *VALUE_P.  The contents will be allocated

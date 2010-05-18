@@ -2,22 +2,17 @@
  * win32_crashrpt.c : provides information after a crash
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -27,7 +22,6 @@
 /*** Includes. ***/
 #include <apr.h>
 #include <dbghelp.h>
-#include <direct.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -40,9 +34,11 @@
 HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
 
 /* Email address where the crash reports should be sent too. */
-#define CRASHREPORT_EMAIL "notifications@subversion.apache.org"
+#define CRASHREPORT_EMAIL "svn-breakage@subversion.tigris.org"
 
 #define DBGHELP_DLL "dbghelp.dll"
+
+#define VERSION_DLL "version.dll"
 
 #define LOGFILE_PREFIX "svn-crash-log"
 
@@ -180,16 +176,11 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
 {
   OSVERSIONINFO oi;
   const char *cmd_line;
-  char workingdir[8192];
 
   /* write the command line */
   cmd_line = GetCommandLine();
   fprintf(log_file,
-                "Cmd line: %s\n", cmd_line);
-
-  _getcwd(workingdir, sizeof(workingdir));
-  fprintf(log_file,
-                "Working Dir: %s\n", workingdir);
+                "Cmd line: %.65s\n", cmd_line);
 
   /* write the svn version number info. */
   fprintf(log_file,
@@ -403,7 +394,7 @@ write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
   else
     return FALSE;
 
-  if (log_params && sym_info->Flags & SYMFLAG_PARAMETER)
+  if (log_params == TRUE && sym_info->Flags & SYMFLAG_PARAMETER)
     {
       if (last_nr_of_frame == nr_of_frame)
         fprintf(log_file, ", ", 2);
@@ -426,10 +417,10 @@ write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
 
 /* Write the details of one function to the log file */
 static void
-write_function_detail(STACKFRAME64 stack_frame, int nr_of_frame, FILE *log_file)
+write_function_detail(STACKFRAME64 stack_frame, void *data)
 {
   ULONG64 symbolBuffer[(sizeof(SYMBOL_INFO) +
-    MAX_SYM_NAME +
+    MAX_PATH +
     sizeof(ULONG64) - 1) /
     sizeof(ULONG64)];
   PSYMBOL_INFO pIHS = (PSYMBOL_INFO)symbolBuffer;
@@ -440,19 +431,22 @@ write_function_detail(STACKFRAME64 stack_frame, int nr_of_frame, FILE *log_file)
   DWORD line_disp=0;
 
   HANDLE proc = GetCurrentProcess();
+  FILE *log_file = (FILE *)data;
 
   symbols_baton_t ensym;
 
-  nr_of_frame++; /* We need a 1 based index here */
+  static int nr_of_frame = 0;
+
+  nr_of_frame++;
 
   /* log the function name */
   pIHS->SizeOfStruct = sizeof(SYMBOL_INFO);
-  pIHS->MaxNameLen = MAX_SYM_NAME;
-  if (SymFromAddr_(proc, stack_frame.AddrPC.Offset, &func_disp, pIHS))
+  pIHS->MaxNameLen = MAX_PATH;
+  if (SymFromAddr_(proc, stack_frame.AddrPC.Offset, &func_disp, pIHS) == TRUE)
     {
       fprintf(log_file,
-                    "#%d  0x%08I64x in %.200s(",
-                    nr_of_frame, stack_frame.AddrPC.Offset, pIHS->Name);
+                    "#%d  0x%08x in %.200s (",
+                    nr_of_frame, stack_frame.AddrPC.Offset,  pIHS->Name);
 
       /* restrict symbol enumeration to this frame only */
       ih_stack_frame.InstructionOffset = stack_frame.AddrPC.Offset;
@@ -471,7 +465,7 @@ write_function_detail(STACKFRAME64 stack_frame, int nr_of_frame, FILE *log_file)
   else
     {
       fprintf(log_file,
-                    "#%d  0x%08I64x in (unknown function)",
+                    "#%d  0x%08x in (unknown function)",
                     nr_of_frame, stack_frame.AddrPC.Offset);
     }
 
@@ -511,12 +505,8 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
       skip = 1;
 
       ctx.ContextFlags = CONTEXT_FULL;
-      if (!GetThreadContext(GetCurrentThread(), &ctx))
-        return;
-    }
-  else
-    {
-      ctx = *context;
+      if (GetThreadContext(GetCurrentThread(), &ctx))
+        context = &ctx;
     }
 
   if (context == NULL)
@@ -551,7 +541,7 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
   while (1)
     {
       if (! StackWalk64_(machine, proc, GetCurrentThread(),
-                         &stack_frame, &ctx, NULL,
+                         &stack_frame, context, NULL,
                          SymFunctionTableAccess64_, SymGetModuleBase64_, NULL))
         {
           break;
@@ -564,7 +554,7 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
              returns TRUE with a frame of zero. */
           if (stack_frame.AddrPC.Offset != 0)
             {
-              write_function_detail(stack_frame, i, log_file);
+              write_function_detail(stack_frame, (void *)log_file);
             }
         }
       i++;
@@ -594,11 +584,64 @@ is_debugger_present()
   return result;
 }
 
+/* Match the version of dbghelp.dll with the minimum expected version */
+static BOOL
+check_dbghelp_version(WORD exp_major, WORD exp_minor, WORD exp_build,
+                      WORD exp_qfe)
+{
+  HANDLE version_dll = LoadLibrary(VERSION_DLL);
+  GETFILEVERSIONINFOSIZE GetFileVersionInfoSize_ =
+         (GETFILEVERSIONINFOSIZE)GetProcAddress(version_dll,
+                                                "GetFileVersionInfoSizeA");
+  GETFILEVERSIONINFO GetFileVersionInfo_ =
+         (GETFILEVERSIONINFO)GetProcAddress(version_dll,
+                                            "GetFileVersionInfoA");
+  VERQUERYVALUE VerQueryValue_ =
+         (VERQUERYVALUE)GetProcAddress(version_dll, "VerQueryValueA");
+
+  DWORD version     = 0,
+        exp_version = MAKELONG(MAKEWORD(exp_qfe, exp_build),
+                               MAKEWORD(exp_minor, exp_major));
+  DWORD h = 0;
+  DWORD resource_size = GetFileVersionInfoSize_(DBGHELP_DLL, &h);
+
+  if (resource_size)
+    {
+      void *resource_data = malloc(resource_size);
+      if (GetFileVersionInfo_(DBGHELP_DLL, h, resource_size,
+                              resource_data) != FALSE)
+        {
+          void *buf = NULL;
+          UINT len;
+          if (VerQueryValue_(resource_data, "\\", &buf, &len))
+            {
+              VS_FIXEDFILEINFO *info = (VS_FIXEDFILEINFO*)buf;
+              version = MAKELONG(MAKEWORD(LOWORD(info->dwFileVersionLS),
+                                          HIWORD(info->dwFileVersionLS)),
+                                 MAKEWORD(LOWORD(info->dwFileVersionMS),
+                                          HIWORD(info->dwFileVersionMS)));
+            }
+        }
+      free(resource_data);
+    }
+
+   FreeLibrary(version_dll);
+
+   if (version >= exp_version)
+     return TRUE;
+
+   return FALSE;
+}
+
 /* Load the dbghelp.dll file, try to find a version that matches our
    requirements. */
 static BOOL
 load_dbghelp_dll()
 {
+  /* check version of the dll, should be at least 6.6.7.5 */
+  if (check_dbghelp_version(6, 6, 7, 5) == FALSE)
+    return FALSE;
+
   dbghelp_dll = LoadLibrary(DBGHELP_DLL);
   if (dbghelp_dll != INVALID_HANDLE_VALUE)
     {
@@ -720,7 +763,7 @@ svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
     return EXCEPTION_CONTINUE_SEARCH;
 
   /* don't log anything if we're running inside a debugger ... */
-  if (is_debugger_present())
+  if (is_debugger_present() == TRUE)
     return EXCEPTION_CONTINUE_SEARCH;
 
   /* ... or if we can't create the log files ... */
@@ -754,12 +797,14 @@ svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
 
   fclose(log_file);
 
+  cleanup_debughlp();
+
   /* inform the user */
   fprintf(stderr, "This application has halted due to an unexpected error.\n"
                   "A crash report and minidump file were saved to disk, you"
                   " can find them here:\n"
                   "%s\n%s\n"
-                  "Please send the log file to %s to help us analyze\nand "
+                  "Please send the log file to %s to help us analyse\nand "
                   "solve this problem.\n\n"
                   "NOTE: The crash report and minidump files can contain some"
                   " sensitive information\n(filenames, partial file content, "
@@ -767,21 +812,6 @@ svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
                   log_filename,
                   dmp_filename,
                   CRASHREPORT_EMAIL);
-
-  if (getenv("SVN_DBG_STACKTRACES_TO_STDERR") != NULL)
-    {
-      fprintf(stderr, "\nProcess info:\n");
-      write_process_info(ptrs ? ptrs->ExceptionRecord : NULL,
-                         ptrs ? ptrs->ContextRecord : NULL,
-                         stderr);
-      fprintf(stderr, "\nStacktrace:\n");
-      write_stacktrace(ptrs ? ptrs->ContextRecord : NULL, stderr);
-    }
-
-  fflush(stderr);
-  fflush(stdout);
-
-  cleanup_debughlp();
 
   /* terminate the application */
   return EXCEPTION_EXECUTE_HANDLER;

@@ -1,21 +1,16 @@
 /*
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007, 2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  *
  * core.i: SWIG module interface file for libsvn_subr, a few pieces of
@@ -222,14 +217,6 @@
 %ignore svn_path_uri_autoescape;
 %ignore svn_path_cstring_from_utf8;
 %ignore svn_path_cstring_to_utf8;
-
-/* svn_dirent_uri.h: SWIG can't digest these functions yet, so ignore them
- * for now. TODO: make them work.
- */
-%ignore svn_dirent_join_many;
-%ignore svn_dirent_condense_targets;
-%ignore svn_uri_condense_targets;
-%ignore svn_dirent_is_under_root;
 
 /* Other files */
 
@@ -592,10 +579,6 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 */
 typedef int apr_status_t;
 
-/* Make possible to parse the SVN_VER_NUM definition. */
-#define APR_STRINGIFY_HELPER(n) #n
-#define APR_STRINGIFY(n) APR_STRINGIFY_HELPER(n)
-
 /* -----------------------------------------------------------------------
    pool functions renaming since swig doesn't take care of the #define's
 */
@@ -745,16 +728,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %ignore svn_opt_parse_all_args;
 #endif
 
-#ifdef SWIGPYTHON
-# The auth baton depends on the providers, so we preserve a
-# reference to them inside the wrapper. This way, if all external
-# references to the providers are gone, they will still be alive,
-# keeping the baton valid.
-%feature("pythonappend") svn_auth_open %{
-  val.__dict__["_deps"] = list(args[0])
-%}
-#endif
-
 /* ----------------------------------------------------------------------- */
 
 %include svn_error_codes_h.swg
@@ -776,7 +749,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %include svn_utf_h.swg
 %include svn_nls_h.swg
 %include svn_path_h.swg
-%include svn_dirent_uri_h.swg
 %include svn_mergeinfo_h.swg
 %include svn_io_h.swg
 
@@ -785,10 +757,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #endif
 
 #ifdef SWIGPERL
-/* The apr_file_t* 'in' typemap can't cope with struct members, and there
-   is no reason to change this one. */
-%immutable svn_patch_t::patch_file;
-
 %include svn_diff_h.swg
 %include svn_error_h.swg
 
@@ -823,6 +791,10 @@ svn_swig_py_initialize();
 #ifdef SWIGRUBY
 %init %{
   svn_swig_rb_initialize();
+
+  rb_define_const(mCore, "SVN_VER_NUM", rb_str_new2(SVN_VER_NUM));
+  rb_define_const(mCore, "SVN_VER_NUMBER", rb_str_new2(SVN_VER_NUMBER));
+  rb_define_const(mCore, "SVN_VERSION", rb_str_new2(SVN_VERSION));
 
   rb_define_const(mCore, "SVN_ALLOCATOR_MAX_FREE_UNLIMITED",
                   UINT2NUM(APR_ALLOCATOR_MAX_FREE_UNLIMITED));

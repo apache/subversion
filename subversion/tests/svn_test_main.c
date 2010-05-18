@@ -2,22 +2,17 @@
  * tests-main.c:  shared main() & friends for SVN test-suite programs
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -48,13 +43,13 @@ const char **test_argv;
 
 
 /* Test option: Print more output */
-static svn_boolean_t verbose_mode = FALSE;
+static int verbose_mode = 0;
 
 /* Test option: Print only unexpected results */
-static svn_boolean_t quiet_mode = FALSE;
+static int quiet_mode = 0;
 
 /* Test option: Remove test directories after success */
-static svn_boolean_t cleanup_mode = FALSE;
+static int cleanup_mode = 0;
 
 /* Option parsing enums and structures */
 enum {
@@ -80,8 +75,7 @@ static const apr_getopt_option_t cl_options[] =
   {"verbose",       verbose_opt, 0,
                     N_("print extra information")},
   {"server-minor-version", server_minor_version_opt, 1,
-                    N_("set the minor version for the server ('3', '4',\n"
-                       "'5', or '6')")},
+                    N_("Set the minor version for the server ('4' or '5')")},
   {"quiet",         quiet_opt, 0,
                     N_("print only unexpected results")},
   {0,               0, 0, 0}
@@ -92,10 +86,10 @@ static const apr_getopt_option_t cl_options[] =
 /* Stuff for cleanup processing */
 
 /* When non-zero, don't remove test directories */
-static svn_boolean_t skip_cleanup = FALSE;
+static int skip_cleanup = 0;
 
 /* All cleanup actions are registered as cleanups on this pool. */
-static apr_pool_t *cleanup_pool = NULL;
+static apr_pool_t *cleanup_pool = 0;
 
 static apr_status_t
 cleanup_rmtree(void *data)
@@ -156,7 +150,7 @@ get_array_size(void)
 {
   int i;
 
-  for (i = 1; test_funcs[i].func2 || test_funcs[i].func_opts; i++)
+  for (i = 1; test_funcs[i].func; i++)
     {
     }
 
@@ -167,40 +161,35 @@ get_array_size(void)
 
 /* Execute a test number TEST_NUM.  Pretty-print test name and dots
    according to our test-suite spec, and return the result code. */
-static svn_boolean_t
+static int
 do_test_num(const char *progname,
             int test_num,
             svn_boolean_t msg_only,
             svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
-  svn_boolean_t skip, xfail, wimp;
-  svn_error_t *err = NULL;
-  svn_boolean_t test_failed;
-  const char *msg = NULL;  /* the message this individual test prints out */
-  const struct svn_test_descriptor_t *desc;
+  svn_test_driver_t func;
+  svn_boolean_t skip, xfail;
+  svn_error_t *err;
+  int array_size = get_array_size();
+  int test_failed = 0;
+  const char *msg = 0;  /* the message this individual test prints out */
 
   /* Check our array bounds! */
-  if ((test_num > get_array_size()) || (test_num <= 0))
+  if ((test_num > array_size) || (test_num <= 0))
     {
       printf("FAIL: %s: THERE IS NO TEST NUMBER %2d\n", progname, test_num);
-      skip_cleanup = TRUE;
-      return TRUE;  /* BAIL, this test number doesn't exist. */
+      return (skip_cleanup = 1);  /* BAIL, this test number doesn't exist. */
+    }
+  else
+    {
+      func = test_funcs[test_num].func;
+      skip = (test_funcs[test_num].mode == svn_test_skip);
+      xfail = (test_funcs[test_num].mode == svn_test_xfail);
     }
 
-  desc = &test_funcs[test_num];
-  skip = desc->mode == svn_test_skip;
-  xfail = desc->mode == svn_test_xfail;
-  wimp = xfail && desc->wip;
-
   /* Do test */
-  msg = desc->msg;
-  if (msg_only || skip)
-    ; /* pass */
-  else if (desc->func2)
-    err = (*desc->func2)(pool);
-  else
-    err = (*desc->func_opts)(opts, pool);
+  err = func(&msg, msg_only || skip, opts, pool);
 
   if (err && err->apr_err == SVN_ERR_TEST_SKIPPED)
     {
@@ -210,7 +199,7 @@ do_test_num(const char *progname,
     }
 
   /* Failure means unexpected results -- FAIL or XPASS. */
-  test_failed = (!wimp && ((err != SVN_NO_ERROR) != (xfail != 0)));
+  test_failed = ((err != SVN_NO_ERROR) != (xfail != 0));
 
   /* If we got an error, print it out.  */
   if (err)
@@ -221,26 +210,20 @@ do_test_num(const char *progname,
 
   if (msg_only)
     {
-      printf(" %2d     %-5s  %s%s%s%s\n",
+      printf(" %2d     %-5s  %s\n",
              test_num,
              (xfail ? "XFAIL" : (skip ? "SKIP" : "")),
-             msg ? msg : "(test did not provide name)",
-             (wimp && verbose_mode) ? " [[" : "",
-             (wimp && verbose_mode) ? desc->wip : "",
-             (wimp && verbose_mode) ? "]]" : "");
+             msg ? msg : "(test did not provide name)");
     }
   else if ((! quiet_mode) || test_failed)
     {
-      printf("%s %s %d: %s%s%s%s\n",
+      printf("%s %s %d: %s\n",
              (err
               ? (xfail ? "XFAIL:" : "FAIL: ")
               : (xfail ? "XPASS:" : (skip ? "SKIP: " : "PASS: "))),
              progname,
              test_num,
-             msg ? msg : "(test did not provide name)",
-             wimp ? " [[WIMP: " : "",
-             wimp ? desc->wip : "",
-             wimp ? "]]" : "");
+             msg ? msg : "(test did not provide name)");
     }
 
   if (msg)
@@ -253,8 +236,6 @@ do_test_num(const char *progname,
       if (apr_isupper(msg[0]))
         printf("WARNING: Test docstring is capitalized\n");
     }
-  if (desc->msg == NULL)
-    printf("WARNING: New-style test descriptor is missing a docstring.\n");
 
   skip_cleanup = test_failed;
 
@@ -269,10 +250,10 @@ main(int argc, const char *argv[])
   const char *prog_name;
   int test_num;
   int i;
-  svn_boolean_t got_error = FALSE;
+  int got_error = 0;
   apr_pool_t *pool, *test_pool;
-  svn_boolean_t ran_a_test = FALSE;
-  svn_boolean_t list_mode = FALSE;
+  int ran_a_test = 0;
+  int list_mode = 0;
   int opt_id;
   apr_status_t apr_err;
   apr_getopt_t *os;
@@ -336,7 +317,7 @@ main(int argc, const char *argv[])
 
       switch (opt_id) {
         case cleanup_opt:
-          cleanup_mode = TRUE;
+          cleanup_mode = 1;
           break;
         case config_opt:
           opts.config_file = apr_pstrdup(pool, opt_arg);
@@ -345,13 +326,13 @@ main(int argc, const char *argv[])
           opts.fs_type = apr_pstrdup(pool, opt_arg);
           break;
         case list_opt:
-          list_mode = TRUE;
+          list_mode = 1;
           break;
         case verbose_opt:
-          verbose_mode = TRUE;
+          verbose_mode = 1;
           break;
         case quiet_opt:
-          quiet_mode = TRUE;
+          quiet_mode = 1;
           break;
         case server_minor_version_opt:
           {
@@ -363,7 +344,7 @@ main(int argc, const char *argv[])
                 exit(1);
               }
             if ((opts.server_minor_version < 3)
-                || (opts.server_minor_version > 6))
+                || (opts.server_minor_version > 5))
               {
                 fprintf(stderr, "FAIL: Invalid minor version given\n");
                 exit(1);
@@ -387,7 +368,7 @@ main(int argc, const char *argv[])
     {
       if (! strcmp(argv[1], "list") || list_mode)
         {
-          ran_a_test = TRUE;
+          ran_a_test = 1;
 
           /* run all tests with MSG_ONLY set to TRUE */
 
@@ -396,7 +377,7 @@ main(int argc, const char *argv[])
           for (i = 1; i <= array_size; i++)
             {
               if (do_test_num(prog_name, i, TRUE, &opts, test_pool))
-                got_error = TRUE;
+                got_error = 1;
 
               /* Clear the per-function pool */
               svn_pool_clear(test_pool);
@@ -409,10 +390,10 @@ main(int argc, const char *argv[])
             {
               if (apr_isdigit(argv[i][0]))
                 {
-                  ran_a_test = TRUE;
+                  ran_a_test = 1;
                   test_num = atoi(argv[i]);
                   if (do_test_num(prog_name, test_num, FALSE, &opts, test_pool))
-                    got_error = TRUE;
+                    got_error = 1;
 
                   /* Clear the per-function pool */
                   svn_pool_clear(test_pool);
@@ -428,7 +409,7 @@ main(int argc, const char *argv[])
       for (i = 1; i <= array_size; i++)
         {
           if (do_test_num(prog_name, i, FALSE, &opts, test_pool))
-            got_error = TRUE;
+            got_error = 1;
 
           /* Clear the per-function pool */
           svn_pool_clear(test_pool);

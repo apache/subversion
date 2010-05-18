@@ -2,22 +2,17 @@
  * main.c :  Main control function for svnserve
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -40,7 +35,6 @@
 #include "svn_error.h"
 #include "svn_ra_svn.h"
 #include "svn_utf.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_repos.h"
@@ -179,14 +173,6 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "[mode: daemon, listen-once]")},
 #endif
-    {"prefer-ipv6",      '6', 0,
-     N_("prefer IPv6 when resolving the listen hostname\n"
-        "                             "
-        "[IPv4 is preferred by default. Using IPv4 and IPv6\n"
-        "                             "
-        "at the same time is not supported in daemon mode.\n"
-        "                             "
-        "Use inetd mode or tunnel mode if you need this.]")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     /* ### Making the assumption here that WIN32 never has fork and so
      * ### this option never exists when --service exists. */
@@ -388,8 +374,6 @@ int main(int argc, const char *argv[])
   apr_uint16_t port = SVN_RA_SVN_PORT;
   const char *host = NULL;
   int family = APR_INET;
-  apr_int32_t sockaddr_info_flags = 0;
-  svn_boolean_t prefer_v6 = FALSE;
   int mode_opt_count = 0;
   const char *config_filename = NULL;
   const char *pid_filename = NULL;
@@ -439,10 +423,6 @@ int main(int argc, const char *argv[])
         usage(argv[0], pool);
       switch (opt)
         {
-        case '6':
-          prefer_v6 = TRUE;
-          break;
-
         case 'h':
           help(pool);
           break;
@@ -516,8 +496,8 @@ int main(int argc, const char *argv[])
               return EXIT_FAILURE;
             }
 
-          params.root = svn_dirent_internal_style(params.root, pool);
-          SVN_INT_ERR(svn_dirent_get_absolute(&params.root, params.root, pool));
+          params.root = svn_path_internal_style(params.root, pool);
+          SVN_INT_ERR(svn_path_get_absolute(&params.root, params.root, pool));
           break;
 
         case 'R':
@@ -540,23 +520,23 @@ int main(int argc, const char *argv[])
 
         case SVNSERVE_OPT_CONFIG_FILE:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&config_filename, arg, pool));
-          config_filename = svn_dirent_internal_style(config_filename, pool);
-          SVN_INT_ERR(svn_dirent_get_absolute(&config_filename, config_filename,
-                                              pool));
+          config_filename = svn_path_internal_style(config_filename, pool);
+          SVN_INT_ERR(svn_path_get_absolute(&config_filename, config_filename,
+                                            pool));
           break;
 
         case SVNSERVE_OPT_PID_FILE:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&pid_filename, arg, pool));
-          pid_filename = svn_dirent_internal_style(pid_filename, pool);
-          SVN_INT_ERR(svn_dirent_get_absolute(&pid_filename, pid_filename,
-                                              pool));
+          pid_filename = svn_path_internal_style(pid_filename, pool);
+          SVN_INT_ERR(svn_path_get_absolute(&pid_filename, pid_filename,
+                                            pool));
           break;
 
         case SVNSERVE_OPT_LOG_FILE:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&log_filename, arg, pool));
-          log_filename = svn_dirent_internal_style(log_filename, pool);
-          SVN_INT_ERR(svn_dirent_get_absolute(&log_filename, log_filename,
-                                              pool));
+          log_filename = svn_path_internal_style(log_filename, pool);
+          SVN_INT_ERR(svn_path_get_absolute(&log_filename, log_filename,
+                                            pool));
           break;
 
         }
@@ -582,7 +562,7 @@ int main(int argc, const char *argv[])
   if (config_filename)
       SVN_INT_ERR(load_configs(&params.cfg, &params.pwdb, &params.authzdb,
                                config_filename, TRUE,
-                               svn_dirent_dirname(config_filename, pool),
+                               svn_path_dirname(config_filename, pool),
                                NULL, NULL, /* server baton, conn */
                                pool));
 
@@ -691,24 +671,10 @@ int main(int argc, const char *argv[])
     {
       apr_socket_close(sock);
       family = APR_UNSPEC;
-
-      if (prefer_v6)
-        {
-          if (host == NULL)
-            host = "::";
-          sockaddr_info_flags = APR_IPV6_ADDR_OK;
-        }
-      else
-        {
-          if (host == NULL)
-            host = "0.0.0.0";
-          sockaddr_info_flags = APR_IPV4_ADDR_OK;
-        }
     }
 #endif
 
-  status = apr_sockaddr_info_get(&sa, host, family, port,
-                                 sockaddr_info_flags, pool);
+  status = apr_sockaddr_info_get(&sa, host, family, port, 0, pool);
   if (status)
     {
       err = svn_error_wrap_apr(status, _("Can't get address info"));

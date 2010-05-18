@@ -1,29 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2004-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  */
 
 package org.tigris.subversion.javahl;
-
-import java.util.Set;
 
 /**
  * This class offers the same commands as the svnadmin commandline
@@ -31,32 +24,37 @@ import java.util.Set;
  */
 public class SVNAdmin
 {
-    private org.apache.subversion.javahl.SVNAdmin aSVNAdmin;
+    /**
+     * Load the required native library.
+     */
+    static
+    {
+        NativeResources.loadNativeLibrary();
+    }
 
     /**
      * Standard empty contructor, builds just the native peer.
      */
     public SVNAdmin()
     {
-        aSVNAdmin = new org.apache.subversion.javahl.SVNAdmin();
-        cppAddr = aSVNAdmin.getCppAddr();
+        cppAddr = ctNative();
     }
+
+    /**
+     * Build the native peer
+     * @return the adress of the peer
+     */
+    private native long ctNative();
 
     /**
      * release the native peer (should not depend on finalize)
      */
-    public void dispose()
-    {
-        aSVNAdmin.dispose();
-    }
+    public native void dispose();
 
     /**
      * release the native peer (should use dispose instead)
      */
-    protected void finalize()
-    {
-        aSVNAdmin.finalize();
-    }
+    protected native void finalize();
 
     /**
      * slot for the adress of the native peer. The JNI code is the only user
@@ -79,8 +77,7 @@ public class SVNAdmin
      */
     public Version getVersion()
     {
-        return new Version(
-                    org.apache.subversion.javahl.NativeResources.getVersion());
+        return NativeResources.version;
     }
 
     /**
@@ -93,17 +90,9 @@ public class SVNAdmin
      * @param fstype                the type of the filesystem (BDB or FSFS)
      * @throws ClientException  throw in case of problem
      */
-    public void create(String path, boolean disableFsyncCommit, boolean keepLog,
-                       String configPath, String fstype)
-            throws ClientException
-    {
-        try {
-            aSVNAdmin.create(path, disableFsyncCommit, keepLog, configPath,
-                             fstype);
-        } catch (org.apache.subversion.javahl.ClientException ex) {
-            throw new ClientException(ex);
-        }
-    }
+    public native void create(String path, boolean disableFsyncCommit,
+                              boolean keepLog, String configPath,
+                              String fstype) throws ClientException;
 
     /**
      * deltify the revisions in the repository
@@ -112,20 +101,8 @@ public class SVNAdmin
      * @param end               end revision
      * @throws ClientException  throw in case of problem
      */
-    public void deltify(String path, Revision start, Revision end)
-            throws ClientException
-    {
-        try
-        {
-            aSVNAdmin.deltify(path,
-                              start == null ? null : start.toApache(),
-                              end == null ? null : end.toApache());
-        }
-        catch (org.apache.subversion.javahl.ClientException ex)
-        {
-            throw new ClientException(ex);
-        }
-    }
+    public native void deltify(String path, Revision start, Revision end)
+            throws ClientException;
 
     /**
      * dump the data in a repository
@@ -157,23 +134,11 @@ public class SVNAdmin
      * @throws ClientException  throw in case of problem
      * @since 1.5
      */
-    public void dump(String path, OutputInterface dataOut,
-                     OutputInterface errorOut, Revision start, Revision end,
-                     boolean incremental, boolean useDeltas)
-            throws ClientException
-    {
-        try
-        {
-            aSVNAdmin.dump(path, dataOut, errorOut,
-                           start == null ? null : start.toApache(),
-                           end == null ? null : end.toApache(),
-                           incremental, useDeltas);
-        }
-        catch (org.apache.subversion.javahl.ClientException ex)
-        {
-            throw new ClientException(ex);
-        }
-    }
+    public native void dump(String path, OutputInterface dataOut,
+                            OutputInterface errorOut, Revision start,
+                            Revision end, boolean incremental,
+                            boolean useDeltas)
+            throws ClientException;
 
     /**
      * make a hot copy of the repository
@@ -183,18 +148,8 @@ public class SVNAdmin
      *                          repository
      * @throws ClientException  throw in case of problem
      */
-    public void hotcopy(String path, String targetPath, boolean cleanLogs)
-            throws ClientException
-    {
-        try
-        {
-            aSVNAdmin.hotcopy(path, targetPath, cleanLogs);
-        }
-        catch (org.apache.subversion.javahl.ClientException ex)
-        {
-            throw new ClientException(ex);
-        }
-    }
+    public native void hotcopy(String path, String targetPath,
+                               boolean cleanLogs) throws ClientException;
 
     /**
      * list all logfiles (BDB) in use or not)
@@ -202,18 +157,8 @@ public class SVNAdmin
      * @param receiver          interface to receive the logfile names
      * @throws ClientException  throw in case of problem
      */
-    public void listDBLogs(String path, MessageReceiver receiver)
-            throws ClientException
-    {
-        try
-        {
-            aSVNAdmin.listDBLogs(path, receiver);
-        }
-        catch (org.apache.subversion.javahl.ClientException ex)
-        {
-            throw new ClientException(ex);
-        }
-    }
+    public native void listDBLogs(String path, MessageReceiver receiver)
+            throws ClientException;
 
     /**
      * list unused logfiles
@@ -221,25 +166,19 @@ public class SVNAdmin
      * @param receiver          interface to receive the logfile names
      * @throws ClientException  throw in case of problem
      */
-    public void listUnusedDBLogs(String path, MessageReceiver receiver)
-            throws ClientException
-    {
-        try
-        {
-            aSVNAdmin.listUnusedDBLogs(path, receiver);
-        }
-        catch (org.apache.subversion.javahl.ClientException ex)
-        {
-            throw new ClientException(ex);
-        }
-    }
+    public native void listUnusedDBLogs(String path, MessageReceiver receiver)
+            throws ClientException;
 
     /**
      * interface to receive the messages
      */
     public static interface MessageReceiver
-        extends org.apache.subversion.javahl.SVNAdmin.MessageReceiver
     {
+        /**
+         * receive one message line
+         * @param message   one line of message
+         */
+        public void receiveMessageLine(String message);
     }
 
     /**
@@ -278,23 +217,11 @@ public class SVNAdmin
      * @throws ClientException  throw in case of problem
      * @since 1.5
      */
-    public void load(String path, InputInterface dataInput,
-                     OutputInterface messageOutput, boolean ignoreUUID,
-                     boolean forceUUID, boolean usePreCommitHook,
-                     boolean usePostCommitHook, String relativePath)
-            throws ClientException
-    {
-        try
-        {
-            aSVNAdmin.load(path, dataInput, messageOutput, ignoreUUID,
-                           forceUUID, usePreCommitHook, usePostCommitHook,
-                           relativePath);
-        }
-        catch (org.apache.subversion.javahl.ClientException ex)
-        {
-            throw new ClientException(ex);
-        }
-    }
+    public native void load(String path, InputInterface dataInput,
+                            OutputInterface messageOutput, boolean ignoreUUID,
+                            boolean forceUUID, boolean usePreCommitHook,
+                            boolean usePostCommitHook, String relativePath)
+            throws ClientException;
 
     /**
      * list all open transactions in a repository
@@ -302,36 +229,15 @@ public class SVNAdmin
      * @param receiver          receives one transaction name per call
      * @throws ClientException  throw in case of problem
      */
-    public void lstxns(String path, MessageReceiver receiver)
-            throws ClientException
-    {
-        try
-        {
-            aSVNAdmin.lstxns(path, receiver);
-        }
-        catch (org.apache.subversion.javahl.ClientException ex)
-        {
-            throw new ClientException(ex);
-        }
-    }
+    public native void lstxns(String path, MessageReceiver receiver)
+            throws ClientException;
 
     /**
      * recover the berkeley db of a repository, returns youngest revision
      * @param path              the path to the repository
      * @throws ClientException  throw in case of problem
      */
-    public long recover(String path)
-            throws ClientException
-    {
-        try
-        {
-            return aSVNAdmin.recover(path);
-        }
-        catch (org.apache.subversion.javahl.ClientException ex)
-        {
-            throw new ClientException(ex);
-        }
-    }
+    public native long recover(String path) throws ClientException;
 
     /**
      * remove open transaction in a repository
@@ -339,18 +245,8 @@ public class SVNAdmin
      * @param transactions      the transactions to be removed
      * @throws ClientException  throw in case of problem
      */
-    public void rmtxns(String path, String [] transactions)
-            throws ClientException
-    {
-        try
-        {
-            aSVNAdmin.rmtxns(path, transactions);
-        }
-        catch (org.apache.subversion.javahl.ClientException ex)
-        {
-            throw new ClientException(ex);
-        }
-    }
+    public native void rmtxns(String path, String [] transactions)
+            throws ClientException;
 
     /**
      * set the log message of a revision
@@ -361,21 +257,9 @@ public class SVNAdmin
      * @throws ClientException  throw in case of problem
      * @deprecated Use setRevProp() instead.
      */
-    public void setLog(String path, Revision rev, String message,
-                       boolean bypassHooks)
-            throws ClientException
-    {
-        try
-        {
-            aSVNAdmin.setLog(path,
-                             rev == null ? null : rev.toApache(),
-                             message, bypassHooks);
-        }
-        catch (org.apache.subversion.javahl.ClientException ex)
-        {
-            throw new ClientException(ex);
-        }
-    }
+    public native void setLog(String path, Revision rev, String message,
+                              boolean bypassHooks)
+            throws ClientException;
 
     /**
      * Change the value of the revision property <code>propName</code>
@@ -393,24 +277,11 @@ public class SVNAdmin
      * @throws SubversionException If a problem occurs.
      * @since 1.5.0
      */
-    public void setRevProp(String path, Revision rev, String propName,
-                           String propValue, boolean usePreRevPropChangeHook,
-                           boolean usePostRevPropChangeHook)
-            throws SubversionException
-    {
-        try
-        {
-            aSVNAdmin.setRevProp(path,
-                                 rev == null ? null : rev.toApache(),
-                                 propName, propValue,
-                                 usePreRevPropChangeHook,
-                                 usePostRevPropChangeHook);
-        }
-        catch (org.apache.subversion.javahl.SubversionException ex)
-        {
-            throw new SubversionException(ex);
-        }
-    }
+    public native void setRevProp(String path, Revision rev,
+                                  String propName, String propValue,
+                                  boolean usePreRevPropChangeHook,
+                                  boolean usePostRevPropChangeHook)
+            throws SubversionException;
 
     /**
      * Verify the repository at <code>path</code> between revisions
@@ -422,21 +293,9 @@ public class SVNAdmin
      * @param end               the last revision
      * @throws ClientException If an error occurred.
      */
-    public void verify(String path, OutputInterface messageOut,
-                       Revision start, Revision end)
-            throws ClientException
-    {
-        try
-        {
-            aSVNAdmin.verify(path, messageOut,
-                             start == null ? null : start.toApache(),
-                             end == null ? null : end.toApache());
-        }
-        catch (org.apache.subversion.javahl.ClientException ex)
-        {
-            throw new ClientException(ex);
-        }
-    }
+    public native void verify(String path,  OutputInterface messageOut,
+                              Revision start, Revision end)
+            throws ClientException;
 
     /**
      * list all locks in the repository
@@ -444,29 +303,7 @@ public class SVNAdmin
      * @throws ClientException  throw in case of problem
      * @since 1.2
      */
-    public Lock[] lslocks(String path)
-            throws ClientException
-    {
-        try
-        {
-            Set<org.apache.subversion.javahl.Lock> aLocks =
-                                                    aSVNAdmin.lslocks(path);
-            Lock[] locks = new Lock[aLocks.size()];
-
-            int i = 0;
-            for (org.apache.subversion.javahl.Lock lock : aLocks)
-            {
-                locks[i] = new Lock(lock);
-                i++;
-            }
-
-            return locks;
-        }
-        catch (org.apache.subversion.javahl.ClientException ex)
-        {
-            throw new ClientException(ex);
-        }
-    }
+    public native Lock[] lslocks(String path) throws ClientException;
 
     /**
      * remove multiple locks from the repository
@@ -475,16 +312,6 @@ public class SVNAdmin
      * @throws ClientException  throw in case of problem
      * @since 1.2
      */
-    public void rmlocks(String path, String [] locks)
-            throws ClientException
-    {
-        try
-        {
-            aSVNAdmin.rmlocks(path, locks);
-        }
-        catch (org.apache.subversion.javahl.ClientException ex)
-        {
-            throw new ClientException(ex);
-        }
-    }
+    public native void rmlocks(String path, String [] locks)
+            throws ClientException;
 }

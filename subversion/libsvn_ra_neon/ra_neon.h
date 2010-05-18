@@ -2,22 +2,17 @@
  * ra_neon.h : Private declarations for the Neon-based DAV RA module.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -82,7 +77,7 @@ typedef struct {
 
 
 
-typedef struct svn_ra_neon__session_t {
+typedef struct {
   apr_pool_t *pool;
   svn_stringbuf_t *url;                 /* original, unparsed session url */
   ne_uri root;                          /* parsed version of above */
@@ -113,9 +108,6 @@ typedef struct svn_ra_neon__session_t {
   svn_ra_progress_notify_func_t progress_func;
   void *progress_baton;
 
-  apr_off_t total_progress;             /* Total number of bytes sent in this
-                                           session with a -1 total marker */
-
   /* Maps SVN_RA_CAPABILITY_foo keys to "yes" or "no" values.
      If a capability is not yet discovered, it is absent from the table.
      The table itself is allocated in the svn_ra_neon__session_t's pool;
@@ -124,32 +116,7 @@ typedef struct svn_ra_neon__session_t {
      well-informed internal code may just compare against those
      constants' addresses, therefore). */
   apr_hash_t *capabilities;
-
-  /*** HTTP v2 protocol stuff. ***
-   *
-   * We assume that if mod_dav_svn sends one of the special v2 OPTIONs
-   * response headers, it has sent all of them.  Specifically, we'll
-   * be looking at the presence of the "me resource" as a flag that
-   * the server supports v2 of our HTTP protocol.
-   */
-
-  /* The "me resource".  Typically used as a target for REPORTs that
-     are path-agnostic.  If we have this, we can speak HTTP v2 to the
-     server.  */
-  const char *me_resource;
-
-  /* Opaque URL "stubs".  If the OPTIONS response returns these, then
-     we know we're using HTTP protocol v2. */
-  const char *rev_stub;         /* for accessing revisions (i.e. revprops) */
-  const char *rev_root_stub;    /* for accessing REV/PATH pairs */
-  const char *txn_stub;         /* for accessing transactions (i.e. txnprops) */
-  const char *txn_root_stub;    /* for accessing TXN/PATH pairs */
-
-  /*** End HTTP v2 stuff ***/
-
 } svn_ra_neon__session_t;
-
-#define SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras) ((ras)->me_resource != NULL)
 
 
 typedef struct {
@@ -570,7 +537,7 @@ svn_error_t *svn_ra_neon__get_vcc(const char **vcc,
 svn_error_t *svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
                                        const char *url,
                                        apr_hash_t *prop_changes,
-                                       const apr_array_header_t *prop_deletes,
+                                       apr_array_header_t *prop_deletes,
                                        apr_hash_t *extra_headers,
                                        apr_pool_t *pool);
 
@@ -721,14 +688,6 @@ svn_ra_neon__parsed_request(svn_ra_neon__session_t *sess,
                             svn_boolean_t spool_response,
                             apr_pool_t *pool);
 
-
-/* If XML_PARSER found an XML parse error, then return a Subversion error
- * saying that the error was found in the response to the DAV request METHOD
- * for the URL URL. Otherwise, return SVN_NO_ERROR. */
-svn_error_t *
-svn_ra_neon__check_parse_error(const char *method,
-                               ne_xml_parser *xml_parser,
-                               const char *url);
 
 /* ### add SVN_RA_NEON_ to these to prefix conflicts with (sys) headers? */
 enum {
@@ -984,7 +943,6 @@ svn_ra_neon__copy(svn_ra_neon__session_t *ras,
                   apr_pool_t *pool);
 
 /* Return the Location HTTP header or NULL if none was sent.
- * (Return a canonical URL even if the header ended with a slash.)
  *
  * Do allocations in POOL.
  */
@@ -1000,7 +958,7 @@ svn_ra_neon__get_locations(svn_ra_session_t *session,
                            apr_hash_t **locations,
                            const char *path,
                            svn_revnum_t peg_revision,
-                           const apr_array_header_t *location_revisions,
+                           apr_array_header_t *location_revisions,
                            apr_pool_t *pool);
 
 
@@ -1098,15 +1056,10 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
    RAS->capabilities with the server's capabilities as read from the
    response headers.  Use POOL only for temporary allocation.
 
-   If the server is kind enough to tell us the current youngest
-   revision of the target repository, set *YOUNGEST_REV to that value;
-   set it to SVN_INVALID_REVNUM otherwise.
-
-  NOTE:  This function also expects the server to announce the
+   NOTE:  This function also expects the server to announce the
    activity collection.  */
 svn_error_t *
 svn_ra_neon__exchange_capabilities(svn_ra_neon__session_t *ras,
-                                   svn_revnum_t *youngest_rev,
                                    apr_pool_t *pool);
 
 /*

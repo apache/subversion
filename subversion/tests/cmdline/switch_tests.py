@@ -3,25 +3,17 @@
 #  switch_tests.py:  testing `svn switch'.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
+# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 ######################################################################
 
 # General modules
@@ -653,7 +645,7 @@ def file_dir_file(sbox):
                                      'switch', dir_url, file_path)
   if not os.path.isdir(file_path):
     raise svntest.Failure
-
+  
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', file_url, file_path)
   if not os.path.isfile(file_path):
@@ -703,24 +695,40 @@ def nonrecursive_switching(sbox):
                                      'switch', '-N', version1_url, wc2_dir)
 
   # Check the URLs of the (not switched) directories.
-  expected_infos = [
-      { 'URL' : '.*/A/B$' },
-      { 'URL' : '.*/A/C$' },
-      { 'URL' : '.*/A/D$' },
-    ]
-  svntest.actions.run_and_verify_info(expected_infos,
-                                      wc2_B_dir, wc2_C_dir, wc2_D_dir)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', wc2_B_dir)
+  if out[1].find('/A/B') == -1:
+    print(out[1])
+    raise svntest.Failure
+
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', wc2_C_dir)
+  if out[1].find('/A/C') == -1:
+    print(out[1])
+    raise svntest.Failure
+
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', wc2_D_dir)
+  if out[1].find('/A/D') == -1:
+    print(out[1])
+    raise svntest.Failure
 
   # Check the URLs of the switched files.
   # ("svn status -u" might be a better check: it fails when newfile's URL
   # is bad, and shows "S" when mu's URL is wrong.)
   # mu: not switched
-  expected_infos = [
-      { 'URL' : '.*/branch/version1/mu$' },
-      { 'URL' : '.*/branch/version1/newfile$' },   # newfile: wrong URL
-    ]
-  svntest.actions.run_and_verify_info(expected_infos,
-                                      wc2_mu_file, wc2_new_file)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', wc2_mu_file)
+  if out[2].find('/branch/version1/mu') == -1:
+    print(out[2])
+    raise svntest.Failure
+  # newfile: wrong URL
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info',
+                                                           wc2_new_file)
+  if out[2].find('/branch/version1/newfile') == -1:
+    print(out[2])
+    raise svntest.Failure
 
 
 #----------------------------------------------------------------------
@@ -762,16 +770,19 @@ def failed_anchor_is_target(sbox):
 
   # There was a bug whereby the failed switch left the wrong URL in
   # the target directory H.  Check for that.
-  expected_infos = [
-      { 'URL' : '.*' + G_url + '$' },
-    ]
-  svntest.actions.run_and_verify_info(expected_infos, H_path)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', H_path)
+  for line in out:
+    if line == 'URL: ' + G_url + '\n':
+      break
+  else:
+    raise svntest.Failure
 
   # Resolve tree conflict at psi.
   svntest.actions.run_and_verify_resolved([psi_path])
 
   # The switch should now be complete.
-  ### Instead of "treeconflict=None" which means "don't check", we should
+  # ### Instead of "treeconflict=None" which means "don't check", we should
   # check "treeconflict=' '" but the test suite doesn't do the right thing.
   expected_status.tweak('A/D/H/psi', treeconflict=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -808,10 +819,11 @@ def bad_intermediate_urls(sbox):
     raise svntest.Failure
 
   # However, the URL for A should now reflect A/C/A, not something else.
-  expected_infos = [
-      { 'URL' : '.*/A/C/A$' },
-    ]
-  svntest.actions.run_and_verify_info(expected_infos, A_path)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', A_path)
+  if out[1].find('/A/C/A') == -1:
+    raise svntest.Failure
+
 
 
 #----------------------------------------------------------------------
@@ -933,14 +945,14 @@ def relocate_beyond_repos_root(sbox):
   # A relocate that changes the repo path part of the URL shouldn't work.
   # This tests for issue #2380.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*Given destination URL invalid.*",
+                                     ".*can only change the repository part.*",
                                      'switch', '--relocate',
                                      A_url, other_B_url, A_wc_dir)
 
   # Another way of trying to change the fs path, leading to an invalid
   # repository root.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*Given source URL invalid.*",
+                                     ".*is not the root.*",
                                      'switch', '--relocate',
                                      repo_url, other_B_url, A_wc_dir)
 
@@ -952,16 +964,10 @@ def relocate_beyond_repos_root(sbox):
   # relocate actually changed the URI.  Escape the expected URI to
   # avoid problems from any regex meta-characters it may contain
   # (e.g. '+').
-  expected_infos = [
-      { 'URL'                : re.escape(other_A_url) + '$',
-        'Path'               : '.+',
-        'Repository UUID'    : '.+',
-        'Revision'           : '.+',
-        'Node Kind'          : '.+',
-        'Last Changed Date'  : '.+' },
-    ]
-  svntest.actions.run_and_verify_info(expected_infos, A_wc_dir, '-rHEAD')
-
+  escaped_exp = '^URL: ' + re.escape(other_A_url) + '$' \
+                '|Path.+|Repository.+|Revision.+|Node.+|Last.+|\n'
+  svntest.actions.run_and_verify_svn(None, escaped_exp, [],
+                                     'info', '-rHEAD', A_wc_dir)
 
 #----------------------------------------------------------------------
 # Issue 2306.
@@ -1612,11 +1618,6 @@ def mergeinfo_switch_elision(sbox):
     'E/alpha' : Item(status='U '),
     'E/beta'  : Item(status='U '),
     })
-  expected_mergeinfo_output = svntest.wc.State(B_COPY_1_path, {
-    '' : Item(status=' U'),
-    })
-  expected_elision_output = svntest.wc.State(B_COPY_1_path, {
-    })
   expected_merge_status = svntest.wc.State(B_COPY_1_path, {
     ''        : Item(status=' M', wc_rev=2),
     'lambda'  : Item(status='  ', wc_rev=2),
@@ -1637,10 +1638,9 @@ def mergeinfo_switch_elision(sbox):
   saved_cwd = os.getcwd()
 
   svntest.actions.run_and_verify_merge(B_COPY_1_path, '2', '4',
-                                       sbox.repo_url + '/A/B', None,
+                                       sbox.repo_url + \
+                                       '/A/B',
                                        expected_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
                                        expected_merge_disk,
                                        expected_merge_status,
                                        expected_skip,
@@ -1666,11 +1666,6 @@ def mergeinfo_switch_elision(sbox):
     'alpha' : Item(status='U '),
     'beta'  : Item(status='U '),
     })
-  expected_mergeinfo_output = svntest.wc.State(E_COPY_2_path, {
-    '' : Item(status=' U'),
-    })
-  expected_elision_output = svntest.wc.State(E_COPY_2_path, {
-    })
   expected_merge_status = svntest.wc.State(E_COPY_2_path, {
     ''      : Item(status=' M', wc_rev=2),
     'alpha' : Item(status='M ', wc_rev=2),
@@ -1685,10 +1680,9 @@ def mergeinfo_switch_elision(sbox):
   saved_cwd = os.getcwd()
 
   svntest.actions.run_and_verify_merge(E_COPY_2_path, '2', '4',
-                                       sbox.repo_url + '/A/B/E', None,
+                                       sbox.repo_url + \
+                                       '/A/B/E',
                                        expected_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
                                        expected_merge_disk,
                                        expected_merge_status,
                                        expected_skip,
@@ -2303,18 +2297,7 @@ def tree_conflicts_on_switch_1_1(sbox):
   # use case 1, as in notes/tree-conflicts/use-cases.txt
   # 1.1) local tree delete, incoming leaf edit
 
-  expected_output = deep_trees_conflict_output.copy()
-  expected_output.add({
-    'DDD/D1/D2'         : Item(status='D '),
-    'DDD/D1/D2/D3'      : Item(status='D '),
-    'DDD/D1/D2/D3/zeta' : Item(status='D '),
-    'DD/D1/D2'          : Item(status='D '),
-    'DD/D1/D2/epsilon'  : Item(status='D '),
-    'DF/D1/beta'        : Item(status='D '),
-    'D/D1/delta'        : Item(status='D '),
-    'DDF/D1/D2'         : Item(status='D '),
-    'DDF/D1/D2/gamma'   : Item(status='D ')
-  })
+  expected_output = deep_trees_conflict_output
 
   expected_disk = disk_empty_dirs.copy()
 
@@ -2327,49 +2310,9 @@ def tree_conflicts_on_switch_1_1(sbox):
     'DD/D1/D2/epsilon'  : Item(status='D '),
     'DDD/D1/D2/D3/zeta' : Item(status='D '),
     })
-  expected_status.tweak('', switched='S')
 
   # Update to the target rev.
   expected_status.tweak(wc_rev=3)
-
-  expected_info = {
-    'F/alpha' : {
-      'Tree conflict' :
-        '^local delete, incoming edit upon switch'
-        + ' Source  left: .file.*/F/alpha@2'
-        + ' Source right: .file.*/F/alpha@3$',
-    },
-    'DF/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming edit upon switch'
-        + ' Source  left: .dir.*/DF/D1@2'
-        + ' Source right: .dir.*/DF/D1@3$',
-    },
-    'DDF/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming edit upon switch'
-        + ' Source  left: .dir.*/DDF/D1@2'
-        + ' Source right: .dir.*/DDF/D1@3$',
-    },
-    'D/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming edit upon switch'
-        + ' Source  left: .dir.*/D/D1@2'
-        + ' Source right: .dir.*/D/D1@3$',
-    },
-    'DD/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming edit upon switch'
-        + ' Source  left: .dir.*/DD/D1@2'
-        + ' Source right: .dir.*/DD/D1@3$',
-    },
-    'DDD/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming edit upon switch'
-        + ' Source  left: .dir.*/DDD/D1@2'
-        + ' Source right: .dir.*/DDD/D1@3$',
-    },
-  }
 
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
@@ -2377,8 +2320,7 @@ def tree_conflicts_on_switch_1_1(sbox):
                         leaf_edit,
                         expected_output,
                         expected_disk,
-                        expected_status,
-                        expected_info = expected_info) ] )
+                        expected_status) ] )
 
 
 def tree_conflicts_on_switch_1_2(sbox):
@@ -2386,15 +2328,7 @@ def tree_conflicts_on_switch_1_2(sbox):
 
   # 1.2) local tree delete, incoming leaf delete
 
-  expected_output = deep_trees_conflict_output.copy()
-  expected_output.add({
-    'DD/D1/D2'          : Item(status='D '),
-    'DDF/D1/D2'         : Item(status='D '),
-    'DDF/D1/D2/gamma'   : Item(status='D '),
-    'DDD/D1/D2'         : Item(status='D '),
-    'DDD/D1/D2/D3'      : Item(status='D '),
-    'DF/D1/beta'        : Item(status='D '),
-  })
+  expected_output = deep_trees_conflict_output
 
   expected_disk = disk_empty_dirs.copy()
 
@@ -2413,7 +2347,6 @@ def tree_conflicts_on_switch_1_2(sbox):
   expected_status.tweak('F/alpha',
                         'D/D1',
                         status='! ', wc_rev=None)
-  expected_status.tweak('', switched='S')
   # Remove the incoming deletes from status and disk.
   expected_status.remove('DD/D1/D2',
                          'DDD/D1/D2/D3',
@@ -2424,53 +2357,13 @@ def tree_conflicts_on_switch_1_2(sbox):
                        'DD/D1/D2',
                        'DDD/D1/D2/D3')
 
-  expected_info = {
-    'F/alpha' : {
-      'Tree conflict' :
-        '^local delete, incoming delete upon switch'
-        + ' Source  left: .file.*/F/alpha@2'
-        + ' Source right: .none.*/F/alpha@3$',
-    },
-    'DF/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming edit upon switch'
-        + ' Source  left: .dir.*/DF/D1@2'
-        + ' Source right: .dir.*/DF/D1@3$',
-    },
-    'DDF/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming edit upon switch'
-        + ' Source  left: .dir.*/DDF/D1@2'
-        + ' Source right: .dir.*/DDF/D1@3$',
-    },
-    'D/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming delete upon switch'
-        + ' Source  left: .dir.*/D/D1@2'
-        + ' Source right: .none.*/D/D1@3$',
-    },
-    'DD/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming edit upon switch'
-        + ' Source  left: .dir.*/DD/D1@2'
-        + ' Source right: .dir.*/DD/D1@3$',
-    },
-    'DDD/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming edit upon switch'
-        + ' Source  left: .dir.*/DDD/D1@2'
-        + ' Source right: .dir.*/DDD/D1@3$',
-    },
-  }
-
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
                         tree_del,
                         leaf_del,
                         expected_output,
                         expected_disk,
-                        expected_status,
-                        expected_info = expected_info) ] )
+                        expected_status) ] )
 
 
 def tree_conflicts_on_switch_2_1(sbox):
@@ -2484,7 +2377,18 @@ def tree_conflicts_on_switch_2_1(sbox):
   expected_disk = disk_after_leaf_edit.copy()
 
   expected_status = deep_trees_status_local_leaf_edit.copy()
-
+  # These 'switched' statuses are bogus, because of do_entry_deletion not
+  # updating the URLs (issue #3334).  For example, after the switch, D/D1
+  # has a URL pointing to incoming/D/D1 and is scheduled for addition as a
+  # copy from local/D/D1.  But D/D1/delta, which was an add without history
+  # prior to the switch, still has a URL pointing to local/D/D1/delta, so it
+  # looks like it is switched relative to its parent.
+  expected_status.tweak('D/D1/delta',
+                        'DD/D1/D2',
+                        'DF/D1/beta',
+                        'DDD/D1/D2',
+                        'DDF/D1/D2',
+                        switched='S')
   # The expectation on 'alpha' reflects partial progress on issue #3334.
   expected_status.tweak('D/D1',
                         'F/alpha',
@@ -2504,60 +2408,13 @@ def tree_conflicts_on_switch_2_1(sbox):
     'DDF/D1/D2',
     'DDF/D1/D2/gamma',
     copied='+', wc_rev='-')
-  expected_status.tweak('', switched='S')
-
-  expected_info = {
-    'F/alpha' : {
-      'Tree conflict' :
-        '^local edit, incoming delete upon switch'
-        + ' Source  left: .file.*/F/alpha@2'
-        + ' Source right: .none.*/F/alpha@3$',
-    },
-    'DF/D1' : {
-      'Tree conflict' :
-        '^local edit, incoming delete upon switch'
-        + ' Source  left: .dir.*/DF/D1@2'
-        + ' Source right: .none.*/DF/D1@3$',
-    },
-    'DDF/D1' : {
-      'Tree conflict' :
-        '^local edit, incoming delete upon switch'
-        + ' Source  left: .dir.*/DDF/D1@2'
-        + ' Source right: .none.*/DDF/D1@3$',
-    },
-    'D/D1' : {
-      'Tree conflict' :
-        '^local edit, incoming delete upon switch'
-        + ' Source  left: .dir.*/D/D1@2'
-        + ' Source right: .none.*/D/D1@3$',
-    },
-    'DD/D1' : {
-      'Tree conflict' :
-        '^local edit, incoming delete upon switch'
-        + ' Source  left: .dir.*/DD/D1@2'
-        + ' Source right: .none.*/DD/D1@3$',
-    },
-    'DDD/D1' : {
-      'Tree conflict' :
-        '^local edit, incoming delete upon switch'
-        + ' Source  left: .dir.*/DDD/D1@2'
-        + ' Source right: .none.*/DDD/D1@3$',
-    },
-  }
-
-  ### D/D1/delta is locally-added during leaf_edit. when tree_del executes,
-  ### it will delete D/D1, and the switch reschedules local D/D1 for
-  ### local-copy from its original revision. however, right now, we cannot
-  ### denote that delta is a local-add rather than a child of that D/D1 copy.
-  ### thus, it appears in the status output as a (M)odified child.
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
                         leaf_edit,
                         tree_del,
                         expected_output,
                         expected_disk,
-                        expected_status,
-                        expected_info = expected_info) ] )
+                        expected_status) ] )
 
 
 def tree_conflicts_on_switch_2_2(sbox):
@@ -2576,7 +2433,6 @@ def tree_conflicts_on_switch_2_2(sbox):
   expected_status.add({'' : Item(),
                        'F/alpha' : Item()})
   expected_status.tweak(contents=None, status='  ', wc_rev=3)
-  expected_status.tweak('', switched='S')
 
   # Expect the incoming tree deletes and the local leaf deletes to mean
   # that all deleted paths are *really* gone, not simply scheduled for
@@ -2605,53 +2461,13 @@ def tree_conflicts_on_switch_2_2(sbox):
                        'DDF/D1',
                        'DDF/D1/D2',)
 
-  expected_info = {
-    'F/alpha' : {
-      'Tree conflict' :
-        '^local delete, incoming delete upon switch'
-        + ' Source  left: .file.*/F/alpha@2'
-        + ' Source right: .none.*/F/alpha@3$',
-    },
-    'DF/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming delete upon switch'
-        + ' Source  left: .dir.*/DF/D1@2'
-        + ' Source right: .none.*/DF/D1@3$',
-    },
-    'DDF/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming delete upon switch'
-        + ' Source  left: .dir.*/DDF/D1@2'
-        + ' Source right: .none.*/DDF/D1@3$',
-    },
-    'D/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming delete upon switch'
-        + ' Source  left: .dir.*/D/D1@2'
-        + ' Source right: .none.*/D/D1@3$',
-    },
-    'DD/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming delete upon switch'
-        + ' Source  left: .dir.*/DD/D1@2'
-        + ' Source right: .none.*/DD/D1@3$',
-    },
-    'DDD/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming delete upon switch'
-        + ' Source  left: .dir.*/DDD/D1@2'
-        + ' Source right: .none.*/DDD/D1@3$',
-    },
-  }
-
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
                         leaf_del,
                         tree_del,
                         expected_output,
                         expected_disk,
-                        expected_status,
-                        expected_info = expected_info) ] )
+                        expected_status) ] )
 
 
 def tree_conflicts_on_switch_3(sbox):
@@ -2665,7 +2481,6 @@ def tree_conflicts_on_switch_3(sbox):
   expected_disk = disk_empty_dirs.copy()
 
   expected_status = deep_trees_status_local_tree_del.copy()
-  expected_status.tweak('', switched='S')
 
   # Expect the incoming tree deletes and the local tree deletes to mean
   # that all deleted paths are *really* gone, not simply scheduled for
@@ -2694,217 +2509,14 @@ def tree_conflicts_on_switch_3(sbox):
                        'DDF/D1',
                        'DDF/D1/D2',)
 
-  expected_info = {
-    'F/alpha' : {
-      'Tree conflict' :
-        '^local delete, incoming delete upon switch'
-        + ' Source  left: .file.*/F/alpha@2'
-        + ' Source right: .none.*/F/alpha@3$',
-    },
-    'DF/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming delete upon switch'
-        + ' Source  left: .dir.*/DF/D1@2'
-        + ' Source right: .none.*/DF/D1@3$',
-    },
-    'DDF/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming delete upon switch'
-        + ' Source  left: .dir.*/DDF/D1@2'
-        + ' Source right: .none.*/DDF/D1@3$',
-    },
-    'D/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming delete upon switch'
-        + ' Source  left: .dir.*/D/D1@2'
-        + ' Source right: .none.*/D/D1@3$',
-    },
-    'DD/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming delete upon switch'
-        + ' Source  left: .dir.*/DD/D1@2'
-        + ' Source right: .none.*/DD/D1@3$',
-    },
-    'DDD/D1' : {
-      'Tree conflict' :
-        '^local delete, incoming delete upon switch'
-        + ' Source  left: .dir.*/DDD/D1@2'
-        + ' Source right: .none.*/DDD/D1@3$',
-    },
-  }
-
   svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
                         tree_del,
                         tree_del,
                         expected_output,
                         expected_disk,
-                        expected_status,
-                        expected_info = expected_info) ] )
+                        expected_status) ] )
 
-
-def single_file_relocate(sbox):
-  "relocate a single file"
-
-  # Create virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-
-  wc_dir = sbox.wc_dir
-  iota_path = os.path.join(sbox.wc_dir, 'iota')
-  repo_dir = sbox.repo_dir
-  repo_url = sbox.repo_url
-  iota_url = repo_url + '/iota'
-
-  # import the greek tree
-  svntest.main.greek_state.write_to_disk(svntest.main.greek_dump_dir)
-  exit_code, output, errput = svntest.main.run_svn(
-    None, 'import', '-m', 'Log message for revision 1.',
-    svntest.main.greek_dump_dir, sbox.repo_url)
-
-  # checkout
-  svntest.main.safe_rmtree(wc_dir, 1)
-  svntest.actions.run_and_verify_svn(None,
-                                     None, [],
-                                     'checkout',
-                                     repo_url, wc_dir)
-
-  # Relocate
-  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
-  other_iota_url = other_repo_url + '/iota'
-  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
-  svntest.main.safe_rmtree(repo_dir, 1)
-  svntest.actions.run_and_verify_svn(None, None,
-                                     ".*Cannot relocate a single file\n",
-                                     'switch', '--relocate',
-                                     iota_url, other_iota_url, iota_path)
-
-
-def relocate_with_switched_children(sbox):
-  "relocate a directory with switched children"
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # Setup (and verify) some switched things
-  do_routine_switching(sbox.wc_dir, sbox.repo_url, False)
-
-  # Relocate
-  repo_dir = sbox.repo_dir
-  repo_url = sbox.repo_url
-  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
-  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
-  svntest.main.safe_rmtree(repo_dir, 1)
-
-  # Do the switch and check the results in three ways.
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
-                                     repo_url, other_repo_url, wc_dir)
-
-  # Attempt to commit changes and examine results
-  expected_output = svntest.wc.State(wc_dir, { })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/B', 'iota',
-                        switched='S')
-  expected_status.remove('A/B/E', 'A/B/F', 'A/B/E/alpha', 'A/B/E/beta',
-                         'A/B/lambda')
-  expected_status.add({
-    'A/B/pi'       : Item(status='  ', wc_rev='1'),
-    'A/B/rho'      : Item(status='  ', wc_rev='1'),
-    'A/B/tau'      : Item(status='  ', wc_rev='1'),
-    })
-
-  # This won't actually do a commit, because nothing should be modified.
-  svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
-
-  # Check the URLs of various nodes.
-  info_output = {
-        wc_dir:                                '.*.other$',
-        os.path.join(wc_dir, 'iota'):          '.*.other/A/D/gamma$',
-        os.path.join(wc_dir, 'A', 'B'):        '.*.other/A/D/G$',
-        os.path.join(wc_dir, 'A', 'B', 'pi'):  '.*.other/A/D/G/pi$',
-    }
-
-  for path, pattern in info_output.items():
-    expected_info = { 'URL' : pattern }
-    svntest.actions.run_and_verify_info([expected_info], path)
-
-def copy_with_switched_subdir(sbox):
-  "copy directory with switched subdir"
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  D = os.path.join(wc_dir, 'A/D')
-  G = os.path.join(D, 'G')
-
-  E_url = sbox.repo_url + '/A/B/E'
-  R = os.path.join(wc_dir, 'R')
-
-  state = svntest.actions.get_virginal_state(wc_dir, 1)
-
-  # Verify before switching
-  svntest.actions.run_and_verify_status(wc_dir, state)
-
-  # Switch D
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', E_url, G)
-
-  state.tweak('A/D/G', switched='S')
-  state.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau');
-  state.add({
-    'A/D/G/alpha' : Item(status='  ', wc_rev=1),
-    'A/D/G/beta' : Item(status='  ', wc_rev=1),
-    })
-  svntest.actions.run_and_verify_status(wc_dir, state)
-
-  # And now copy A and everything below it to R
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', D, R)
-
-  state.add({
-    'R'         : Item(status='A ', copied='+', wc_rev='-'),
-    'R/gamma'   : Item(status='  ', copied='+', wc_rev='-'),
-    'R/G/alpha' : Item(status='  ', copied='+', wc_rev='-'),
-    'R/G/beta'  : Item(status='  ', copied='+', wc_rev='-'),
-    'R/H'       : Item(status='  ', copied='+', wc_rev='-'),
-    'R/H/chi'   : Item(status='  ', copied='+', wc_rev='-'),
-    'R/H/omega' : Item(status='  ', copied='+', wc_rev='-'),
-    'R/H/psi'   : Item(status='  ', copied='+', wc_rev='-'),
-
-    # This should be:
-    # 'R/G'       : Item(status='A ', copied='+', wc_rev='-'),
-    # But is:
-    'R/G'       : Item(status='  ', copied='+', wc_rev='-'),
-    })
-
-  svntest.actions.run_and_verify_status(wc_dir, state)
-
-  svntest.main.run_svn(None, 'ci', '-m', 'Commit added folder', wc_dir)
-
-  # Additional test. Enable when the invalid copy is fixed.
-  # It should either commit to R/G/alpha or to A/D/G/alpha when the copy
-  # keeps the switch.. or it must be that there is no alpha file.
-
-  # (Don't forget to bump the wc_rev below for the extra commit)
-  #svntest.main.run_svn(None, 'up', wc_dir)
-  #svntest.main.file_append(os.path.join(wc_dir, 'R/G/alpha'), "apple")
-  #svntest.main.run_svn(None, 'ci', '-m', 'Commit changed file', wc_dir)
-
-  # Checkout working copy to verify result
-  svntest.main.safe_rmtree(wc_dir, 1)
-  svntest.actions.run_and_verify_svn(None,
-                                     None, [],
-                                     'checkout',
-                                     sbox.repo_url, wc_dir)
-
-  # Switch D again to recreate state
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', E_url, G)
-
-  # Clear the statuses
-  state.tweak(status='  ', copied=None, wc_rev='2')
-  # But reset the switched state
-  state.tweak('A/D/G', switched='S')
-
-  # This fails because the original tree of D is under R, while there
-  # should either be the tree of E, or nothing at all.
-  svntest.actions.run_and_verify_status(wc_dir, state)
 
 
 ########################################################################
@@ -2944,12 +2556,9 @@ test_list = [ None,
               tolerate_local_mods,
               tree_conflicts_on_switch_1_1,
               tree_conflicts_on_switch_1_2,
-              XFail(tree_conflicts_on_switch_2_1),
+              tree_conflicts_on_switch_2_1,
               tree_conflicts_on_switch_2_2,
               tree_conflicts_on_switch_3,
-              single_file_relocate,
-              relocate_with_switched_children,
-              XFail(copy_with_switched_subdir),
              ]
 
 if __name__ == '__main__':

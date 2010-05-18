@@ -3,22 +3,17 @@
  * commandline client.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -190,7 +185,7 @@ open_editor(svn_boolean_t *performed_edit,
           svn_error_clear(err);
         }
       else if (err)
-        return svn_error_return(err);
+        return err;
       else
         *performed_edit = TRUE;
     }
@@ -237,7 +232,7 @@ launch_resolver(svn_boolean_t *performed_edit,
       svn_error_clear(err);
     }
   else if (err)
-    return svn_error_return(err);
+    return err;
   else if (performed_edit)
     *performed_edit = TRUE;
 
@@ -318,7 +313,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
               b->external_failed = TRUE;
             }
           else if (err)
-            return svn_error_return(err);
+            return err;
           (*result)->choice = svn_wc_conflict_choose_merged;
           return SVN_NO_ERROR;
         }
@@ -351,7 +346,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                           _("No merge tool found;"
                                             " leaving all conflicts.")));
               b->external_failed = TRUE;
-              return svn_error_return(err);
+              return err;
             }
           else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
             {
@@ -360,10 +355,10 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                           _("Error running merge tool;"
                                             " leaving all conflicts.")));
               b->external_failed = TRUE;
-              return svn_error_return(err);
+              return err;
             }
           else if (err)
-            return svn_error_return(err);
+            return err;
 
           if (remains_in_conflict)
             (*result)->choice = svn_wc_conflict_choose_postpone;
@@ -634,15 +629,6 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             }
           else if (strcmp(answer, "l") == 0)
             {
-              if (desc->kind == svn_wc_conflict_kind_property)
-                {
-                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                                              _("Invalid option; cannot "
-                                                "resolve property conflicts "
-                                                "with an external merge tool."
-                                                "\n\n")));
-                  continue;
-                }
               if (desc->base_file && desc->their_file && desc->my_file
                     && desc->merged_file)
                 {

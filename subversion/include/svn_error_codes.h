@@ -1,22 +1,17 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  *
@@ -214,11 +209,6 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 12,
              "Invalid character in hex checksum")
 
-  /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_BAD_TOKEN,
-             SVN_ERR_BAD_CATEGORY_START + 13,
-             "Unknown string value of token")
-
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
@@ -287,16 +277,6 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_STREAM_UNRECOGNIZED_DATA,
              SVN_ERR_STREAM_CATEGORY_START + 2,
              "Unrecognized stream data")
-
-  /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_STREAM_RESET_NOT_SUPPORTED,
-             SVN_ERR_STREAM_CATEGORY_START + 3,
-             "Stream doesn't support resetting")
-
-  /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED,
-             SVN_ERR_STREAM_CATEGORY_START + 4,
-             "Stream doesn't support seeking")
 
   /* node errors */
 
@@ -370,16 +350,9 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 6,
              "Invalid lock")
 
- /** Previously this error number was used by SVN_ERR_WC_NOT_DIRECTORY, which
-  * is now an alias for this error.
-  * @since Since 1.7. */
-  SVN_ERRDEF(SVN_ERR_WC_NOT_WORKING_COPY,
+  SVN_ERRDEF(SVN_ERR_WC_NOT_DIRECTORY,
              SVN_ERR_WC_CATEGORY_START + 7,
              "Path is not a working copy directory")
-
-  /* This name is deprecated. Use SVN_ERR_WC_NOT_WORKING_COPY.
-   * @deprecated Provided for backward compatibility with the 1.6 API. */
-#define SVN_ERR_WC_NOT_DIRECTORY SVN_ERR_WC_NOT_WORKING_COPY
 
   SVN_ERRDEF(SVN_ERR_WC_NOT_FILE,
              SVN_ERR_WC_CATEGORY_START + 8,
@@ -484,36 +457,6 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_WC_CANNOT_MOVE_FILE_EXTERNAL,
              SVN_ERR_WC_CATEGORY_START + 31,
              "Cannot move a file external")
-
-  /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_WC_DB_ERROR,
-             SVN_ERR_WC_CATEGORY_START + 32,
-             "Something's amiss with the wc sqlite database")
-
-  /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_WC_MISSING,
-             SVN_ERR_WC_CATEGORY_START + 33,
-             "The working copy is missing")
-
-  /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_WC_NOT_SYMLINK,
-             SVN_ERR_WC_CATEGORY_START + 34,
-             "The specified node is not a symlink")
-
-  /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
-             SVN_ERR_WC_CATEGORY_START + 35,
-             "The specified path has an unexpected status")
-
-  /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_WC_UPGRADE_REQUIRED,
-             SVN_ERR_WC_CATEGORY_START + 36,
-             "The working copy needs to be upgraded")
-
-  /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_WC_CLEANUP_REQUIRED,
-             SVN_ERR_WC_CATEGORY_START + 37,
-             "Previous operation was interrupted; run 'svn cleanup'")
 
   /* fs errors */
 
@@ -899,10 +842,7 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 11,
              "Repository has been moved")
 
-  /** @since New in 1.7 */
-  SVN_ERRDEF(SVN_ERR_RA_DAV_CONN_TIMEOUT,
-             SVN_ERR_RA_DAV_CATEGORY_START + 12,
-             "Connection timed out")
+  /* SVN_ERR_RA_DAV_CATEGORY_START + 12 is reserved for use in 1.7. */
 
   /** @since New in 1.6 */
   SVN_ERRDEF(SVN_ERR_RA_DAV_FORBIDDEN,
@@ -953,11 +893,6 @@ SVN_ERROR_START
              SVN_ERR_RA_SVN_CATEGORY_START + 7,
              "Cannot negotiate authentication mechanism")
 
-  /** @since New in 1.7  */
-  SVN_ERRDEF(SVN_ERR_RA_SVN_EDIT_ABORTED,
-             SVN_ERR_RA_SVN_CATEGORY_START + 8,
-             "Editor drive was aborted")
-
   /* libsvn_ra_serf errors */
   /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED,
@@ -967,10 +902,6 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED,
              SVN_ERR_RA_SERF_CATEGORY_START + 1,
              "Server SSL certificate untrusted")
-  /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_RA_SERF_GSSAPI_INITIALISATION_FAILED,
-             SVN_ERR_RA_SERF_CATEGORY_START + 2,
-             "Initialization of the GSSAPI context failed")
 
   /* libsvn_auth errors */
 
@@ -1157,11 +1088,6 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED,
              SVN_ERR_CLIENT_CATEGORY_START + 17,
              "A file external cannot overwrite an existing versioned item")
-
-  /** @since New in 1.7. */
-  SVN_ERRDEF(SVN_ERR_CLIENT_PATCH_BAD_STRIP_COUNT,
-             SVN_ERR_CLIENT_CATEGORY_START + 18,
-             "Invalid path component strip count specified")
 
   /* misc errors */
 

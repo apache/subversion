@@ -5,22 +5,17 @@
  *          specific to working copies.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -35,7 +30,6 @@
 #include "svn_props.h"
 
 #include "wc.h"   /* just for prototypes of things in this .c file */
-#include "entries.h"
 #include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
@@ -46,8 +40,10 @@ svn_wc__ensure_directory(const char *path,
                          apr_pool_t *pool)
 {
   svn_node_kind_t kind;
+  svn_error_t *err = svn_io_check_path(path, &kind, pool);
 
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  if (err)
+    return err;
 
   if (kind != svn_node_none && kind != svn_node_dir)
     {
@@ -56,12 +52,13 @@ svn_wc__ensure_directory(const char *path,
          Might happen if there's a file in the way, for example. */
       return svn_error_createf(APR_ENOTDIR, NULL,
                                _("'%s' is not a directory"),
-                               svn_dirent_local_style(path, pool));
+                               svn_path_local_style(path, pool));
     }
   else if (kind == svn_node_none)
     {
       /* The dir doesn't exist, and it's our job to change that. */
-      svn_error_t *err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
+
+      err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
 
       if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
         {
@@ -77,7 +74,7 @@ svn_wc__ensure_directory(const char *path,
           /* Okay, so the problem is a missing intermediate
              directory.  We don't know which one, so we recursively
              back up one level and try again. */
-          const char *shorter = svn_dirent_dirname(path, pool);
+          const char *shorter = svn_path_dirname(path, pool);
 
           /* Clear the error. */
           svn_error_clear(err);
@@ -90,12 +87,17 @@ svn_wc__ensure_directory(const char *path,
             }
           else  /* We have a valid path, so recursively ensure it. */
             {
-              SVN_ERR(svn_wc__ensure_directory(shorter, pool));
-              return svn_wc__ensure_directory(path, pool);
+              err = svn_wc__ensure_directory(shorter, pool);
+
+              if (err)
+                return (err);
+              else
+                return svn_wc__ensure_directory(path, pool);
             }
         }
 
-      SVN_ERR(err);
+      if (err)
+        return err;
     }
   else  /* No problem, the dir already existed, so just leave. */
     SVN_ERR_ASSERT(kind == svn_node_dir);
@@ -122,7 +124,6 @@ svn_wc_create_notify(const char *path,
   ret->content_state = ret->prop_state = svn_wc_notify_state_unknown;
   ret->lock_state = svn_wc_notify_lock_state_unknown;
   ret->revision = SVN_INVALID_REVNUM;
-  ret->old_revision = SVN_INVALID_REVNUM;
 
   return ret;
 }
@@ -236,7 +237,7 @@ void svn_wc__compat_call_notify_func(void *baton,
 }
 
 svn_boolean_t
-svn_wc_match_ignore_list(const char *str, const apr_array_header_t *list,
+svn_wc_match_ignore_list(const char *str, apr_array_header_t *list,
                          apr_pool_t *pool)
 {
   /* For now, we simply forward to svn_cstring_match_glob_list. In the
@@ -247,63 +248,118 @@ svn_wc_match_ignore_list(const char *str, const apr_array_header_t *list,
   return svn_cstring_match_glob_list(str, list);
 }
 
-svn_wc_conflict_description2_t *
-svn_wc_conflict_description_create_text2(const char *local_abspath,
-                                         apr_pool_t *result_pool)
+svn_error_t *
+svn_wc__path_switched(const char *wc_path,
+                      svn_boolean_t *switched,
+                      const svn_wc_entry_t *entry,
+                      apr_pool_t *pool)
 {
-  svn_wc_conflict_description2_t *conflict;
+  const char *wc_parent_path, *parent_child_url;
+  const svn_wc_entry_t *parent_entry;
+  svn_wc_adm_access_t *parent_adm_access;
+  svn_error_t *err;
 
-  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR(svn_path_get_absolute(&wc_path, wc_path, pool));
 
-  conflict = apr_pcalloc(result_pool, sizeof(*conflict));
-  conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
+  if (svn_dirent_is_root(wc_path, strlen(wc_path)))
+    {
+      *switched = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  wc_parent_path = svn_path_dirname(wc_path, pool);
+  err = svn_wc_adm_open3(&parent_adm_access, NULL, wc_parent_path, FALSE, 0,
+                         NULL, NULL, pool);
+
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+          *switched = FALSE;
+        }
+
+      return err;
+    }
+
+  SVN_ERR(svn_wc__entry_versioned(&parent_entry, wc_parent_path,
+                                  parent_adm_access, FALSE, pool));
+  SVN_ERR(svn_wc_adm_close2(parent_adm_access, pool));
+
+  /* Without complete entries (and URLs) for WC_PATH and it's parent
+     we return SVN_ERR_ENTRY_MISSING_URL. */
+  if (!parent_entry->url || !entry->url)
+    {
+      const char *no_url_path = parent_entry->url ? wc_path : wc_parent_path;
+      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                               _("Cannot find a URL for '%s'"),
+                               svn_path_local_style(no_url_path, pool));
+    }
+
+  parent_child_url
+    = svn_path_url_add_component2(parent_entry->url,
+                                  svn_path_basename(wc_path, pool), pool);
+  *switched = strcmp(parent_child_url, entry->url) != 0;
+
+  return SVN_NO_ERROR;
+}
+
+svn_wc_conflict_description_t *
+svn_wc_conflict_description_create_text(const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        apr_pool_t *pool)
+{
+  svn_wc_conflict_description_t *conflict;
+
+  conflict = apr_pcalloc(pool, sizeof(*conflict));
+  conflict->path = path;
   conflict->node_kind = svn_node_file;
   conflict->kind = svn_wc_conflict_kind_text;
+  conflict->access = adm_access;
   conflict->action = svn_wc_conflict_action_edit;
   conflict->reason = svn_wc_conflict_reason_edited;
   return conflict;
 }
 
-svn_wc_conflict_description2_t *
-svn_wc_conflict_description_create_prop2(const char *local_abspath,
-                                         svn_node_kind_t node_kind,
-                                         const char *property_name,
-                                         apr_pool_t *result_pool)
+svn_wc_conflict_description_t *
+svn_wc_conflict_description_create_prop(const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        svn_node_kind_t node_kind,
+                                        const char *property_name,
+                                        apr_pool_t *pool)
 {
-  svn_wc_conflict_description2_t *conflict;
+  svn_wc_conflict_description_t *conflict;
 
-  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
-
-  conflict = apr_pcalloc(result_pool, sizeof(*conflict));
-  conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
+  conflict = apr_pcalloc(pool, sizeof(*conflict));
+  conflict->path = path;
   conflict->node_kind = node_kind;
   conflict->kind = svn_wc_conflict_kind_property;
-  conflict->property_name = apr_pstrdup(result_pool, property_name);
+  conflict->access = adm_access;
+  conflict->property_name = property_name;
   return conflict;
 }
 
-svn_wc_conflict_description2_t *
-svn_wc_conflict_description_create_tree2(
-  const char *local_abspath,
-  svn_node_kind_t node_kind,
-  svn_wc_operation_t operation,
-  const svn_wc_conflict_version_t *src_left_version,
-  const svn_wc_conflict_version_t *src_right_version,
-  apr_pool_t *result_pool)
+svn_wc_conflict_description_t *
+svn_wc_conflict_description_create_tree(
+                            const char *path,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_node_kind_t node_kind,
+                            svn_wc_operation_t operation,
+                            svn_wc_conflict_version_t *src_left_version,
+                            svn_wc_conflict_version_t *src_right_version,
+                            apr_pool_t *pool)
 {
-  svn_wc_conflict_description2_t *conflict;
+  svn_wc_conflict_description_t *conflict;
 
-  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
-
-  conflict = apr_pcalloc(result_pool, sizeof(*conflict));
-  conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
+  conflict = apr_pcalloc(pool, sizeof(*conflict));
+  conflict->path = path;
   conflict->node_kind = node_kind;
   conflict->kind = svn_wc_conflict_kind_tree;
+  conflict->access = adm_access;
   conflict->operation = operation;
-  conflict->src_left_version = svn_wc_conflict_version_dup(src_left_version,
-                                                           result_pool);
-  conflict->src_right_version = svn_wc_conflict_version_dup(src_right_version,
-                                                            result_pool);
+  conflict->src_left_version = src_left_version;
+  conflict->src_right_version = src_right_version;
   return conflict;
 }
 
@@ -343,41 +399,6 @@ svn_wc__conflict_description_dup(const svn_wc_conflict_description_t *conflict,
   return new_conflict;
 }
 
-svn_wc_conflict_description2_t *
-svn_wc__conflict_description2_dup(const svn_wc_conflict_description2_t *conflict,
-                                  apr_pool_t *pool)
-{
-  svn_wc_conflict_description2_t *new_conflict;
-
-  new_conflict = apr_pcalloc(pool, sizeof(*new_conflict));
-
-  /* Shallow copy all members. */
-  *new_conflict = *conflict;
-
-  if (conflict->local_abspath)
-    new_conflict->local_abspath = apr_pstrdup(pool, conflict->local_abspath);
-  if (conflict->property_name)
-    new_conflict->property_name = apr_pstrdup(pool, conflict->property_name);
-  if (conflict->mime_type)
-    new_conflict->mime_type = apr_pstrdup(pool, conflict->mime_type);
-  if (conflict->base_file)
-    new_conflict->base_file = apr_pstrdup(pool, conflict->base_file);
-  if (conflict->their_file)
-    new_conflict->their_file = apr_pstrdup(pool, conflict->their_file);
-  if (conflict->my_file)
-    new_conflict->my_file = apr_pstrdup(pool, conflict->my_file);
-  if (conflict->merged_file)
-    new_conflict->merged_file = apr_pstrdup(pool, conflict->merged_file);
-  if (conflict->src_left_version)
-    new_conflict->src_left_version =
-      svn_wc_conflict_version_dup(conflict->src_left_version, pool);
-  if (conflict->src_right_version)
-    new_conflict->src_right_version =
-      svn_wc_conflict_version_dup(conflict->src_right_version, pool);
-
-  return new_conflict;
-}
-
 svn_wc_conflict_version_t *
 svn_wc_conflict_version_create(const char *repos_url,
                                const char* path_in_repos,
@@ -388,10 +409,6 @@ svn_wc_conflict_version_create(const char *repos_url,
   svn_wc_conflict_version_t *version;
 
   version = apr_pcalloc(pool, sizeof(*version));
-
-  SVN_ERR_ASSERT_NO_RETURN(svn_uri_is_canonical(repos_url, pool) &&
-                           svn_relpath_is_canonical(path_in_repos, pool) &&
-                           SVN_IS_VALID_REVNUM(peg_rev));
 
   version->repos_url = repos_url;
   version->peg_rev = peg_rev;
@@ -409,9 +426,6 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
 
   svn_wc_conflict_version_t *new_version;
 
-  if (version == NULL)
-    return NULL;
-
   new_version = apr_pcalloc(pool, sizeof(*new_version));
 
   /* Shallow copy all members. */
@@ -426,171 +440,3 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
   return new_version;
 }
 
-
-svn_wc_conflict_description_t *
-svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
-                  apr_pool_t *result_pool)
-{
-  svn_wc_conflict_description_t *new_conflict;
-
-  if (conflict == NULL)
-    return NULL;
-
-  new_conflict = apr_pcalloc(result_pool, sizeof(*new_conflict));
-
-  new_conflict->path = apr_pstrdup(result_pool, conflict->local_abspath);
-  new_conflict->node_kind = conflict->node_kind;
-  new_conflict->kind = conflict->kind;
-  new_conflict->action = conflict->action;
-  new_conflict->reason = conflict->reason;
-  if (conflict->src_left_version)
-    new_conflict->src_left_version =
-          svn_wc_conflict_version_dup(conflict->src_left_version, result_pool);
-  if (conflict->src_right_version)
-    new_conflict->src_right_version =
-          svn_wc_conflict_version_dup(conflict->src_right_version, result_pool);
-
-  switch (conflict->kind)
-    {
-
-      case svn_wc_conflict_kind_property:
-        new_conflict->property_name = apr_pstrdup(result_pool,
-                                                  conflict->property_name);
-        /* Falling through. */
-
-      case svn_wc_conflict_kind_text:
-        new_conflict->is_binary = conflict->is_binary;
-        new_conflict->mime_type = conflict->mime_type
-                              ? apr_pstrdup(result_pool, conflict->mime_type)
-                              : NULL;
-        new_conflict->base_file = apr_pstrdup(result_pool,
-                                              conflict->base_file);
-        new_conflict->their_file = apr_pstrdup(result_pool,
-                                               conflict->their_file);
-        new_conflict->my_file = apr_pstrdup(result_pool,
-                                            conflict->my_file);
-        new_conflict->merged_file = conflict->merged_file
-                                    ? apr_pstrdup(result_pool,
-                                                  conflict->merged_file)
-                                    : NULL;
-        break;
-
-      case svn_wc_conflict_kind_tree:
-        new_conflict->operation = conflict->operation;
-        break;
-    }
-
-  /* A NULL access baton is allowable by the API. */
-  new_conflict->access = NULL;
-
-  return new_conflict;
-}
-
-
-svn_wc_conflict_description2_t *
-svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
-                  apr_pool_t *result_pool)
-{
-  svn_wc_conflict_description2_t *new_conflict;
-
-  if (conflict == NULL)
-    return NULL;
-
-  new_conflict = apr_pcalloc(result_pool, sizeof(*new_conflict));
-
-  svn_error_clear(
-    svn_dirent_get_absolute(&new_conflict->local_abspath, conflict->path,
-                            result_pool));
-  new_conflict->node_kind = conflict->node_kind;
-  new_conflict->kind = conflict->kind;
-  new_conflict->action = conflict->action;
-  new_conflict->reason = conflict->reason;
-  if (conflict->src_left_version)
-    new_conflict->src_left_version =
-          svn_wc_conflict_version_dup(conflict->src_left_version, result_pool);
-  if (conflict->src_right_version)
-    new_conflict->src_right_version =
-          svn_wc_conflict_version_dup(conflict->src_right_version, result_pool);
-
-  switch (conflict->kind)
-    {
-      case svn_wc_conflict_kind_property:
-        new_conflict->property_name = apr_pstrdup(result_pool,
-                                                  conflict->property_name);
-        /* Falling through. */
-
-      case svn_wc_conflict_kind_text:
-        new_conflict->is_binary = conflict->is_binary;
-        new_conflict->mime_type = conflict->mime_type
-                              ? apr_pstrdup(result_pool, conflict->mime_type)
-                              : NULL;
-        new_conflict->base_file = apr_pstrdup(result_pool,
-                                              conflict->base_file);
-        new_conflict->their_file = apr_pstrdup(result_pool,
-                                               conflict->their_file);
-        new_conflict->my_file = apr_pstrdup(result_pool,
-                                            conflict->my_file);
-        new_conflict->merged_file = conflict->merged_file
-                                    ? apr_pstrdup(result_pool,
-                                                  conflict->merged_file)
-                                    : NULL;
-        break;
-
-      case svn_wc_conflict_kind_tree:
-        new_conflict->operation = conflict->operation;
-        break;
-    }
-
-  return new_conflict;
-}
-
-svn_error_t *
-svn_wc__status2_from_3(svn_wc_status2_t **status,
-                       const svn_wc_status3_t *old_status, 
-                       svn_wc_context_t *wc_ctx,
-                       const char *local_abspath,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
-{
-  const svn_wc_entry_t *entry;
-  const svn_wc_conflict_description2_t *tree_conflict;
-  svn_wc_conflict_description_t *old_tree_conflict;
-
-  if (old_status == NULL)
-    {
-      *status = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  *status = apr_pcalloc(result_pool, sizeof(**status));
-
-  SVN_ERR(svn_wc__get_entry(&entry, wc_ctx->db, local_abspath, TRUE,
-                            svn_node_unknown, FALSE, result_pool,
-                            scratch_pool));
-
-  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, wc_ctx->db,
-                                           local_abspath, scratch_pool,
-                                           scratch_pool));
-  old_tree_conflict = svn_wc__cd2_to_cd(tree_conflict, result_pool);
-
-  (*status)->entry = entry;
-  (*status)->text_status = old_status->text_status;
-  (*status)->prop_status = old_status->prop_status;
-  (*status)->locked = old_status->locked;
-  (*status)->copied = old_status->copied;
-  (*status)->switched = old_status->switched;
-  (*status)->repos_text_status = old_status->repos_text_status;
-  (*status)->repos_prop_status = old_status->repos_prop_status;
-  (*status)->repos_lock = svn_lock_dup(old_status->repos_lock, result_pool);
-  (*status)->url = apr_pstrdup(result_pool, old_status->url);
-  (*status)->ood_last_cmt_rev = old_status->ood_last_cmt_rev;
-  (*status)->ood_last_cmt_date = old_status->ood_last_cmt_date;
-  (*status)->ood_kind = old_status->ood_kind;
-  (*status)->ood_last_cmt_author = old_status->ood_last_cmt_author;
-  (*status)->tree_conflict = old_tree_conflict;
-  (*status)->file_external = old_status->file_external;
-  (*status)->pristine_text_status = old_status->pristine_text_status;
-  (*status)->pristine_prop_status = old_status->pristine_prop_status;
-
-  return SVN_NO_ERROR;
-}

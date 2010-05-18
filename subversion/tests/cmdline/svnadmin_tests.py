@@ -3,25 +3,17 @@
 #  svnadmin_tests.py:  testing the 'svnadmin' tool.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
+# Copyright (c) 2000-2006, 2008-2009 CollabNet.  All rights reserved.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 ######################################################################
 
 # General modules
@@ -33,7 +25,6 @@ import sys
 import svntest
 from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
 from svntest.verify import SVNUnexpectedStderr
-from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -92,11 +83,11 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
   using the array of wc.States passed in revs. VARARGS are optional
   arguments passed to the 'load' command"""
 
-  if isinstance(dump, str):
+  if type(dump) is type(""):
     dump = [ dump ]
 
   exit_code, output, errput = svntest.main.run_command_stdin(
-    svntest.main.svnadmin_binary, expected_stderr, 0, 1, dump,
+    svntest.main.svnadmin_binary, expected_stderr, 1, dump,
     'load', '--quiet', sbox.repo_dir, *varargs)
 
   if expected_stdout:
@@ -129,7 +120,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
       rev_tree = revs[rev].old_tree()
 
       try:
-        svntest.tree.compare_trees("rev/disk", rev_tree, wc_tree)
+        svntest.tree.compare_trees ("rev/disk", rev_tree, wc_tree)
       except svntest.tree.SVNTreeError:
         svntest.verify.display_trees(None, 'WC TREE', wc_tree, rev_tree)
         raise
@@ -625,7 +616,7 @@ def recover_fsfs(sbox):
   svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
 
   # Remember the contents of the db/current file.
-  expected_current_contents = open(current_path).read()
+  expected_current_contents = svntest.main.file_read(current_path)
 
   # Move aside the current file for r3.
   os.rename(os.path.join(sbox.repo_dir, 'db','current'),
@@ -637,7 +628,7 @@ def recover_fsfs(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  actual_current_contents = open(current_path).read()
+  actual_current_contents = svntest.main.file_read(current_path)
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
@@ -651,7 +642,7 @@ def recover_fsfs(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  actual_current_contents = open(current_path).read()
+  actual_current_contents = svntest.main.file_read(current_path)
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
@@ -665,7 +656,7 @@ def recover_fsfs(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  actual_current_contents = open(current_path).read()
+  actual_current_contents = svntest.main.file_read(current_path)
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
@@ -684,7 +675,7 @@ def recover_fsfs(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  actual_current_contents = open(current_path).read()
+  actual_current_contents = svntest.main.file_read(current_path)
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
@@ -700,7 +691,7 @@ def load_with_parent_dir(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
                                    'mergeinfo_included.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.main.file_read(dumpfile_location)
 
   # Create 'sample' dir in sbox.repo_url, and load the dump stream there.
   svntest.actions.run_and_verify_svn(None,
@@ -798,7 +789,7 @@ def reflect_dropped_renumbered_revs(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'with_merges.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.main.file_read(dumpfile_location)
 
   # Create 'toplevel' dir in sbox.repo_url
   svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 1.\n'],
@@ -813,14 +804,24 @@ def reflect_dropped_renumbered_revs(sbox):
                              '/toplevel')
 
   # Verify the svn:mergeinfo properties
-  url = sbox.repo_url
-  expected_output = svntest.verify.UnorderedOutput([
-    url + "/trunk - /branch1:5-9\n",
-    url + "/toplevel/trunk - /toplevel/branch1:14-18\n",
-    ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, ["/trunk:1-4\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/branch2')
+  svntest.actions.run_and_verify_svn(None, ["/branch1:5-9\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/trunk')
+  svntest.actions.run_and_verify_svn(None, ["/toplevel/trunk:1-13\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/toplevel/branch2')
+  svntest.actions.run_and_verify_svn(None, ["/toplevel/branch1:14-18\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/toplevel/trunk')
+  svntest.actions.run_and_verify_svn(None, ["/toplevel/trunk:1-12\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/toplevel/branch1')
+  svntest.actions.run_and_verify_svn(None, ["/trunk:1-3\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/branch1')
 
 #----------------------------------------------------------------------
 
@@ -949,244 +950,6 @@ def verify_with_invalid_revprops(sbox):
     ".*Malformed file"):
     raise svntest.Failure
 
-#----------------------------------------------------------------------
-# Even *more* testing for issue #3020 'Reflect dropped/renumbered
-# revisions in svn:mergeinfo data during svnadmin load'
-#
-# Full or incremental dump-load cycles should result in the same
-# mergeinfo in the loaded repository.
-#
-# Given a repository 'SOURCE-REPOS' with mergeinfo, and a repository
-# 'TARGET-REPOS' (which may or may not be empty), either of the following
-# methods to move 'SOURCE-REPOS' to 'TARGET-REPOS' should result in
-# the same mergeinfo on 'TARGET-REPOS':
-#
-#   1) Dump -r1:HEAD from 'SOURCE-REPOS' and load it in one shot to
-#      'TARGET-REPOS'.
-#
-#   2) Dump 'SOURCE-REPOS' in a series of incremental dumps and load
-#      each of them to 'TARGET-REPOS'.
-#
-# See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc13
-def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
-  "don't filter mergeinfo revs from incremental dump"
-
-  # Create an empty repos.
-  test_create(sbox)
-
-  # PART 1: Load a full dump to an empty repository.
-  #
-  # The test repository used here, 'mergeinfo_included_full.dump', is
-  # this repos:
-  #                       __________________________________________
-  #                      |                                         |
-  #                      |             ____________________________|_____
-  #                      |            |                            |     |
-  # trunk---r2---r3-----r5---r6-------r8---r9--------------->      |     |
-  #   r1             |        |     |       |                      |     |
-  # intial           |        |     |       |______                |     |
-  # import         copy       |   copy             |            merge   merge
-  #                  |        |     |            merge           (r5)   (r8)
-  #                  |        |     |            (r9)              |     |
-  #                  |        |     |              |               |     |
-  #                  |        |     V              V               |     |
-  #                  |        | branches/B2-------r11---r12---->   |     |
-  #                  |        |     r7              |____|         |     |
-  #                  |        |                        |           |     |
-  #                  |      merge                      |___        |     |
-  #                  |      (r6)                           |       |     |
-  #                  |        |_________________           |       |     |
-  #                  |                          |        merge     |     |
-  #                  |                          |      (r11-12)    |     |
-  #                  |                          |          |       |     |
-  #                  V                          V          V       |     |
-  #              branches/B1-------------------r10--------r13-->   |     |
-  #                  r4                                            |     |
-  #                   |                                            V     V
-  #                  branches/B1/B/E------------------------------r14---r15->
-  #                  
-  #
-  # The mergeinfo on this repos@15 is:
-  #
-  #   Properties on 'branches/B1':
-  #     svn:mergeinfo
-  #       /branches/B2:11-12
-  #       /trunk:6,9
-  #   Properties on 'branches/B1/B/E':
-  #     svn:mergeinfo
-  #       /branches/B2/B/E:11-12
-  #       /trunk/B/E:5-6,8-9
-  #   Properties on 'branches/B2':
-  #     svn:mergeinfo
-  #       /trunk:9
-  dumpfile_full = open(os.path.join(os.path.dirname(sys.argv[0]),
-                                    'svnadmin_tests_data',
-                                    'mergeinfo_included_full.dump')).read()
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_full, '--ignore-uuid')
-
-  # Check that the mergeinfo is as expected.
-  url = sbox.repo_url + '/branches/'
-  expected_output = svntest.verify.UnorderedOutput([
-    url + "B1 - /branches/B2:11-12\n",
-    "/trunk:6,9\n",
-    url + "B2 - /trunk:9\n",
-    url + "B1/B/E - /branches/B2/B/E:11-12\n",
-    "/trunk/B/E:5-6,8-9\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url)  
-
-  # PART 2: Load a a series of incremental dumps to an empty repository.
-  #
-  # Incrementally dump the repository into three dump files:
-  dump_file_r1_10 = svntest.main.temp_dir + "-r1-10.dump"
-  exit_code, output, errput = svntest.main.run_svnadmin(
-    'dump', sbox.repo_dir, '-r1:10')
-  dump_fp = open(dump_file_r1_10, 'wb')
-  dump_fp.writelines(output)
-  dump_fp.close()
-
-  dump_file_r11_13 = svntest.main.temp_dir + "-r11-13.dump"
-  exit_code, output, errput = svntest.main.run_svnadmin(
-    'dump', sbox.repo_dir, '--incremental', '-r11:13')
-  dump_fp = open(dump_file_r11_13, 'wb')
-  dump_fp.writelines(output)
-  dump_fp.close()
-
-  dump_file_r14_15 = svntest.main.temp_dir + "-r14-15.dump"
-  exit_code, output, errput = svntest.main.run_svnadmin(
-    'dump', sbox.repo_dir, '--incremental', '-r14:15')
-  dump_fp = open(dump_file_r14_15, 'wb')
-  dump_fp.writelines(output)
-  dump_fp.close()
-
-  # Blow away the current repos and create an empty one in its place.
-  test_create(sbox)
-
-  # Load the three incremental dump files in sequence.
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r1_10).read(),
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r11_13).read(),
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r14_15).read(),
-                             '--ignore-uuid')
-
-  # Check the mergeinfo, we use the same expected output as before,
-  # as it (duh!) should be exactly the same as when we loaded the
-  # repos in one shot.
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url)
-
-  # Now repeat the above two scenarios, but with an initially non-empty target
-  # repository.  First, try the full dump-load in one shot.
-  #
-  # PART 3: Load a full dump to an non-empty repository.
-  #  
-  # Reset our sandbox.
-  test_create(sbox)
-
-  # Load this skeleton repos into the empty target:
-  #
-  #   Projects/       (Added r1)
-  #     README        (Added r2)
-  #     Project-X     (Added r3)
-  #     Project-Y     (Added r4)
-  #     Project-Z     (Added r5)
-  #     docs/         (Added r6)
-  #       README      (Added r6)
-  dumpfile_skeleton = open(os.path.join(os.path.dirname(sys.argv[0]),
-                                        'svnadmin_tests_data',
-                                        'skeleton_repos.dump')).read()
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
-                             '--ignore-uuid')
-
-  # Load 'svnadmin_tests_data/mergeinfo_included_full.dump' in one shot:
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_full,
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
-
-  # Check that the mergeinfo is as expected.  This is exactly the
-  # same expected mergeinfo we previously checked, except that the
-  # revisions are all offset +6 to reflect the revions already in
-  # the skeleton target before we began loading and the leading source
-  # paths are adjusted by the --parent-dir:
-  #
-  #   Properties on 'branches/B1':
-  #     svn:mergeinfo
-  #       /Projects/Project-X/branches/B2:17-18
-  #       /Projects/Project-X/trunk:12,15
-  #   Properties on 'branches/B1/B/E':
-  #     svn:mergeinfo
-  #       /Projects/Project-X/branches/B2/B/E:17-18
-  #       /Projects/Project-X/trunk/B/E:11-12,14-15
-  #   Properties on 'branches/B2':
-  #     svn:mergeinfo
-  #       /Projects/Project-X/trunk:15
-  url = sbox.repo_url + '/Projects/Project-X/branches/'
-  expected_output = svntest.verify.UnorderedOutput([
-    url + "B1 - /Projects/Project-X/branches/B2:17-18\n",
-    "/Projects/Project-X/trunk:12,15\n",
-    url + "B2 - /Projects/Project-X/trunk:15\n",
-    url + "B1/B/E - /Projects/Project-X/branches/B2/B/E:17-18\n",
-    "/Projects/Project-X/trunk/B/E:11-12,14-15\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url)
-
-  # PART 4: Load a a series of incremental dumps to an non-empty repository.
-  #
-  # Reset our sandbox.
-  test_create(sbox)
-
-  # Load this skeleton repos into the empty target:
-  load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
-                             '--ignore-uuid')
-  
-  # Load the three incremental dump files in sequence.
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r1_10).read(),
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r11_13).read(),
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
-  load_and_verify_dumpstream(sbox, [], [], None,
-                             open(dump_file_r14_15).read(),
-                             '--parent-dir', 'Projects/Project-X',
-                             '--ignore-uuid')
-
-  # Check the resulting mergeinfo.  We expect the exact same results
-  # as Part 3.
-  #
-  # Currently this fails because our current logic mapping mergeinfo revs
-  # in the load stream to their new values based on the offset of the
-  # target repository is quite flawed.  Right now this is the resulting
-  # mergeinfo:
-  #
-  #    Properties on 'svnadmin_tests-21\Projects\Project-X\branches\B1\B
-  #      svn:mergeinfo
-  #        /Projects/Project-X/branches/B2/B/E:11-12
-  #        /Projects/Project-X/trunk/B/E:5-6,8-9
-  #    Properties on 'svnadmin_tests-21\Projects\Project-X\branches\B1':
-  #      svn:mergeinfo
-  #        /Projects/Project-X/branches/B2:11-18
-  #                                           ^^
-  #                                 The *only* correct rev here!
-  #        /Projects/Project-X/trunk:6,9
-  #    Properties on 'svnadmin_tests-21\Projects\Project-X\branches\B2':
-  #      svn:mergeinfo
-  #        /Projects/Project-X/trunk:9
-  #
-  # See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16 for
-  # more info.
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url)
 
 ########################################################################
 # Run the tests
@@ -1215,7 +978,6 @@ test_list = [ None,
               create_in_repo_subdir,
               SkipUnless(verify_with_invalid_revprops,
                          svntest.main.is_fs_type_fsfs),
-              XFail(dont_drop_valid_mergeinfo_during_incremental_loads),
              ]
 
 if __name__ == '__main__':

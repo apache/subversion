@@ -2,22 +2,17 @@
  * util.c :  utility functions for the RA/DAV library
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -551,10 +546,6 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
           return svn_error_create(SVN_ERR_FS_NOT_FOUND, NULL,
                                   apr_psprintf(pool, _("'%s' path not found"),
                                                req->url));
-        case 403:
-          return svn_error_create(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
-                                  apr_psprintf(pool, _("access to '%s' forbidden"),
-                                               req->url));
 
         case 301:
         case 302:
@@ -1084,26 +1075,11 @@ wrapper_endelm_cb(void *baton,
   return 0;
 }
 
-svn_error_t *
-svn_ra_neon__check_parse_error(const char *method,
-                               ne_xml_parser *xml_parser,
-                               const char *url)
-{
-  const char *msg = ne_xml_get_error(xml_parser);
-  if (msg != NULL && *msg != '\0')
-    return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                             _("The %s request returned invalid XML "
-                               "in the response: %s (%s)"),
-                             method, msg, url);
-  return SVN_NO_ERROR;
-}
-
 static int
 wrapper_reader_cb(void *baton, const char *data, size_t len)
 {
   parser_wrapper_baton_t *pwb = baton;
   svn_ra_neon__session_t *sess = pwb->req->sess;
-  int parser_status;
 
   if (pwb->req->err)
     return 1;
@@ -1116,17 +1092,7 @@ wrapper_reader_cb(void *baton, const char *data, size_t len)
   if (pwb->req->err)
     return 1;
 
-  parser_status = ne_xml_parse(pwb->parser, data, len);
-  if (parser_status)
-    {
-      /* Pass XML parser error. */
-      SVN_RA_NEON__REQ_ERR(pwb->req,
-                           svn_ra_neon__check_parse_error(pwb->req->method,
-                                                          pwb->parser,
-                                                          pwb->req->url));
-    }
-
-  return parser_status;
+  return ne_xml_parse(pwb->parser, data, len);
 }
 
 ne_xml_parser *
@@ -1219,6 +1185,7 @@ parsed_request(svn_ra_neon__request_t *req,
                apr_pool_t *pool)
 {
   ne_xml_parser *success_parser = NULL;
+  const char *msg;
   spool_reader_baton_t spool_reader_baton;
 
   if (body == NULL)
@@ -1285,7 +1252,13 @@ parsed_request(svn_ra_neon__request_t *req,
         }
     }
 
-  SVN_ERR(svn_ra_neon__check_parse_error(method, success_parser, url));
+  /* was there an XML parse error somewhere? */
+  msg = ne_xml_get_error(success_parser);
+  if (msg != NULL && *msg != '\0')
+    return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                             _("The %s request returned invalid XML "
+                               "in the response: %s (%s)"),
+                             method, msg, url);
 
   return SVN_NO_ERROR;
 }
@@ -1497,8 +1470,6 @@ svn_ra_neon__request_dispatch(int *code_p,
   /* Any other errors? Report them */
   SVN_ERR(req->err);
 
-  SVN_ERR(svn_ra_neon__check_parse_error(req->method, error_parser, req->url));
-
   /* We either have a neon error, or some other error
      that we didn't expect. */
   return generate_error(req, pool);
@@ -1510,5 +1481,5 @@ svn_ra_neon__request_get_location(svn_ra_neon__request_t *request,
                                   apr_pool_t *pool)
 {
   const char *val = ne_get_response_header(request->ne_req, "Location");
-  return val ? svn_uri_canonicalize(val, pool) : NULL;
+  return val ? apr_pstrdup(pool, val) : NULL;
 }

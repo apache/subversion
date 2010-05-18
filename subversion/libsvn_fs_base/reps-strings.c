@@ -1,22 +1,17 @@
 /* reps-strings.c : intepreting representations with respect to strings
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -132,7 +127,7 @@ delta_string_keys(apr_array_header_t **keys,
 
 /* Delete the strings associated with array KEYS in FS as part of TRAIL.  */
 static svn_error_t *
-delete_strings(const apr_array_header_t *keys,
+delete_strings(apr_array_header_t *keys,
                svn_fs_t *fs,
                trail_t *trail,
                apr_pool_t *pool)
@@ -323,7 +318,7 @@ get_one_window(struct compose_handler_baton *cb,
 
 static svn_error_t *
 rep_undeltify_range(svn_fs_t *fs,
-                    const apr_array_header_t *deltas,
+                    apr_array_header_t *deltas,
                     representation_t *fulltext,
                     int cur_chunk,
                     char *buf,
@@ -533,7 +528,7 @@ rep_read_range(svn_fs_t *fs,
                    _("Corruption detected whilst reading delta chain from "
                      "representation '%s' to '%s'"), first_rep_key, rep_key);
               else
-                return svn_error_return(err);
+                return err;
             }
         }
     }
@@ -825,11 +820,9 @@ svn_fs_base__rep_contents(svn_string_t *str,
     if (! svn_checksum_match(checksum, rep_checksum))
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         apr_psprintf(pool, "%s:\n%s\n%s\n",
-                      _("Checksum mismatch on representation '%s'"),
-                      _("   expected:  %s"),
-                      _("     actual:  %s")),
-         rep_key,
+         _("Checksum mismatch on representation '%s':\n"
+           "   expected:  %s\n"
+           "     actual:  %s\n"), rep_key,
          svn_checksum_to_cstring_display(rep_checksum, pool),
          svn_checksum_to_cstring_display(checksum, pool));
   }
@@ -921,11 +914,9 @@ txn_body_read_rep(void *baton, trail_t *trail)
                                            args->rb->md5_checksum)))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   apr_psprintf(trail->pool, "%s:\n%s\n%s\n",
-                                _("MD5 checksum mismatch on representation '%s'"),
-                                _("   expected:  %s"),
-                                _("     actual:  %s")),
-                   args->rb->rep_key,
+                   _("MD5 checksum mismatch on representation '%s':\n"
+                     "   expected:  %s\n"
+                     "     actual:  %s\n"), args->rb->rep_key,
                    svn_checksum_to_cstring_display(rep->md5_checksum,
                                                    trail->pool),
                    svn_checksum_to_cstring_display(args->rb->md5_checksum,
@@ -936,11 +927,9 @@ txn_body_read_rep(void *baton, trail_t *trail)
                                            args->rb->sha1_checksum)))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   apr_psprintf(trail->pool, "%s:\n%s\n%s\n",
-                                _("SHA1 checksum mismatch on representation '%s'"),
-                                _("   expected:  %s"),
-                                _("     actual:  %s")),
-                   args->rb->rep_key,
+                   _("SHA1 checksum mismatch on representation '%s':\n"
+                     "   expected:  %s\n"
+                     "     actual:  %s\n"), args->rb->rep_key,
                    svn_checksum_to_cstring_display(rep->sha1_checksum,
                                                    trail->pool),
                    svn_checksum_to_cstring_display(args->rb->sha1_checksum,
@@ -1618,135 +1607,6 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
     /* Delete the original pre-deltified strings. */
     SVN_ERR(delete_strings(orig_str_keys, fs, trail, pool));
   }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *svn_fs_base__rep_obliterate(svn_fs_t *fs,
-                                         const char *key,
-                                         const char *pred_key,
-                                         trail_t *trail,
-                                         apr_pool_t *pool)
-{
-  const char *new_str = NULL;
-  representation_t *empty;
-  svn_stream_t *new_stream;
-  struct write_svndiff_strings_baton new_baton;
-  svn_stream_t *pred_stream1, *pred_stream2;
-  svn_txdelta_stream_t *txdelta_stream;
-  base_fs_data_t *bfd = fs->fsap_data;
-  svn_txdelta_window_handler_t new_handler;
-  void *new_handler_baton;
-  apr_pool_t *wpool;
-  apr_array_header_t *windows;
-  window_write_t *ww;
-  svn_txdelta_window_t *window;
-  svn_filesize_t tview_off = 0;
-  svn_filesize_t diffsize = 0;
-  const unsigned char *digest;
-  representation_t *pred_rep;
-  representation_t new_rep;
-  rep_delta_chunk_t *chunk;
-  apr_array_header_t *chunks;
-  int i;
-
-  if (!pred_key)
-    {
-      /* No predecessor so just write a new empty rep */
-      SVN_ERR(svn_fs_bdb__string_append(fs, &new_str, 0, NULL, trail, pool));
-      empty = make_fulltext_rep(new_str, NULL,
-                                svn_checksum_empty_checksum(svn_checksum_md5,
-                                                            pool),
-                                svn_checksum_empty_checksum(svn_checksum_sha1,
-                                                            pool),
-                                pool);
-      SVN_ERR(svn_fs_bdb__write_rep(fs, key, empty, trail, pool));
-
-      return SVN_NO_ERROR;
-    }
-
-  if (!strcmp(key, pred_key))
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Attempt to obliterate '%s' using itself "),
-                             key);
-
-  new_baton.fs = fs;
-  new_baton.trail = trail;
-  new_baton.header_read = FALSE;
-  new_stream = svn_stream_create(&new_baton, pool);
-  svn_stream_set_write(new_stream, write_svndiff_strings);
-
-  /* ### Is there a simpler way to write a no-change delta? */
-  SVN_ERR(svn_fs_base__rep_contents_read_stream(&pred_stream1, fs, pred_key,
-                                                TRUE, trail, pool));
-  SVN_ERR(svn_fs_base__rep_contents_read_stream(&pred_stream2, fs, pred_key,
-                                                TRUE, trail, pool));
-  svn_txdelta(&txdelta_stream, pred_stream1, pred_stream2, pool);
-
-  if (bfd->format >= SVN_FS_BASE__MIN_SVNDIFF1_FORMAT)
-    svn_txdelta_to_svndiff2(&new_handler, &new_handler_baton,
-                            new_stream, 1, pool);
-  else
-    svn_txdelta_to_svndiff2(&new_handler, &new_handler_baton,
-                            new_stream, 0, pool);
-
-  wpool = svn_pool_create(pool);
-  windows = apr_array_make(pool, 1, sizeof(ww));
-  do
-    {
-      new_baton.size = 0;
-      new_baton.key = NULL;
-      svn_pool_clear(wpool);
-
-      SVN_ERR(svn_txdelta_next_window(&window, txdelta_stream, wpool));
-      SVN_ERR(new_handler(window, new_handler_baton));
-      if (window)
-        {
-          ww = apr_pcalloc(pool, sizeof(*ww));
-          ww->key = new_baton.key;
-          ww->svndiff_len = new_baton.size;
-          ww->text_off = tview_off;
-          ww->text_len = window->tview_len;
-          APR_ARRAY_PUSH(windows, window_write_t *) = ww;
-          tview_off += window->tview_len;
-          diffsize += ww->svndiff_len;
-        }
-    } while (window);
-
-  svn_pool_destroy(wpool);
-
-  digest = svn_txdelta_md5_digest(txdelta_stream);
-  if (!digest)
-    return svn_error_createf(SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT, NULL,
-                             _("Failed to calculate MD5 digest for '%s'"),
-                             pred_key);
-  /* ### Check the digest against something?  pred_rep->md5_checksum? */
-
-  SVN_ERR(svn_fs_bdb__read_rep(&pred_rep, fs, pred_key, trail, pool));
-  new_rep.md5_checksum = svn_checksum_dup(pred_rep->md5_checksum, pool);
-  new_rep.sha1_checksum = svn_checksum_dup(pred_rep->sha1_checksum, pool);
-  new_rep.kind = rep_kind_delta;
-  new_rep.txn_id = NULL;
-
-  chunks = apr_array_make(pool, windows->nelts, sizeof(chunk));
-
-  for (i = 0; i < windows->nelts; i++)
-    {
-      ww = APR_ARRAY_IDX(windows, i, window_write_t *);
-
-      chunk = apr_palloc(pool, sizeof(*chunk));
-      chunk->offset = ww->text_off;
-
-      chunk->version = new_baton.version;
-      chunk->string_key = ww->key;
-      chunk->size = ww->text_len;
-      chunk->rep_key = pred_key;
-
-      APR_ARRAY_PUSH(chunks, rep_delta_chunk_t *) = chunk;
-    }
-
-  new_rep.contents.delta.chunks = chunks;
-  SVN_ERR(svn_fs_bdb__write_rep(fs, key, &new_rep, trail, pool));
 
   return SVN_NO_ERROR;
 }

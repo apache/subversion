@@ -1,22 +1,17 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  *
@@ -175,7 +170,7 @@ svn_ra_svn_create_conn(apr_socket_t *sock,
  */
 svn_error_t *
 svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
-                            const apr_array_header_t *list);
+                            apr_array_header_t *list);
 
 /** Return @c TRUE if @a conn has the capability @a capability, or
  * @c FALSE if it does not. */
@@ -347,7 +342,7 @@ svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
  * tuple specification; use 'B' instead.
  */
 svn_error_t *
-svn_ra_svn_parse_tuple(const apr_array_header_t *list,
+svn_ra_svn_parse_tuple(apr_array_header_t *list,
                        apr_pool_t *pool,
                        const char *fmt, ...);
 
@@ -365,7 +360,7 @@ svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_ra_svn_parse_proplist(const apr_array_header_t *list,
+svn_ra_svn_parse_proplist(apr_array_header_t *list,
                           apr_pool_t *pool,
                           apr_hash_t **props);
 

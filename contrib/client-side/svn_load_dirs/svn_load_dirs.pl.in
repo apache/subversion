@@ -74,9 +74,6 @@ my $opt_existing_wc_dir;
 # "global-ignores" option).
 my $opt_glob_ignores;
 
-# Message to use for the final commit.
-my $opt_final_commit_msg;
-
 # This is the character used to separate regular expressions occuring
 # in the tag directory path from the path itself.
 my $REGEX_SEP_CHAR = '@';
@@ -94,8 +91,7 @@ GetOptions('no_user_input'           => \$opt_no_user_input,
            'tag_location=s'          => \$opt_import_tag_location,
            'verbose+'                => \$opt_verbose,
            'wc=s'                    => \$opt_existing_wc_dir,
-           'glob_ignores=s'          => \$opt_glob_ignores,
-           'message=s'               => \$opt_final_commit_msg)
+           'glob_ignores=s'          => \$opt_glob_ignores)
   or &usage;
 &usage("$0: too few arguments") if @ARGV < 2;
 
@@ -436,7 +432,7 @@ my $native_eol = &determine_native_eol;
       # Trim off the last segment and record the result.
       push(@load_tags_without_last_segment, substr($load_tag, 0, $index));
     }
-
+  
   foreach my $dir ($repos_load_rel_path, @load_tags_without_last_segment)
     {
       next unless length $dir;
@@ -802,7 +798,7 @@ while (defined (my $load_dir = &get_next_load_dir))
                     {
                       goto RELIST;
                     }
-
+                  
                   if ($line =~ /^F$/i)
                     {
                       $got_line = 1;
@@ -1198,7 +1194,7 @@ while (defined (my $load_dir = &get_next_load_dir))
                   {
                     @diff_ignore_space_changes = ('-b');
                   }
-
+                
                 # Write the value to a temporary file in case it's multi-line
                 my ($handle, $tmpfile) = tempfile(DIR => $temp_dir);
                 print $handle $property_value;
@@ -1264,11 +1260,7 @@ while (defined (my $load_dir = &get_next_load_dir))
           }
       }
 
-    my $message = $opt_final_commit_msg;
-    if (!$message)
-      {
-        $message = wrap('', '', "Load $load_dir into $repos_load_abs_path.\n");
-      }
+    my $message = wrap('', '', "Load $load_dir into $repos_load_abs_path.\n");
     read_from_process($svn, 'commit',
                       @svn_use_repos_cmd_opts,
                       '-m', $message);
@@ -1349,8 +1341,7 @@ sub usage
       "  -wc path       use the already checked-out working copy at path\n",
       "                 instead of checkout out a fresh working copy\n",
       "  -glob_ignores  List of filename patterns to ignore (as in svn's\n",
-      "                 global-ignores config option)\n",
-      "  -message       Final commit message\n";
+      "                 global-ignores config option)\n";
 }
 
 # Get the next directory to load, either from the command line or from
@@ -1533,7 +1524,7 @@ sub safe_read_from_pipe
       my @commandline = ();
       my $command;
       my $comment;
-
+        
       while ($command = shift)
         {
           if ("-m" eq $command)
@@ -1542,7 +1533,7 @@ sub safe_read_from_pipe
               my ($handle, $tmpfile) = tempfile(DIR => $temp_dir);
               print $handle $comment;
               close($handle);
-
+                
               push(@commandline, "--file");
               push(@commandline, $tmpfile);
             }
@@ -1559,15 +1550,15 @@ sub safe_read_from_pipe
               push(@commandline, $command);
             }
         }
-
+        
       print "Running @commandline\n";
       if ( $comment ) { print $comment; }
-
+        
       # Now do the pipe.
       open(SAFE_READ, "@commandline |")
         or die "$0: cannot pipe to command: $!\n";
     }
-
+    
   # parent
   my @output;
   while (<SAFE_READ>)

@@ -2,22 +2,17 @@
  * constructors.c :  Constructors for various data structures.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -147,17 +142,19 @@ svn_prop_hash_dup(apr_hash_t *hash,
                   apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  apr_hash_t *new_hash = apr_hash_make(pool);
+  apr_hash_t *new_hash;
+
+  new_hash = apr_hash_make(pool);
 
   for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
     {
       const void *key;
-      apr_ssize_t klen;
       void *prop;
 
-      apr_hash_this(hi, &key, &klen, &prop);
-      apr_hash_set(new_hash, apr_pstrdup(pool, key), klen,
-                   svn_string_dup(prop, pool));
+      apr_hash_this(hi, &key, NULL, &prop);
+
+      apr_hash_set(new_hash, apr_pstrdup(pool, key),
+      APR_HASH_KEY_STRING, svn_string_dup(prop, pool));
     }
   return new_hash;
 }
@@ -185,7 +182,7 @@ svn_log_entry_create(apr_pool_t *pool)
 }
 
 svn_log_entry_t *
-svn_log_entry_dup(const svn_log_entry_t *log_entry, apr_pool_t *pool)
+svn_log_entry_dup(svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   svn_log_entry_t *new_entry = svn_log_entry_create(pool);
@@ -193,7 +190,7 @@ svn_log_entry_dup(const svn_log_entry_t *log_entry, apr_pool_t *pool)
   *new_entry = *log_entry;
 
   if (log_entry->revprops)
-    new_entry->revprops = svn_prop_hash_dup(log_entry->revprops, pool);
+    log_entry->revprops = svn_prop_hash_dup(log_entry->revprops, pool);
 
   if (log_entry->changed_paths2)
     {
@@ -222,7 +219,7 @@ svn_log_entry_dup(const svn_log_entry_t *log_entry, apr_pool_t *pool)
 }
 
 svn_location_segment_t *
-svn_location_segment_dup(const svn_location_segment_t *segment,
+svn_location_segment_dup(svn_location_segment_t *segment,
                          apr_pool_t *pool)
 {
   svn_location_segment_t *new_segment =

@@ -1,31 +1,11 @@
 #!/usr/bin/env python
-#
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
 
 #
 # header_wrappers.py: Generates SWIG proxy wrappers around Subversion
 #                     header files
 #
 
-import os, re, sys, glob, shutil, tempfile
+import os, re, sys, glob, shutil
 if __name__ == "__main__":
   parent_dir = os.path.dirname(os.path.abspath(os.path.dirname(sys.argv[0])))
   sys.path[0:0] = [ parent_dir, os.path.dirname(parent_dir) ]
@@ -258,8 +238,8 @@ class Generator(generator.swig.Generator):
     output_fname = os.path.join(self.proxy_dir,
       self.proxy_filename(base_fname))
 
-    # Open a temporary output file
-    self.ofile = tempfile.TemporaryFile(dir=self.proxy_dir)
+    # Open the output file
+    self.ofile = open(output_fname, 'w')
     self.ofile.write('/* Proxy classes for %s\n' % base_fname)
     self.ofile.write(' * DO NOT EDIT -- AUTOMATICALLY GENERATED */\n')
 
@@ -282,21 +262,8 @@ class Generator(generator.swig.Generator):
     # Write callback definitions into the SWIG interface file
     self._write_callbacks(callbacks)
 
-    # Copy the temporary file over to the result file.
-    # Ideally we'd simply rename the temporary file to output_fname,
-    # but NamedTemporaryFile() only supports its 'delete' parameter
-    # in python 2.6 and above, and renaming the file while it's opened
-    # exclusively is probably not a good idea.
-    outputfile = open(output_fname, 'w')
-    self.ofile.seek(0)
-    shutil.copyfileobj(self.ofile, outputfile)
-
-    # Close our temporary file.
-    # It will also be deleted automatically.
+    # Close our output file
     self.ofile.close()
-
-    # Close our output file, too.
-    outputfile.close()
 
   def process_header_file(self, fname):
     """Generate a wrapper around a header file"""

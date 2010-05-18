@@ -6,22 +6,17 @@
  *
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -37,8 +32,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Modify the entry of working copy LOCAL_ABSPATH, presumably after an update
-   completes.   If LOCAL_ABSPATH doesn't exist, this routine does nothing.
+/* Modify the entry of working copy PATH, presumably after an update
+   completes.   If PATH doesn't exist, this routine does nothing.
+   ADM_ACCESS must be an access baton for PATH (assuming it existed).
 
    Set the entry's 'url' and 'working revision' fields to BASE_URL and
    NEW_REVISION.  If BASE_URL is null, the url field is untouched; if
@@ -47,35 +43,40 @@ extern "C" {
 
    If REPOS is non-NULL, set the repository root of the entry to REPOS, but
    only if REPOS is an ancestor of the entries URL (after possibly modifying
-   it).  In addition to that requirement, if the LOCAL_ABSPATH refers to a
-   directory, the repository root is only set if REPOS is an ancestor of the
-   URLs all file entries which don't already have a repository root set.  This
-   prevents the entries file from being corrupted by this operation.
+   it).  IN addition to that requirement, if the PATH refers to a directory,
+   the repository root is only set if REPOS is an ancestor of the URLs all
+   file entries which don't already have a repository root set.  This prevents
+   the entries file from being corrupted by this operation.
 
-   If LOCAL_ABSPATH is a directory, then, walk entries below LOCAL_ABSPATH
-   according to DEPTH thusly:
+   If PATH is a directory, then, walk entries below PATH according to
+   DEPTH thusly:
 
    If DEPTH is svn_depth_infinity, perform the following actions on
    every entry below PATH; if svn_depth_immediates, svn_depth_files,
-   or svn_depth_empty, perform them only on LOCAL_ABSPATH.
+   or svn_depth_empty, perform them only on PATH.
 
    If NEW_REVISION is valid, then tweak every entry to have this new
    working revision (excluding files that are scheduled for addition
    or replacement.)  Likewise, if BASE_URL is non-null, then rewrite
    all urls to be "telescoping" children of the base_url.
 
+   If REMOVE_MISSING_DIRS is TRUE, then delete the entries for any
+   missing directories.  If NOTIFY_FUNC is non-null, invoke it with
+   NOTIFY_BATON for each missing entry deleted.
+
    EXCLUDE_PATHS is a hash containing const char * pathnames.  Entries
    for pathnames contained in EXCLUDE_PATHS are not touched by this
-   function.  These pathnames should be absolute paths.
+   function.
 */
-svn_error_t *svn_wc__do_update_cleanup(svn_wc__db_t *db,
-                                       const char *local_abspath,
+svn_error_t *svn_wc__do_update_cleanup(const char *path,
+                                       svn_wc_adm_access_t *adm_access,
                                        svn_depth_t depth,
                                        const char *base_url,
                                        const char *repos,
                                        svn_revnum_t new_revision,
                                        svn_wc_notify_func2_t notify_func,
                                        void *notify_baton,
+                                       svn_boolean_t remove_missing_dirs,
                                        apr_hash_t *exclude_paths,
                                        apr_pool_t *pool);
 

@@ -1,22 +1,17 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  */
@@ -162,10 +157,10 @@ class SVNTests extends TestCase
             rootDirectoryName = System.getProperty("user.dir");
         rootDir = new File(rootDirectoryName);
 
-        // if not already set, get a useful value for root url
+        // if not alread set, get a usefull value for root url
         if (rootUrl == null)
             rootUrl = System.getProperty("test.rooturl");
-        if (rootUrl == null || rootUrl.trim().length() == 0)
+        if (rootUrl == null)
         {
             // if no root url, set build a file url
             rootUrl = rootDir.toURI().toString();
@@ -569,19 +564,17 @@ class SVNTests extends TestCase
          *
          * @param createWC Whether to create the working copy on disk,
          * and initialize the expected working copy layout.
-         * @param loadRepos Whether to load the sample repository, or
-         * leave it with no initial revisions
          * @throws SubversionException If there is a problem
          * creating or loading the repository.
          * @throws IOException If there is a problem finding the
          * dump file.
          */
-        protected OneTest(boolean createWC, boolean loadRepos)
+        protected OneTest(boolean createWC)
             throws SubversionException, IOException
         {
             this.testName = testBaseName + ++testCounter;
             this.wc = greekWC.copy();
-            this.repository = createInitialRepository(loadRepos);
+            this.repository = createInitialRepository();
             this.url = makeReposUrl(repository);
 
             if (createWC)
@@ -590,21 +583,6 @@ class SVNTests extends TestCase
             }
         }
 
-        /**
-         * Build a new test setup with a new repository.  Create a
-         * corresponding working copy and expected working copy
-         * layout.
-         *
-         * @param createWC Whether to create the working copy on disk,
-         * and initialize the expected working copy layout.
-         *
-         * @see #OneTest
-         */
-        protected OneTest(boolean createWC)
-            throws SubversionException, IOException
-        {
-            this(createWC,true);
-        }
         /**
          * Build a new test setup with a new repository.  Create a
          * corresponding working copy and expected working copy
@@ -712,7 +690,7 @@ class SVNTests extends TestCase
          * @throws IOException If there is a problem finding the
          * dump file.
          */
-        protected File createInitialRepository(boolean loadGreek)
+        protected File createInitialRepository()
             throws SubversionException, IOException
         {
             // build a clean repository directory
@@ -721,11 +699,8 @@ class SVNTests extends TestCase
             // create and load the repository from the default repository dump
             admin.create(repos.getAbsolutePath(), true, false,
                          conf.getAbsolutePath(), fsType);
-            if (loadGreek)
-            {
-                admin.load(repos.getAbsolutePath(), new FileInputer(greekDump),
-                           new IgnoreOutputer(), false, false, null);
-            }
+            admin.load(repos.getAbsolutePath(), new FileInputer(greekDump),
+                       new IgnoreOutputer(), false, false, null);
             return repos;
         }
 

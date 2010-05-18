@@ -2,22 +2,17 @@
  * ra_loader.c:  logic for loading different RA library implementations
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -284,7 +279,7 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
   apr_uri_t repos_URI;
   apr_status_t apr_err;
 #ifdef CHOOSABLE_DAV_MODULE
-  const char *http_library = "serf";
+  const char *http_library = "neon";
 #endif
   /* Auth caching parameters. */
   svn_boolean_t store_passwords = SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
@@ -404,7 +399,7 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
             = svn_config_get_server_setting(servers,
                                             server_group, /* NULL is OK */
                                             SVN_CONFIG_OPTION_HTTP_LIBRARY,
-                                            "serf");
+                                            "neon");
 
           if (strcmp(http_library, "neon") != 0 &&
               strcmp(http_library, "serf") != 0)
@@ -482,10 +477,8 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
   session->pool = pool;
 
   /* Ask the library to open the session. */
-  SVN_ERR_W(vtable->open_session(session, repos_URL, callbacks, callback_baton,
-                               config, pool),
-            apr_psprintf(pool, "Unable to connect to a repository at URL '%s'",
-                         repos_URL));
+  SVN_ERR(vtable->open_session(session, repos_URL, callbacks, callback_baton,
+                               config, pool));
 
   /* Check the UUID. */
   if (uuid)
@@ -516,7 +509,7 @@ svn_error_t *svn_ra_reparent(svn_ra_session_t *session,
   /* Make sure the new URL is in the same repository, so that the
      implementations don't have to do it. */
   SVN_ERR(svn_ra_get_repos_root2(session, &repos_root, pool));
-  if (! svn_uri_is_ancestor(repos_root, url))
+  if (! svn_path_is_ancestor(repos_root, url))
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("'%s' isn't in the same repository as '%s'"),
                              url, repos_root);
@@ -529,54 +522,6 @@ svn_error_t *svn_ra_get_session_url(svn_ra_session_t *session,
                                     apr_pool_t *pool)
 {
   return session->vtable->get_session_url(session, url, pool);
-}
-
-svn_error_t *svn_ra_get_path_relative_to_session(svn_ra_session_t *session,
-                                                 const char **rel_path,
-                                                 const char *url,
-                                                 apr_pool_t *pool)
-{
-  const char *sess_url;
-  SVN_ERR(session->vtable->get_session_url(session, &sess_url, pool));
-  if (strcmp(sess_url, url) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_uri_is_child(sess_url, url, pool);
-      if (! *rel_path)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("'%s' isn't a child of session URL '%s'"),
-                                 url, sess_url);
-      *rel_path = svn_path_uri_decode(*rel_path, pool);
-    }
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *svn_ra_get_path_relative_to_root(svn_ra_session_t *session,
-                                              const char **rel_path,
-                                              const char *url,
-                                              apr_pool_t *pool)
-{
-  const char *root_url;
-  SVN_ERR(session->vtable->get_repos_root(session, &root_url, pool));
-  if (strcmp(root_url, url) == 0)
-    {
-      *rel_path = "";
-    }
-  else
-    {
-      *rel_path = svn_uri_is_child(root_url, url, pool);
-      if (! *rel_path)
-        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("'%s' isn't a child of repository root "
-                                   "URL '%s'"),
-                                 url, root_url);
-      *rel_path = svn_path_uri_decode(*rel_path, pool);
-    }
-
-  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_ra_get_latest_revnum(svn_ra_session_t *session,
@@ -689,6 +634,8 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
 {
   svn_error_t *err;
   int i;
+  apr_hash_index_t *hi;
+  svn_mergeinfo_catalog_t tmp_catalog;
 
   /* Validate path format. */
   for (i = 0; i < paths->nelts; i++)
@@ -705,9 +652,41 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
       return err;
     }
 
-  return session->vtable->get_mergeinfo(session, catalog, paths,
-                                        revision, inherit,
-                                        include_descendants, pool);
+  SVN_ERR(session->vtable->get_mergeinfo(session, &tmp_catalog, paths,
+                                         revision, inherit,
+                                         include_descendants, pool));
+  
+  if (tmp_catalog == NULL)
+    {
+      *catalog = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* Even though CATALOG's keys are relative to the session URL, some
+     older servers returned some of those keys with leading slashes
+     (for subtree items, when INCLUDE_DESCENDANTS was set).  This code
+     cleans up that mess.  */
+  *catalog = apr_hash_make(pool);
+  for (hi = apr_hash_first(pool, tmp_catalog); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      const char *path;
+
+      apr_hash_this(hi, &key, &klen, &val);
+      path = key;
+      if (path[0] == '/')
+        {
+          apr_hash_set(*catalog, path + 1, klen - 1, val);
+        }
+      else
+        {
+          apr_hash_set(*catalog, path, klen, val);
+        }
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
@@ -880,7 +859,7 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
                                   apr_hash_t **locations,
                                   const char *path,
                                   svn_revnum_t peg_revision,
-                                  const apr_array_header_t *location_revisions,
+                                  apr_array_header_t *location_revisions,
                                   apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -969,11 +948,11 @@ svn_error_t *svn_ra_lock(svn_ra_session_t *session,
 {
   apr_hash_index_t *hi;
 
-  for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(NULL, path_revs); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-
-      SVN_ERR_ASSERT(*path != '/');
+      const void *path;
+      apr_hash_this(hi, &path, NULL, NULL);
+      SVN_ERR_ASSERT(*((const char *)path) != '/');
     }
 
   if (comment && ! svn_xml_is_xml_safe(comment, strlen(comment)))
@@ -994,11 +973,11 @@ svn_error_t *svn_ra_unlock(svn_ra_session_t *session,
 {
   apr_hash_index_t *hi;
 
-  for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(NULL, path_tokens); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-
-      SVN_ERR_ASSERT(*path != '/');
+      const void *path;
+      apr_hash_this(hi, &path, NULL, NULL);
+      SVN_ERR_ASSERT(*((const char *)path) != '/');
     }
 
   return session->vtable->unlock(session, path_tokens, break_lock,
@@ -1134,24 +1113,6 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                                              pool);
     }
   return err;
-}
-
-svn_error_t *
-svn_ra__obliterate_path_rev(svn_ra_session_t *session,
-                            svn_revnum_t rev,
-                            const char *path,
-                            apr_pool_t *pool)
-{
-  const char *session_url;
-
-  SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
-
-  if (session->vtable->obliterate_path_rev == NULL)
-    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                            _("Obliterate is not supported by this "
-                              "Repository Access method"));
-
-  return session->vtable->obliterate_path_rev(session, rev, path, pool);
 }
 
 

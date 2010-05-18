@@ -2,22 +2,17 @@
  * cyrus_auth.c :  functions for Cyrus SASL-based authentication
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -168,7 +163,7 @@ apr_status_t svn_ra_svn__sasl_common_init(apr_pool_t *pool)
   return apr_err;
 }
 
-static svn_error_t *sasl_init_cb(void *baton, apr_pool_t *pool)
+static svn_error_t *sasl_init_cb(apr_pool_t *pool)
 {
   if (svn_ra_svn__sasl_common_init(pool) != APR_SUCCESS
       || sasl_client_init(NULL) != SASL_OK)
@@ -179,8 +174,7 @@ static svn_error_t *sasl_init_cb(void *baton, apr_pool_t *pool)
 
 svn_error_t *svn_ra_svn__sasl_init(void)
 {
-  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status,
-                                sasl_init_cb, NULL, NULL));
+  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status, sasl_init_cb, NULL));
   return SVN_NO_ERROR;
 }
 
@@ -276,7 +270,7 @@ get_credentials(cred_baton_t *baton)
 
 /* The username callback. Implements the sasl_getsimple_t interface. */
 static int
-get_username_cb(void *b, int id, const char **username, size_t *len)
+get_username_cb(void *b, int id, const char **username, unsigned *len)
 {
   cred_baton_t *baton = b;
 
@@ -302,7 +296,7 @@ get_password_cb(sasl_conn_t *conn, void *b, int id, sasl_secret_t **psecret)
   if (baton->password || get_credentials(baton))
     {
       sasl_secret_t *secret;
-      size_t len = strlen(baton->password);
+      int len = strlen(baton->password);
 
       /* sasl_secret_t is a struct with a variable-sized array as a final
          member, which means we need to allocate len-1 supplementary bytes
@@ -347,7 +341,7 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
   if (is_tunneled)
     {
       /* We need to tell SASL that this connection is tunneled,
-         otherwise it will ignore EXTERNAL. The third parameter
+         otherwise it will ignore EXTERNAL. The third paramater
          should be the username, but since SASL doesn't seem
          to use it on the client side, any non-empty string will do. */
       result = sasl_setprop(*sasl_ctx,
@@ -602,7 +596,7 @@ sasl_write_cb(void *baton, const char *buffer, apr_size_t *len)
         *len = 0;
         return SVN_NO_ERROR;
       }
-      sasl_baton->write_len -= (unsigned int) tmplen;
+      sasl_baton->write_len -= tmplen;
       sasl_baton->write_buf += tmplen;
     }
   while (sasl_baton->write_len > 0);
@@ -727,7 +721,7 @@ svn_error_t *svn_ra_svn__get_addresses(const char **local_addrport,
 
 svn_error_t *
 svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
-                          const apr_array_header_t *mechlist,
+                          apr_array_header_t *mechlist,
                           const char *realm, apr_pool_t *pool)
 {
   apr_pool_t *subpool;

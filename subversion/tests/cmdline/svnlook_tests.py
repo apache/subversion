@@ -3,25 +3,17 @@
 #  svnlook_tests.py:  testing the 'svnlook' tool.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
+# Copyright (c) 2000-2004, 2007-2009 CollabNet.  All rights reserved.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 ######################################################################
 
 # General modules
@@ -92,7 +84,7 @@ def test_misc(sbox):
 
   # give the repo a new UUID
   uuid = "01234567-89ab-cdef-89ab-cdef01234567"
-  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0, 1,
+  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 1,
                            ["SVN-fs-dump-format-version: 2\n",
                             "\n",
                             "UUID: ", uuid, "\n",
@@ -211,13 +203,6 @@ def delete_file_in_moved_dir(sbox):
     'A/B/E2'      : Item(status='  ', wc_rev=2),
     'A/B/E2/beta' : Item(status='  ', wc_rev=2),
     })
-  ### this commit fails. the 'alpha' node is marked 'not-present' since it
-  ### is a deleted child of a move/copy. this is all well and proper.
-  ### however, during the commit, the parent node is committed down to just
-  ### the BASE node. at that point, 'alpha' has no parent in WORKING which
-  ### is a schema violation. there is a plan for committing in this kind of
-  ### situation, layed out in wc-ng-design. that needs to be implemented
-  ### in order to get this commit working again.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -549,35 +534,6 @@ def diff_binary(sbox):
                           "'svnlook diff' output.")
 
 #----------------------------------------------------------------------
-def test_filesize(sbox):
-  "test 'svnlook filesize'"
-
-  sbox.build()
-  repo_dir = sbox.repo_dir
-  wc_dir = sbox.wc_dir
-
-  tree_output = run_svnlook('tree', '--full-paths', repo_dir)
-  for line in tree_output:
-    # Drop line endings
-    line = line.rstrip()
-    # Skip directories
-    if line[-1] == '/':
-      continue
-    # Run 'svnlook cat' and measure the size of the output.
-    cat_output = run_svnlook('cat', repo_dir, line)
-    cat_size = len("".join(cat_output))
-    # Run 'svnlook filesize' and compare the results with the CAT_SIZE.
-    filesize_output = run_svnlook('filesize', repo_dir, line)
-    if len(filesize_output) != 1:
-      raise svntest.Failure("'svnlook filesize' printed something other than "
-                            "a single line of output.")
-    filesize = int(filesize_output[0].strip())
-    if filesize != cat_size:
-      raise svntest.Failure("'svnlook filesize' and the counted length of "
-                            "'svnlook cat's output differ for the path "
-                            "'%s'." % (line))
-
-#----------------------------------------------------------------------
 def verify_logfile(logfilename, expected_data):
   if os.path.exists(logfilename):
     fp = open(logfilename)
@@ -674,9 +630,7 @@ fp.close()"""
 # list all tests here, starting with None:
 test_list = [ None,
               test_misc,
-              ### it would be nice to XFail this, but it throws an assertion
-              ### which leaves a core dump. let's not leave turds right now.
-              Skip(delete_file_in_moved_dir),
+              delete_file_in_moved_dir,
               test_print_property_diffs,
               info_bad_newlines,
               changed_copy_info,
@@ -685,7 +639,6 @@ test_list = [ None,
               diff_ignore_whitespace,
               diff_ignore_eolstyle,
               diff_binary,
-              test_filesize,
               test_txn_flag,
              ]
 

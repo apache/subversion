@@ -1,0 +1,1162 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<style type="text/css"> /* <![CDATA[ */
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
+<title>Subversion Links</title>
+</head>
+
+<body>
+<div class="app">
+
+<h1 style="text-align: center;">链接</h1>
+
+<p>本文根据原文r34536，由<a href="http://www.subversion.org.cn" title="Subversion中文社区">Subversion中文站</a>的中文化翻译小组翻译，欢迎各位参与翻译工作，加入地址：<a href="http://code.google.com/p/svncndoc/" title="Subversion翻译团队">http://code.google.com/p/svncndoc/</a>。
+</p>
+
+<p><b>声明：</b> 这些链接作为服务提供给Subversion用户，Tigris.org、CollabNet 
+Inc和Subversion团队都不能保证这些链接的正确性、有效性或实用性。</p>
+
+<p>可以根据<a href="hacking.html#patches">发补丁指南</a>，通过发送这个源代码的补丁来向本页添加链接。
+</p>
+
+<div class="h2" id="toc" title="toc">
+<h2 id="toc_">目录</h2>
+
+<ul>
+  <li><a href="#mail-archives"
+      >邮件列表</a></li>
+  <li><a href="#dev-docs"
+      >开发者文档</a></li>
+  <li><a href="#books"
+      >图书</a></li>
+  <li><a href="#all-clients"
+      >Subversion客户端：</a><br/>
+      <ul>
+         <li><a href="#clients"
+             >独立客户端</a></li>
+         <li><a href="#desktop-integrations"
+             >桌面集成客户端</a></li>
+         <li><a href="#ide-plugins"
+             >IDE插件客户端</a></li>
+         <li><a href="#other-plugins"
+             >其他插件客户端</a></li>
+      </ul></li>
+  <li><a href="#bindings"
+      >Subversion语言封装</a></li>
+  <li><a href="#hook-scripts"
+      >钩子脚本</a></li>
+  <li><a href="#converters"
+      >版本库转化工具</a></li>
+  <li><a href="#community-sites"
+      >社区站点</a></li>
+  <li><a href="#hosting"
+      >提供Subversion主机的站点</a></li>
+  <li><a href="#high-level-tools"
+      >使用Subversion的高级工具</a></li>
+  <li><a href="#browsers"
+      >版本库浏览工具</a></li>
+  <li><a href="#misc-utils"
+      >杂类工具</a></li>
+  <li><a href="#misc-resources"
+      >杂类资源</a></li>
+  <li><a href="#articles"
+      >文章和评论</a></li>
+  <li><a href="#other-links-pages"
+      >其他Subversion链接页面</a></li>
+</ul>
+</div>
+
+<div class="h2" id="mail-archives" title="mail-archives">
+<h2 id="mail_archives">邮件列表归档</h2>
+    <ul>
+      <li><p><b>邮件列表归档主站</b><br/>
+  <a href="http://subversion.tigris.org/servlets/SearchList?listName=users"
+     >http://subversion.tigris.org/servlets/SearchList?listName=users</a>
+         <br/>
+  <a href="http://subversion.tigris.org/servlets/SearchList?listName=dev"
+     >http://subversion.tigris.org/servlets/SearchList?listName=dev</a>
+         <br/>
+  <a href="http://subversion.tigris.org/servlets/SearchList?listName=announce"
+     >http://subversion.tigris.org/servlets/SearchList?listName=announce</a>
+         <br/>
+        &nbsp;<br/>
+        这里可以通过Message-ID定位归档信息和线索：
+        <br/>
+        <a href="http://www.red-bean.com/threadfind/"
+                >http://www.red-bean.com/threadfind/</a><br/>
+      </p>
+      </li>
+      <li><p><b>备选（镜像）邮件列表归档</b><br/>
+        Haxx归档比主站归档有更好的用户界面：<br/>
+        <a href="http://svn.haxx.se/dev/"
+                >http://svn.haxx.se/dev/</a><br/>
+        <a href="http://svn.haxx.se/users/"
+                >http://svn.haxx.se/users/</a><br/>
+        &nbsp;<br/>
+        <a href="http://news.gmane.org/index.php?prefix=gmane.comp.version-control.subversion"
+                >http://news.gmane.org/index.php?prefix=gmane.comp.version-control.subversion</a><br/>
+        &nbsp;<br/>
+        <a href="http://marc.info/?l=subversion-announce"
+                >http://marc.info/?l=subversion-announce</a><br/>
+<!--
+        <a href="http://marc.info/?l=subversion-breakage"
+                >http://marc.info/?l=subversion-breakage</a><br/>
+-->
+        <a href="http://marc.info/?l=subversion-cvs"
+                >http://marc.info/?l=subversion-cvs</a>
+                (实际上是svn提交列表，名字错了)<br/>
+        <a href="http://marc.info/?l=subversion-dev"
+                >http://marc.info/?l=subversion-dev</a><br/>
+        <a href="http://marc.info/?l=subversion-issues"
+                >http://marc.info/?l=subversion-issues</a><br/>
+<!--
+        <a href="http://marc.info/?l=subversion-users"
+                >http://marc.info/?l=subversion-users</a><br/>
+-->
+      </p>
+      </li>
+      <li><p><b>Email-&gt;RSS网关</b><br/>
+        Alessandro Massaro为users@和announce@邮件列表设置了一个Email-&gt;RSS的供稿：<br/>
+        <a href="http://mailbucket.org/subversion-users.xml"
+                >http://mailbucket.org/subversion-users.xml</a><br/>
+        <a href="http://mailbucket.org/subversion-announce.xml"
+                >http://mailbucket.org/subversion-announce.xml</a><br/>
+        更多信息可以看<a
+        href="http://subversion.tigris.org/servlets/ReadMsg?list=users&amp;msgNo=56321"
+        >这个邮件</a>。
+      </p>
+      </li>
+    </ul>
+
+</div>
+
+<div class="h2" id="dev-docs" title="dev-docs">
+<h2 id="dev_docs">开发者文档</h2>
+    <ul>
+      <li><p><b>Subversion API文档</b><br/>
+        <a href="http://svn.collab.net/svn-doxygen/"
+                >http://svn.collab.net/svn-doxygen/</a></p>
+      </li>
+    </ul>
+
+</div>
+
+<div class="h2" id="books" title="books">
+<h2 id="books_">Books</h2>
+    <ul>
+      <li><p><b>"使用Subversion进行版本控制"</b> - 
+        由Ben Collins-Sussman、Brian
+        W. Fitzpatrick和C. Michael Pilato撰写的图书；<br/>
+        包括O'Reilly发布版本，以及完全在线开放代码/HTML/PDF的版本。<br/>
+        <a href="http://svnbook.red-bean.com/"
+                >http://svnbook.red-bean.com/</a>
+        ，以及中文版<a href="http://www.subversion.org.cn/svnbook/"
+                >http://www.subversion.org.cn/svnbook/</a>。</p>
+      </li>
+
+      <li><p><b>"版本控制之道--使用SUBVERSION(第2版)"</b> -
+        由Dan Berlin和Garrett Rooney编写的Subversion图书；<br/>
+        有一章可以免费下载<br/>
+        <a href="http://apress.com/book/bookDisplay.html?bID=10203"
+                >http://apress.com/book/bookDisplay.html?bID=10203</a>，
+        以及中文版<a href="http://www.china-pub.com/34229"
+                >http://www.china-pub.com/34229</a>。
+                </p>
+      </li>
+
+      <li><p><b>"Pragmatic Version Control Using Subversion"</b> -
+        Mike Mason的一本Subversion图书；<br/>
+        有两章可以免费下载<br/>
+        <a href="http://www.pragmaticprogrammer.com/titles/svn/"
+                >http://www.pragmaticprogrammer.com/titles/svn/</a></p>
+      </li>
+
+      <li><p><b>"Subversion Version Control : Using the Subversion
+        Version Control System in Development Projects"</b> -
+        William Nagel的一本Subversion图书；<br/>
+        纸版由Prentice Hall出版，可以按照Open Publication License下载PDF；<br/>
+        <a href="http://www.williamnagel.net/svn.php"
+                >http://www.williamnagel.net/svn.php</a></p>
+      </li>
+
+      <li><p><b>"Subversion in Action"</b> -
+        Jeffrey Machols的一本Subversion图书；<br/>
+        有两章可以自由下载；<br/>
+        只有pdf格式可用<br/>
+        <a href="http://www.manning.com/machols/"
+                >http://www.manning.com/machols/</a></p>
+      </li>
+
+      <li><p><b>"Subversion"</b> -
+        Frank Budszuhn的一本德国（德语）Subversion图书；<br/>
+        有一些章节可以免费下载<br/>
+        <a href="http://www.galileocomputing.de/929?GPP=subversion"
+                >http://www.galileocomputing.de/929?GPP=subversion</a></p>
+      </li>
+
+      <li><p><b>"Versionsmanagement mit Subversion"</b> -
+        一本由Tobias Wassermann根据Subversion 1.4编写的德国（德语）图书；<br/>
+        <a href="http://mitp.de/vmi/mitp/detail/pWert/1662/titel/Versionsmanagement%20mit%20Subversion"
+                >http://mitp.de/vmi/mitp/detail/pWert/1662/titel/Versionsmanagement%20mit%20Subversion</a></p>
+      </li>
+    </ul>
+</div>
+
+<div class="h2" id="all-clients" title="all-clients">
+<h2 id="all_clients">Subversion客户端</h2>
+
+<div class="h3" id="clients" title="clients">
+<h3 id="clients_">独立客户端</h3>
+    <ul>
+      <li><p><b>Cornerstone</b> - 一个Mac OS X的GUI Subversion客户端。<br/>
+        (<i>非开源，有免费试用版。</i>)
+        <br/>
+        <a href="http://www.zennaware.com/cornerstone/"
+                >http://www.zennaware.com/cornerstone/</a>
+      </p></li>
+
+      <li><p><b>eSvn</b> - 跨平台的以QT为基础的Subversion GUI客户端。<br/>
+        <a href="http://sourceforge.net/projects/esvn"
+                >http://sourceforge.net/projects/esvn</a>
+      </p></li>
+
+      <li><p><b>FSVS</b> - 快速subversion命令行客户端，专注于软件部署。<br/>
+        <a href="http://fsvs.tigris.org/"
+                >http://fsvs.tigris.org/</a>
+      </p></li>
+
+      <li><p><b>KDESvn</b> - 一个KDE的Subversion客户端。<br/>
+        <a href="http://www.alwins-world.de/wiki/programs/kdesvn"
+                >http://www.alwins-world.de/wiki/programs/kdesvn</a>
+      </p></li>
+
+      <li><p><b>QSvn</b> - 跨平台的Subversion GUI客户端。<br/>
+        <a href="http://ar.oszine.de/projects/qsvn/"
+                >http://ar.oszine.de/projects/qsvn/</a>
+      </p></li>
+
+      <li><p><b>RapidSVN</b> - 跨平台的Subversion GUI客户端。<br/>
+        <a href="http://rapidsvn.tigris.org/"
+                >http://rapidsvn.tigris.org/</a>
+      </p></li>
+
+      <li><p><b>RSVN</b> - 允许以一个单独的原子事务进行多库操作的Python脚本。<br/>
+        <a href="https://opensvn.csie.org/traccgi/rsvn/trac.cgi/wiki"
+                >https://opensvn.csie.org/traccgi/rsvn/trac.cgi/wiki</a>
+      </p></li>
+
+      <li><p><b>SmartSVN</b> - 跨平台的Subversion GUI客户端。<br/>
+        (<i>非开源，有免费和商业版本。</i>)
+        <br/>
+        <a href="http://www.syntevo.com/smartsvn/"
+                >http://www.syntevo.com/smartsvn/</a>
+      </p></li>
+
+      <li><p><b>Subcommander</b> - 跨平台的Subversion GUI客户端，包含可视化的文本合并工具。<br/>
+         <a href="http://subcommander.tigris.org/"
+                 >http://subcommander.tigris.org/</a>
+      </p></li>
+
+      <li><p><b>SvnX</b> - Mac OS X Panther的GUI客户端。<br/>
+        <a
+        href="http://www.lachoseinteractive.net/en/community/subversion/svnx/"
+        >http://www.lachoseinteractive.net/en/community/subversion/svnx/</a>
+      </p></li>
+
+      <li><p><b>Syncro SVN Client</b> - 跨平台的Subversion图形化客户端。<br/>
+          <em>（非开源，有Mac
+          OS X、Windows和Linux的免费试用版）</em><br/>
+       <a href="http://www.syncrosvnclient.com"
+               >http://www.syncrosvnclient.com</a>
+      </p></li>
+
+      <li><p><b>WorkBench</b> - 基于Subversion的跨平台的软件开发GUI，由Python编写<br/>
+        <a href="http://pysvn.tigris.org/"
+                >http://pysvn.tigris.org/</a>
+      </p></li>
+
+      <li><p><b>Versions</b> - Mac OS X的Subversion GUI客户端。<br/>
+        (<i>Not open source; requires commercial license.</i>)
+        <br/>
+        <a href="http://www.versionsapp.com/"
+                >http://www.versionsapp.com/</a>
+      </p></li>
+
+      <li><p><b>ZigVersion</b> - Mac OS X的Subversion界面，目标是建立围绕程序员日常工作流程的接口。<br/>
+        （<i>注意这个不是开源的。</i>）
+        <br/>
+        <a href="http://zigversion.com/"
+                >http://zigversion.com/</a>
+      </p></li>
+
+    </ul>
+</div>
+
+<div class="h3" id="desktop-integrations" title="desktop-integrations">
+<h3 id="desktop_integrations">桌面集成客户端</h3>
+    <ul>
+      <li><p><b>Cascade</b> - Subversion的跨平台文件系统磁盘客户端，包括GUI和命令行，也提供一些高级功能。<br/>
+        （<i>非开源；个人可以自由使用</i>）
+        <br/>
+        <a href="http://www.conifersystems.com/cascade/"
+                >http://www.conifersystems.com/cascade/</a>
+      </p></li>
+
+      <li><p><b>KSvn</b> - KDE的Subversion客户端 -- Konqueror的一个插件。<br/>
+        <a href="http://sourceforge.net/projects/ksvn"
+                >http://sourceforge.net/projects/ksvn</a>
+      </p></li>
+
+      <li><p><b>SCPlugin</b> - Mac OS X Finder的Subversion集成。<br/>
+        <a href="http://scplugin.tigris.org/"
+                >http://scplugin.tigris.org/</a>
+      </p></li>
+
+      <li><p><b>TortoiseSVN</b> - Subversion客户端，作为一个windows外壳扩展实现。<br/>
+        <a href="http://tortoisesvn.tigris.org/"
+                >http://tortoisesvn.tigris.org/</a>
+      </p></li>
+
+    </ul>
+</div>
+
+<div class="h3" id="ide-plugins" title="ide-plugins">
+<h3 id="ide_plugins">IDE插件客户端</h3>
+    <p>许多集成开发环境本身或通过插件可以支持Subversion，这一部分针对那些本身不支持，但是通过插件支持的IDE。</p>
+
+    <ul>
+      <li><p><b>Aigenta Unified SCC</b> - MSSCCI兼容程序的Subversion/CVS附加功能，包括Microsoft Visual Studio和其他程序<br/>
+        （<i>非开源，有免费试用版本可以下载。</i>）
+        <br/>
+        <a href="http://aigenta.com/products/UnifiedScc.aspx"
+                >http://aigenta.com/products/UnifiedScc.aspx</a>
+      </p></li>
+
+      <li><p><b>AnkhSVN</b> - Microsoft 
+        Visual Studio的Subversion集成。<br/>
+        <a href="http://ankhsvn.open.collab.net/"
+                >http://ankhsvn.open.collab.net/</a>
+      </p></li>
+
+      <li><p><b>CW Subversion</b> - Metrowerks CodeWarrior的VCS插件<br/> 
+        <a href="http://www.soundgeek.org/Sound_Geek/CWSVN.html"
+                >http://www.soundgeek.org/Sound_Geek/CWSVN.html</a>
+      </p></li>
+
+      <li><p><b>Subclipse</b> - Subversion的Eclipse的插件。<br/>
+        <a href="http://subclipse.tigris.org/"
+                >http://subclipse.tigris.org/</a>
+      </p></li>
+
+      <li><p><b>Subversive</b> - Subversion的Eclipse的插件。<br/>
+      <a href="http://www.polarion.org/index.php?page=overview&amp;project=subversive"
+              >http://www.polarion.org/index.php?page=overview&amp;project=subversive</a>
+      </p></li>
+
+      <li><p><b>SVN SCC Proxy</b> - SCC的SVN附加组件。<br/>
+        （<i>不是开源项目。</i>）
+        <br/>
+        <a href="http://www.pushok.com/soft_svn.php"
+                >http://www.pushok.com/soft_svn.php</a>
+      </p></li>
+
+      <li><p><b>VisualSVN</b> - Visual Studio .NET
+        2003, 2005 &amp; 2008的Subversion集成<br/>
+        （<i>商业闭源产品。</i>）
+        <br/>
+        <a href="http://www.visualsvn.com/visualsvn/"
+                >http://www.visualsvn.com/visualsvn/</a>
+      </p></li>
+
+      <li><p><b>WLW-SVN</b> - WebLogic Workshop (8.1.3/8.1.4)的Subversion扩展。<br/>
+        <a href="https://wlw-svn.projects.dev2dev.bea.com/"
+                >https://wlw-svn.projects.dev2dev.bea.com/</a>
+      </p></li>
+
+    </ul>
+</div>
+
+<div class="h3" id="other-plugins" title="other-plugins">
+<h3 id="other_plugins">其他插件客户端</h3>
+    <ul>
+      <li><p><b>psvn.el</b> - emacs的Subversion接口。<br/>
+        <a href="http://xsteve.nit.at/prg/vc_svn/"
+                >http://xsteve.nit.at/prg/vc_svn/</a>
+      </p></li>
+
+      <li><p><b>Vcscommand.vim</b> - vim编辑器的CVS/SVN/SVK集成插件。<br/>
+        <a href="http://www.vim.org/scripts/script.php?script_id=90"
+                >http://www.vim.org/scripts/script.php?script_id=90</a>
+      </p></li>
+
+    </ul>
+
+</div>
+</div>
+
+<div class="h2" id="bindings" title="bindings">
+<!-- leaving old "lang_bindings" id for compatibility -->
+<h2 id="lang_bindings">Subversion语言封装</h2>
+    <ul>
+      <li><p><b>Subversion</b> - 模仿原C语言API的
+        <a
+        href="http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/python/">Python</a>、<a
+        href="http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/perl/">Perl</a>、<a
+        href="http://svn.collab.net/repos/svn/trunk/subversion/bindings/javahl/">Java</a>和<a
+        href="http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/ruby/">Ruby</a>Subversion API封装。<br/>
+        <a href="http://subversion.tigris.org/"
+                >http://subversion.tigris.org/</a>
+      </p></li>
+
+      <li><p><b>PySVN</b> - Subversion客户端API的面向对象的封装。<br/>
+        <a href="http://pysvn.tigris.org/"
+                >http://pysvn.tigris.org/</a>
+      </p></li>
+      
+      <li><p><b>SVNKit</b> - 纯Java的Subversion客户端库。<br/>
+
+        <a href="http://svnkit.com/"
+                >http://svnkit.com/</a>
+      </p></li>
+
+      <li><p><b>SVNCPP</b> - Subversion客户端API的面向对象C++封装。<br/>
+
+        <a href="http://rapidsvn.tigris.org/"
+                >http://rapidsvn.tigris.org/</a>
+      </p></li>
+
+      <li><p><b>SubversionSharp</b> - C#封装<br/>
+        <a href="http://www.softec.st/SubversionSharp"
+                >http://www.softec.st/SubversionSharp</a>
+      </p></li>
+
+      <li><p><b>SharpSvn</b> - .Net 2.0的Subversion的客户端API封装，还有部分功能增强。<br/>
+        <a href="http://sharpsvn.open.collab.net/"
+                >http://sharpsvn.open.collab.net/</a>
+      </p></li>
+
+      <li><p><b>PECL SVN (PHP)</b> - PHP封装。<br/>
+        <a href="http://pecl.php.net/package/svn"
+                >http://pecl.php.net/package/svn</a>
+      </p></li>
+    </ul>
+
+</div>
+
+<div class="h2" id="hook-scripts" title="hook-scripts">
+<h2 id="hook_scripts">钩子脚本</h2>
+    <ul>
+      <li><p>在<a href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/"
+          >tools area</a>（有支持的），以及作为补充的<a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/"
+          >contrib area</a>（不是我们支持的，但作为基础提供）上有许多钩子脚本。</p></li>
+
+      <li><p><b>svn2cvs</b> - 将Subversion提交保存在CVS版本库。<br/>
+        <a href="http://svn2cvs.tigris.org/"
+                >http://svn2cvs.tigris.org/</a>
+      </p></li>
+
+      <li><p><b>PHPUnitStats</b> - 在每一次提交，计算统计作者执行的PHPUnit测试用例并将结果存放到MySQL数据库。<br/>
+        <a href="http://sourceforge.net/projects/phpunitstats/"
+                >http://sourceforge.net/projects/phpunitstats/</a>
+      </p></li>
+    </ul>
+
+</div>
+
+<div class="h2" id="converters" title="converters">
+<h2 id="converters_">版本库转化工具</h2>
+    <ul>
+      <li><p><b>cvs2svn</b> - CVS到Subversion的转化工具<br/>
+        cvs2svn现在是独立的项目了，请看：<br/>
+        <a href="http://cvs2svn.tigris.org/"
+                >http://cvs2svn.tigris.org/</a>
+      </p></li>
+
+      <li><p><b>p42svn</b> - Perforce到Subversion的转化工具<br/>
+        将Perforce depot转化为Subversion版本库的perl脚本。<br/>
+        <a href="http://p42svn.tigris.org/"
+                >http://p42svn.tigris.org/</a>
+      </p></li>
+
+      <li><p><b>rcs2svn</b> - RCS到Subversion的转化工具<br/>
+        将RCS repositories转化为Subversion版本库的perl脚本。<br/>
+        <a href="http://www.coelho.net/rcs2svn.html"
+                >http://www.coelho.net/rcs2svn.html</a>
+      </p></li>
+
+      <li><p><b>sccs2svn.py</b> - SCCS到Subversion的转化工具<br/>
+        将SCCS repositories转化为Subversion版本库的Python脚本。<br/>
+        <a href="http://sccs2svn.berlios.de/"
+                >http://sccs2svn.berlios.de/</a>
+      </p></li>
+          
+      <li><p><b>svn-dump2dir</b>和<b>svn-dir2dump</b> - 在Subversion转储文件和Subversion转储目录之间互相转换
+      <br/> 一个“转储目录”和转储文件是同构的，只是所有的部分都解开存放在自己的文件中，所以所有部分的长度是明确的。在使用转储目录格式时，可以很容易的修改或改善subversion版本库的历史。此外，如果一个文件遗失，作为增量转储形式，对于重新实现一个补丁也非常有用。也提供了Subversion转储文件的精确格式。<br/>
+      <a href="http://www.cubewano.org/blacktackle"
+              >http://www.cubewano.org/blacktackle</a>
+      </p></li>
+
+      <li><p><b>SVN Importer</b> - 从MKS、VSS、ClearCase、Star Team、PVCS和CVS迁移到SVN的工具<br/>
+        <a href="http://www.polarion.org/index.php?page=overview&amp;project=svnimporter"
+                >http://www.polarion.org/index.php?page=overview&amp;project=svnimporter</a>
+      </p></li>      
+
+      <li><p><b>Tailor</b> - 在ArX、Bazaar、Bazaar-NG、CVS、Codeville、Darcs、Git、Mercurial、Monotone、Subversion和Tla版本库之间迁移变更集的工具<br/>
+        <a href="http://wiki.darcs.net/DarcsWiki/Tailor"
+                >http://wiki.darcs.net/DarcsWiki/Tailor</a>
+      </p></li>
+
+      <li><p><b>vss2svn</b> - 从微软Visual Source Safe (VSS)到Subversion的工具<br/>
+       <a href="http://www.pumacode.org/projects/vss2svn"
+               >http://www.pumacode.org/projects/vss2svn</a>
+      </p></li>
+
+      <li><p><b>SVNFusion</b> - 将多个（几百个）版本库合并为一个的工具，可以保留修订历史并智能的处理分支和标签。<br/>
+       <a href="http://svnfusion.sourceforge.net">http://svnfusion.sourceforge.net</a>
+      </p></li>
+
+    </ul>
+
+</div>
+
+<div class="h2" id="community-sites" title="community-sites">
+<!-- old "community_sites" id left for compatibility -->
+<h2 id="community_sites">社区站点</h2>
+   <ul>
+     <li><p><b>Subversionary</b> - 一个以<a href="http://subwiki.tigris.org/">SubWiki</a>为基础的站点，用来宣传Subversion和收集如何配置和使用Subversion的信息。<br/> 
+       <a href="http://www.subversionary.org/"
+               >http://www.subversionary.org/</a></p>
+     </li>
+     <li><p><b>SVNForum</b> - 一个Subversion社区，用来与其他Subversion用户交换信息的帮助和讨论论坛。<br/>
+     <a href="http://svnforum.org/"
+             >http://svnforum.org/</a></p>
+     </li>
+     <li><p><b>Subversion Wiki</b> - 一个针对Subversion最佳实践、配置、使用以及相关工具，以<a href="http://www.mediawiki.org/">Mediawiki</a>为基础的Wiki。<br/>
+       <a href="http://www.orcaware.com/svn/wiki/"
+               >http://www.orcaware.com/svn/wiki/</a></p>
+     </li>
+
+     <li><p><b>openCollabNet</b> - 包含下载（例如经过CollabNet编译和测试的Subversion）、技术内容、培训，以及与CollabNet的Subversion工程师交流（通过论坛或<a
+       href="http://blogs.open.collab.net/svn/">Submerged
+       blog</a>）。成为会员可以获取更多，例如免费的在线Subversion课程。<br/>
+       <a href="http://open.collab.net/"
+               >http://open.collab.net/</a></p>
+     </li>
+   </ul>
+
+</div>
+
+<div class="h2" id="hosting" title="hosting">
+<h2 id="hosting_">提供Subversion主机的站点</h2>
+
+  <ul>
+
+    <li><p><strong>berlios.de</strong>:  针对开源项目的免费主机<br/>
+      <a href="http://www.berlios.de/"
+              >http://www.berlios.de/</a></p>
+
+      <p><em>"BerliOS的目标是为开源软件（OSS）中不同兴趣的团队提供支持，我们的目的是完成中立的中介功能，BerliOS的目标团队一边是开源软件的开发者和用户，一边是OSS操作系统和应用的商业制造商，以及相关支持公司。"</em></p>
+    </li>
+
+    <li><p><strong>ObjectWeb</strong>: 开源中间件<br/>
+      <a href="http://www.objectweb.org/"
+              >http://www.objectweb.org/</a></p>
+
+      <p><em>“ObjectWeb是一个国际联合体，培养流行应用的开源中间件开发：EAI、电子商务、集群、网格计算、可管理的服务等等。”</em>他们的主机软件是GForge，包含集成的Subversion支持。更多细节可以看
+         <a
+         href="http://www.objectweb.org/phorum/read.php?f=49&amp;i=37&amp;t=37"
+         >http://www.objectweb.org/phorum/read.php?f=49&amp;i=37&amp;t=37</a>。</p>
+    </li>
+
+    <li><p><strong>CollabNet</strong>: 商业软件开发协作平台，集成Subversion。<br/> 
+      <a href="http://www.collab.net/subversion/"
+              >http://www.collab.net/subversion/</a></p>
+
+      <p><em>“CollabNet Enterprise Edition (CEE)交付了一套完整的软件开发和协作平台，包含完整的Subversion集成。CollabNet业提供定制Subversion、主机Subversion开发环境和Subversion支持以及培训。”</em></p>
+    </li>
+
+    <li><p><strong>CVSDude</strong>: 免费和商业Subversion主机<br/>
+      <a href="http://cvsdude.com/"
+              >http://cvsdude.com/</a></p>
+
+      <p><em>“CVSDude是一个免费CVS服务和Subversion服务。我们为软件开发者、图形艺术家和项目经理提供cvs主机和Subversion主机。你可以使用自己喜欢的客户端访问CVS和Subversion服务器，我们的基本或者说‘免费’服务有限制，但是我们提供商业升级...”</em></p>
+    </li>
+
+    <li><p><strong>SourceHosting.net</strong>:  商业Subversion主机<br/>
+      <a href="http://www.sourcehosting.net/"
+              >http://www.sourcehosting.net/</a></p>
+
+      <p><em>“SourceHosting.net提供完全管理的Subversion主机，并包含Bugzilla和CVS主机封装。现在，已经在所有的主机方案中包含安全离线备份，也有WebSVN和CVSweb的附加工具。”</em></p>
+    </li>
+
+    <li><p><strong>wush.net</strong>: 商业Subversion主机<br/>
+      <a href="http://www.wush.net/"
+              >http://www.wush.net/</a></p>
+
+      <p><em>“我们为个人和小公司提供专业的高质量Subversion主机，我们的方案包含了补充Subversion的集成软件。”</em></p>
+    </li>
+
+    <li><p><strong>ProjectLocker</strong>: 商业Subversion主机<br/>
+      <a href="http://www.projectlocker.com/"
+              >http://www.projectlocker.com/</a></p>
+
+      <p><em>“ProjectLocker提供专业Subversion主机，也包含额外的开发过程、项目管理和协作工具。</em></p>
+    </li>
+
+    <li><p><strong>Gna!</strong>: 为GPL兼容协议的项目提供免费主机<br/>
+      <a href="https://gna.org/index.php"
+              >https://gna.org/index.php</a></p>
+      <p><em>“Gna！项目是开发的中心，自由软件项目的分发和维护。”</em></p>
+    </li>
+
+    <li><p><strong>http://www.projxpert.com/</strong>: 专业软件项目主机站点<br />
+      <a href="http://www.projxpert.com/"
+              >http://www.projxpert.com/</a></p>
+    </li>
+
+    <li><p><strong>DevGuard.com</strong>: 商业Subversion主机<br/>
+      <a href="http://www.devguard.com/">http://www.devguard.com/</a></p>
+
+      <p><em>“DevGuard.com为个人和小公司提供商业Subversion主机，安全加密数据传输，易用的web管理界面。”</em></p>
+    </li>
+
+    <li><p><strong>AVLUX&nbsp;Solutions</strong>:
+                   商业Subversion主机<br/>
+      <a href="http://www.avlux.net/">http://www.avlux.net/</a></p>
+
+      <p><em>“完整服务的”web主机，包含（还有其他的）Subversion版本库和WebSVN。</em></p>
+    </li>
+
+    <li><p><strong>GeekISP</strong>:
+                   商业Subversion主机<br/>
+      <a href="http://www.geekisp.com/">http://www.geekisp.com/</a></p>
+
+      <p><em>"GeekISP includes CVS and SVN repositories with all
+              accounts."</em></p> 
+    </li>
+
+    <li><p><strong>TextDrive</strong>:
+                   商业Subversion主机<br/>
+      <a href="http://textdrive.com/">http://textdrive.com/</a></p>
+
+      <p><em>Repository hosting services, from shared hosting to fully
+             managed dedicated server clusters.</em></p> 
+    </li>
+
+    <li><p><strong>Labyrinth Data Services</strong>:
+                   商业Subversion主机<br/>
+      <a href="http://www.labyrinthdata.net.au/"
+              >http://www.labyrinthdata.net.au/</a></p>
+
+      <p><em>澳大利亚Linux shell账户和web主机，所有账户有无限制的Subversion版本库。</em></p>
+    </li>
+
+    <li><p><strong>SourceForge.net</strong>:
+                   对于开源软件免费的主机<br/>
+      <a href="http://sourceforge.net/"
+              >http://sourceforge.net/</a></p>
+
+      <p><em>可能是网络上最大的开源项目主机站点。</em></p>
+    </li>
+
+    <li><p><strong>hosted-projects.com</strong>:
+                   商业Subversion主机<br/>
+       <a href="http://www.hosted-projects.com">http://www.hosted-projects.com</a></p>
+       <p><em>hosted-projects.com是一个专门从事为软件项目团队提供主机服务，包括Subversion修订控制系统，以及关联的问题管理软件，例如Trac和Bugzilla。</em></p>
+    </li>
+
+    <li><p><strong>google.com</strong>:
+                   开源项目免费的Subversion主机<br/>
+       <a href="http://code.google.com/hosting/">http://code.google.com/hosting/</a></p>
+      <p>
+          <em>“我们的心主机服务提供了一个协作开发环境，包括：有单独成员控制的项目空间；通过Subversion进行版本控制；邮件列表是groups.google.com。”</em></p>
+    </li>
+
+    <li><p><strong>myVersionControl.com</strong>:
+                      Subversion主机和项目管理<br/>
+       <a href="http://www.myversioncontrol.com/"
+               >http://www.myversioncontrol.com/</a></p>
+      <p>
+          <em>商业Subversion主机，与其他项目管理服务集成。</em></p>
+    </li>
+
+    <li><p><strong>Versionshelf.com</strong>:
+      商业Subversion主机，向教师和学生免费提供<br/>
+      <a href="http://www.versionshelf.com/"
+              >http://www.versionshelf.com/</a></p>
+      <p><em>Versionshelf有高效的配置和访问版本库、用户、ACL、rss供稿、外部提交触发器，备份等操作的web界面，所有数据通过128位的SSL加密。</em></p>
+    </li>
+
+    <li><p><strong>Assembla</strong>: “私有/公开工作空间，集成工具包括wiki、讨论区、提醒、Subversion和Trac等。”<br/> 
+      <a href="http://www.assembla.com/"
+              >http://www.assembla.com/</a></p>
+      </li>
+
+   <li><p><strong>Code Spaces</strong>:
+     free and 商业Subversion主机<br/>
+      <a href="http://www.codespaces.com/"
+              >http://www.CodeSpaces.com/</a></p>
+      <p><em>“Code Spaces是一个开发和协作平台，建立在Subversion基础之上，包括问题跟踪、项目管理等。Code Spaces为开源或非盈利项目和个人用户提供免费方案。”</em></p>
+    </li>
+
+   <li><p><strong>Beanstalk</strong>:
+      Subversion管理和集成服务<br/>
+      <a href="http://www.beanstalkapp.com/"
+              >http://www.beanstalkapp.com/</a></p>
+      <p><em>“Beanstalk是一个Subversion主机系统，可以让每个人简单的设置、浏览、跟踪和管理Subversion版本库，Beanstalk有内置的与Basecamp、FogBugz和Lighthouse等工具的集成。”</em></p>
+    </li>
+
+    <li><p><strong>8svn</strong>: 到帐支付subversion主机<br/> 
+      <a href="http://www.8svn.com/"
+              >http://www.8svn.com/</a></p>
+
+      <p><em>“无限制的Subversion主机，没有每月费用，到帐支付价格有无限制数量的版本库和用户。”</em></p>
+    </li>
+    
+    <li><p><strong>Springloops</strong>: 为web开发者提供的Subversion主机<br/> 
+      <a href="http://www.springloops.com/"
+              >http://www.springloops.com/</a></p>
+
+      <p><em>“单独源浏览器，好看的变更评审，代码部署和更适合日常的web开发。”</em></p>
+    </li>
+
+    <li><p><strong>Weble</strong>: 商业Subversion主机<br/>
+      <a href="http://www.weble.be/"
+              >http://www.weble.be/</a></p>
+			  
+      <p><em>“无限制数量的版本库和用户，存放在高可靠性的服务器集群中，免费试用。”</em></p>
+    </li>
+
+    <li><p><strong>SSHControl.com</strong>: 通过SSH的Subversion、Git和Mercurial主机服务。<br/>
+        <a href="http://sshcontrol.com/"
+                >http://sshcontrol.com/</a></p>
+ 
+       <p><em>使用SSH免费的svn/git/hg服务器，有零成本和付费服务；访问控制面板；项目创建/管理；未注册用户可以免费试用。</em></p>
+    </li>
+
+    <li><p><strong>XP-Dev.com</strong>: 免费Subversion主机<br/>
+        <a href="http://xp-dev.com/"
+                >http://xp-dev.com/</a></p>
+ 
+       <p><em>为闭源和开源项目提供无限制的免费Subversion主机，包含访问许可和提交邮件的控制。</em></p>
+    </li>
+
+    <li><p><strong>LCube</strong>:  专业subversion主机<br/>
+      <a href="http://www.lcube-webhosting.de/"
+              >http://www.lcube-webhosting.de/</a></p>
+
+      <p><em>“LCube - Webhosting &amp; Webdesign提供专业subversion版本库主机，SSL加密、备份、BugZilla、Trac和WebSVN。”服务器位于：德国。</em></p>
+    </li>
+
+    <li><p><strong>SlikSVN</strong>: 专业subversion主机<br/>
+      <a href="http://www.sliksvn.com/"
+              >http://www.sliksvn.com/</a></p>
+
+      <p><em>“专于Subversion主机，提供离站备份、加密、DAV或svnserve，提供稳定运行的免费和付费服务。”服务器位于：荷兰。</em></p>
+    </li>
+
+  </ul>
+
+</div>
+
+<div class="h2" id="high-level-tools" title="high-level-tools">
+<!-- old "high_level_tools" id left for compatibility -->
+<h2 id="high_level_tools">使用Subversion的高级工具</h2>
+    <ul>
+      <li><p><b>Trac</b> - Trac是一个简约的web软件项目管理和bug/问题跟踪系统。它提供一个修订控制系统（Subversion）的界面，集成的Wiki和报告工具。<br/>
+        <a href="http://trac.edgewall.org/"
+                >http://trac.edgewall.org/</a>
+      </p></li>
+
+      <li><p><b>Subissue</b> - 直接在Subversion版本库中的问题跟踪[<i>计划阶段</i>]<br/>
+        <a href="http://subissue.tigris.org/"
+                >http://subissue.tigris.org/</a>
+      </p></li>
+
+      <li><p><b>Subwiki</b><br/>
+        <a href="http://subwiki.tigris.org/"
+                >http://subwiki.tigris.org/</a>
+      </p></li>      
+
+      <li><p><b>SharpForge</b> - SharpForge是开源c#、asp net 2.0项目管理web应用。<br/>
+        <a href="http://sharpforge.org"
+                >http://sharpforge.org</a>
+      </p></li>
+
+      <li><p><b>svk</b> - 基于Subversion的分布式版本控制系统<br/>
+        <a href="http://svk.elixus.org/"
+                >http://svk.elixus.org/</a>
+      </p></li>      
+
+      <li><p><b>submaster</b> - SubMaster是分布式软件开发系统，基于Subverion。<br/>
+        <a href="http://www.rocklinux.org/wiki/SubMaster"
+                >http://www.rocklinux.org/wiki/SubMaster</a>
+      </p></li>
+
+      <li><p><b>Codestriker</b> - 免费、开源、代码协作评审系统；允许团队成员使用Subversion，创建和管理代码评审主题。<br/>
+        <a href="http://codestriker.sourceforge.net/"
+                >http://codestriker.sourceforge.net/</a>
+      </p></li>
+
+      <li><p><b>Scmbug</b> - 集成软件配置管理和bug跟踪。目标是成为通用的版本控制系统和bug跟踪系统的胶水。<br/>
+        <a href="http://freshmeat.net/projects/scmbug/"
+                >http://freshmeat.net/projects/scmbug/</a>
+      </p></li>
+
+      <li><p><b>BugTracker.NET</b> - 免费，开源，基于web的.NET问题跟踪。<br/>
+        <a href="http://ifdefined.com/bugtrackernet.html"
+                >http://ifdefined.com/bugtrackernet.html</a>
+      </p></li>
+
+      <li><p><b>Collaboa</b> - 版本库浏览和问题跟踪，类似于Trac。<br/>
+        <a href="http://collaboa.org/"
+                >http://collaboa.org</a>
+      </p></li>
+
+      <li><p><b>DITrack</b> - 轻量级的分布式问题跟踪系统，使用Subversion版本库而不是数据库存放数据。<br/>
+        <a href="http://www.ditrack.org/"
+                >http://www.ditrack.org</a>
+      </p></li>
+      
+      <li><p><b>FastTrack</b> - FastTrack是一个零管理工具，提供与Eclipse集成的项目工作计划和跟踪。所有的跟踪数据存放在Subversion，并通过Subversion共享。<br/>
+      (<i>非开源，但可以免费使用。</i>)<br/>
+        <a href="http://www.polarion.org/index.php?page=overview&amp;project=fasttrack"
+                >http://www.polarion.org/index.php?page=overview&amp;project=fasttrack</a>
+      </p></li>      
+
+      <li><p><b>USVN</b> -管理Subversion版本库的web界面，提供管理版本库文件上权限控制的简单方式。<br/>
+        <a href="http://www.usvn.info/"
+                >http://www.usvn.info/</a>
+      </p></li>
+
+      <li><p><b>VoilaSVN</b> - 搜索Subversion版本库内容、路径名和日期的web接口，包含访问控制的用户管理；在线diff。<br/> 
+        （<i>非开源，有免费使用版本。</i>）
+        <br/>
+        <a href="http://www.voilasvn.com/main/page_download.html"
+                >http://www.voilasvn.com/main/page_download.html</a>
+      </p></li>
+
+      <li><p><b>Submin</b> - 易用的subversion版本库管理web界面，可以简单的创建版本库，添加/改变/删除用户/组，并管理访问权限。<br/>
+        <a href="http://supermind.nl/submin"
+                >http://supermind.nl/submin</a>
+      </p></li>
+
+    </ul>
+
+</div>
+
+<div class="h2" id="browsers" title="browsers">
+<!-- old "repos_browsing" id left for compatibility -->
+<h2 id="repos_browsing">版本库浏览工具</h2>
+    <ul>
+      <li><p><b>SVN::Web</b><br/>
+        <a href="http://search.cpan.org/~nikc/SVN-Web/lib/SVN/Web.pm"
+                >http://search.cpan.org/~nikc/SVN-Web/lib/SVN/Web.pm</a>
+      </p></li>
+
+      <li><p><b>ViewVC（以前也称为ViewCVS）</b><br/>
+        <a href="http://www.viewvc.org/"
+                >http://www.viewvc.org/</a><br/>
+      </p></li>
+
+      <li><p><b>WebSVN</b><br/>
+        <a href="http://websvn.tigris.org/"
+                >http://websvn.tigris.org/</a>
+      </p></li>
+
+      <li><p><b>Insurrection</b> - Subversion的Web访问<br/>
+        <a href="http://insurrection.tigris.org/"
+                >http://insurrection.tigris.org/</a><br/>
+                版本库在<a href="http://svn.sinz.com/svn/Insurrection/"
+                               >http://svn.sinz.com/svn/Insurrection/</a>
+      </p></li>
+
+      <li><p><b>Chora</b><br/>
+        <a href="http://www.horde.org/chora/"
+                >http://www.horde.org/chora/</a>
+      </p></li>
+
+      <li><p><b>SVN::RaWeb::Light</b><br/>
+        <a href="http://web-cpan.berlios.de/modules/SVN-RaWeb-Light/"
+                >http://web-cpan.berlios.de/modules/SVN-RaWeb-Light/</a>
+      </p></li>
+
+      <li><p><b>FlexySvn</b><br/>
+        <a href="http://www.akbkhome.com/blog.php/View/90/FlexySvn.html"
+                >http://www.akbkhome.com/blog.php/View/90/FlexySvn.html</a>
+      </p></li>
+
+      <li><p><b>perl_svn</b><br/>
+        <a href="http://www.osdevel.org/projects/show/16?lang=en"
+                >http://www.osdevel.org/projects/show/16?lang=en</a>
+      </p></li>
+
+      <li><p><b>mod_svn_view</b><br/>
+        <a href="http://www.outoforder.cc/projects/apache/mod_svn_view/"
+                >http://www.outoforder.cc/projects/apache/mod_svn_view/</a>
+      </p></li>
+  
+      <li><p><b>bsSvnBrowser</b><br />
+        <a href="https://bssvnbrowser.bountysource.com/docs/install"
+                >https://bssvnbrowser.bountysource.com/docs/install</a>
+      </p></li>
+
+      <li><p><b>sventon</b> - 浏览Subversion版本库的web应用<br/>
+        <a href="http://www.sventon.org/"
+                >http://www.sventon.org/</a>
+      </p></li>
+      
+      <li><p><b>WebClient for SVN</b> - Subversion版本库的web接口，提供浏览和简单的写操作。<br/>
+        <a href="http://www.polarion.org/index.php?page=overview&amp;project=svnwebclient"
+                >http://www.polarion.org/index.php?page=overview&amp;project=svnwebclient</a>
+      </p></li>        
+
+      <li><p>也请看：<a
+        href="#high-level-tools">前面<i>高级工具</i>部分</a>的<b>Trac</b>和<b>Collaboa</b>，也包含版本库浏览以外的其他功能。
+      </p></li>
+
+    </ul>
+
+</div>
+
+<div class="h2" id="misc-utils" title="misc-utils">
+<!-- old "misc_utils" id left for compatibility -->
+<h2 id="misc_utils">杂类工具</h2>
+    <ul>
+      <li><p><b>Bugzilla/SVN集成</b> - 集成<a href="http://www.bugzilla.org/">Bugzilla</a>和Subversion的工具。<br/>
+        <a href="http://sean-janus.optionpc.com/me/software/bugtraq/"
+                >http://sean-janus.optionpc.com/me/software/bugtraq/</a>
+      </p></li>
+      
+      <li><p><b>CommitMonitor</b> - 监视版本库提交的Windows工具。<br />
+      <a href="http://tools.tortoisesvn.net/CommitMonitor"
+              >http://tools.tortoisesvn.net/CommitMonitor</a>
+      </p></li>
+
+      <li><p><b>CQ2SVN</b> - Subversion和IBM Rational ClearQuest的双向集成，可以让用户在同ClearQuest变更记录中记录一组更改的文件和开发者注释。<br/>
+        （<i>闭源，商业</i>）
+        <br/>
+        <a href="http://www.clearvision-cm.com/products/clearquest-subversion-integration.html"
+                 >http://www.clearvision-cm.com/products/clearquest-subversion-integration.html</a>
+      </p></li>
+
+      <li><p><b>JIRA Subversion plugin</b> - 集成<a href="http://www.atlassian.com/software/jira/">JIRA</a>
+        和Subversion的插件。<br/>
+        <a href="http://confluence.atlassian.com/display/JIRAEXT/JIRA+Subversion+plugin"
+                >http://confluence.atlassian.com/display/JIRAEXT/JIRA+Subversion+plugin</a>
+      </p></li>
+
+      <li><p><b>JIRA2SVN</b> - Subversion和Atlassian JIRA的双向集成：在JIRA记录中记录变更文件集和开发者注释。<br/>
+        （<i>闭源，商业</i>）
+        <br/>
+        <a href="http://www.clearvision-cm.com/products/jira-subversion-integration.html"
+                >http://www.clearvision-cm.com/products/jira-subversion-integration.html</a>
+      </p></li>
+
+      <li><p><b>Piston</b> - "简单的供方分支管理"<br/>
+        <a href="http://piston.rubyforge.org/"
+                >http://piston.rubyforge.org/</a>
+      </p></li>
+
+      <li><p><b>RAM2SVN</b> - 无缝集成Rational Asset Manager和Subversion，允许用户打包，下载和修改来自Subversion版本库中存放的制品的资产（assets）。<br/>
+        （<i>闭源，商业</i>）
+        <br/>
+        <a href="http://www.clearvision-cm.com/products/ram-subversion-integration.html"
+                >http://www.clearvision-cm.com/products/ram-subversion-integration.html</a>
+       </p></li>
+
+       <li><p><b>Scord</b> - 使用较大和/或更多文件来减少Subversion工作拷贝占用的空间。<br/>
+	     <a href="http://scord.sourceforge.net/"
+	       >http://scord.sourceforge.net/</a>
+	   </p></li>
+
+       <li><p><b>Suafe</b> - “Subversion用户授权文件编辑器。”Java的Swing GUI应用，用来编辑Subversion的authz文件。有一个用来编辑authz文件的健壮命令行接口。<br/>
+      <a href="http://code.google.com/p/suafe/"
+              >http://code.google.com/p/suafe/</a>
+      </p></li>
+
+       <li><p><b>SupoSE</b> - "Subversion版本库搜索引擎。"
+        执行全文关键字搜索整个Subversion版本库的Java程序（包括历史）。<br/>
+      <a href="http://supose.soebes.de/"
+              >http://supose.soebes.de/</a>
+      </p></li>
+
+      <li><p><b>SVN Notifier</b> - 监控版本库变更的Windows程序。<br/>
+        <a href="http://svnnotifier.tigris.org/"
+                >http://svnnotifier.tigris.org/</a>
+      </p></li>
+
+      <li><p><b>SvnReporter</b> - 生成各种Subversion提交报告的Python脚本。<br/>
+      <a href="http://www.calins.ch/software/SvnReporter.html"
+              >http://www.calins.ch/software/SvnReporter.html</a>
+      </p></li>
+      
+      <li><p><b>SvnDumpTool</b> - Python类和前端脚本，可以用来修正行结束符问题、从文件导出、连接、合并、分割、检查Subversion转储文件。<br/>
+        <a href="http://svn.borg.ch/svndumptool/"
+                >http://svn.borg.ch/svndumptool/</a>
+      </p></li>
+      
+      <li><p><b>svn-merge-repos.pl</b> - 一个基本的perl脚本，用来合并多个版本库为一个，按照日期顺序。<br/>
+        <a href="http://www.coelho.net/svn-merge-repos.html"
+                >http://www.coelho.net/svn-merge-repos.html</a>
+      </p></li>
+
+      <li><p><b>StatSVN</b> - 从版本库生成统计信息的构建工具。包括随着时间变化的代码行数，每个开发者的贡献，模块、目录和文件的演进，以及检入发生最多的日期等等。它也可以展示提交日志，并与ViewVC、BugZilla、Chora和其他工具集成。<br/>
+        <a href="http://www.statsvn.org">http://www.statsvn.org</a>
+      </p></li>
+
+      <li><p><b>UCM4SVN</b> - Subversion的ALM (应用生命周期管理)，根据IBM的Rational
+        ClearCase Unified Change Management（UCM）原理设计模型，UCM4SVN在Subversion上应用了这个概念的简单版本。<br/>
+        （<i>闭源</i>）
+        <br/>
+        <a href="http://www.clearvision-cm.com/products/unified-change-management-for-subversion.html"
+                >http://www.clearvision-cm.com/products/unified-change-management-for-subversion.html</a>
+      </p></li>
+
+      <li><p><b>VersionLink</b> -  TechExcel DevTrack与Subversion集成的工具。<br/>
+        <a href="http://www.techexcel.com/products/devtrack/subversion.html"
+                >http://www.techexcel.com/products/devtrack/subversion.html</a>
+      </p></li>
+
+    </ul>
+
+</div>
+
+<div class="h2" id="misc-resources" title="misc-resources">
+<!-- old "misc_resources" id left for compatibility -->
+<h2 id="misc_resources">各类资源</h2>
+    <ul>
+      <li><p><b>Conectiva Linux的Subversion文档</b>
+      关于团队如何组织Subversion版本库、标准流程的非常完整的文档。<br/>
+        <a href="https://moin.conectiva.com.br/RepositorySystem"
+                >https://moin.conectiva.com.br/RepositorySystem</a>
+      </p></li>
+
+      <li><p><b>Segetech Open Source Rendezvous</b>
+      配置Subversion、Bugzilla和MediaWiki等开源协作工具并使他们共同工作的详细指南。<br/>
+        <a href="http://oss.segetech.com/bugzilla-svn-wiki.html"
+                >http://oss.segetech.com/bugzilla-svn-wiki.html</a>
+      </p></li>
+
+      <li><p><b>SubTrain - 开源培训材料</b>
+      开源培训材料，包括可以更改的幻灯片，主要针对希望迁移到Subversion的公司。<br/>
+        <a href="http://www.polarion.org/index.php?page=overview&amp;project=subtrain"
+                >http://www.polarion.org/index.php?page=overview&amp;project=subtrain</a>
+      </p></li>
+
+    </ul>
+
+</div>
+
+<div class="h2" id="articles" title="articles">
+<h2 id="articles_">文章和评论</h2>
+
+    <ul>
+      <li><p><b>"CVS is out, Subversion is in"</b> 
+        <i>by Chip Turner</i><br />
+        <a href="http://www.redhat.com/magazine/010aug05/features/subversion/">
+          http://www.redhat.com/magazine/010aug05/features/subversion/</a></p>
+      </li>
+
+      <li><p><b>"The Subversion Project: Building a Better CVS"</b> 
+        <i>by Ben Collins-Sussman</i><br />
+        <a href="http://www.linuxjournal.com/article/4768">
+          http://www.linuxjournal.com/article/4768</a></p>
+      </li>
+
+      <li><p><b>"Single-User Subversion"</b>
+        <i>by Rafael Garcia-Suarez</i><br />
+<a href="http://www.onlamp.com/pub/a/onlamp/2002/10/31/subversion.html">
+          http://www.onlamp.com/pub/a/onlamp/2002/10/31/subversion.html</a></p>
+      </li>
+
+      <li><p><b>"Multiuser Subversion"</b>
+        <i>by Rafael Garcia-Suarez</i><br />
+        <a href="http://www.onlamp.com/pub/a/apache/2002/12/19/svn2.html">
+          http://www.onlamp.com/pub/a/apache/2002/12/19/svn2.html</a></p>
+      </li>
+
+      <li><p><b>"Using the Subversion Client API"</b>
+        <i>by Garrett Rooney</i><br />
+        Part 1: 
+<a href="http://www.linuxdevcenter.com/pub/a/linux/2003/04/24/libsvn1.html">
+         http://www.linuxdevcenter.com/pub/a/linux/2003/04/24/libsvn1.html</a>
+        <br />
+        Part 2: 
+<a href="http://www.linuxdevcenter.com/pub/a/linux/2003/05/15/libsvn2.html">
+       http://www.linuxdevcenter.com/pub/a/linux/2003/05/15/libsvn2.html</a></p>
+      </li>
+
+      <li><p><b>Subversion文章</b>
+        <i>by Shlomi Fish</i><br />
+        <a href="http://better-scm.berlios.de/docs/shlomif-evolution.html">
+          http://better-scm.berlios.de/docs/shlomif-evolution.html</a><br />
+<a href="http://better-scm.berlios.de/subversion/compelling_alternative.html">
+         http://better-scm.berlios.de/subversion/compelling_alternative.html
+        </a></p>
+      </li>
+
+      <li><p><b>"Subversion for CVS Users"</b>
+        <i>by Mike Mason</i><br />
+        <a href="http://osdir.com/Article203.phtml">
+          http://osdir.com/Article203.phtml</a><br />
+ <a href="http://slashdot.jp/journal.pl?op=display&amp;uid=12&amp;id=200792">
+          http://slashdot.jp/journal.pl?op=display&amp;uid=12&amp;id=200792</a>
+          (Japanese translation)</p>
+      </li>
+
+      <li><p><b>"驱散对Subversion的恐惧，不确定性和疑义"</b>
+        <i>by Ben Collins-Sussman</i><br />
+        <a href="http://www.red-bean.com/sussman/svn-anti-fud.html">
+          http://www.red-bean.com/sussman/svn-anti-fud.html</a>，中文翻译为<a href="http://www.subversion.org.cn/?action-viewnews-itemid-12">
+          http://www.subversion.org.cn/?action-viewnews-itemid-12</a></p>
+      </li>
+
+      <li><p><b>"Debunking BitMover's Subversion Comparison"</b>
+          <i>by Karl Fogel</i><br />
+        <a href="http://subversion.tigris.org/bitmover-svn.html"
+                >http://subversion.tigris.org/bitmover-svn.html</a></p>
+      </li>
+
+      <li><p><b>The "Better SCM" version control systems comparison:</b><br />
+      <a href="http://better-scm.berlios.de/comparison/"
+              >http://better-scm.berlios.de/comparison/</a></p>
+      </li>
+
+    </ul>
+
+</div>
+
+<div class="h2" id="other-links-pages" title="other-links-pages">
+<!-- old "other_link_pages" id left for compatibility -->
+<h2 id="other_link_pages">其他Subversion链接页</h2>
+    <ul>
+      <li>
+        <a href="http://www.arhs.net/Computers/Software/ConfigurationManagement/Tools/Subversion/"
+         >http://www.arhs.net/Computers/Software/ConfigurationManagement/Tools/Subversion/</a>
+      </li>
+
+      <li>
+        <a href="http://dmoz.org/Computers/Software/Configuration_Management/Tools/Subversion/"
+         >http://dmoz.org/Computers/Software/Configuration_Management/Tools/Subversion/</a>
+      </li>
+
+      <li>
+        <a href="http://www.oreillynet.com/search/index.ncsp?sp-k=all&amp;sp-q=subversion"
+         >http://www.oreillynet.com/search/index.ncsp?sp-k=all&amp;sp-q=subversion</a>
+      </li>
+    </ul>
+
+</div>
+
+</div>
+</body>
+</html>

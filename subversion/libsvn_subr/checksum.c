@@ -2,22 +2,17 @@
  * checksum.c:   checksum routines
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -29,7 +24,6 @@
 
 #include "svn_checksum.h"
 #include "svn_error.h"
-#include "svn_ctype.h"
 
 #include "sha1.h"
 #include "md5.h"
@@ -147,43 +141,6 @@ svn_checksum_to_cstring(const svn_checksum_t *checksum,
     }
 }
 
-
-const char *
-svn_checksum_serialize(const svn_checksum_t *checksum,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
-{
-  const char *ckind_str;
-
-  ckind_str = (checksum->kind == svn_checksum_md5 ? "$md5 $" : "$sha1$");
-  return apr_pstrcat(result_pool,
-                     ckind_str,
-                     svn_checksum_to_cstring(checksum, scratch_pool),
-                     NULL);
-}
-
-
-svn_error_t *
-svn_checksum_deserialize(const svn_checksum_t **checksum,
-                         const char *data,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
-{
-  svn_checksum_kind_t ckind;
-  svn_checksum_t *parsed_checksum;
-
-  /* "$md5 $..." or "$sha1$..." */
-  SVN_ERR_ASSERT(strlen(data) > 6);
-
-  ckind = (data[1] == 'm' ? svn_checksum_md5 : svn_checksum_sha1);
-  SVN_ERR(svn_checksum_parse_hex(&parsed_checksum, ckind,
-                                 data + 6, result_pool));
-  *checksum = parsed_checksum;
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_checksum_parse_hex(svn_checksum_t **checksum,
                        svn_checksum_kind_t kind,
@@ -207,15 +164,12 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
 
   for (i = 0; i < len; i++)
     {
-      if ((! svn_ctype_isxdigit(hex[i * 2])) ||
-          (! svn_ctype_isxdigit(hex[i * 2 + 1])))
+      if ((! isxdigit(hex[i * 2])) || (! isxdigit(hex[i * 2 + 1])))
         return svn_error_create(SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
 
       ((unsigned char *)(*checksum)->digest)[i] =
-        ((svn_ctype_isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10
-                                      : hex[i*2] - '0') << 4) |
-        (svn_ctype_isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10
-                                       : hex[i*2+1] - '0');
+        (( isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10 : hex[i*2] - '0') << 4) |
+        ( isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10 : hex[i*2+1] - '0');
       is_zeros |= (*checksum)->digest[i];
     }
 

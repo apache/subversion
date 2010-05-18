@@ -1,24 +1,4 @@
 #!/bin/bash
-#
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
 # -*- mode: shell-script; -*-
 # $Id$
 
@@ -144,15 +124,12 @@ unset HTTPS_PROXY
 
 say "Using '$APXS'..."
 
-# Find the source and build directories. The build dir can be found if it is
-# the current working dir or the source dir.
-pushd ${SCRIPTDIR}/../../../ > /dev/null
-ABS_SRCDIR=$(pwd)
-popd > /dev/null
 if [ -x subversion/svn/svn ]; then
   ABS_BUILDDIR=$(pwd)
-elif [ -x $ABS_SRCDIR/subversion/svn/svn ]; then
-  ABS_BUILDDIR=$ABS_SRCDIR
+elif [ -x $SCRIPTDIR/../../svn/svn ]; then
+  pushd $SCRIPTDIR/../../../ >/dev/null
+  ABS_BUILDDIR=$(pwd)
+  popd >/dev/null
 else
   fail "Run this script from the root of Subversion's build tree!"
 fi
@@ -218,15 +195,13 @@ LOAD_MOD_AUTH="$(get_loadmodule_config mod_auth_basic)" \
     || fail "Auth_Basic module not found."
 LOAD_MOD_ACCESS_COMPAT="$(get_loadmodule_config mod_access_compat)" \
     && {
-say "Found modules for Apache 2.3.0+"
+say "Found Auth modules for Apache 2.3.0+"
 LOAD_MOD_AUTHN_CORE="$(get_loadmodule_config mod_authn_core)" \
     || fail "Authn_Core module not found."
 LOAD_MOD_AUTHZ_CORE="$(get_loadmodule_config mod_authz_core)" \
     || fail "Authz_Core module not found."
 LOAD_MOD_AUTHZ_HOST="$(get_loadmodule_config mod_authz_host)" \
     || fail "Authz_Host module not found."
-LOAD_MOD_UNIXD=$(get_loadmodule_config mod_unixd) \
-    || fail "UnixD module not found"
 }
 LOAD_MOD_AUTHN_FILE="$(get_loadmodule_config mod_authn_file)" \
     || fail "Authn_File module not found."
@@ -258,7 +233,6 @@ touch $HTTPD_MIME_TYPES
 cat > "$HTTPD_CFG" <<__EOF__
 $LOAD_MOD_LOG_CONFIG
 $LOAD_MOD_MIME
-$LOAD_MOD_UNIXD
 $LOAD_MOD_DAV
 LoadModule          dav_svn_module "$MOD_DAV_SVN"
 $LOAD_MOD_AUTH
@@ -270,9 +244,9 @@ $LOAD_MOD_AUTHZ_HOST
 LoadModule          authz_svn_module "$MOD_AUTHZ_SVN"
 
 LockFile            lock
-User                $(id -un)
-Group               $(id -gn)
-Listen              $HTTPD_PORT
+User                $(whoami)
+Group               $(groups | awk '{print $1}')
+Listen              localhost:$HTTPD_PORT
 ServerName          localhost
 PidFile             "$HTTPD_PID"
 LogFormat           "%h %l %u %t \"%r\" %>s %b" common
@@ -358,12 +332,6 @@ rm "$HTTPD_CFG-copy"
 
 say "HTTPD is good"
 
-if [ "$HTTP_LIBRARY" = "" ]; then
-  say "Using default dav library"
-else
-  say "Using dav library '$HTTP_LIBRARY'"
-fi
-
 if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
   exit
 fi
@@ -377,7 +345,7 @@ else
   pushd "$ABS_BUILDDIR/subversion/tests/cmdline/" >/dev/null
   TEST="$1"
   shift
-  time "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" "$@"
+  time "$SCRIPTDIR/${TEST}_tests.py" "--url=$BASE_URL" "$@"
   r=$?
   popd >/dev/null
 fi

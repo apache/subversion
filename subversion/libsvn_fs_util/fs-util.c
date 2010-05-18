@@ -2,22 +2,17 @@
  * ends.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2007, 2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -27,7 +22,6 @@
 #include <apr_strings.h>
 
 #include "svn_fs.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
 
@@ -38,7 +32,7 @@ const char *
 svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool)
 {
   char *newpath;
-  size_t path_len;
+  int path_len;
   int path_i = 0, newpath_i = 0;
   svn_boolean_t eating_slashes = FALSE;
 
@@ -137,9 +131,9 @@ svn_fs__next_entry_name(const char **next_p,
 }
 
 svn_fs_path_change2_t *
-svn_fs__path_change_create_internal(const svn_fs_id_t *node_rev_id,
-                                    svn_fs_path_change_kind_t change_kind,
-                                    apr_pool_t *pool)
+svn_fs__path_change2_create(const svn_fs_id_t *node_rev_id,
+                            svn_fs_path_change_kind_t change_kind,
+                            apr_pool_t *pool)
 {
   svn_fs_path_change2_t *change;
 

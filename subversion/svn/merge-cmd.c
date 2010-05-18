@@ -2,22 +2,17 @@
  * merge-cmd.c -- Merging changes into a working copy.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -28,7 +23,6 @@
 /*** Includes. ***/
 
 #include "svn_client.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_types.h"
@@ -55,15 +49,6 @@ svn_cl__merge(apr_getopt_t *os,
   svn_opt_revision_t first_range_start, first_range_end, peg_revision1,
     peg_revision2;
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
-
-  /* Merge doesn't support specifying a revision or revision range
-     when using --reintegrate. */
-  if (opt_state->reintegrate
-      && opt_state->start_revision.kind != svn_opt_revision_unspecified)
-    {
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("-r and -c can't be used with --reintegrate"));
-    }
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -244,9 +229,9 @@ svn_cl__merge(apr_getopt_t *os,
          somewhere deeper in the directory structure. */
       if (svn_path_is_url(sourcepath1))
         {
-          const char *sp1_basename, *sp2_basename;
-          sp1_basename = svn_uri_basename(sourcepath1, pool);
-          sp2_basename = svn_uri_basename(sourcepath2, pool);
+          char *sp1_basename, *sp2_basename;
+          sp1_basename = svn_path_basename(sourcepath1, pool);
+          sp2_basename = svn_path_basename(sourcepath2, pool);
 
           if (strcmp(sp1_basename, sp2_basename) == 0)
             {
@@ -272,8 +257,8 @@ svn_cl__merge(apr_getopt_t *os,
     }
 
   if (! opt_state->quiet)
-    SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                 FALSE, FALSE, FALSE, pool));
+    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                         FALSE, FALSE, pool);
 
   if (opt_state->extensions)
     options = svn_cstring_split(opt_state->extensions, " \t\n\r", TRUE, pool);
@@ -349,11 +334,8 @@ svn_cl__merge(apr_getopt_t *os,
                               pool);
     }
 
-  if (! opt_state->quiet)
-    SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, pool));
-
   if (err && (! opt_state->reintegrate))
     return svn_cl__may_need_force(err);
 
-  return svn_error_return(err);
+  return err;
 }

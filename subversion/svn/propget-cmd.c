@@ -2,22 +2,17 @@
  * propget-cmd.c -- Print properties and values of files/dirs
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -35,7 +30,6 @@
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_props.h"
 #include "svn_xml.h"
@@ -76,11 +70,16 @@ print_properties_xml(const char *pname,
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *filename = svn__apr_hash_index_key(hi);
-      svn_string_t *propval = svn__apr_hash_index_val(hi);
+      const void *key;
+      void *val;
+      const char *filename;
+      svn_string_t *propval;
       svn_stringbuf_t *sb = NULL;
 
       svn_pool_clear(iterpool);
+      apr_hash_this(hi, &key, NULL, &val);
+      filename = key;
+      propval = val;
 
       svn_xml_make_open_tag(&sb, iterpool, svn_xml_normal, "target",
                         "path", filename, NULL);
@@ -120,10 +119,15 @@ print_properties(svn_stream_t *out,
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *filename = svn__apr_hash_index_key(hi);
-      svn_string_t *propval = svn__apr_hash_index_val(hi);
+      const void *key;
+      void *val;
+      const char *filename;
+      svn_string_t *propval;
 
       svn_pool_clear(iterpool);
+      apr_hash_this(hi, &key, NULL, &val);
+      filename = key;
+      propval = val;
 
       if (print_filenames)
         {
@@ -132,7 +136,7 @@ print_properties(svn_stream_t *out,
           /* Print the file name. */
 
           if (! is_url)
-            filename = svn_dirent_local_style(filename, iterpool);
+            filename = svn_path_local_style(filename, iterpool);
 
           /* In verbose mode, print exactly same as "proplist" does;
            * otherwise, print a brief header. */
@@ -219,7 +223,7 @@ svn_cl__propget(apr_getopt_t *os,
       svn_string_t *propval;
 
       SVN_ERR(svn_cl__revprop_prepare(&opt_state->start_revision, targets,
-                                      &URL, ctx, pool));
+                                      &URL, pool));
 
       /* Let libsvn_client do the real work. */
       SVN_ERR(svn_client_revprop_get(pname_utf8, &propval,
@@ -320,11 +324,11 @@ svn_cl__propget(apr_getopt_t *os,
           like_proplist = opt_state->verbose && !opt_state->strict;
 
           if (opt_state->xml)
-            SVN_ERR(print_properties_xml(pname_utf8, props, subpool));
+            print_properties_xml(pname_utf8, props, subpool);
           else
-            SVN_ERR(print_properties(out, svn_path_is_url(target), pname_utf8,
-                                     props, print_filenames, omit_newline,
-                                     like_proplist, subpool));
+            print_properties(out, svn_path_is_url(target), pname_utf8, props,
+                             print_filenames, omit_newline, like_proplist,
+                             subpool);
         }
 
       if (opt_state->xml)

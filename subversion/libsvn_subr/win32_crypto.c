@@ -2,22 +2,17 @@
  * win32_crypto.c: win32 providers for SVN_AUTH_*
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2003-2006, 2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -72,7 +67,7 @@ windows_password_encrypter(apr_hash_t *creds,
   if (crypted)
     {
       char *coded = apr_palloc(pool, apr_base64_encode_len(blobout.cbData));
-      apr_base64_encode(coded, (const char*)blobout.pbData, blobout.cbData);
+      apr_base64_encode(coded, blobout.pbData, blobout.cbData);
       crypted = svn_auth__simple_password_set(creds, realmstring, username,
                                               coded, parameters,
                                               non_interactive, pool);
@@ -106,13 +101,13 @@ windows_password_decrypter(const char **out,
 
   blobin.cbData = strlen(in);
   blobin.pbData = apr_palloc(pool, apr_base64_decode_len(in));
-  apr_base64_decode((char*)blobin.pbData, in);
+  apr_base64_decode(blobin.pbData, in);
   decrypted = CryptUnprotectData(&blobin, &descr, NULL, NULL, NULL,
                                  CRYPTPROTECT_UI_FORBIDDEN, &blobout);
   if (decrypted)
     {
       if (0 == lstrcmpW(descr, description))
-        *out = apr_pstrndup(pool, (const char*)blobout.pbData, blobout.cbData);
+        *out = apr_pstrndup(pool, blobout.pbData, blobout.cbData);
       else
         decrypted = FALSE;
       LocalFree(blobout.pbData);
@@ -206,7 +201,7 @@ windows_ssl_client_cert_pw_encrypter(apr_hash_t *creds,
   if (crypted)
     {
       char *coded = apr_palloc(pool, apr_base64_encode_len(blobout.cbData));
-      apr_base64_encode(coded, (const char*)blobout.pbData, blobout.cbData);
+      apr_base64_encode(coded, blobout.pbData, blobout.cbData);
       crypted = svn_auth__ssl_client_cert_pw_set(creds, realmstring, username,
                                                  coded, parameters,
                                                  non_interactive, pool);
@@ -240,13 +235,13 @@ windows_ssl_client_cert_pw_decrypter(const char **out,
 
   blobin.cbData = strlen(in);
   blobin.pbData = apr_palloc(pool, apr_base64_decode_len(in));
-  apr_base64_decode((char*)blobin.pbData, in);
+  apr_base64_decode(blobin.pbData, in);
   decrypted = CryptUnprotectData(&blobin, &descr, NULL, NULL, NULL,
                                  CRYPTPROTECT_UI_FORBIDDEN, &blobout);
   if (decrypted)
     {
       if (0 == lstrcmpW(descr, description))
-        *out = apr_pstrndup(pool, (const char*)blobout.pbData, blobout.cbData);
+        *out = apr_pstrndup(pool, blobout.pbData, blobout.cbData);
       else
         decrypted = FALSE;
       LocalFree(blobout.pbData);
@@ -335,14 +330,14 @@ windows_validate_certificate(svn_boolean_t *ok_p,
   CERT_CHAIN_PARA chain_para;
   PCCERT_CHAIN_CONTEXT chain_context = NULL;
   int cert_len;
-  BYTE *binary_cert;
+  char *binary_cert;
 
   *ok_p = FALSE;
 
   /* Use apr-util as CryptStringToBinaryA is available only on XP+. */
   binary_cert = apr_palloc(pool,
                            apr_base64_decode_len(ascii_cert));
-  cert_len = apr_base64_decode((char*)binary_cert, ascii_cert);
+  cert_len = apr_base64_decode(binary_cert, ascii_cert);
 
   /* Parse the certificate into a context. */
   cert_context = CertCreateCertificateContext
@@ -356,28 +351,14 @@ windows_validate_certificate(svn_boolean_t *ok_p,
       chain_para.cbSize = sizeof(chain_para);
 
       if (CertGetCertificateChain(NULL, cert_context, NULL, NULL, &chain_para,
-                                  CERT_CHAIN_CACHE_END_CERT |
-                                  CERT_CHAIN_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT,
+                                  CERT_CHAIN_CACHE_END_CERT,
                                   NULL, &chain_context))
         {
-          CERT_CHAIN_POLICY_PARA policy_para;
-          CERT_CHAIN_POLICY_STATUS policy_status;
-
-          policy_para.cbSize = sizeof(policy_para);
-          policy_para.dwFlags = 0;
-          policy_para.pvExtraPolicyPara = NULL;
-
-          policy_status.cbSize = sizeof(policy_status);
-
-          if (CertVerifyCertificateChainPolicy(CERT_CHAIN_POLICY_SSL,
-                                               chain_context, &policy_para,
-                                               &policy_status))
+          if (chain_context->rgpChain[0]->TrustStatus.dwErrorStatus
+              == CERT_TRUST_NO_ERROR)
             {
-              if (policy_status.dwError == S_OK)
-                {
-                  /* Windows thinks the certificate is valid. */
-                  *ok_p = TRUE;
-                }
+              /* Windows think the certificate is valid. */
+              *ok_p = TRUE;
             }
 
           CertFreeCertificateChain(chain_context);

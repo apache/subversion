@@ -2,22 +2,17 @@
  * marshal.c :  Marshalling routines for Subversion protocol
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -84,7 +79,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
 }
 
 svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
-                                         const apr_array_header_t *list)
+                                         apr_array_header_t *list)
 {
   int i;
   svn_ra_svn_item_t *item;
@@ -679,7 +674,7 @@ svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
 
 /* Parse a tuple of svn_ra_svn_item_t *'s.  Advance *FMT to the end of the
  * tuple specification and advance AP by the corresponding arguments. */
-static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *pool,
+static svn_error_t *vparse_tuple(apr_array_header_t *items, apr_pool_t *pool,
                                  const char **fmt, va_list *ap)
 {
   int count, nesting_level;
@@ -775,7 +770,7 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn_parse_tuple(const apr_array_header_t *list,
+svn_error_t *svn_ra_svn_parse_tuple(apr_array_header_t *list,
                                     apr_pool_t *pool,
                                     const char *fmt, ...)
 {
@@ -805,7 +800,7 @@ svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return err;
 }
 
-svn_error_t *svn_ra_svn_parse_proplist(const apr_array_header_t *list,
+svn_error_t *svn_ra_svn_parse_proplist(apr_array_header_t *list,
                                        apr_pool_t *pool,
                                        apr_hash_t **props)
 {
@@ -831,7 +826,7 @@ svn_error_t *svn_ra_svn_parse_proplist(const apr_array_header_t *list,
 
 /* --- READING AND WRITING COMMANDS AND RESPONSES --- */
 
-svn_error_t *svn_ra_svn__handle_failure_status(const apr_array_header_t *params,
+svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
                                                apr_pool_t *pool)
 {
   const char *message, *file;
@@ -1008,7 +1003,10 @@ svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
   for (; err; err = err->child)
     {
-      const char *msg = svn_err_best_message(err, buffer, sizeof(buffer));
+      const char *msg = err->message;
+
+      if (msg == NULL)
+        msg = svn_strerror(err->apr_err, buffer, sizeof(buffer));
 
       /* The message string should have been optional, but we can't
          easily change that, so marshal nonexistent messages as "". */

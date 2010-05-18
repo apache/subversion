@@ -2,22 +2,17 @@
  * paths.c:   a path manipulation library using svn_stringbuf_t
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007, 2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -38,8 +33,7 @@
 #include "svn_io.h"                     /* for svn_io_stat() */
 #include "svn_ctype.h"
 
-#include "dirent_uri.h"
-
+#include "private_uri.h"
 
 /* The canonical empty path.  Can this be changed?  Well, change the empty
    test below and the path library will work, not so sure about the fs/wc
@@ -55,6 +49,26 @@
 #define SVN_PATH_IS_PLATFORM_EMPTY(s,n) ((n) == 1 && (s)[0] == '.')
 
 
+const char *
+svn_path_internal_style(const char *path, apr_pool_t *pool)
+{
+#if defined(WIN32) || defined(__CYGWIN__)
+  if ((path[0] == '/' || path[0] == '\\') && path[1] == path[0])
+    return svn_dirent_internal_style(path, pool);
+#endif
+  return svn_uri_internal_style(path, pool);
+}
+
+
+const char *
+svn_path_local_style(const char *path, apr_pool_t *pool)
+{
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (path[0] == '/' && path[1] == '/')
+    return svn_dirent_local_style(path, pool);
+#endif
+  return svn_uri_local_style(path, pool);
+}
 
 
 #ifndef NDEBUG
@@ -81,12 +95,10 @@ is_canonical(const char *path,
   return (! SVN_PATH_IS_PLATFORM_EMPTY(path, len)
           && strstr(path, "/./") == NULL
           && (len == 0
-              || (len == 1 && path[0] == '/')
-              || (path[len-1] != '/')
-#if defined(WIN32) || defined(__CYGWIN__)
               || svn_dirent_is_root(path, len)
-#endif
-              ));
+              /* The len > 0 check is redundant, but here to make
+               * sure we never ever end up indexing with -1. */
+              || (len > 0 && path[len-1] != '/')));
 }
 #endif
 
@@ -379,6 +391,23 @@ svn_path_basename(const char *path, apr_pool_t *pool)
   return apr_pstrmemdup(pool, path + start, len - start);
 }
 
+
+void
+svn_path_split(const char *path,
+               const char **dirpath,
+               const char **base_name,
+               apr_pool_t *pool)
+{
+  assert(dirpath != base_name);
+
+  if (dirpath)
+    *dirpath = svn_path_dirname(path, pool);
+
+  if (base_name)
+    *base_name = svn_path_basename(path, pool);
+}
+
+
 int
 svn_path_is_empty(const char *path)
 {
@@ -572,7 +601,7 @@ svn_path_is_single_path_component(const char *name)
 svn_boolean_t
 svn_path_is_dotpath_present(const char *path)
 {
-  size_t len;
+  int len;
 
   /* The empty string does not have a dotpath */
   if (path[0] == '\0')
@@ -598,7 +627,7 @@ svn_path_is_dotpath_present(const char *path)
 svn_boolean_t
 svn_path_is_backpath_present(const char *path)
 {
-  size_t len;
+  int len;
 
   /* 0 and 1-length paths do not have a backpath */
   if (path[0] == '\0' || path[1] == '\0')
@@ -675,7 +704,7 @@ svn_path_is_url(const char *path)
 
       alphanum | mark | ":" | "@" | "&" | "=" | "+" | "$" | ","
 */
-const char svn_uri__char_validity[256] = {
+static const char uri_char_validity[256] = {
   0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
   0, 1, 0, 0, 1, 0, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
@@ -734,7 +763,7 @@ svn_path_is_uri_safe(const char *path)
             }
           return FALSE;
         }
-      else if (! svn_uri__char_validity[((unsigned char)path[i])])
+      else if (! uri_char_validity[((unsigned char)path[i])])
         {
           return FALSE;
         }
@@ -771,13 +800,14 @@ uri_escape(const char *path, const char table[], apr_pool_t *pool)
         svn_stringbuf_appendbytes(retstr, path + copied,
                                   i - copied);
 
-      /* Now, write in our escaped character, consisting of the
-         '%' and two digits.  We cast the C to unsigned char here because
-         the 'X' format character will be tempted to treat it as an unsigned
-         int...which causes problem when messing with 0x80-0xFF chars.
-         We also need space for a null as apr_snprintf will write one. */
+      /* Now, sprintf() in our escaped character, making sure our
+         buffer is big enough to hold the '%' and two digits.  We cast
+         the C to unsigned char here because the 'X' format character
+         will be tempted to treat it as an unsigned int...which causes
+         problem when messing with 0x80-0xFF chars.  We also need space
+         for a null as sprintf will write one. */
       svn_stringbuf_ensure(retstr, retstr->len + 4);
-      apr_snprintf(retstr->data + retstr->len, 4, "%%%02X", (unsigned char)c);
+      sprintf(retstr->data + retstr->len, "%%%02X", (unsigned char)c);
       retstr->len += 3;
 
       /* Finally, update our copy counter. */
@@ -792,7 +822,7 @@ uri_escape(const char *path, const char table[], apr_pool_t *pool)
   if (i - copied)
     svn_stringbuf_appendbytes(retstr, path + copied, i - copied);
 
-  /* retstr is null-terminated either by apr_snprintf or the svn_stringbuf
+  /* retstr is null-terminated either by sprintf or the svn_stringbuf
      functions. */
 
   return retstr->data;
@@ -804,7 +834,7 @@ svn_path_uri_encode(const char *path, apr_pool_t *pool)
 {
   const char *ret;
 
-  ret = uri_escape(path, svn_uri__char_validity, pool);
+  ret = uri_escape(path, uri_char_validity, pool);
 
   /* Our interface guarantees a copy. */
   if (ret == path)
@@ -922,10 +952,9 @@ svn_path_url_add_component2(const char *url,
                             const char *component,
                             apr_pool_t *pool)
 {
-  /* = svn_path_uri_encode() but without always copying */
-  component = uri_escape(component, svn_uri__char_validity, pool);
+  assert(svn_path_is_canonical(url, pool));
 
-  return svn_path_join(url, component, pool);
+  return svn_path_join(url, svn_path_uri_encode(component, pool), pool);
 }
 
 svn_error_t *
@@ -941,7 +970,64 @@ svn_path_get_absolute(const char **pabsolute,
 
   return svn_dirent_get_absolute(pabsolute, relative, pool);
 }
+
+
+svn_error_t *
+svn_path_split_if_file(const char *path,
+                       const char **pdirectory,
+                       const char **pfile,
+                       apr_pool_t *pool)
+{
+  apr_finfo_t finfo;
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(svn_path_is_canonical(path, pool));
+
+  err = svn_io_stat(&finfo, path, APR_FINFO_TYPE, pool);
+  if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
+    return err;
+
+  if (err || finfo.filetype == APR_REG)
+    {
+      svn_error_clear(err);
+      svn_path_split(path, pdirectory, pfile, pool);
+    }
+  else if (finfo.filetype == APR_DIR)
+    {
+      *pdirectory = path;
+      *pfile = SVN_EMPTY_PATH;
+    }
+  else
+    {
+      return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
+                               _("'%s' is neither a file nor a directory name"),
+                               svn_path_local_style(path, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
+const char *
+svn_path_canonicalize(const char *path, apr_pool_t *pool)
+{
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (path[0] == '/' && path[1] == '/')
+    return svn_dirent_canonicalize(path, pool);
+#endif
+  return svn_uri_canonicalize(path, pool);
+}
+
+svn_boolean_t
+svn_path_is_canonical(const char *path, apr_pool_t *pool)
+{
+  return svn_uri_is_canonical(path, pool)
+#if defined(WIN32) || defined(__CYGWIN__)
+         || (path[0] == '/' && path[1] == '/' &&
+             svn_dirent_is_canonical(path, pool))
+#endif
+         ;
+}
 
 
 /** Get APR's internal path encoding. */
@@ -1032,7 +1118,7 @@ illegal_path_escape(const char *path, apr_pool_t *pool)
       /*### The backslash separator doesn't work too great with Windows,
          but it's what we'll use for consistency with invalid utf8
          formatting (until someone has a better idea) */
-      apr_snprintf(retstr->data + retstr->len, 5, "\\%03o", (unsigned char)c);
+      sprintf(retstr->data + retstr->len, "\\%03o", (unsigned char)c);
       retstr->len += 4;
 
       /* Finally, update our copy counter. */
@@ -1047,7 +1133,7 @@ illegal_path_escape(const char *path, apr_pool_t *pool)
   if (i - copied)
     svn_stringbuf_appendbytes(retstr, path + copied, i - copied);
 
-  /* retstr is null-terminated either by apr_snprintf or the svn_stringbuf
+  /* retstr is null-terminated either by sprintf or the svn_stringbuf
      functions. */
 
   return retstr->data;
@@ -1066,7 +1152,7 @@ svn_path_check_valid(const char *path, apr_pool_t *pool)
             (SVN_ERR_FS_PATH_SYNTAX, NULL,
              _("Invalid control character '0x%02x' in path '%s'"),
              (unsigned char)*c,
-             illegal_path_escape(svn_dirent_local_style(path, pool), pool));
+             illegal_path_escape(svn_path_local_style(path, pool), pool));
         }
     }
 

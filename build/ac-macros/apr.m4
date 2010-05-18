@@ -1,21 +1,3 @@
-dnl ===================================================================
-dnl   Licensed to the Apache Software Foundation (ASF) under one
-dnl   or more contributor license agreements.  See the NOTICE file
-dnl   distributed with this work for additional information
-dnl   regarding copyright ownership.  The ASF licenses this file
-dnl   to you under the Apache License, Version 2.0 (the
-dnl   "License"); you may not use this file except in compliance
-dnl   with the License.  You may obtain a copy of the License at
-dnl
-dnl     http://www.apache.org/licenses/LICENSE-2.0
-dnl
-dnl   Unless required by applicable law or agreed to in writing,
-dnl   software distributed under the License is distributed on an
-dnl   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-dnl   KIND, either express or implied.  See the License for the
-dnl   specific language governing permissions and limitations
-dnl   under the License.
-dnl ===================================================================
 dnl
 dnl  SVN_LIB_APR(wanted_regex, alt_wanted_regex)
 dnl
@@ -77,11 +59,10 @@ AC_DEFUN(SVN_LIB_APR,
     AC_MSG_ERROR([apr-config --cflags failed])
   fi
 
-  apr_ldflags="`$apr_config --ldflags`"
+  LDFLAGS="$LDFLAGS `$apr_config --ldflags`"
   if test $? -ne 0; then
     AC_MSG_ERROR([apr-config --ldflags failed])
   fi
-  LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS($apr_ldflags)`"
 
   SVN_APR_INCLUDES="`$apr_config --includes`"
   if test $? -ne 0; then
@@ -93,18 +74,17 @@ AC_DEFUN(SVN_LIB_APR,
     AC_MSG_ERROR([apr-config --prefix failed])
   fi
 
-  if test "$enable_all_static" = "yes"; then
-    SVN_APR_LIBS="`$apr_config --link-ld --libs`"
-    if test $? -ne 0; then
-      AC_MSG_ERROR([apr-config --link-ld --libs failed])
-    fi
-  else
-    SVN_APR_LIBS="`$apr_config --link-ld`"
-    if test $? -ne 0; then
-      AC_MSG_ERROR([apr-config --link-ld failed])
-    fi
+  dnl When APR stores the dependent libs in the .la file, we don't need 
+  dnl --libs.
+  SVN_APR_LIBS="`$apr_config --link-libtool --libs`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apr-config --link-libtool --libs failed])
   fi
-  SVN_APR_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($SVN_APR_LIBS)`"
+
+  SVN_APR_EXPORT_LIBS="`$apr_config --link-ld --libs`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apr-config --link-ld --libs failed])
+  fi
 
   SVN_APR_SHLIB_PATH_VAR="`$apr_config --shlib-path-var`"
   if test $? -ne 0; then
@@ -112,9 +92,9 @@ AC_DEFUN(SVN_LIB_APR,
   fi
 
   AC_SUBST(SVN_APR_PREFIX)
-  AC_SUBST(SVN_APR_CONFIG, ["$apr_config"])
   AC_SUBST(SVN_APR_INCLUDES)
   AC_SUBST(SVN_APR_LIBS)
+  AC_SUBST(SVN_APR_EXPORT_LIBS)
   AC_SUBST(SVN_APR_SHLIB_PATH_VAR)
 ])
 
@@ -131,7 +111,7 @@ AC_DEFUN(SVN_DOWNLOAD_APR,
   echo "get it with SVN and put it in a subdirectory of this source:"
   echo ""
   echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr/branches/1.3.x \\"
+  echo "    http://svn.apache.org/repos/asf/apr/apr/branches/1.2.x \\"
   echo "    apr"
   echo ""
   echo "Run that right here in the top level of the Subversion tree."
@@ -144,7 +124,7 @@ AC_DEFUN(SVN_DOWNLOAD_APR,
   echo "getting both from SVN with:"
   echo ""
   echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/1.3.x \\"
+  echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/1.2.x \\"
   echo "    apr-util"
   echo ""
   AC_MSG_ERROR([no suitable apr found])

@@ -1,22 +1,17 @@
 /**
  * @copyright
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  *
@@ -111,28 +106,6 @@ typedef struct svn_error_t
 
 /** @} */
 
-/** @defgroup apr_hash_utilities APR Hash Table Helpers
- * These functions enable the caller to dereference an APR hash table index
- * without type casts or temporary variables.
- *
- * ### These are private, and may go away when APR implements them natively.
- * @{
- */
-
-/** Return the key of the hash table entry indexed by @a hi. */
-const void *
-svn__apr_hash_index_key(const apr_hash_index_t *hi);
-
-/** Return the key length of the hash table entry indexed by @a hi. */
-apr_ssize_t
-svn__apr_hash_index_klen(const apr_hash_index_t *hi);
-
-/** Return the value of the hash table entry indexed by @a hi. */
-void *
-svn__apr_hash_index_val(const apr_hash_index_t *hi);
-
-/** @} */
-
 /** The various types of nodes in the Subversion filesystem. */
 typedef enum
 {
@@ -161,39 +134,12 @@ svn_node_kind_to_word(svn_node_kind_t kind);
 
 /** Return the appropriate node_kind for @a word.  @a word is as
  * returned from svn_node_kind_to_word().  If @a word does not
- * represent a recognized kind or is @c NULL, return #svn_node_unknown.
+ * represent a recognized kind or is @c NULL, return @c svn_node_unknown.
  *
  * @since New in 1.6.
  */
 svn_node_kind_t
 svn_node_kind_from_word(const char *word);
-
-/** Generic three-state property to represent an unknown value for values that
- * are just like booleans. @since New in 1.7. */
-typedef enum
-{
-  svn_tristate_unknown = 0,
-  svn_tristate_false,
-  svn_tristate_true
-} svn_tristate_t;
-
-/** Return a constant string "true", "false" or NULL representing the value of
- * @a tristate.
- *
- * @since New in 1.7.
- */
-const char *
-svn_tristate_to_word(svn_tristate_t tristate);
-
-/** Return the appropriate tristate for @a word. If @a word is "true", returns
- * #svn_tristate_true; if @a word is "false", returns #svn_tristate_false,
- * for all other values (including NULL) returns #svn_tristate_unknown.
- *
- * @since New in 1.7.
- */
-svn_tristate_t
-svn_tristate_from_word(const char * word);
-
 
 /** About Special Files in Subversion
  *
@@ -243,7 +189,7 @@ typedef long int svn_revnum_t;
 
 /** Not really invalid...just unimportant -- one day, this can be its
  * own unique value, for now, just make it the same as
- * #SVN_INVALID_REVNUM.
+ * @c SVN_INVALID_REVNUM.
  */
 #define SVN_IGNORED_REVNUM ((svn_revnum_t) -1)
 
@@ -255,7 +201,7 @@ typedef long int svn_revnum_t;
  * store its value in @a rev.  If @a endptr is non-NULL, then the
  * address of the first non-numeric character in @a str is stored in
  * it.  If there are no digits in @a str, then @a endptr is set (if
- * non-NULL), and the error #SVN_ERR_REVNUM_PARSE_FAILURE error is
+ * non-NULL), and the error @c SVN_ERR_REVNUM_PARSE_FAILURE error is
  * returned.  Negative numbers parsed from @a str are considered
  * invalid, and result in the same error.
  *
@@ -329,39 +275,39 @@ typedef enum
      the deeper it descends.  This allows us to compare two depths
      numerically to decide which should govern. */
 
-  /** Depth undetermined or ignored.  In some contexts, this means the
-      client should choose an appropriate default depth.  The server
-      will generally treat it as #svn_depth_infinity. */
+  /* Depth undetermined or ignored.  In some contexts, this means the
+     client should choose an appropriate default depth.  The server
+     will generally treat it as @c svn_depth_infinity. */
   svn_depth_unknown    = -2,
 
-  /** Exclude (i.e., don't descend into) directory D.
-      @note In Subversion 1.5, svn_depth_exclude is *not* supported
-      anywhere in the client-side (libsvn_wc/libsvn_client/etc) code;
-      it is only supported as an argument to set_path functions in the
-      ra and repos reporters.  (This will enable future versions of
-      Subversion to run updates, etc, against 1.5 servers with proper
-      svn_depth_exclude behavior, once we get a chance to implement
-      client-side support for svn_depth_exclude.)
+  /* Exclude (i.e., don't descend into) directory D. */
+  /* NOTE: In Subversion 1.5, svn_depth_exclude is *not* supported
+     anywhere in the client-side (libsvn_wc/libsvn_client/etc) code;
+     it is only supported as an argument to set_path functions in the
+     ra and repos reporters.  (This will enable future versions of
+     Subversion to run updates, etc, against 1.5 servers with proper
+     svn_depth_exclude behavior, once we get a chance to implement
+     client-side support for svn_depth_exclude.)
   */
   svn_depth_exclude    = -1,
 
-  /** Just the named directory D, no entries.  Updates will not pull in
-      any files or subdirectories not already present. */
+  /* Just the named directory D, no entries.  Updates will not pull in
+     any files or subdirectories not already present. */
   svn_depth_empty      =  0,
 
-  /** D + its file children, but not subdirs.  Updates will pull in any
-      files not already present, but not subdirectories. */
+  /* D + its file children, but not subdirs.  Updates will pull in any
+     files not already present, but not subdirectories. */
   svn_depth_files      =  1,
 
-  /** D + immediate children (D and its entries).  Updates will pull in
-      any files or subdirectories not already present; those
-      subdirectories' this_dir entries will have depth-empty. */
+  /* D + immediate children (D and its entries).  Updates will pull in
+     any files or subdirectories not already present; those
+     subdirectories' this_dir entries will have depth-empty. */
   svn_depth_immediates =  2,
 
-  /** D + all descendants (full recursion from D).  Updates will pull
-      in any files or subdirectories not already present; those
-      subdirectories' this_dir entries will have depth-infinity.
-      Equivalent to the pre-1.5 default update behavior. */
+  /* D + all descendants (full recursion from D).  Updates will pull
+     in any files or subdirectories not already present; those
+     subdirectories' this_dir entries will have depth-infinity.
+     Equivalent to the pre-1.5 default update behavior. */
   svn_depth_infinity   =  3
 
 } svn_depth_t;
@@ -379,7 +325,7 @@ svn_depth_to_word(svn_depth_t depth);
 
 /** Return the appropriate depth for @a depth_str.  @a word is as
  * returned from svn_depth_to_word().  If @a depth_str does not
- * represent a recognized depth, return #svn_depth_unknown.
+ * represent a recognized depth, return @c svn_depth_unknown.
  *
  * @since New in 1.5.
  */
@@ -387,8 +333,8 @@ svn_depth_t
 svn_depth_from_word(const char *word);
 
 
-/* Return #svn_depth_infinity if boolean @a recurse is TRUE, else
- * return #svn_depth_files.
+/* Return @c svn_depth_infinity if boolean @a recurse is TRUE, else
+ * return @c svn_depth_files.
  *
  * @note New code should never need to use this, it is called only
  * from pre-depth APIs, for compatibility.
@@ -399,8 +345,8 @@ svn_depth_from_word(const char *word);
   ((recurse) ? svn_depth_infinity : svn_depth_files)
 
 
-/* Return #svn_depth_infinity if boolean @a recurse is TRUE, else
- * return #svn_depth_immediates.
+/* Return @c svn_depth_infinity if boolean @a recurse is TRUE, else
+ * return @c svn_depth_immediates.
  *
  * @note New code should never need to use this, it is called only
  * from pre-depth APIs, for compatibility.
@@ -411,8 +357,8 @@ svn_depth_from_word(const char *word);
   ((recurse) ? svn_depth_infinity : svn_depth_immediates)
 
 
-/* Return #svn_depth_infinity if boolean @a recurse is TRUE, else
- * return #svn_depth_empty.
+/* Return @c svn_depth_infinity if boolean @a recurse is TRUE, else
+ * return @c svn_depth_empty.
  *
  * @note New code should never need to use this, it is called only
  * from pre-depth APIs, for compatibility.
@@ -428,7 +374,7 @@ svn_depth_from_word(const char *word);
  * Although much code has been converted to use depth, some code still
  * takes a recurse boolean.  In most cases, it makes sense to treat
  * unknown or infinite depth as recursive, and any other depth as
- * non-recursive (which in turn usually translates to #svn_depth_files).
+ * non-recursive (which in turn usually translates to @c svn_depth_files).
  */
 #define SVN_DEPTH_IS_RECURSIVE(depth)                              \
   (((depth) == svn_depth_infinity || (depth) == svn_depth_unknown) \
@@ -436,7 +382,7 @@ svn_depth_from_word(const char *word);
 
 
 /**
- * It is sometimes convenient to indicate which parts of an #svn_dirent_t
+ * It is sometimes convenient to indicate which parts of an @c svn_dirent_t
  * object you are actually interested in, so that calculating and sending
  * the data corresponding to the other fields can be avoided.  These values
  * can be used for that purpose.
@@ -605,13 +551,13 @@ typedef struct svn_commit_info_t
 
 
 /**
- * Allocate an object of type #svn_commit_info_t in @a pool and
+ * Allocate an object of type @c svn_commit_info_t in @a pool and
  * return it.
  *
- * The @c revision field of the new struct is set to #SVN_INVALID_REVNUM.
- * All other fields are initialized to @c NULL.
+ * The @c revision field of the new struct is set to @c
+ * SVN_INVALID_REVNUM.  All other fields are initialized to @c NULL.
  *
- * @note Any object of the type #svn_commit_info_t should
+ * @note Any object of the type @c svn_commit_info_t should
  * be created using this function.
  * This is to provide for extending the svn_commit_info_t in
  * the future.
@@ -635,7 +581,7 @@ svn_commit_info_dup(const svn_commit_info_t *src_commit_info,
 /**
  * A structure to represent a path that changed for a log entry.
  *
- * @note To allow for extending the #svn_log_changed_path2_t structure in
+ * @note To allow for extending the @c svn_log_changed_path2_t structure in
  * future releases, always use svn_log_changed_path2_create() to allocate
  * the structure.
  *
@@ -655,24 +601,16 @@ typedef struct svn_log_changed_path2_t
   /** The type of the node, may be svn_node_unknown. */
   svn_node_kind_t node_kind;
 
-  /** Is the text modified, may be svn_tristate_unknown.
-   * @since New in 1.7. */
-  svn_tristate_t text_modified;
-
-  /** Are properties modified, may be svn_tristate_unknown.
-   * @since New in 1.7. */
-  svn_tristate_t props_modified;
-
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update
      svn_log_changed_path2_dup(). */
 } svn_log_changed_path2_t;
 
 /**
- * Returns an #svn_log_changed_path2_t, allocated in @a pool with all fields
+ * Returns an @c svn_log_changed_path2_t, allocated in @a pool with all fields
  * initialized to NULL, None or empty values.
  *
- * @note To allow for extending the #svn_log_changed_path2_t structure in
+ * @note To allow for extending the @c svn_log_changed_path2_t structure in
  * future releases, this function should always be used to allocate the
  * structure.
  *
@@ -692,7 +630,7 @@ svn_log_changed_path2_dup(const svn_log_changed_path2_t *changed_path,
 
 /**
  * A structure to represent a path that changed for a log entry.  Same as
- * #svn_log_changed_path2_t, but without the node kind.
+ * @c svn_log_changed_path2_t, but without the node kind.
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
@@ -724,7 +662,7 @@ svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
 /**
  * A structure to represent all the information about a particular log entry.
  *
- * @note To allow for extending the #svn_log_entry_t structure in future
+ * @note To allow for extending the @c svn_log_entry_t structure in future
  * releases, always use svn_log_entry_create() to allocate the structure.
  *
  * @since New in 1.5.
@@ -732,7 +670,7 @@ svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
 typedef struct svn_log_entry_t
 {
   /** A hash containing as keys every path committed in @a revision; the
-   * values are (#svn_log_changed_path_t *) stuctures.
+   * values are (@c svn_log_changed_path_t *) stuctures.
    *
    * The subversion core libraries will always set this field to the same
    * value as changed_paths2 for compatibity reasons.
@@ -767,7 +705,7 @@ typedef struct svn_log_entry_t
   svn_boolean_t has_children;
 
   /** A hash containing as keys every path committed in @a revision; the
-   * values are (#svn_log_changed_path2_t *) stuctures.
+   * values are (@c svn_log_changed_path2_t *) stuctures.
    *
    * If this value is not @c NULL, it MUST have the same value as
    * changed_paths or svn_log_entry_dup() will not create an identical copy.
@@ -780,24 +718,16 @@ typedef struct svn_log_entry_t
    */
   apr_hash_t *changed_paths2;
 
-  /**
-   * Whether @a revision should be interpreted as non-inheritable in the
-   * same sense of #svn_merge_range_t.
-   *
-   * @since New in 1.7.
-   */
-  svn_boolean_t non_inheritable;
-
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update
      svn_log_entry_dup(). */
 } svn_log_entry_t;
 
 /**
- * Returns an #svn_log_entry_t, allocated in @a pool with all fields
+ * Returns an @c svn_log_entry_t, allocated in @a pool with all fields
  * initialized to NULL values.
  *
- * @note To allow for extending the #svn_log_entry_t structure in future
+ * @note To allow for extending the @c svn_log_entry_t structure in future
  * releases, this function should always be used to allocate the structure.
  *
  * @since New in 1.5.
@@ -814,10 +744,10 @@ svn_log_entry_create(apr_pool_t *pool);
  * @since New in 1.6.
  */
 svn_log_entry_t *
-svn_log_entry_dup(const svn_log_entry_t *log_entry, apr_pool_t *pool);
+svn_log_entry_dup(svn_log_entry_t *log_entry, apr_pool_t *pool);
 
 /** The callback invoked by log message loopers, such as
- * #svn_ra_plugin_t.get_log() and svn_repos_get_logs().
+ * @c svn_ra_plugin_t.get_log() and svn_repos_get_logs().
  *
  * This function is invoked once on each log message, in the order
  * determined by the caller (see above-mentioned functions).
@@ -832,7 +762,7 @@ svn_log_entry_dup(const svn_log_entry_t *log_entry, apr_pool_t *pool);
  *
  * If @a log_entry->changed_paths is non-@c NULL, then it contains as keys
  * every path committed in @a log_entry->revision; the values are
- * (#svn_log_changed_path_t *) structures.
+ * (@c svn_log_changed_path_t *) structures.
  *
  * If @a log_entry->has_children is @c TRUE, the message will be followed
  * immediately by any number of merged revisions (child messages), which are
@@ -849,25 +779,25 @@ svn_log_entry_dup(const svn_log_entry_t *log_entry, apr_pool_t *pool);
  * @since New in 1.5.
  */
 
-typedef svn_error_t *(*svn_log_entry_receiver_t)(
-  void *baton,
-  svn_log_entry_t *log_entry,
-  apr_pool_t *pool);
+typedef svn_error_t *(*svn_log_entry_receiver_t)
+  (void *baton,
+   svn_log_entry_t *log_entry,
+   apr_pool_t *pool);
 
 /**
- * Similar to #svn_log_entry_receiver_t, except this uses separate
+ * Similar to @c svn_log_entry_receiver_t, except this uses separate
  * parameters for each part of the log entry.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
-typedef svn_error_t *(*svn_log_message_receiver_t)(
-  void *baton,
-  apr_hash_t *changed_paths,
-  svn_revnum_t revision,
-  const char *author,
-  const char *date,  /* use svn_time_from_cstring() if need apr_time_t */
-  const char *message,
-  apr_pool_t *pool);
+typedef svn_error_t *(*svn_log_message_receiver_t)
+  (void *baton,
+   apr_hash_t *changed_paths,
+   svn_revnum_t revision,
+   const char *author,
+   const char *date,  /* use svn_time_from_cstring() if need apr_time_t */
+   const char *message,
+   apr_pool_t *pool);
 
 
 /** Callback function type for commits.
@@ -878,21 +808,21 @@ typedef svn_error_t *(*svn_log_message_receiver_t)(
  *
  * @since New in 1.4.
  */
-typedef svn_error_t *(*svn_commit_callback2_t)(
-  const svn_commit_info_t *commit_info,
-  void *baton,
-  apr_pool_t *pool);
+typedef svn_error_t *(*svn_commit_callback2_t)
+  (const svn_commit_info_t *commit_info,
+   void *baton,
+   apr_pool_t *pool);
 
-/** Same as #svn_commit_callback2_t, but uses individual
- * data elements instead of the #svn_commit_info_t structure
+/** Same as @c svn_commit_callback2_t, but uses individual
+ * data elements instead of the @c svn_commit_info_t structure
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-typedef svn_error_t *(*svn_commit_callback_t)(
-  svn_revnum_t new_revision,
-  const char *date,
-  const char *author,
-  void *baton);
+typedef svn_error_t *(*svn_commit_callback_t)
+  (svn_revnum_t new_revision,
+   const char *date,
+   const char *author,
+   void *baton);
 
 
 /** A buffer size that may be used when processing a stream of data.
@@ -933,7 +863,7 @@ typedef svn_error_t *(*svn_commit_callback_t)(
 /** Validate @a mime_type.
  *
  * If @a mime_type does not contain a "/", or ends with non-alphanumeric
- * data, return #SVN_ERR_BAD_MIME_TYPE, else return success.
+ * data, return @c SVN_ERR_BAD_MIME_TYPE, else return success.
  *
  * Use @a pool only to find error allocation.
  *
@@ -959,8 +889,8 @@ svn_mime_type_is_binary(const char *mime_type);
 
 /** A user defined callback that subversion will call with a user defined
  * baton to see if the current operation should be continued.  If the operation
- * should continue, the function should return #SVN_NO_ERROR, if not, it
- * should return #SVN_ERR_CANCELLED.
+ * should continue, the function should return @c SVN_NO_ERROR, if not, it
+ * should return @c SVN_ERR_CANCELLED.
  */
 typedef svn_error_t *(*svn_cancel_func_t)(void *cancel_baton);
 
@@ -998,10 +928,10 @@ typedef struct svn_lock_t
 } svn_lock_t;
 
 /**
- * Returns an #svn_lock_t, allocated in @a pool with all fields initialized
+ * Returns an @c svn_lock_t, allocated in @a pool with all fields initialized
  * to NULL values.
  *
- * @note To allow for extending the #svn_lock_t structure in the future
+ * @note To allow for extending the @c svn_lock_t structure in the future
  * releases, this function should always be used to allocate the structure.
  *
  * @since New in 1.2.
@@ -1054,7 +984,7 @@ typedef struct svn_merge_range_t
  * @since New in 1.5.
  */
 svn_merge_range_t *
-svn_merge_range_dup(const svn_merge_range_t *range, apr_pool_t *pool);
+svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool);
 
 /**
  * Returns true if the changeset committed in revision @a rev is one
@@ -1063,7 +993,7 @@ svn_merge_range_dup(const svn_merge_range_t *range, apr_pool_t *pool);
  * @since New in 1.5.
  */
 svn_boolean_t
-svn_merge_range_contains_rev(const svn_merge_range_t *range, svn_revnum_t rev);
+svn_merge_range_contains_rev(svn_merge_range_t *range, svn_revnum_t rev);
 
 
 
@@ -1092,15 +1022,15 @@ typedef struct svn_location_segment_t
 
 
 /**
- * A callback invoked by generators of #svn_location_segment_t
+ * A callback invoked by generators of @c svn_location_segment_t
  * objects, used to report information about a versioned object's
  * history in terms of its location in the repository filesystem over
  * time.
  */
-typedef svn_error_t *(*svn_location_segment_receiver_t)(
-  svn_location_segment_t *segment,
-  void *baton,
-  apr_pool_t *pool);
+typedef svn_error_t *(*svn_location_segment_receiver_t)
+  (svn_location_segment_t *segment,
+   void *baton,
+   apr_pool_t *pool);
 
 
 /**
@@ -1109,21 +1039,8 @@ typedef svn_error_t *(*svn_location_segment_receiver_t)(
  * @since New in 1.5.
  */
 svn_location_segment_t *
-svn_location_segment_dup(const svn_location_segment_t *segment,
+svn_location_segment_dup(svn_location_segment_t *segment,
                          apr_pool_t *pool);
-
-/** A line number, such as in a file or a stream.
- *
- * @since New in 1.7.
- */
-typedef unsigned long svn_linenum_t;
-
-/* The maximum value of an svn_linenum_t.
- *
- * @since New in 1.7.
- */
-#define SVN_LINENUM_MAX_VALUE ULONG_MAX
-
 /** @} */
 
 
@@ -1144,16 +1061,6 @@ typedef unsigned long svn_linenum_t;
  * guard.
  */
 #include "svn_error.h"
-
-
-/*
- * Subversion developers may want to use some additional debugging facilities
- * while working on the code. We'll pull that in here, so individual source
- * files don't have to include this header manually.
- */
-#ifdef SVN_DEBUG
-#include "private/svn_debug.h"
-#endif
 
 
 #endif /* SVN_TYPES_H */

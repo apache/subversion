@@ -3,25 +3,17 @@
 #  commit_tests.py:  testing fancy commit cases.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-#    Licensed to the Apache Software Foundation (ASF) under one
-#    or more contributor license agreements.  See the NOTICE file
-#    distributed with this work for additional information
-#    regarding copyright ownership.  The ASF licenses this file
-#    to you under the Apache License, Version 2.0 (the
-#    "License"); you may not use this file except in compliance
-#    with the License.  You may obtain a copy of the License at
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
 #
-#    Unless required by applicable law or agreed to in writing,
-#    software distributed under the License is distributed on an
-#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-#    KIND, either express or implied.  See the License for the
-#    specific language governing permissions and limitations
-#    under the License.
 ######################################################################
 
 # General modules
@@ -1126,7 +1118,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        "not under version control",
+                                        "unversioned",
                                         mu_path)
 
   Q_path = os.path.join(wc_dir, 'Q')
@@ -1359,13 +1351,13 @@ def failed_commit(sbox):
 
 #----------------------------------------------------------------------
 
-# Commit from multiple working copies is being worked on as issue #2381.
-# Also related to issue #959, this test here doesn't use svn:externals
-# but the behaviour needs to be considered.
-# In this test two WCs are nested, one WC is child of the other.
+# Commit from multiple working copies is not yet supported.  At
+# present an error is generated and none of the working copies change.
+# Related to issue 959, this test here doesn't use svn:externals but the
+# behaviour needs to be considered.
 
-def commit_multiple_wc_nested(sbox):
-  "commit from two nested working copies"
+def commit_multiple_wc(sbox):
+  "attempted commit from multiple wc fails"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1392,123 +1384,16 @@ def commit_multiple_wc_nested(sbox):
   expected_status2.tweak('A/B/lambda', status='M ')
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
-  # Commit should succeed, even though one target is a "child" of the other.
-  svntest.actions.run_and_verify_svn("Ouput on stderr where none expected",
-                                     svntest.verify.AnyOutput, [],
+  # Commit should fail, even though one target is a "child" of the other.
+  svntest.actions.run_and_verify_svn("Unexpectedly not locked",
+                                     None, svntest.verify.AnyOutput,
                                      'commit', '-m', 'log',
                                      wc_dir, wc2_dir)
 
-  # Verify status changed
-  expected_status.tweak('A/mu', status='  ', wc_rev=2)
-  expected_status2.tweak('A/B/lambda', status='  ', wc_rev=2)
+  # Verify status unchanged
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
-# Same as commit_multiple_wc_nested except that the two WCs are not nested.
-def commit_multiple_wc(sbox):
-  "commit from two working copies"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # Cleanup original wc
-  svntest.sandbox._cleanup_test_path(wc_dir)
-
-  # Checkout two wcs
-  wc1_dir = os.path.join(wc_dir, 'wc1')
-  wc2_dir = os.path.join(wc_dir, 'wc2')
-  url = sbox.repo_url
-  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     svntest.verify.AnyOutput, [],
-                                     'checkout',
-                                     url, wc1_dir)
-  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     svntest.verify.AnyOutput, [],
-                                     'checkout',
-                                     url, wc2_dir)
-
-  # Modify both working copies
-  mu1_path = os.path.join(wc1_dir, 'A', 'mu')
-  svntest.main.file_append(mu1_path, 'appended mu1 text')
-  lambda2_path = os.path.join(wc2_dir, 'A', 'B', 'lambda')
-  svntest.main.file_append(lambda2_path, 'appended lambda2 text')
-
-  # Verify modified status
-  expected_status1 = svntest.actions.get_virginal_state(wc1_dir, 1)
-  expected_status1.tweak('A/mu', status='M ')
-  svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
-  expected_status2 = svntest.actions.get_virginal_state(wc2_dir, 1)
-  expected_status2.tweak('A/B/lambda', status='M ')
-  svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
-
-  # Commit should succeed.
-  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     svntest.verify.AnyOutput, [],
-                                     'commit', '-m', 'log',
-                                     wc1_dir, wc2_dir)
-
-  # Verify status changed
-  expected_status1.tweak('A/mu', status='  ', wc_rev=2)
-  expected_status2.tweak('A/B/lambda', status='  ', wc_rev=2)
-  svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
-  svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
-
-# Same as commit_multiple_wc except that the two WCs come
-# from different repositories. Commits to multiple repositories
-# are outside the scope of issue #2381.
-def commit_multiple_wc_multiple_repos(sbox):
-  "committing two WCs from different repos fails"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # Create another repository
-  repo2, url2 = sbox.add_repo_path("repo2")
-  svntest.main.copy_repos(sbox.repo_dir, repo2, 1, 1)
-
-  # Cleanup original wc
-  svntest.sandbox._cleanup_test_path(wc_dir)
-
-  # Checkout two wcs
-  wc1_dir = os.path.join(wc_dir, 'wc1')
-  wc2_dir = os.path.join(wc_dir, 'wc2')
-  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     svntest.verify.AnyOutput, [],
-                                     'checkout',
-                                     sbox.repo_url, wc1_dir)
-  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     svntest.verify.AnyOutput, [],
-                                     'checkout',
-                                     url2, wc2_dir)
-
-  # Modify both working copies
-  mu1_path = os.path.join(wc1_dir, 'A', 'mu')
-  svntest.main.file_append(mu1_path, 'appended mu1 text')
-  lambda2_path = os.path.join(wc2_dir, 'A', 'B', 'lambda')
-  svntest.main.file_append(lambda2_path, 'appended lambda2 text')
-
-  # Verify modified status
-  expected_status1 = svntest.actions.get_virginal_state(wc1_dir, 1)
-  expected_status1.tweak('A/mu', status='M ')
-  svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
-  expected_status2 = svntest.actions.get_virginal_state(wc2_dir, 1)
-  expected_status2.tweak('A/B/lambda', status='M ')
-  svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
-
-  # Commit should fail, since WCs come from different repositories.
-  # The exact error message depends on whether or not the tests are
-  # run below a 1.7 working copy
-  error_re = ".*(is not a|Are all targets part of the same) working copy.*"
-  svntest.actions.run_and_verify_svn("Expected output on stderr doesn't match",
-                                     [], error_re,
-                                     'commit', '-m', 'log',
-                                     wc1_dir, wc2_dir)
-
-  # Verify status unchanged
-  svntest.actions.run_and_verify_status(wc1_dir, expected_status1)
-  svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
-
-#----------------------------------------------------------------------
 
 def commit_nonrecursive(sbox):
   "commit named targets with -N (issues #1195, #1239)"
@@ -1806,9 +1691,8 @@ def commit_out_of_date_deletions(sbox):
   svntest.main.run_svn(None, 'rm', C_path, F_path, omega_path, alpha_path,
                        psi_path)
 
-  # A commit of any one of these files or dirs should fail, preferably
-  # with an out-of-date error message.
-  error_re = "(out of date|not found)"
+  # A commit of any one of these files or dirs should fail
+  error_re = "out of date"
   commit(wc_backup, None, None, error_re, C_path)
   commit(wc_backup, None, None, error_re, I_path)
   commit(wc_backup, None, None, error_re, F_path)
@@ -1929,7 +1813,7 @@ def from_wc_top_with_bad_editor(sbox):
     None, svntest.verify.AnyOutput,
     'ci', '--editor-cmd', 'no_such-editor')
 
-  err = " ".join([x.strip() for x in err])
+  err = " ".join(map(str.strip, err))
   if not (re.match(".*no_such-editor.*", err)
           and re.match(".*Commit failed.*", err)):
     print("Commit failed, but not in the way expected.")
@@ -1961,7 +1845,7 @@ def mods_in_schedule_delete(sbox):
                                         None, wc_dir)
 
   # Unversioned file still exists
-  actual_contents = open(foo_path).read()
+  actual_contents = svntest.main.file_read(foo_path)
   if actual_contents != foo_contents:
     raise svntest.Failure
 
@@ -2065,6 +1949,28 @@ def local_mods_are_not_commits(sbox):
                                      os.path.join(wc_dir, 'A', 'mu'),
                                      os.path.join(wc_dir, 'A', 'yu'))
 
+# Helper for hook tests: returns the "hook failed" line, with precise
+# wording that changed with Subversion 1.5.
+def hook_failure_message(hookname):
+  if svntest.main.server_minor_version < 5:
+    return "'%s' hook failed with error output:\n" % hookname
+  else:
+    if hookname in ["start-commit", "pre-commit"]:
+      action = "Commit"
+    elif hookname == "pre-revprop-change":
+      action = "Revprop change"
+    elif hookname == "pre-lock":
+      action = "Lock"
+    elif hookname == "pre-unlock":
+      action = "Unlock"
+    else:
+      action = None
+    if action is None:
+      message = "%s hook failed (exit code 1)" % (hookname,)
+    else:
+      message = "%s blocked by %s hook (exit code 1)" % (action, hookname)
+    return message + " with output:\n"
+
 
 #----------------------------------------------------------------------
 # Test if the post-commit error message is returned back to the svn
@@ -2079,10 +1985,8 @@ def post_commit_hook_test(sbox):
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
-  # Create a hook that outputs a message to stderr and returns exit code 1
-  # Include a non-XML-safe message to regression-test issue #3553.
-  error_msg = "Text with <angle brackets> & ampersand"
-  svntest.actions.create_failing_hook(repo_dir, "post-commit", error_msg)
+  # Disable commits
+  svntest.actions.create_failing_post_commit_hook(repo_dir)
 
   # Modify iota just so there is something to commit.
   iota_path = os.path.join(wc_dir, "iota")
@@ -2095,9 +1999,8 @@ def post_commit_hook_test(sbox):
                       "Transmitting file data .\n",
                       "Committed revision 2.\n",
                       "\n",
-                      "Warning: " +
-                        svntest.actions.hook_failure_message('post-commit'),
-                      error_msg + "\n",
+                      "Warning: " + hook_failure_message('post-commit'),
+                      "Post-commit hook failed\n",
                     ]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
@@ -2433,7 +2336,7 @@ def set_invalid_revprops(sbox):
   svntest.actions.run_and_verify_svn(None, [],
                                      'svn: Revision property pair is empty',
                                      'mkdir', '-m', 'msg',
-                                     '--with-revprop', '',
+				     '--with-revprop', '',
                                      remote_dir)
 
 #----------------------------------------------------------------------
@@ -2448,9 +2351,13 @@ def start_commit_hook_test(sbox):
   repo_dir = sbox.repo_dir
 
   # Create a hook that outputs a message to stderr and returns exit code 1
-  # Include a non-XML-safe message to regression-test issue #3553.
-  error_msg = "Text with <angle brackets> & ampersand"
-  svntest.actions.create_failing_hook(repo_dir, "start-commit", error_msg)
+  hook_code = """import sys
+sys.stderr.write("Start-commit hook failed")
+sys.exit(1)"""
+
+  # Setup the hook configs to log data to a file
+  start_commit_hook = svntest.main.get_start_commit_hook_path(repo_dir)
+  svntest.main.create_python_hook_script(start_commit_hook, hook_code)
 
   # Modify iota just so there is something to commit.
   iota_path = os.path.join(wc_dir, "iota")
@@ -2468,9 +2375,8 @@ def start_commit_hook_test(sbox):
   # contain source code file and line numbers.
   if len(actual_stderr) > 2:
     actual_stderr = actual_stderr[-2:]
-  expected_stderr = [ "svn: " +
-                        svntest.actions.hook_failure_message('start-commit'),
-                      error_msg + "\n",
+  expected_stderr = [ "svn: " + hook_failure_message('start-commit'),
+                      "Start-commit hook failed\n"
                     ]
   svntest.verify.compare_and_display_lines('Start-commit hook test',
                                            'STDERR',
@@ -2488,9 +2394,13 @@ def pre_commit_hook_test(sbox):
   repo_dir = sbox.repo_dir
 
   # Create a hook that outputs a message to stderr and returns exit code 1
-  # Include a non-XML-safe message to regression-test issue #3553.
-  error_msg = "Text with <angle brackets> & ampersand"
-  svntest.actions.create_failing_hook(repo_dir, "pre-commit", error_msg)
+  hook_code = """import sys
+sys.stderr.write("Pre-commit hook failed")
+sys.exit(1)"""
+
+  # Setup the hook configs to log data to a file
+  pre_commit_hook = svntest.main.get_pre_commit_hook_path(repo_dir)
+  svntest.main.create_python_hook_script(pre_commit_hook, hook_code)
 
   # Modify iota just so there is something to commit.
   iota_path = os.path.join(wc_dir, "iota")
@@ -2508,9 +2418,8 @@ def pre_commit_hook_test(sbox):
   # contain source code file and line numbers.
   if len(actual_stderr) > 2:
     actual_stderr = actual_stderr[-2:]
-  expected_stderr = [ "svn: " +
-                        svntest.actions.hook_failure_message('pre-commit'),
-                      error_msg + "\n",
+  expected_stderr = [ "svn: " + hook_failure_message('pre-commit'),
+                      "Pre-commit hook failed\n"
                     ]
   svntest.verify.compare_and_display_lines('Pre-commit hook test',
                                            'STDERR',
@@ -2786,12 +2695,10 @@ test_list = [ None,
               commit_from_long_dir,
               commit_with_lock,
               commit_current_dir,
-              XFail(commit_multiple_wc_nested),
-              XFail(commit_multiple_wc),
-              commit_multiple_wc_multiple_repos,
+              commit_multiple_wc,
               commit_nonrecursive,
               failed_commit,
-              commit_out_of_date_deletions,
+              XFail(commit_out_of_date_deletions, svntest.main.is_ra_type_svn),
               commit_with_bad_log_message,
               commit_with_mixed_line_endings,
               commit_with_mixed_line_endings_in_ignored_part,

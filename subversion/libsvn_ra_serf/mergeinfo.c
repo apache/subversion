@@ -2,22 +2,17 @@
  * mergeinfo.c : entry point for mergeinfo RA functions for ra_serf
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -119,18 +114,14 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
       if (mergeinfo_ctx->curr_info && mergeinfo_ctx->curr_path)
         {
           svn_mergeinfo_t path_mergeinfo;
-          const char *path;
 
           SVN_ERR_ASSERT(mergeinfo_ctx->curr_path->data);
-          path = apr_pstrdup(mergeinfo_ctx->pool,
-                             mergeinfo_ctx->curr_path->data);
           SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo,
                                       mergeinfo_ctx->curr_info->data,
                                       mergeinfo_ctx->pool));
-          /* Correct for naughty servers that send "relative" paths
-             with leading slashes! */
           apr_hash_set(mergeinfo_ctx->result_catalog,
-                       path[0] == '/' ? path + 1 : path,
+                       apr_pstrdup(mergeinfo_ctx->pool,
+                                   mergeinfo_ctx->curr_path->data),
                        APR_HASH_KEY_STRING, path_mergeinfo);
         }
       svn_ra_serf__xml_pop_state(parser);
@@ -247,12 +238,10 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   const char *relative_url, *basecoll_url;
   const char *path;
 
-  *catalog = NULL;
-
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
                                          NULL, NULL, revision, NULL, pool));
 
-  path = svn_path_url_add_component2(basecoll_url, relative_url, pool);
+  path = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
   mergeinfo_ctx = apr_pcalloc(pool, sizeof(*mergeinfo_ctx));
   mergeinfo_ctx->pool = pool;
@@ -300,9 +289,15 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
       SVN_ERR(err2);
     }
 
-  SVN_ERR(err);
+  if (parser_ctx->error)
+    {
+      svn_error_clear(err);
+      SVN_ERR(parser_ctx->error);
+    }
+  else
+    SVN_ERR(err);
 
-  if (mergeinfo_ctx->done && apr_hash_count(mergeinfo_ctx->result_catalog))
+  if (mergeinfo_ctx->done)
     *catalog = mergeinfo_ctx->result_catalog;
 
   return SVN_NO_ERROR;

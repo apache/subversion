@@ -3,22 +3,17 @@
  *                repository.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -80,7 +75,6 @@ typedef struct {
   const char *fs_parent_path;        /* path to parent of SVN FS'es  */
   enum conf_flag autoversioning;     /* whether autoversioning is active */
   enum conf_flag bulk_updates;       /* whether bulk updates are allowed */
-  enum conf_flag v2_protocol;        /* whether HTTP v2 is advertised */
   enum path_authz_conf path_authz_method; /* how GET subrequests are handled */
   enum conf_flag list_parentpath;    /* whether to allow GET of parentpath */
   const char *root_dir;              /* our top-level directory */
@@ -141,7 +135,6 @@ init_dso(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp)
   return OK;
 }
 
-/* Implements the #create_server_config method of Apache's #module vtable. */
 static void *
 create_server_config(apr_pool_t *p, server_rec *s)
 {
@@ -149,7 +142,6 @@ create_server_config(apr_pool_t *p, server_rec *s)
 }
 
 
-/* Implements the #merge_server_config method of Apache's #module vtable. */
 static void *
 merge_server_config(apr_pool_t *p, void *base, void *overrides)
 {
@@ -165,25 +157,19 @@ merge_server_config(apr_pool_t *p, void *base, void *overrides)
 }
 
 
-/* Implements the #create_dir_config method of Apache's #module vtable. */
 static void *
 create_dir_config(apr_pool_t *p, char *dir)
 {
   /* NOTE: dir==NULL creates the default per-dir config */
   dir_conf_t *conf = apr_pcalloc(p, sizeof(*conf));
 
-  /*In subversion context dir is always considered to be coming from
-   <Location /blah> directive. So we treat it as URI. */
-  if (dir)
-    conf->root_dir = svn_uri_canonicalize(dir, p);
+  conf->root_dir = dir;
   conf->bulk_updates = CONF_FLAG_ON;
-  conf->v2_protocol = CONF_FLAG_ON;
 
   return conf;
 }
 
 
-/* Implements the #merge_dir_config method of Apache's #module vtable. */
 static void *
 merge_dir_config(apr_pool_t *p, void *base, void *overrides)
 {
@@ -201,7 +187,6 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->fs_parent_path = INHERIT_VALUE(parent, child, fs_parent_path);
   newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
   newconf->bulk_updates = INHERIT_VALUE(parent, child, bulk_updates);
-  newconf->v2_protocol = INHERIT_VALUE(parent, child, v2_protocol);
   newconf->path_authz_method = INHERIT_VALUE(parent, child, path_authz_method);
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
   /* Prefer our parent's value over our new one - hence the swap. */
@@ -226,14 +211,6 @@ static const char *
 SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   dir_conf_t *conf = config;
-
-  /* SVNMasterURI requires mod_proxy and mod_proxy_http
-   * (r->handler = "proxy-server" in mirror.c), make sure
-   * they are present. */
-  if (ap_find_linked_module("mod_proxy.c") == NULL)
-    return "module mod_proxy not loaded, required for SVNMasterURI";
-  if (ap_find_linked_module("mod_proxy_http.c") == NULL)
-    return "module mod_proxy_http not loaded, required for SVNMasterURI";
 
   conf->master_uri = apr_pstrdup(cmd->pool, arg1);
 
@@ -286,20 +263,6 @@ SVNAllowBulkUpdates_cmd(cmd_parms *cmd, void *config, int arg)
     conf->bulk_updates = CONF_FLAG_ON;
   else
     conf->bulk_updates = CONF_FLAG_OFF;
-
-  return NULL;
-}
-
-
-static const char *
-SVNAdvertiseV2Protocol_cmd(cmd_parms *cmd, void *config, int arg)
-{
-  dir_conf_t *conf = config;
-
-  if (arg)
-    conf->v2_protocol = CONF_FLAG_ON;
-  else
-    conf->v2_protocol = CONF_FLAG_OFF;
 
   return NULL;
 }
@@ -522,41 +485,6 @@ dav_svn__get_special_uri(request_rec *r)
 }
 
 
-const char *
-dav_svn__get_me_resource_uri(request_rec *r)
-{
-  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/me", NULL);
-}
-
-
-const char *
-dav_svn__get_rev_stub(request_rec *r)
-{
-  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/rev", NULL);
-}
-
-
-const char *
-dav_svn__get_rev_root_stub(request_rec *r)
-{
-  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/rvr", NULL);
-}
-
-
-const char *
-dav_svn__get_txn_stub(request_rec *r)
-{
-  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/txn", NULL);
-}
-
-
-const char *
-dav_svn__get_txn_root_stub(request_rec *r)
-{
-  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/txr", NULL);
-}
-
-
 svn_boolean_t
 dav_svn__get_autoversioning_flag(request_rec *r)
 {
@@ -574,16 +502,6 @@ dav_svn__get_bulk_updates_flag(request_rec *r)
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
   return conf->bulk_updates == CONF_FLAG_ON;
-}
-
-
-svn_boolean_t
-dav_svn__get_v2_protocol_flag(request_rec *r)
-{
-  dir_conf_t *conf;
-
-  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->v2_protocol == CONF_FLAG_ON;
 }
 
 
@@ -752,28 +670,10 @@ merge_xml_in_filter(ap_filter_t *f,
   return APR_SUCCESS;
 }
 
-
-/* Response handler for POST requests (protocol-v2 commits).  */
-static int dav_svn__handler(request_rec *r)
-{
-  /* HTTP-defined Methods we handle */
-  r->allowed = 0
-    | (AP_METHOD_BIT << M_POST);
-
-  if (r->method_number == M_POST) {
-    return dav_svn__method_post(r);
-  }
-
-  return DECLINED;
-}
-
-
-
 
 
 /** Module framework stuff **/
 
-/* Implements the #cmds member of Apache's #module vtable. */
 static const command_rec cmds[] =
 {
   /* per directory/location */
@@ -831,12 +731,6 @@ static const command_rec cmds[] =
                "only skeletal reports that require additional per-file "
                "downloads."),
 
-  /* per directory/location */
-  AP_INIT_FLAG("SVNAdvertiseV2Protocol", SVNAdvertiseV2Protocol_cmd, NULL,
-               ACCESS_CONF|RSRC_CONF,
-               "enables server advertising of support for version 2 of "
-               "Subversion's HTTP protocol (default values is On)."),
-
   { NULL }
 };
 
@@ -852,7 +746,6 @@ static dav_provider provider =
 };
 
 
-/* Implements the #register_hooks method of Apache's #module vtable. */
 static void
 register_hooks(apr_pool_t *pconf)
 {
@@ -867,9 +760,6 @@ register_hooks(apr_pool_t *pconf)
                            AP_FTYPE_RESOURCE);
   ap_hook_insert_filter(merge_xml_filter_insert, NULL, NULL,
                         APR_HOOK_MIDDLE);
-
-  /* general request handler for methods which mod_dav DECLINEs. */
-  ap_hook_handler(dav_svn__handler, NULL, NULL, APR_HOOK_LAST);
 
   /* live property handling */
   dav_hook_gather_propsets(dav_svn__gather_propsets, NULL, NULL,
@@ -886,7 +776,7 @@ register_hooks(apr_pool_t *pconf)
                             NULL, AP_FTYPE_CONTENT_SET);
   ap_register_input_filter("IncomingRewrite", dav_svn__location_in_filter,
                            NULL, AP_FTYPE_CONTENT_SET);
-  ap_hook_fixups(dav_svn__proxy_request_fixup, NULL, NULL, APR_HOOK_MIDDLE);
+  ap_hook_fixups(dav_svn__proxy_merge_fixup, NULL, NULL, APR_HOOK_MIDDLE);
 }
 
 

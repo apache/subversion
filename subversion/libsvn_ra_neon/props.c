@@ -2,22 +2,17 @@
  * props.c :  routines for fetching DAV properties
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -30,7 +25,6 @@
 #include <apr_want.h>
 
 #include "svn_error.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
@@ -413,8 +407,7 @@ static svn_error_t * end_element(void *baton, int state,
     case ELEM_href:
       /* Special handling for <href> that belongs to the <response> tag. */
       if (rsrc->href_parent == ELEM_response)
-        return assign_rsrc_url(pc->rsrc, svn_uri_canonicalize(cdata, pc->pool),
-                               pc->pool);
+        return assign_rsrc_url(pc->rsrc, cdata, pc->pool);
 
       /* Use the parent element's name, not the href. */
       parent_defn = defn_from_id(rsrc->href_parent);
@@ -425,8 +418,7 @@ static svn_error_t * end_element(void *baton, int state,
 
       /* All other href's we'll treat as property values. */
       name = parent_defn->name;
-      value = svn_string_create(svn_uri_canonicalize(cdata, pc->pool),
-                                pc->pool);
+      value = svn_string_create(cdata, pc->pool);
       break;
 
     default:
@@ -632,8 +624,8 @@ svn_error_t * svn_ra_neon__get_one_prop(const svn_string_t **propval,
     {
       /* ### need an SVN_ERR here */
       return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                               _("'%s' was not present on the resource '%s'"),
-                               name, url);
+                               _("'%s' was not present on the resource"),
+                               name);
     }
 
   *propval = value;
@@ -723,7 +715,7 @@ svn_ra_neon__search_for_starting_props(svn_ra_neon__resource_t **rsrc,
 
       /* else... lop off the basename and try again. */
       svn_stringbuf_set(lopped_path,
-                        svn_path_join(svn_uri_basename(path_s->data, iterpool),
+                        svn_path_join(svn_path_basename(path_s->data, iterpool),
                                       lopped_path->data, iterpool));
 
       len = path_s->len;
@@ -1091,7 +1083,7 @@ svn_error_t *
 svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
                           const char *url,
                           apr_hash_t *prop_changes,
-                          const apr_array_header_t *prop_deletes,
+                          apr_array_header_t *prop_deletes,
                           apr_hash_t *extra_headers,
                           apr_pool_t *pool)
 {

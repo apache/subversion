@@ -2,22 +2,17 @@
  * revisions.c:  discovering revisions
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -27,7 +22,6 @@
 
 #include "svn_error.h"
 #include "svn_ra.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "client.h"
 
@@ -40,11 +34,10 @@
 svn_error_t *
 svn_client__get_revision_number(svn_revnum_t *revnum,
                                 svn_revnum_t *youngest_rev,
-                                svn_wc_context_t *wc_ctx,
-                                const char *local_abspath,
                                 svn_ra_session_t *ra_session,
                                 const svn_opt_revision_t *revision,
-                                apr_pool_t *scratch_pool)
+                                const char *path,
+                                apr_pool_t *pool)
 {
   switch (revision->kind)
     {
@@ -70,74 +63,45 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
           if (! ra_session)
             return svn_error_create(SVN_ERR_CLIENT_RA_ACCESS_REQUIRED,
                                     NULL, NULL);
-          SVN_ERR(svn_ra_get_latest_revnum(ra_session, revnum, scratch_pool));
+          SVN_ERR(svn_ra_get_latest_revnum(ra_session, revnum, pool));
           if (youngest_rev)
             *youngest_rev = *revnum;
         }
       break;
 
+    case svn_opt_revision_committed:
     case svn_opt_revision_working:
     case svn_opt_revision_base:
-      {
-        svn_error_t *err;
-
-        /* Sanity check. */
-        if (local_abspath == NULL)
-          return svn_error_create(SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
-                                  NULL, NULL);
-
-        /* The BASE, COMMITTED, and PREV revision keywords do not
-           apply to URLs. */
-        if (svn_path_is_url(local_abspath))
-          goto invalid_rev_arg;
-
-        err = svn_wc__node_get_commit_base_rev(revnum, wc_ctx,
-                                               local_abspath,
-                                               scratch_pool);
-
-        /* Return the same error as older code did (before and at r935091).
-           At least svn_client_proplist3 promises SVN_ERR_ENTRY_NOT_FOUND. */
-        if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-          {
-            svn_error_clear(err);
-            return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                                     _("'%s' is not under version control"),
-                                     svn_dirent_local_style(local_abspath,
-                                                            scratch_pool));
-          }
-        else
-          SVN_ERR(err);
-
-        if (! SVN_IS_VALID_REVNUM(*revnum))
-          return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                                   _("Path '%s' has no committed "
-                                     "revision"), local_abspath);
-      }
-      break;
-
-    case svn_opt_revision_committed:
     case svn_opt_revision_previous:
       {
+        svn_wc_adm_access_t *adm_access;
+        const svn_wc_entry_t *ent;
+
         /* Sanity check. */
-        if (local_abspath == NULL)
+        if (path == NULL)
           return svn_error_create(SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
                                   NULL, NULL);
 
-        /* The BASE, COMMITTED, and PREV revision keywords do not
-           apply to URLs. */
-        if (svn_path_is_url(local_abspath))
-          goto invalid_rev_arg;
+        SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
+                                       0, NULL, NULL, pool));
+        SVN_ERR(svn_wc__entry_versioned(&ent, path, adm_access, FALSE, pool));
+        SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
-        SVN_ERR(svn_wc__node_get_changed_info(revnum, NULL, NULL,
-                                              wc_ctx, local_abspath,
-                                              scratch_pool, scratch_pool));
-        if (! SVN_IS_VALID_REVNUM(*revnum))
-          return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                                   _("Path '%s' has no committed "
-                                     "revision"), local_abspath);
-
-        if (revision->kind == svn_opt_revision_previous)
-          (*revnum)--;
+        if ((revision->kind == svn_opt_revision_base)
+            || (revision->kind == svn_opt_revision_working))
+          {
+            *revnum = ent->revision;
+          }
+        else
+          {
+            if (! SVN_IS_VALID_REVNUM(ent->cmt_rev))
+              return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                                       _("Path '%s' has no committed "
+                                         "revision"), path);
+            *revnum = ent->cmt_rev;
+            if (revision->kind == svn_opt_revision_previous)
+              (*revnum)--;
+          }
       }
       break;
 
@@ -154,15 +118,14 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
       if (! ra_session)
         return svn_error_create(SVN_ERR_CLIENT_RA_ACCESS_REQUIRED, NULL, NULL);
       SVN_ERR(svn_ra_get_dated_revision(ra_session, revnum,
-                                        revision->value.date, scratch_pool));
+                                        revision->value.date, pool));
       break;
 
     default:
       return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                                _("Unrecognized revision type requested for "
                                  "'%s'"),
-                               svn_dirent_local_style(local_abspath,
-                                                      scratch_pool));
+                               svn_path_local_style(path, pool));
     }
 
   /* Final check -- if our caller provided a youngest revision, and
@@ -178,10 +141,4 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
     *revnum = *youngest_rev;
 
   return SVN_NO_ERROR;
-
-  invalid_rev_arg:
-    return svn_error_create(
-      SVN_ERR_CLIENT_BAD_REVISION, NULL,
-      _("PREV, BASE, or COMMITTED revision keywords are invalid for URL"));
-
 }

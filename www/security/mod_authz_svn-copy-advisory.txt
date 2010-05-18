@@ -1,0 +1,43 @@
+Subversion versions up to and including 1.0.5 have a bug in
+mod_authz_svn that allows users with write access to read
+portions of the repository that they do not have read access
+to.  Subversion 1.0.6 and newer (including 1.1.0-rc1) are not
+vulnerable to this issue.
+
+Details:
+========
+
+mod_authz_svn would allow a user to copy portions of a repo to which
+they did not have read permissions to portions that they did have 
+read permissions on, thereby evading the read restrictions.
+
+Severity:
+=========
+
+This is a low risk issue.  Only sites running mod_authz_svn (an
+Apache module) that are trying to restrict some of their users
+with write access to a repo from reading part of that repo are
+vulnerable.
+
+Most installations will not fall into this category.
+Additionally, any attempt to use such a vulnerability will be
+apparent as the copy will be versioned.  Plus, it's doubtful
+any site would permit public write access to its repository
+so this issue should not be accessible by unauthenticated users.
+
+This vulnerability does not affect users running svnserve.
+
+Workarounds:
+============
+
+* Disable DAV and use svnserve.
+
+* Separate content into different repos.
+
+* Disable the COPY method via Apache configuration.  Note this will
+  disallow all copies.
+
+Recommendations:
+================
+
+We recommend all users upgrade to 1.0.6 or 1.1.0-rc1.

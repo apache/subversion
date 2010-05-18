@@ -2,22 +2,17 @@
  * utf.c:  UTF-8 conversion routines
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007, 2009 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -399,7 +394,7 @@ fuzzy_escape(const char *src, apr_size_t len, apr_pool_t *pool)
       src++;
     }
 
-  /* Allocate that amount, plus one slot for '\0' character. */
+  /* Allocate that amount. */
   new = apr_palloc(pool, new_len + 1);
 
   new_orig = new;
@@ -413,7 +408,7 @@ fuzzy_escape(const char *src, apr_size_t len, apr_pool_t *pool)
              function escapes different characters.  Please keep in sync!
              ### If we add another fuzzy escape somewhere, we should abstract
              ### this out to a common function. */
-          apr_snprintf(new, 6, "?\\%03u", (unsigned char) *src_orig);
+          sprintf(new, "?\\%03u", (unsigned char) *src_orig);
           new += 5;
         }
       else
@@ -450,6 +445,7 @@ convert_to_stringbuf(xlate_handle_node_t *node,
   apr_status_t apr_err;
   apr_size_t srclen = src_length;
   apr_size_t destlen = buflen;
+  char *destbuf;
 
   /* Initialize *DEST to an empty stringbuf.
      A 1:2 ratio of input bytes to output bytes (as assigned above)
@@ -457,6 +453,7 @@ convert_to_stringbuf(xlate_handle_node_t *node,
      to be enough, we'll grow the buffer again, sizing it based on a
      1:3 ratio of the remainder of the string. */
   *dest = svn_stringbuf_create_ensure(buflen + 1, pool);
+  destbuf = (*dest)->data;
 
   /* Not only does it not make sense to convert an empty string, but
      apr-iconv is quite unreasonable about not allowing that. */
@@ -577,8 +574,7 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
 {
   const char *last = svn_utf__last_valid(data, len);
   const char *valid_txt = "", *invalid_txt = "";
-  int i;
-  size_t valid, invalid;
+  int i, valid, invalid;
 
   /* We will display at most 24 valid octets (this may split a leading
      multi-byte character) as that should fit on one 80 character line. */

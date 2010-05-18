@@ -2,22 +2,17 @@
  * update.c :  entry point for update RA functions for ra_serf
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2006 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -266,10 +261,6 @@ typedef struct report_fetch_t {
 
   /* Are we done fetching this file? */
   svn_boolean_t done;
-
-  /* Discard the rest of the content? */
-  svn_boolean_t discard;
-
   svn_ra_serf__list_t **done_list;
   svn_ra_serf__list_t done_item;
 
@@ -367,7 +358,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       report_info_t *new_info;
 
       new_info = apr_pcalloc(info_parent_pool, sizeof(*new_info));
-      new_info->pool = svn_pool_create(info_parent_pool);
+      apr_pool_create(&new_info->pool, info_parent_pool);
       new_info->lock_token = NULL;
 
       new_info->dir = apr_pcalloc(new_info->pool, sizeof(*new_info->dir));
@@ -409,7 +400,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       report_info_t *new_info;
 
       new_info = apr_pcalloc(info_parent_pool, sizeof(*new_info));
-      new_info->pool = svn_pool_create(info_parent_pool);
+      apr_pool_create(&new_info->pool, info_parent_pool);
       new_info->file_baton = NULL;
       new_info->lock_token = NULL;
       new_info->fetch_file = FALSE;
@@ -499,7 +490,7 @@ open_dir(report_dir_t *dir)
 
   if (dir->base_name[0] == '\0')
     {
-      dir->dir_baton_pool = svn_pool_create(dir->pool);
+      apr_pool_create(&dir->dir_baton_pool, dir->pool);
 
       if (dir->report_context->destination &&
           dir->report_context->sess->wc_callbacks->invalidate_wc_props)
@@ -518,7 +509,7 @@ open_dir(report_dir_t *dir)
     {
       SVN_ERR(open_dir(dir->parent_dir));
 
-      dir->dir_baton_pool = svn_pool_create(dir->parent_dir->dir_baton_pool);
+      apr_pool_create(&dir->dir_baton_pool, dir->parent_dir->dir_baton_pool);
 
       if (SVN_IS_VALID_REVNUM(dir->base_rev))
         {
@@ -665,7 +656,7 @@ headers_fetch(serf_bucket_t *headers,
       serf_bucket_headers_setn(headers, "Accept-Encoding",
                                "svndiff1;q=0.9,svndiff;q=0.8");
     }
-  else if (fetch_ctx->conn->using_compression)
+  else if (fetch_ctx->conn->using_compression == TRUE)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
@@ -692,7 +683,7 @@ cancel_fetch(serf_request_t *request,
        * to hold subsequent read() ops until we get back to where we were
        * before the close and we can then resume the textdelta() calls.
        */
-      if (fetch_ctx->read_headers)
+      if (fetch_ctx->read_headers == TRUE)
         {
           if (fetch_ctx->aborted_read == FALSE && fetch_ctx->read_size)
             {
@@ -709,7 +700,7 @@ cancel_fetch(serf_request_t *request,
   SVN_ERR_MALFUNCTION_NO_RETURN();
 }
 
-static svn_error_t *
+static apr_status_t
 error_fetch(serf_request_t *request,
             report_fetch_t *fetch_ctx,
             svn_error_t *err)
@@ -722,16 +713,12 @@ error_fetch(serf_request_t *request,
   fetch_ctx->done_item.next = *fetch_ctx->done_list;
   *fetch_ctx->done_list = &fetch_ctx->done_item;
 
-  /* Discard the rest of this request
-     (This makes sure it doesn't error when the request is aborted later) */
-  serf_request_set_handler(request,
-                           svn_ra_serf__response_discard_handler, NULL);
+  serf_request_set_handler(request, svn_ra_serf__handle_discard_body, NULL);
 
-  return SVN_NO_ERROR;
+  return APR_SUCCESS;
 }
 
-/* Implements svn_ra_serf__response_handler_t */
-static svn_error_t *
+static apr_status_t
 handle_fetch(serf_request_t *request,
              serf_bucket_t *response,
              void *handler_baton,
@@ -760,7 +747,7 @@ handle_fetch(serf_request_t *request,
           return error_fetch(request, fetch_ctx, err);
         }
 
-      info->editor_pool = svn_pool_create(info->dir->dir_baton_pool);
+      apr_pool_create(&info->editor_pool, info->dir->dir_baton_pool);
 
       /* Expand our full name now if we haven't done so yet. */
       if (!info->name)
@@ -825,7 +812,7 @@ handle_fetch(serf_request_t *request,
   status = serf_bucket_response_status(response, &sl);
   if (SERF_BUCKET_READ_ERROR(status))
     {
-      return svn_error_wrap_apr(status, NULL);
+      return status;
     }
   if (sl.code != 200)
     {
@@ -844,12 +831,12 @@ handle_fetch(serf_request_t *request,
       status = serf_bucket_read(response, 8000, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return status;
         }
 
       fetch_ctx->read_size += len;
 
-      if (fetch_ctx->aborted_read)
+      if (fetch_ctx->aborted_read == TRUE)
         {
           /* We haven't caught up to where we were before. */
           if (fetch_ctx->read_size < fetch_ctx->aborted_read_size)
@@ -857,13 +844,13 @@ handle_fetch(serf_request_t *request,
               /* Eek.  What did the file shrink or something? */
               if (APR_STATUS_IS_EOF(status))
                 {
-                  SVN_ERR_MALFUNCTION();
+                  SVN_ERR_MALFUNCTION_NO_RETURN();
                 }
 
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return svn_error_wrap_apr(status, NULL);
+                  return status;
                 }
               continue;
             }
@@ -959,19 +946,17 @@ handle_fetch(serf_request_t *request,
           svn_pool_destroy(info->editor_pool);
           svn_pool_destroy(info->pool);
 
-          if (status)
-            return svn_error_wrap_apr(status, NULL);
+          return status;
         }
       if (APR_STATUS_IS_EAGAIN(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return status;
         }
     }
   /* not reached */
 }
 
-/* Implements svn_ra_serf__response_handler_t */
-static svn_error_t *
+static apr_status_t
 handle_stream(serf_request_t *request,
               serf_bucket_t *response,
               void *handler_baton,
@@ -1000,12 +985,12 @@ handle_stream(serf_request_t *request,
       status = serf_bucket_read(response, 8000, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         {
-          return svn_error_wrap_apr(status, NULL);
+          return status;
         }
 
       fetch_ctx->read_size += len;
 
-      if (fetch_ctx->aborted_read)
+      if (fetch_ctx->aborted_read == TRUE)
         {
           /* We haven't caught up to where we were before. */
           if (fetch_ctx->read_size < fetch_ctx->aborted_read_size)
@@ -1013,13 +998,13 @@ handle_stream(serf_request_t *request,
               /* Eek.  What did the file shrink or something? */
               if (APR_STATUS_IS_EOF(status))
                 {
-                  SVN_ERR_MALFUNCTION();
+                  SVN_ERR_MALFUNCTION_NO_RETURN();
                 }
 
               /* Skip on to the next iteration of this loop. */
               if (APR_STATUS_IS_EAGAIN(status))
                 {
-                  return svn_error_wrap_apr(status, NULL);
+                  return status;
                 }
               continue;
             }
@@ -1048,7 +1033,7 @@ handle_stream(serf_request_t *request,
 
       if (status)
         {
-          return svn_error_wrap_apr(status, NULL);
+          return status;
         }
     }
   /* not reached */
@@ -1060,7 +1045,7 @@ handle_propchange_only(report_info_t *info)
   /* Ensure our parent is open. */
   SVN_ERR(open_dir(info->dir));
 
-  info->editor_pool = svn_pool_create(info->dir->dir_baton_pool);
+  apr_pool_create(&info->editor_pool, info->dir->dir_baton_pool);
 
   /* Expand our full name now if we haven't done so yet. */
   if (!info->name)
@@ -1164,7 +1149,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
   /* If we've been asked to fetch the file or its an add, do so.
    * Otherwise, handle the case where only the properties changed.
    */
-  if (info->fetch_file && ctx->text_deltas)
+  if (info->fetch_file && ctx->text_deltas == TRUE)
     {
       report_fetch_t *fetch_ctx;
 
@@ -1261,7 +1246,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info = push_state(parser, ctx, OPEN_DIR);
 
-      info->base_rev = SVN_STR_TO_REV(rev);
+      info->base_rev = apr_atoi64(rev);
       info->dir->base_rev = info->base_rev;
       info->dir->target_rev = ctx->target_rev;
       info->fetch_props = TRUE;
@@ -1308,7 +1293,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       dir = info->dir;
 
-      info->base_rev = SVN_STR_TO_REV(rev);
+      info->base_rev = apr_atoi64(rev);
       dir->base_rev = info->base_rev;
       dir->target_rev = ctx->target_rev;
 
@@ -1356,7 +1341,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info->name = dir->name;
 
       info->copyfrom_path = cf ? apr_pstrdup(info->pool, cf) : NULL;
-      info->copyfrom_rev = cr ? SVN_STR_TO_REV(cr) : SVN_INVALID_REVNUM;
+      info->copyfrom_rev = cr ? apr_atoi64(cr) : SVN_INVALID_REVNUM;
 
       /* Mark that we don't have a base. */
       info->base_rev = SVN_INVALID_REVNUM;
@@ -1390,7 +1375,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info = push_state(parser, ctx, OPEN_FILE);
 
-      info->base_rev = SVN_STR_TO_REV(rev);
+      info->base_rev = apr_atoi64(rev);
       info->target_rev = ctx->target_rev;
       info->fetch_props = FALSE;
 
@@ -1425,7 +1410,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info->name = NULL;
 
       info->copyfrom_path = cf ? apr_pstrdup(info->pool, cf) : NULL;
-      info->copyfrom_rev = cr ? SVN_STR_TO_REV(cr) : SVN_INVALID_REVNUM;
+      info->copyfrom_rev = cr ? apr_atoi64(cr) : SVN_INVALID_REVNUM;
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "delete-entry") == 0)
@@ -1448,7 +1433,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(open_dir(info->dir));
 
-      tmppool = svn_pool_create(info->dir->dir_baton_pool);
+      apr_pool_create(&tmppool, info->dir->dir_baton_pool);
 
       name_buf = svn_stringbuf_dup(info->dir->name_buf, tmppool);
       svn_path_add_component(name_buf, file_name);
@@ -1741,50 +1726,23 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       if (info->lock_token && info->fetch_props == FALSE)
         info->fetch_props = TRUE;
 
-      /* If possible, we'd like to fetch only a delta against a
-       * version of the file we already have in our working copy,
-       * rather than fetching a fulltext.
+      /* If we have a WC, we can dive all the way into the WC to get the
+       * previous URL so we can do an differential GET with the base URL.
        *
-       * In HTTP v2, we can simply construct the URL we need given the
-       * path and base revision number.
+       * If we don't have a WC (as is the case for URL<->URL diff), we can
+       * manually reconstruct the base URL.  This avoids us having to grab
+       * two full-text for URL<->URL diffs.  Instead, we can just grab one
+       * full-text and a diff from the server against that other file.
        */
-      if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->sess))
+      if (ctx->sess->wc_callbacks->get_wc_prop)
         {
-          const char *fs_path;
-          const char *full_path = svn_uri_join(ctx->sess->repos_url.path,
-                                               info->name, info->pool);
-          SVN_ERR(svn_ra_serf__get_relative_path(&fs_path, full_path,
-                                                 ctx->sess, NULL, info->pool));
-          info->delta_base = svn_string_createf(info->pool, "%s/%ld/%s",
-                                                ctx->sess->rev_root_stub,
-                                                info->base_rev, fs_path);
+          ctx->sess->wc_callbacks->get_wc_prop(ctx->sess->wc_callback_baton,
+                                               info->name,
+                                               SVN_RA_SERF__WC_CHECKED_IN_URL,
+                                               &info->delta_base,
+                                               info->pool);
         }
-
-      /* Still no base URL?  If we have a WC, we might be able to dive all
-       * the way into the WC to get the previous URL so we can do a
-       * differential GET with the base URL.
-       */
-      if ((! info->delta_base) && (ctx->sess->wc_callbacks->get_wc_prop))
-        {
-          SVN_ERR(ctx->sess->wc_callbacks->get_wc_prop(
-            ctx->sess->wc_callback_baton, info->name,
-            SVN_RA_SERF__WC_CHECKED_IN_URL, &info->delta_base, info->pool));
-        }
-
-#if 0 /* ### FIXME: Something's not quite right with this algorithm.
-         ### Would be great to figure out the problem and correct it,
-         ### but that'll only bring a performance enhancement to the
-         ### technical correctness of not falling back to this URL
-         ### construction.  Motivation is low on this, though, because
-         ### HTTP v2 won't hit this block.  */
-
-      /* STILL no base URL?  Well, all else has failed, but we can
-       * manually reconstruct the base URL.  This avoids us having to
-       * grab two full-text for URL<->URL diffs.  Instead, we can just
-       * grab one full-text and a diff from the server against that
-       * other file.
-       */
-      if (! info->delta_base)
+      else
         {
           const char *c;
           apr_size_t comp_count;
@@ -1799,9 +1757,9 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
           svn_path_remove_components(path, comp_count);
 
-          /* Find out the difference of the destination compared to
-           * the repos root url. Cut off this difference from path,
-           * which will give us our version resource root path.
+          /* Find out the difference of the destination compared to the repos
+           * root url. Cut of this difference from path, which will give us our
+           * version resource root path.
            *
            * Example:
            * path:
@@ -1811,8 +1769,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
            * destination:
            *  http://localhost/repositories/log_tests-17/branches/a
            *
-           * So, find 'branches/a' as the difference. Cutting it off
-           * path, gives us:
+           * So, find 'branches/a' as the difference. Cut it of path, gives us:
            *  /repositories/log_tests-17/!svn/ver/4
            */
           if (ctx->destination &&
@@ -1862,7 +1819,6 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
           info->delta_base = svn_string_create_from_buf(path, info->pool);
         }
-#endif
 
       SVN_ERR(fetch_file(ctx, info));
       svn_ra_serf__xml_pop_state(parser);
@@ -2066,7 +2022,7 @@ link_path(void *report_baton,
           apr_pool_t *pool)
 {
   report_context_t *report = report_baton;
-  const char *link, *report_target;
+  const char *link, *vcc_url;
   apr_uri_t uri;
   apr_status_t status;
 
@@ -2081,10 +2037,8 @@ link_path(void *report_baton,
                                _("Unable to parse URL '%s'"), url);
     }
 
-  SVN_ERR(svn_ra_serf__report_resource(&report_target, report->sess,
-                                       NULL, pool));
-  SVN_ERR(svn_ra_serf__get_relative_path(&link, uri.path, report->sess,
-                                         NULL, pool));
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &link, report->sess,
+                                     report->sess->conns[0], uri.path, pool));
 
   /* Copy parameters to reporter's pool. */
   lock_token = apr_pstrdup(report->pool, lock_token);
@@ -2127,7 +2081,7 @@ link_path(void *report_baton,
  * if the number of ACTIVE_REQS > REQS_PER_CONN or if there currently is
  * only one main connection open.
  */
-static svn_error_t *
+static void
 open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
 {
   /* For each REQS_PER_CONN outstanding requests open a new connection, with
@@ -2136,7 +2090,6 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
       ((active_reqs / REQS_PER_CONN) > sess->num_conns))
     {
       int cur = sess->num_conns;
-      apr_status_t status;
 
       sess->conns[cur] = apr_palloc(sess->pool, sizeof(*sess->conns[cur]));
       sess->conns[cur]->bkt_alloc = serf_bucket_allocator_create(sess->pool,
@@ -2151,17 +2104,13 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
       sess->conns[cur]->last_status_code = -1;
       sess->conns[cur]->ssl_context = NULL;
       sess->conns[cur]->session = sess;
-      status = serf_connection_create2(&sess->conns[cur]->conn,
-                                       sess->context,
-                                       sess->repos_url,
-                                       svn_ra_serf__conn_setup,
-                                       sess->conns[cur],
-                                       svn_ra_serf__conn_closed,
-                                       sess->conns[cur],
-                                       sess->pool);
-      if (status)
-        return svn_error_wrap_apr(status, NULL);
-
+      sess->conns[cur]->conn = serf_connection_create(sess->context,
+                                                      sess->conns[cur]->address,
+                                                      svn_ra_serf__conn_setup,
+                                                      sess->conns[cur],
+                                                      svn_ra_serf__conn_closed,
+                                                      sess->conns[cur],
+                                                      sess->pool);
       sess->num_conns++;
 
       /* Authentication protocol specific initalization. */
@@ -2171,8 +2120,6 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
         sess->proxy_auth_protocol->init_conn_func(sess, sess->conns[cur],
                                                   sess->pool);
     }
-
-  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -2184,7 +2131,8 @@ finish_report(void *report_baton,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   svn_ra_serf__list_t *done_list;
-  const char *report_target;
+  const char *vcc_url;
+  apr_hash_t *props;
   apr_status_t status;
   svn_boolean_t closed_root;
   int status_code, i;
@@ -2192,10 +2140,21 @@ finish_report(void *report_baton,
   svn_ra_serf__add_close_tag_buckets(report->buckets, report->sess->bkt_alloc,
                                      "S:update-report");
 
-  SVN_ERR(svn_ra_serf__report_resource(&report_target, sess, NULL, pool));
+  props = apr_hash_make(pool);
+
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL, sess, sess->conns[0],
+                                      sess->repos_url.path, pool));
+
+  if (!vcc_url)
+    {
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested version-controlled-configuration "
+                                "value"));
+    }
 
   /* create and deliver request */
-  report->path = report_target;
+  report->path = vcc_url;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
@@ -2224,22 +2183,24 @@ finish_report(void *report_baton,
   svn_ra_serf__request_create(handler);
 
   /* Open the first extra connection. */
-  SVN_ERR(open_connection_if_needed(sess, 0));
+  open_connection_if_needed(sess, 0);
 
   sess->cur_conn = 1;
   closed_root = FALSE;
 
   while (!report->done || report->active_fetches || report->active_propfinds)
     {
-      status = serf_context_run(sess->context, sess->timeout, pool);
+      status = serf_context_run(sess->context, SERF_DURATION_FOREVER, pool);
       if (APR_STATUS_IS_TIMEUP(status))
         {
-          return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT,
-                                  NULL,
-                                  _("Connection timed out"));
+          continue;
         }
       if (status)
         {
+          if (parser_ctx->error)
+            svn_error_clear(sess->pending_error);
+
+          SVN_ERR(parser_ctx->error);
           SVN_ERR(sess->pending_error);
 
           return svn_error_wrap_apr(status, _("Error retrieving REPORT (%d)"),
@@ -2248,8 +2209,8 @@ finish_report(void *report_baton,
 
       /* Open extra connections if we have enough requests to send. */
       if (sess->num_conns < MAX_NR_OF_CONNS)
-        SVN_ERR(open_connection_if_needed(sess, report->active_fetches +
-                                          report->active_propfinds));
+        open_connection_if_needed(sess, report->active_fetches +
+                                        report->active_propfinds);
 
       /* Switch our connection. */
       if (!report->done)
@@ -2641,7 +2602,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   /* Fetch properties. */
   fetch_props = apr_hash_make(pool);
 
-  fetch_url = svn_path_url_add_component2(session->repos_url.path, path, pool);
+  fetch_url = svn_path_url_add_component(session->repos_url.path, path, pool);
 
   /* The simple case is if we want HEAD - then a GET on the fetch_url is fine.
    *
@@ -2650,12 +2611,18 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
    */
   if (SVN_IS_VALID_REVNUM(revision))
     {
-      const char *baseline_url, *rel_path;
+      const char *vcc_url, *rel_path, *baseline_url;
 
-      SVN_ERR(svn_ra_serf__get_baseline_info(&baseline_url, &rel_path,
-                                             session, conn, fetch_url,
-                                             revision, NULL, pool));
-      fetch_url = svn_path_url_add_component2(baseline_url, rel_path, pool);
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &rel_path,
+                                         session, conn, fetch_url, pool));
+
+      SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, vcc_url,
+                                          revision, "0", baseline_props, pool));
+
+      baseline_url = svn_ra_serf__get_ver_prop(fetch_props, vcc_url, revision,
+                                               "DAV:", "baseline-collection");
+
+      fetch_url = svn_path_url_add_component(baseline_url, rel_path, pool);
       revision = SVN_INVALID_REVNUM;
     }
 

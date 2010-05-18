@@ -1,29 +1,24 @@
 /*
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
 #include "svn_cmdline.h"
-#include "svn_dirent_uri.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_utf.h"
+#include "svn_path.h"
 #include "svn_opt.h"
 
 #include "svn_private_config.h"
@@ -116,7 +111,6 @@ int
 main(int argc, const char *argv[])
 {
   const char *wc_path, *trail_url;
-  const char *local_abspath;
   apr_allocator_t *allocator;
   apr_pool_t *pool;
   int wc_format;
@@ -124,8 +118,6 @@ main(int argc, const char *argv[])
   svn_boolean_t no_newline = FALSE, committed = FALSE;
   svn_error_t *err;
   apr_getopt_t *os;
-  svn_node_kind_t kind;
-  svn_wc_context_t *wc_ctx;
   const apr_getopt_option_t options[] =
     {
       {"no-newline", 'n', 0, N_("do not output the trailing newline")},
@@ -213,9 +205,7 @@ main(int argc, const char *argv[])
   SVN_INT_ERR(svn_utf_cstring_to_utf8
               (&wc_path, (os->ind < argc) ? os->argv[os->ind] : ".",
                pool));
-  wc_path = svn_dirent_internal_style(wc_path, pool);
-  SVN_INT_ERR(svn_dirent_get_absolute(&local_abspath, wc_path, pool));
-  SVN_INT_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
+  wc_path = svn_path_internal_style(wc_path, pool);
 
   if (os->ind+1 < argc)
     SVN_INT_ERR(svn_utf_cstring_to_utf8
@@ -223,82 +213,32 @@ main(int argc, const char *argv[])
   else
     trail_url = NULL;
 
-  SVN_INT_ERR(svn_io_check_path(wc_path, &kind, pool));
-  if (kind == svn_node_dir)
+  SVN_INT_ERR(svn_wc_check_wc(wc_path, &wc_format, pool));
+  if (! wc_format)
     {
-      SVN_INT_ERR(svn_wc_check_wc2(&wc_format, wc_ctx, local_abspath, pool));
-      if (wc_format == 0)
+      svn_node_kind_t kind;
+      SVN_INT_ERR(svn_io_check_path(wc_path, &kind, pool));
+      if (kind == svn_node_dir)
         {
-          SVN_INT_ERR(svn_cmdline_printf(pool, _("Unversioned directory%s"),
+          SVN_INT_ERR(svn_cmdline_printf(pool, _("exported%s"),
                                          no_newline ? "" : "\n"));
           svn_pool_destroy(pool);
           return EXIT_SUCCESS;
         }
-      SVN_INT_ERR(svn_wc_revision_status2(&res, wc_ctx, local_abspath,
-                                          trail_url, committed, NULL, NULL,
-                                          pool, pool));
-    }
-  else if (kind == svn_node_file)
-    {
-      SVN_INT_ERR(svn_wc_check_wc2(&wc_format, wc_ctx,
-                                   svn_dirent_dirname(local_abspath, pool),
-                                   pool));
-
-      /* Unversioned file in unversioned directory */
-      if (wc_format == 0)
+      else
         {
-          SVN_INT_ERR(svn_cmdline_printf(pool, _("Unversioned file%s"),
-                                         no_newline ? "" : "\n"));
+          svn_error_clear
+            (svn_cmdline_fprintf(stderr, pool,
+                                 _("'%s' not versioned, and not exported\n"),
+                                 wc_path));
           svn_pool_destroy(pool);
-          return EXIT_SUCCESS;
+          return EXIT_FAILURE;
         }
-
-      err = svn_wc_revision_status2(&res, wc_ctx, local_abspath,
-                                    trail_url, committed, NULL, NULL,
-                                    pool, pool);
-
-      if (err)
-        {
-          /* Unversioned file in versioned directory */
-          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-            {
-              svn_error_clear(err);
-              SVN_INT_ERR(svn_cmdline_printf(pool, _("Unversioned file%s"),
-                                             no_newline ? "" : "\n"));
-              svn_pool_destroy(pool);
-              return EXIT_SUCCESS;
-            }
-          else
-              SVN_INT_ERR(err);
-        }
-
-    }
-  else if (kind == svn_node_none)
-    {
-      svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                          _("'%s' doesn't exist\n"),
-                                          svn_dirent_local_style(wc_path, pool)));
-      svn_pool_destroy(pool);
-      return EXIT_FAILURE;
-    }
-  else
-    {
-      svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                          _("'%s' is of unknown type\n"),
-                                          svn_dirent_local_style(wc_path, pool)));
-      svn_pool_destroy(pool);
-      return EXIT_FAILURE;
     }
 
-  if (! SVN_IS_VALID_REVNUM(res->min_rev))
-    {
-      /* Local uncommitted modifications, no revision info was found. */
-      SVN_INT_ERR(svn_cmdline_printf(pool, _("Uncommitted local addition, "
-                                             "copy or move%s"),
-                                             no_newline ? "" : "\n"));
-      svn_pool_destroy(pool);
-      return EXIT_SUCCESS;
-    }
+
+  SVN_INT_ERR(svn_wc_revision_status(&res, wc_path, trail_url, committed,
+                                     NULL, NULL, pool));
 
   /* Build compact '123[:456]M?S?' string. */
   SVN_INT_ERR(svn_cmdline_printf(pool, "%ld", res->min_rev));

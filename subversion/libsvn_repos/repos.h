@@ -1,22 +1,17 @@
 /* repos.h : interface to Subversion repository, private to libsvn_repos
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -76,8 +71,6 @@ extern "C" {
 #define SVN_REPOS__HOOK_WRITE_SENTINEL  "write-sentinels"
 #define SVN_REPOS__HOOK_PRE_REVPROP_CHANGE  "pre-revprop-change"
 #define SVN_REPOS__HOOK_POST_REVPROP_CHANGE "post-revprop-change"
-#define SVN_REPOS__HOOK_PRE_OBLITERATE  "pre-obliterate"
-#define SVN_REPOS__HOOK_POST_OBLITERATE "post-obliterate"
 #define SVN_REPOS__HOOK_PRE_LOCK        "pre-lock"
 #define SVN_REPOS__HOOK_POST_LOCK       "post-lock"
 #define SVN_REPOS__HOOK_PRE_UNLOCK      "pre-unlock"
@@ -134,7 +127,7 @@ struct svn_repos_t
      object.  You'd think the capabilities here would represent the
      *repository's* capabilities, but no, they represent the
      client's -- we just don't have any other place to persist them. */
-  const apr_array_header_t *client_capabilities;
+  apr_array_header_t *client_capabilities;
 
   /* Maps SVN_REPOS_CAPABILITY_foo keys to "yes" or "no" values.
      If a capability is not yet discovered, it is absent from the table.
@@ -223,43 +216,6 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
                                      const svn_string_t *old_value,
                                      char action,
                                      apr_pool_t *pool);
-
-/* Run the pre-obliterate hook for REPOS.  Use POOL for any
-   temporary allocations.  If the hook fails, return
-   SVN_ERR_REPOS_HOOK_FAILURE.
-
-   REV is the revision whose property is being changed.
-   AUTHOR is the authenticated name of the user changing the prop.
-   OBLITERATION_SET is a string listing all the PATH@REV pairs, with
-   a newline after each.
-
-   The pre-revprop-change hook will have the new property value
-   written to its stdin.  If the property is being deleted, no data
-   will be written. */
-svn_error_t *
-svn_repos__hooks_pre_obliterate(svn_repos_t *repos,
-                                svn_revnum_t rev,
-                                const char *author,
-                                const svn_string_t *obliteration_set,
-                                apr_pool_t *pool);
-
-/* Run the pre-obliterate hook for REPOS.  Use POOL for any
-   temporary allocations.  If the hook fails, return
-   SVN_ERR_REPOS_HOOK_FAILURE.
-
-   REV is the revision whose property was changed.
-   AUTHOR is the authenticated name of the user who changed the prop.
-   OBLITERATION_SET is a string listing all the PATH@REV pairs, with
-   a newline after each.
-
-   The old value will be passed to the post-revprop hook on stdin.  If
-   the property is being created, no data will be written. */
-svn_error_t *
-svn_repos__hooks_post_obliterate(svn_repos_t *repos,
-                                 svn_revnum_t rev,
-                                 const char *author,
-                                const svn_string_t *obliteration_set,
-                                 apr_pool_t *pool);
 
 /* Run the pre-lock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.

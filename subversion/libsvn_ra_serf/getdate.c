@@ -2,22 +2,17 @@
  * getdate.c :  entry point for get_dated_revision for ra_serf
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -199,7 +194,7 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  const char *report_target;
+  const char *vcc_url;
   int status_code;
 
   date_ctx = apr_pcalloc(pool, sizeof(*date_ctx));
@@ -208,12 +203,14 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   date_ctx->revision = revision;
   date_ctx->done = FALSE;
 
-  SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+                                     session, session->conns[0],
+                                     session->repos_url.path, pool));
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
   handler->method = "REPORT";
-  handler->path = report_target;
+  handler->path = vcc_url;
   handler->body_type = "text/xml";
   handler->conn = session->conns[0];
   handler->session = session;

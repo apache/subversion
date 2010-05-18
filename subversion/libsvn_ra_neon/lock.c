@@ -2,22 +2,17 @@
  * lock.c :  routines for managing lock states in the DAV server
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -276,7 +271,7 @@ do_lock(svn_lock_t **lock,
      " <D:locktype><D:write /></D:locktype>" DEBUG_CR
      "%s" /* maybe owner */
      "</D:lockinfo>",
-     comment ? apr_pstrcat(pool,
+     comment ? apr_pstrcat(pool, 
                            "<D:owner>",
                            apr_xml_quote_string(pool, comment, 0),
                            "</D:owner>",
@@ -300,27 +295,13 @@ do_lock(svn_lock_t **lock,
   if (err)
     goto cleanup;
 
-  err = svn_ra_neon__check_parse_error("LOCK", lck_parser, url);
-  if (err)
-    goto cleanup;
-
   /*###FIXME: we never verified whether we have received back the type
     of lock we requested: was it shared/exclusive? was it write/otherwise?
     How many did we get back? Only one? */
   err = lock_from_baton(lock, req, fs_path.data, lrb, pool);
 
  cleanup:
-  /* 405 == Method Not Allowed (Occurs when trying to lock a working
-     copy path which no longer exists at HEAD in the repository. */
-  if (code == 405)
-    {
-      svn_error_clear(err);
-      err = svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
-                              _("Lock request failed: %d %s"),
-                              code, req->code_desc);
-    }
   svn_ra_neon__request_destroy(req);
-
   return err;
 }
 
@@ -551,10 +532,6 @@ svn_ra_neon__get_lock_internal(svn_ra_neon__session_t *ras,
       err = svn_error_quick_wrap(err, _("Failed to fetch lock information"));
       goto cleanup;
     }
-
-  err = svn_ra_neon__check_parse_error("PROPFIND", lck_parser, url);
-  if (err)
-    goto cleanup;
 
   /*###FIXME We assume here we only got one lock response. The WebDAV
     spec makes no such guarantees. How to make sure we grab the one we need? */

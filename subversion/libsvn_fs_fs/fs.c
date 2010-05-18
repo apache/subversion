@@ -1,22 +1,17 @@
 /* fs.c --- creating, opening and closing filesystems
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -86,7 +81,7 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
       ffsd = apr_pcalloc(common_pool, sizeof(*ffsd));
       ffsd->common_pool = common_pool;
 
-#if SVN_FS_FS__USE_LOCK_MUTEX
+#if APR_HAS_THREADS
       /* POSIX fcntl locks are per-process, so we need a mutex for
          intra-process synchronization when grabbing the repository write
          lock. */
@@ -96,14 +91,6 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
         return svn_error_wrap_apr(status,
                                   _("Can't create FSFS write-lock mutex"));
 
-      /* ... not to mention locking the txn-current file. */
-      status = apr_thread_mutex_create(&ffsd->txn_current_lock,
-                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
-      if (status)
-        return svn_error_wrap_apr(status,
-                                  _("Can't create FSFS txn-current mutex"));
-#endif
-#if APR_HAS_THREADS
       /* We also need a mutex for synchronising access to the active
          transaction list and free transaction pointer. */
       status = apr_thread_mutex_create(&ffsd->txn_list_lock,
@@ -111,8 +98,14 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
       if (status)
         return svn_error_wrap_apr(status,
                                   _("Can't create FSFS txn list mutex"));
-#endif
 
+      /* ... not to mention locking the txn-current file. */
+      status = apr_thread_mutex_create(&ffsd->txn_current_lock,
+                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
+      if (status)
+        return svn_error_wrap_apr(status,
+                                  _("Can't create FSFS txn-current mutex"));
+#endif
 
       key = apr_pstrdup(common_pool, key);
       status = apr_pool_userdata_set(ffsd, key, NULL, common_pool);
@@ -150,7 +143,6 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__set_uuid,
   svn_fs_fs__revision_root,
   svn_fs_fs__begin_txn,
-  svn_fs_fs__begin_obliteration_txn,
   svn_fs_fs__open_txn,
   svn_fs_fs__purge_txn,
   svn_fs_fs__list_transactions,
@@ -222,17 +214,17 @@ fs_open_for_recovery(svn_fs_t *fs,
                      const char *path,
                      apr_pool_t *pool, apr_pool_t *common_pool)
 {
-  /* Recovery for FSFS is currently limited to recreating the 'current'
+  /* Recovery for FSFS is currently limited to recreating the current
      file from the latest revision. */
 
-  /* The only thing we have to watch out for is that the 'current' file
+  /* The only thing we have to watch out for is that the current file
      might not exist.  So we'll try to create it here unconditionally,
      and just ignore any errors that might indicate that it's already
      present. (We'll need it to exist later anyway as a source for the
      new file's permissions). */
 
-  /* Use a partly-filled fs pointer first to create 'current'.  This will fail
-     if 'current' already exists, but we don't care about that. */
+  /* Use a partly-filled fs pointer first to create current.  This will fail
+     if current already exists, but we don't care about that. */
   fs->path = apr_pstrdup(fs->pool, path);
   svn_error_clear(svn_io_file_create(svn_fs_fs__path_current(fs, pool),
                                      "0 1 1\n", pool));

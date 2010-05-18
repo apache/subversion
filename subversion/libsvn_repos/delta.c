@@ -2,22 +2,17 @@
  * delta.c:   an editor driver for expressing differences between two trees
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -248,7 +243,7 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
   /* Calculate the fs path implicitly used for editor->open_root, so
      we can do an authz check on that path first. */
   if (*src_entry)
-    authz_root_path = svn_dirent_dirname(tgt_fullpath, pool);
+    authz_root_path = svn_path_dirname(tgt_fullpath, pool);
   else
     authz_root_path = tgt_fullpath;
 
@@ -616,7 +611,8 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
   svn_filesize_t size1, size2;
   svn_checksum_t *checksum1, *checksum2;
   svn_stream_t *stream1, *stream2;
-  svn_boolean_t same;
+  char *buf1, *buf2;
+  apr_size_t len1, len2;
 
   /* If the filesystem claims the things haven't changed, then they
      haven't changed. */
@@ -656,9 +652,21 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
   SVN_ERR(svn_fs_file_contents(&stream1, root1, path1, pool));
   SVN_ERR(svn_fs_file_contents(&stream2, root2, path2, pool));
 
-  SVN_ERR(svn_stream_contents_same2(&same, stream1, stream2, pool));
+  buf1 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
+  buf2 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
+  do
+    {
+      len1 = len2 = SVN__STREAM_CHUNK_SIZE;
+      SVN_ERR(svn_stream_read(stream1, buf1, &len1));
+      SVN_ERR(svn_stream_read(stream2, buf2, &len2));
 
-  *changed_p = !same;
+      if (len1 != len2 || memcmp(buf1, buf2, len1))
+        {
+          *changed_p = TRUE;
+          return SVN_NO_ERROR;
+        }
+    }
+  while (len1 > 0);
 
   return SVN_NO_ERROR;
 }

@@ -1,30 +1,10 @@
 #!/usr/bin/env python
-#
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-#
 
 webpagetext = '''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
 <head>
-<title>Subversion nightly tarballs (r%d)</title>
+<title>Subversion 1.5.x nightly tarballs (r%d)</title>
 </head>
 <body style="font-size: 14pt; text-align: justify;
   background-color: #f0f0f0; padding: 0 5%%">
@@ -32,22 +12,22 @@ webpagetext = '''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
   text-decoration: underline">WARNING</h1>
 
 <p>The code you are about to download is an <i>automatically generated</i>
-nightly release of Subversion (r%d).</p>
+nightly release of Subversion 1.5.x (r%d).</p>
 
-<p>This distribution is automatically generated from the latest sources from
-<a href="http://svn.apache.org/repos/asf/subversion/trunk/">Subversion trunk</a>.
-It may not even compile, and is certainly <i>not</i> suitable for any sort of
+<p>This distribution is automatically generated from the latest sources on the
+<a href="http://svn.apache.org/repos/asf/subversion/branches/1.5.x">1.5.x branch</a>.  It
+may not even compile, and is certainly <i>not</i> suitable for any sort of
 production use.  This distribution has not been tested, and may cause any
 number of problems, up to and including death and bodily injury.  Only use this
 distribution on data you aren't afraid to lose.  You have been warned.</p>
 
 <p>We provide these for testing by those members of the community who
 are interested in testing it.  As such, if you are interested in helping
-us test this code, you're very welcome to download and test these packages.
+us test this branch, you're very welcome to download and test these packages.
 If you are looking for a copy of Subversion for production use, this
 is <i>not it</i>; you should instead grab the latest stable release
 from the <a
-href="http://subversion.apache.org/packages.html">Download
+href="http://subversion.tigris.org/project_packages.html">Download
 area</a>.</p>
 
 <h2 style="font-size: 18pt">Note to operating system distro package

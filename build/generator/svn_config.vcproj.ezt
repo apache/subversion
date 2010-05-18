@@ -1,28 +1,9 @@
-[define COPYRIGHT]
-<!--
-     Licensed to the Apache Software Foundation (ASF) under one
-     or more contributor license agreements.  See the NOTICE file
-     distributed with this work for additional information
-     regarding copyright ownership.  The ASF licenses this file
-     to you under the Apache License, Version 2.0 (the
-     "License"); you may not use this file except in compliance
-     with the License.  You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-     Unless required by applicable law or agreed to in writing,
-     software distributed under the License is distributed on an
-     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-     KIND, either express or implied.  See the License for the
-     specific language governing permissions and limitations
-     under the License.
--->
-[end]<?xml version="1.0" encoding = "Windows-1252"?>
+<?xml version="1.0" encoding = "Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="[version]"
 	Name="__CONFIG__"
-	ProjectGUID="[project_guid]"
+	ProjectGUID="{638FEA9B-E592-4B88-93B7-08B8A32CAD1F}"
 	Keyword="MakeFileProj">
 	<Platforms>
 [for platforms]		<Platform
@@ -32,8 +13,7 @@
 [for platforms][for configs]		<Configuration
 			Name="[configs]|[platforms]"
 			OutputDirectory="."
-			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
-			IntermediateDirectory="..\..\$(ConfigurationName)"
+			IntermediateDirectory="."
 			ConfigurationType="10"
 			UseOfMFC="0"
 			DeleteExtensionsOnClean="*.obj;*.ilk;*.pdb;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;$(TargetPath)"
@@ -73,19 +53,6 @@
 					Outputs="..\..\subversion\svn_private_config.h"/>
 			</FileConfiguration>
 [end][end]		</File>
-[for sql]		<File
-			RelativePath="../../[sql.source]">
-[for platforms][for configs]			<FileConfiguration
-				Name="[configs]|[platforms]">
-				<Tool
-					Name="VCCustomBuildTool"
-					Description="Generating [sql.header]"
-					CommandLine="&quot;[sql.svn_python]&quot; &quot;$(SolutionDir)\build\transform_sql.py&quot; &quot;$(InputPath)&quot; &quot;$(SolutionDir)\[sql.header]&quot;"
-					Outputs="$(SolutionDir)\[sql.header]"
-				/>
-			</FileConfiguration>
-[end][end]		</File>
-[end]
 	</Files>
 	<Globals>
 	</Globals>

@@ -2,22 +2,17 @@
  * propedit-cmd.c -- Edit properties of files/dirs using $EDITOR
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -32,14 +27,15 @@
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_props.h"
 #include "cl.h"
 
-#include "private/svn_wc_private.h"
+/* We shouldn't be including a private header here, but it is
+ * necessary for fixing issue #3416 */
+#include "private/svn_opt_private.h"
 
 #include "svn_private_config.h"
 
@@ -91,7 +87,7 @@ svn_cl__propedit(apr_getopt_t *os,
       svn_opt_push_implicit_dot_target(targets, pool);
 
       SVN_ERR(svn_cl__revprop_prepare(&opt_state->start_revision, targets,
-                                      &URL, ctx, pool));
+                                      &URL, pool));
 
       /* Fetch the current property. */
       SVN_ERR(svn_client_revprop_get(pname_utf8, &propval,
@@ -176,7 +172,7 @@ svn_cl__propedit(apr_getopt_t *os,
              _("Explicit target argument required"));
         }
 
-      SVN_ERR(svn_opt_eat_peg_revisions(&targets, targets, pool));
+      SVN_ERR(svn_opt__eat_peg_revisions(&targets, targets, pool));
 
       /* For each target, edit the property PNAME. */
       for (i = 0; i < targets->nelts; i++)
@@ -186,8 +182,8 @@ svn_cl__propedit(apr_getopt_t *os,
           svn_string_t *propval, *edited_propval;
           const char *base_dir = target;
           const char *target_local;
-          const char *local_abspath;
-          svn_node_kind_t kind;
+          svn_wc_adm_access_t *adm_access;
+          const svn_wc_entry_t *entry;
           svn_opt_revision_t peg_revision;
           svn_revnum_t base_rev = SVN_INVALID_REVNUM;
 
@@ -227,17 +223,16 @@ svn_cl__propedit(apr_getopt_t *os,
                 }
 
               /* Split the path if it is a file path. */
-              SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, subpool));
-
-              SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
-                                       subpool));
-
-              if (kind == svn_node_none)
-                return svn_error_createf(
-                   SVN_ERR_ENTRY_NOT_FOUND, NULL,
+              SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
+                                             FALSE, 0, ctx->cancel_func,
+                                             ctx->cancel_baton, subpool));
+              SVN_ERR(svn_wc_entry(&entry, target, adm_access, FALSE, subpool));
+              if (! entry)
+                return svn_error_createf
+                  (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                    _("'%s' does not appear to be a working copy path"), target);
-              if (kind == svn_node_file)
-                base_dir = svn_dirent_dirname(target, subpool);
+              if (entry->kind == svn_node_file)
+                svn_path_split(target, &base_dir, NULL, subpool);
             }
 
           /* Run the editor on a temporary file which contains the
@@ -254,7 +249,7 @@ svn_cl__propedit(apr_getopt_t *os,
                                                  subpool));
 
           target_local = svn_path_is_url(target) ? target
-            : svn_dirent_local_style(target, subpool);
+            : svn_path_local_style(target, subpool);
 
           /* ...and re-set the property's value accordingly. */
           if (edited_propval && !svn_string_compare(propval, edited_propval))
@@ -279,7 +274,7 @@ svn_cl__propedit(apr_getopt_t *os,
                 SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
                                                 err, pool));
               else if (err)
-                return svn_error_return(err);
+                return err;
 
               /* Print a message if we successfully committed or if it
                  was just a wc propset (but not if the user aborted an URL

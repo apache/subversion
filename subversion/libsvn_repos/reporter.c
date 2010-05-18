@@ -2,26 +2,20 @@
  * reporter.c : `reporter' vtable routines for updates.
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_types.h"
 #include "svn_error.h"
@@ -155,16 +149,10 @@ read_number(apr_uint64_t *num, apr_file_t *temp, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-#ifndef APR_SIZE_MAX
-/* APR 0.9 doesn't define APR_SIZE_MAX */
-#define APR_SIZE_MAX    (~((apr_size_t)0))
-#endif
-
 static svn_error_t *
 read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
 {
   apr_uint64_t len;
-  apr_size_t size;
   char *buf;
 
   SVN_ERR(read_number(&len, temp, pool));
@@ -173,7 +161,7 @@ read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
      len + 1 wraps around and we end up passing 0 to apr_palloc(),
      thus getting a pointer to no storage?  Probably not (16 exabyte
      string, anyone?) but let's be future-proof anyway. */
-  if (len + 1 < len || len + 1 > APR_SIZE_MAX)
+  if (len + 1 < len)
     {
       /* xgettext doesn't expand preprocessor definitions, so we must
          pass translatable string to apr_psprintf() function to create
@@ -186,9 +174,8 @@ read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
                                len);
     }
 
-  size = (apr_size_t)len;
-  buf = apr_palloc(pool, size+1);
-  SVN_ERR(svn_io_file_read_full(temp, buf, size, NULL, pool));
+  buf = apr_palloc(pool, len + 1);
+  SVN_ERR(svn_io_file_read_full(temp, buf, len, NULL, pool));
   buf[len] = 0;
   *str = buf;
   return SVN_NO_ERROR;
@@ -612,10 +599,7 @@ fake_dirent(const svn_fs_dirent_t **entry, svn_fs_root_t *root,
   else
     {
       ent = apr_palloc(pool, sizeof(**entry));
-      /* ### All callers should be updated to pass just one of these
-             formats */
-      ent->name = (*path == '/') ? svn_uri_basename(path, pool)
-                                 : svn_relpath_basename(path, pool);
+      ent->name = svn_path_basename(path, pool);
       SVN_ERR(svn_fs_node_id(&ent->id, root, path, pool));
       ent->kind = kind;
       *entry = ent;
@@ -807,8 +791,8 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
           && (!info || (!info->start_empty && !info->lock_token))
           && (requested_depth <= wc_depth || t_entry->kind == svn_node_file))
         return SVN_NO_ERROR;
-
-      related = (distance != -1 || b->ignore_ancestry);
+      else if (distance != -1 || b->ignore_ancestry)
+        related = TRUE;
     }
 
   /* If there's a source and it's not related to the target, nuke it. */
@@ -957,6 +941,8 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   apr_hash_t *s_entries = NULL, *t_entries;
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
+  const svn_fs_dirent_t *s_entry, *t_entry;
+  void *val;
   const char *name, *s_fullpath, *t_fullpath, *e_fullpath;
   path_info_t *info;
 
@@ -983,8 +969,6 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
       while (1)
         {
-          const svn_fs_dirent_t *s_entry, *t_entry;
-
           svn_pool_clear(subpool);
           SVN_ERR(fetch_path_info(b, &name, &info, e_path, subpool));
           if (!name)
@@ -1053,10 +1037,9 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                hi;
                hi = apr_hash_next(hi))
             {
-              const svn_fs_dirent_t *s_entry;
-
               svn_pool_clear(subpool);
-              s_entry = svn__apr_hash_index_val(hi);
+              apr_hash_this(hi, NULL, NULL, &val);
+              s_entry = val;
 
               if (apr_hash_get(t_entries, s_entry->name,
                                APR_HASH_KEY_STRING) == NULL)
@@ -1091,10 +1074,9 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       /* Loop over the dirents in the target. */
       for (hi = apr_hash_first(pool, t_entries); hi; hi = apr_hash_next(hi))
         {
-          const svn_fs_dirent_t *s_entry, *t_entry;
-
           svn_pool_clear(subpool);
-          t_entry = svn__apr_hash_index_val(hi);
+          apr_hash_this(hi, NULL, NULL, &val);
+          t_entry = val;
 
           if (is_depth_upgrade(wc_depth, requested_depth, t_entry->kind))
             {
@@ -1154,7 +1136,7 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
 
   /* Compute the target path corresponding to the working copy anchor,
      and check its authorization. */
-  t_anchor = *b->s_operand ? svn_dirent_dirname(b->t_path, pool) : b->t_path;
+  t_anchor = *b->s_operand ? svn_path_dirname(b->t_path, pool) : b->t_path;
   SVN_ERR(check_auth(b, &allowed, t_anchor, pool));
   if (!allowed)
     return svn_error_create
@@ -1263,7 +1245,7 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
     if (err == SVN_NO_ERROR)
       return b->editor->close_edit(b->edit_baton, pool);
     svn_error_clear(b->editor->abort_edit(b->edit_baton, pool));
-    return svn_error_return(err);
+    return err;
   }
 }
 

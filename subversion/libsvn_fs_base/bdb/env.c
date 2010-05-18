@@ -1,22 +1,17 @@
 /* env.h : managing the BDB environment
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -287,10 +282,10 @@ create_env(bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
   apr_size_t path_size, path_bdb_size;
 
 #if SVN_BDB_PATH_UTF8
-  path_bdb = svn_dirent_local_style(path, pool);
+  path_bdb = svn_path_local_style(path, pool);
 #else
   SVN_ERR(svn_utf_cstring_from_utf8(&path_bdb,
-                                    svn_dirent_local_style(path, pool),
+                                    svn_path_local_style(path, pool),
                                     pool));
 #endif
 
@@ -298,8 +293,6 @@ create_env(bdb_env_t **bdbp, const char *path, apr_pool_t *pool)
      because it must survive the cache pool cleanup. */
   path_size = strlen(path) + 1;
   path_bdb_size = strlen(path_bdb) + 1;
-  /* Using calloc() to ensure the padding bytes in bdb->key (which is used as
-   * a hash key) are zeroed. */
   bdb = calloc(1, sizeof(*bdb) + path_size + path_bdb_size);
 
   /* We must initialize this now, as our callers may assume their bdb
@@ -376,7 +369,7 @@ clear_cache(void *data)
 static volatile svn_atomic_t bdb_cache_state;
 
 static svn_error_t *
-bdb_init_cb(void *baton, apr_pool_t *pool)
+bdb_init_cb(apr_pool_t *pool)
 {
 #if APR_HAS_THREADS
   apr_status_t apr_err;
@@ -403,7 +396,7 @@ bdb_init_cb(void *baton, apr_pool_t *pool)
 svn_error_t *
 svn_fs_bdb__init(apr_pool_t* pool)
 {
-  return svn_atomic__init_once(&bdb_cache_state, bdb_init_cb, NULL, pool);
+  return svn_atomic__init_once(&bdb_cache_state, bdb_init_cb, pool);
 }
 
 static APR_INLINE void
@@ -433,7 +426,7 @@ static svn_error_t *
 bdb_cache_key(bdb_env_key_t *keyp, apr_file_t **dbconfig_file,
               const char *path, apr_pool_t *pool)
 {
-  const char *dbcfg_file_name = svn_dirent_join(path, BDB_CONFIG_FILE, pool);
+  const char *dbcfg_file_name = svn_path_join(path, BDB_CONFIG_FILE, pool);
   apr_file_t *dbcfg_file;
   apr_status_t apr_err;
   apr_finfo_t finfo;
@@ -519,7 +512,7 @@ bdb_close(bdb_env_t *bdb)
     svn_pool_destroy(bdb->pool);
   else
     free(bdb);
-  return svn_error_return(err);
+  return err;
 }
 
 
@@ -572,7 +565,7 @@ svn_fs_bdb__close(bdb_env_baton_t *bdb_baton)
       err = bdb_close(bdb);
       release_cache_mutex();
     }
-  return svn_error_return(err);
+  return err;
 }
 
 
@@ -636,7 +629,7 @@ svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
   if (err)
     {
       release_cache_mutex();
-      return svn_error_return(err);
+      return err;
     }
 
   bdb = bdb_cache_get(&key, &panic);
@@ -707,7 +700,7 @@ svn_fs_bdb__open(bdb_env_baton_t **bdb_batonp, const char *path,
     }
 
   release_cache_mutex();
-  return svn_error_return(err);
+  return err;
 }
 
 

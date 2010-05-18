@@ -1,0 +1,87 @@
+Purpose: A master/slave server replication model for Subversion WebDAV-based
+transactions.
+
+Some or all clients interact with a slave server, but the slave transparently
+passes all of the write-oriented activites to the master (rewriting the
+content as necessary).  The slaves are essentially read-only, but they
+do have a complete copy of the repository locally.  This serves to
+alleviate read traffic from the master server, and may dramatically
+speed up read operations, if a slave is sited closer to the users.
+
+This model has several advantages to using a straight HTTP DAV-aware
+caching proxy, in that each slave can respond to all read-only requests
+without ever having to relay them to the master backend.
+
+Proxy server requirements:
+  Subversion 1.5 or newer
+  Apache HTTP Server 2.2.0 or higher with at least mod_proxy,
+  mod_proxy_http, mod_dav, and mod_dav_svn enabled
+  (Several fixes to mod_proxy were committed for this patch that
+  were not backported to the 2.0 branch of httpd.)
+
+Example configuration:
+
+Participants:
+  Slave  -> slave.example.com  (there can be many!)
+  Master -> master.example.com (there can only be one!)
+  A WebDAV client (ra_neon, ra_serf, other WebDAV clients)
+
+Each client does:
+
+ % svn co http://slave.example.com/repos/slave/
+ ...
+ % svn ci
+ % ...etc...
+
+ (The client can perform all operations as normal.)
+
+Each slave has:
+
+<Location /repos/slave>
+  DAV svn
+  SVNPath /my/local/copy/of/repos
+  SVNMasterURI http://master.example.com/repos/master
+</Location>
+
+The master:
+
+The master MUST have a post-commit hook that updates all of the slaves.  An
+example that does this using 'svnadmin dump'/'svnadmin load' and ssh is
+provided below.  svnsync can be used instead, but is left as an exercise to
+the reader.
+
+Note that if revprop changes are permitted via a pre-revprop-change
+hook (which is not true by default), a post-revprop-change hook is
+needed as well, to propagate those changes to slaves.
+
+Additionally, if locks are permitted on the master repository, lock databases
+need to kept in sync via post-lock and post-unlock hooks on the master pushing
+the lock state to the slaves.  (Username preservation is left as an exercise to
+the reader.)  If the lock database is not propagated, users will not be able to
+accurately determine whether a lock is held - but locking will still work.
+
+----
+#!/bin/sh
+REPOS="$1"
+REV="$2"
+SLAVE_HOST=slave.example.com
+SLAVE_PATH=/my/local/copy/of/repos
+
+# Ensure svnadmin is in your PATH on both this machine and the remote server!
+svnadmin dump --incremental -q -r"$REV" "$REPOS" |
+  ssh $SLAVE_HOST "svnadmin load -q $SLAVE_PATH"
+----
+
+Issues/Thoughts:
+- The master maybe should update the slaves using a DAV commit of its own.
+  (essentially replay the commit once it is approved).  This requires
+  a way to inject commits/user to the slave.  But, this would eliminate the
+  reliance on post-commit hooks.
+- This isn't multi-master replication.  The slave won't accept commits
+  on its own.  If the master can't be contacted for a write operation, it
+  will return a proxy error.  (Multi-master == distributed repositories.)
+- Remove the location_filter for the header.  I believe mod_proxy does this
+  for us already.  We may just be duplicating things.  We will still have
+  to rewrite the bodies of the requests/responses though.
+- Determine a better way to handle the MERGE call.  It's the only operation
+  that doesn't occur on the activity URL.

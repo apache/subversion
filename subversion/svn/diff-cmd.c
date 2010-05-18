@@ -2,22 +2,17 @@
  * diff-cmd.c -- Display context diff of a file
  *
  * ====================================================================
- *    Licensed to the Apache Software Foundation (ASF) under one
- *    or more contributor license agreements.  See the NOTICE file
- *    distributed with this work for additional information
- *    regarding copyright ownership.  The ASF licenses this file
- *    to you under the Apache License, Version 2.0 (the
- *    "License"); you may not use this file except in compliance
- *    with the License.  You may obtain a copy of the License at
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
  *
- *    Unless required by applicable law or agreed to in writing,
- *    software distributed under the License is distributed on an
- *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *    KIND, either express or implied.  See the License for the
- *    specific language governing permissions and limitations
- *    under the License.
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
 
@@ -30,7 +25,6 @@
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
-#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error_codes.h"
 #include "svn_error.h"
@@ -93,11 +87,11 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
-  path = svn_cl__path_join(path, summary->path, pool);
+  path = svn_path_join(path, summary->path, pool);
 
   /* Convert non-urls to local style, so that things like "" show up as "." */
   if (! svn_path_is_url(path))
-    path = svn_dirent_local_style(path, pool);
+    path = svn_path_local_style(path, pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                         "kind", svn_cl__node_kind_str_xml(summary->node_kind),
@@ -122,11 +116,11 @@ summarize_regular(const svn_client_diff_summarize_t *summary,
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
-  path = svn_uri_join(path, summary->path, pool);
+  path = svn_path_join(path, summary->path, pool);
 
   /* Convert non-urls to local style, so that things like "" show up as "." */
   if (! svn_path_is_url(path))
-    path = svn_dirent_local_style(path, pool);
+    path = svn_path_local_style(path, pool);
 
   /* Note: This output format tries to look like the output of 'svn status',
    *       thus the blank spaces where information that is not relevant to
@@ -323,8 +317,8 @@ svn_cl__diff(apr_getopt_t *os,
                                      _("Path '%s' not relative to base URLs"),
                                      path);
 
-          target1 = svn_cl__path_join(old_target, path, iterpool);
-          target2 = svn_cl__path_join(new_target, path, iterpool);
+          target1 = svn_path_join(old_target, path, iterpool);
+          target2 = svn_path_join(new_target, path, iterpool);
 
           if (opt_state->summarize)
             SVN_ERR(svn_client_diff_summarize2
@@ -339,7 +333,7 @@ svn_cl__diff(apr_getopt_t *os,
                      (void *) target1,
                      ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff5
+            SVN_ERR(svn_client_diff4
                     (options,
                      target1,
                      &(opt_state->start_revision),
@@ -349,7 +343,6 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->depth,
                      ! opt_state->notice_ancestry,
                      opt_state->no_diff_deleted,
-                     opt_state->show_copies_as_adds,
                      opt_state->force,
                      svn_cmdline_output_encoding(pool),
                      outfile,
@@ -384,7 +377,7 @@ svn_cl__diff(apr_getopt_t *os,
                      (void *) truepath,
                      ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff_peg5
+            SVN_ERR(svn_client_diff_peg4
                     (options,
                      truepath,
                      &peg_revision,
@@ -394,7 +387,6 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->depth,
                      ! opt_state->notice_ancestry,
                      opt_state->no_diff_deleted,
-                     opt_state->show_copies_as_adds,
                      opt_state->force,
                      svn_cmdline_output_encoding(pool),
                      outfile,
