@@ -10611,20 +10611,20 @@ def basic_reintegrate(sbox):
   expected_skip = wc.State(A_MOVED_path, {})
   # This test is currently marked as XFail as the reintegrate fails:
   #
-  #   merge_tests-77>svn merge ^/A_COPY A --reintegrate
-  #   ..\..\..\subversion\svn\merge-cmd.c:70: (apr_err=155010)
-  #   ..\..\..\subversion\svn\util.c:1118: (apr_err=155010)
-  #   ..\..\..\subversion\libsvn_client\cmdline.c:269: (apr_err=155010)
-  #   ..\..\..\subversion\libsvn_client\cmdline.c:132: (apr_err=155010)
-  #   ..\..\..\subversion\libsvn_client\util.c:270: (apr_err=155010)
-  #   ..\..\..\subversion\libsvn_client\ra.c:430: (apr_err=155010)
-  #   ..\..\..\subversion\libsvn_client\url.c:106: (apr_err=155010)
-  #   ..\..\..\subversion\libsvn_client\url.c:151: (apr_err=155010)
-  #   ..\..\..\subversion\libsvn_wc\node.c:432: (apr_err=155010)
-  #   ..\..\..\subversion\libsvn_wc\wc_db.c:4678: (apr_err=155010)
-  #   ..\..\..\subversion\libsvn_wc\wc_db.c:4670: (apr_err=155010)
-  #   svn: The node 'C:\SVN\src-trunk\Debug\subversion\tests\cmdline\
-  #     svn-test-work\working_copies\merge_tests-77\A' was not found.
+  #   >svn merge ^^/A_COPY A_MOVED --reintegrate
+  #   ..\..\..\subversion\svn\merge-cmd.c:358: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_client\merge.c:9777: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_client\merge.c:9747: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_client\merge.c:9654: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_client\ra.c:753: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_client\mergeinfo.c:740: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_client\ra.c:548: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_repos\rev_hunt.c:908: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_repos\rev_hunt.c:607: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_fs_fs\tree.c:2883: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_fs_fs\tree.c:2883: (apr_err=160013)
+  #   ..\..\..\subversion\libsvn_fs_fs\tree.c:667: (apr_err=160013)
+  #   svn: File not found: revision 7, path '/A_MOVED'
   svntest.actions.run_and_verify_merge(A_MOVED_path, None, None,
                                        sbox.repo_url + '/A_COPY', None,
                                        expected_output,
