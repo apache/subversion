@@ -62,8 +62,12 @@ svn_wc__sync_text_base(const char *local_abspath,
 
 
 /* Set *RESULT_ABSPATH to the absolute path to where LOCAL_ABSPATH's
-   text-base file is or should be created.  The file does not necessarily
-   exist. */
+   "normal text-base" file is or should be created.  The file does not
+   necessarily exist.
+
+   "Normal text-base" means the base of the copied file, if copied or moved,
+   else nothing if it's a simple add (even if replacing an existing node),
+   else the ultimate base. */
 svn_error_t *
 svn_wc__text_base_path(const char **result_abspath,
                        svn_wc__db_t *db,
@@ -134,29 +138,29 @@ svn_error_t *svn_wc__prop_path(const char **prop_path,
                                apr_pool_t *pool);
 
 /* Set *RESULT_ABSPATH to the absolute path to a readable file containing
-   the WORKING_NODE pristine text of LOCAL_ABSPATH in DB.
+   the WC-1 "normal text-base" of LOCAL_ABSPATH in DB.
 
-   The implementation might create the file as an independent copy on
-   demand, or it might return the path to a shared file.  The file will
-   remain readable until RESULT_POOL is cleared or until LOCAL_ABSPATH's WC
-   metadata is next changed, whichever is sooner.
-     (### The latter doesn't sound like a totally reasonable condition.)
-   After that, if the implementation provided a separate file then the file
-   will automatically be removed, or if it provided a shared file then
-   no guarantees are made about it after this time.
+   "Normal text-base" means the same as in svn_wc__text_base_path().
+   ### May want to check the callers' exact requirements and replace this
+       definition with something easier to comprehend.
 
-   ### The present implementation just returns the path to the file in the
-     pristine store and does not make any attempt to ensure its lifetime is
-     as promised.
+   What the callers want:
+     A path to a file that will remain available and unchanged as long as
+     the caller wants it - such as for the lifetime of RESULT_POOL.
 
-   If the node LOCAL_ABSPATH has no pristine text, return an error.
+   What the current implementation provides:
+     A path to the file in the pristine store.  This file will be removed or
+     replaced the next time this or another Subversion client updates the WC.
+
+   If the node LOCAL_ABSPATH has no pristine text, the result is a path
+   where no file exists (in a directory that does exist).
 
    Allocate *RESULT_PATH in RESULT_POOL.  */
 svn_error_t *
-svn_wc__get_working_node_pristine_file(const char **result_abspath,
-                                       svn_wc__db_t *db,
-                                       const char *local_abspath,
-                                       apr_pool_t *result_pool);
+svn_wc__text_base_path_to_read(const char **result_abspath,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool);
 
 
 
