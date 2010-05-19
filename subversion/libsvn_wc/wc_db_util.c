@@ -40,6 +40,7 @@
 #include "svn_dirent_uri.h"
 
 #include "wc.h"
+#include "adm_files.h"
 #include "wc_db_util.h"
 #include "wc-queries.h"
 
@@ -70,4 +71,23 @@ svn_wc__db_util_fetch_wc_id(apr_int64_t *wc_id,
   *wc_id = svn_sqlite__column_int64(stmt, 0);
 
   return svn_error_return(svn_sqlite__reset(stmt));
+}
+
+
+
+svn_error_t *
+svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
+                        const char *dir_abspath,
+                        const char *sdb_fname,
+                        svn_sqlite__mode_t smode,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  const char *sdb_abspath = svn_wc__adm_child(dir_abspath, sdb_fname,
+                                              scratch_pool);
+
+  return svn_error_return(svn_sqlite__open(sdb, sdb_abspath,
+                                           smode, statements,
+                                           0, NULL,
+                                           result_pool, scratch_pool));
 }
