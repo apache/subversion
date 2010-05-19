@@ -9525,20 +9525,32 @@ calculate_left_hand_side(const char **url_left,
       /* We've previously merged some or all of the target, up to
          youngest_merged_rev, from the target to the source.  Set *URL_LEFT
          and *REV_LEFT to cover the youngest part of this range. */
-      svn_opt_revision_t peg_revision;
+      svn_opt_revision_t peg_revision, youngest_rev, unspecified_rev;
+      svn_opt_revision_t *start_revision;
       const char *youngest_url;
+      const char *old_url;
 
       peg_revision.kind = svn_opt_revision_number;
-      peg_revision.value.number = youngest_merged_rev;
+      peg_revision.value.number = target_rev;
 
-      *rev_left = youngest_merged_rev;
-      SVN_ERR(svn_client__derive_location(
-        &youngest_url, NULL,
-        svn_path_url_add_component2(source_repos_root,
-                                    target_repos_rel_path,
-                                    subpool),
-        &peg_revision, ra_session, ctx, subpool, subpool));
+      youngest_rev.kind = svn_opt_revision_number;
+      youngest_rev.value.number = youngest_merged_rev;
+      
+      unspecified_rev.kind = svn_opt_revision_unspecified;
+
+      *rev_left = youngest_rev.value.number;
+
+      /* Get the URL of the target_url@youngest_merged_rev. */
+      SVN_ERR(svn_ra_get_session_url(ra_session, &old_url, subpool));
+      SVN_ERR(svn_ra_reparent(ra_session, target_url, subpool));
+      SVN_ERR(svn_client__repos_locations(&youngest_url, &start_revision,
+                                          NULL, NULL, ra_session,
+                                          target_url, &peg_revision,
+                                          &youngest_rev, &unspecified_rev,
+                                          ctx, subpool));
+
       *url_left = apr_pstrdup(pool, youngest_url);
+      SVN_ERR(svn_ra_reparent(ra_session, old_url, subpool));
     }
 
   svn_pool_destroy(subpool);
