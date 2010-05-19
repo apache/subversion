@@ -43,6 +43,7 @@
 #include "lock.h"
 #include "tree_conflicts.h"
 #include "wc_db_pdh.h"
+#include "wc_db_util.h"
 #include "workqueue.h"
 
 #include "svn_private_config.h"
@@ -592,30 +593,6 @@ determine_obstructed_file(svn_boolean_t *obstructed_file,
 
 /* */
 static svn_error_t *
-fetch_wc_id(apr_int64_t *wc_id,
-            svn_sqlite__db_t *sdb,
-            apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  /* ### cheat. we know there is just one WORKING_COPY row, and it has a
-     ### NULL value for local_abspath. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WCROOT_NULL));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_CORRUPT, svn_sqlite__reset(stmt),
-                             _("Missing a row in WCROOT."));
-
-  SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 0));
-  *wc_id = svn_sqlite__column_int64(stmt, 0);
-
-  return svn_error_return(svn_sqlite__reset(stmt));
-}
-
-
-/* */
-static svn_error_t *
 open_db(svn_sqlite__db_t **sdb,
         const char *dir_abspath,
         const char *sdb_fname,
@@ -851,7 +828,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
       apr_int64_t wc_id;
       svn_error_t *err;
 
-      err = fetch_wc_id(&wc_id, sdb, scratch_pool);
+      err = svn_wc__db_util_fetch_wc_id(&wc_id, sdb, scratch_pool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_WC_CORRUPT)
@@ -5973,7 +5950,7 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
   apr_hash_index_t *hi;
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR(fetch_wc_id(&wc_id, sdb, iterpool));
+  SVN_ERR(svn_wc__db_util_fetch_wc_id(&wc_id, sdb, iterpool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_BASE_DAV_CACHE));
 
