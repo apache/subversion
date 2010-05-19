@@ -269,10 +269,10 @@ svn_wc__text_revert_path(const char **result_abspath,
 
 
 svn_error_t *
-svn_wc__get_working_node_pristine_file(const char **result_abspath,
-                                       svn_wc__db_t *db,
-                                       const char *local_abspath,
-                                       apr_pool_t *result_pool)
+svn_wc__text_base_path_to_read(const char **result_abspath,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool)
 {
   SVN_ERR(svn_wc__text_base_path(result_abspath, db, local_abspath,
                                  result_pool));
