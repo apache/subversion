@@ -126,6 +126,9 @@ extern "C" {
 #define SVN_WC__VERSION 16
 
 
+/* Formats <= this have no concept of "revert text-base/props".  */
+#define SVN_WC__NO_REVERT_FILES 4
+
 /* A version <= this doesn't have property caching in the entries file. */
 #define SVN_WC__NO_PROPCACHING_VERSION 5
 
