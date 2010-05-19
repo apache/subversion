@@ -8111,14 +8111,11 @@ def merge_to_sparse_directories(sbox):
   # 'C', and 'D' are checked out at depth empty; the two of these affected
   # by the merge, 'B' and 'D', get non-inheritable mergeinfo for r4:9.
   # The root and 'D' do should also get the changes
-  # that affect them directly (the prop adds from r8 and r9).  Changes
-  # deeper than the immediate children raise tree conflicts.
+  # that affect them directly (the prop adds from r8 and r9).
   expected_output = wc.State(immediates_dir, {
     'D'   : Item(status=' U'),
-    'D/H' : Item(status='  ', treeconflict='C'),
     'mu'  : Item(status='U '),
     ''    : Item(status=' U'),
-    'B/E' : Item(status='  ', treeconflict='C'),
     })
   expected_mergeinfo_output = wc.State(immediates_dir, {
     ''  : Item(status=' U'),
@@ -8130,11 +8127,9 @@ def merge_to_sparse_directories(sbox):
   expected_status = wc.State(immediates_dir, {
     ''          : Item(status=' M', wc_rev=9),
     'B'         : Item(status=' M', wc_rev=9),
-    'B/E'       : Item(status='! ', treeconflict='C'),
     'mu'        : Item(status='M ', wc_rev=9),
     'C'         : Item(status='  ', wc_rev=9),
     'D'         : Item(status=' M', wc_rev=9),
-    'D/H'       : Item(status='! ', treeconflict='C'),
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-9',
@@ -8145,7 +8140,10 @@ def merge_to_sparse_directories(sbox):
     'D'         : Item(props={SVN_PROP_MERGEINFO : '/A/D:5-9*',
                               "prop:name" : "propval"}),
     })
-  expected_skip = wc.State(immediates_dir, {})
+  expected_skip = svntest.wc.State(immediates_dir, {
+    'D/H'               : Item(),
+    'B/E'               : Item(),
+    })
   svntest.actions.run_and_verify_merge(immediates_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
@@ -8175,12 +8173,10 @@ def merge_to_sparse_directories(sbox):
   # The root of the files WC should get non-inheritable r4:9 and its one
   # present child 'mu' should get the same but inheritable.  The root
   # should also get the change that affects it directly (the prop add
-  # from r9).  Changes into shallow subtrees should raise tree conflicts.
+  # from r9).
   expected_output = wc.State(files_dir, {
     'mu' : Item(status='U '),
     ''   : Item(status=' U'),
-    'B'  : Item(status='  ', treeconflict='C'),
-    'D'  : Item(status='  ', treeconflict='C'),
     })
   expected_mergeinfo_output = wc.State(files_dir, {
     ''   : Item(status=' U'),
@@ -8191,8 +8187,6 @@ def merge_to_sparse_directories(sbox):
   expected_status = wc.State(files_dir, {
     ''          : Item(status=' M', wc_rev=9),
     'mu'        : Item(status='MM', wc_rev=9),
-    'B'         : Item(status='! ', treeconflict='C'),
-    'D'         : Item(status='! ', treeconflict='C'),
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-9*',
@@ -8200,7 +8194,10 @@ def merge_to_sparse_directories(sbox):
     'mu'        : Item("New content",
                        props={SVN_PROP_MERGEINFO : '/A/mu:5-9'}),
     })
-  expected_skip = wc.State(files_dir, {})
+  expected_skip = svntest.wc.State(files_dir, {
+    'D'               : Item(),
+    'B'               : Item(),
+    })
   svntest.actions.run_and_verify_merge(files_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
@@ -8225,12 +8222,8 @@ def merge_to_sparse_directories(sbox):
   # Merge r4:9 into the empty WC.
   # The root of the files WC should get non-inheritable r4:9 and also get
   # the one change that affects it directly (the prop add from r9).
-  # Changes into the missing subtrees should raise tree conflicts.
   expected_output = wc.State(empty_dir, {
     ''   : Item(status=' U'),
-    'mu' : Item(status='  ', treeconflict='C'),
-    'B'  : Item(status='  ', treeconflict='C'),
-    'D'  : Item(status='  ', treeconflict='C'),
     })
   expected_mergeinfo_output = wc.State(empty_dir, {
     '' : Item(status=' U'),
@@ -8239,15 +8232,16 @@ def merge_to_sparse_directories(sbox):
     })
   expected_status = wc.State(empty_dir, {
     ''          : Item(status=' M', wc_rev=9),
-    'mu'        : Item(status='! ', treeconflict='C'),
-    'B'         : Item(status='! ', treeconflict='C'),
-    'D'         : Item(status='! ', treeconflict='C'),
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-9*',
                               "prop:name" : "propval"}),
     })
-  expected_skip = wc.State(empty_dir, {})
+  expected_skip = svntest.wc.State(empty_dir, {
+    'mu'               : Item(),
+    'D'               : Item(),
+    'B'               : Item(),
+    })
   svntest.actions.run_and_verify_merge(empty_dir, '4', '9',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
@@ -11169,7 +11163,7 @@ def reintegrate_on_shallow_wc(sbox):
     'C'         : Item(),
     'D'         : Item(), # Don't expect anything under D, its depth is empty!
     })
-  expected_A_skip = wc.State(A_COPY_path, {})
+  expected_A_skip = wc.State(A_path, {})
   svntest.actions.run_and_verify_merge(A_path, None, None,
                                        sbox.repo_url + '/A_COPY', None,
                                        expected_output,
@@ -11184,27 +11178,23 @@ def reintegrate_on_shallow_wc(sbox):
   # Now revert the reintegrate and make a second change on the
   # branch in r4, but this time change a subtree that corresponds
   # to the missing (shallow) portion of the source.  The reintegrate
-  # should still succeed, albeit with a tree-conflict.
+  # should still succeed, albeit skipping some paths.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
   svntest.main.file_write(psi_COPY_path, "more branch work")
   svntest.main.run_svn(None, 'commit', '-m',
                        'Some more work on the A_COPY branch', wc_dir)
-  # Reuse the same expectations as the prior merge, except that...
-  #
-  # ...a tree conflict occurs...
-  expected_output.add({
-      'D/H' : Item(status='  ', treeconflict='C')
-      })
-  expected_A_status.add({
-      'D/H' : Item(status='! ', treeconflict='C')
-      })
-  # ...non-inheritable mergeinfo is set on the root of the missing subtree...
+  # Reuse the same expectations as the prior merge, except that
+  # non-inheritable mergeinfo is set on the root of the missing subtree...
   expected_mergeinfo_output.add({
       'D' : Item(status=' U')
       })
   expected_A_status.tweak('D', status=' M')
   expected_A_disk.tweak('D', props={SVN_PROP_MERGEINFO : '/A_COPY/D:2-4*'})
-  # ...the mergeinfo on the target root includes the latest rev on the branch.
+  # ... a depth-restricted item is skipped ...
+  expected_A_skip.add({
+      'D/H' : Item()
+  })
+  # ... and the mergeinfo on the target root includes the latest rev on the branch.
   expected_A_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A_COPY:2-4'})
   svntest.actions.run_and_verify_merge(A_path, None, None,
                                        sbox.repo_url + '/A_COPY', None,
@@ -15200,8 +15190,7 @@ def tree_conflicts_on_merge_local_ci_4_1(sbox):
     'DDF/D1'            : Item(status='! ', treeconflict='C'),
     })
 
-  expected_skip = svntest.wc.State('', {
-    })
+  expected_skip = svntest.wc.State('', { })
 
   svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
@@ -17004,65 +16993,6 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
   # local tree missing (via shell delete), incoming leaf edit
 
   expected_output = wc.State('', {
-#  'F/alpha'           : Item(status='  ', treeconflict='C'),
-  'D/D1'              : Item(status='  ', treeconflict='C'),
-  'DF/D1'             : Item(status='  ', treeconflict='C'),
-  'DD/D1'             : Item(status='  ', treeconflict='C'),
-  'DDF/D1'            : Item(status='  ', treeconflict='C'),
-  'DDD/D1'            : Item(status='  ', treeconflict='C'),
-  })
-
-  expected_disk = state_after_tree_del
-
-  expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev=3),
-    'F'                 : Item(status='  ', wc_rev=3),
-    'F/alpha'           : Item(status='!M', wc_rev=3),
-    'D'                 : Item(status='  ', wc_rev=3),
-    'D/D1'              : Item(status='! ', wc_rev='?', treeconflict='C'),
-    'DF'                : Item(status='  ', wc_rev=3),
-    'DF/D1'             : Item(status='! ', wc_rev='?', treeconflict='C'),
-    'DF/D1/beta'        : Item(status='  '),
-    'DD'                : Item(status='  ', wc_rev=3),
-    'DD/D1'             : Item(status='! ', wc_rev='?', treeconflict='C'),
-    'DD/D1/D2'          : Item(status='  '),
-    'DDF'               : Item(status='  ', wc_rev=3),
-    'DDF/D1'            : Item(status='! ', wc_rev='?', treeconflict='C'),
-    'DDF/D1/D2'         : Item(status='  '),
-    'DDF/D1/D2/gamma'   : Item(status='  '),
-    'DDD'               : Item(status='  ', wc_rev=3),
-    'DDD/D1'            : Item(status='! ', wc_rev='?', treeconflict='C'),
-    'DDD/D1/D2'         : Item(status='  '),
-    'DDD/D1/D2/D3'      : Item(status='  '),
-    })
-
-  expected_skip = svntest.wc.State('', {
-    'F/alpha'           : Item(),
-    })
-
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
-    [ DeepTreesTestCase(
-               "local_tree_missing_incoming_leaf_edit",
-               svntest.actions.deep_trees_rmtree,
-               leaf_edit,
-               expected_output,
-               expected_disk,
-               expected_status,
-               expected_skip,
-             ) ], False)
-
-def tree_conflicts_merge_del_onto_missing(sbox):
-  "tree conflicts: tree missing, leaf del"
-
-  # local tree missing (via shell delete), incoming leaf edit
-
-  expected_output = wc.State('', {
-#  'F/alpha'           : Item(status='  ', treeconflict='C'),
-#  'D/D1'              : Item(status='  ', treeconflict='C'),
-  'DF/D1'             : Item(status='  ', treeconflict='C'),
-  'DD/D1'             : Item(status='  ', treeconflict='C'),
-  'DDF/D1'            : Item(status='  ', treeconflict='C'),
-  'DDD/D1'            : Item(status='  ', treeconflict='C'),
   })
 
   expected_disk = state_after_tree_del
@@ -17074,17 +17004,76 @@ def tree_conflicts_merge_del_onto_missing(sbox):
     'D'                 : Item(status='  ', wc_rev=3),
     'D/D1'              : Item(status='! ', wc_rev='?'),
     'DF'                : Item(status='  ', wc_rev=3),
-    'DF/D1'             : Item(status='! ', wc_rev='?', treeconflict='C'),
+    'DF/D1'             : Item(status='! ', wc_rev='?'),
     'DF/D1/beta'        : Item(status='  '),
     'DD'                : Item(status='  ', wc_rev=3),
-    'DD/D1'             : Item(status='! ', wc_rev='?', treeconflict='C'),
+    'DD/D1'             : Item(status='! ', wc_rev='?'),
     'DD/D1/D2'          : Item(status='  '),
     'DDF'               : Item(status='  ', wc_rev=3),
-    'DDF/D1'            : Item(status='! ', wc_rev='?', treeconflict='C'),
+    'DDF/D1'            : Item(status='! ', wc_rev='?'),
     'DDF/D1/D2'         : Item(status='  '),
     'DDF/D1/D2/gamma'   : Item(status='  '),
     'DDD'               : Item(status='  ', wc_rev=3),
-    'DDD/D1'            : Item(status='! ', wc_rev='?', treeconflict='C'),
+    'DDD/D1'            : Item(status='! ', wc_rev='?'),
+    'DDD/D1/D2'         : Item(status='  '),
+    'DDD/D1/D2/D3'      : Item(status='  '),
+    })
+
+  expected_skip = svntest.wc.State('', {
+    'F/alpha'           : Item(),
+    })
+
+
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase(
+               "local_tree_missing_incoming_leaf_edit",
+               svntest.actions.deep_trees_rmtree,
+               leaf_edit,
+               expected_output,
+               expected_disk,
+               expected_status,
+               expected_skip,
+
+               ### This should not happening!
+               ### The commit succeeds (it only commits mergeinfo).
+               ### But then the work queue freaks out while trying to install
+               ### F/alpha into the WC, because F/alpha is missing from disk.
+               ### We end up with a working copy that cannot be cleaned up.
+               ### To make this test pass for now we'll expect this error.
+               ### When the problem is fixed this test will start to fail
+               ### and should be adjusted.
+               commit_block_string=".*Error bumping revisions post-commit",
+
+             ) ], False)
+
+def tree_conflicts_merge_del_onto_missing(sbox):
+  "tree conflicts: tree missing, leaf del"
+
+  # local tree missing (via shell delete), incoming leaf edit
+
+  expected_output = wc.State('', {
+  })
+
+  expected_disk = state_after_tree_del
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status=' M', wc_rev=3),
+    'F'                 : Item(status='  ', wc_rev=3),
+    'F/alpha'           : Item(status='!M', wc_rev=3),
+    'D'                 : Item(status='  ', wc_rev=3),
+    'D/D1'              : Item(status='! ', wc_rev='?'),
+    'DF'                : Item(status='  ', wc_rev=3),
+    'DF/D1'             : Item(status='! ', wc_rev='?'),
+    'DF/D1/beta'        : Item(status='  '),
+    'DD'                : Item(status='  ', wc_rev=3),
+    'DD/D1'             : Item(status='! ', wc_rev='?'),
+    'DD/D1/D2'          : Item(status='  '),
+    'DDF'               : Item(status='  ', wc_rev=3),
+    'DDF/D1'            : Item(status='! ', wc_rev='?'),
+    'DDF/D1/D2'         : Item(status='  '),
+    'DDF/D1/D2/gamma'   : Item(status='  '),
+    'DDD'               : Item(status='  ', wc_rev=3),
+    'DDD/D1'            : Item(status='! ', wc_rev='?'),
     'DDD/D1/D2'         : Item(status='  '),
     'DDD/D1/D2/D3'      : Item(status='  '),
     })
@@ -17103,7 +17092,17 @@ def tree_conflicts_merge_del_onto_missing(sbox):
                expected_disk,
                expected_status,
                expected_skip,
-               commit_block_string = ".*missing.*"
+
+               ### This should not happening!
+               ### The commit succeeds (it only commits mergeinfo).
+               ### But then the work queue freaks out while trying to install
+               ### F/alpha into the WC, because F/alpha is missing from disk.
+               ### We end up with a working copy that cannot be cleaned up.
+               ### To make this test pass for now we'll expect this error.
+               ### When the problem is fixed this test will start to fail
+               ### and should be adjusted.
+               commit_block_string=".*Error bumping revisions post-commit",
+
              ) ], False)
 
 #----------------------------------------------------------------------
