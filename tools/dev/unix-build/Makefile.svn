@@ -318,7 +318,7 @@ apr-util-clean:
 	-(cd $(APR_UTIL_OBJDIR) && make clean)
 
 
-# retrieve apr if not present yet
+# retrieve apr-util if not present yet
 $(APR_UTIL_OBJDIR)/.retrieved:
 	[ -d $(APR_UTIL_OBJDIR) ] || mkdir -p $(APR_UTIL_OBJDIR)
 	if [ ! -d $(APR_UTIL_SRCDIR) ]; then \
@@ -815,9 +815,11 @@ RUBYLIB=$(SVN_PREFIX)/lib/ruby/site_ruby$(shell grep \
 	grep ^svn_cv_ruby_sitedir_libsuffix $(svn_builddir)/config.log | \
 	cut -d'=' -f2)
 svn-check-swig-pl:
-	cd $(svn_builddir) && make check-swig-pl
+	cd $(svn_builddir) && \
+		env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) make check-swig-pl
 svn-check-swig-py:
-	cd $(svn_builddir) && make check-swig-py
+	cd $(svn_builddir) && \
+		env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) make check-swig-py
 svn-check-swig-rb:
 	cd $(svn_builddir)/subversion/bindings/swig/ruby/test && \
 		env RUBYLIB=$(RUBYLIB) \
