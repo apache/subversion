@@ -125,6 +125,63 @@ reverse_propchanges(apr_hash_t *baseprops,
 }
 
 
+/* Set *RESULT_ABSPATH to the absolute path to a readable file containing
+   the pristine text of LOCAL_ABSPATH in DB, or to NULL if it does not have
+   any pristine text.  If the node has more than one pristine text, get the
+   one that is "nearest" to the working version.  That means the pristine
+   text of the copied file if this node is copied or moved here, else of the
+   replaced file if it is an add that replaces a file, else of its base
+   node, or NULL if it is a simple add or an add that replaces a non-file.
+
+   Rationale:
+
+   Which text-base do we want to use for the diff?  If the node is replaced
+   by a new file, then the base of the replaced file is called (in WC-1) the
+   "revert base".  If the replacement is a copy or move, then there is also
+   the base of the copied file to consider.
+
+   One could argue that we should never diff against the revert
+   base, and instead diff against the empty-file for both types of
+   replacement.  After all, there is no ancestry relationship
+   between the working file and the base file.  But my guess is that
+   in practice, users want to see the diff between their working
+   file and "the nearest versioned thing", whatever that is.  I'm
+   not 100% sure this is the right decision, but it at least seems
+   to match our test suite's expectations. */
+static svn_error_t *
+get_nearest_pristine_text_as_file(const char **result_abspath,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool)
+{
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_wc__text_base_path(result_abspath, db, local_abspath,
+                                 result_pool));
+
+  SVN_ERR(svn_io_check_path(*result_abspath, &kind, result_pool));
+  if (kind == svn_node_none)
+    SVN_ERR(svn_wc__text_revert_path(result_abspath, db, local_abspath,
+                                     result_pool));
+
+  /* If there is no revert base to diff either, don't attempt to diff it.
+     ### This is a band-aid.
+     ### In WC-NG, files added within a copied subtree are marked "copied",
+     ### which will cause the code below to end up calling
+     ### eb->callbacks->file_changed() with a non-existent text-base.
+     ### Not sure how to properly tell apart a file added within a copied
+     ### subtree from a copied file. But eventually we'll have to get the
+     ### base text from the pristine store anyway and use tempfiles (or
+     ### streams, hopefully) for diffing, so all this horrible statting
+     ### the disk for text bases, and this hack, will just go away. */
+  SVN_ERR(svn_io_check_path(*result_abspath, &kind, pool));
+  if (kind == svn_node_none)
+    *result_abspath = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
 /*-------------------------------------------------------------------------*/
 
 
@@ -543,50 +600,12 @@ file_diff(struct dir_baton *db,
     revision = revert_base_revnum;
 
   /* Set TEXTBASE to the path to the text-base file that we want to diff
-     against, or to NULL if there isn't one.
+     against.
 
-     If the regular text base is not there, we fall back to the revert
-     text base (if that's not present either, we'll error later).  But
-     the logic here is subtler than one might at first expect.
-
-     When the file has some non-replacement scheduling, then it can be
-     expected to still have its regular text base.  But what about
-     when it's replaced or replaced-with-history?  In both cases, a
-     revert text-base will be present; in the latter case only, a
-     regular text-base be present as well.  So which text-base do we
-     want to use for the diff?
-
-     One could argue that we should never diff against the revert
-     base, and instead diff against the empty-file for both types of
-     replacement.  After all, there is no ancestry relationship
-     between the working file and the base file.  But my guess is that
-     in practice, users want to see the diff between their working
-     file and "the nearest versioned thing", whatever that is.  I'm
-     not 100% sure this is the right decision, but it at least seems
-     to match our test suite's expectations. */
-  {
-    svn_node_kind_t kind;
-
-    SVN_ERR(svn_wc__text_base_path(&textbase, eb->db, local_abspath, pool));
-    SVN_ERR(svn_io_check_path(textbase, &kind, pool));
-    if (kind == svn_node_none)
-      SVN_ERR(svn_wc__text_revert_path(&textbase, eb->db, local_abspath,
-                                       pool));
-
-    /* If there is no revert base to diff either, don't attempt to diff it.
-     * ### This is a band-aid.
-     * ### In WC-NG, files added within a copied subtree are marked "copied",
-     * ### which will cause the code below to end up calling
-     * ### eb->callbacks->file_changed() with a non-existent text-base.
-     * ### Not sure how to properly tell apart a file added within a copied
-     * ### subtree from a copied file. But eventually we'll have to get the
-     * ### base text from the pristine store anyway and use tempfiles (or
-     * ### streams, hopefully) for diffing, so all this horrible statting
-     * ### the disk for text bases, and this hack, will just go away. */
-    SVN_ERR(svn_io_check_path(textbase, &kind, pool));
-    if (kind == svn_node_none)
-      textbase = NULL;
-  }
+     ### There shouldn't be cases where the result is NULL, but at present
+     there might be - see get_nearest_pristine_text_as_file(). */
+  SVN_ERR(get_nearest_pristine_text_as_file(&textbase, eb->db, local_abspath,
+                                            pool));
 
   SVN_ERR(get_empty_file(eb, &empty_file));
 
