@@ -488,541 +488,6 @@ scan_upwards_for_repos(apr_int64_t *repos_id,
 }
 
 
-/* Get the format version from a wc-1 directory. If it is not a working copy
-   directory, then it sets VERSION to zero and returns no error.  */
-static svn_error_t *
-get_old_version(int *version,
-                const char *abspath,
-                apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-  const char *format_file_path;
-
-  /* Try reading the format number from the entries file.  */
-  format_file_path = svn_wc__adm_child(abspath, SVN_WC__ADM_ENTRIES,
-                                       scratch_pool);
-  err = svn_io_read_version_file(version, format_file_path, scratch_pool);
-  if (err == NULL)
-    return SVN_NO_ERROR;
-  if (err->apr_err != SVN_ERR_BAD_VERSION_FILE_FORMAT
-      && !APR_STATUS_IS_ENOENT(err->apr_err)
-      && !APR_STATUS_IS_ENOTDIR(err->apr_err))
-    return svn_error_createf(SVN_ERR_WC_MISSING, err, _("'%s' does not exist"),
-                             svn_dirent_local_style(abspath, scratch_pool));
-  svn_error_clear(err);
-
-  /* This must be a really old working copy!  Fall back to reading the
-     format file.
-
-     Note that the format file might not exist in newer working copies
-     (format 7 and higher), but in that case, the entries file should
-     have contained the format number. */
-  format_file_path = svn_wc__adm_child(abspath, SVN_WC__ADM_FORMAT,
-                                       scratch_pool);
-  err = svn_io_read_version_file(version, format_file_path, scratch_pool);
-  if (err == NULL)
-    return SVN_NO_ERROR;
-
-  /* Whatever error may have occurred... we can just ignore. This is not
-     a working copy directory. Signal the caller.  */
-  svn_error_clear(err);
-
-  *version = 0;
-  return SVN_NO_ERROR;
-}
-
-
-/* POOL may be NULL if the lifetime of LOCAL_ABSPATH is sufficient.  */
-static const char *
-compute_pdh_relpath(const svn_wc__db_pdh_t *pdh,
-                    apr_pool_t *result_pool)
-{
-  const char *relpath = svn_dirent_is_child(pdh->wcroot->abspath,
-                                            pdh->local_abspath,
-                                            result_pool);
-  if (relpath == NULL)
-    return "";
-  return relpath;
-}
-
-
-/* The filesystem has a directory at LOCAL_RELPATH. Examine the metadata
-   to determine if a *file* was supposed to be there.
-
-   ### this function is only required for per-dir .svn support. once all
-   ### metadata is collected in a single wcroot, then we won't need to
-   ### look in subdirs for other metadata.  */
-static svn_error_t *
-determine_obstructed_file(svn_boolean_t *obstructed_file,
-                          const svn_wc__db_wcroot_t *wcroot,
-                          const char *local_relpath,
-                          apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  SVN_ERR_ASSERT(wcroot->sdb != NULL && wcroot->wc_id != UNKNOWN_WC_ID);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_WORKING_IS_FILE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                            wcroot->wc_id,
-                            local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
-    {
-      *obstructed_file = svn_sqlite__column_boolean(stmt, 0);
-    }
-  else
-    {
-      SVN_ERR(svn_sqlite__reset(stmt));
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_BASE_IS_FILE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                wcroot->wc_id,
-                                local_relpath));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      if (have_row)
-        *obstructed_file = svn_sqlite__column_boolean(stmt, 0);
-    }
-
-  return svn_sqlite__reset(stmt);
-}
-
-
-/* */
-static svn_error_t *
-open_db(svn_sqlite__db_t **sdb,
-        const char *dir_abspath,
-        const char *sdb_fname,
-        svn_sqlite__mode_t smode,
-        apr_pool_t *result_pool,
-        apr_pool_t *scratch_pool)
-{
-  const char *sdb_abspath = svn_wc__adm_child(dir_abspath, sdb_fname,
-                                              scratch_pool);
-
-  return svn_error_return(svn_sqlite__open(sdb, sdb_abspath,
-                                           smode, statements,
-                                           0, NULL,
-                                           result_pool, scratch_pool));
-}
-
-
-/* For a given LOCAL_ABSPATH, figure out what sqlite database (PDH) to
-   use and the RELPATH within that wcroot.  If a sqlite database needs
-   to be opened, then use SMODE for it.
-
-   *LOCAL_RELPATH will be allocated within RESULT_POOL. Temporary allocations
-   will be made in SCRATCH_POOL.
-
-   *PDH will be allocated within DB->STATE_POOL.
-
-   Certain internal structures will be allocated in DB->STATE_POOL.
-*/
-static svn_error_t *
-parse_local_abspath(svn_wc__db_pdh_t **pdh,
-                    const char **local_relpath,
-                    svn_wc__db_t *db,
-                    const char *local_abspath,
-                    svn_sqlite__mode_t smode,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
-{
-  const char *original_abspath = local_abspath;
-  svn_node_kind_t kind;
-  svn_boolean_t special;
-  const char *build_relpath;
-  svn_wc__db_pdh_t *found_pdh = NULL;
-  svn_wc__db_pdh_t *child_pdh;
-  svn_boolean_t obstruction_possible = FALSE;
-  svn_sqlite__db_t *sdb;
-  svn_boolean_t moved_upwards = FALSE;
-  svn_boolean_t always_check = FALSE;
-  int wc_format = 0;
-
-  /* ### we need more logic for finding the database (if it is located
-     ### outside of the wcroot) and then managing all of that within DB.
-     ### for now: play quick & dirty. */
-
-  /* ### for now, overwrite the provided mode.  We currently cache the
-     ### sdb handles, which is great but for the occasion where we
-     ### initially open the sdb in readonly mode and then later want
-     ### to write to it.  The solution is to reopen the db in readwrite
-     ### mode, but that assumes we can track the fact that it was
-     ### originally opened readonly.  So for now, just punt and open
-     ### everything in readwrite mode.  */
-  smode = svn_sqlite__mode_readwrite;
-
-  *pdh = apr_hash_get(db->dir_data, local_abspath, APR_HASH_KEY_STRING);
-  if (*pdh != NULL && (*pdh)->wcroot != NULL)
-    {
-      /* We got lucky. Just return the thing BEFORE performing any I/O.  */
-      /* ### validate SMODE against how we opened wcroot->sdb? and against
-         ### DB->mode? (will we record per-dir mode?)  */
-
-      /* ### for most callers, we could pass NULL for result_pool.  */
-      *local_relpath = compute_pdh_relpath(*pdh, result_pool);
-
-      return SVN_NO_ERROR;
-    }
-
-  /* ### at some point in the future, we may need to find a way to get
-     ### rid of this stat() call. it is going to happen for EVERY call
-     ### into wc_db which references a file. calls for directories could
-     ### get an early-exit in the hash lookup just above.  */
-  SVN_ERR(svn_io_check_special_path(local_abspath, &kind,
-                                    &special /* unused */, scratch_pool));
-  if (kind != svn_node_dir)
-    {
-      /* If the node specified by the path is NOT present, then it cannot
-         possibly be a directory containing ".svn/wc.db".
-
-         If it is a file, then it cannot contain ".svn/wc.db".
-
-         For both of these cases, strip the basename off of the path and
-         move up one level. Keep record of what we strip, though, since
-         we'll need it later to construct local_relpath.  */
-      svn_dirent_split(local_abspath, &local_abspath, &build_relpath,
-                       scratch_pool);
-
-      /* ### if *pdh != NULL (from further above), then there is (quite
-         ### probably) a bogus value in the DIR_DATA hash table. maybe
-         ### clear it out? but what if there is an access baton?  */
-
-      /* Is this directory in our hash?  */
-      *pdh = apr_hash_get(db->dir_data, local_abspath, APR_HASH_KEY_STRING);
-      if (*pdh != NULL && (*pdh)->wcroot != NULL)
-        {
-          const char *dir_relpath;
-
-          /* Stashed directory's local_relpath + basename. */
-          dir_relpath = compute_pdh_relpath(*pdh, NULL);
-          *local_relpath = svn_relpath_join(dir_relpath,
-                                            build_relpath,
-                                            result_pool);
-          return SVN_NO_ERROR;
-        }
-
-      /* If the requested path is not on the disk, then we don't know how
-         many ancestors need to be scanned until we start hitting content
-         on the disk. Set ALWAYS_CHECK to keep looking for .svn/entries
-         rather than bailing out after the first check.  */
-      if (kind == svn_node_none)
-        always_check = TRUE;
-    }
-  else
-    {
-      /* Start the local_relpath empty. If *this* directory contains the
-         wc.db, then relpath will be the empty string.  */
-      build_relpath = "";
-
-      /* It is possible that LOCAL_ABSPATH was *intended* to be a file,
-         but we just found a directory in its place. After we build
-         the PDH, then we'll examine the parent to see how it describes
-         this particular path.
-
-         ### this is only possible with per-dir wc.db databases.  */
-      obstruction_possible = TRUE;
-    }
-
-  /* LOCAL_ABSPATH refers to a directory at this point. The PDH corresponding
-     to that directory is what we need to return. At this point, we've
-     determined that a PDH with a discovered WCROOT is NOT in the DB's hash
-     table of wcdirs. Let's fill in an existing one, or create one. Then
-     go figure out where the WCROOT is.  */
-
-  if (*pdh == NULL)
-    {
-      *pdh = apr_pcalloc(db->state_pool, sizeof(**pdh));
-      (*pdh)->local_abspath = apr_pstrdup(db->state_pool, local_abspath);
-    }
-  else
-    {
-      /* The PDH should have been built correctly (so far).  */
-      SVN_ERR_ASSERT(strcmp((*pdh)->local_abspath, local_abspath) == 0);
-    }
-
-  /* Assume that LOCAL_ABSPATH is a directory, and look for the SQLite
-     database in the right place. If we find it... great! If not, then
-     peel off some components, and try again. */
-
-  while (TRUE)
-    {
-      svn_error_t *err;
-
-      err = open_db(&sdb, local_abspath, SDB_FILE, smode,
-                    db->state_pool, scratch_pool);
-      if (err == NULL)
-        break;
-      if (err->apr_err != SVN_ERR_SQLITE_ERROR
-          && !APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_return(err);
-      svn_error_clear(err);
-
-      /* If we have not moved upwards, then check for a wc-1 working copy.
-         Since wc-1 has a .svn in every directory, and we didn't find one
-         in the original directory, then we aren't looking at a wc-1.
-
-         If the original path is not present, then we have to check on every
-         iteration. The content may be the immediate parent, or possibly
-         five ancetors higher. We don't test for directory presence (just
-         for the presence of subdirs/files), so we don't know when we can
-         stop checking ... so just check always.  */
-      if (!moved_upwards || always_check)
-        {
-          SVN_ERR(get_old_version(&wc_format, local_abspath, scratch_pool));
-          if (wc_format != 0)
-            break;
-        }
-
-      /* We couldn't open the SDB within the specified directory, so
-         move up one more directory. */
-      if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
-        {
-          /* Hit the root without finding a wcroot. */
-          return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                                   _("'%s' is not a working copy"),
-                                   svn_dirent_local_style(original_abspath,
-                                                          scratch_pool));
-        }
-
-      local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-
-      moved_upwards = TRUE;
-
-      /* An obstruction is no longer possible.
-
-         Example: we were given "/some/file" and "file" turned out to be
-         a directory. We did not find an SDB at "/some/file/.svn/wc.db",
-         so we are now going to look at "/some/.svn/wc.db". That SDB will
-         contain the correct information for "file".
-
-         ### obstruction is only possible with per-dir wc.db databases.  */
-      obstruction_possible = FALSE;
-
-      /* Is the parent directory recorded in our hash?  */
-      found_pdh = apr_hash_get(db->dir_data,
-                               local_abspath, APR_HASH_KEY_STRING);
-      if (found_pdh != NULL)
-        {
-          if (found_pdh->wcroot != NULL)
-            break;
-          found_pdh = NULL;
-        }
-    }
-
-  if (found_pdh != NULL)
-    {
-      /* We found a PDH with data in it. We can now construct the child
-         from this, rather than continuing to scan upwards.  */
-
-      /* The subdirectory uses the same WCROOT as the parent dir.  */
-      (*pdh)->wcroot = found_pdh->wcroot;
-    }
-  else if (wc_format == 0)
-    {
-      /* We finally found the database. Construct the PDH record.  */
-
-      apr_int64_t wc_id;
-      svn_error_t *err;
-
-      err = svn_wc__db_util_fetch_wc_id(&wc_id, sdb, scratch_pool);
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_WC_CORRUPT)
-            return svn_error_quick_wrap(
-              err, apr_psprintf(scratch_pool,
-                                _("Missing a row in WCROOT for '%s'."),
-                                svn_dirent_local_style(original_abspath,
-                                                       scratch_pool)));
-          return svn_error_return(err);
-        }
-
-      /* WCROOT.local_abspath may be NULL when the database is stored
-         inside the wcroot, but we know the abspath is this directory
-         (ie. where we found it).  */
-
-      SVN_ERR(svn_wc__db_pdh_create_wcroot(&(*pdh)->wcroot,
-                            apr_pstrdup(db->state_pool, local_abspath),
-                            sdb, wc_id, FORMAT_FROM_SDB,
-                            db->auto_upgrade, db->enforce_empty_wq,
-                            db->state_pool, scratch_pool));
-    }
-  else
-    {
-      /* We found a wc-1 working copy directory.  */
-      SVN_ERR(svn_wc__db_pdh_create_wcroot(&(*pdh)->wcroot,
-                            apr_pstrdup(db->state_pool, local_abspath),
-                            NULL, UNKNOWN_WC_ID, wc_format,
-                            db->auto_upgrade, db->enforce_empty_wq,
-                            db->state_pool, scratch_pool));
-
-      /* Don't test for a directory obstructing a versioned file. The wc-1
-         code can manage that itself.  */
-      obstruction_possible = FALSE;
-    }
-
-  {
-    const char *dir_relpath;
-
-    /* The subdirectory's relpath is easily computed relative to the
-       wcroot that we just found.  */
-    dir_relpath = compute_pdh_relpath(*pdh, NULL);
-
-    /* And the result local_relpath may include a filename.  */
-    *local_relpath = svn_relpath_join(dir_relpath, build_relpath, result_pool);
-  }
-
-  /* Check to see if this (versioned) directory is obstructing what should
-     be a file in the parent directory.
-
-     ### obstruction is only possible with per-dir wc.db databases.  */
-  if (obstruction_possible)
-    {
-      const char *parent_dir;
-      svn_wc__db_pdh_t *parent_pdh;
-
-      /* We should NOT have moved up a directory.  */
-      assert(!moved_upwards);
-
-      /* Get/make a PDH for the parent.  */
-      parent_dir = svn_dirent_dirname(local_abspath, scratch_pool);
-      parent_pdh = apr_hash_get(db->dir_data, parent_dir, APR_HASH_KEY_STRING);
-      if (parent_pdh == NULL || parent_pdh->wcroot == NULL)
-        {
-          svn_error_t *err = open_db(&sdb, parent_dir, SDB_FILE, smode,
-                                     db->state_pool, scratch_pool);
-          if (err)
-            {
-              if (err->apr_err != SVN_ERR_SQLITE_ERROR
-                  && !APR_STATUS_IS_ENOENT(err->apr_err))
-                return svn_error_return(err);
-              svn_error_clear(err);
-
-              /* No parent, so we're at a wcroot apparently. An obstruction
-                 is (therefore) not possible.  */
-              parent_pdh = NULL;
-            }
-          else
-            {
-              /* ### construct this according to per-dir semantics.  */
-              if (parent_pdh == NULL)
-                {
-                  parent_pdh = apr_pcalloc(db->state_pool,
-                                           sizeof(*parent_pdh));
-                  parent_pdh->local_abspath = apr_pstrdup(db->state_pool,
-                                                          parent_dir);
-                }
-              else
-                {
-                  /* The PDH should have been built correctly (so far).  */
-                  SVN_ERR_ASSERT(strcmp(parent_pdh->local_abspath,
-                                        parent_dir) == 0);
-                }
-
-              SVN_ERR(svn_wc__db_pdh_create_wcroot(&parent_pdh->wcroot,
-                                    parent_pdh->local_abspath,
-                                    sdb,
-                                    1 /* ### hack.  */,
-                                    FORMAT_FROM_SDB,
-                                    db->auto_upgrade, db->enforce_empty_wq,
-                                    db->state_pool, scratch_pool));
-
-              apr_hash_set(db->dir_data,
-                           parent_pdh->local_abspath, APR_HASH_KEY_STRING,
-                           parent_pdh);
-
-              (*pdh)->parent = parent_pdh;
-            }
-        }
-
-      if (parent_pdh)
-        {
-          const char *lookfor_relpath = svn_dirent_basename(local_abspath,
-                                                            scratch_pool);
-
-          /* Was there supposed to be a file sitting here?  */
-          SVN_ERR(determine_obstructed_file(&(*pdh)->obstructed_file,
-                                            parent_pdh->wcroot,
-                                            lookfor_relpath,
-                                            scratch_pool));
-
-          /* If we determined that a file was supposed to be at the
-             LOCAL_ABSPATH requested, then return the PDH and LOCAL_RELPATH
-             which describes that file.  */
-          if ((*pdh)->obstructed_file)
-            {
-              *pdh = parent_pdh;
-              *local_relpath = apr_pstrdup(result_pool, lookfor_relpath);
-              return SVN_NO_ERROR;
-            }
-        }
-    }
-
-  /* The PDH is complete. Stash it into DB.  */
-  apr_hash_set(db->dir_data,
-               (*pdh)->local_abspath, APR_HASH_KEY_STRING,
-               *pdh);
-
-  /* Did we traverse up to parent directories?  */
-  if (!moved_upwards)
-    {
-      /* We did NOT move to a parent of the original requested directory.
-         We've constructed and filled in a PDH for the request, so we
-         are done.  */
-      return SVN_NO_ERROR;
-    }
-
-  /* The PDH that we just built was for the LOCAL_ABSPATH originally passed
-     into this function. We stepped *at least* one directory above that.
-     We should now create PDH records for each parent directory that does
-     not (yet) have one.  */
-
-  child_pdh = *pdh;
-
-  do
-    {
-      const char *parent_dir = svn_dirent_dirname(child_pdh->local_abspath,
-                                                  scratch_pool);
-      svn_wc__db_pdh_t *parent_pdh;
-
-      parent_pdh = apr_hash_get(db->dir_data, parent_dir, APR_HASH_KEY_STRING);
-      if (parent_pdh == NULL)
-        {
-          parent_pdh = apr_pcalloc(db->state_pool, sizeof(*parent_pdh));
-          parent_pdh->local_abspath = apr_pstrdup(db->state_pool, parent_dir);
-
-          /* All the PDHs have the same wcroot.  */
-          parent_pdh->wcroot = (*pdh)->wcroot;
-
-          apr_hash_set(db->dir_data,
-                       parent_pdh->local_abspath, APR_HASH_KEY_STRING,
-                       parent_pdh);
-        }
-      else if (parent_pdh->wcroot == NULL)
-        {
-          parent_pdh->wcroot = (*pdh)->wcroot;
-        }
-
-      /* Point the child PDH at this (new) parent PDH. This will allow for
-         easy traversals without path munging.  */
-      child_pdh->parent = parent_pdh;
-      child_pdh = parent_pdh;
-
-      /* Loop if we haven't reached the PDH we found, or the abspath
-         where we terminated the search (when we found wc.db). Note that
-         if we never located a PDH in our ancestry, then FOUND_PDH will
-         be NULL and that portion of the test will always be TRUE.  */
-    }
-  while (child_pdh != found_pdh
-         && strcmp(child_pdh->local_abspath, local_abspath) != 0);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Get the statement given by STMT_IDX, and bind the appropriate wc_id and
    local_relpath based upon LOCAL_ABSPATH.  Store it in *STMT, and use
    SCRATCH_POOL for temporary allocations.
@@ -1040,8 +505,8 @@ get_statement_for_path(svn_sqlite__stmt_t **stmt,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -1068,7 +533,7 @@ navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
     return SVN_NO_ERROR;
 
   parent_abspath = svn_dirent_dirname(child_pdh->local_abspath, scratch_pool);
-  SVN_ERR(parse_local_abspath(parent_pdh, &local_relpath, db,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(parent_pdh, &local_relpath, db,
                               parent_abspath, smode,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(*parent_pdh);
@@ -1350,8 +815,8 @@ gather_children(const apr_array_header_t **children,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -1505,9 +970,9 @@ create_db(svn_sqlite__db_t **sdb,
 {
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR(open_db(sdb, dir_abspath, sdb_fname,
-                  svn_sqlite__mode_rwcreate,
-                  result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_util_open_db(sdb, dir_abspath, sdb_fname,
+                                  svn_sqlite__mode_rwcreate, result_pool,
+                                  scratch_pool));
 
   /* Create the database's schema.  */
   SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_SCHEMA));
@@ -1602,8 +1067,8 @@ svn_wc__db_to_relpath(const char **local_relpath,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readonly,
                               result_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -1626,8 +1091,8 @@ svn_wc__db_from_relpath(const char **local_abspath,
   SVN_ERR_ASSERT(svn_relpath_is_canonical(local_abspath));
 #endif
 
-  SVN_ERR(parse_local_abspath(&pdh, &unused_relpath, db, wri_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &unused_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -1671,8 +1136,8 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
   SVN_ERR_ASSERT(children != NULL);
 #endif
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -1745,8 +1210,8 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
   SVN_ERR_ASSERT(checksum != NULL);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -1817,8 +1282,8 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
   SVN_ERR_ASSERT(target != NULL);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -1885,8 +1350,8 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                  || status == svn_wc__db_status_excluded
                  || status == svn_wc__db_status_not_present);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -1954,8 +1419,8 @@ svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
   SVN_ERR_ASSERT(props != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(changed_rev));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -1996,8 +1461,8 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -2042,8 +1507,8 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -2334,8 +1799,8 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
   SVN_ERR_ASSERT(sha1_checksum != NULL);
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -2363,8 +1828,8 @@ svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
   SVN_ERR_ASSERT(temp_dir_abspath != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -2405,8 +1870,8 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
                                                       scratch_pool),
                                    scratch_pool);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -2449,8 +1914,8 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
   SVN_ERR_ASSERT(sha1_checksum != NULL);
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -2489,8 +1954,8 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
   SVN_ERR_ASSERT(sha1_checksum != NULL);
   SVN_ERR_ASSERT(md5_checksum->kind == svn_checksum_md5);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -2526,8 +1991,8 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
   SVN_ERR_ASSERT(sha1_checksum != NULL);
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -2592,8 +2057,8 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
   SVN_ERR_ASSERT(sha1_checksum != NULL);
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -2647,8 +2112,8 @@ svn_wc__db_repos_ensure(apr_int64_t *repos_id,
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -2701,8 +2166,8 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
 #endif
   SVN_ERR_ASSERT(conflict == NULL);  /* ### can't handle yet  */
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -2794,8 +2259,8 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
   SVN_ERR_ASSERT(checksum != NULL);
   SVN_ERR_ASSERT(conflict == NULL);  /* ### can't handle yet  */
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -2861,8 +2326,8 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
   SVN_ERR_ASSERT(target != NULL);
   SVN_ERR_ASSERT(conflict == NULL);  /* ### can't handle yet  */
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -2913,8 +2378,8 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -2973,8 +2438,8 @@ svn_wc__db_op_add_file(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -3010,8 +2475,8 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(target != NULL);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -3104,8 +2569,8 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
   spb.conflict = conflict;
   spb.work_items = work_items;
 
-  SVN_ERR(parse_local_abspath(&spb.pdh, &spb.local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&spb.pdh, &spb.local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
 
   return svn_error_return(
@@ -3280,8 +2745,8 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &scb.local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &scb.local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -3325,8 +2790,8 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
   /* ### we're not ready to handy RESOLVED_TREE just yet.  */
   SVN_ERR_ASSERT(!resolved_tree);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -3443,8 +2908,8 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   stb.parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  SVN_ERR(parse_local_abspath(&pdh, &stb.local_relpath, db, stb.parent_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &stb.local_relpath, db,
+                              stb.parent_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -3489,8 +2954,8 @@ svn_wc__db_op_read_all_tree_conflicts(apr_hash_t **tree_conflicts,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -3576,8 +3041,8 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -3629,8 +3094,8 @@ svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -3711,8 +3176,8 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(depth >= svn_depth_empty && depth <= svn_depth_infinity);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -3760,8 +3225,8 @@ db_working_update_presence(svn_wc__db_status_t status,
   svn_sqlite__stmt_t *stmt;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -3792,8 +3257,8 @@ db_working_actual_remove(svn_wc__db_t *db,
   svn_sqlite__stmt_t *stmt;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
 
   VERIFY_USABLE_PDH(pdh);
@@ -3842,8 +3307,8 @@ db_working_insert(svn_wc__db_status_t status,
   svn_sqlite__stmt_t *stmt;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -4163,8 +3628,8 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -4776,8 +4241,8 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  SVN_ERR(parse_local_abspath(&pdh, &rb.local_relpath, db, local_dir_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &rb.local_relpath, db,
+                              local_dir_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -5167,8 +4632,8 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(new_revision));
   SVN_ERR_ASSERT(new_checksum == NULL || new_children == NULL);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -5269,8 +4734,8 @@ svn_wc__db_global_update(svn_wc__db_t *db,
                      && new_checksum == NULL
                      && new_target != NULL));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -5365,8 +4830,8 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -5403,8 +4868,8 @@ svn_wc__db_lock_add(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(lock != NULL);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -5448,8 +4913,8 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -5485,8 +4950,8 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -5547,8 +5012,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
   if (original_revision)
     *original_revision = SVN_INVALID_REVNUM;
 
-  SVN_ERR(parse_local_abspath(&pdh, &current_relpath, db, current_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &current_relpath, db,
+                              current_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -5682,7 +5147,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                                      scratch_pool));
         }
       current_abspath = pdh->local_abspath;
-      current_relpath = compute_pdh_relpath(pdh, NULL);
+      current_relpath = svn_wc__db_pdh_compute_relpath(pdh, NULL);
     }
 
   /* If we're here, then we have an added/copied/moved (start) node, and
@@ -5693,7 +5158,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
     {
       const char *base_relpath;
 
-      /* ### unwrap this. we can optimize away the parse_local_abspath.  */
+      /* ### unwrap this. we can optimize away the
+             svn_wc__db_pdh_parse_local_abspath().  */
       SVN_ERR(svn_wc__db_scan_base_repos(&base_relpath, repos_root_url,
                                          repos_uuid, db, current_abspath,
                                          result_pool, scratch_pool));
@@ -5741,8 +5207,8 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
      transition.  */
   child_presence = svn_wc__db_status_base_deleted;
 
-  SVN_ERR(parse_local_abspath(&pdh, &current_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &current_relpath, db,
+                              local_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -5913,7 +5379,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
                                      scratch_pool));
         }
       current_abspath = pdh->local_abspath;
-      current_relpath = compute_pdh_relpath(pdh, NULL);
+      current_relpath = svn_wc__db_pdh_compute_relpath(pdh, NULL);
     }
 
   return SVN_NO_ERROR;
@@ -6062,8 +5528,8 @@ svn_wc__db_wq_add(svn_wc__db_t *db,
   if (work_item == NULL)
     return SVN_NO_ERROR;
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -6111,8 +5577,8 @@ svn_wc__db_wq_fetch(apr_uint64_t *id,
   SVN_ERR_ASSERT(work_item != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -6173,8 +5639,8 @@ svn_wc__db_wq_completed(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
   SVN_ERR_ASSERT(id != 0);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -6235,8 +5701,8 @@ svn_wc__db_temp_get_format(int *format,
       const char *local_relpath;
       svn_error_t *err;
 
-      err = parse_local_abspath(&pdh, &local_relpath, db, local_dir_abspath,
-                                svn_sqlite__mode_readonly,
+      err = svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                                local_dir_abspath, svn_sqlite__mode_readonly,
                                 scratch_pool, scratch_pool);
       /* NOTE: pdh does *not* have to have a usable format.  */
 
@@ -6484,7 +5950,7 @@ svn_wc__db_temp_borrow_sdb(svn_sqlite__db_t **sdb,
   else
     smode = svn_sqlite__mode_readwrite;
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath,
                               db, local_dir_abspath, smode,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
@@ -6524,8 +5990,8 @@ svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
   /* The parent should be a working copy if this function is called.
      Basically, the child is in an "added" state, which is not possible
      for a working copy root.  */
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, parent_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              parent_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -6584,8 +6050,8 @@ svn_wc__db_temp_set_keep_local(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* First flush the entries */
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   flush_entries(pdh);
 
@@ -6615,8 +6081,8 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
   *victims = NULL;
 
   /* The parent should be a working copy directory. */
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -6694,8 +6160,8 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
   apr_array_header_t *cflcts;
 
   /* The parent should be a working copy directory. */
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -6819,8 +6285,8 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -6868,8 +6334,8 @@ svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
   SVN_ERR_ASSERT(temp_dir_abspath != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, wri_abspath,
-                              svn_sqlite__mode_readonly,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -6895,8 +6361,8 @@ svn_wc__db_wclock_set(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -7128,8 +6594,8 @@ svn_wc__db_temp_op_set_working_checksum(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -7221,8 +6687,8 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(new_rev));
   SVN_ERR_ASSERT(svn_relpath_is_canonical(new_repos_relpath, scratch_pool));
 
-  SVN_ERR(parse_local_abspath(&pdh, &du.local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &du.local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -7349,7 +6815,8 @@ make_copy_txn(void *baton,
       svn_pool_clear(iterpool);
       cbt.local_abspath = svn_dirent_join(mcb->local_abspath, name, iterpool);
 
-      SVN_ERR(parse_local_abspath(&cbt.pdh, &cbt.local_relpath, mcb->db,
+      SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&cbt.pdh,
+                                  &cbt.local_relpath, mcb->db,
                                   cbt.local_abspath,
                                   svn_sqlite__mode_readwrite,
                                   iterpool, iterpool));
@@ -7564,8 +7031,8 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&mcb.pdh, &mcb.local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&mcb.pdh, &mcb.local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(mcb.pdh);
 
@@ -7606,8 +7073,8 @@ svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
@@ -7750,8 +7217,8 @@ svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
 
   svn_dirent_split(local_abspath, &parent_abspath, &name, scratch_pool);
 
-  SVN_ERR(parse_local_abspath(&pdh, &local_relpath, db, local_abspath,
-                              svn_sqlite__mode_readwrite,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
   
