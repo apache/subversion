@@ -42,8 +42,7 @@
 #include "entries.h"
 #include "lock.h"
 #include "tree_conflicts.h"
-#include "wc_db_pdh.h"
-#include "wc_db_util.h"
+#include "wc_db_private.h"
 #include "workqueue.h"
 
 #include "svn_private_config.h"

@@ -161,4 +161,20 @@ const char *
 svn_wc__db_pdh_compute_relpath(const svn_wc__db_pdh_t *pdh,
                                apr_pool_t *result_pool);
 
+/* */
+svn_error_t *
+svn_wc__db_util_fetch_wc_id(apr_int64_t *wc_id,
+                            svn_sqlite__db_t *sdb,
+                            apr_pool_t *scratch_pool);
+
+/* */
+svn_error_t *
+svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
+                        const char *dir_abspath,
+                        const char *sdb_fname,
+                        svn_sqlite__mode_t smode,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+
 #endif /* WC_DB_PDH_H */
