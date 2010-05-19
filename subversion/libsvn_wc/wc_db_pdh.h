@@ -122,4 +122,18 @@ svn_wc__db_close_many_wcroots(apr_hash_t *roots,
                               apr_pool_t *state_pool,
                               apr_pool_t *scratch_pool);
 
+
+/* Construct a new svn_wc__db_wcroot_t. The WCROOT_ABSPATH and SDB parameters
+   must have lifetime of at least RESULT_POOL.  */
+svn_error_t *
+svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
+                             const char *wcroot_abspath,
+                             svn_sqlite__db_t *sdb,
+                             apr_int64_t wc_id,
+                             int format,
+                             svn_boolean_t auto_upgrade,
+                             svn_boolean_t enforce_empty_wq,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
 #endif /* WC_DB_PDH_H */
