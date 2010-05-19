@@ -909,7 +909,7 @@ jobject CreateJ::Set(std::vector<jobject> &objects)
     {
       jobject jthing = *it;
 
-      env->CallObjectMethod(set, add_mid, jthing);
+      env->CallBooleanMethod(set, add_mid, jthing);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
