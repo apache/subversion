@@ -458,7 +458,8 @@ delete_entry(const char *path,
   svn_wc_notify_action_t action = svn_wc_notify_skip;
   svn_boolean_t tree_conflicted = FALSE;
 
-  /* Skip *everything* within a newly tree-conflicted directory. */
+  /* Skip *everything* within a newly tree-conflicted directory,
+   * and directories the children of which should be skipped. */
   if (pb->skip || pb->tree_conflicted || pb->skip_children)
     return SVN_NO_ERROR;
 
@@ -560,7 +561,8 @@ add_directory(const char *path,
   b->pristine_props = eb->empty_hash;
   *child_baton = b;
 
-  /* Skip *everything* within a newly tree-conflicted directory. */
+  /* Skip *everything* within a newly tree-conflicted directory,
+   * and directories the children of which should be skipped. */
   if (pb->skip || pb->tree_conflicted || pb->skip_children)
     {
       b->skip = TRUE;
@@ -648,7 +650,7 @@ open_directory(const char *path,
   *child_baton = b;
 
   /* Skip *everything* within a newly tree-conflicted directory
-   * or directories the children of which should be skipped. */
+   * and directories the children of which should be skipped. */
   if (pb->skip || pb->tree_conflicted || pb->skip_children)
     {
       b->skip = TRUE;
@@ -685,7 +687,8 @@ add_file(const char *path,
   b = make_file_baton(path, TRUE, pb->edit_baton, pool);
   *file_baton = b;
 
-  /* Skip *everything* within a newly tree-conflicted directory. */
+  /* Skip *everything* within a newly tree-conflicted directory.
+   * and directories the children of which should be skipped. */
   if (pb->skip || pb->tree_conflicted || pb->skip_children)
     {
       b->skip = TRUE;
@@ -711,7 +714,8 @@ open_file(const char *path,
   b = make_file_baton(path, FALSE, pb->edit_baton, pool);
   *file_baton = b;
 
-  /* Skip *everything* within a newly tree-conflicted directory. */
+  /* Skip *everything* within a newly tree-conflicted directory
+   * and directories the children of which should be skipped. */
   if (pb->skip || pb->tree_conflicted || pb->skip_children)
     {
       b->skip = TRUE;

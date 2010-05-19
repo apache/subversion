@@ -17034,7 +17034,7 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
                expected_status,
                expected_skip,
 
-               ### This should not happening!
+               ### This should not be happening!
                ### The commit succeeds (it only commits mergeinfo).
                ### But then the work queue freaks out while trying to install
                ### F/alpha into the WC, because F/alpha is missing from disk.
@@ -17093,7 +17093,7 @@ def tree_conflicts_merge_del_onto_missing(sbox):
                expected_status,
                expected_skip,
 
-               ### This should not happening!
+               ### This should not be happening!
                ### The commit succeeds (it only commits mergeinfo).
                ### But then the work queue freaks out while trying to install
                ### F/alpha into the WC, because F/alpha is missing from disk.
