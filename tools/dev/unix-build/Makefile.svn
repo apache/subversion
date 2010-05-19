@@ -59,12 +59,13 @@ APR_ICONV_VER	= 1.2.1
 APR_UTIL_VER	= 1.3.9
 HTTPD_VER	= 2.2.14
 NEON_VER	= 0.29.3
-SERF_VER	= 0.3.0
+SERF_VER	= 0.4.0
 SQLITE_VER	= 3.6.22
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
 NEON_DIST	= neon-$(NEON_VER).tar.gz
+SERF_DIST	= serf-$(SERF_VER).tar.gz
 SQLITE_DIST	= sqlite-$(SQLITE_VER).tar.gz
 HTTPD_DIST	= httpd-$(HTTPD_VER).tar.bz2
 
@@ -83,9 +84,7 @@ APR_ICONV_URL	= ftp://ftp.fu-berlin.de/unix/www/apache/apr/$(APR_ICONV_DIST)
 APR_UTIL_URL	= http://svn.apache.org/repos/asf/apr/apr-util
 HTTPD_URL	= http://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
-SERF_REPOS_URL = http://serf.googlecode.com/svn
-SERF_URL	= $(SERF_REPOS_URL)/tags/$(SERF_VER)
-SERF_TRUNK_URL = $(SERF_REPOS_URL)/trunk
+SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
 SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
@@ -435,9 +434,9 @@ neon-reset:
 neon-clean:
 	-(cd $(NEON_OBJDIR) && make clean)
 
-# fetch distfile for neon
-$(DISTDIR)/$(NEON_DIST):
-	cd $(DISTDIR) && $(FETCH_CMD) $(NEON_URL)
+# fetch distfile for serf
+$(DISTDIR)/$(SERF_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(SERF_URL)
 
 # retrieve neon
 $(NEON_OBJDIR)/.retrieved: $(DISTDIR)/$(NEON_DIST)
@@ -482,23 +481,19 @@ serf-clean:
 	-(cd $(SERF_SRCDIR) && ./serfmake clean)
 
 
-# retrieve serf if not present yet
-# r1221 fixes apr/apr-util detection in serfmake 
-$(SERF_OBJDIR)/.retrieved:
+# fetch distfile for neon
+$(DISTDIR)/$(NEON_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(NEON_URL)
+#
+# retrieve serf
+$(SERF_OBJDIR)/.retrieved: $(DISTDIR)/$(SERF_DIST)
 	[ -d $(SERF_OBJDIR) ] || mkdir -p $(SERF_OBJDIR)
-	if [ ! -d $(SERF_SRCDIR) ]; then \
-		svn export $(SERF_URL) \
-				$(SERF_SRCDIR) && \
-		(cd $(SERF_SRCDIR) && \
-			svn diff -c1221 $(SERF_TRUNK_URL) \
-			| patch -p0); \
-	fi
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SERF_DIST)
 	touch $@
 
 # compile serf (serf won't compile outside its source tree)
 $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved
 	cd $(SERF_SRCDIR) && \
-		svn up || true && \
 		./serfmake --with-apr=$(PREFIX)/apr \
 			--with-apr-util=$(PREFIX)/apr \
 			--prefix=$(PREFIX)/serf \
