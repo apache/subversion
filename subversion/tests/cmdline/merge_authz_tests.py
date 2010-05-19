@@ -224,7 +224,6 @@ def mergeinfo_and_skipped_paths(sbox):
   # parent of a missing child and the sibling of missing child, but the former
   # always takes precedence in terms of getting *non*-inheritable mergeinfo.
   expected_output = wc.State(A_COPY_2_path, {
-    'D/G'       : Item(status='  ', treeconflict='C'),
     'D/H/omega' : Item(status='U '),
     })
   expected_mergeinfo_output = wc.State(A_COPY_2_path, {
@@ -238,7 +237,6 @@ def mergeinfo_and_skipped_paths(sbox):
     })
   expected_status = wc.State(A_COPY_2_path, {
     ''          : Item(status=' M', wc_rev=8),
-    'D/G'       : Item(status='! ', treeconflict='C'),
     'D/H/chi'   : Item(status='  ', wc_rev=8),
     'D/H/omega' : Item(status='MM', wc_rev=8),
     'D/H'       : Item(status=' M', wc_rev=8),
@@ -272,6 +270,7 @@ def mergeinfo_and_skipped_paths(sbox):
     })
   expected_skip = wc.State(A_COPY_2_path, {
     'B/E'     : Item(),
+    'D/G'       : Item(),
     'D/H/psi'   : Item(),
     })
   saved_cwd = os.getcwd()
