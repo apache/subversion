@@ -341,15 +341,15 @@ svn_wc__db_close_many_wcroots(apr_hash_t *roots,
 /* Construct a new svn_wc__db_wcroot_t. The WCROOT_ABSPATH and SDB parameters
    must have lifetime of at least RESULT_POOL.  */
 static svn_error_t *
-create_wcroot(svn_wc__db_wcroot_t **wcroot,
-              const char *wcroot_abspath,
-              svn_sqlite__db_t *sdb,
-              apr_int64_t wc_id,
-              int format,
-              svn_boolean_t auto_upgrade,
-              svn_boolean_t enforce_empty_wq,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
+svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
+                             const char *wcroot_abspath,
+                             svn_sqlite__db_t *sdb,
+                             apr_int64_t wc_id,
+                             int format,
+                             svn_boolean_t auto_upgrade,
+                             svn_boolean_t enforce_empty_wq,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
   if (sdb != NULL)
     SVN_ERR(svn_sqlite__read_schema_version(&format, sdb, scratch_pool));
@@ -998,7 +998,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
          inside the wcroot, but we know the abspath is this directory
          (ie. where we found it).  */
 
-      SVN_ERR(create_wcroot(&(*pdh)->wcroot,
+      SVN_ERR(svn_wc__db_pdh_create_wcroot(&(*pdh)->wcroot,
                             apr_pstrdup(db->state_pool, local_abspath),
                             sdb, wc_id, FORMAT_FROM_SDB,
                             db->auto_upgrade, db->enforce_empty_wq,
@@ -1007,7 +1007,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
   else
     {
       /* We found a wc-1 working copy directory.  */
-      SVN_ERR(create_wcroot(&(*pdh)->wcroot,
+      SVN_ERR(svn_wc__db_pdh_create_wcroot(&(*pdh)->wcroot,
                             apr_pstrdup(db->state_pool, local_abspath),
                             NULL, UNKNOWN_WC_ID, wc_format,
                             db->auto_upgrade, db->enforce_empty_wq,
@@ -1076,7 +1076,7 @@ parse_local_abspath(svn_wc__db_pdh_t **pdh,
                                         parent_dir) == 0);
                 }
 
-              SVN_ERR(create_wcroot(&parent_pdh->wcroot,
+              SVN_ERR(svn_wc__db_pdh_create_wcroot(&parent_pdh->wcroot,
                                     parent_pdh->local_abspath,
                                     sdb,
                                     1 /* ### hack.  */,
@@ -1713,7 +1713,7 @@ svn_wc__db_init(svn_wc__db_t *db,
   pdh->local_abspath = apr_pstrdup(db->state_pool, local_abspath);
 
   /* Create the WCROOT for this directory.  */
-  SVN_ERR(create_wcroot(&pdh->wcroot, pdh->local_abspath,
+  SVN_ERR(svn_wc__db_pdh_create_wcroot(&pdh->wcroot, pdh->local_abspath,
                         sdb, wc_id, FORMAT_FROM_SDB,
                         FALSE /* auto-upgrade */,
                         FALSE /* enforce_empty_wq */,
