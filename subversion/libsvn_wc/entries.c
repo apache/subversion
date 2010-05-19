@@ -1598,34 +1598,6 @@ svn_wc__get_entry_versioned(const svn_wc_entry_t **entry,
 
 
 svn_error_t *
-svn_wc__maybe_get_entry(const svn_wc_entry_t **entry,
-                        svn_wc_context_t *wc_ctx,
-                        const char *local_abspath,
-                        svn_node_kind_t kind,
-                        svn_boolean_t show_hidden,
-                        svn_boolean_t need_parent_stub,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-
-  err = svn_wc__get_entry_versioned(entry, wc_ctx, local_abspath,
-                                    kind, show_hidden, need_parent_stub,
-                                    result_pool, scratch_pool);
-
-  if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      *entry = NULL;
-    }
-  else if (err)
-    return svn_error_return(err);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_wc__node_is_deleted(svn_boolean_t *deleted,
                         svn_wc__db_t *db,
                         const char *local_abspath,
