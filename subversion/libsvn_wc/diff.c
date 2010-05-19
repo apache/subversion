@@ -174,7 +174,7 @@ get_nearest_pristine_text_as_file(const char **result_abspath,
      ### base text from the pristine store anyway and use tempfiles (or
      ### streams, hopefully) for diffing, so all this horrible statting
      ### the disk for text bases, and this hack, will just go away. */
-  SVN_ERR(svn_io_check_path(*result_abspath, &kind, pool));
+  SVN_ERR(svn_io_check_path(*result_abspath, &kind, result_pool));
   if (kind == svn_node_none)
     *result_abspath = NULL;
 
