@@ -2000,9 +2000,11 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
 
 svn_error_t *
 svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
+                               const char *local_relpath,
                                apr_hash_t *base_props,
                                apr_hash_t *revert_props,
                                apr_hash_t *working_props,
+                               int original_format,
                                apr_pool_t *scratch_pool);
 
 

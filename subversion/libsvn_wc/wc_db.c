@@ -6131,9 +6131,11 @@ svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
 
 svn_error_t *
 svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
+                               const char *local_relpath,
                                apr_hash_t *base_props,
                                apr_hash_t *revert_props,
                                apr_hash_t *working_props,
+                               int original_format,
                                apr_pool_t *scratch_pool)
 {
   NOT_IMPLEMENTED();
@@ -6145,6 +6147,23 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
      ### base props go into WORKING_NODE if avail, otherwise BASE.
      ###
      ### revert only goes into BASE. (and WORKING better be there!)
+
+     Prior to 1.4.0, REVERT_PROPS did not exist. If a file was deleted,
+     then a copy (with props) could not replace the deletion. An addition
+     *could* be performed, but that would never bring its own props.
+
+     1.4.0 through 1.4.5 created the concept of REVERT_PROPS, but had a
+     bug in svn_wc_add_repos_file2() whereby a copy-with-props did NOT
+     construct a REVERT_PROPS if the target had no props. Thus, reverting
+     the delete/copy would see no REVERT_PROPS to restore, leaving the
+     props from the copy source intact, and appearing as if they are (now)
+     the base props for the previously-deleted file. (wc corruption)
+
+     1.4.6 ensured that an empty REVERT_PROPS would be established at all
+     times. See issue 2530, and r861670 as starting points.
+
+     We will use ORIGINAL_FORMAT and SVN_WC__NO_REVERT_FILES to determine
+     the handling of our inputs, relative to the state of this node.
   */
 }
 
