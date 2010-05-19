@@ -29,8 +29,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
-#include "wc_db_pdh.h"
-#include "wc_db_util.h"
+#include "wc_db_private.h"
 #include "wc-queries.h"
 
 #include "svn_private_config.h"
