@@ -2352,9 +2352,13 @@ typedef struct svn_wc_diff_callbacks4_t
    *
    * This function is called for @a path before any of the callbacks are
    * called for a child of @a path.
+   *
+   * If the callback returns @c TRUE in @a *skip_children, children
+   * of this directory will be skipped.
    */
   svn_error_t *(*dir_opened)(const char *local_dir_abspath,
                              svn_boolean_t *tree_conflicted,
+                             svn_boolean_t *skip_children,
                              const char *path,
                              svn_revnum_t rev,
                              void *diff_baton,

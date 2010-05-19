@@ -800,6 +800,7 @@ diff_dir_deleted(const char *local_dir_abspath,
 static svn_error_t *
 diff_dir_opened(const char *local_dir_abspath,
                 svn_boolean_t *tree_conflicted,
+                svn_boolean_t *skip_children,
                 const char *path,
                 svn_revnum_t rev,
                 void *diff_baton,
@@ -807,6 +808,8 @@ diff_dir_opened(const char *local_dir_abspath,
 {
   if (tree_conflicted)
     *tree_conflicted = FALSE;
+  if (skip_children)
+    *skip_children = FALSE;
 
   /* Do nothing. */
 
