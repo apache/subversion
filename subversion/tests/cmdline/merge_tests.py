@@ -10603,22 +10603,6 @@ def basic_reintegrate(sbox):
   expected_status.tweak(wc_rev=9)
   k_expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/A_COPY:2-9'})
   expected_skip = wc.State(A_MOVED_path, {})
-  # This test is currently marked as XFail as the reintegrate fails:
-  #
-  #   >svn merge ^^/A_COPY A_MOVED --reintegrate
-  #   ..\..\..\subversion\svn\merge-cmd.c:358: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_client\merge.c:9777: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_client\merge.c:9747: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_client\merge.c:9654: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_client\ra.c:753: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_client\mergeinfo.c:740: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_client\ra.c:548: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_repos\rev_hunt.c:908: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_repos\rev_hunt.c:607: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_fs_fs\tree.c:2883: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_fs_fs\tree.c:2883: (apr_err=160013)
-  #   ..\..\..\subversion\libsvn_fs_fs\tree.c:667: (apr_err=160013)
-  #   svn: File not found: revision 7, path '/A_MOVED'
   svntest.actions.run_and_verify_merge(A_MOVED_path, None, None,
                                        sbox.repo_url + '/A_COPY', None,
                                        expected_output,
@@ -19208,8 +19192,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(new_subtrees_should_not_break_merge,
                          server_has_mergeinfo),
-              XFail(SkipUnless(basic_reintegrate,
-                               server_has_mergeinfo)),
+              SkipUnless(basic_reintegrate,
+                         server_has_mergeinfo),
               reintegrate_with_rename,
               reintegrate_branch_never_merged_to,
               reintegrate_fail_on_modified_wc,
