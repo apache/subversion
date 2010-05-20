@@ -32,6 +32,7 @@ ENABLE_PYTHON_BINDINGS ?= yes
 ENABLE_RUBY_BINDINGS ?= yes
 ENABLE_PERL_BINDINGS ?= yes
 ENABLE_JAVA_BINDINGS ?= no # they don't build with thread-less APR...
+USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
 
 PWD		= $(shell pwd)
 
@@ -53,17 +54,19 @@ SRCDIR		= $(PWD)/src
 OBJDIR		= $(PWD)/objdir
 
 BDB_MAJOR_VER	= 4.8
-BDB_VER		= $(BDB_MAJOR_VER).26
-APR_VER		= 1.3.9
+BDB_VER		= $(BDB_MAJOR_VER).30
+APR_VER		= 1.4.2
 APR_ICONV_VER	= 1.2.1
+GNU_ICONV_VER	= 1.13.1
 APR_UTIL_VER	= 1.3.9
-HTTPD_VER	= 2.2.14
+HTTPD_VER	= 2.2.15
 NEON_VER	= 0.29.3
 SERF_VER	= 0.6.1
-SQLITE_VER	= 3.6.22
+SQLITE_VER	= 3.6.23.1
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
+GNU_ICONV_DIST	= libiconv-$(GNU_ICONV_VER).tar.gz
 NEON_DIST	= neon-$(NEON_VER).tar.gz
 SERF_DIST	= serf-$(SERF_VER).tar.gz
 SQLITE_DIST	= sqlite-$(SQLITE_VER).tar.gz
@@ -73,7 +76,8 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SERF_DIST) \
 		$(DISTDIR)/$(SQLITE_DIST) \
 		$(DISTDIR)/$(HTTPD_DIST) \
-		$(DISTDIR)/$(APR_ICONV_DIST)
+		$(DISTDIR)/$(APR_ICONV_DIST) \
+		$(DISTDIR)/$(GNU_ICONV_DIST)
 
 FETCH_CMD	= wget -c
 
@@ -81,6 +85,7 @@ SUBVERSION_REPOS_URL = https://svn.apache.org/repos/asf/subversion
 BDB_URL		= http://download.oracle.com/berkeley-db/$(BDB_DIST)
 APR_URL		= http://svn.apache.org/repos/asf/apr/apr
 APR_ICONV_URL	= ftp://ftp.fu-berlin.de/unix/www/apache/apr/$(APR_ICONV_DIST)
+GNU_ICONV_URL	= ftp://ftp.fu-berlin.de/unix/gnu/libiconv/$(GNU_ICONV_DIST)
 APR_UTIL_URL	= http://svn.apache.org/repos/asf/apr/apr-util
 HTTPD_URL	= http://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
@@ -90,6 +95,7 @@ SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
 APR_SRCDIR	= $(SRCDIR)/apr-$(APR_VER)
 APR_ICONV_SRCDIR	= $(SRCDIR)/apr-iconv-$(APR_ICONV_VER)
+GNU_ICONV_SRCDIR	= $(SRCDIR)/libiconv-$(GNU_ICONV_VER)
 APR_UTIL_SRCDIR	= $(SRCDIR)/apr-util-$(APR_UTIL_VER)
 HTTPD_SRCDIR	= $(SRCDIR)/httpd-$(HTTPD_VER)
 NEON_SRCDIR	= $(SRCDIR)/neon-$(NEON_VER)
@@ -100,6 +106,7 @@ SVN_SRCDIR	= $(SVN_WC)
 BDB_OBJDIR	= $(OBJDIR)/db-$(BDB_VER)
 APR_OBJDIR	= $(OBJDIR)/apr-$(APR_VER)
 APR_ICONV_OBJDIR	= $(OBJDIR)/apr-iconv-$(APR_ICONV_VER)
+GNU_ICONV_OBJDIR	= $(OBJDIR)/libiconv-$(GNU_ICONV_VER)
 APR_UTIL_OBJDIR	= $(OBJDIR)/apr-util-$(APR_UTIL_VER)
 HTTPD_OBJDIR	= $(OBJDIR)/httpd-$(HTTPD_VER)
 NEON_OBJDIR	= $(OBJDIR)/neon-$(NEON_VER)
@@ -118,16 +125,16 @@ svn_builddir	?=$(SVN_WC)
 
 .PHONY: all reset clean nuke
 
-all: dirs-create bdb-install apr-install apr-iconv-install apr-util-install \
+all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	httpd-install neon-install serf-install sqlite-install svn-install \
 	svn-bindings-install
 
 # Use these to start a build from the beginning.
-reset: dirs-reset bdb-reset apr-reset apr-iconv-reset apr-util-reset \
+reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 	httpd-reset neon-reset serf-reset sqlite-reset svn-reset
 
 # Use to save disc space.
-clean: bdb-clean apr-clean apr-iconv-clean apr-util-clean httpd-clean \
+clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
 	neon-clean serf-clean svn-clean
 
 # Nukes everything (including installed binaries!)
@@ -303,6 +310,64 @@ $(APR_ICONV_OBJDIR)/.installed: $(APR_ICONV_OBJDIR)/.compiled
 	touch $@
 
 #######################################################################
+# gnu-iconv
+#######################################################################
+
+gnu-iconv-retrieve:	$(GNU_ICONV_OBJDIR)/.retrieved
+gnu-iconv-configure:	$(GNU_ICONV_OBJDIR)/.configured
+gnu-iconv-compile:	$(GNU_ICONV_OBJDIR)/.compiled
+gnu-iconv-install:	$(GNU_ICONV_OBJDIR)/.installed
+gnu-iconv-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(GNU_ICONV_OBJDIR)/$(f);)
+
+gnu-iconv-clean:
+	-(cd $(GNU_ICONV_OBJDIR) && make clean)
+
+# fetch distfile for gnu-iconv
+$(DISTDIR)/$(GNU_ICONV_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(GNU_ICONV_URL)
+
+# retrieve gnu-iconv
+$(GNU_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(GNU_ICONV_DIST)
+	[ -d $(GNU_ICONV_OBJDIR) ] || mkdir -p $(GNU_ICONV_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(GNU_ICONV_DIST)
+	touch $@
+
+# configure gnu-iconv
+$(GNU_ICONV_OBJDIR)/.configured: $(GNU_ICONV_OBJDIR)/.retrieved
+	cd $(GNU_ICONV_OBJDIR) \
+		&& env CFLAGS="-g" $(GNU_ICONV_SRCDIR)/configure \
+		--prefix=$(PREFIX)/iconv
+	touch $@
+
+# compile gnu-iconv
+$(GNU_ICONV_OBJDIR)/.compiled: $(GNU_ICONV_OBJDIR)/.configured
+	(cd $(GNU_ICONV_OBJDIR) && make)
+	touch $@
+
+# install gnu-iconv
+$(GNU_ICONV_OBJDIR)/.installed: $(GNU_ICONV_OBJDIR)/.compiled
+	(cd $(GNU_ICONV_OBJDIR) && make install)
+	touch $@
+
+#######################################################################
+# iconv
+#######################################################################
+
+.PHONY: iconv-install iconv-reset iconv-clean
+
+ifeq ($(USE_APR_ICONV),yes)
+iconv-install: apr-iconv-install
+iconv-reset: apr-iconv-reset
+iconv-clean: apr-iconv-clean
+else
+iconv-install: gnu-iconv-install
+iconv-reset: gnu-iconv-reset
+iconv-clean: gnu-iconv-clean
+endif
+
+#######################################################################
 # apr-util
 #######################################################################
 
@@ -327,6 +392,12 @@ $(APR_UTIL_OBJDIR)/.retrieved:
 	fi
 	touch $@
 
+ifeq ($(USE_APR_ICONV),yes)
+ICONV_FLAG=--with-iconv=$(PREFIX)/apr
+else
+ICONV_FLAG=--with-iconv=$(PREFIX)/iconv
+endif
+
 # configure apr-util
 $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved
 	cd $(APR_UTIL_SRCDIR) && ./buildconf --with-apr=$(APR_SRCDIR)
@@ -337,7 +408,7 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved
 		--enable-maintainer-mode \
 		--with-apr=$(PREFIX)/apr \
 		--with-berkeley-db=$(PREFIX)/bdb \
-		--with-iconv=$(PREFIX)/apr
+		$(ICONV_FLAG)
 	touch $@
 
 # compile apr-util
@@ -628,7 +699,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 	cd $(SVN_SRCDIR) && ./autogen.sh
 	cd $(svn_builddir) && \
 		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib" \
-			LD_LIBRARY_PATH="$(PREFIX)/bdb/lib:$$LD_LIBRARY_PATH" \
+			LD_LIBRARY_PATH="$(PREFIX)/bdb/lib:$(PREFIX)/iconv/lib:$$LD_LIBRARY_PATH" \
 			$(SVN_SRCDIR)/configure \
 			--enable-maintainer-mode \
 			--with-ssl \
@@ -746,7 +817,7 @@ httpd-conf:
 	echo "</Location>" >> $(HTTPD_CHECK_CONF)
 
 # We need this to make sure some targets below pick up the right libraries
-LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/svn-$(WC)/lib
+LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/svn-$(WC)/lib
 
 .PHONY: start-svnserve stop-svnserve start-httpd stop-httpd
 
