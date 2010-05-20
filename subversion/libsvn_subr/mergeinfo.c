@@ -1715,6 +1715,35 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
 }
 
 svn_error_t *
+svn_mergeinfo__add_prefix_to_catalog(svn_mergeinfo_catalog_t *out_catalog,
+                                     svn_mergeinfo_catalog_t in_catalog,
+                                     const char *prefix_path,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  *out_catalog = apr_hash_make(result_pool);
+
+  for (hi = apr_hash_first(scratch_pool, in_catalog);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *original_path = svn__apr_hash_index_key(hi);
+      svn_mergeinfo_t value = svn__apr_hash_index_val(hi);
+
+      if (original_path[0] == '/')
+        original_path++;
+
+      apr_hash_set(*out_catalog,
+                   svn_dirent_join(prefix_path, original_path, result_pool),
+                   APR_HASH_KEY_STRING, value);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
                                        svn_mergeinfo_t mergeinfo,
                                        const char *suffix,
