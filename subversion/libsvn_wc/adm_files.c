@@ -325,7 +325,7 @@ svn_wc__ultimate_base_text_path_to_read(const char **result_abspath,
 
 
 svn_error_t *
-svn_wc__get_pristine_base_contents(svn_stream_t **contents,
+svn_wc__get_ultimate_base_contents(svn_stream_t **contents,
                                    svn_wc__db_t *db,
                                    const char *local_abspath,
                                    apr_pool_t *result_pool,
