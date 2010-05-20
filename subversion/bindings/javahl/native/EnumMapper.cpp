@@ -242,5 +242,6 @@ int EnumMapper::getOrdinal(const char *clazzName, jobject jenum)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(-1);
 
+  env->PopLocalFrame(NULL);
   return (int) jorder;
 }
