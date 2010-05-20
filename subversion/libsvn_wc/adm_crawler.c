@@ -353,9 +353,34 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
             missing = TRUE;
         }
 
-      /* From here on out, ignore any entry scheduled for addition */
       if (current_entry->schedule == svn_wc_schedule_add)
-        continue;
+        {
+          /* If an added dir has "svn:externals" property set on it,
+           * store its name and depth in traversal_info. */
+          if (traversal_info && current_entry->kind == svn_node_dir)
+            {
+              const svn_string_t *propval;
+              SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_EXTERNALS,
+                                      this_full_path, adm_access, subpool));
+              if (propval)
+                {
+                  apr_pool_t *dup_pool = traversal_info->pool;
+                  const char *dup_path = apr_pstrdup(dup_pool, this_full_path);
+                  const char *dup_val = apr_pstrmemdup(dup_pool, propval->data,
+                                                       propval->len);
+                  apr_hash_set(traversal_info->externals_old,
+                               dup_path, APR_HASH_KEY_STRING, dup_val);
+                  apr_hash_set(traversal_info->externals_new,
+                               dup_path, APR_HASH_KEY_STRING, dup_val);
+                  apr_hash_set(traversal_info->depths,
+                               dup_path, APR_HASH_KEY_STRING,
+                               svn_depth_to_word(current_entry->depth));
+                }
+            }
+
+          /* From here on out, ignore any entry scheduled for addition */
+          continue;
+        }
 
       /*** Files ***/
       if (current_entry->kind == svn_node_file)
