@@ -143,7 +143,7 @@ restore_node(svn_boolean_t *restored,
    using DB.  In that case send the externals definition and DEPTH to
    EXTERNAL_FUNC.  Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-read_traversal_info(svn_wc__db_t *db,
+read_externals_info(svn_wc__db_t *db,
                     const char *local_abspath,
                     svn_wc_external_update_t external_func,
                     void *external_baton,
@@ -237,7 +237,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool)
 {
   const char *dir_abspath;
-  const apr_array_header_t *children;
+  const apr_array_header_t *base_children;
   apr_hash_t *dirents;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
@@ -249,7 +249,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
      notice that we're picking up hidden entries too (read_children never
      hides children). */
   dir_abspath = svn_dirent_join(anchor_abspath, dir_path, scratch_pool);
-  SVN_ERR(svn_wc__db_base_get_children(&children, db, dir_abspath,
+  SVN_ERR(svn_wc__db_base_get_children(&base_children, db, dir_abspath,
                                        scratch_pool, iterpool));
   SVN_ERR(svn_io_get_dir_filenames(&dirents, dir_abspath, scratch_pool));
 
@@ -270,18 +270,52 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                        NULL, db, dir_abspath,
                                        scratch_pool, iterpool));
 
-  /* If "this dir" has "svn:externals" property set on it, store its name
-     and depth in traversal_info. */
+  /* If "this dir" has "svn:externals" property set on it,
+   * call the external_func callback. */
   if (external_func)
     {
-      SVN_ERR(read_traversal_info(db, dir_abspath, external_func,
+      const apr_array_header_t *all_children;
+
+      SVN_ERR(read_externals_info(db, dir_abspath, external_func,
                                   external_baton, dir_depth, iterpool));
+
+      /* Also do this for added children. They aren't part of the base
+       * tree so we don't recurse into them. But our caller might still
+       * want to pull externals into them as part of the update operation. */
+      SVN_ERR(svn_wc__db_read_children(&all_children, db, dir_abspath,
+                                       scratch_pool, iterpool));
+      for (i = 0; i < all_children->nelts; ++i)
+        {
+          const char *child = APR_ARRAY_IDX(all_children, i, const char *);
+          const char *this_abspath;
+          svn_wc__db_status_t this_status;
+          svn_wc__db_kind_t this_kind;
+          svn_depth_t this_depth;
+
+          svn_pool_clear(iterpool);
+
+          this_abspath = svn_dirent_join(dir_abspath, child, iterpool);
+          SVN_ERR(svn_wc__db_read_info(&this_status, &this_kind, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       &this_depth, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       db, this_abspath, iterpool, iterpool));
+          if (this_kind == svn_wc__db_kind_dir &&
+              this_status == svn_wc__db_status_added)
+            {
+              SVN_ERR(read_externals_info(db, this_abspath, external_func,
+                                          external_baton, this_depth,
+                                          iterpool));
+            }
+        }
     }
 
-  /* Looping over current directory's SVN entries: */
-  for (i = 0; i < children->nelts; ++i)
+
+  /* Looping over current directory's BASE children: */
+  for (i = 0; i < base_children->nelts; ++i)
     {
-      const char *child = APR_ARRAY_IDX(children, i, const char *);
+      const char *child = APR_ARRAY_IDX(base_children, i, const char *);
       const char *this_path, *this_abspath;
       const char *this_repos_root_url, *this_repos_relpath;
       svn_wc__db_status_t this_status;
