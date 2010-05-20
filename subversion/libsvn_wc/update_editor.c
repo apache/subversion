@@ -3559,7 +3559,7 @@ add_file_with_history(const char *path,
       SVN_ERR(svn_wc__get_entry(&src_entry, db, src_local_abspath, FALSE,
                             svn_node_file, FALSE, subpool, subpool));
 
-      SVN_ERR(svn_wc__get_pristine_base_contents(&source_text_base,
+      SVN_ERR(svn_wc__get_ultimate_base_contents(&source_text_base,
                                                  db, src_local_abspath,
                                                  subpool, subpool));
 
@@ -4117,7 +4117,7 @@ apply_textdelta(void *file_baton,
 
   if (! fb->adding_file)
     {
-      SVN_ERR(svn_wc__get_pristine_base_contents(&source, fb->edit_baton->db,
+      SVN_ERR(svn_wc__get_ultimate_base_contents(&source, fb->edit_baton->db,
                                                  fb->local_abspath,
                                                  handler_pool, handler_pool));
       if (source == NULL)

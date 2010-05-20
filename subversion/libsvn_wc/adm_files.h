@@ -114,7 +114,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
  * file is locally added), set *CONTENTS to NULL.
  * The base version of LOCAL_ABSPATH must be a file. */
 svn_error_t *
-svn_wc__get_pristine_base_contents(svn_stream_t **contents,
+svn_wc__get_ultimate_base_contents(svn_stream_t **contents,
                                    svn_wc__db_t *db,
                                    const char *local_abspath,
                                    apr_pool_t *result_pool,
