@@ -99,6 +99,19 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
                                           const char *prefix_path,
                                           apr_pool_t *pool);
 
+/* Make a shallow (ie, mergeinfos are not duped, or altered at all;
+   though keys are reallocated) copy of IN_CATALOG in *OUT_CATALOG,
+   adding PREFIX_PATH to the beginning of each key in the catalog.
+
+   The new hash keys are allocated in RESULT_POOL.  SCRATCH_POOL
+   is used for any temporary allocations.*/
+svn_error_t *
+svn_mergeinfo__add_prefix_to_catalog(svn_mergeinfo_catalog_t *out_catalog,
+                                     svn_mergeinfo_catalog_t in_catalog,
+                                     const char *prefix_path,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
 /* Makes a deep copy of MERGEINFO in *OUT_MERGEINFO.  If SUFFIX_REL_PATH is
    a valid relative path then add it to the end of each key path in
    *OUT_MERGEINFO.  *OUT_MERGEINFO is allocated in RESULT_POOL.  SCRATCH_POOL
