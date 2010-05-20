@@ -83,12 +83,12 @@ kind_to_word(svn_client_diff_summarize_kind_t kind)
  * the path the working copy root corresponds to. */
 static svn_error_t *
 summarize_xml(const svn_client_diff_summarize_t *summary,
-                   void *baton,
-                   apr_pool_t *pool)
+              void *baton,
+              apr_pool_t *pool)
 {
   /* Full path to the object being diffed.  This is created by taking the
    * baton, and appending the target's relative path. */
-  const char *path = baton;
+  const char *path = *(const char **)baton;
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
 
   /* Tack on the target path, so we can differentiate between different parts
@@ -115,10 +115,10 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
  * svn_client_diff_summarize_func_t interface. */
 static svn_error_t *
 summarize_regular(const svn_client_diff_summarize_t *summary,
-               void *baton,
-               apr_pool_t *pool)
+                  void *baton,
+                  apr_pool_t *pool)
 {
-  const char *path = baton;
+  const char *path = *(const char **)baton;
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
@@ -335,8 +335,7 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->depth,
                      ! opt_state->notice_ancestry,
                      opt_state->changelists,
-                     summarize_func,
-                     (void *) target1,
+                     summarize_func, &target1,
                      ctx, iterpool));
           else
             SVN_ERR(svn_client_diff5
@@ -380,8 +379,7 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->depth,
                      ! opt_state->notice_ancestry,
                      opt_state->changelists,
-                     summarize_func,
-                     (void *) truepath,
+                     summarize_func, &truepath,
                      ctx, iterpool));
           else
             SVN_ERR(svn_client_diff_peg5

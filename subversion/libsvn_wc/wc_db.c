@@ -6078,6 +6078,7 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
   const char *tree_conflict_data;
   svn_boolean_t have_row;
   apr_hash_t *found;
+  apr_array_header_t *found_keys;
 
   *victims = NULL;
 
@@ -6142,7 +6143,8 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
         }
     }
 
-  SVN_ERR(svn_hash_keys((apr_array_header_t **)victims, found, result_pool));
+  SVN_ERR(svn_hash_keys(&found_keys, found, result_pool));
+  *victims = found_keys;
 
   return SVN_NO_ERROR;
 }

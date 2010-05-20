@@ -992,7 +992,8 @@ txn_body_cleanup_txn(void *baton, trail_t *trail)
 static svn_error_t *
 txn_body_cleanup_txn_copy(void *baton, trail_t *trail)
 {
-  svn_error_t *err = svn_fs_bdb__delete_copy(trail->fs, baton, trail,
+  const char *copy_id = *(const char **)baton;
+  svn_error_t *err = svn_fs_bdb__delete_copy(trail->fs, copy_id, trail,
                                              trail->pool);
 
   /* Copy doesn't exist?  No sweat. */
@@ -1008,7 +1009,9 @@ txn_body_cleanup_txn_copy(void *baton, trail_t *trail)
 static svn_error_t *
 txn_body_cleanup_txn_changes(void *baton, trail_t *trail)
 {
-  return svn_fs_bdb__changes_delete(trail->fs, baton, trail, trail->pool);
+  const char *key = *(const char **)baton;
+
+  return svn_fs_bdb__changes_delete(trail->fs, key, trail, trail->pool);
 }
 
 
@@ -1122,7 +1125,9 @@ delete_txn_tree(svn_fs_t *fs,
 static svn_error_t *
 txn_body_delete_txn(void *baton, trail_t *trail)
 {
-  return svn_fs_bdb__delete_txn(trail->fs, baton, trail, trail->pool);
+  const char *txn_id = *(const char **)baton;
+
+  return svn_fs_bdb__delete_txn(trail->fs, txn_id, trail, trail->pool);
 }
 
 
@@ -1151,7 +1156,7 @@ svn_fs_base__purge_txn(svn_fs_t *fs,
   /* Kill the transaction's changes (which should gracefully recover
      if...). */
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_cleanup_txn_changes,
-                                 (void *)txn_id, TRUE, pool));
+                                 &txn_id, TRUE, pool));
 
   /* Kill the transaction's copies (which should gracefully...). */
   if (txn->copies)
@@ -1160,14 +1165,14 @@ svn_fs_base__purge_txn(svn_fs_t *fs,
         {
           SVN_ERR(svn_fs_base__retry_txn
                   (fs, txn_body_cleanup_txn_copy,
-                   (void *)APR_ARRAY_IDX(txn->copies, i, const char *),
+                   &APR_ARRAY_IDX(txn->copies, i, const char *),
                    TRUE, pool));
         }
     }
 
   /* Kill the transaction itself (which ... just kidding -- this has
      no graceful failure mode). */
-  return svn_fs_base__retry_txn(fs, txn_body_delete_txn, (void *)txn_id,
+  return svn_fs_base__retry_txn(fs, txn_body_delete_txn, &txn_id,
                                 TRUE, pool);
 }
 
