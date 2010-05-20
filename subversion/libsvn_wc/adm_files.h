@@ -53,12 +53,13 @@ svn_boolean_t svn_wc__adm_area_exists(const char *adm_abspath,
 
 
 /* Atomically rename a temporary text-base file TMP_TEXT_BASE_ABSPATH to its
-   canonical location.  LOCAL_ABSPATH is the path of the working file whose
+   canonical location.  LOCAL_ABSPATH in DB is the working file whose
    text-base is to be moved.  The tmp file should be closed already. */
 svn_error_t *
-svn_wc__sync_text_base(const char *local_abspath,
+svn_wc__sync_text_base(svn_wc__db_t *db,
+                       const char *local_abspath,
                        const char *tmp_text_base_path,
-                       apr_pool_t *pool);
+                       apr_pool_t *scratch_pool);
 
 
 /* Set *RESULT_ABSPATH to the absolute path to where LOCAL_ABSPATH's

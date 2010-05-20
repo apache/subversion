@@ -1195,7 +1195,8 @@ install_committed_file(svn_boolean_t *overwrote_working,
 
   /* Install the new text base if one is waiting. */
   if (tmp_text_base_abspath != NULL)
-    SVN_ERR(svn_wc__sync_text_base(file_abspath, tmp_text_base_abspath, scratch_pool));
+    SVN_ERR(svn_wc__sync_text_base(db, file_abspath, tmp_text_base_abspath,
+                                   scratch_pool));
 
   return SVN_NO_ERROR;
 }
