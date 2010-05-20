@@ -527,27 +527,14 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
   line terminators).
   If ERROR_EXPECTED is None, any stderr also will be printed."""
 
-  valgrind = True
-
   if verbose_mode:
     start = time.time()
-
-  if valgrind:
-    varargs = list(varargs)
-    varargs.insert(0, command)
-    varargs.insert(0, '-v')
-    varargs = tuple(varargs)
-    command = 'valgrind'
 
   exit_code, stdout_lines, stderr_lines = spawn_process(command,
                                                         bufsize,
                                                         binary_mode,
                                                         stdin_lines,
                                                         *varargs)
-
-  if valgrind:
-    stderr_lines = [line for line in stderr_lines if not line.startswith("==")]
-    stderr_lines = [line for line in stderr_lines if not line.startswith("--")]
 
   if verbose_mode:
     stop = time.time()
@@ -563,9 +550,9 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
         sys.stdout.write(x)
     raise Failure
 
-  stdout_lines = [line for line in stdout_lines if not line.startswith("DBG:")]
-
-  return exit_code, stdout_lines, stderr_lines
+  return exit_code, \
+         [line for line in stdout_lines if not line.startswith("DBG:")], \
+         stderr_lines
 
 def create_config_dir(cfgdir, config_contents=None, server_contents=None):
   "Create config directories and files"
