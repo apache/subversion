@@ -1622,6 +1622,7 @@ wrap_4to3_dir_props_changed(const char *local_dir_abspath,
 static svn_error_t *
 wrap_4to3_dir_opened(const char *local_dir_abspath,
                      svn_boolean_t *tree_conflicted,
+                     svn_boolean_t *skip_children,
                      const char *path,
                      svn_revnum_t rev,
                      void *diff_baton,
@@ -1633,6 +1634,8 @@ wrap_4to3_dir_opened(const char *local_dir_abspath,
   if (local_dir_abspath)
     adm_access = svn_wc__adm_retrieve_internal2(b->db, local_dir_abspath,
                                                 scratch_pool);
+  if (skip_children)
+    *skip_children = FALSE;
 
   return b->callbacks3->dir_opened(adm_access, tree_conflicted, path, rev,
                                    b->baton);
