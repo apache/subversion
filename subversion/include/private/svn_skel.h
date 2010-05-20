@@ -142,7 +142,7 @@ void svn_skel__prepend(svn_skel_t *skel, svn_skel_t *list);
    generally want to use svn_skel__prepend().
 
    NOTE: careful of the argument order here.  */
-void svn_skel__append(svn_skel_t *list, const svn_skel_t *skel);
+void svn_skel__append(svn_skel_t *list, svn_skel_t *skel);
 
 
 /* Create an atom skel whose contents are the string representation
