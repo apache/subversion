@@ -162,6 +162,36 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                const char *local_abspath,
                                apr_pool_t *result_pool);
 
+/* Set *RESULT_ABSPATH to the path of the WC-1 "revert-base" text of the
+   versioned file LOCAL_ABSPATH in DB.  */
+svn_error_t *
+svn_wc__text_revert_path_to_read(const char **result_abspath,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool);
+
+/* Set *RESULT_ABSPATH to the path of the ultimate base text of the
+   versioned file LOCAL_ABSPATH in DB.  In WC-1 terms this means the
+   "normal text-base" or, if the node is replaced by a copy or move, the
+   "revert-base".  */
+svn_error_t *
+svn_wc__ultimate_base_text_path(const char **result_abspath,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
+/* Set *RESULT_ABSPATH to the path of the ultimate base text of the
+   versioned file LOCAL_ABSPATH in DB.  In WC-1 terms this means the
+   "normal text-base" or, if the node is replaced by a copy or move, the
+   "revert-base".  */
+svn_error_t *
+svn_wc__ultimate_base_text_path_to_read(const char **result_abspath,
+                                        svn_wc__db_t *db,
+                                        const char *local_abspath,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool);
+
 
 
 /*** Opening all kinds of adm files ***/

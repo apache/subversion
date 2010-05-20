@@ -281,6 +281,54 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
 
 
 svn_error_t *
+svn_wc__text_revert_path_to_read(const char **result_abspath,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool)
+{
+  SVN_ERR(svn_wc__text_revert_path(result_abspath, db, local_abspath,
+                                   result_pool));
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__ultimate_base_text_path(const char **result_abspath,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  const svn_wc_entry_t *entry;
+  svn_boolean_t replaced;
+
+  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_file,
+                            FALSE, scratch_pool, scratch_pool));
+  replaced = entry && entry->schedule == svn_wc_schedule_replace;
+
+  if (replaced)
+    SVN_ERR(svn_wc__text_revert_path(result_abspath, db, local_abspath,
+                                     result_pool));
+  else
+    SVN_ERR(svn_wc__text_base_path(result_abspath, db, local_abspath,
+                                   result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__ultimate_base_text_path_to_read(const char **result_abspath,
+                                        svn_wc__db_t *db,
+                                        const char *local_abspath,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool)
+{
+  return svn_wc__ultimate_base_text_path(result_abspath, db, local_abspath,
+                                         result_pool, scratch_pool);
+}
+
+
+svn_error_t *
 svn_wc__get_pristine_base_contents(svn_stream_t **contents,
                                    svn_wc__db_t *db,
                                    const char *local_abspath,
@@ -323,8 +371,8 @@ svn_wc__get_pristine_base_contents(svn_stream_t **contents,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* If there's a WC-1 "revert base", open that. */
-  SVN_ERR(svn_wc__text_revert_path(&revert_base, db, local_abspath,
-                                   scratch_pool));
+  SVN_ERR(svn_wc__text_revert_path_to_read(&revert_base, db, local_abspath,
+                                           scratch_pool));
   err = svn_stream_open_readonly(contents, revert_base,
                                  result_pool, scratch_pool);
   if (err)
@@ -332,8 +380,8 @@ svn_wc__get_pristine_base_contents(svn_stream_t **contents,
       svn_error_clear(err);
 
       /* There's no "revert base", so open the "normal base". */
-      SVN_ERR(svn_wc__text_base_path(&revert_base, db, local_abspath,
-                                     scratch_pool));
+      SVN_ERR(svn_wc__text_base_path_to_read(&revert_base, db, local_abspath,
+                                             scratch_pool));
       err = svn_stream_open_readonly(contents, revert_base,
                                      result_pool, scratch_pool);
     }
@@ -412,8 +460,8 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
     const char *text_base;
     svn_error_t *err;
 
-    SVN_ERR(svn_wc__text_base_path(&text_base, db, local_abspath,
-                                   scratch_pool));
+    SVN_ERR(svn_wc__text_base_path_to_read(&text_base, db, local_abspath,
+                                           scratch_pool));
     SVN_ERR_ASSERT(text_base != NULL);
 
     /* ### now for some ugly hackiness. right now, file externals will
@@ -438,8 +486,8 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 
         svn_error_clear(err);
 
-        SVN_ERR(svn_wc__text_revert_path(&text_base, db, local_abspath,
-                                         scratch_pool));
+        SVN_ERR(svn_wc__text_revert_path_to_read(&text_base, db, local_abspath,
+                                                 scratch_pool));
         return svn_stream_open_readonly(contents, text_base,
                                    result_pool, scratch_pool);
       }

@@ -156,13 +156,13 @@ get_nearest_pristine_text_as_file(const char **result_abspath,
 {
   svn_node_kind_t kind;
 
-  SVN_ERR(svn_wc__text_base_path(result_abspath, db, local_abspath,
-                                 result_pool));
+  SVN_ERR(svn_wc__text_base_path_to_read(result_abspath, db, local_abspath,
+                                         result_pool));
 
   SVN_ERR(svn_io_check_path(*result_abspath, &kind, result_pool));
   if (kind == svn_node_none)
-    SVN_ERR(svn_wc__text_revert_path(result_abspath, db, local_abspath,
-                                     result_pool));
+    SVN_ERR(svn_wc__text_revert_path_to_read(result_abspath, db, local_abspath,
+                                             result_pool));
 
   /* If there is no revert base to diff either, don't attempt to diff it.
      ### This is a band-aid.
@@ -996,7 +996,8 @@ report_wc_file_as_added(struct dir_baton *db,
 
 
   if (eb->use_text_base)
-    SVN_ERR(svn_wc__text_base_path(&source_file, eb->db, local_abspath, pool));
+    SVN_ERR(svn_wc__text_base_path_to_read(&source_file,
+                                           eb->db, local_abspath, pool));
   else
     source_file = path;
 
