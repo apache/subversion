@@ -9462,7 +9462,7 @@ calculate_left_hand_side(const char **url_left,
      get an initial value for *REV_LEFT. */
   source_url = svn_path_url_add_component2(source_repos_root,
                                            source_repos_rel_path,
-                                           subpool),
+                                           subpool);
   target_url = svn_path_url_add_component2(source_repos_root,
                                            target_repos_rel_path,
                                            subpool);
