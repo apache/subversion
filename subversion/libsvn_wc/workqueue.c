@@ -491,14 +491,14 @@ verify_pristine_present(svn_wc__db_t *db,
   svn_node_kind_t check_kind;
 
   /* Verify that one of the two text bases are present.  */
-  SVN_ERR(svn_wc__text_base_path(&base_abspath, db, local_abspath,
-                                 scratch_pool));
+  SVN_ERR(svn_wc__text_base_path_to_read(&base_abspath, db, local_abspath,
+                                         scratch_pool));
   SVN_ERR(svn_io_check_path(base_abspath, &check_kind, scratch_pool));
   if (check_kind == svn_node_file)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__text_revert_path(&base_abspath, db, local_abspath,
-                                   scratch_pool));
+  SVN_ERR(svn_wc__text_revert_path_to_read(&base_abspath, db, local_abspath,
+                                           scratch_pool));
   SVN_ERR(svn_io_check_path(base_abspath, &check_kind, scratch_pool));
   if (check_kind == svn_node_file)
     return SVN_NO_ERROR;
@@ -1419,8 +1419,9 @@ log_do_committed(svn_wc__db_t *db,
           /* If the working file was overwritten (due to re-translation)
              or touched (due to +x / -x), then use *that* textual
              timestamp instead. */
-          SVN_ERR(svn_wc__text_base_path(&base_abspath, db, local_abspath,
-                                         pool));
+          SVN_ERR(svn_wc__text_base_path_to_read(&base_abspath,
+                                                 db, local_abspath,
+                                                 pool));
           SVN_ERR(svn_io_stat(&basef_finfo, base_abspath,
                               APR_FINFO_MIN | APR_FINFO_LINK,
                               pool));

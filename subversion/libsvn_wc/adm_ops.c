@@ -2289,7 +2289,8 @@ svn_wc_get_pristine_copy_path(const char *path,
                           TRUE, TRUE, pool, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc__text_base_path(pristine_path, db, local_abspath, pool));
+  SVN_ERR(svn_wc__text_base_path_to_read(pristine_path, db, local_abspath,
+                                         pool));
 
   return svn_error_return(svn_wc__db_close(db));
 }

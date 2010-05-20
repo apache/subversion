@@ -4017,40 +4017,6 @@ open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* For the given LOCAL_ABSPATH, set *OLD_TEXT_BASE_ABSPATH to the path of
-   the text-base file it should revert to: that is the (permanent)
-   text-base path, or (if the entry is replaced with history) the (permanent)
-   revert-base path.  Note: This function deals with the WC-1 concept of a
-   pair of deterministic paths for the two possible pristine texts of a node.
-
-   Allocate OLD_TEXT_BASE_ABSPATH in RESULT_POOL.  Use SCRATCH_POOL for
-   temporary allocation. */
-static svn_error_t *
-get_pristine_base_path(const char **old_text_base_abspath,
-                       svn_wc__db_t *db,
-                       const char *local_abspath,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
-{
-  const svn_wc_entry_t *entry;
-  svn_boolean_t replaced;
-
-  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_file,
-                            FALSE, scratch_pool, scratch_pool));
-
-  replaced = entry && entry->schedule == svn_wc_schedule_replace;
-  /* ### Should use pristine api here */
-  if (replaced)
-    SVN_ERR(svn_wc__text_revert_path(old_text_base_abspath,
-                                     db, local_abspath, result_pool));
-  else
-    SVN_ERR(svn_wc__text_base_path(old_text_base_abspath,
-                                   db, local_abspath, result_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Set *MD5_CHECKSUM to the MD-5 hex digest of the BASE_NODE pristine text
  * of LOCAL_ABSPATH in DB, or to NULL if it has no BASE_NODE or if that
  * checksum is not known.  Allocate *MD5_CHECKSUM in RESULT_POOL.
@@ -4381,9 +4347,9 @@ merge_file(svn_skel_t **work_items,
       && ! entry->file_external_path)  /* ### EBUG */
     is_replaced = TRUE;
 
-  SVN_ERR(get_pristine_base_path(&text_base_abspath,
-                                 eb->db, fb->local_abspath,
-                                 fb->pool, pool));
+  SVN_ERR(svn_wc__ultimate_base_text_path(&text_base_abspath,
+                                          eb->db, fb->local_abspath,
+                                          pool, pool));
 
   /* For 'textual' merging, we implement this matrix.
 
@@ -4445,8 +4411,8 @@ merge_file(svn_skel_t **work_items,
               if (entry && entry->file_external_path)
                 {
                   SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_replace);
-                  SVN_ERR(svn_wc__text_revert_path(install_from, eb->db,
-                                                   fb->local_abspath, pool));
+                  SVN_ERR(svn_wc__text_revert_path_to_read(
+                            install_from, eb->db, fb->local_abspath, pool));
                 }
             }
         }
@@ -4611,7 +4577,7 @@ merge_file(svn_skel_t **work_items,
   if (new_text_base_tmp_abspath)
     {
       /* Move the temp text-base file to its final destination.
-       * FB->text_base_path is the appropriate path: the "revert-base" path
+       * text_base_abspath is the appropriate path: the "revert-base" path
        * if the node is replaced, else the usual text-base path. */
       SVN_ERR(svn_wc__loggy_move(&work_item, eb->db, pb->local_abspath,
                                  new_text_base_tmp_abspath,
@@ -4968,7 +4934,7 @@ close_file(void *file_baton,
 
   /* Clean up any temporary files.  */
 
-  /* For the INSTALL_FROM file, be careful that it doesn't refer to the
+  /* ### For the INSTALL_FROM file, be careful that it doesn't refer to the
      working file, or the revert text base. (sigh)  Hopefully, this will
      be cleared up in the future.  */
   if (install_from != NULL
@@ -4976,8 +4942,8 @@ close_file(void *file_baton,
     {
       const char *revert_base_abspath;
 
-      SVN_ERR(svn_wc__text_revert_path(&revert_base_abspath, eb->db,
-                                       fb->local_abspath, pool));
+      SVN_ERR(svn_wc__text_revert_path_to_read(&revert_base_abspath, eb->db,
+                                               fb->local_abspath, pool));
       if (strcmp(install_from, revert_base_abspath) != 0)
         {
           SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
