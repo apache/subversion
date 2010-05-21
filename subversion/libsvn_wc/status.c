@@ -273,6 +273,8 @@ assemble_status(svn_wc_status3_t **status,
                 const char *local_abspath,
                 const svn_wc_entry_t *entry,
                 const svn_wc_entry_t *parent_entry,
+                const char *parent_repos_root_url,
+                const char *parent_repos_relpath,
                 svn_node_kind_t path_kind,
                 svn_boolean_t path_special,
                 svn_boolean_t get_all,
@@ -284,6 +286,8 @@ assemble_status(svn_wc_status3_t **status,
   svn_wc_status3_t *stat;
   svn_wc__db_status_t db_status;
   svn_wc__db_kind_t db_kind;
+  const char *repos_relpath;
+  const char *repos_root_url;
   const char *url;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
@@ -313,16 +317,20 @@ assemble_status(svn_wc_status3_t **status,
   SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, db, local_abspath,
                                            scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_read_info(&db_status, &db_kind, &revision, NULL, NULL,
-                               NULL, &changed_rev, &changed_date,
+  SVN_ERR(svn_wc__db_read_info(&db_status, &db_kind, &revision,
+                               &repos_relpath, &repos_root_url, NULL,
+                               &changed_rev, &changed_date,
                                &changed_author, NULL, NULL, NULL, NULL,
                                NULL, &changelist, NULL, NULL, NULL, NULL,
                                NULL, NULL, &base_shadowed, &conflicted,
                                &lock, db, local_abspath, result_pool,
                                scratch_pool));
 
+  /* ### Temporary until we've revved svn_wc_status3_t to only use
+   * ### repos_{root_url,relpath} */
   SVN_ERR(svn_wc__internal_node_get_url(&url, db, local_abspath,
                                         result_pool, scratch_pool));
+
   SVN_ERR(svn_wc__internal_is_file_external(&file_external_p, db,
                                             local_abspath, scratch_pool));
 
@@ -331,10 +339,27 @@ assemble_status(svn_wc_status3_t **status,
       an URL, at the very least. */
   if (! file_external_p)
     {
-      svn_boolean_t is_wc_root; /* Not used. */
+      if (parent_repos_root_url && repos_root_url &&
+          (strcmp(parent_repos_root_url, repos_root_url) == 0))
+        {
+          const char *base = svn_dirent_basename(local_abspath, scratch_pool);
 
-      SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, &switched_p, db,
-                                    local_abspath, scratch_pool));
+          if (! repos_relpath)
+            {
+              repos_relpath = svn_relpath_join( parent_repos_relpath, base,
+                                                result_pool);
+              /* If _read_info() doesn't give us a repos_relpath, it means
+               * that it is implied by the parent, thus the path can not be
+               * switched. */
+              switched_p = FALSE;
+            }
+          else
+            {
+              switched_p = (strcmp(svn_relpath_join(parent_repos_relpath, base,
+                                                    scratch_pool),
+                                   repos_relpath) != 0);
+            }
+        }
     }
 
   /* Examine whether our directory metadata is present, and compensate
@@ -618,6 +643,8 @@ assemble_status(svn_wc_status3_t **status,
   stat->conflicted = conflicted;
   stat->versioned = TRUE;
   stat->changelist = changelist;
+  stat->repos_root_url = repos_root_url;
+  stat->repos_relpath = repos_relpath;
 
   *status = stat;
 
@@ -693,6 +720,8 @@ send_status_structure(const struct walk_status_baton *wb,
                       const char *local_abspath,
                       const svn_wc_entry_t *entry,
                       const svn_wc_entry_t *parent_entry,
+                      const char *parent_repos_root_url,
+                      const char *parent_repos_relpath,
                       svn_node_kind_t path_kind,
                       svn_boolean_t path_special,
                       svn_boolean_t get_all,
@@ -713,10 +742,16 @@ send_status_structure(const struct walk_status_baton *wb,
 
       if (entry->url)
         abs_path = entry->url + strlen(wb->repos_root);
-      else if (parent_entry && parent_entry->url)
-        abs_path = svn_uri_join(parent_entry->url + strlen(wb->repos_root),
-                                svn_dirent_basename(local_abspath, NULL),
-                                pool);
+      else if (parent_repos_root_url && parent_repos_relpath)
+        {
+          const char *parent_url =
+            svn_path_url_add_component2(parent_repos_root_url,
+                                        parent_repos_relpath, pool);
+
+          abs_path = svn_uri_join(parent_url + strlen(wb->repos_root),
+                                  svn_dirent_basename(local_abspath, NULL),
+                                  pool);
+        }
       else
         abs_path = NULL;
 
@@ -727,9 +762,9 @@ send_status_structure(const struct walk_status_baton *wb,
     }
 
   SVN_ERR(assemble_status(&statstruct, wb->db, local_abspath, entry,
-                          parent_entry, path_kind, path_special, get_all,
-                          is_ignored, repos_lock,
-                          pool, pool));
+                          parent_entry, parent_repos_root_url,
+                          parent_repos_relpath, path_kind, path_special,
+                          get_all, is_ignored, repos_lock, pool, pool));
 
   if (statstruct && status_func)
     return svn_error_return((*status_func)(status_baton, local_abspath,
@@ -887,6 +922,8 @@ static svn_error_t *
 get_dir_status(const struct walk_status_baton *wb,
                const char *local_abspath,
                const svn_wc_entry_t *parent_entry,
+               const char *parent_repos_root_url,
+               const char *parent_repos_relpath,
                const char *selected,
                const apr_array_header_t *ignores,
                svn_depth_t depth,
@@ -909,6 +946,8 @@ handle_dir_entry(const struct walk_status_baton *wb,
                  const char *local_abspath,
                  const svn_wc_entry_t *dir_entry,
                  const svn_wc_entry_t *entry,
+                 const char *dir_repos_root_url,
+                 const char *dir_repos_relpath,
                  svn_node_kind_t path_kind,
                  svn_boolean_t path_special,
                  const apr_array_header_t *ignores,
@@ -936,18 +975,21 @@ handle_dir_entry(const struct walk_status_baton *wb,
               || depth == svn_depth_immediates
               || depth == svn_depth_infinity))
         {
-          SVN_ERR(get_dir_status(wb, local_abspath, dir_entry, NULL, ignores,
-                                 depth, get_all, no_ignore, FALSE,
-                                 get_excluded, status_func, status_baton,
-                                 cancel_func, cancel_baton, pool));
+          SVN_ERR(get_dir_status(wb, local_abspath, dir_entry,
+                                 dir_repos_root_url, dir_repos_relpath,
+                                 NULL, ignores, depth, get_all, no_ignore,
+                                 FALSE, get_excluded, status_func,
+                                 status_baton, cancel_func, cancel_baton,
+                                 pool));
         }
       else
         {
           /* ENTRY is a child entry (file or parent stub). Or we have a
              directory entry but DEPTH is limiting our recursion.  */
           SVN_ERR(send_status_structure(wb, local_abspath, entry,
-                                        dir_entry,
-                                        svn_node_dir, FALSE /* path_special */,
+                                        dir_entry, dir_repos_root_url,
+                                        dir_repos_relpath, svn_node_dir,
+                                        FALSE /* path_special */,
                                         get_all, FALSE /* is_ignored */,
                                         status_func, status_baton, pool));
         }
@@ -956,8 +998,10 @@ handle_dir_entry(const struct walk_status_baton *wb,
     {
       /* This is a file/symlink on-disk.  */
       SVN_ERR(send_status_structure(wb, local_abspath, entry,
-                                    dir_entry, path_kind, path_special,
-                                    get_all, FALSE /* is_ignored */,
+                                    dir_entry, dir_repos_root_url,
+                                    dir_repos_relpath, path_kind,
+                                    path_special, get_all, 
+                                    FALSE /* is_ignored */,
                                     status_func, status_baton, pool));
     }
 
@@ -1036,6 +1080,8 @@ static svn_error_t *
 get_dir_status(const struct walk_status_baton *wb,
                const char *local_abspath,
                const svn_wc_entry_t *parent_entry,
+               const char *parent_repos_root_url,
+               const char *parent_repos_relpath,
                const char *selected,
                const apr_array_header_t *ignore_patterns,
                svn_depth_t depth,
@@ -1051,6 +1097,8 @@ get_dir_status(const struct walk_status_baton *wb,
 {
   apr_hash_index_t *hi;
   const svn_wc_entry_t *dir_entry;
+  const char *dir_repos_root_url;
+  const char *dir_repos_relpath;
   apr_hash_t *dirents, *nodes, *conflicts, *all_children;
   apr_array_header_t *patterns = NULL;
   apr_pool_t *iterpool, *subpool = svn_pool_create(scratch_pool);
@@ -1078,6 +1126,14 @@ get_dir_status(const struct walk_status_baton *wb,
   /* Get this directory's entry. */
   SVN_ERR(svn_wc__get_entry(&dir_entry, wb->db, local_abspath, FALSE,
                             svn_node_dir, FALSE, subpool, iterpool));
+
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &dir_repos_relpath,
+                               &dir_repos_root_url, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, wb->db, local_abspath, scratch_pool,
+                               scratch_pool));
+
 
   if (selected == NULL)
     {
@@ -1127,7 +1183,9 @@ get_dir_status(const struct walk_status_baton *wb,
       if (! skip_this_dir)
         SVN_ERR(send_status_structure(wb, local_abspath,
                                       dir_entry, parent_entry,
-                                      svn_node_dir, FALSE /* path_special */,
+                                      parent_repos_root_url,
+                                      parent_repos_relpath, svn_node_dir,
+                                      FALSE /* path_special */,
                                       get_all, FALSE /* is_ignored */,
                                       status_func, status_baton,
                                       iterpool));
@@ -1205,6 +1263,8 @@ get_dir_status(const struct walk_status_baton *wb,
                                        node_abspath,
                                        dir_entry,
                                        entry,
+                                       dir_repos_root_url,
+                                       dir_repos_relpath,
                                        dirent_p ? dirent_p->kind
                                                 : svn_node_none,
                                        dirent_p ? dirent_p->special : FALSE,
@@ -1565,8 +1625,10 @@ make_dir_baton(void **dir_baton,
       const apr_array_header_t *ignores = eb->ignores;
 
       SVN_ERR(get_dir_status(&eb->wb, local_abspath,
-                             status_in_parent->entry, NULL,
-                             ignores, d->depth == svn_depth_files ?
+                             status_in_parent->entry,
+                             status_in_parent->repos_root_url,
+                             status_in_parent->repos_relpath,
+                             NULL, ignores, d->depth == svn_depth_files ?
                              svn_depth_files : svn_depth_immediates,
                              TRUE, TRUE, TRUE, FALSE, hash_stash, d->statii,
                              NULL, NULL, pool));
@@ -1708,6 +1770,8 @@ mark_deleted(void *baton,
 static svn_error_t *
 handle_statii(struct edit_baton *eb,
               const svn_wc_entry_t *dir_entry,
+              const char *dir_repos_root_url,
+              const char *dir_repos_relpath,
               apr_hash_t *statii,
               svn_boolean_t dir_was_deleted,
               svn_depth_t depth,
@@ -1751,10 +1815,10 @@ handle_statii(struct edit_baton *eb,
 
           SVN_ERR(get_dir_status(&eb->wb,
                                  local_abspath,
-                                 dir_entry, NULL,
-                                 ignores, depth, eb->get_all,
-                                 eb->no_ignore, TRUE, FALSE, status_func,
-                                 status_baton, eb->cancel_func,
+                                 dir_entry, dir_repos_root_url,
+                                 dir_repos_relpath, NULL, ignores, depth,
+                                 eb->get_all, eb->no_ignore, TRUE, FALSE,
+                                 status_func, status_baton, eb->cancel_func,
                                  eb->cancel_baton, subpool));
         }
       if (dir_was_deleted)
@@ -1990,6 +2054,8 @@ close_directory(void *dir_baton,
 
       /* Now do the status reporting. */
       SVN_ERR(handle_statii(eb, dir_status ? dir_status->entry : NULL,
+                            dir_status ? dir_status->repos_root_url : NULL,
+                            dir_status ? dir_status->repos_relpath : NULL,
                             db->statii, was_deleted, db->depth, pool));
       if (dir_status && svn_wc__is_sendable_status(dir_status, eb->no_ignore,
                                                   eb->get_all))
@@ -2013,7 +2079,7 @@ close_directory(void *dir_baton,
                   && tgt_status->entry->kind == svn_node_dir)
                 {
                   SVN_ERR(get_dir_status(&eb->wb, eb->target_abspath,
-                                         tgt_status->entry, NULL,
+                                         tgt_status->entry, NULL, NULL, NULL,
                                          eb->ignores, eb->default_depth,
                                          eb->get_all, eb->no_ignore, TRUE,
                                          FALSE,
@@ -2033,6 +2099,8 @@ close_directory(void *dir_baton,
              Note that our directory couldn't have been deleted,
              because it is the root of the edit drive. */
           SVN_ERR(handle_statii(eb, eb->anchor_status->entry,
+                                eb->anchor_status->repos_root_url,
+                                eb->anchor_status->repos_relpath,
                                 db->statii, FALSE, eb->default_depth, pool));
           if (svn_wc__is_sendable_status(eb->anchor_status, eb->no_ignore,
                                          eb->get_all))
@@ -2363,6 +2431,8 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
     {
       SVN_ERR(get_dir_status(&wb,
                              svn_dirent_dirname(local_abspath, scratch_pool),
+                             NULL, 
+                             NULL,
                              NULL,
                              svn_dirent_basename(local_abspath, NULL),
                              ignore_patterns,
@@ -2383,6 +2453,8 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                              local_abspath,
                              NULL,
                              NULL,
+                             NULL,
+                             NULL,
                              ignore_patterns,
                              depth,
                              get_all,
@@ -2399,6 +2471,8 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
     {
       SVN_ERR(get_dir_status(&wb,
                              svn_dirent_dirname(local_abspath, scratch_pool),
+                             NULL,
+                             NULL,
                              NULL,
                              svn_dirent_basename(local_abspath, NULL),
                              ignore_patterns,
@@ -2468,6 +2542,8 @@ internal_status(svn_wc_status3_t **status,
   svn_boolean_t path_special;
   const svn_wc_entry_t *entry;
   const svn_wc_entry_t *parent_entry = NULL;
+  const char *parent_repos_relpath;
+  const char *parent_repos_root_url;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -2508,6 +2584,26 @@ internal_status(svn_wc_status3_t **status,
       const char *parent_abspath = svn_dirent_dirname(local_abspath,
                                                       scratch_pool);
 
+      err = svn_wc__db_read_info(NULL, NULL, NULL, &parent_repos_relpath,
+                                 &parent_repos_root_url, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, db, parent_abspath, result_pool,
+                                 scratch_pool);
+
+      /* ### Can _read_info() throw ERR_WC_MISSING? */
+      if (err && (err->apr_err == SVN_ERR_WC_MISSING
+                    || err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
+                    || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+        {
+          svn_error_clear(err);
+          parent_entry = NULL;
+          parent_repos_root_url = NULL;
+          parent_repos_relpath = NULL;
+        }
+      else if (err)
+        return svn_error_return(err);
+
       err = svn_wc__get_entry(&parent_entry, db, parent_abspath, TRUE,
                               svn_node_dir, FALSE, scratch_pool, scratch_pool);
       if (err && (err->apr_err == SVN_ERR_WC_MISSING
@@ -2524,7 +2620,9 @@ internal_status(svn_wc_status3_t **status,
 
   return svn_error_return(assemble_status(status, db, local_abspath,
                                           entry, parent_entry,
-                                          path_kind, path_special,
+                                          parent_repos_root_url,
+                                          parent_repos_relpath, path_kind,
+                                          path_special,
                                           TRUE /* get_all */,
                                           FALSE /* is_ignored */,
                                           NULL /* repos_lock */,
@@ -2585,6 +2683,14 @@ svn_wc_dup_status3(const svn_wc_status3_t *orig_stat,
   if (orig_stat->changelist)
     new_stat->changelist
       = apr_pstrdup(pool, orig_stat->changelist);
+
+  if (orig_stat->repos_root_url)
+    new_stat->repos_root_url
+      = apr_pstrdup(pool, orig_stat->repos_root_url);
+
+  if (orig_stat->repos_relpath)
+    new_stat->repos_relpath
+      = apr_pstrdup(pool, orig_stat->repos_relpath);
 
   /* Return the new hotness. */
   return new_stat;
