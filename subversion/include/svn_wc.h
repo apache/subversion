@@ -3852,10 +3852,7 @@ svn_wc_dup_status(const svn_wc_status_t *orig_stat,
  * this function can reveal the following things:
  *
  *    - #svn_wc_status_none : @a local_abspath is not versioned, and is
- *                            either not present on disk, or is ignored
- *                            by svn's default ignore regular expressions
- *                            or the svn:ignore property setting for
- *                            @a local_abspath's parent directory.
+ *                            not present on disk
  *
  *    - #svn_wc_status_missing : @a local_abspath is versioned, but is
  *                               missing from the working copy.
