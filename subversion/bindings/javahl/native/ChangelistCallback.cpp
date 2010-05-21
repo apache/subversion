@@ -67,6 +67,11 @@ ChangelistCallback::doChangelist(const char *path, const char *changelist,
 {
   JNIEnv *env = JNIUtil::getEnv();
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
   static jmethodID mid = 0; // the method id will not change during
   // the time this library is loaded, so
   // it can be cached.
@@ -74,27 +79,23 @@ ChangelistCallback::doChangelist(const char *path, const char *changelist,
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ChangelistCallback");
       if (JNIUtil::isJavaExceptionThrown())
-        return;
+        POP_AND_RETURN();
 
       mid = env->GetMethodID(clazz, "doChangelist",
                              "(Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        return;
-
-      env->DeleteLocalRef(clazz);
+        POP_AND_RETURN();
     }
 
   jstring jChangelist = JNIUtil::makeJString(changelist);
   if (JNIUtil::isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN();
 
   jstring jPath = JNIUtil::makeJString(path);
   if (JNIUtil::isJavaExceptionThrown())
-    return;
+    POP_AND_RETURN();
 
   env->CallVoidMethod(m_callback, mid, jPath, jChangelist);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
 
-  env->DeleteLocalRef(jChangelist);
+  env->PopLocalFrame(NULL);
 }
