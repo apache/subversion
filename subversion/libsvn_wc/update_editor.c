@@ -4214,7 +4214,6 @@ merge_file(svn_skel_t **work_items,
   svn_boolean_t magic_props_changed;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   svn_skel_t *work_item;
-  const char *text_base_abspath;
 
   /*
      When this function is called on file F, we assume the following
@@ -4304,10 +4303,6 @@ merge_file(svn_skel_t **work_items,
   if (entry && entry->schedule == svn_wc_schedule_replace
       && ! entry->file_external_path)  /* ### EBUG */
     is_replaced = TRUE;
-
-  SVN_ERR(svn_wc__ultimate_base_text_path(&text_base_abspath,
-                                          eb->db, fb->local_abspath,
-                                          pool, pool));
 
   /* For 'textual' merging, we implement this matrix.
 
@@ -4441,7 +4436,8 @@ merge_file(svn_skel_t **work_items,
               else if (fb->copied_text_base_abspath)
                 merge_left = fb->copied_text_base_abspath;
               else
-                merge_left = text_base_abspath;
+                SVN_ERR(svn_wc__ultimate_base_text_path_to_read(
+                  &merge_left, eb->db, fb->local_abspath, pool, pool));
 
               /* Merge the changes from the old textbase to the new
                  textbase into the file we're updating.
@@ -4534,9 +4530,14 @@ merge_file(svn_skel_t **work_items,
 #ifndef SVN_EXPERIMENTAL_PRISTINE
   if (new_text_base_tmp_abspath)
     {
+      const char *text_base_abspath;
+
       /* Move the temp text-base file to its final destination.
        * text_base_abspath is the appropriate path: the "revert-base" path
        * if the node is replaced, else the usual text-base path. */
+      SVN_ERR(svn_wc__ultimate_base_text_path(&text_base_abspath,
+                                          eb->db, fb->local_abspath,
+                                          pool, pool));
       SVN_ERR(svn_wc__loggy_move(&work_item, eb->db, pb->local_abspath,
                                  new_text_base_tmp_abspath,
                                  text_base_abspath,
