@@ -2592,6 +2592,11 @@ internal_status(svn_wc_status3_t **status,
       else if (err)
         return svn_error_return(err);
     }
+  else
+    {
+      parent_repos_root_url = NULL;
+      parent_repos_relpath = NULL;
+    }
 
   return svn_error_return(assemble_status(status, db, local_abspath,
                                           entry, parent_repos_root_url,
