@@ -3226,32 +3226,21 @@ absent_file_or_dir(const char *path,
   const char *repos_relpath;
   const char *repos_root_url;
   const char *repos_uuid;
+  svn_boolean_t is_added;
   svn_wc__db_kind_t db_kind
     = kind == svn_node_dir ? svn_wc__db_kind_dir : svn_wc__db_kind_file;
 
   local_abspath = svn_dirent_join(pb->local_abspath, name, pool);
 
-  /* Extra check: an item by this name may not exist, but there may
-     still be one scheduled for addition.  That's a genuine
-     tree-conflict.  */
-  {
-    svn_boolean_t in_parent = (kind == svn_node_dir);
-    const svn_wc_entry_t *entry;
-    svn_boolean_t hidden;
-    SVN_ERR(svn_wc__get_entry(&entry, eb->db, local_abspath, TRUE, kind,
-                              in_parent, pool, pool));
-
-    if (entry)
-      SVN_ERR(svn_wc__entry_is_hidden(&hidden, entry));
-
-    /* ### BH: With WC-NG we should probably also check for replaced? */
-    if (entry && !hidden && (entry->schedule == svn_wc_schedule_add))
-      return svn_error_createf(
+  /* If an item by this name is scheduled for addition that's a
+     genuine tree-conflict.  */
+  SVN_ERR(svn_wc__node_is_added(&is_added, eb->wc_ctx, local_abspath, pool));
+  if (is_added)
+    return svn_error_createf(
          SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
          _("Failed to mark '%s' absent: item of the same name is already "
            "scheduled for addition"),
          svn_dirent_local_style(path, pool));
-  }
 
   SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
                                      &repos_uuid, eb->db, pb->local_abspath,
