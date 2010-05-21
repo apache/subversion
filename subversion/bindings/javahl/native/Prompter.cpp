@@ -84,8 +84,6 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
       return NULL;
     }
   env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
 
   // Check if PromptUserPassword2 is implemented by the Java object.
   jclass clazz2 = env->FindClass(JAVA_PACKAGE"/PromptUserPassword2");
@@ -97,8 +95,6 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
     return NULL;
 
   env->DeleteLocalRef(clazz2);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
 
   bool v3 = false;
   if (v2)
@@ -113,8 +109,6 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
         return NULL;
 
       env->DeleteLocalRef(clazz3);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
     }
 
   // Create a new global ref for the Java object, because it is
@@ -150,8 +144,6 @@ jstring Prompter::username()
         return NULL;
 
       env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
     }
 
   jstring ret = static_cast<jstring>(env->CallObjectMethod(m_prompter, mid));
@@ -184,8 +176,6 @@ jstring Prompter::password()
         return NULL;
 
       env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return false;
     }
 
   jstring ret = static_cast<jstring>(env->CallObjectMethod(m_prompter, mid));
@@ -222,8 +212,6 @@ bool Prompter::askYesNo(const char *realm, const char *question,
         return false;
 
       env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return false;
     }
 
   // convert the texts to Java strings
@@ -243,12 +231,7 @@ bool Prompter::askYesNo(const char *realm, const char *question,
 
   // delete the Java strings
   env->DeleteLocalRef(jquestion);
-  if (JNIUtil::isJavaExceptionThrown())
-    return false;
-
   env->DeleteLocalRef(jrealm);
-  if (JNIUtil::isJavaExceptionThrown())
-    return false;
 
   return ret ? true:false;
 }
@@ -277,8 +260,6 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
             return NULL;
 
           env->DeleteLocalRef(clazz);
-          if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
         }
 
       jstring jrealm = JNIUtil::makeJString(realm);
@@ -297,12 +278,7 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
         return NULL;
 
       env->DeleteLocalRef(jquestion);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
       env->DeleteLocalRef(jrealm);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
 
       JNIStringHolder answer(janswer);
       if (answer != NULL)
@@ -334,8 +310,6 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
             return NULL;
 
           env->DeleteLocalRef(clazz);
-          if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
         }
 
       jstring jrealm = JNIUtil::makeJString(realm);
@@ -353,12 +327,7 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
         return NULL;
 
       env->DeleteLocalRef(jquestion);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
       env->DeleteLocalRef(jrealm);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
 
       JNIStringHolder answer(janswer);
       if (answer != NULL)
@@ -396,8 +365,6 @@ int Prompter::askTrust(const char *question, bool maySave)
             return -1;
 
           env->DeleteLocalRef(clazz);
-          if (JNIUtil::isJavaExceptionThrown())
-            return -1;
         }
       jstring jquestion = JNIUtil::makeJString(question);
       if (JNIUtil::isJavaExceptionThrown())
@@ -409,8 +376,6 @@ int Prompter::askTrust(const char *question, bool maySave)
         return -1;
 
       env->DeleteLocalRef(jquestion);
-      if (JNIUtil::isJavaExceptionThrown())
-        return -1;
 
       return ret;
     }
@@ -458,8 +423,6 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
             return false;
 
           env->DeleteLocalRef(clazz);
-          if (JNIUtil::isJavaExceptionThrown())
-            return false;
         }
 
       jstring jrealm = JNIUtil::makeJString(realm);
@@ -477,12 +440,7 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
         return false;
 
       env->DeleteLocalRef(jusername);
-      if (JNIUtil::isJavaExceptionThrown())
-        return false;
-
       env->DeleteLocalRef(jrealm);
-      if (JNIUtil::isJavaExceptionThrown())
-        return false;
 
       m_maySave = env->CallBooleanMethod(m_prompter, mid2) ? true : false;
       if (JNIUtil::isJavaExceptionThrown())
@@ -505,8 +463,6 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
             return false;
 
           env->DeleteLocalRef(clazz);
-          if (JNIUtil::isJavaExceptionThrown())
-            return false;
         }
 
       jstring jrealm = JNIUtil::makeJString(realm);
@@ -523,12 +479,7 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
         return false;
 
       env->DeleteLocalRef(jusername);
-      if (JNIUtil::isJavaExceptionThrown())
-        return false;
-
       env->DeleteLocalRef(jrealm);
-      if (JNIUtil::isJavaExceptionThrown())
-        return false;
 
       if (maySave)
         m_maySave = askYesNo(realm, _("May save the answer ?"), true);

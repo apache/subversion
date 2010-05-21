@@ -124,12 +124,8 @@ RevpropTable::RevpropTable(jobject jrevpropTable)
             = std::string((const char *)propval);
 
           JNIUtil::getEnv()->DeleteLocalRef(jpropval);
-          if (JNIUtil::isExceptionThrown())
-            return;
         }
 
       JNIUtil::getEnv()->DeleteLocalRef(jkeySet);
-      if (JNIUtil::isExceptionThrown())
-        return;
     }
 }

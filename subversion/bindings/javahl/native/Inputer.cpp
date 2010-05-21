@@ -86,8 +86,6 @@ svn_error_t *Inputer::read(void *baton, char *buffer, apr_size_t *len)
         return SVN_NO_ERROR;
 
       env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
     }
 
   // Allocate a Java byte array to read the data.
@@ -148,8 +146,6 @@ svn_error_t *Inputer::close(void *baton)
         return SVN_NO_ERROR;
 
       env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
     }
 
   // Call the Java object, to close the stream.

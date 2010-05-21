@@ -74,8 +74,6 @@ NotifyCallback *NotifyCallback::makeCNotify(jobject notify)
       return NULL;
     }
   env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
 
   // Make a global reference, because the reference is longer
   // needed, than the call.
@@ -131,8 +129,6 @@ NotifyCallback::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
         return;
 
       env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return;
     }
 
   jobject jInfo = CreateJ::NotifyInformation(wcNotify);
@@ -144,6 +140,4 @@ NotifyCallback::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
     return;
 
   env->DeleteLocalRef(jInfo);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
 }

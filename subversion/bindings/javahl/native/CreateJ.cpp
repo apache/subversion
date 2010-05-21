@@ -776,8 +776,6 @@ CreateJ::RevisionRangeList(apr_array_header_t *ranges)
         POP_AND_RETURN_NULL;
 
       env->DeleteLocalRef(jrange);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
     }
 
   return env->PopLocalFrame(jranges);
@@ -860,12 +858,7 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t *pool)
         POP_AND_RETURN_NULL;
 
       env->DeleteLocalRef(jpropName);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
       env->DeleteLocalRef(jpropVal);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
     }
 
   return env->PopLocalFrame(map);
@@ -914,8 +907,6 @@ jobject CreateJ::Set(std::vector<jobject> &objects)
         POP_AND_RETURN_NULL;
 
       env->DeleteLocalRef(jthing);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
     }
 
   return env->PopLocalFrame(set);
