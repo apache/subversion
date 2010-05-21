@@ -230,8 +230,7 @@ class Generator(gen_win.WinGeneratorBase):
         # groupname = 'java'
       elif isinstance(target, gen_base.TargetExe):
         if target.name.endswith('-test') \
-           or target.name.endswith('-tests') \
-           or target.name.startswith('diff'):
+           or target.name.endswith('-tests'):
           groupname = 'test'
         else:
           groupname = 'exe'
