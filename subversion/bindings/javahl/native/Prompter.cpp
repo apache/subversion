@@ -73,28 +73,27 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
 
   JNIEnv *env = JNIUtil::getEnv();
 
-  // Sanity check that the Java object implements PromptUserPassword.
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
+  // Sanity check that the Java object implements PromptUserPassword.
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
   if (!env->IsInstanceOf(jprompter, clazz))
-    {
-      env->DeleteLocalRef(clazz);
-      return NULL;
-    }
-  env->DeleteLocalRef(clazz);
+    POP_AND_RETURN_NULL;
 
   // Check if PromptUserPassword2 is implemented by the Java object.
   jclass clazz2 = env->FindClass(JAVA_PACKAGE"/PromptUserPassword2");
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
   bool v2 = env->IsInstanceOf(jprompter, clazz2) ? true: false;
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  env->DeleteLocalRef(clazz2);
+    POP_AND_RETURN_NULL;
 
   bool v3 = false;
   if (v2)
@@ -102,20 +101,20 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
       // Check if PromptUserPassword3 is implemented by the Java object.
       jclass clazz3 = env->FindClass(JAVA_PACKAGE"/PromptUserPassword3");
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+        POP_AND_RETURN_NULL;
 
       v3 = env->IsInstanceOf(jprompter, clazz3) ? true: false;
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-      env->DeleteLocalRef(clazz3);
+        POP_AND_RETURN_NULL;
     }
 
   // Create a new global ref for the Java object, because it is
   // longer used that this call.
   jobject myPrompt = env->NewGlobalRef(jprompter);
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
+
+  env->PopLocalFrame(NULL);
 
   // Create the C++ peer.
   return new Prompter(myPrompt, v2, v3);
@@ -129,6 +128,11 @@ jstring Prompter::username()
 {
   JNIEnv *env = JNIUtil::getEnv();
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
   static jmethodID mid = 0;
@@ -137,20 +141,18 @@ jstring Prompter::username()
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+        POP_AND_RETURN_NULL;
 
       mid = env->GetMethodID(clazz, "getUsername", "()Ljava/lang/String;");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        return NULL;
-
-      env->DeleteLocalRef(clazz);
+        POP_AND_RETURN_NULL;
     }
 
   jstring ret = static_cast<jstring>(env->CallObjectMethod(m_prompter, mid));
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_NULL;
 
-  return ret;
+  return (jstring) env->PopLocalFrame(ret);
 }
 
 /**
@@ -161,6 +163,11 @@ jstring Prompter::password()
 {
   JNIEnv *env = JNIUtil::getEnv();
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
   static jmethodID mid = 0;
@@ -169,20 +176,18 @@ jstring Prompter::password()
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+        POP_AND_RETURN_NULL;
 
       mid = env->GetMethodID(clazz, "getPassword", "()Ljava/lang/String;");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        return NULL;
-
-      env->DeleteLocalRef(clazz);
+        POP_AND_RETURN_NULL;
     }
 
   jstring ret = static_cast<jstring>(env->CallObjectMethod(m_prompter, mid));
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  return ret;
+  return (jstring) env->PopLocalFrame(ret);
 }
 /**
  * Ask the user a question, which can be answered by yes/no.
@@ -196,6 +201,11 @@ bool Prompter::askYesNo(const char *realm, const char *question,
 {
   JNIEnv *env = JNIUtil::getEnv();
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return false;
+
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
   static jmethodID mid = 0;
@@ -204,35 +214,30 @@ bool Prompter::askYesNo(const char *realm, const char *question,
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
       if (JNIUtil::isJavaExceptionThrown())
-        return false;
+        POP_AND_RETURN(false);
 
       mid = env->GetMethodID(clazz, "askYesNo",
                              "(Ljava/lang/String;Ljava/lang/String;Z)Z");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        return false;
-
-      env->DeleteLocalRef(clazz);
+        POP_AND_RETURN(false);
     }
 
   // convert the texts to Java strings
   jstring jrealm = JNIUtil::makeJString(realm);
   if (JNIUtil::isJavaExceptionThrown())
-    return false;
+    POP_AND_RETURN(false);
 
   jstring jquestion = JNIUtil::makeJString(question);
   if (JNIUtil::isJavaExceptionThrown())
-    return false;
+    POP_AND_RETURN(false);
 
   // execute the callback
   jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm, jquestion,
                                         yesIsDefault ? JNI_TRUE : JNI_FALSE);
   if (JNIUtil::isJavaExceptionThrown())
-    return false;
+    POP_AND_RETURN(false);
 
-  // delete the Java strings
-  env->DeleteLocalRef(jquestion);
-  env->DeleteLocalRef(jrealm);
-
+  env->PopLocalFrame(NULL);
   return ret ? true:false;
 }
 
@@ -240,6 +245,12 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
                                   bool showAnswer, bool maySave)
 {
   JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return false;
+
   if (m_version3)
     {
       static jmethodID mid = 0;
@@ -248,37 +259,34 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
         {
           jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword3");
           if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
+            POP_AND_RETURN_NULL;
 
           mid = env->GetMethodID(clazz, "askQuestion",
-                                 "(Ljava/lang/String;Ljava/lang/String;ZZ)Ljava/lang/String;");
+                                 "(Ljava/lang/String;Ljava/lang/String;"
+                                 "ZZ)Ljava/lang/String;");
           if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-            return NULL;
+            POP_AND_RETURN_NULL;
 
           mid2 = env->GetMethodID(clazz, "userAllowedSave", "()Z");
           if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-            return NULL;
-
-          env->DeleteLocalRef(clazz);
+            POP_AND_RETURN_NULL;
         }
 
       jstring jrealm = JNIUtil::makeJString(realm);
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+        POP_AND_RETURN_NULL;
 
       jstring jquestion = JNIUtil::makeJString(question);
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+        POP_AND_RETURN_NULL;
 
       jstring janswer = static_cast<jstring>(
-                                             env->CallObjectMethod(m_prompter, mid, jrealm, jquestion,
-                                                                   showAnswer ? JNI_TRUE : JNI_FALSE,
-                                                                   maySave ? JNI_TRUE : JNI_FALSE));
+                           env->CallObjectMethod(m_prompter, mid, jrealm,
+                                        jquestion,
+                                        showAnswer ? JNI_TRUE : JNI_FALSE,
+                                        maySave ? JNI_TRUE : JNI_FALSE));
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-      env->DeleteLocalRef(jquestion);
-      env->DeleteLocalRef(jrealm);
+        POP_AND_RETURN_NULL;
 
       JNIStringHolder answer(janswer);
       if (answer != NULL)
@@ -286,14 +294,13 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
           m_answer = answer;
           m_maySave = env->CallBooleanMethod(m_prompter, mid2) ? true: false;
           if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
+            POP_AND_RETURN_NULL;
         }
       else
         {
           m_answer = "";
           m_maySave = false;
         }
-      return m_answer.c_str();
     }
   else
     {
@@ -302,32 +309,28 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
         {
           jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
           if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
+            POP_AND_RETURN_NULL;
 
           mid = env->GetMethodID(clazz, "askQuestion",
-                                 "(Ljava/lang/String;Ljava/lang/String;Z)Ljava/lang/String;");
+                                 "(Ljava/lang/String;Ljava/lang/String;Z)"
+                                 "Ljava/lang/String;");
           if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-            return NULL;
-
-          env->DeleteLocalRef(clazz);
+            POP_AND_RETURN_NULL;
         }
 
       jstring jrealm = JNIUtil::makeJString(realm);
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+        POP_AND_RETURN_NULL;
 
       jstring jquestion = JNIUtil::makeJString(question);
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+        POP_AND_RETURN_NULL;
 
       jstring janswer = static_cast<jstring>(
-                                             env->CallObjectMethod(m_prompter, mid, jrealm, jquestion,
-                                                                   showAnswer ? JNI_TRUE : JNI_FALSE));
+                            env->CallObjectMethod(m_prompter, mid, jrealm,
+                                jquestion, showAnswer ? JNI_TRUE : JNI_FALSE));
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-      env->DeleteLocalRef(jquestion);
-      env->DeleteLocalRef(jrealm);
+        POP_AND_RETURN_NULL;
 
       JNIStringHolder answer(janswer);
       if (answer != NULL)
@@ -343,8 +346,10 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
           m_answer = "";
           m_maySave = false;
         }
-      return m_answer.c_str();
     }
+
+  env->PopLocalFrame(NULL);
+  return m_answer.c_str();
 }
 
 int Prompter::askTrust(const char *question, bool maySave)
@@ -353,30 +358,33 @@ int Prompter::askTrust(const char *question, bool maySave)
     {
       static jmethodID mid = 0;
       JNIEnv *env = JNIUtil::getEnv();
+
+      // Create a local frame for our references
+      env->PushLocalFrame(LOCAL_FRAME_SIZE);
+      if (JNIUtil::isJavaExceptionThrown())
+        return -1;
+
       if (mid == 0)
         {
           jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword2");
           if (JNIUtil::isJavaExceptionThrown())
-            return -1;
+            POP_AND_RETURN(-1);
 
           mid = env->GetMethodID(clazz, "askTrustSSLServer",
                                  "(Ljava/lang/String;Z)I");
           if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-            return -1;
-
-          env->DeleteLocalRef(clazz);
+            POP_AND_RETURN(-1);
         }
       jstring jquestion = JNIUtil::makeJString(question);
       if (JNIUtil::isJavaExceptionThrown())
-        return -1;
+        POP_AND_RETURN(-1);
 
       jint ret = env->CallIntMethod(m_prompter, mid, jquestion,
                                     maySave ? JNI_TRUE : JNI_FALSE);
       if (JNIUtil::isJavaExceptionThrown())
-        return -1;
+        POP_AND_RETURN(-1);
 
-      env->DeleteLocalRef(jquestion);
-
+      env->PopLocalFrame(NULL);
       return ret;
     }
   else
@@ -403,6 +411,13 @@ int Prompter::askTrust(const char *question, bool maySave)
 bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
 {
   JNIEnv *env = JNIUtil::getEnv();
+  jboolean ret;
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return false;
+
   if (m_version3)
     {
       static jmethodID mid = 0;
@@ -411,42 +426,34 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
         {
           jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword3");
           if (JNIUtil::isJavaExceptionThrown())
-            return false;
+            POP_AND_RETURN(false);
 
           mid = env->GetMethodID(clazz, "prompt",
                                  "(Ljava/lang/String;Ljava/lang/String;Z)Z");
           if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-            return false;
+            POP_AND_RETURN(false);
 
           mid2 = env->GetMethodID(clazz, "userAllowedSave", "()Z");
           if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-            return false;
-
-          env->DeleteLocalRef(clazz);
+            POP_AND_RETURN(false);
         }
 
       jstring jrealm = JNIUtil::makeJString(realm);
       if (JNIUtil::isJavaExceptionThrown())
-        return false;
+        POP_AND_RETURN(false);
 
       jstring jusername = JNIUtil::makeJString(pi_username);
       if (JNIUtil::isJavaExceptionThrown())
-        return false;
+        POP_AND_RETURN(false);
 
-      jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm,
-                                            jusername,
-                                            maySave ? JNI_TRUE: JNI_FALSE);
+      ret = env->CallBooleanMethod(m_prompter, mid, jrealm, jusername,
+                                   maySave ? JNI_TRUE: JNI_FALSE);
       if (JNIUtil::isJavaExceptionThrown())
-        return false;
-
-      env->DeleteLocalRef(jusername);
-      env->DeleteLocalRef(jrealm);
+        POP_AND_RETURN(false);
 
       m_maySave = env->CallBooleanMethod(m_prompter, mid2) ? true : false;
       if (JNIUtil::isJavaExceptionThrown())
-        return false;
-
-      return ret ? true:false;
+        POP_AND_RETURN(false);
     }
   else
     {
@@ -455,39 +462,34 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
         {
           jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
           if (JNIUtil::isJavaExceptionThrown())
-            return false;
+            POP_AND_RETURN(false);
 
           mid = env->GetMethodID(clazz, "prompt",
                                  "(Ljava/lang/String;Ljava/lang/String;)Z");
           if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-            return false;
-
-          env->DeleteLocalRef(clazz);
+            POP_AND_RETURN(false);
         }
 
       jstring jrealm = JNIUtil::makeJString(realm);
       if (JNIUtil::isJavaExceptionThrown())
-        return false;
+        POP_AND_RETURN(false);
 
       jstring jusername = JNIUtil::makeJString(pi_username);
       if (JNIUtil::isJavaExceptionThrown())
-        return false;
+        POP_AND_RETURN(false);
 
-      jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm,
-                                            jusername);
+      ret = env->CallBooleanMethod(m_prompter, mid, jrealm, jusername);
       if (JNIUtil::isJavaExceptionThrown())
-        return false;
-
-      env->DeleteLocalRef(jusername);
-      env->DeleteLocalRef(jrealm);
+        POP_AND_RETURN(false);
 
       if (maySave)
         m_maySave = askYesNo(realm, _("May save the answer ?"), true);
       else
         m_maySave = false;
-
-      return ret ? true:false;
     }
+
+  env->PopLocalFrame(NULL);
+  return ret ? true:false;
 }
 
 svn_auth_provider_object_t *Prompter::getProviderSimple()
