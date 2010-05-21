@@ -535,8 +535,6 @@ jobject SVNAdmin::lslocks(const char *path)
     }
 
   env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
 
   return CreateJ::Set(jlocks);
 }

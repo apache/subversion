@@ -82,8 +82,6 @@ ChangelistCallback::doChangelist(const char *path, const char *changelist,
         return;
 
       env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return;
     }
 
   jstring jChangelist = JNIUtil::makeJString(changelist);
@@ -99,6 +97,4 @@ ChangelistCallback::doChangelist(const char *path, const char *changelist,
     return;
 
   env->DeleteLocalRef(jChangelist);
-  // We return here regardless of whether an exception is thrown or not,
-  // so we do not need to explicitly check for one.
 }

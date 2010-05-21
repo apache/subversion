@@ -381,7 +381,6 @@ Java_org_apache_subversion_javahl_SVNAdmin_setLog
   setRevProp(jthis, jpath, jrevision, jlogPropName, jmessage,
              !jbypassHooks, !jbypassHooks);
   env->DeleteLocalRef(jlogPropName);
-  // No need to check for an exception here, because we return anyway
 }
 
 JNIEXPORT void JNICALL

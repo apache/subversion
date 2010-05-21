@@ -39,8 +39,6 @@ Array::~Array()
             it < m_objects.end(); ++it)
         {
           JNIUtil::getEnv()->DeleteLocalRef(*it);
-          if (JNIUtil::isExceptionThrown())
-            return;
         }
       
       JNIUtil::getEnv()->DeleteLocalRef(m_objectArray);

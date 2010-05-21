@@ -430,14 +430,8 @@ JNIUtil::putErrorsInTrace(svn_error_t *err,
   stackTrace.push_back(jelement);
 
   env->DeleteLocalRef(stClazz);
-  if (isJavaExceptionThrown())
-    return;
   env->DeleteLocalRef(jdeclClass);
-  if (isJavaExceptionThrown())
-    return;
   env->DeleteLocalRef(jmethodName);
-  if (isJavaExceptionThrown())
-    return;
   env->DeleteLocalRef(jfileName);
 }
 
@@ -809,8 +803,6 @@ jobject JNIUtil::createDate(apr_time_t time)
     return NULL;
 
   env->DeleteLocalRef(clazz);
-  if (isJavaExceptionThrown())
-    return NULL;
 
   return ret;
 }

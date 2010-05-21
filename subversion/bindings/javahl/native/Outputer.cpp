@@ -91,8 +91,6 @@ svn_error_t *Outputer::write(void *baton, const char *buffer, apr_size_t *len)
         return SVN_NO_ERROR;
 
       env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
     }
 
   // convert the data to a Java byte array
@@ -107,8 +105,6 @@ svn_error_t *Outputer::write(void *baton, const char *buffer, apr_size_t *len)
     return SVN_NO_ERROR;
 
   env->DeleteLocalRef(data);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
 
   // return the number of bytes written
   *len = written;
@@ -142,8 +138,6 @@ svn_error_t *Outputer::close(void *baton)
         return SVN_NO_ERROR;
 
       env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
     }
 
   // Call the Java object, to close the stream.

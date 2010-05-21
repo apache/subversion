@@ -807,16 +807,10 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
         env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
 
         env->DeleteLocalRef(jranges);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
         env->DeleteLocalRef(jpath);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
     }
 
     env->DeleteLocalRef(clazz);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
 
     return jmergeinfo;
 }
