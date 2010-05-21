@@ -3227,6 +3227,7 @@ absent_file_or_dir(const char *path,
   const char *repos_root_url;
   const char *repos_uuid;
   svn_boolean_t is_added;
+  svn_node_kind_t existing_kind;
   svn_wc__db_kind_t db_kind
     = kind == svn_node_dir ? svn_wc__db_kind_dir : svn_wc__db_kind_file;
 
@@ -3234,13 +3235,19 @@ absent_file_or_dir(const char *path,
 
   /* If an item by this name is scheduled for addition that's a
      genuine tree-conflict.  */
-  SVN_ERR(svn_wc__node_is_added(&is_added, eb->wc_ctx, local_abspath, pool));
-  if (is_added)
-    return svn_error_createf(
+  SVN_ERR(svn_wc_read_kind(&existing_kind, eb->wc_ctx, local_abspath, TRUE,
+                           pool));
+  if (existing_kind != svn_node_none)
+    {
+      SVN_ERR(svn_wc__node_is_added(&is_added, eb->wc_ctx, local_abspath,
+                                    pool));
+      if (is_added)
+        return svn_error_createf(
          SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
          _("Failed to mark '%s' absent: item of the same name is already "
            "scheduled for addition"),
          svn_dirent_local_style(path, pool));
+    }
 
   SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
                                      &repos_uuid, eb->db, pb->local_abspath,
