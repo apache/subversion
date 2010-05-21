@@ -295,12 +295,18 @@ svn_wc__ultimate_base_text_path(const char **result_abspath,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
-  const svn_wc_entry_t *entry;
+  svn_error_t *err;
   svn_boolean_t replaced;
 
-  SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, TRUE, svn_node_file,
-                            FALSE, scratch_pool, scratch_pool));
-  replaced = entry && entry->schedule == svn_wc_schedule_replace;
+  err = svn_wc__internal_is_replaced(&replaced, db, local_abspath,
+                                     scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      replaced = FALSE;
+    }
+  else
+    SVN_ERR(err);
 
   if (replaced)
     SVN_ERR(svn_wc__text_revert_path(result_abspath, db, local_abspath,
