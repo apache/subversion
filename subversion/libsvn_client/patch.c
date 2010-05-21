@@ -1391,6 +1391,15 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
           if (! target->skipped)
             {
               local_abspath = abs_wc_path;
+              for (i = 0; i < present_components; i++)
+                {
+                  const char *component;
+                  component = APR_ARRAY_IDX(components, i,
+                                            const char *);
+                  local_abspath = svn_dirent_join(local_abspath,
+                                                  component, pool);
+                }
+
               for (i = present_components; i < components->nelts - 1; i++)
                 {
                   const char *component;
