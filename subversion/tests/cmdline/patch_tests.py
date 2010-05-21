@@ -1066,9 +1066,12 @@ def patch_remove_empty_dirs(sbox):
   os.remove(os.path.join(wc_dir, 'A', 'D', 'H', 'chi'))
 
   expected_output = [
-    'D         %s\n' % os.path.join(wc_dir, 'A', 'B'),
     'D         %s\n' % os.path.join(wc_dir, 'A', 'D', 'H', 'psi'),
     'D         %s\n' % os.path.join(wc_dir, 'A', 'D', 'H', 'omega'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'lambda'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'alpha'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B'),
   ]
 
   expected_disk = svntest.main.greek_state.copy()
