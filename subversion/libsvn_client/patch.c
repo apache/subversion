@@ -169,7 +169,7 @@ typedef struct {
 
 /* A smaller struct containing a subset of patch_target_t.
  * Carries the minimal amount of information we still need for a
- * target after we're done patching it. Helps saving some memory. */
+ * target after we're done patching it so we can free other resources. */
 typedef struct {
   const char *local_abspath;
   svn_boolean_t deleted;
