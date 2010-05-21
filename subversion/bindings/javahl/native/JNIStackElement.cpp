@@ -71,7 +71,7 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
 
       // Release the Java string.
       env->DeleteLocalRef(jlo);
-      env->DeleteLocalRef(jlo);
+      env->DeleteLocalRef(oStr);
 
       // Remember the parameter for the exit of the method.
       m_clazz = clazz;
