@@ -9456,8 +9456,14 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
   expected_output = wc.State(A_COPY_B_path, {
     'lambda' : Item(status='U '),
     })
+  # Issue #3642 http://subversion.tigris.org/issues/show_bug.cgi?id=3642
+  #
+  # We don't expect A_COPY/B/F to have mergeinfo recorded on it because
+  # not only is it unaffected by the merge at depth immediates, it could
+  # never be affected by the merge, regardless of depth.  
   expected_mergeinfo_output = wc.State(A_COPY_B_path, {
-    ''  : Item(status=' U'),
+    ''   : Item(status=' U'),
+    'E'  : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_COPY_B_path, {
     })
@@ -9472,7 +9478,7 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
   expected_status = wc.State(A_COPY_B_path, {
     ''         : Item(status=' M', wc_rev=2),
     'lambda'   : Item(status='M ', wc_rev=2),
-    'F'        : Item(status=' M', wc_rev=2),
+    'F'        : Item(status='  ', wc_rev=2),
     'E'        : Item(status=' M', wc_rev=2),
     'E/alpha'  : Item(status='  ', wc_rev=2),
     'E/beta'   : Item(status='  ', wc_rev=2),
