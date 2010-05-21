@@ -159,16 +159,21 @@ typedef struct {
   /* True if the target's parent directory exists. */
   svn_boolean_t parent_dir_exists;
 
-  /* True if the target's parent directory is being deleted
-   * as a result of the patching process. */
-  svn_boolean_t parent_dir_deleted;
-
   /* The keywords of the target. */
   apr_hash_t *keywords;
 
   /* The pool the target is allocated in. */
   apr_pool_t *pool;
 } patch_target_t;
+
+
+/* A smaller struct containing a subset of patch_target_t.
+ * Carries the minimal amount of information we still need for a
+ * target after we're done patching it. Helps saving some memory. */
+typedef struct {
+  const char *local_abspath;
+  svn_boolean_t deleted;
+} patch_target_info_t;
 
 
 /* Strip STRIP_COUNT components from the front of PATH, returning
@@ -513,7 +518,6 @@ init_patch_target(patch_target_t **patch_target,
   target->had_rejects = FALSE;
   target->deleted = FALSE;
   target->eof = FALSE;
-  target->parent_dir_deleted = FALSE;
   target->pool = result_pool;
   target->lines = apr_array_make(result_pool, 0,
                                  sizeof(svn_stream_mark_t *));
@@ -1297,7 +1301,7 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
 {
   if (target->deleted)
     {
-      if (! dry_run && ! target->parent_dir_deleted)
+      if (! dry_run)
         {
           /* Schedule the target for deletion.  Suppress
            * notification, we'll do it manually in a minute
@@ -1547,10 +1551,11 @@ check_dir_empty(svn_boolean_t *empty, const char *local_abspath,
 
       for (j = 0; j < deleted_targets->nelts; j++)
         {
-          patch_target_t *target;
+          patch_target_info_t *target_info;
 
-          target = APR_ARRAY_IDX(deleted_targets, j, patch_target_t *);
-          if (! svn_path_compare_paths(found, target->local_abspath))
+          target_info = APR_ARRAY_IDX(deleted_targets, j,
+                                      patch_target_info_t *);
+          if (! svn_path_compare_paths(found, target_info->local_abspath))
            {
               deleted = TRUE;
               break;
@@ -1612,7 +1617,7 @@ push_if_unique(apr_array_header_t *empty_dirs, const char *empty_dir,
  * If DRY_RUN is TRUE, do not modify the working copy.
  * Do temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
-delete_empty_dirs(apr_array_header_t *targets, svn_client_ctx_t *ctx,
+delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
                   svn_boolean_t dry_run, apr_pool_t *scratch_pool)
 {
   apr_array_header_t *empty_dirs;
@@ -1623,13 +1628,13 @@ delete_empty_dirs(apr_array_header_t *targets, svn_client_ctx_t *ctx,
 
   /* Get a list of all deleted targets. */
   deleted_targets = apr_array_make(scratch_pool, 0, sizeof(patch_target_t *));
-  for (i = 0; i < targets->nelts; i++)
+  for (i = 0; i < targets_info->nelts; i++)
     {
-      patch_target_t *target;
+      patch_target_info_t *target_info;
 
-      target = APR_ARRAY_IDX(targets, i, patch_target_t *);
-      if (target->deleted)
-        APR_ARRAY_PUSH(deleted_targets, patch_target_t *) = target;
+      target_info = APR_ARRAY_IDX(targets_info, i, patch_target_info_t *);
+      if (target_info->deleted)
+        APR_ARRAY_PUSH(deleted_targets, patch_target_info_t *) = target_info;
     }
 
   /* We have nothing to do if there aren't any deleted targets. */
@@ -1639,10 +1644,10 @@ delete_empty_dirs(apr_array_header_t *targets, svn_client_ctx_t *ctx,
   /* Look for empty parent directories of deleted targets. */
   empty_dirs = apr_array_make(scratch_pool, 0, sizeof(const char *));
   iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < targets->nelts; i++)
+  for (i = 0; i < targets_info->nelts; i++)
     {
       svn_boolean_t parent_empty;
-      patch_target_t *target;
+      patch_target_info_t *target_info;
       const char *parent;
 
       svn_pool_clear(iterpool);
@@ -1650,8 +1655,8 @@ delete_empty_dirs(apr_array_header_t *targets, svn_client_ctx_t *ctx,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      target = APR_ARRAY_IDX(targets, i, patch_target_t *);
-      parent = svn_dirent_dirname(target->local_abspath, iterpool);
+      target_info = APR_ARRAY_IDX(targets_info, i, patch_target_info_t *);
+      parent = svn_dirent_dirname(target_info->local_abspath, iterpool);
       SVN_ERR(check_dir_empty(&parent_empty, parent, ctx->wc_ctx,
                               deleted_targets, NULL, iterpool));
       if (parent_empty)
@@ -1704,26 +1709,6 @@ delete_empty_dirs(apr_array_header_t *targets, svn_client_ctx_t *ctx,
         }
     }
   while (again);
-
-  /* Mark all children of empty parent directories. */
-  for (i = 0; i < targets->nelts ; i++)
-    {
-      patch_target_t *target;
-      int j;
-
-      target = APR_ARRAY_IDX(targets, i, patch_target_t *);
-      for (j = 0; j < empty_dirs->nelts; j++)
-        {
-          const char *empty_dir;
-
-          empty_dir = APR_ARRAY_IDX(empty_dirs, j, const char *);
-          if (svn_dirent_is_ancestor(empty_dir, target->local_abspath))
-            {
-              target->parent_dir_deleted = TRUE;
-              break;
-            }
-        }
-    }
 
   /* Finally, delete empty directories. */
   for (i = 0; i < empty_dirs->nelts; i++)
@@ -1804,8 +1789,7 @@ apply_patches(void *baton,
   apr_pool_t *iterpool;
   const char *patch_eol_str;
   apr_file_t *patch_file;
-  apr_array_header_t *targets;
-  int i;
+  apr_array_header_t *targets_info;
   apply_patches_baton_t *btn = baton;
 
   /* Try to open the patch file. */
@@ -1822,7 +1806,8 @@ apply_patches(void *baton,
     }
 
   /* Apply patches. */
-  targets = apr_array_make(scratch_pool, 0, sizeof(patch_target_t *));
+  targets_info = apr_array_make(scratch_pool, 0,
+                                sizeof(patch_target_info_t *));
   iterpool = svn_pool_create(scratch_pool);
   do
     {
@@ -1833,7 +1818,7 @@ apply_patches(void *baton,
 
       SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
                                         btn->reverse, btn->ignore_whitespace,
-                                        scratch_pool, iterpool));
+                                        iterpool, iterpool));
       if (patch)
         {
           patch_target_t *target;
@@ -1846,40 +1831,35 @@ apply_patches(void *baton,
                                   btn->patch_func, btn->patch_baton,
                                   btn->ctx->cancel_func,
                                   btn->ctx->cancel_baton,
-                                  result_pool, iterpool));
-          if (target->filtered)
-            SVN_ERR(svn_diff_close_patch(patch));
-          else
-            APR_ARRAY_PUSH(targets, patch_target_t *) = target;
+                                  iterpool, iterpool));
+          if (! target->filtered)
+            {
+              /* Save info we'll still need when we're done patching. */
+              patch_target_info_t *target_info =
+                apr_palloc(scratch_pool, sizeof(patch_target_info_t));
+              target_info->local_abspath = apr_pstrdup(scratch_pool,
+                                                       target->local_abspath);
+              target_info->deleted = target->deleted;
+              APR_ARRAY_PUSH(targets_info,
+                             patch_target_info_t *) = target_info;
+
+              if (! target->skipped)
+                SVN_ERR(install_patched_target(target, btn->abs_wc_path,
+                                               btn->ctx, btn->dry_run,
+                                               iterpool));
+              SVN_ERR(send_patch_notification(target, btn->ctx, iterpool));
+            }
+
+          SVN_ERR(svn_diff_close_patch(patch));
         }
     }
   while (patch);
 
   /* Delete directories which are empty after patching, if any. */
-  SVN_ERR(delete_empty_dirs(targets, btn->ctx, btn->dry_run, scratch_pool));
-
-  /* Install patched targets into the working copy. */
-  for (i = 0; i < targets->nelts; i++)
-    {
-      patch_target_t *target;
-
-      svn_pool_clear(iterpool);
-
-      if (btn->ctx->cancel_func)
-        SVN_ERR(btn->ctx->cancel_func(btn->ctx->cancel_baton));
-
-      target = APR_ARRAY_IDX(targets, i, patch_target_t *);
-      if (! target->skipped)
-        SVN_ERR(install_patched_target(target, btn->abs_wc_path,
-                                       btn->ctx, btn->dry_run, iterpool));
-      if (! target->parent_dir_deleted)
-        SVN_ERR(send_patch_notification(target, btn->ctx, iterpool));
-      if (target->patch)
-        SVN_ERR(svn_diff_close_patch(target->patch));
-    }
+  SVN_ERR(delete_empty_dirs(targets_info, btn->ctx, btn->dry_run,
+                            scratch_pool));
 
   SVN_ERR(svn_io_file_close(patch_file, iterpool));
-
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
