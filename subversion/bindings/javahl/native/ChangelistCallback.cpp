@@ -79,21 +79,21 @@ ChangelistCallback::doChangelist(const char *path, const char *changelist,
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ChangelistCallback");
       if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN();
+        POP_AND_RETURN_NOTHING();
 
       mid = env->GetMethodID(clazz, "doChangelist",
                              "(Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        POP_AND_RETURN();
+        POP_AND_RETURN_NOTHING();
     }
 
   jstring jChangelist = JNIUtil::makeJString(changelist);
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN();
+    POP_AND_RETURN_NOTHING();
 
   jstring jPath = JNIUtil::makeJString(path);
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN();
+    POP_AND_RETURN_NOTHING();
 
   env->CallVoidMethod(m_callback, mid, jPath, jChangelist);
 
