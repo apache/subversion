@@ -141,6 +141,8 @@ Commit access for specific areas:
        rocksun   Rock Sun <daijun@gmail.com>                 (www: zh)
        kmradke   Kevin Radke <kmradke@gmail.com>             (add-needs-lock.py)
            esr   Eric S. Raymond <esr@thyrsus.com>           (svncutter)
+     gmcdonald   Gavin McDonald <gavin@16degrees.com.au>     (build/hudson,
+                                                              tools/buildbot)
 
   Translation of message files:
 
