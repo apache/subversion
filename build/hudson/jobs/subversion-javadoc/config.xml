@@ -16,74 +16,87 @@
     KIND, either express or implied.  See the License for the
     specific language governing permissions and limitations
     under the License.
--->
+--> 
 <project>
-  <actions/>
-  <description>Build Subversion javadoc from &quot;trunk&quot; branch</description>
+  <actions /> 
+  <description>Build Subversion javadoc from "trunk" branch</description> 
   <logRotator>
-    <daysToKeep>-1</daysToKeep>
-    <numToKeep>40</numToKeep>
+    <daysToKeep>-1</daysToKeep> 
+    <numToKeep>40</numToKeep> 
+    <artifactDaysToKeep>-1</artifactDaysToKeep> 
+    <artifactNumToKeep>-1</artifactNumToKeep> 
   </logRotator>
-  <keepDependencies>false</keepDependencies>
+  <keepDependencies>false</keepDependencies> 
   <properties>
-    <hudson.plugins.disk__usage.DiskUsageProperty/>
-    <hudson.plugins.descriptionsetter.JobByDescription/>
+    <hudson.plugins.descriptionsetter.JobByDescription /> 
+    <hudson.plugins.disk__usage.DiskUsageProperty /> 
     <hudson.plugins.jira.JiraProjectProperty>
-      <siteName>https://issues.apache.org/jira/</siteName>
+      <siteName>https://issues.apache.org/jira/</siteName> 
     </hudson.plugins.jira.JiraProjectProperty>
   </properties>
   <scm class="hudson.scm.SubversionSCM">
     <locations>
       <hudson.scm.SubversionSCM_-ModuleLocation>
-        <remote>https://svn.apache.org/repos/asf/subversion/trunk</remote>
-        <local>subversion-trunk</local>
+        <remote>https://svn.apache.org/repos/asf/subversion/trunk</remote> 
+        <local>subversion-trunk</local> 
       </hudson.scm.SubversionSCM_-ModuleLocation>
     </locations>
-    <useUpdate>true</useUpdate>
+    <useUpdate>false</useUpdate> 
+    <doRevert>false</doRevert> 
     <browser class="hudson.scm.browsers.ViewSVN">
-      <url>http://svn.apache.org/viewcvs.cgi/?root=Apache-SVN</url>
+      <url>http://svn.apache.org/viewcvs.cgi/?root=Apache-SVN</url> 
     </browser>
-    <excludedRegions></excludedRegions>
-    <excludedUsers></excludedUsers>
-    <excludedRevprop></excludedRevprop>
+    <excludedRegions /> 
+    <includedRegions /> 
+    <excludedUsers /> 
+    <excludedRevprop /> 
+    <excludedCommitMessages /> 
   </scm>
-  <assignedNode>minerva.apache.org (Ubuntu)</assignedNode>
-  <canRoam>false</canRoam>
-  <disabled>false</disabled>
-  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
-  <jdk>(Default)</jdk>
+  <assignedNode>minerva.apache.org (Ubuntu)</assignedNode> 
+  <canRoam>false</canRoam> 
+  <disabled>false</disabled> 
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding> 
+  <jdk>(Default)</jdk> 
   <triggers class="vector">
     <hudson.triggers.SCMTrigger>
-      <spec>0 23 * * *</spec>
+      <spec>0 23 * * *</spec> 
     </hudson.triggers.SCMTrigger>
   </triggers>
-  <concurrentBuild>false</concurrentBuild>
+  <concurrentBuild>false</concurrentBuild> 
   <builders>
     <hudson.tasks.Shell>
-      <command>cd subversion-trunk
-
-./autogen.sh
-
-./configure --enable-maintainer-mode --disable-shared --with-apr=../../subversion-trunk-ubuntu/subversion-trunk/apr --with-apr-util=../../subversion-trunk-ubuntu/subversion-trunk/apr-util --with-jdk=/home/hudson/tools/java/jdk1.6.0_17-64/
-
-make
-</command>
+      <command>
+        cd subversion-trunk 
+        ./autogen.sh 
+        ./configure 
+          --enable-maintainer-mode 
+          --disable-shared 
+          --with-apr=/usr/local/apr/apr-1.4.2 
+          --with-apr-util=/usr/local/apr/apr-util-1.3.9 
+          --with-jdk=/home/hudson/tools/java/jdk1.6.0_17-64/ 
+        make
+      </command> 
     </hudson.tasks.Shell>
     <hudson.tasks.Shell>
-      <command>#!/bin/bash
-
-cd subversion-trunk
-
-export PATH=doxygen-1.6.1/bin:$PATH
-
-make doc-javahl</command>
+      <command>
+        #!/bin/bash 
+        cd subversion-trunk 
+        export PATH=doxygen-1.6.1/bin:$PATH 
+        make doc-javahl
+      </command> 
     </hudson.tasks.Shell>
   </builders>
   <publishers>
     <hudson.tasks.JavadocArchiver>
-      <javadocDir>subversion-trunk/doc/javadoc/</javadocDir>
-      <keepAll>false</keepAll>
+      <javadocDir>subversion-trunk/doc/javadoc/</javadocDir> 
+      <keepAll>false</keepAll> 
     </hudson.tasks.JavadocArchiver>
+    <hudson.tasks.Mailer>
+      <recipients>notifications@subversion.apache.org</recipients> 
+      <dontNotifyEveryUnstableBuild>true</dontNotifyEveryUnstableBuild> 
+      <sendToIndividuals>false</sendToIndividuals> 
+    </hudson.tasks.Mailer>
   </publishers>
-  <buildWrappers/>
+  <buildWrappers /> 
 </project>
+
