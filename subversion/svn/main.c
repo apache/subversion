@@ -355,9 +355,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "[alias: --rd]")},
   {"ignore-whitespace", opt_ignore_whitespace, 0,
-                       N_("don't take whitespace into account when,\n"
+                       N_("ignore whitespace during pattern matching\n"
                        "                             "
-                       "determining where a patch should be applied")},
+                       "[alias: --iw]")},
   {"show-diff", opt_show_diff, 0,
                        N_("produce diff output\n"
                        "                             "
@@ -387,6 +387,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"strip",         opt_strip_count, 1, NULL},
   {"sca",           opt_show_copies_as_adds, 0, NULL},
   {"ik",            opt_ignore_keywords, 0, NULL},
+  {"iw",            opt_ignore_whitespace, 0, NULL},
   {"diff",          opt_show_diff, 0, NULL},
 
   {0,               0, 0, 0},
