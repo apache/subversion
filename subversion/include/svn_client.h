@@ -4835,12 +4835,25 @@ svn_client_info(const char *path_or_url,
  */
 
 /**
- * The callback invoked by svn_client_patch().  Each invocation describes
- * a patch application for @a local_abspath, and provides the @a patch_abspath
- * to the temporary patch file and @a reject_abspath to the temporary reject
- * file.  Neither @a patch_abspath or @a reject_abspath are guaranteed to
- * exist (depending on the @a remove_tempfiles parameter for
- * svn_client_patch() ).
+ * The callback invoked by svn_client_patch() before attempting to patch
+ * the target file at @a canon_path_from_patchfile (the path as parsed from
+ * the patch file, but in canonicalized form). The callback can prevent
+ * the file from being patched by setting @a filtered to @c TRUE.
+ *
+ * The callback is also provided with @a patch_abspath, the path of a
+ * temporary file containing the patched result, and with @a reject_abspath,
+ * the path to a temporary file containing the diff text of any hunks
+ * which were rejected during patching.
+ *
+ * Because the callback is invoked before the patching attempt is made,
+ * there is no guarantee that the target file will actually be patched
+ * successfully. Client implementations must pay attention to notification
+ * feedback provided by svn_client_patch() to find out which paths were
+ * patched successfully.
+ *
+ * Note also that the files at @a patch_abspath and @a reject_abspath are
+ * guaranteed to remain on disk after patching only if the
+ * @a remove_tempfiles parameter for svn_client_patch() is @c FALSE.
  *
  * The const char * parameters may be allocated in @a scratch_pool which
  * will be cleared after each invocation.
@@ -4849,6 +4862,7 @@ svn_client_info(const char *path_or_url,
  */
 typedef svn_error_t *(*svn_client_patch_func_t)(
   void *baton,
+  svn_boolean_t *filtered,
   const char *local_abspath,
   const char *patch_abspath,
   const char *reject_abspath,
@@ -4876,25 +4890,13 @@ typedef svn_error_t *(*svn_client_patch_func_t)(
  * This is useful when applying a unidiff which was created with the
  * original and modified files swapped due to human error.
  *
- * Excluding patch targets from the patching process is possible by passing
- * @a include_patterns and/or @a exclude_patterns arrays containing
- * elements of type const char *.
- * If @a include_patterns is not NULL, patch targets not matching any glob
- * pattern in @a include_patterns will not be patched.
- * If @a exclude_patterns is not NULL, patch targets matching any glob pattern
- * in @a exclude_patterns will not be patched
- * The match is performed on the target path as parsed from the patch file,
- * after canonicalization.
- * If both @a include_patterns and @a exclude_patterns are specified,
- * the @a include_patterns are applied first, i.e. the @a exclude_patterns
- * are applied to all targets which matched one of the @a include_patterns.
- *
  * If @a ignore_whitespace is TRUE, allow patches to be applied if they
  * only differ from the target by whitespace.
  *
- * If @a remove_tempfiles is TRUE, the temporary patch and reject file
- * lifetimes will be managed internally, otherwise, the caller should take
- * ownership of these files.
+ * If @a remove_tempfiles is TRUE, lifetimes of temporary files created
+ * during patching will be managed internally. Otherwise, the caller should
+ * take ownership of these files, the names of which can be obtained by
+ * passing a @a patch_func callback.
  *
  * If @a patch_func is non-NULL, invoke @a patch_func with @a patch_baton
  * for each patch target processed.
@@ -4915,8 +4917,6 @@ svn_client_patch(const char *patch_abspath,
                  svn_boolean_t dry_run,
                  int strip_count,
                  svn_boolean_t reverse,
-                 const apr_array_header_t *include_patterns,
-                 const apr_array_header_t *exclude_patterns,
                  svn_boolean_t ignore_whitespace,
                  svn_boolean_t remove_tempfiles,
                  svn_client_patch_func_t patch_func,

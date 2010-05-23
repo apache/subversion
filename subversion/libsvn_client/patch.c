@@ -136,7 +136,7 @@ typedef struct {
   /* True if the target had to be skipped for some reason. */
   svn_boolean_t skipped;
 
-  /* True if the target matches a filter glob pattern. */
+  /* True if the target has been filtered by the patch callback. */
   svn_boolean_t filtered;
 
   /* True if at least one hunk was rejected. */
@@ -337,8 +337,6 @@ resolve_target_path(patch_target_t *target,
  * which should be stripped from target paths in the patch.
  * Upon success, allocate the patch target structure in RESULT_POOL.
  * Else, set *target to NULL.
- * If a target does not match a glob in INCLUDE_PATTERNS, mark it as filtered.
- * If a target matches a glob in EXCLUDE_PATTERNS, mark it as filtered.
  * REMOVE_TEMPFILES as in svn_client_patch().
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
@@ -346,8 +344,6 @@ init_patch_target(patch_target_t **patch_target,
                   const svn_patch_t *patch,
                   const char *base_dir,
                   svn_wc_context_t *wc_ctx, int strip_count,
-                  const apr_array_header_t *include_patterns,
-                  const apr_array_header_t *exclude_patterns,
                   svn_boolean_t remove_tempfiles,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
@@ -358,49 +354,6 @@ init_patch_target(patch_target_t **patch_target,
   SVN_ERR(resolve_target_path(target, patch->new_filename,
                               base_dir, strip_count, wc_ctx,
                               result_pool, scratch_pool));
-
-  target->filtered = FALSE;
-  if (include_patterns)
-    {
-      int i;
-      const char *glob;
-      svn_boolean_t match;
-
-      match = FALSE;
-      for (i = 0; i < include_patterns->nelts; i++)
-        {
-          glob = APR_ARRAY_IDX(include_patterns, i, const char *);
-          match = (apr_fnmatch(glob, target->canon_path_from_patchfile,
-                               APR_FNM_CASE_BLIND) == APR_SUCCESS);
-          if (match)
-            break;
-        }
-
-      if (! match)
-        {
-          target->filtered = TRUE;
-          *patch_target = target;
-          return SVN_NO_ERROR;
-        }
-    }
-  if (exclude_patterns)
-    {
-      int i;
-      const char *glob;
-
-      for (i = 0; i < exclude_patterns->nelts; i++)
-        {
-          glob = APR_ARRAY_IDX(exclude_patterns, i, const char *);
-          target->filtered = (apr_fnmatch(glob,
-                                          target->canon_path_from_patchfile,
-                                          APR_FNM_CASE_BLIND) == APR_SUCCESS);
-          if (target->filtered)
-            {
-              *patch_target = target;
-              return SVN_NO_ERROR;
-            }
-        }
-    }
 
   target->local_mods = FALSE;
   target->executable = FALSE;
@@ -1138,8 +1091,6 @@ send_patch_notification(const patch_target_t *target,
  * in RESULT_POOL. Use WC_CTX as the working copy context.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
- * If a target does not match a glob in INCLUDE_PATTERNS, mark it as filtered.
- * If a target matches a glob in EXCLUDE_PATTERNS, mark it as filtered.
  * REMOVE_TEMPFILES, PATCH_FUNC, and PATCH_BATON as in svn_client_patch().
  * IGNORE_WHITESPACE tells whether whitespace should be considered when
  * doing the matching.
@@ -1149,8 +1100,6 @@ static svn_error_t *
 apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                 const char *abs_wc_path, svn_wc_context_t *wc_ctx,
                 int strip_count,
-                const apr_array_header_t *include_patterns,
-                const apr_array_header_t *exclude_patterns,
                 svn_boolean_t ignore_whitespace,
                 svn_boolean_t remove_tempfiles,
                 svn_client_patch_func_t patch_func,
@@ -1165,13 +1114,25 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   static const int MAX_FUZZ = 2;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
-                            include_patterns, exclude_patterns,
                             remove_tempfiles, result_pool, scratch_pool));
-
-  if (target->skipped || target->filtered)
+  if (target->skipped)
     {
       *patch_target = target;
       return SVN_NO_ERROR;
+    }
+
+  target->filtered = FALSE;
+  if (patch_func)
+    {
+      SVN_ERR(patch_func(patch_baton, &target->filtered,
+                         target->canon_path_from_patchfile,
+                         target->patched_path, target->reject_path,
+                         scratch_pool));
+      if (target->filtered)
+        {
+          *patch_target = target;
+          return SVN_NO_ERROR;
+        }
     }
 
   iterpool = svn_pool_create(scratch_pool);
@@ -1281,11 +1242,6 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
     }
 
   *patch_target = target;
-
-  if (patch_func)
-    SVN_ERR(patch_func(patch_baton, target->canon_path_from_patchfile,
-                       target->patched_path, target->reject_path,
-                       scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1766,12 +1722,6 @@ typedef struct {
   /* Whether to apply the patch in reverse. */
   svn_boolean_t reverse;
 
-  /* Files not matching any of these patterns won't be patched. */
-  const apr_array_header_t *include_patterns;
-
-  /* Files matching any of these patterns won't be patched. */
-  const apr_array_header_t *exclude_patterns;
-
   /* Indicates whether we should ignore whitespace when matching context
    * lines */
   svn_boolean_t ignore_whitespace;
@@ -1834,7 +1784,6 @@ apply_patches(void *baton,
 
           SVN_ERR(apply_one_patch(&target, patch, btn->abs_wc_path,
                                   btn->ctx->wc_ctx, btn->strip_count,
-                                  btn->include_patterns, btn->exclude_patterns,
                                   btn->ignore_whitespace,
                                   btn->remove_tempfiles,
                                   btn->patch_func, btn->patch_baton,
@@ -1880,8 +1829,6 @@ svn_client_patch(const char *patch_abspath,
                  svn_boolean_t dry_run,
                  int strip_count,
                  svn_boolean_t reverse,
-                 const apr_array_header_t *include_patterns,
-                 const apr_array_header_t *exclude_patterns,
                  svn_boolean_t ignore_whitespace,
                  svn_boolean_t remove_tempfiles,
                  svn_client_patch_func_t patch_func,
@@ -1902,8 +1849,6 @@ svn_client_patch(const char *patch_abspath,
   baton.ctx = ctx;
   baton.strip_count = strip_count;
   baton.reverse = reverse;
-  baton.include_patterns = include_patterns;
-  baton.exclude_patterns = exclude_patterns;
   baton.ignore_whitespace = ignore_whitespace;
   baton.remove_tempfiles = remove_tempfiles;
   baton.patch_func = patch_func;
