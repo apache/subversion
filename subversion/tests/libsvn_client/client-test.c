@@ -257,6 +257,7 @@ struct patch_collection_baton
 /* Collect all the patch information we're interested in. */
 static svn_error_t *
 patch_collection_func(void *baton,
+                      svn_boolean_t *filtered,
                       const char *local_abspath,
                       const char *patch_abspath,
                       const char *reject_abspath,
@@ -275,6 +276,9 @@ patch_collection_func(void *baton,
                  apr_pstrdup(pcb->state_pool, local_abspath),
                  APR_HASH_KEY_STRING,
                  apr_pstrdup(pcb->state_pool, reject_abspath));
+
+  if (filtered)
+    *filtered = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -384,8 +388,8 @@ test_patch(const svn_test_opts_t *opts,
   pcb.reject_tempfiles = apr_hash_make(pool);
   pcb.state_pool = pool;
   SVN_ERR(svn_client_patch(patch_file_path, wc_path, FALSE, 0, FALSE,
-                           NULL, NULL, FALSE, FALSE, patch_collection_func,
-                           &pcb, ctx, pool, pool));
+                           FALSE, FALSE, patch_collection_func, &pcb,
+                           ctx, pool, pool));
   SVN_ERR(svn_io_file_close(patch_file, pool));
 
   SVN_ERR_ASSERT(apr_hash_count(pcb.patched_tempfiles) == 1);
