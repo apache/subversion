@@ -119,7 +119,7 @@ typedef enum {
   opt_reverse_diff,
   opt_include_pattern,
   opt_exclude_pattern,
-  opt_ignore_whitespaces,
+  opt_ignore_whitespace,
   opt_show_diff,
 } svn_cl__longopt_t;
 
@@ -381,8 +381,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        "See also the --include-pattern option.\n"
                        "                             "
                        "[alias: --ep]")},
-  {"ignore-whitespaces", opt_ignore_whitespaces, 0,
-                       N_("don't take whitespaces into account when,\n"
+  {"ignore-whitespace", opt_ignore_whitespace, 0,
+                       N_("don't take whitespace into account when,\n"
                        "                             "
                        "determining where a patch should be applied")},
   {"show-diff", opt_show_diff, 0,
@@ -859,7 +859,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  do not agree with.\n"
      ),
     {'q', opt_dry_run, 'p', opt_reverse_diff, opt_include_pattern,
-     opt_exclude_pattern, opt_ignore_whitespaces} },
+     opt_exclude_pattern, opt_ignore_whitespace} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1786,8 +1786,8 @@ main(int argc, const char *argv[])
                                                       sizeof (const char *));
         APR_ARRAY_PUSH(opt_state.exclude_patterns, const char *) = opt_arg;
         break;
-      case opt_ignore_whitespaces:
-          opt_state.ignore_whitespaces = TRUE;
+      case opt_ignore_whitespace:
+          opt_state.ignore_whitespace = TRUE;
           break;
       case opt_show_diff:
           opt_state.show_diff = TRUE;

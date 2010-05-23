@@ -3827,7 +3827,7 @@ def merge_ignore_whitespace(sbox):
   # with the remote whitespace changes as both will be ignored.
   svntest.main.file_write(file_path, "    Aa\nB b\nC c\n")
 
-  # Lines changed only by whitespaces - both in local or remote -
+  # Lines changed only by whitespace - both in local or remote -
   # should be ignored
   expected_output = wc.State(sbox.wc_dir, { file_name : Item(status='G ') })
   expected_mergeinfo_output = wc.State(sbox.wc_dir, {

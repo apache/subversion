@@ -2355,8 +2355,8 @@ def patch_with_include_exclude_patterns(sbox):
                                        "--include-pattern", "*a",
                                        "--exclude-pattern", "A/*/gamma")
 
-def patch_with_ignore_whitespaces(sbox):
-  "ignore whitespaces when patching"
+def patch_with_ignore_whitespace(sbox):
+  "ignore whitespace when patching"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -2487,7 +2487,7 @@ def patch_with_ignore_whitespaces(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1, # dry-run
-                                       "--ignore-whitespaces",)
+                                       "--ignore-whitespace",)
 
 ########################################################################
 #Run the tests
@@ -2512,7 +2512,7 @@ test_list = [ None,
               patch_with_include_patterns,
               patch_with_exclude_patterns,
               patch_with_include_exclude_patterns,
-              patch_with_ignore_whitespaces,
+              patch_with_ignore_whitespace,
             ]
 
 if __name__ == '__main__':

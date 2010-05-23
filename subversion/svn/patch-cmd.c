@@ -81,7 +81,7 @@ svn_cl__patch(apr_getopt_t *os,
                            opt_state->reverse_diff,
                            opt_state->include_patterns,
                            opt_state->exclude_patterns,
-                           opt_state->ignore_whitespaces,
+                           opt_state->ignore_whitespace,
                            TRUE, NULL, NULL, ctx, pool, pool));
 
 
