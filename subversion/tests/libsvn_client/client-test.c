@@ -258,7 +258,7 @@ struct patch_collection_baton
 static svn_error_t *
 patch_collection_func(void *baton,
                       svn_boolean_t *filtered,
-                      const char *local_abspath,
+                      const char *canon_path_from_patchfile,
                       const char *patch_abspath,
                       const char *reject_abspath,
                       apr_pool_t *scratch_pool)
@@ -267,13 +267,13 @@ patch_collection_func(void *baton,
 
   if (patch_abspath)
     apr_hash_set(pcb->patched_tempfiles,
-                 apr_pstrdup(pcb->state_pool, local_abspath),
+                 apr_pstrdup(pcb->state_pool, canon_path_from_patchfile),
                  APR_HASH_KEY_STRING,
                  apr_pstrdup(pcb->state_pool, patch_abspath));
 
   if (reject_abspath)
     apr_hash_set(pcb->reject_tempfiles,
-                 apr_pstrdup(pcb->state_pool, local_abspath),
+                 apr_pstrdup(pcb->state_pool, canon_path_from_patchfile),
                  APR_HASH_KEY_STRING,
                  apr_pstrdup(pcb->state_pool, reject_abspath));
 
