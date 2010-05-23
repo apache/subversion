@@ -114,6 +114,7 @@ typedef enum {
   opt_show_revs,
   opt_reintegrate,
   opt_trust_server_cert,
+  opt_strip_count,
   opt_show_copies_as_adds,
   opt_ignore_keywords,
   opt_reverse_diff,
@@ -325,20 +326,24 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("lump-merge all of source URL's unmerged changes\n"
                        "                             "
                        "[alias: --ri]")},
-  {"strip",         'p', 1,
-                    N_("number of leading path components to strip\n"
+  {"strip-count",   opt_strip_count, 1,
+                    N_("number of leading path components to strip from\n"
                        "                             "
-                       "from pathnames. Specifying -p0 gives the entire\n"
+                       "paths parsed from the patch file. --strip-count 0\n"
                        "                             "
-                       "path unmodified. Specifying -p1 causes the path\n"
+                       "is the default and leaves paths unmodified.\n"
                        "                             "
-                       "    doc/fudge/crunchy.html\n"
+                       "--strip-count 1 would change the path\n"
                        "                             "
-                       "to be interpreted as\n"
+                       "'doc/fudge/crunchy.html' to 'fudge/crunchy.html'.\n"
                        "                             "
-                       "    fudge/crunchy.html\n"
+                       "--strip-count 2 would leave just 'crunchy.html'\n"
                        "                             "
-                       "while -p2 would give just crunchy.html")},
+                       "The expected component separator is '/' on all\n"
+                       "                             "
+                       "platforms. A leading '/' counts as one component.\n"
+                       "                             "
+                       "[alias: --strip]")},
   {"show-copies-as-adds", opt_show_copies_as_adds, 0,
                     N_("don't diff copied or moved files with their source\n"
                        "                             "
@@ -411,6 +416,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"kl",            opt_keep_local, 0, NULL},
   {"sr",            opt_show_revs, 1, NULL},
   {"ri",            opt_reintegrate, 0, NULL},
+  {"strip",         opt_strip_count, 1, NULL},
   {"sca",           opt_show_copies_as_adds, 0, NULL},
   {"ik",            opt_ignore_keywords, 0, NULL},
   {"ip",            opt_include_pattern, 1, NULL},
@@ -858,7 +864,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  for addition. Use 'svn revert' to undo deletions and additions you\n"
      "  do not agree with.\n"
      ),
-    {'q', opt_dry_run, 'p', opt_reverse_diff, opt_include_pattern,
+    {'q', opt_dry_run, opt_strip_count, opt_reverse_diff, opt_include_pattern,
      opt_exclude_pattern, opt_ignore_whitespace} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
@@ -1750,20 +1756,22 @@ main(int argc, const char *argv[])
       case opt_reintegrate:
         opt_state.reintegrate = TRUE;
         break;
-      case 'p':
+      case opt_strip_count:
         {
           char *end;
           opt_state.strip_count = (int) strtol(opt_arg, &end, 10);
           if (end == opt_arg || *end != '\0')
             {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("Non-numeric strip argument given"));
+              err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                      _("Invalid strip count '%s'"), opt_arg);
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
           if (opt_state.strip_count < 0)
             {
-              err = svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                    _("Argument to --strip must be positive"));
+              err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                      _("Negative strip count '%i' "
+                                        "(strip count must be positive)"),
+                                      opt_state.strip_count);
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
         }
