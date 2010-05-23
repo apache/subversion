@@ -269,7 +269,7 @@ parse_next_hunk(svn_hunk_t **hunk,
                 svn_patch_t *patch,
                 svn_stream_t *stream,
                 svn_boolean_t reverse,
-                svn_boolean_t ignore_whitespaces,
+                svn_boolean_t ignore_whitespace,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
@@ -360,7 +360,7 @@ parse_next_hunk(svn_hunk_t **hunk,
           if (original_lines > 0 && modified_lines > 0 
               && ((c == ' ')
               || (! eof && line->len == 0)
-              || (ignore_whitespaces && c != del && c != add)))
+              || (ignore_whitespace && c != del && c != add)))
             {
               hunk_seen = TRUE;
               original_lines--;
@@ -521,7 +521,7 @@ svn_error_t *
 svn_diff_parse_next_patch(svn_patch_t **patch,
                           apr_file_t *patch_file,
                           svn_boolean_t reverse,
-                          svn_boolean_t ignore_whitespaces,
+                          svn_boolean_t ignore_whitespace,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
@@ -629,7 +629,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
           svn_pool_clear(iterpool);
 
           SVN_ERR(parse_next_hunk(&hunk, *patch, stream, reverse,
-                                  ignore_whitespaces, result_pool, iterpool));
+                                  ignore_whitespace, result_pool, iterpool));
           if (hunk)
             APR_ARRAY_PUSH((*patch)->hunks, svn_hunk_t *) = hunk;
         }

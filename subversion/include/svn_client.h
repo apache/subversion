@@ -4889,8 +4889,8 @@ typedef svn_error_t *(*svn_client_patch_func_t)(
  * the @a include_patterns are applied first, i.e. the @a exclude_patterns
  * are applied to all targets which matched one of the @a include_patterns.
  *
- * If @a ignore_whitespaces is TRUE, allow patches to be applied if they
- * only differ from the target by whitespaces.
+ * If @a ignore_whitespace is TRUE, allow patches to be applied if they
+ * only differ from the target by whitespace.
  *
  * If @a remove_tempfiles is TRUE, the temporary patch and reject file
  * lifetimes will be managed internally, otherwise, the caller should take
@@ -4917,7 +4917,7 @@ svn_client_patch(const char *patch_abspath,
                  svn_boolean_t reverse,
                  const apr_array_header_t *include_patterns,
                  const apr_array_header_t *exclude_patterns,
-                 svn_boolean_t ignore_whitespaces,
+                 svn_boolean_t ignore_whitespace,
                  svn_boolean_t remove_tempfiles,
                  svn_client_patch_func_t patch_func,
                  void *patch_baton,
