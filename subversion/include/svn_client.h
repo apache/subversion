@@ -4863,7 +4863,7 @@ svn_client_info(const char *path_or_url,
 typedef svn_error_t *(*svn_client_patch_func_t)(
   void *baton,
   svn_boolean_t *filtered,
-  const char *local_abspath,
+  const char *canon_path_from_patchfile,
   const char *patch_abspath,
   const char *reject_abspath,
   apr_pool_t *scratch_pool);
