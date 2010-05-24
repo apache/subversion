@@ -268,8 +268,27 @@ svn_error_t *
 svn_wc__text_base_path_to_read(const char **result_abspath,
                                svn_wc__db_t *db,
                                const char *local_abspath,
-                               apr_pool_t *result_pool)
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+  const svn_checksum_t *checksum;
+
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &checksum,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
+  if (checksum == NULL)
+    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                             _("Node '%s' has no pristine text"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+  SVN_ERR(svn_wc__db_pristine_get_path(result_abspath, db, local_abspath,
+                                       checksum,
+                                       result_pool, scratch_pool));
+#else
   SVN_ERR(svn_wc__text_base_path(result_abspath, db, local_abspath,
                                  result_pool));
   /* Return an error if the file does not exist */
@@ -283,6 +302,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                svn_dirent_local_style(local_abspath,
                                                       result_pool));
   }
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -319,6 +339,23 @@ svn_wc__ultimate_base_text_path(const char **result_abspath,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+  const svn_checksum_t *checksum;
+
+  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, &checksum,
+                                   NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
+  if (checksum == NULL)
+    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                             _("Node '%s' has no pristine base text"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+  SVN_ERR(svn_wc__db_pristine_get_path(result_abspath, db, local_abspath,
+                                       checksum,
+                                       result_pool, scratch_pool));
+#else
   svn_error_t *err;
   svn_boolean_t replaced;
 
@@ -338,6 +375,7 @@ svn_wc__ultimate_base_text_path(const char **result_abspath,
   else
     SVN_ERR(svn_wc__text_base_path(result_abspath, db, local_abspath,
                                    result_pool));
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -413,7 +451,7 @@ svn_wc__get_ultimate_base_contents(svn_stream_t **contents,
 
       /* There's no "revert base", so open the "normal base". */
       err = svn_wc__text_base_path_to_read(&revert_base, db, local_abspath,
-                                           scratch_pool);
+                                           scratch_pool, scratch_pool);
       if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
         {
           svn_error_clear(err);
@@ -439,10 +477,11 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 {
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
+  const svn_checksum_t *sha1_checksum;
 
-  SVN_ERR(svn_wc__db_read_info(&status, &kind,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &sha1_checksum,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
@@ -495,13 +534,20 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                    && status != svn_wc__db_status_obstructed_delete
                    && status != svn_wc__db_status_base_deleted);
 
-  /* ### TODO 1.7: use pristine store instead of this block: */
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+  if (sha1_checksum)
+    SVN_ERR(svn_wc__db_pristine_read(contents, db, local_abspath,
+                                     sha1_checksum,
+                                     result_pool, scratch_pool));
+  else
+    *contents = NULL;
+#else
   {
     const char *text_base;
     svn_error_t *err;
 
     err = svn_wc__text_base_path_to_read(&text_base, db, local_abspath,
-                                         scratch_pool);
+                                         scratch_pool, scratch_pool);
     /* ### now for some ugly hackiness. right now, file externals will
        ### sometimes put their pristine contents into the revert base,
        ### because they think they're *replaced* nodes, rather than
@@ -528,6 +574,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
     SVN_ERR(svn_stream_open_readonly(contents, text_base,
                                      result_pool, scratch_pool));
   }
+#endif
 
   return SVN_NO_ERROR;
 }

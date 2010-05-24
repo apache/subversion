@@ -492,7 +492,7 @@ verify_pristine_present(svn_wc__db_t *db,
 
   /* Verify that one of the two text bases are present.  */
   err = svn_wc__text_base_path_to_read(&base_abspath, db, local_abspath,
-                                       scratch_pool);
+                                       scratch_pool, scratch_pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
     {
       svn_error_clear(err);
@@ -1425,7 +1425,7 @@ log_do_committed(svn_wc__db_t *db,
              timestamp instead. */
           SVN_ERR(svn_wc__text_base_path_to_read(&base_abspath,
                                                  db, local_abspath,
-                                                 pool));
+                                                 pool, pool));
           SVN_ERR(svn_io_stat(&basef_finfo, base_abspath,
                               APR_FINFO_MIN | APR_FINFO_LINK,
                               pool));

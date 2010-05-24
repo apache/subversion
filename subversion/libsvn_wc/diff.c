@@ -152,12 +152,13 @@ static svn_error_t *
 get_nearest_pristine_text_as_file(const char **result_abspath,
                                   svn_wc__db_t *db,
                                   const char *local_abspath,
-                                  apr_pool_t *result_pool)
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
 
   err = svn_wc__text_base_path_to_read(result_abspath, db, local_abspath,
-                                         result_pool);
+                                       result_pool, scratch_pool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
     {
@@ -608,7 +609,7 @@ file_diff(struct dir_baton *db,
      ### There shouldn't be cases where the result is NULL, but at present
      there might be - see get_nearest_pristine_text_as_file(). */
   SVN_ERR(get_nearest_pristine_text_as_file(&textbase, eb->db, local_abspath,
-                                            pool));
+                                            pool, pool));
 
   SVN_ERR(get_empty_file(eb, &empty_file));
 
@@ -1000,7 +1001,8 @@ report_wc_file_as_added(struct dir_baton *db,
 
   if (eb->use_text_base)
     SVN_ERR(svn_wc__text_base_path_to_read(&source_file,
-                                           eb->db, local_abspath, pool));
+                                           eb->db, local_abspath,
+                                           pool, pool));
   else
     source_file = path;
 
@@ -1230,7 +1232,7 @@ delete_entry(const char *path,
 
           SVN_ERR(svn_wc__text_base_path_to_read(&textbase,
                                                  eb->db, local_abspath,
-                                                 pool));
+                                                 pool, pool));
 
           SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
                                              pool, pool));
@@ -1601,7 +1603,7 @@ close_file(void *file_baton,
   if (!temp_file_path)
     SVN_ERR(svn_wc__text_base_path_to_read(&temp_file_path,
                                            eb->db, fb->local_abspath,
-                                           fb->pool));
+                                           fb->pool, pool));
 
   /* If the file isn't in the working copy (either because it was added
      in the BASE->repos diff or because we're diffing against WORKING
@@ -1666,7 +1668,7 @@ close_file(void *file_baton,
       if (eb->use_text_base)
         SVN_ERR(svn_wc__text_base_path_to_read(&localfile,
                                                eb->db, fb->local_abspath,
-                                               fb->pool));
+                                               fb->pool, pool));
       else
         /* a detranslated version of the working file */
         SVN_ERR(svn_wc__internal_translated_file(
