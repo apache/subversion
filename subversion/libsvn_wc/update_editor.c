@@ -4209,7 +4209,6 @@ merge_file(svn_skel_t **work_items,
            svn_boolean_t *install_pristine,
            const char **install_from,
            svn_wc_notify_state_t *content_state,
-           const svn_wc_entry_t *entry,
            struct file_baton *fb,
            const char *new_text_base_tmp_abspath,
            apr_pool_t *pool)
@@ -4221,6 +4220,7 @@ merge_file(svn_skel_t **work_items,
   svn_boolean_t magic_props_changed;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   svn_skel_t *work_item;
+  const svn_wc_entry_t *entry;
 
   /*
      When this function is called on file F, we assume the following
@@ -4240,6 +4240,9 @@ merge_file(svn_skel_t **work_items,
   *work_items = NULL;
   *install_pristine = FALSE;
   *install_from = NULL;
+
+  SVN_ERR(svn_wc__get_entry(&entry, eb->db, fb->local_abspath, TRUE,
+                            svn_node_file, FALSE, pool, pool));
 
   /* Start by splitting the file path, getting an access baton for the parent,
      and an entry for the file if any. */
@@ -4629,7 +4632,6 @@ close_file(void *file_baton,
   apr_array_header_t *entry_props;
   apr_array_header_t *wc_props;
   apr_array_header_t *regular_props;
-  const svn_wc_entry_t *entry;
   svn_boolean_t install_pristine;
   const char *install_from;
   apr_hash_t *current_base_props = NULL;
@@ -4638,6 +4640,7 @@ close_file(void *file_baton,
   svn_skel_t *work_item;
   svn_revnum_t new_changed_rev;
   apr_time_t new_changed_date;
+  svn_node_kind_t kind;
   const char *new_changed_author;
 
   if (fb->skip_this)
@@ -4709,11 +4712,8 @@ close_file(void *file_baton,
                                         new_text_base_md5_checksum, pool));
 #endif
 
-  /* Get a copy of the entry *before* we begin mucking around with the
-     tree. Behaviors are quite different based on the original state.  */
-  SVN_ERR(svn_wc__get_entry(&entry, eb->db, fb->local_abspath, TRUE,
-                            svn_node_file, FALSE, pool, pool));
-  if (! entry && ! fb->adding_file)
+  SVN_ERR(svn_wc_read_kind(&kind, eb->wc_ctx, fb->local_abspath, TRUE, pool));
+  if (kind == svn_node_none && ! fb->adding_file)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("'%s' is not under version control"),
                              svn_dirent_local_style(fb->local_abspath, pool));
@@ -4775,7 +4775,7 @@ close_file(void *file_baton,
       current_base_props = fb->copied_base_props;
       current_actual_props = fb->copied_working_props;
     }
-  else if (entry != NULL)
+  else if (kind != svn_node_none)
     {
       /* This node already exists. Grab its properties.  */
       SVN_ERR(svn_wc__get_pristine_props(&current_base_props,
@@ -4861,8 +4861,7 @@ close_file(void *file_baton,
 
   /* Do the hard work. This will queue some additional work.  */
   SVN_ERR(merge_file(&work_item, &install_pristine, &install_from,
-                     &content_state, entry,
-                     fb, new_text_base_abspath, pool));
+                     &content_state, fb, new_text_base_abspath, pool));
   all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
 
   if (install_pristine)
@@ -4938,6 +4937,7 @@ close_file(void *file_baton,
 #else
     const svn_checksum_t *new_checksum = new_text_base_md5_checksum;
 #endif
+    const char *serialised;
 
     /* If we don't have a NEW checksum, then the base must not have changed.
        Just carry over the old checksum.  */
@@ -4954,6 +4954,11 @@ close_file(void *file_baton,
            new_checksum is originally MD-5 but will later be SHA-1.  That's
            OK here because we just read it and write it back. */
       }
+
+    if (kind != svn_node_none)
+      SVN_ERR(svn_wc__db_temp_get_file_external(&serialised,
+                                                eb->db, fb->local_abspath,
+                                                pool, pool));
 
     SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
                                      fb->new_relpath,
@@ -4972,13 +4977,19 @@ close_file(void *file_baton,
     /* ### ugh. deal with preserving the file external value in the database.
        ### there is no official API, so we do it this way. maybe we should
        ### have a temp API into wc_db.  */
-    if (entry && entry->file_external_path)
+    if (kind != svn_node_none && serialised)
       {
+        const char *file_external_path;
+        svn_opt_revision_t file_external_peg_rev, file_external_rev;
         svn_wc_entry_t tmp_entry;
 
-        tmp_entry.file_external_path = entry->file_external_path;
-        tmp_entry.file_external_peg_rev = entry->file_external_peg_rev;
-        tmp_entry.file_external_rev = entry->file_external_rev;
+        SVN_ERR(svn_wc__unserialize_file_external(&file_external_path,
+                                                  &file_external_peg_rev,
+                                                  &file_external_rev,
+                                                  serialised, pool));
+        tmp_entry.file_external_path = file_external_path;
+        tmp_entry.file_external_peg_rev = file_external_peg_rev;
+        tmp_entry.file_external_rev = file_external_rev;
         SVN_ERR(svn_wc__entry_modify(eb->db, fb->local_abspath,
                                      svn_node_file,
                                      &tmp_entry,
