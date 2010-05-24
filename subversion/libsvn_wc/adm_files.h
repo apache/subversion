@@ -161,7 +161,8 @@ svn_error_t *
 svn_wc__text_base_path_to_read(const char **result_abspath,
                                svn_wc__db_t *db,
                                const char *local_abspath,
-                               apr_pool_t *result_pool);
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 /* Set *RESULT_ABSPATH to the path of the WC-1 "revert-base" text of the
    versioned file LOCAL_ABSPATH in DB.

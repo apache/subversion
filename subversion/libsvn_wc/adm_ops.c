@@ -2291,7 +2291,7 @@ svn_wc_get_pristine_copy_path(const char *path,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   err = svn_wc__text_base_path_to_read(pristine_path, db, local_abspath,
-                                         pool);
+                                       pool, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
     {
       const char *adm_abspath = svn_dirent_dirname(local_abspath, pool);
