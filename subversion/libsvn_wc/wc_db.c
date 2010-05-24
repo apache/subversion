@@ -1783,6 +1783,44 @@ svn_wc__db_base_get_dav_cache(apr_hash_t **props,
 
 
 svn_error_t *
+svn_wc__db_pristine_get_path(const char **pristine_abspath,
+                             svn_wc__db_t *db,
+                             const char *wri_abspath,
+                             const svn_checksum_t *sha1_checksum,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(pristine_abspath != NULL);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+  SVN_ERR_ASSERT(sha1_checksum != NULL);
+  /* ### Transitional: accept MD-5 and look up the SHA-1.  Return an error
+   * if the pristine text is not in the store. */
+  if (sha1_checksum->kind != svn_checksum_sha1)
+    SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, db, wri_abspath,
+                                         sha1_checksum,
+                                         scratch_pool, scratch_pool));
+  SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath,
+                                             db, wri_abspath,
+                                             svn_sqlite__mode_readonly,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  /* ### should we look in the PRISTINE table for anything?  */
+
+  SVN_ERR(get_pristine_fname(pristine_abspath, pdh, sha1_checksum,
+                             FALSE /* create_subdir */,
+                             scratch_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__db_pristine_read(svn_stream_t **contents,
                          svn_wc__db_t *db,
                          const char *wri_abspath,

@@ -855,6 +855,22 @@ typedef enum {
 } svn_wc__db_checkmode_t;
 
 
+/* Set *PRISTINE_ABSPATH to the path to the pristine text file
+   identified by SHA1_CHECKSUM.  Error if it does not exist.
+
+   ### This is temporary - callers should not be looking at the file
+   directly.
+
+   Allocate the stream in RESULT_POOL. */
+svn_error_t *
+svn_wc__db_pristine_get_path(const char **pristine_abspath,
+                             svn_wc__db_t *db,
+                             const char *wri_abspath,
+                             const svn_checksum_t *checksum,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+
 /* Set *CONTENTS to a readable stream that will yield the pristine text
    identified by CHECKSUM (### which should/must be its SHA-1 checksum?).
 
