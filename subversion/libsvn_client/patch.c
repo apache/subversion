@@ -328,6 +328,10 @@ resolve_target_path(patch_target_t *target,
   /* ### We cannot yet replace a locally deleted dir with a file,
    * ### but some day we might want to allow it. */
 
+  /* ### Shouldn't libsvn_wc flag an obstruction in this case? */
+  if (target->locally_deleted && target->kind_on_disk != svn_node_none)
+    target->skipped = TRUE;
+
   return SVN_NO_ERROR;
 }
 
@@ -375,7 +379,7 @@ init_patch_target(patch_target_t **patch_target,
       apr_size_t len;
 
 
-      if (target->kind_on_disk == svn_node_file && ! target->locally_deleted)
+      if (target->kind_on_disk == svn_node_file)
         {
           /* Open the file. */
           SVN_ERR(svn_io_file_open(&target->file, target->local_abspath,
