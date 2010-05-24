@@ -6662,8 +6662,17 @@ svn_wc_get_pristine_contents(svn_stream_t **contents,
                              apr_pool_t *scratch_pool);
 
 
-/** Returns a path to the pristine copy of @a path. Should use
- * svn_wc_get_pristine_contents() instead.
+/** Set *PRISTINE_PATH to the path of the "normal" pristine text file for
+ * the versioned file PATH.
+ *
+ * If PATH does not have a pristine text, set *PRISTINE_PATH to a path where
+ * nothing exists on disk (in a directory that does exist).
+ *
+ * @note: Before version 1.7, the behaviour in that case was to provide the
+ * path where the pristine text *would be* if it were present.  The new
+ * behaviour is intended to provide backward compatibility for callers that
+ * open or test the provided path immediately, and not for callers that
+ * store the path for later use.
  *
  * @deprecated Provided for backwards compatibility with the 1.5 API.
  */
