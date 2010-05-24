@@ -6675,6 +6675,7 @@ svn_wc_get_pristine_contents(svn_stream_t **contents,
  * store the path for later use.
  *
  * @deprecated Provided for backwards compatibility with the 1.5 API.
+ * Callers should use svn_wc_get_pristine_contents() instead.
  */
 SVN_DEPRECATED
 svn_error_t *
