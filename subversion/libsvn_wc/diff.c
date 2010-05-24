@@ -161,11 +161,12 @@ get_nearest_pristine_text_as_file(const char **result_abspath,
                                        result_pool, scratch_pool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-    {
-      svn_error_clear(err);
-      err = svn_wc__text_revert_path_to_read(result_abspath, db, local_abspath,
-                                             result_pool);
-    }
+    svn_error_clear(err);
+  else
+    return svn_error_return(err);
+
+  err = svn_wc__text_revert_path_to_read(result_abspath, db, local_abspath,
+                                         result_pool);
 
   /* If there is no revert base to diff either, don't attempt to diff it.
      ### This is a band-aid.
@@ -177,11 +178,11 @@ get_nearest_pristine_text_as_file(const char **result_abspath,
      ### base text from the pristine store anyway and use tempfiles (or
      ### streams, hopefully) for diffing, so this hack will just go away. */
   if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-    {
-      svn_error_clear(err);
-      *result_abspath = NULL;
-    }
+    svn_error_clear(err);
+  else
+    return svn_error_return(err);
 
+  *result_abspath = NULL;
   return SVN_NO_ERROR;
 }
 

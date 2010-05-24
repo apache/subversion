@@ -496,14 +496,14 @@ verify_pristine_present(svn_wc__db_t *db,
   if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
     svn_error_clear(err);
   else
-    return err;
+    return svn_error_return(err);
 
   err = svn_wc__text_revert_path_to_read(&base_abspath, db, local_abspath,
                                          scratch_pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
     svn_error_clear(err);
   else
-    return err;
+    return svn_error_return(err);
 
   /* A real file must have either a regular or a revert text-base.
      If it has neither, we could be looking at the situation described
