@@ -4371,8 +4371,10 @@ merge_file(svn_skel_t **work_items,
               if (entry && entry->file_external_path)
                 {
                   SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_replace);
-                  SVN_ERR(svn_wc__text_revert_path_to_read(
-                            install_from, eb->db, fb->local_abspath, pool));
+
+                  /* The revert-base will be installed later in this function.
+                     To tell the caller to install the new working text from
+                     the (revert-)base file, we leave INSTALL_FROM as NULL. */
                 }
             }
         }
@@ -4495,12 +4497,14 @@ merge_file(svn_skel_t **work_items,
     } /* end: "textual" merging process */
   else
     {
+      /* There is no new text base, but let's see if the working file needs
+         to be updated for any other reason. */
+
       apr_hash_t *keywords;
 
       SVN_ERR(svn_wc__get_keywords(&keywords, eb->db, fb->local_abspath, NULL,
                                    pool, pool));
       if (magic_props_changed || keywords)
-        /* no new text base, but... */
         {
           /* Special edge-case: it's possible that this file installation
              only involves propchanges, but that some of those props still
@@ -4900,23 +4904,14 @@ close_file(void *file_baton,
 
   /* Clean up any temporary files.  */
 
-  /* ### For the INSTALL_FROM file, be careful that it doesn't refer to the
-     working file, or the revert text base. (sigh)  Hopefully, this will
-     be cleared up in the future.  */
+  /* Remove the INSTALL_FROM file, as long as it doesn't refer to the
+     working file.  */
   if (install_from != NULL
       && strcmp(install_from, fb->local_abspath) != 0)
     {
-      const char *revert_base_abspath;
-
-      SVN_ERR(svn_wc__text_revert_path_to_read(&revert_base_abspath, eb->db,
-                                               fb->local_abspath, pool));
-      if (strcmp(install_from, revert_base_abspath) != 0)
-        {
-          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
-                                               install_from,
-                                               pool, pool));
-          all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-        }
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db, install_from,
+                                           pool, pool));
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
     }
 
   if (fb->copied_text_base_abspath)
