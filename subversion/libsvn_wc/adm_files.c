@@ -347,10 +347,6 @@ svn_wc__get_ultimate_base_contents(svn_stream_t **contents,
                                    NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
-  if (checksum && checksum->kind != svn_checksum_sha1)
-    SVN_ERR(svn_wc__db_pristine_get_sha1(&checksum, db, local_abspath,
-                                         checksum,
-                                         scratch_pool, scratch_pool));
   if (kind != svn_wc__db_kind_file)
     return svn_error_createf(SVN_ERR_WC_NOT_FILE, NULL,
                              _("base node of '%s' is not a file"),
