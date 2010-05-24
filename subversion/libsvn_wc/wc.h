@@ -285,6 +285,7 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_DIR_PROP_BASE       "dir-prop-base"
 #define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
 #define SVN_WC__ADM_PRISTINE            "pristine"
+#define SVN_WC__ADM_NONEXISTENT_PATH    "nonexistent-path"
 
 /* The basename of the ".prej" file, if a directory ever has property
    conflicts.  This .prej file will appear *within* the conflicted

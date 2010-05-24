@@ -2284,22 +2284,23 @@ svn_wc_get_pristine_copy_path(const char *path,
 {
   svn_wc__db_t *db;
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly, NULL,
                           TRUE, TRUE, pool, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc__text_base_path_to_read(pristine_path, db, local_abspath,
-                                         pool));
-  /* ### TODO for backward compatibility:
-   * if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-   *   {
-   *     svn_error_clear(err);
-   *     *pristine_path = nonexistent_path();
-   *     return SVN_NO_ERROR;
-   *   }
-   *  SVN_ERR(err);
-   */
+  err = svn_wc__text_base_path_to_read(pristine_path, db, local_abspath,
+                                         pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+    {
+      const char *adm_abspath = svn_dirent_dirname(local_abspath, pool);
+
+      svn_error_clear(err);
+      *pristine_path = svn_wc__nonexistent_path(db, adm_abspath, pool);
+      return SVN_NO_ERROR;
+    }
+   SVN_ERR(err);
 
   return svn_error_return(svn_wc__db_close(db));
 }
