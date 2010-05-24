@@ -202,16 +202,8 @@ read_externals_info(svn_wc__db_t *db,
    DEPTH_COMPATIBILITY_TRICK means the same thing here as it does
    in svn_wc_crawl_revisions3().
 
-   If TRAVERSAL_INFO is non-null, record this directory's
-   value of svn:externals in both TRAVERSAL_INFO->externals_old and
-   TRAVERSAL_INFO->externals_new, using wc_path + dir_path as the key,
-   and the raw (unparsed) value of the property as the value; store
-   this directory's depth in TRAVERSAL_INFO->depths, using the same
-   key and svn_depth_to_word(depth) as the value.  (Note: We set the
-   property value in both places, because its absence in just one or
-   the other place signals that the property was added or deleted;
-   thus, storing it in both places signals that it is present and, by
-   default, unchanged.)
+   If EXTERNAL_FUNC is non-NULL, then send externals information with
+   the help of EXTERNAL_BATON
 
    If RESTORE_FILES is set, then unexpectedly missing working files
    will be restored from text-base and NOTIFY_FUNC/NOTIFY_BATON
