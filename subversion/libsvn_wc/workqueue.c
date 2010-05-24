@@ -488,29 +488,32 @@ verify_pristine_present(svn_wc__db_t *db,
                         apr_pool_t *scratch_pool)
 {
   const char *base_abspath;
-  svn_node_kind_t check_kind;
+  svn_error_t *err;
 
   /* Verify that one of the two text bases are present.  */
-  SVN_ERR(svn_wc__text_base_path_to_read(&base_abspath, db, local_abspath,
-                                         scratch_pool));
-  SVN_ERR(svn_io_check_path(base_abspath, &check_kind, scratch_pool));
-  if (check_kind == svn_node_file)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__text_revert_path_to_read(&base_abspath, db, local_abspath,
-                                           scratch_pool));
-  SVN_ERR(svn_io_check_path(base_abspath, &check_kind, scratch_pool));
-  if (check_kind == svn_node_file)
-    return SVN_NO_ERROR;
+  err = svn_wc__text_base_path_to_read(&base_abspath, db, local_abspath,
+                                       scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+    {
+      svn_error_clear(err);
+      err = svn_wc__text_revert_path_to_read(&base_abspath, db, local_abspath,
+                                             scratch_pool);
+    }
 
   /* A real file must have either a regular or a revert text-base.
      If it has neither, we could be looking at the situation described
      in issue #2101, in which case all we can do is deliver the expected
      error.  */
-  return svn_error_createf(APR_ENOENT, NULL,
-                           _("Error restoring text for '%s'"),
-                           svn_dirent_local_style(local_abspath,
-                                                  scratch_pool));
+  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+    {
+      svn_error_clear(err);
+      return svn_error_createf(APR_ENOENT, NULL,
+                               _("Error restoring text for '%s'"),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

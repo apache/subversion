@@ -2291,6 +2291,15 @@ svn_wc_get_pristine_copy_path(const char *path,
 
   SVN_ERR(svn_wc__text_base_path_to_read(pristine_path, db, local_abspath,
                                          pool));
+  /* ### TODO for backward compatibility:
+   * if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+   *   {
+   *     svn_error_clear(err);
+   *     *pristine_path = nonexistent_path();
+   *     return SVN_NO_ERROR;
+   *   }
+   *  SVN_ERR(err);
+   */
 
   return svn_error_return(svn_wc__db_close(db));
 }
