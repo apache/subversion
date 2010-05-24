@@ -211,8 +211,8 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
               wc.get_prop_diffs(self.path, self.wc))
 
   def test_get_pristine_copy_path(self):
-      path_to_file = '%s/%s' % (self.path, 'foo')
-      path_to_text_base = '%s/%s/text-base/foo.svn-base' % (self.path,
+      path_to_file = '%s/trunk/README.txt' % self.path
+      path_to_text_base = '%s/trunk/%s/text-base/README.txt.svn-base' % (self.path,
         wc.get_adm_dir())
       self.assertEqual(path_to_text_base, wc.get_pristine_copy_path(path_to_file))
 
