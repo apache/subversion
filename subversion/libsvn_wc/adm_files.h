@@ -153,8 +153,8 @@ svn_error_t *svn_wc__prop_path(const char **prop_path,
      A path to the file in the pristine store.  This file will be removed or
      replaced the next time this or another Subversion client updates the WC.
 
-   If the node LOCAL_ABSPATH has no pristine text, the result is a path
-   where no file exists (in a directory that does exist).
+   If the node LOCAL_ABSPATH has no such pristine text, return an error of
+   type SVN_ERR_WC_PATH_UNEXPECTED_STATUS.
 
    Allocate *RESULT_PATH in RESULT_POOL.  */
 svn_error_t *
@@ -164,7 +164,10 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                apr_pool_t *result_pool);
 
 /* Set *RESULT_ABSPATH to the path of the WC-1 "revert-base" text of the
-   versioned file LOCAL_ABSPATH in DB.  */
+   versioned file LOCAL_ABSPATH in DB.
+
+   If the node LOCAL_ABSPATH has no such pristine text, return an error of
+   type SVN_ERR_WC_PATH_UNEXPECTED_STATUS.  */
 svn_error_t *
 svn_wc__text_revert_path_to_read(const char **result_abspath,
                                  svn_wc__db_t *db,
@@ -185,7 +188,10 @@ svn_wc__ultimate_base_text_path(const char **result_abspath,
 /* Set *RESULT_ABSPATH to the path of the ultimate base text of the
    versioned file LOCAL_ABSPATH in DB.  In WC-1 terms this means the
    "normal text-base" or, if the node is replaced by a copy or move, the
-   "revert-base".  */
+   "revert-base".
+
+   If the node LOCAL_ABSPATH has no such pristine text, return an error of
+   type SVN_ERR_WC_PATH_UNEXPECTED_STATUS.  */
 svn_error_t *
 svn_wc__ultimate_base_text_path_to_read(const char **result_abspath,
                                         svn_wc__db_t *db,

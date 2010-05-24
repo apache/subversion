@@ -154,15 +154,17 @@ get_nearest_pristine_text_as_file(const char **result_abspath,
                                   const char *local_abspath,
                                   apr_pool_t *result_pool)
 {
-  svn_node_kind_t kind;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc__text_base_path_to_read(result_abspath, db, local_abspath,
-                                         result_pool));
+  err = svn_wc__text_base_path_to_read(result_abspath, db, local_abspath,
+                                         result_pool);
 
-  SVN_ERR(svn_io_check_path(*result_abspath, &kind, result_pool));
-  if (kind == svn_node_none)
-    SVN_ERR(svn_wc__text_revert_path_to_read(result_abspath, db, local_abspath,
-                                             result_pool));
+  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+    {
+      svn_error_clear(err);
+      err = svn_wc__text_revert_path_to_read(result_abspath, db, local_abspath,
+                                             result_pool);
+    }
 
   /* If there is no revert base to diff either, don't attempt to diff it.
      ### This is a band-aid.
@@ -172,11 +174,12 @@ get_nearest_pristine_text_as_file(const char **result_abspath,
      ### Not sure how to properly tell apart a file added within a copied
      ### subtree from a copied file. But eventually we'll have to get the
      ### base text from the pristine store anyway and use tempfiles (or
-     ### streams, hopefully) for diffing, so all this horrible statting
-     ### the disk for text bases, and this hack, will just go away. */
-  SVN_ERR(svn_io_check_path(*result_abspath, &kind, result_pool));
-  if (kind == svn_node_none)
-    *result_abspath = NULL;
+     ### streams, hopefully) for diffing, so this hack will just go away. */
+  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+    {
+      svn_error_clear(err);
+      *result_abspath = NULL;
+    }
 
   return SVN_NO_ERROR;
 }

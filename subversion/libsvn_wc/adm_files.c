@@ -272,6 +272,18 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
 {
   SVN_ERR(svn_wc__text_base_path(result_abspath, db, local_abspath,
                                  result_pool));
+  /* Return an error if the file does not exist */
+  {
+    svn_node_kind_t kind;
+
+    SVN_ERR(svn_io_check_path(*result_abspath, &kind, result_pool));
+    if (kind != svn_node_file)
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                               _("File '%s' has no text base"),
+                               svn_dirent_local_style(local_abspath,
+                                                      result_pool));
+  }
+
   return SVN_NO_ERROR;
 }
 
@@ -284,6 +296,18 @@ svn_wc__text_revert_path_to_read(const char **result_abspath,
 {
   SVN_ERR(svn_wc__text_revert_path(result_abspath, db, local_abspath,
                                    result_pool));
+  /* Return an error if the file does not exist */
+  {
+    svn_node_kind_t kind;
+
+    SVN_ERR(svn_io_check_path(*result_abspath, &kind, result_pool));
+    if (kind != svn_node_file)
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                               _("File '%s' has no text base"),
+                               svn_dirent_local_style(local_abspath,
+                                                      result_pool));
+  }
+
   return SVN_NO_ERROR;
 }
 
@@ -325,8 +349,21 @@ svn_wc__ultimate_base_text_path_to_read(const char **result_abspath,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool)
 {
-  return svn_wc__ultimate_base_text_path(result_abspath, db, local_abspath,
-                                         result_pool, scratch_pool);
+  SVN_ERR(svn_wc__ultimate_base_text_path(result_abspath, db, local_abspath,
+                                          result_pool, scratch_pool));
+  /* Return an error if the file does not exist */
+  {
+    svn_node_kind_t kind;
+
+    SVN_ERR(svn_io_check_path(*result_abspath, &kind, scratch_pool));
+    if (kind != svn_node_file)
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                               _("File '%s' has no text base"),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+  }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -361,7 +398,6 @@ svn_wc__get_ultimate_base_contents(svn_stream_t **contents,
   SVN_ERR_ASSERT(checksum != NULL);
   SVN_ERR(svn_wc__db_pristine_read(contents, db, local_abspath,
                                    checksum, result_pool, scratch_pool));
-  return SVN_NO_ERROR;
 #else
   const char *revert_base;
   svn_error_t *err;
@@ -369,22 +405,28 @@ svn_wc__get_ultimate_base_contents(svn_stream_t **contents,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* If there's a WC-1 "revert base", open that. */
-  SVN_ERR(svn_wc__text_revert_path_to_read(&revert_base, db, local_abspath,
-                                           scratch_pool));
-  err = svn_stream_open_readonly(contents, revert_base,
-                                 result_pool, scratch_pool);
-  if (err)
+  err = svn_wc__text_revert_path_to_read(&revert_base, db, local_abspath,
+                                         scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
     {
       svn_error_clear(err);
 
       /* There's no "revert base", so open the "normal base". */
-      SVN_ERR(svn_wc__text_base_path_to_read(&revert_base, db, local_abspath,
-                                             scratch_pool));
-      err = svn_stream_open_readonly(contents, revert_base,
-                                     result_pool, scratch_pool);
+      err = svn_wc__text_base_path_to_read(&revert_base, db, local_abspath,
+                                           scratch_pool);
+      if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+        {
+          svn_error_clear(err);
+          *contents = NULL;
+          return SVN_NO_ERROR;
+        }
     }
-  return err;
+  SVN_ERR(err);
+  SVN_ERR(svn_stream_open_readonly(contents, revert_base,
+                                   result_pool, scratch_pool));
 #endif
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -458,22 +500,18 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
     const char *text_base;
     svn_error_t *err;
 
-    SVN_ERR(svn_wc__text_base_path_to_read(&text_base, db, local_abspath,
-                                           scratch_pool));
-    SVN_ERR_ASSERT(text_base != NULL);
-
+    err = svn_wc__text_base_path_to_read(&text_base, db, local_abspath,
+                                         scratch_pool);
     /* ### now for some ugly hackiness. right now, file externals will
        ### sometimes put their pristine contents into the revert base,
        ### because they think they're *replaced* nodes, rather than
        ### simple BASE nodes. watch out for this scenario, and
        ### compensate appropriately.  */
-    err = svn_stream_open_readonly(contents, text_base,
-                                   result_pool, scratch_pool);
     if (err)
       {
         svn_boolean_t file_external;
 
-        if (!APR_STATUS_IS_ENOENT(err->apr_err))
+        if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
           return svn_error_return(err);
 
         SVN_ERR(svn_wc__internal_is_file_external(&file_external,
@@ -486,11 +524,12 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 
         SVN_ERR(svn_wc__text_revert_path_to_read(&text_base, db, local_abspath,
                                                  scratch_pool));
-        return svn_stream_open_readonly(contents, text_base,
-                                   result_pool, scratch_pool);
       }
-    return SVN_NO_ERROR;
+    SVN_ERR(svn_stream_open_readonly(contents, text_base,
+                                     result_pool, scratch_pool));
   }
+
+  return SVN_NO_ERROR;
 }
 
 
