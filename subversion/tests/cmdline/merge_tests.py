@@ -9460,7 +9460,7 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
   #
   # We don't expect A_COPY/B/F to have mergeinfo recorded on it because
   # not only is it unaffected by the merge at depth immediates, it could
-  # never be affected by the merge, regardless of depth.  
+  # never be affected by the merge, regardless of depth.
   expected_mergeinfo_output = wc.State(A_COPY_B_path, {
     ''   : Item(status=' U'),
     'E'  : Item(status=' U'),
@@ -9470,7 +9470,7 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
   expected_disk = wc.State('', {
     ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B:2-3'}),
     'lambda'  : Item(contents="This is the file 'lambda' modified.\n"),
-    'F'       : Item(props={SVN_PROP_MERGEINFO : '/A/B/F:2-3*'}),
+    'F'       : Item(), # No mergeinfo!
     'E'       : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:2-3*'}),
     'E/alpha' : Item(contents="This is the file 'alpha'.\n"),
     'E/beta'  : Item(contents="This is the file 'beta'.\n"),
@@ -19060,6 +19060,72 @@ def foreign_repos_del_and_props(sbox):
                                      os.path.join(wc2_dir, 'iota'),
                                      os.path.join(wc2_dir, 'new-file'))
 
+# Test for issue #3642 'immediate depth merges don't create proper subtree
+# mergeinfo'. See http://subversion.tigris.org/issues/show_bug.cgi?id=3642
+def immedate_depth_merge_creates_minimal_subtree_mergeinfo(sbox):
+  "no spurious mergeinfo from immediate depth merges "
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  B_path      = os.path.join(wc_dir, "A", "B")
+  B_COPY_path = os.path.join(wc_dir, "A_COPY", "B")
+
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  
+  # Merge -c5 from A/B to A_COPY/B at --depth immediates.
+  # This should create only the minimum subtree mergeinfo
+  # required to describe the merge.  This means that A_COPY/B/E gets
+  # non-inheritable mergeinfo for r5, because a full depth merge would
+  # affect that subtree.  The other child of the merge target, A_COPY/B/F
+  # would never be affected by r5, so it doesn't need any explicit
+  # mergeinfo.
+  #
+  # Currently this test fails because *no* immediate directory children
+  # of the merge target get explicit mergeinfo set.
+  expected_output = wc.State(B_COPY_path, {})
+  expected_mergeinfo_output = wc.State(B_COPY_path, {
+    ''  : Item(status=' U'),
+    'E' : Item(status=' U'),  # A_COPY/B/E would be affected by r5 if the
+                              # merge was at infinite depth, so it needs
+                              # non-inheritable override mergeinfo.
+    #'F' : Item(status=' U'), No override mergeinfo, r5 is
+    #                         inoperative on this child.
+    })
+  expected_elision_output = wc.State(B_COPY_path, {
+    })
+  expected_status = wc.State(B_COPY_path, {
+    ''        : Item(status=' M'),
+    'F'       : Item(status='  '),
+    'E'       : Item(status=' M'),
+    'E/alpha' : Item(status='  '),
+    'E/beta'  : Item(status='  '),
+    'lambda'  : Item(status='  '),
+
+    })
+  expected_status.tweak(wc_rev=6)
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B:5'}),
+    'E'       : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:5*'}),
+    'E/alpha' : Item("This is the file 'alpha'.\n"),
+    'E/beta'  : Item("This is the file 'beta'.\n"),
+    'F'       : Item(),
+    'lambda'  : Item("This is the file 'lambda'.\n")
+    })
+  expected_skip = wc.State(B_COPY_path, { })
+  svntest.actions.run_and_verify_merge(B_COPY_path, '4', '5',
+                                       sbox.repo_url + '/A/B', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1, '--depth', 'immediates')
+
 ########################################################################
 # Run the tests
 
@@ -19292,6 +19358,7 @@ test_list = [ None,
               reintegrate_with_self_referential_mergeinfo,
               reintegrate_with_subtree_merges,
               foreign_repos_del_and_props,
+              XFail(immedate_depth_merge_creates_minimal_subtree_mergeinfo),
              ]
 
 if __name__ == '__main__':
