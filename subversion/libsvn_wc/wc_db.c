@@ -2312,8 +2312,12 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(props != NULL);
   /* ### any assertions for CHANGED_* ?  */
-  /* ### any assertions for ORIGINAL_* ?  */
-  SVN_ERR_ASSERT(checksum != NULL);
+  SVN_ERR_ASSERT((! original_repos_relpath && ! original_root_url
+                  && ! original_uuid && ! checksum
+                  && original_revision == SVN_INVALID_REVNUM)
+                 || (original_repos_relpath && original_root_url
+                     && original_uuid && checksum
+                     && original_revision != SVN_INVALID_REVNUM));
   SVN_ERR_ASSERT(conflict == NULL);  /* ### can't handle yet  */
 
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,

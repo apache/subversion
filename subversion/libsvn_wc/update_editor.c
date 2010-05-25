@@ -5978,6 +5978,30 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                  pool));
       all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
     }
+  else
+    {
+      /* ### There's something wrong around here.  Sometimes (merge from a
+         foreign repository, at least) we are called with copyfrom_url =
+         NULL and an empty new_base_contents (and an empty set of
+         new_base_props).  Why an empty "new base"?
+
+         That happens in merge_tests.py 54,87,88,89,143.
+
+         In that case, having been given this supposed "new base" file, we
+         copy it and calculate its checksum but do not install it.  Why?
+         That must be wrong.
+
+         To crudely work around one issue with this, that we shouldn't
+         record a checksum in the database if we haven't installed the
+         corresponding pristine text, for now we'll just set the checksum
+         to NULL.
+
+         The proper solution is probably more like: the caller should pass
+         NULL for the missing information, and this function should learn to
+         handle that. */
+
+      base_checksum = NULL;
+    }
 
   /* For added files without NEW_CONTENTS, then generate the working file
      from the provided "pristine" contents.  */
