@@ -8979,8 +8979,7 @@ typedef struct log_find_operative_baton_t
   apr_pool_t *result_pool;
 } log_find_operative_baton_t;
 
-/* A svn_log_entry_receiver_t callback for
-   ensure_all_missing_ranges_are_phantoms(). */
+/* A svn_log_entry_receiver_t callback for find_unsynced_ranges(). */
 static svn_error_t *
 log_find_operative_revs(void *baton,
                         svn_log_entry_t *log_entry,
