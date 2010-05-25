@@ -49,7 +49,7 @@ typedef struct
   /* Holds the directory that corresponds to the REPOS_URL at svn_ra_open3()
      time. When callbacks specify a relative path, they are joined with
      this base directory. */
-  const char *base_dir;
+  const char *base_dir_abspath;
 
   /* When true, makes sure temporary files are created
      outside the working copy. */
@@ -117,12 +117,10 @@ get_wc_prop(void *baton,
     }
 
   /* If we don't have a base directory, then there are no properties. */
-  else if (cb->base_dir == NULL)
+  else if (cb->base_dir_abspath == NULL)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  svn_dirent_join(cb->base_dir, relpath, pool),
-                                  pool));
+  local_abspath = svn_dirent_join(cb->base_dir_abspath, relpath, pool);
 
   return svn_error_return(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
                                            local_abspath, name, pool, pool));
@@ -188,9 +186,7 @@ set_wc_prop(void *baton,
   callback_baton_t *cb = baton;
   const char *local_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  svn_dirent_join(cb->base_dir, path, pool),
-                                  pool));
+  local_abspath = svn_dirent_join(cb->base_dir_abspath, path, pool);
 
   /* We pass 1 for the 'force' parameter here.  Since the property is
      coming from the repository, we definitely want to accept it.
@@ -255,9 +251,7 @@ invalidate_wc_props(void *baton,
   wb.prop_name = prop_name;
   wb.wc_ctx = cb->ctx->wc_ctx;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  svn_dirent_join(cb->base_dir, path, pool),
-                                  pool));
+  local_abspath = svn_dirent_join(cb->base_dir_abspath, path, pool);
 
   return svn_error_return(
     svn_wc__node_walk_children(cb->ctx->wc_ctx, local_abspath, FALSE,
@@ -289,7 +283,7 @@ get_client_string(void *baton,
 svn_error_t *
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
-                                     const char *base_dir,
+                                     const char *base_dir_abspath,
                                      const apr_array_header_t *commit_items,
                                      svn_boolean_t use_admin,
                                      svn_boolean_t read_only_wc,
@@ -300,7 +294,9 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   callback_baton_t *cb = apr_pcalloc(pool, sizeof(*cb));
   const char *uuid = NULL;
 
-  SVN_ERR_ASSERT(base_dir != NULL || ! use_admin);
+  SVN_ERR_ASSERT(base_dir_abspath != NULL || ! use_admin);
+  SVN_ERR_ASSERT(base_dir_abspath == NULL
+                        || svn_dirent_is_absolute(base_dir_abspath));
 
   cbtable->open_tmp_file = open_tmp_file;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
@@ -313,21 +309,17 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cbtable->cancel_func = ctx->cancel_func ? cancel_callback : NULL;
   cbtable->get_client_string = get_client_string;
 
-  cb->base_dir = base_dir;
+  cb->base_dir_abspath = base_dir_abspath;
   cb->read_only_wc = read_only_wc;
   cb->pool = pool;
   cb->commit_items = commit_items;
   cb->ctx = ctx;
 
-  if (base_dir)
+  if (base_dir_abspath)
     {
-      const char *base_dir_abspath;
-      svn_error_t *err;
-
-      SVN_ERR(svn_dirent_get_absolute(&base_dir_abspath, base_dir, pool));
-      err = svn_wc__node_get_repos_info(NULL, &uuid, ctx->wc_ctx,
-                                        base_dir_abspath, FALSE, FALSE,
-                                        pool, pool);
+      svn_error_t *err = svn_wc__node_get_repos_info(NULL, &uuid, ctx->wc_ctx,
+                                                     base_dir_abspath, FALSE,
+                                                     FALSE, pool, pool);
 
       if (err && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
                   || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
@@ -411,7 +403,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_revnum_t *rev_p,
                                  const char **url_p,
                                  const char *path_or_url,
-                                 const char *base_dir,
+                                 const char *base_dir_abspath,
                                  const svn_opt_revision_t *peg_revision_p,
                                  const svn_opt_revision_t *revision,
                                  svn_client_ctx_t *ctx,
@@ -440,7 +432,8 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                     pool));
 
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, initial_url,
-                                               base_dir, NULL, base_dir != NULL,
+                                               base_dir_abspath, NULL,
+                                               base_dir_abspath != NULL,
                                                FALSE, ctx, pool));
 
   dead_end_rev.kind = svn_opt_revision_unspecified;

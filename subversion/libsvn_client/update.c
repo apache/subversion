@@ -199,7 +199,7 @@ update_internal(svn_revnum_t *result_rev,
 
   /* Open an RA session for the URL */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, anchor_url,
-                                               anchor, NULL, TRUE, TRUE,
+                                               anchor_abspath, NULL, TRUE, TRUE,
                                                ctx, pool));
 
   /* ### todo: shouldn't svn_client__get_revision_number be able

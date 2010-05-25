@@ -610,11 +610,13 @@ get_ra_editor(svn_ra_session_t **ra_session,
 {
   void *commit_baton;
   apr_hash_t *commit_revprops;
+  const char *base_dir_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&base_dir_abspath, base_dir, pool));
 
   /* Open an RA session to URL. */
-  SVN_ERR(svn_client__open_ra_session_internal(ra_session,
-                                               base_url, base_dir,
-                                               commit_items,
+  SVN_ERR(svn_client__open_ra_session_internal(ra_session, base_url,
+                                               base_dir_abspath, commit_items,
                                                is_commit, !is_commit,
                                                ctx, pool));
 
