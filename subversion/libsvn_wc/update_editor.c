@@ -2843,8 +2843,8 @@ prop_hash_from_array(const apr_array_header_t *prop_list,
 }
 
 
-/* Build a work item to write an old-style propsfile for the specified
-   BASE properties.
+/* Set *WORK_ITEM to a new work item to write an old-style propsfile for the
+   specified BASE properties, BASE_PROPS.
 
    ### breaks the props encapsulation by using svn_wc__prop_path, but this
    ### function will only last until we move props into the database.  */
@@ -2866,9 +2866,9 @@ build_write_base_props(svn_skel_t **work_item,
 }
 
 
-/* Build a work item to write an old-style propsfile for the specified
-   ACTUAL properties. If ACTUAL_PROPS is NULL, then the old-style propsfile
-   will be removed, indicating "no change" from the pristines.
+/* Set *WORK_ITEM to a new work item to write an old-style propsfile for the
+   specified ACTUAL properties. If ACTUAL_PROPS is NULL, then the old-style
+   propsfile will be removed, indicating "no change" from the pristines.
 
    ### breaks the props encapsulation by using svn_wc__prop_path, but this
    ### function will only last until we move props into the database.  */

@@ -90,7 +90,7 @@ svn_wc__wq_run(svn_wc__db_t *db,
                apr_pool_t *scratch_pool);
 
 
-/* Build a work item (returned in *WORK_ITEM) that will install the working
+/* Set *WORK_ITEM to a new work item that will install the working
    copy file at LOCAL_ABSPATH. If USE_COMMIT_TIMES is TRUE, then the newly
    installed file will use the nodes CHANGE_DATE for the file timestamp.
    If RECORD_FILEINFO is TRUE, then the resulting LAST_MOD_TIME and
@@ -113,7 +113,7 @@ svn_wc__wq_build_file_install(svn_skel_t **work_item,
                               apr_pool_t *scratch_pool);
 
 
-/* Build a work item (returned in *WORK_ITEM) that will remove a single
+/* Set *WORK_ITEM to a new work item that will remove a single
    file.  */
 svn_error_t *
 svn_wc__wq_build_file_remove(svn_skel_t **work_item,
@@ -123,7 +123,7 @@ svn_wc__wq_build_file_remove(svn_skel_t **work_item,
                              apr_pool_t *scratch_pool);
 
 
-/* Build a work item (returned in *WORK_ITEM) that will synchronize the
+/* Set *WORK_ITEM to a new work item that will synchronize the
    target node's readonly and executable flags with the values defined
    by its properties and lock status.  */
 svn_error_t *
@@ -134,8 +134,8 @@ svn_wc__wq_build_sync_file_flags(svn_skel_t **work_item,
                                  apr_pool_t *scratch_pool);
 
 
-/* Build a work item that will install a property reject file for
-   LOCAL_ABSPATH into the working copy. The propety conflicts will
+/* Set *WORK_ITEM to a new work item that will install a property reject
+   file for LOCAL_ABSPATH into the working copy. The propety conflicts will
    be taken from CONFLICT_SKEL, or if NULL, then from wc_db for the
    given DB/LOCAL_ABSPATH.  */
 svn_error_t *
@@ -147,8 +147,8 @@ svn_wc__wq_build_prej_install(svn_skel_t **work_item,
                               apr_pool_t *scratch_pool);
 
 
-/* Build a work item that will install PROPS at PROPS_ABSPATH. If PROPS
-   is NULL, then the target props file will will be removed.
+/* Set *WORK_ITEM to a new work item that will install PROPS at PROPS_ABSPATH.
+   If PROPS is NULL, then the target props file will will be removed.
 
    ### this will go away when we fully move to in-db properties.  */
 svn_error_t *
@@ -158,9 +158,9 @@ svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
                                  apr_pool_t *result_pool);
 
 
-/* Build a work item that will record file information of LOCAL_ABSPATH
-   into the TRANSLATED_SIZE and LAST_MOD_TIME of the node via the
-   svn_wc__db_global_record_fileinfo() function.
+/* Set *WORK_ITEM to a new work item that will record file information of
+   LOCAL_ABSPATH into the TRANSLATED_SIZE and LAST_MOD_TIME of the node via
+   the svn_wc__db_global_record_fileinfo() function.
 
    ### it is unclear whether this should survive.  */
 svn_error_t *
@@ -198,8 +198,10 @@ svn_wc__wq_add_killme(svn_wc__db_t *db,
 
 /* ### temporary compat for mapping the old loggy into workqueue space.
 
-   LOG_CONTENT may be NULL or reference an empty log. No work item will be
-   built in this case.
+   Set *WORK_ITEM to a new work item ...
+
+   LOG_CONTENT may be NULL or reference an empty log.  Set *WORK_ITEM to
+   NULL in this case.
 
    NOTE: ADM_ABSPATH and LOG_CONTENT must live at least as long as
    RESULT_POOL (typically, they'll be allocated within RESULT_POOL).
