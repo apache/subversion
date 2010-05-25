@@ -544,7 +544,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
 #else
   {
     const char *text_base;
-    svn_error_t *err;
+    svn_error_t *err, *err2;
 
     err = svn_wc__text_base_path_to_read(&text_base, db, local_abspath,
                                          scratch_pool, scratch_pool);
@@ -560,11 +560,11 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
         if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
           return svn_error_return(err);
 
-        SVN_ERR(svn_wc__internal_is_file_external(&file_external,
-                                                  db, local_abspath,
-                                                  scratch_pool));
-        if (!file_external)
-          return svn_error_return(err);
+        err2 = svn_wc__internal_is_file_external(&file_external,
+                                                 db, local_abspath,
+                                                 scratch_pool);
+        if (err2 || !file_external)
+          return svn_error_return(svn_error_compose_create(err, err2));
 
         svn_error_clear(err);
 
