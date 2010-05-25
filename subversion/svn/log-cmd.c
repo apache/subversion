@@ -35,6 +35,7 @@
 #include "svn_time.h"
 #include "svn_cmdline.h"
 #include "svn_props.h"
+#include "svn_pools.h"
 
 #include "cl.h"
 
@@ -273,6 +274,7 @@ log_entry_receiver(void *baton,
       apr_status_t status;
       svn_opt_revision_t start_revision;
       svn_opt_revision_t end_revision;
+      svn_error_t *err;
 
       if ((status = apr_file_open_stdout(&outfile, pool)))
         return svn_error_wrap_apr(status, _("Can't open stdout"));
@@ -291,22 +293,81 @@ log_entry_receiver(void *baton,
       end_revision.value.number = log_entry->revision;
 
       SVN_ERR(svn_cmdline_printf(pool, _("\n")));
-      SVN_ERR(svn_client_diff5(diff_options,
-                               lb->target_url,
-                               &start_revision,
-                               lb->target_url,
-                               &end_revision,
-                               NULL,
-                               svn_depth_infinity,
-                               FALSE, /* ignore ancestry */
-                               TRUE, /* no diff deleted */
-                               FALSE, /* show copies as adds */
-                               FALSE, /* ignore content type */
-                               svn_cmdline_output_encoding(pool),
-                               outfile,
-                               errfile,
-                               NULL,
-                               lb->ctx, pool));
+      err = svn_client_diff5(diff_options,
+                             lb->target_url,
+                             &start_revision,
+                             lb->target_url,
+                             &end_revision,
+                             NULL,
+                             svn_depth_infinity,
+                             FALSE, /* ignore ancestry */
+                             TRUE, /* no diff deleted */
+                             FALSE, /* show copies as adds */
+                             FALSE, /* ignore content type */
+                             svn_cmdline_output_encoding(pool),
+                             outfile,
+                             errfile,
+                             NULL,
+                             lb->ctx, pool);
+      if (err)
+        {
+          /* We get a "path not found" error in case the revision created
+           * lb->target_url. Try to show a diff from the parent instead. */
+          if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+            {
+              const char *parent;
+              apr_pool_t *iterpool;
+
+              svn_error_clear(err);
+
+              parent = svn_uri_dirname(lb->target_url, pool);
+              iterpool = svn_pool_create(pool);
+              while (strcmp(parent, lb->target_url) != 0)
+                {
+                  svn_pool_clear(iterpool);
+                  err = svn_client_diff5(diff_options,
+                                         parent,
+                                         &start_revision,
+                                         parent,
+                                         &end_revision,
+                                         NULL,
+                                         svn_depth_infinity,
+                                         FALSE, /* ignore ancestry */
+                                         TRUE, /* no diff deleted */
+                                         FALSE, /* show copies as adds */
+                                         FALSE, /* ignore content type */
+                                         svn_cmdline_output_encoding(iterpool),
+                                         outfile,
+                                         errfile,
+                                         NULL,
+                                         lb->ctx, iterpool);
+                  if (err == SVN_NO_ERROR)
+                    break;
+                  else
+                    {
+                      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+                        {
+                          svn_error_clear(err);
+                          continue;
+                        }
+                      if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL ||
+                          err->apr_err == SVN_ERR_AUTHZ_UNREADABLE ||
+                          err->apr_err == SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED)
+                        {
+                          svn_error_clear(err);
+                          break;
+                        }
+                      return svn_error_return(err);
+                    }
+
+                  parent = svn_uri_dirname(parent, pool);
+                }
+              svn_pool_destroy(iterpool);
+            }
+          else
+            return svn_error_return(err);
+        }
+
       SVN_ERR(svn_cmdline_printf(pool, _("\n")));
     }
 
