@@ -370,10 +370,6 @@ process_committed_leaf(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
-  /* SVN_EXPERIMENTAL_PRISTINE:
-     copied_checksum is originally MD-5 but will later be SHA-1.  That's OK
-     because we are just reading it from one place in the DB and writing it
-     to another. */
 
   if (kind == svn_wc__db_kind_dir)
     adm_abspath = local_abspath;
@@ -416,6 +412,10 @@ process_committed_leaf(svn_wc__db_t *db,
   /* ### this picks up file and symlink  */
   if (kind != svn_wc__db_kind_dir)
     {
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+      /* The old pristine text will be dereferenced and (possibly) removed
+         from the pristine store when the new one replaces it. */
+#else
       /* Queue a removal any "revert" text base now.  */
       {
         const char *revert_abspath;
@@ -427,6 +427,7 @@ process_committed_leaf(svn_wc__db_t *db,
                                              scratch_pool, scratch_pool));
         SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
       }
+#endif
 
       /* If we sent a delta (meaning: post-copy modification),
          then this file will appear in the queue and so we should have
@@ -464,6 +465,11 @@ process_committed_leaf(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_wq_add(db, adm_abspath, work_item, scratch_pool));
     }
 
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+  /* Set TMP_TEXT_BASE_ABSPATH to NULL.  The new text base will be found in
+     the pristine store by its checksum. */
+  tmp_text_base_abspath = NULL;
+#else
   /* Set TMP_TEXT_BASE_ABSPATH to the new text base to be installed, if any.
      In effect, retrieve the temporary file that was laid down by
      svn_wc__internal_transmit_text_deltas(). */
@@ -478,6 +484,7 @@ process_committed_leaf(svn_wc__db_t *db,
     if (new_base_kind != svn_node_file)
       tmp_text_base_abspath = NULL;
   }
+#endif
 
   SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, tmp_text_base_abspath,
                                     new_revnum,
@@ -2355,7 +2362,11 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
       svn_node_kind_t on_disk;
       svn_boolean_t wc_special, local_special;
       svn_boolean_t text_modified_p;
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+      const svn_checksum_t *base_sha1_checksum, *working_sha1_checksum;
+#else
       const char *text_base_file;
+#endif
 
       /* Only check if the file was modified when it wasn't overwritten with a
          special file */
@@ -2375,8 +2386,40 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                    svn_dirent_local_style(local_abspath, scratch_pool));
         }
 
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+      /* Find the checksum(s) of the node's one or two pristine texts.  Note
+         that read_info() may give us the one from WORKING_NODE again. */
+      err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL,
+                                     &base_sha1_checksum,
+                                     NULL, NULL, NULL,
+                                     db, local_abspath,
+                                     scratch_pool, scratch_pool);
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          base_sha1_checksum = NULL;
+        }
+      else
+        SVN_ERR(err);
+      err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL,
+                                 &working_sha1_checksum,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 db, local_abspath,
+                                 scratch_pool, scratch_pool);
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          working_sha1_checksum = NULL;
+        }
+      else
+        SVN_ERR(err);
+#else
       SVN_ERR(svn_wc__text_base_path(&text_base_file, db, local_abspath,
                                      scratch_pool));
+#endif
 
 #ifndef USE_DB_PROPS
       /* Remove prop/NAME, prop-base/NAME.svn-base. */
@@ -2391,7 +2434,26 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               scratch_pool));
 
       /* Remove text-base/NAME.svn-base */
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+      /* Having removed the checksums that reference the pristine texts,
+         remove the pristine texts (if now totally unreferenced) from the
+         pristine store.  Don't try to remove the same pristine text twice.
+         The two checksums might be the same, either because the copied base
+         was exactly the same as the replaced base, or just because the
+         ..._read_info() code above sets WORKING_SHA1_CHECKSUM to the base
+         checksum if there is no WORKING_NODE row. */
+      if (base_sha1_checksum)
+        SVN_ERR(svn_wc__db_pristine_remove(db, local_abspath,
+                                           base_sha1_checksum,
+                                           scratch_pool));
+      if (working_sha1_checksum
+          && ! svn_checksum_match(base_sha1_checksum, working_sha1_checksum))
+        SVN_ERR(svn_wc__db_pristine_remove(db, local_abspath,
+                                           working_sha1_checksum,
+                                           scratch_pool));
+#else
       SVN_ERR(svn_io_remove_file2(text_base_file, TRUE, scratch_pool));
+#endif
 
       /* If we were asked to destroy the working file, do so unless
          it has local mods. */
