@@ -155,6 +155,40 @@ get_nearest_pristine_text_as_file(const char **result_abspath,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+  const svn_checksum_t *checksum;
+
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &checksum,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
+  if (checksum == NULL)
+    {
+      svn_error_t *err;
+
+      err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, &checksum,
+                                     NULL, NULL, NULL,
+                                     db, local_abspath,
+                                     scratch_pool, scratch_pool);
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          checksum = NULL;
+        }
+      else if (err)
+        return svn_error_return(err);
+    }
+
+  if (checksum != NULL)
+    {
+      SVN_ERR(svn_wc__db_pristine_get_path(result_abspath, db, local_abspath,
+                                           checksum,
+                                           result_pool, scratch_pool));
+      return SVN_NO_ERROR;
+    }
+#else
   svn_error_t *err;
 
   err = svn_wc__text_base_path_to_read(result_abspath, db, local_abspath,
@@ -181,6 +215,7 @@ get_nearest_pristine_text_as_file(const char **result_abspath,
     svn_error_clear(err);
   else
     return svn_error_return(err);
+#endif
 
   *result_abspath = NULL;
   return SVN_NO_ERROR;
