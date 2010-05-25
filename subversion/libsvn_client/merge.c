@@ -5244,6 +5244,7 @@ get_mergeinfo_walk_cb(const char *local_abspath,
   svn_boolean_t deleted;
   svn_boolean_t absent;
   svn_boolean_t obstructed;
+  svn_boolean_t immediate_child_dir;
 
   /* TODO(#2843) How to deal with a excluded item on merge? */
 
@@ -5287,6 +5288,11 @@ get_mergeinfo_walk_cb(const char *local_abspath,
   SVN_ERR(svn_wc__node_get_depth(&depth, wb->ctx->wc_ctx, local_abspath,
                                  scratch_pool));
 
+  immediate_child_dir = ((wb->depth == svn_depth_immediates)
+                         &&(kind == svn_node_dir)
+                         && (strcmp(abs_parent_path,
+                                    wb->merge_target_abspath) == 0));
+
   /* Store PATHs with explict mergeinfo, which are switched, are missing
      children due to a sparse checkout, are scheduled for deletion are absent
      from the WC, are first level sub directories relative to merge target if
@@ -5299,9 +5305,7 @@ get_mergeinfo_walk_cb(const char *local_abspath,
       || depth == svn_depth_empty
       || depth == svn_depth_files
       || absent
-      || ((wb->depth == svn_depth_immediates) &&
-          (kind == svn_node_dir) &&
-          (strcmp(abs_parent_path, wb->merge_target_abspath) == 0))
+      || immediate_child_dir
       || ((wb->depth == svn_depth_files) &&
           (kind == svn_node_file) &&
           (strcmp(abs_parent_path, wb->merge_target_abspath) == 0))
@@ -5334,7 +5338,9 @@ get_mergeinfo_walk_cb(const char *local_abspath,
       if (!child->has_noninheritable
           && (depth == svn_depth_empty
               || depth == svn_depth_files))
-      child->has_noninheritable = TRUE;
+        child->has_noninheritable = TRUE;
+
+      child->immediate_child_dir = immediate_child_dir;
 
       APR_ARRAY_PUSH(wb->children_with_mergeinfo,
                      svn_client__merge_path_t *) = child;
@@ -6897,6 +6903,120 @@ do_mergeinfo_unaware_dir_merge(const char *url1,
                                    merge_b, pool);
 }
 
+/* A svn_log_entry_receiver_t callback for
+   get_inoperative_immediate_children(). */
+static svn_error_t *
+log_find_operative_subtree_revs(void *baton,
+                                svn_log_entry_t *log_entry,
+                                apr_pool_t *pool)
+{
+  apr_hash_t *immediate_children = baton;
+  apr_hash_index_t *hi, *hi2;
+  svn_revnum_t revision;
+
+  revision = log_entry->revision;
+
+  for (hi = apr_hash_first(pool, log_entry->changed_paths2);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *path = svn__apr_hash_index_key(hi);
+      for (hi2 = apr_hash_first(pool, immediate_children);
+           hi2;
+           hi2 = apr_hash_next(hi2))
+        {
+          const char *immediate_path = svn__apr_hash_index_val(hi2);
+          if (svn_dirent_is_ancestor(immediate_path, path))
+            {
+              apr_hash_set(immediate_children, svn__apr_hash_index_key(hi2),
+                           APR_HASH_KEY_STRING, NULL);
+              /* A path can't be the child of more than
+                 one immediate child of the merge target. */
+              break;
+            }
+      }
+    }
+  return SVN_NO_ERROR;
+}
+
+/* Issue #3642.
+
+   Find inoperative subtrees when record_mergeinfo_for_dir_merge() is
+   recording mergeinfo describing a merge at depth=immediates.
+
+   CHILDREN_WITH_MERGEINFO is the standard array of subtrees that are
+   interesting from a merge tracking perspective, see the global comment
+   'THE CHILDREN_WITH_MERGEINFO ARRAY'.
+
+   MERGE_SOURCE_REPOS_ABSPATH is the absolute repository path of the merge
+   source.  OLDEST_REV and YOUNGEST_REV are the revisions merged from
+   MERGE_SOURCE_REPOS_ABSPATH to MERGE_TARGET_ABSPATH.
+
+   RA_SESSION points to MERGE_SOURCE_REPOS_ABSPATH.
+
+   Set *IMMEDIATE_CHILDREN to a hash (mapping const char * WC absolute
+   paths to const char * repos absolute paths) containing all the
+   subtrees which would be inoperative if MERGE_SOURCE_REPOS_PATH
+   -r(OLDEST_REV - 1):YOUNGEST_REV were merged to MERGE_TARGET_ABSPATH
+   at --depth infinity.  The keys of the hash point to copies of the ABSPATH
+   members of the svn_client__merge_path_t * in CHILDREN_WITH_MERGEINFO that
+   are inoperative.  The hash values are the key's corresponding repository
+   absolute merge source path.
+
+   RESULT_POOL is used to allocate the contents of *IMMEDIATE_CHILDREN.
+   SCRATCH_POOL is used for temporary allocations. */
+static svn_error_t *
+get_inoperative_immediate_children(apr_hash_t **immediate_children,
+                                   apr_array_header_t *children_with_mergeinfo,
+                                   const char *merge_source_repos_abspath,
+                                   svn_revnum_t oldest_rev,
+                                   svn_revnum_t youngest_rev,
+                                   const char *merge_target_abspath,
+                                   svn_ra_session_t *ra_session,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  int i;
+  *immediate_children = apr_hash_make(result_pool);
+
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(oldest_rev));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  SVN_ERR_ASSERT(oldest_rev <= youngest_rev);
+
+  /* Find all the children in CHILDREN_WITH_MERGEINFO with the
+     immediate_child_dir flag set and store them in *IMMEDIATE_CHILDREN. */
+  for (i = 0; i < children_with_mergeinfo->nelts; i++)
+    {
+      svn_client__merge_path_t *child =
+        APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
+
+      if (child->immediate_child_dir)
+        apr_hash_set(*immediate_children,
+                     apr_pstrdup(result_pool, child->abspath),
+                     APR_HASH_KEY_STRING,
+                     svn_uri_join(merge_source_repos_abspath,
+                                  svn_dirent_is_child(merge_target_abspath,
+                                                      child->abspath,
+                                                      result_pool),
+                                  result_pool));
+    }
+
+  /* Now remove any paths from *IMMEDIATE_CHILDREN that are inoperative when
+     merging MERGE_SOURCE_REPOS_PATH -r(OLDEST_REV - 1):YOUNGEST_REV to
+     MERGE_TARGET_ABSPATH at --depth infinity. */
+  if (apr_hash_count(*immediate_children))
+    {
+      apr_array_header_t *log_targets = apr_array_make(scratch_pool, 1,
+                                                       sizeof(const char *));
+      APR_ARRAY_PUSH(log_targets, const char *) = "";
+      SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_rev,
+                              oldest_rev, 0, TRUE, FALSE, FALSE,
+                              NULL, log_find_operative_subtree_revs,
+                              *immediate_children, scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Helper for do_directory_merge().
 
    Record mergeinfo describing a merge of MERGED_RANGE->START:
@@ -6922,6 +7042,7 @@ record_mergeinfo_for_dir_merge(const svn_merge_range_t *merged_range,
   int i;
   svn_boolean_t is_rollback = (merged_range->start > merged_range->end);
   svn_boolean_t operative_merge = FALSE;
+  apr_hash_t *inoperative_immediate_children = NULL;
 
   /* Update the WC mergeinfo here to account for our new
      merges, minus any unresolved conflicts and skips. */
@@ -6959,6 +7080,19 @@ record_mergeinfo_for_dir_merge(const svn_merge_range_t *merged_range,
   remove_absent_children(merge_b->target_abspath,
                          notify_b->children_with_mergeinfo, notify_b);
 
+
+  /* Find all issue #3642 children (i.e immediate child directories of the
+     merge target, with no pre-existing explicit mergeinfo, during a --depth
+     immediates merge).  Stash those that are inoperative at any depth in
+     INOPERATIVE_IMMEDIATE_CHILDREN. */
+  if (!merge_b->record_only && range.start <= range.end)
+    SVN_ERR(get_inoperative_immediate_children(
+      &inoperative_immediate_children,
+      notify_b->children_with_mergeinfo,
+      mergeinfo_path, range.start + 1, range.end,
+      merge_b->target_abspath, merge_b->ra_session1,
+      pool, iterpool));
+
   /* Record mergeinfo on any subtree affected by the merge or for
      every subtree if this is a --record-only merge.  Always record
      mergeinfo on the merge target CHILDREN_WITH_MERGEINFO[0]. */
@@ -6986,6 +7120,7 @@ record_mergeinfo_for_dir_merge(const svn_merge_range_t *merged_range,
          was affected by the merge. */
       if (i > 0 /* Always record mergeinfo on the merge target. */
           && (!merge_b->record_only || merge_b->reintegrate_merge)
+          && (!child->immediate_child_dir || child->pre_merge_mergeinfo)
           && (!operative_merge
               || !subtree_touched_by_merge(child->abspath, notify_b,
                                            iterpool)))
@@ -7015,6 +7150,14 @@ record_mergeinfo_for_dir_merge(const svn_merge_range_t *merged_range,
                                                  merge_b->ctx->wc_ctx,
                                                  child->abspath, iterpool));
           if (child_is_deleted)
+            continue;
+
+          /* We don't need to record mergeinfo on those issue #3642 children
+             that are inoperative at any depth. */
+          if (inoperative_immediate_children
+              && apr_hash_get(inoperative_immediate_children,
+                              child->abspath,
+                             APR_HASH_KEY_STRING))
             continue;
 
           child_repos_path = svn_dirent_is_child(merge_b->target_abspath,
