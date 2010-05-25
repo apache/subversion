@@ -1160,6 +1160,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 {
   const char *message;
   const char *top_src_path, *top_dst_url;
+  const char *top_src_abspath;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
   void *edit_baton;
@@ -1214,9 +1215,10 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                                  pool);
     }
 
+  SVN_ERR(svn_dirent_get_absolute(&top_src_abspath, top_src_path, pool));
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, top_dst_url,
-                                               top_src_path,
-                                               NULL, TRUE, TRUE, ctx, pool));
+                                               top_src_abspath, NULL, TRUE,
+                                               TRUE, ctx, pool));
 
   /* If requested, determine the nearest existing parent of the destination,
      and reparent the ra session there. */

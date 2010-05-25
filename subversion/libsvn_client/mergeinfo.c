@@ -1597,12 +1597,13 @@ location_from_path_and_rev(const char **url,
   svn_ra_session_t *ra_session;
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_revnum_t rev;
+  const char *local_abspath;
+
+  if (!svn_path_is_url(path_or_url))
+    SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, subpool));
 
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev, url,
-                                           path_or_url,
-                                           !svn_path_is_url(path_or_url)
-                                             ? path_or_url
-                                             : NULL,
+                                           path_or_url, local_abspath,
                                            peg_revision, peg_revision,
                                            ctx, subpool));
   *url = apr_pstrdup(pool, *url);
