@@ -33,10 +33,11 @@ IF NOT EXIST "imports\" (
 IF NOT EXIST build\imports.done (
   copy /y imports\dev-default.build default.build
   nant build %NANTARGS%
-  del release\bin\*svn*
-  IF NOT ERRORLEVEL 1 (
-    echo. > build\imports.done
+  IF ERRORLEVEL 1 (
+    exit /B 1
   )
+  del release\bin\*svn* release\bin\_*.*
+  echo. > build\imports.done
 )
 
 POPD
@@ -51,5 +52,8 @@ taskkill /im svn.exe /f 2> nul:
 taskkill /im svnadmin.exe /f 2> nul:
 taskkill /im svnserve.exe /f 2> nul:
 taskkill /im httpd.exe /f 2> nul:
+IF EXIST "%TESTDIR%\tests\subversion\tests\cmdline\httpd\" (
+  rmdir /s /q  "%TESTDIR%\tests\subversion\tests\cmdline\httpd"
+)
 
 exit /B 0
