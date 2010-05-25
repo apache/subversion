@@ -950,7 +950,7 @@ svn_client__do_commit(const char *base_url,
 /* Handle changes to the svn:externals property described by EXTERNALS_OLD,
 
    EXTERNALS_NEW, and AMBIENT_DEPTHS.  The tree's top level directory
-   is at TO_PATH and corresponds to FROM_URL URL in the repository,
+   is at TO_ABSPATH and corresponds to FROM_URL URL in the repository,
    which has a root URL of REPOS_ROOT_URL.  A write lock should be
    held.
 
@@ -986,7 +986,7 @@ svn_client__handle_externals(apr_hash_t *externals_old,
                              apr_hash_t *externals_new,
                              apr_hash_t *ambient_depths,
                              const char *from_url,
-                             const char *to_path,
+                             const char *to_abspath,
                              const char *repos_root_url,
                              svn_depth_t requested_depth,
                              svn_boolean_t *timestamp_sleep,
@@ -1000,7 +1000,7 @@ svn_client__handle_externals(apr_hash_t *externals_old,
    checked out -- they will have no administrative subdirectories.
 
    The checked out or exported tree's top level directory is at
-   TO_PATH and corresponds to FROM_URL URL in the repository, which
+   TO_ABSPATH and corresponds to FROM_URL URL in the repository, which
    has a root URL of REPOS_ROOT_URL.
 
    REQUESTED_DEPTH is the requested_depth of the driving operation; it
@@ -1015,7 +1015,7 @@ svn_client__handle_externals(apr_hash_t *externals_old,
 svn_error_t *
 svn_client__fetch_externals(apr_hash_t *externals,
                             const char *from_url,
-                            const char *to_path,
+                            const char *to_abspath,
                             const char *repos_root_url,
                             svn_depth_t requested_depth,
                             svn_boolean_t is_export,

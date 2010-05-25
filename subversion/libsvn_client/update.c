@@ -108,7 +108,7 @@ update_internal(svn_revnum_t *result_rev,
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
   const char *anchor_url;
-  const char *anchor, *target;
+  const char *target;
   const char *repos_root;
   svn_error_t *err;
   svn_revnum_t revnum;
@@ -131,15 +131,9 @@ update_internal(svn_revnum_t *result_rev,
     depth_is_sticky = FALSE;
 
   if (strcmp(local_abspath, anchor_abspath))
-    {
-      target = svn_dirent_basename(local_abspath, pool);
-      anchor = svn_dirent_basename(path, pool);
-    }
+    target = svn_dirent_basename(local_abspath, pool);
   else
-    {
-      target = "";
-      anchor = path;
-    }
+    target = "";
 
   /* Get full URL from the ANCHOR. */
   SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
@@ -281,7 +275,7 @@ update_internal(svn_revnum_t *result_rev,
       SVN_ERR(svn_client__handle_externals(efb.externals_old,
                                            efb.externals_new,
                                            efb.ambient_depths,
-                                           anchor_url, anchor,
+                                           anchor_url, anchor_abspath,
                                            repos_root,
                                            depth, use_sleep, ctx, pool));
     }
