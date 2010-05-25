@@ -19062,7 +19062,7 @@ def foreign_repos_del_and_props(sbox):
 
 # Test for issue #3642 'immediate depth merges don't create proper subtree
 # mergeinfo'. See http://subversion.tigris.org/issues/show_bug.cgi?id=3642
-def immedate_depth_merge_creates_minimal_subtree_mergeinfo(sbox):
+def immediate_depth_merge_creates_minimal_subtree_mergeinfo(sbox):
   "no spurious mergeinfo from immediate depth merges "
 
   sbox.build()
@@ -19082,9 +19082,6 @@ def immedate_depth_merge_creates_minimal_subtree_mergeinfo(sbox):
   # affect that subtree.  The other child of the merge target, A_COPY/B/F
   # would never be affected by r5, so it doesn't need any explicit
   # mergeinfo.
-  #
-  # Currently this test fails because *no* immediate directory children
-  # of the merge target get explicit mergeinfo set.
   expected_output = wc.State(B_COPY_path, {})
   expected_mergeinfo_output = wc.State(B_COPY_path, {
     ''  : Item(status=' U'),
@@ -19358,7 +19355,7 @@ test_list = [ None,
               reintegrate_with_self_referential_mergeinfo,
               reintegrate_with_subtree_merges,
               foreign_repos_del_and_props,
-              XFail(immedate_depth_merge_creates_minimal_subtree_mergeinfo),
+              immediate_depth_merge_creates_minimal_subtree_mergeinfo,
              ]
 
 if __name__ == '__main__':
