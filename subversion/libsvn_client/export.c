@@ -1076,9 +1076,15 @@ svn_client_export5(svn_revnum_t *result_rev,
                      ctx->notify_baton2, pool));
 
           if (! ignore_externals && depth == svn_depth_infinity)
-            SVN_ERR(svn_client__fetch_externals(eb->externals, from, to,
-                                                repos_root_url, depth, TRUE,
-                                                &use_sleep, ctx, pool));
+            {
+              const char *to_abspath;
+
+              SVN_ERR(svn_dirent_get_absolute(&to_abspath, to, pool));
+              SVN_ERR(svn_client__fetch_externals(eb->externals,
+                                                  from, to_abspath,
+                                                  repos_root_url, depth, TRUE,
+                                                  &use_sleep, ctx, pool));
+            }
         }
       else if (kind == svn_node_none)
         {

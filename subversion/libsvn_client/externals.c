@@ -51,7 +51,7 @@ struct handle_external_item_change_baton
   apr_hash_t *old_desc;
 
   /* The directory that has this externals property. */
-  const char *parent_dir;
+  const char *parent_dir_abspath;
 
   /* The URL for the directory that has this externals property. */
   const char *parent_dir_url;
@@ -723,9 +723,9 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
 {
   struct handle_external_item_change_baton *ib = baton;
   svn_wc_external_item2_t *old_item, *new_item;
-  const char *parent;
-  const char *path = svn_dirent_join(ib->parent_dir,
-                                     (const char *) key, ib->iter_pool);
+  const char *local_abspath = svn_dirent_join(ib->parent_dir_abspath,
+                                              (const char *) key,
+                                              ib->iter_pool);
   svn_ra_session_t *ra_session;
   svn_node_kind_t kind;
   svn_client__ra_session_from_path_results ra_cache = { 0 };
@@ -822,12 +822,13 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
   if (! old_item)
     {
       /* This branch is only used during a checkout or an export. */
+      const char *parent_abspath;
 
       /* First notify that we're about to handle an external. */
       if (ib->ctx->notify_func2)
         (*ib->ctx->notify_func2)
           (ib->ctx->notify_baton2,
-           svn_wc_create_notify(path, svn_wc_notify_update_external,
+           svn_wc_create_notify(local_abspath, svn_wc_notify_update_external,
                                 ib->iter_pool), ib->iter_pool);
 
       switch (*ra_cache.kind_p)
@@ -835,8 +836,8 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
         case svn_node_dir:
           /* The target dir might have multiple components.  Guarantee
              the path leading down to the last component. */
-          parent = svn_dirent_dirname(path, ib->iter_pool);
-          SVN_ERR(svn_io_make_dir_recursively(parent, ib->iter_pool));
+          parent_abspath = svn_dirent_dirname(local_abspath, ib->iter_pool);
+          SVN_ERR(svn_io_make_dir_recursively(parent_abspath, ib->iter_pool));
 
           /* If we were handling renames the fancy way, then before
              checking out a new subdir here, we would somehow learn if
@@ -852,14 +853,14 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                exist before the parent export process unless a versioned
                directory above it did, which means the user would have
                already had to force these creations to occur. */
-            SVN_ERR(svn_client_export4(NULL, new_item->url, path,
+            SVN_ERR(svn_client_export4(NULL, new_item->url, local_abspath,
                                        &(new_item->peg_revision),
                                        &(new_item->revision),
                                        TRUE, FALSE, svn_depth_infinity, NULL,
                                        ib->ctx, ib->iter_pool));
           else
             SVN_ERR(svn_client__checkout_internal
-                    (NULL, new_item->url, path,
+                    (NULL, new_item->url, local_abspath,
                      &(new_item->peg_revision), &(new_item->revision),
                      &ra_cache,
                      SVN_DEPTH_INFINITY_OR_FILES(TRUE),
@@ -870,13 +871,13 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
           if (ib->is_export)
             /* Do not overwrite an existing file with this file
                external. */
-            SVN_ERR(svn_client_export4(NULL, new_item->url, path,
+            SVN_ERR(svn_client_export4(NULL, new_item->url, local_abspath,
                                        &(new_item->peg_revision),
                                        &(new_item->revision),
                                        FALSE, TRUE, svn_depth_infinity, NULL,
                                        ib->ctx, ib->iter_pool));
           else
-            SVN_ERR(switch_file_external(path,
+            SVN_ERR(switch_file_external(local_abspath,
                                          new_item->url,
                                          &new_item->peg_revision,
                                          &new_item->revision,
@@ -902,20 +903,15 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
          just be renamed to a new one. */
 
       svn_error_t *err;
-      const char *remove_target_abspath;
       svn_boolean_t lock_existed;
 
-      SVN_ERR(svn_dirent_get_absolute(&remove_target_abspath,
-                                      path,
-                                      ib->iter_pool));
-
       SVN_ERR(svn_wc_locked2(&lock_existed, NULL, ib->ctx->wc_ctx,
-                             remove_target_abspath, ib->iter_pool));
+                             local_abspath, ib->iter_pool));
 
       if (! lock_existed)
         {
           SVN_ERR(svn_wc__acquire_write_lock(NULL, ib->ctx->wc_ctx,
-                                             remove_target_abspath,
+                                             local_abspath,
                                              ib->iter_pool,
                                              ib->iter_pool));
         }
@@ -925,14 +921,14 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
          going to need this directory, and therefore it's better to
          leave stuff where the user expects it. */
       err = svn_wc_remove_from_revision_control2(
-                        ib->ctx->wc_ctx, remove_target_abspath, TRUE, FALSE,
+                        ib->ctx->wc_ctx, local_abspath, TRUE, FALSE,
                         ib->ctx->cancel_func, ib->ctx->cancel_baton,
                         ib->iter_pool);
 
       if (ib->ctx->notify_func2)
         {
           svn_wc_notify_t *notify =
-              svn_wc_create_notify(remove_target_abspath,
+              svn_wc_create_notify(local_abspath,
                                    svn_wc_notify_update_external_removed,
                                    ib->iter_pool);
 
@@ -948,7 +944,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
           && (! err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
         {
           svn_error_t *err2 = svn_wc__release_write_lock(ib->ctx->wc_ctx,
-                                                         remove_target_abspath,
+                                                         local_abspath,
                                                          ib->iter_pool);
           if (err2)
             {
@@ -974,7 +970,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       if (ib->ctx->notify_func2)
         (*ib->ctx->notify_func2)
           (ib->ctx->notify_baton2,
-           svn_wc_create_notify(path, svn_wc_notify_update_external,
+           svn_wc_create_notify(local_abspath, svn_wc_notify_update_external,
                                 ib->iter_pool), ib->iter_pool);
 
       /* Either the URL changed, or the exact same item is present in
@@ -985,14 +981,14 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       switch (*ra_cache.kind_p)
         {
         case svn_node_dir:
-          SVN_ERR(switch_dir_external(path, new_item->url,
+          SVN_ERR(switch_dir_external(local_abspath, new_item->url,
                                       &(new_item->revision),
                                       &(new_item->peg_revision),
                                       ib->timestamp_sleep, ib->ctx,
                                       ib->iter_pool));
           break;
         case svn_node_file:
-          SVN_ERR(switch_file_external(path,
+          SVN_ERR(switch_file_external(local_abspath,
                                        new_item->url,
                                        &new_item->peg_revision,
                                        &new_item->revision,
@@ -1029,10 +1025,10 @@ handle_external_item_change_wrapper(const void *key, apr_ssize_t klen,
     {
       if (ib->ctx->notify_func2)
         {
-          const char *path = svn_dirent_join(ib->parent_dir, key,
-                                             ib->iter_pool);
+          const char *local_abspath = svn_dirent_join(ib->parent_dir_abspath,
+                                                      key, ib->iter_pool);
           svn_wc_notify_t *notifier =
-          svn_wc_create_notify(path,
+          svn_wc_create_notify(local_abspath,
                                svn_wc_notify_failed_external,
                                ib->iter_pool);
           notifier->err = err;
@@ -1065,7 +1061,7 @@ struct handle_externals_desc_change_baton
      to or exported to.  The to_path must be a substring of the
      external item parent directory path. */
   const char *from_url;
-  const char *to_path;
+  const char *to_abspath;
 
   /* Passed through to handle_external_item_change_baton. */
   svn_client_ctx_t *ctx;
@@ -1096,7 +1092,6 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   const char *ambient_depth_w;
   svn_depth_t ambient_depth;
   const char *url;
-  const char *abs_parent_dir;
   svn_error_t *err;
 
   if (cb->ambient_depths)
@@ -1161,19 +1156,17 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
 
   ib.old_desc          = old_desc_hash;
   ib.new_desc          = new_desc_hash;
-  ib.parent_dir        = (const char *) key;
   ib.repos_root_url    = cb->repos_root_url;
   ib.ctx               = cb->ctx;
   ib.is_export         = cb->is_export;
   ib.timestamp_sleep   = cb->timestamp_sleep;
   ib.pool              = cb->pool;
   ib.iter_pool         = svn_pool_create(cb->pool);
-
-  SVN_ERR(svn_dirent_get_absolute(&abs_parent_dir, ib.parent_dir,
+  SVN_ERR(svn_dirent_get_absolute(&ib.parent_dir_abspath, (const char *) key,
                                   cb->pool));
 
-  err = svn_wc__node_get_url(&url, cb->ctx->wc_ctx,
-                             abs_parent_dir, cb->pool, cb->pool);
+  err = svn_wc__node_get_url(&url, cb->ctx->wc_ctx, ib.parent_dir_abspath,
+                             cb->pool, cb->pool);
 
   /* If we're doing an 'svn export' the current dir will not be a
      working copy. We can't get the parent_dir. */
@@ -1188,12 +1181,12 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
              parent_dir past strlen(to_path) to from_url (making sure to move
              past a '/' in parent_dir, otherwise svn_path_url_add_component()
              will error. */
-          len = strlen(cb->to_path);
-          if (ib.parent_dir[len] == '/')
+          len = strlen(cb->to_abspath);
+          if (ib.parent_dir_abspath[len] == '/')
             ++len;
           ib.parent_dir_url = svn_path_url_add_component2(cb->from_url,
-                                                          ib.parent_dir + len,
-                                                          cb->pool);
+                                           ib.parent_dir_abspath + len,
+                                           cb->pool);
           svn_error_clear(err);
         }
       else
@@ -1244,7 +1237,7 @@ svn_client__handle_externals(apr_hash_t *externals_old,
                              apr_hash_t *externals_new,
                              apr_hash_t *ambient_depths,
                              const char *from_url,
-                             const char *to_path,
+                             const char *to_abspath,
                              const char *repos_root_url,
                              svn_depth_t requested_depth,
                              svn_boolean_t *timestamp_sleep,
@@ -1252,6 +1245,8 @@ svn_client__handle_externals(apr_hash_t *externals_old,
                              apr_pool_t *pool)
 {
   struct handle_externals_desc_change_baton cb = { 0 };
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(to_abspath));
 
   /* Sanity check; see r30124. */
   if (! svn_path_is_url(from_url))
@@ -1263,7 +1258,7 @@ svn_client__handle_externals(apr_hash_t *externals_old,
   cb.requested_depth   = requested_depth;
   cb.ambient_depths    = ambient_depths;
   cb.from_url          = from_url;
-  cb.to_path           = to_path;
+  cb.to_abspath        = to_abspath;
   cb.repos_root_url    = repos_root_url;
   cb.ctx               = ctx;
   cb.timestamp_sleep   = timestamp_sleep;
@@ -1278,7 +1273,7 @@ svn_client__handle_externals(apr_hash_t *externals_old,
 svn_error_t *
 svn_client__fetch_externals(apr_hash_t *externals,
                             const char *from_url,
-                            const char *to_path,
+                            const char *to_abspath,
                             const char *repos_root_url,
                             svn_depth_t requested_depth,
                             svn_boolean_t is_export,
@@ -1288,13 +1283,15 @@ svn_client__fetch_externals(apr_hash_t *externals,
 {
   struct handle_externals_desc_change_baton cb = { 0 };
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(to_abspath));
+
   cb.externals_new     = externals;
   cb.externals_old     = apr_hash_make(pool);
   cb.requested_depth   = requested_depth;
   cb.ambient_depths    = NULL;
   cb.ctx               = ctx;
   cb.from_url          = from_url;
-  cb.to_path           = to_path;
+  cb.to_abspath        = to_abspath;
   cb.repos_root_url    = repos_root_url;
   cb.timestamp_sleep   = timestamp_sleep;
   cb.is_export         = is_export;
