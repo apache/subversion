@@ -424,7 +424,7 @@ svn_wc__get_ultimate_base_contents(svn_stream_t **contents,
                                    scratch_pool, scratch_pool));
   if (kind != svn_wc__db_kind_file)
     return svn_error_createf(SVN_ERR_WC_NOT_FILE, NULL,
-                             _("base node of '%s' is not a file"),
+                             _("Base node of '%s' is not a file"),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
   if (status != svn_wc__db_status_normal)
