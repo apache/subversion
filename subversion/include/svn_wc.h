@@ -6792,6 +6792,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
  * @a baton is a closure object; it should be provided by the
  * implementation, and passed by the caller.
  *
+ * ### This func has a ROOT_URL arg, not a ROOT boolean.
  * If @a root is TRUE, then the implementation should make sure that @a url
  * is the repository root.  Else, it can be an URL inside the repository.
  * @a pool may be used for temporary allocations.
@@ -6806,6 +6807,8 @@ typedef svn_error_t *(*svn_wc_relocation_validator3_t)(void *baton,
 
 /** Similar to #svn_wc_relocation_validator3_t, but without
  * the @a root_url arguments.
+ *
+ * ### What about the ROOT argument?
  *
  * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
@@ -6829,6 +6832,8 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
  * The pre-change URL should be @a from, and the post-change URL will be
  * @a to.  @a validator (and its baton, @a validator_baton), will be called
  * for the newly generated base URL and calculated repo root.
+ * ### Doc string of svn_wc_relocation_validator3_t says it's called for
+ *     each file/directory. Is that so?
  *
  * If @a recurse is @c FALSE, none of the children of @a local_abspath will
  * be changed.  @a wc_ctx is an working copy context.
