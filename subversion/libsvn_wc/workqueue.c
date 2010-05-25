@@ -286,15 +286,15 @@ run_revert(svn_wc__db_t *db,
          using the original base.  */
       reinstall_working = magic_changed || replaced;
 
-      /* Rename the "Revert Base" back to normal "Base".  (This is a WC-1
-       * concept only: in WC-NG, the checksum of this base stays in the
-       * BASE_NODE table so we don't need to rename or move it.)
-       *
-       * The WC-1 way: If there is a "revert base" file (because the file
-       * is replaced), then move that revert base over to the normal base
-       * and update the normal base checksum accordingly. */
       if (replaced)
         {
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+          /* With the Pristine Store, the checksum of this base stays in the
+             BASE_NODE table so we don't need to rename or move anything. */
+#else
+          /* For WC-1: If there is a "revert base" file (because the file
+           * is replaced), then move that revert base over to the normal
+           * base and update the normal base checksum accordingly. */
           const char *revert_base_path;
           const char *text_base_path;
           svn_checksum_t *checksum;
@@ -318,6 +318,7 @@ run_revert(svn_wc__db_t *db,
                                         svn_checksum_md5, scratch_pool));
           tmp_entry.checksum = svn_checksum_to_cstring(checksum, scratch_pool);
           modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
+#endif
         }
       else if (!reinstall_working)
         {
@@ -487,6 +488,26 @@ verify_pristine_present(svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_pool_t *scratch_pool)
 {
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+  const svn_checksum_t *base_checksum;
+
+  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   &base_checksum, NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
+  if (base_checksum != NULL)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &base_checksum,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
+  if (base_checksum != NULL)
+    return SVN_NO_ERROR;
+#else
   const char *base_abspath;
   svn_error_t *err;
 
@@ -504,6 +525,7 @@ verify_pristine_present(svn_wc__db_t *db,
     svn_error_clear(err);
   else
     return svn_error_return(err);
+#endif
 
   /* A real file must have either a regular or a revert text-base.
      If it has neither, we could be looking at the situation described
@@ -659,6 +681,10 @@ run_prepare_revert_files(svn_wc__db_t *db,
 
   /* Rename the original text base over to the revert text base.  */
   SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+  /* With the Pristine Store, the checksum of this base stays in the
+   * BASE_NODE table so we don't need to rename or move anything. */
+#else
   if (kind == svn_wc__db_kind_file)
     {
       const char *text_base;
@@ -671,6 +697,7 @@ run_prepare_revert_files(svn_wc__db_t *db,
 
       SVN_ERR(move_if_present(text_base, text_revert, scratch_pool));
     }
+#endif
 
   /* Set up the revert props.  */
 
@@ -1196,9 +1223,15 @@ install_committed_file(svn_boolean_t *overwrote_working,
     }
 
   /* Install the new text base if one is waiting. */
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+  /* The Pristine Store equivalent is putting the text in the pristine store
+     and putting its checksum in the database, both of which happened before
+     this function was called. */
+#else
   if (tmp_text_base_abspath != NULL)
     SVN_ERR(svn_wc__sync_text_base(db, file_abspath, tmp_text_base_abspath,
                                    scratch_pool));
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -1775,6 +1808,7 @@ run_delete(svn_wc__db_t *db,
       SVN_ERR(move_if_present(props_revert, props_base, scratch_pool));
 #endif
 
+#ifndef SVN_EXPERIMENTAL_PRISTINE
       if (kind != svn_wc__db_kind_dir)
         {
           const char *text_base, *text_revert;
@@ -1785,6 +1819,7 @@ run_delete(svn_wc__db_t *db,
                                            local_abspath, scratch_pool));
           SVN_ERR(move_if_present(text_revert, text_base, scratch_pool));
         }
+#endif
     }
 #ifndef USE_DB_PROPS
   if (was_added)
