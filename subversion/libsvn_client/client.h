@@ -483,23 +483,24 @@ svn_client__make_local_parents(const char *path,
 
 /*** Checkout, update and switch ***/
 
-/* Update a working copy PATH to REVISION, and (if not NULL) set
+/* Update a working copy LOCAL_ABSPATH to REVISION, and (if not NULL) set
    RESULT_REV to the update revision.
 
    If DEPTH is svn_depth_unknown, then use whatever depth is already
-   set for PATH, or @c svn_depth_infinity if PATH does not exist.
+   set for LOCAL_ABSPATH, or @c svn_depth_infinity if LOCAL_ABSPATH does
+   not exist.
 
    Else if DEPTH is svn_depth_infinity, then update fully recursively
    (resetting the existing depth of the working copy if necessary).
-   Else if DEPTH is svn_depth_files, update all files under PATH (if
+   Else if DEPTH is svn_depth_files, update all files under LOCAL_ABSPATH (if
    any), but exclude any subdirectories.  Else if DEPTH is
    svn_depth_immediates, update all files and include immediate
    subdirectories (at svn_depth_empty).  Else if DEPTH is
-   svn_depth_empty, just update PATH; if PATH is a directory, that
-   means touching only its properties not its entries.
+   svn_depth_empty, just update LOCAL_ABSPATH; if LOCAL_ABSPATH is a
+   directory, that means touching only its properties not its entries.
 
    If DEPTH_IS_STICKY is set and DEPTH is not svn_depth_unknown, then
-   in addition to updating PATH, also set its sticky ambient depth
+   in addition to updating LOCAL_ABSPATH, also set its sticky ambient depth
    value to DEPTH.
 
    If IGNORE_EXTERNALS is true, do no externals processing.
@@ -510,7 +511,7 @@ svn_client__make_local_parents(const char *path,
    to TRUE if a sleep is required, and will not change
    *TIMESTAMP_SLEEP if no sleep is required.
 
-   If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH
+   If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of LOCAL_ABSPATH
    that obstruct items added from the repos are tolerated; if FALSE,
    these obstructions cause the update to fail.
 
@@ -524,7 +525,7 @@ svn_client__make_local_parents(const char *path,
 */
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
-                            const char *path,
+                            const char *local_abspath,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
                             svn_boolean_t depth_is_sticky,
