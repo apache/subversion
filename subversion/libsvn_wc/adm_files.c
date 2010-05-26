@@ -617,6 +617,25 @@ svn_wc__get_ultimate_base_md5_checksum(const svn_checksum_t **md5_checksum,
 
 
 svn_error_t *
+svn_wc__get_pristine_text_status(apr_finfo_t *finfo,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+  const char *text_base_abspath;
+
+  SVN_ERR(svn_wc__text_base_path_to_read(&text_base_abspath,
+                                         db, local_abspath,
+                                         scratch_pool, scratch_pool));
+  SVN_ERR(svn_io_stat(finfo, text_base_abspath,
+                      APR_FINFO_MIN | APR_FINFO_LINK,
+                      result_pool));
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__prop_path(const char **prop_path,
                   const char *path,
                   svn_wc__db_kind_t node_kind,

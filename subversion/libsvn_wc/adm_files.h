@@ -170,6 +170,19 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* Set *FINFO to the status of the pristine text of LOCAL_ABSPATH in DB.
+   Only the following fields are guaranteed to be set:
+     APR_FINFO_TYPE
+     APR_FINFO_SIZE
+     APR_FINFO_MTIME
+ */
+svn_error_t *
+svn_wc__get_pristine_text_status(apr_finfo_t *finfo,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
 #ifndef SVN_EXPERIMENTAL_PRISTINE
 /* Set *RESULT_ABSPATH to the path of the WC-1 "revert-base" text of the
    versioned file LOCAL_ABSPATH in DB.
