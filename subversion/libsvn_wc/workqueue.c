@@ -1448,19 +1448,15 @@ log_do_committed(svn_wc__db_t *db,
           /* The working copy file hasn't been overwritten, meaning
              we need to decide which timestamp to use. */
 
-          const char *base_abspath;
           apr_finfo_t basef_finfo;
           svn_boolean_t modified;
 
           /* If the working file was overwritten (due to re-translation)
              or touched (due to +x / -x), then use *that* textual
              timestamp instead. */
-          SVN_ERR(svn_wc__text_base_path_to_read(&base_abspath,
-                                                 db, local_abspath,
-                                                 pool, pool));
-          SVN_ERR(svn_io_stat(&basef_finfo, base_abspath,
-                              APR_FINFO_MIN | APR_FINFO_LINK,
-                              pool));
+          SVN_ERR(svn_wc__get_pristine_text_status(&basef_finfo,
+                                                   db, local_abspath,
+                                                   pool, pool));
 
           /* Verify that the working file is the same as the base file
              by comparing file sizes, then timestamps and the contents
@@ -1472,6 +1468,11 @@ log_do_committed(svn_wc__db_t *db,
           modified = finfo.size != basef_finfo.size;
           if (finfo.mtime != basef_finfo.mtime && ! modified)
             {
+              const char *base_abspath;
+
+              SVN_ERR(svn_wc__text_base_path_to_read(&base_abspath,
+                                                     db, local_abspath,
+                                                     pool, pool));
               SVN_ERR(svn_wc__internal_versioned_file_modcheck(
                         &modified,
                         db, local_abspath, base_abspath, FALSE, pool));
