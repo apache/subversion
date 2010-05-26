@@ -4541,7 +4541,10 @@ merge_file(svn_skel_t **work_items,
     }
 
   /* Deal with installation of the new textbase, if appropriate. */
-#ifndef SVN_EXPERIMENTAL_PRISTINE
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+  /* The WC-NG equivalent is putting the pristine's checksum into the DB,
+     which is done in close_file(). */
+#else
   if (new_text_base_tmp_abspath)
     {
       const char *text_base_abspath;
@@ -4550,8 +4553,8 @@ merge_file(svn_skel_t **work_items,
        * text_base_abspath is the appropriate path: the "revert-base" path
        * if the node is replaced, else the usual text-base path. */
       SVN_ERR(svn_wc__ultimate_base_text_path(&text_base_abspath,
-                                          eb->db, fb->local_abspath,
-                                          pool, pool));
+                                              eb->db, fb->local_abspath,
+                                              pool, pool));
       SVN_ERR(svn_wc__loggy_move(&work_item, eb->db, pb->local_abspath,
                                  new_text_base_tmp_abspath,
                                  text_base_abspath,
@@ -5774,7 +5777,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   svn_wc__db_t *db = wc_ctx->db;
   const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
   const char *tmp_text_base_abspath;
-  svn_checksum_t *base_checksum;
+  svn_checksum_t *new_text_base_md5_checksum;
+  svn_checksum_t *new_text_base_sha1_checksum;
   const char *source_abspath = NULL;
   svn_skel_t *all_work_items;
   svn_skel_t *work_item;
@@ -5932,14 +5936,15 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   }
 
   /* Copy NEW_BASE_CONTENTS into a temporary file so our log can refer to
-     it, and set TMP_TEXT_BASE_ABSPATH to its path.  Compute its MD5
-     checksum as we copy, and put it in BASE_CHECKSUM. */
+     it, and set TMP_TEXT_BASE_ABSPATH to its path.  Compute its
+     NEW_TEXT_BASE_MD5_CHECKSUM and NEW_TEXT_BASE_SHA1_CHECKSUM as we copy. */
   {
     svn_stream_t *tmp_base_contents;
 
     SVN_ERR(svn_wc__open_writable_base(&tmp_base_contents,
                                        &tmp_text_base_abspath,
-                                       &base_checksum, NULL,
+                                       &new_text_base_md5_checksum,
+                                       &new_text_base_sha1_checksum,
                                        wc_ctx->db, local_abspath,
                                        pool, pool));
     SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
@@ -5967,16 +5972,22 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
      text base.  */
   if (copyfrom_url != NULL)
     {
-      const char *text_base_abspath;
-
       /* Write out log commands to set up the new text base and its checksum.
          (Install it as the normal text base, not the 'revert base'.) */
+#ifdef SVN_EXPERIMENTAL_PRISTINE
+      SVN_ERR(svn_wc__db_pristine_install(db, tmp_text_base_abspath,
+                                          new_text_base_sha1_checksum,
+                                          new_text_base_md5_checksum, pool));
+#else
+      const char *text_base_abspath;
+
       SVN_ERR(svn_wc__text_base_path(&text_base_abspath, db, local_abspath,
                                      pool));
       SVN_ERR(svn_wc__loggy_move(&work_item, db, dir_abspath,
                                  tmp_text_base_abspath, text_base_abspath,
                                  pool));
       all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+#endif
     }
   else
     {
@@ -6000,7 +6011,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
          NULL for the missing information, and this function should learn to
          handle that. */
 
-      base_checksum = NULL;
+      new_text_base_sha1_checksum = NULL;
+      new_text_base_md5_checksum = NULL;
     }
 
   /* For added files without NEW_CONTENTS, then generate the working file
@@ -6052,7 +6064,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                   original_root_url,
                                   original_uuid,
                                   copyfrom_rev,
-                                  base_checksum,
+                                  /* SVN_EXPERIMENTAL_PRISTINE: use SHA-1 */
+                                  new_text_base_md5_checksum,
                                   NULL /* conflict */,
                                   NULL /* work_items */,
                                   pool));
