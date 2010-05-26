@@ -1439,11 +1439,6 @@ log_do_committed(svn_wc__db_t *db,
 
       translated_size = finfo.size;
 
-#ifdef SVN_EXPERIMENTAL_PRISTINE
-      last_mod_time = finfo.mtime;
-      /* ### Should we choose a different time stamp if the working copy
-         hasn't been overwritten, like WC-1 did?  Why did it do so? */
-#else
       if (overwrote_working)
         {
           last_mod_time = finfo.mtime;
@@ -1485,7 +1480,6 @@ log_do_committed(svn_wc__db_t *db,
              else use the base file's timestamp. */
           last_mod_time = modified ? basef_finfo.mtime : finfo.mtime;
         }
-#endif
 
       return svn_error_return(svn_wc__db_global_record_fileinfo(
                                 db, local_abspath,
