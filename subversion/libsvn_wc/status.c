@@ -1892,21 +1892,16 @@ delete_entry(const char *path,
   struct dir_baton *db = parent_baton;
   struct edit_baton *eb = db->edit_baton;
   const char *local_abspath = svn_dirent_join(eb->anchor_abspath, path, pool);
-  const svn_wc_entry_t *entry;
+  svn_wc__db_kind_t kind;
 
   /* Note:  when something is deleted, it's okay to tweak the
      statushash immediately.  No need to wait until close_file or
      close_dir, because there's no risk of having to honor the 'added'
      flag.  We already know this item exists in the working copy. */
 
-  /* Read the parent's entries file.  If the deleted thing is not
-     versioned in this working copy, it was probably deleted via this
-     working copy.  No need to report such a thing. */
-  SVN_ERR(svn_wc__get_entry(&entry, eb->db, local_abspath, FALSE,
-                            svn_node_unknown, FALSE, pool, pool));
-
+  SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, local_abspath, FALSE, pool));
   SVN_ERR(tweak_statushash(db, db, TRUE, eb->db,
-                           local_abspath, entry->kind == svn_node_dir,
+                           local_abspath, kind == svn_wc__db_kind_dir,
                            svn_wc_status_deleted, 0, revision, NULL, pool));
 
   /* Mark the parent dir -- it lost an entry (unless that parent dir
@@ -1915,7 +1910,7 @@ delete_entry(const char *path,
   if (db->parent_baton && (! *eb->target_basename))
     SVN_ERR(tweak_statushash(db->parent_baton, db, TRUE,eb->db,
                              db->local_abspath,
-                             entry->kind == svn_node_dir,
+                             kind == svn_wc__db_kind_dir,
                              svn_wc_status_modified, 0, SVN_INVALID_REVNUM,
                              NULL, pool));
 
