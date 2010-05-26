@@ -1604,10 +1604,17 @@ svn_client_update(svn_revnum_t *result_rev,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  return svn_client__update_internal(result_rev, path, revision,
-                                     SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                     FALSE, FALSE, FALSE, NULL,
-                                     TRUE, FALSE, ctx, pool);
+  apr_array_header_t *paths = apr_array_make(pool, 1, sizeof(const char *));
+  apr_array_header_t *result_revs;
+  
+  APR_ARRAY_PUSH(paths, const char *) = path;
+
+  SVN_ERR(svn_client_update2(&result_revs, paths, revision, recurse, FALSE,
+                             ctx, pool));
+
+  *result_rev = APR_ARRAY_IDX(result_revs, 0, svn_revnum_t);
+
+  return SVN_NO_ERROR;
 }
 
 /*** From switch.c ***/
