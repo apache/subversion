@@ -570,15 +570,15 @@ typedef struct
   svn_node_kind_t *kind_p;
 } svn_client__ra_session_from_path_results;
 
-/* Checkout into PATH a working copy of URL at REVISION, and (if not
+/* Checkout into LOCAL_ABSPATH a working copy of URL at REVISION, and (if not
    NULL) set RESULT_REV to the checked out revision.
 
    If DEPTH is svn_depth_infinity, then check out fully recursively.
-   Else if DEPTH is svn_depth_files, checkout all files under PATH (if
+   Else if DEPTH is svn_depth_files, checkout all files under LOCAL_ABSPATH (if
    any), but not subdirectories.  Else if DEPTH is
    svn_depth_immediates, check out all files and include immediate
    subdirectories (at svn_depth_empty).  Else if DEPTH is
-   svn_depth_empty, just check out PATH, with none of its entries.
+   svn_depth_empty, just check out LOCAL_ABSPATH, with none of its entries.
 
    DEPTH must be a definite depth, not (e.g.) svn_depth_unknown.
 
@@ -592,18 +592,18 @@ typedef struct
    If TIMESTAMP_SLEEP is NULL this function will sleep before
    returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
    NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
-   to TRUE if a sleep is required, and will not change
-   *TIMESTAMP_SLEEP if no sleep is required.  If
-   ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH that
-   obstruct items added from the repos are tolerated; if FALSE, these
-   obstructions cause the checkout to fail.
+   to TRUE if a sleep is required, and will not change *TIMESTAMP_SLEEP
+   if no sleep is required.  If ALLOW_UNVER_OBSTRUCTIONS is TRUE,
+   unversioned children of LOCAL_ABSPATH that obstruct items added from
+   the repos are tolerated; if FALSE, these obstructions cause the checkout
+   to fail.
 
    If INNERCHECKOUT is true, no anchor check is performed on the target.
    */
 svn_error_t *
 svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const char *URL,
-                              const char *path,
+                              const char *local_abspath,
                               const svn_opt_revision_t *peg_revision,
                               const svn_opt_revision_t *revision,
                               const svn_client__ra_session_from_path_results *ra_cache,

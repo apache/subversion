@@ -268,8 +268,6 @@ switch_dir_external(const char *path,
     {
       struct relegate_dir_external_with_write_lock_baton baton;
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
       baton.local_abspath = local_abspath;
       baton.wc_ctx = ctx->wc_ctx;
       baton.cancel_func = ctx->cancel_func;
@@ -289,7 +287,7 @@ switch_dir_external(const char *path,
     }
 
   /* ... Hello, new hotness. */
-  return svn_client__checkout_internal(NULL, url, path, peg_revision,
+  return svn_client__checkout_internal(NULL, url, local_abspath, peg_revision,
                                        revision, NULL, svn_depth_infinity,
                                        FALSE, FALSE, TRUE, timestamp_sleep,
                                        ctx, pool);
