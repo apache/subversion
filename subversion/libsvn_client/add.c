@@ -515,12 +515,16 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
     }
   else if (kind == svn_node_file)
     err = add_file(b->local_abspath, b->ctx, scratch_pool);
+  else if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("'%s' not found"),
+                             svn_dirent_local_style(b->local_abspath,
+                                                    scratch_pool));
   else
-    err = svn_wc_add4(b->ctx->wc_ctx, b->local_abspath, b->depth, NULL,
-                      SVN_INVALID_REVNUM,
-                      b->ctx->cancel_func, b->ctx->cancel_baton,
-                      b->ctx->notify_func2, b->ctx->notify_baton2,
-                      scratch_pool);
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Unsupported node kind for path '%s'"),
+                             svn_dirent_local_style(b->local_abspath,
+                                                    scratch_pool));
 
   /* Ignore SVN_ERR_ENTRY_EXISTS when FORCE is set.  */
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && b->force)
