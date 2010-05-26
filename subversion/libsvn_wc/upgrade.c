@@ -430,6 +430,15 @@ wipe_obsolete_files(const char *wcroot_abspath, apr_pool_t *scratch_pool)
                     FALSE, NULL, NULL, scratch_pool));
 #endif
 
+#if 0  /* Conditional upon upgrading to format 18 */
+  /* Remove the old text-base directory. */
+  svn_error_clear(svn_io_remove_dir2(
+                    svn_wc__adm_child(wcroot_abspath,
+                                      TEXT_BASE_SUBDIR,
+                                      scratch_pool),
+                    FALSE, NULL, NULL, scratch_pool));
+#endif
+
   /* Remove the old-style lock file LAST.  */
   svn_error_clear(svn_io_remove_file2(
                     build_lockfile_path(wcroot_abspath, scratch_pool),
@@ -1105,6 +1114,13 @@ bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 }
 
 
+static svn_error_t *
+bump_to_18(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+
 #if 0 /* ### no tree conflict migration yet */
 
 /* */
@@ -1194,7 +1210,6 @@ svn_wc__upgrade_sdb(int *result_format,
       case 16:
         {
           struct bump_to_17_baton b17;
-          const char *pristine_dir;
 
           b17.wcroot_abspath = wcroot_abspath;
           b17.original_format = start_format;
@@ -1202,15 +1217,29 @@ svn_wc__upgrade_sdb(int *result_format,
           /* Move the properties into the database.  */
           SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_17, &b17,
                                                scratch_pool));
+        }
+
+        *result_format = 17;
+        /* FALLTHROUGH  */
+#endif
+
+#if 0
+      case 17:
+        {
+          const char *pristine_dir;
 
           /* Create the '.svn/pristine' directory.  */
           pristine_dir = svn_wc__adm_child(wcroot_abspath,
                                            SVN_WC__ADM_PRISTINE,
                                            scratch_pool);
           SVN_ERR(svn_io_dir_make(pristine_dir, APR_OS_DEFAULT, scratch_pool));
+
+          /* Move text bases into the pristine directory, and update the db */
+          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_18, &b18,
+                                               scratch_pool));
         }
 
-        *result_format = 17;
+        *result_format = 18;
         /* FALLTHROUGH  */
 #endif
 
