@@ -1468,14 +1468,14 @@ log_do_committed(svn_wc__db_t *db,
           modified = finfo.size != basef_finfo.size;
           if (finfo.mtime != basef_finfo.mtime && ! modified)
             {
-              const char *base_abspath;
-
-              SVN_ERR(svn_wc__text_base_path_to_read(&base_abspath,
-                                                     db, local_abspath,
-                                                     pool, pool));
-              SVN_ERR(svn_wc__internal_versioned_file_modcheck(
-                        &modified,
-                        db, local_abspath, base_abspath, FALSE, pool));
+              /* Compare the texts.  Don't use
+                 svn_wc__internal_text_modified_p's ability to compare
+                 against the *recorded* size and time stamp because that's
+                 not what we are interested in right here. */
+              SVN_ERR(svn_wc__internal_text_modified_p(
+                        &modified, db, local_abspath,
+                        TRUE /* force_comparison */,
+                        FALSE /* compare_textbases */, pool));
             }
           /* If they are the same, use the working file's timestamp,
              else use the base file's timestamp. */
