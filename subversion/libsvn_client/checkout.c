@@ -81,7 +81,7 @@ initialize_area(svn_revnum_t *result_rev,
 svn_error_t *
 svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const char *url,
-                              const char *path,
+                              const char *local_abspath,
                               const svn_opt_revision_t *peg_revision,
                               const svn_opt_revision_t *revision,
                               const svn_client__ra_session_from_path_results *ra_cache,
@@ -100,13 +100,11 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   const char *session_url;
   svn_node_kind_t kind;
   const char *uuid, *repos_root;
-  const char *local_abspath;
 
   /* Sanity check.  Without these, the checkout is meaningless. */
-  SVN_ERR_ASSERT(path != NULL);
+  SVN_ERR_ASSERT(local_abspath != NULL);
   SVN_ERR_ASSERT(url != NULL);
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* Fulfill the docstring promise of svn_client_checkout: */
   if ((revision->kind != svn_opt_revision_number)
@@ -180,14 +178,14 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       (SVN_ERR_UNSUPPORTED_FEATURE , NULL,
        _("URL '%s' refers to a file, not a directory"), session_url);
 
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &kind, pool));
 
   if (kind == svn_node_none)
     {
       /* Bootstrap: create an incomplete working-copy root dir.  Its
          entries file should only have an entry for THIS_DIR with a
          URL, revnum, and an 'incomplete' flag.  */
-      SVN_ERR(svn_io_make_dir_recursively(path, pool));
+      SVN_ERR(svn_io_make_dir_recursively(local_abspath, pool));
       err = initialize_area(result_rev, local_abspath, revision, session_url,
                             repos_root, uuid, revnum, depth, use_sleep,
                             ignore_externals, allow_unver_obstructions,
@@ -229,27 +227,27 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                           _("'%s' is already a working copy for a different URL;"
                             " use 'svn update' to update it"),
-                          svn_dirent_local_style(path, pool));
+                          svn_dirent_local_style(local_abspath, pool));
         }
     }
   else
     {
       return svn_error_createf(SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
                                _("'%s' already exists and is not a directory"),
-                               svn_dirent_local_style(path, pool));
+                               svn_dirent_local_style(local_abspath, pool));
     }
 
   if (err)
     {
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
-      svn_io_sleep_for_timestamps(path, pool);
+      svn_io_sleep_for_timestamps(local_abspath, pool);
       return svn_error_return(err);
     }
   *use_sleep = TRUE;
 
   if (sleep_here)
-    svn_io_sleep_for_timestamps(path, pool);
+    svn_io_sleep_for_timestamps(local_abspath, pool);
 
   return SVN_NO_ERROR;
 }
@@ -266,8 +264,13 @@ svn_client_checkout3(svn_revnum_t *result_rev,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
-                                       revision, NULL, depth, ignore_externals,
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  return svn_client__checkout_internal(result_rev, URL, local_abspath,
+                                       peg_revision, revision, NULL, depth,
+                                       ignore_externals,
                                        allow_unver_obstructions, FALSE, NULL,
                                        ctx, pool);
 }
