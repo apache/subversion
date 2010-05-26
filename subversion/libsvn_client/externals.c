@@ -198,9 +198,9 @@ switch_dir_external(const char *path,
              externals definition, perform an update. */
           if (strcmp(node_url, url) == 0)
             {
-              SVN_ERR(svn_client__update_internal(NULL, path, revision,
-                                                  svn_depth_unknown, FALSE,
-                                                  FALSE, FALSE,
+              SVN_ERR(svn_client__update_internal(NULL, local_abspath,
+                                                  revision, svn_depth_unknown,
+                                                  FALSE, FALSE, FALSE,
                                                   timestamp_sleep, TRUE,
                                                   TRUE, ctx, subpool));
               svn_pool_destroy(subpool);

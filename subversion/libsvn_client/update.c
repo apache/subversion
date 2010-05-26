@@ -307,7 +307,7 @@ update_internal(svn_revnum_t *result_rev,
 
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
-                            const char *path,
+                            const char *local_abspath,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
                             svn_boolean_t depth_is_sticky,
@@ -319,17 +319,10 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
-  const char *local_abspath, *anchor_abspath;
+  const char *anchor_abspath;
   svn_error_t *err1, *err2;
 
-  SVN_ERR_ASSERT(path);
-
-  if (svn_path_is_url(path))
-    return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                             _("Path '%s' is not a directory"),
-                             path);
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   if (!innerupdate)
     {
@@ -367,7 +360,6 @@ svn_client_update3(apr_array_header_t **result_revs,
                    apr_pool_t *pool)
 {
   int i;
-  svn_error_t *err = SVN_NO_ERROR;
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *path = NULL;
 
@@ -377,6 +369,8 @@ svn_client_update3(apr_array_header_t **result_revs,
   for (i = 0; i < paths->nelts; ++i)
     {
       svn_boolean_t sleep;
+      svn_boolean_t skipped = FALSE;
+      svn_error_t *err = SVN_NO_ERROR;
       svn_revnum_t result_rev;
       path = APR_ARRAY_IDX(paths, i, const char *);
 
@@ -385,19 +379,36 @@ svn_client_update3(apr_array_header_t **result_revs,
       if (ctx->cancel_func && (err = ctx->cancel_func(ctx->cancel_baton)))
         break;
 
-      err = svn_client__update_internal(&result_rev, path, revision, depth,
-                                        depth_is_sticky, ignore_externals,
-                                        allow_unver_obstructions,
-                                        &sleep, TRUE, FALSE, ctx, subpool);
-      if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+      if (svn_path_is_url(path))
         {
-          return svn_error_return(err);
+          skipped = TRUE;
         }
-      else if (err)
+      else
         {
-          /* SVN_ERR_WC_NOT_WORKING_COPY: it's not versioned */
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
+          const char *local_abspath;
+
+          SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
+          err = svn_client__update_internal(&result_rev, local_abspath,
+                                            revision, depth, depth_is_sticky,
+                                            ignore_externals,
+                                            allow_unver_obstructions,
+                                            &sleep, TRUE, FALSE, ctx, subpool);
+
+          if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+            {
+              return svn_error_return(err);
+            }
+
+          if (err)
+            {
+              /* SVN_ERR_WC_NOT_WORKING_COPY: it's not versioned */
+              svn_error_clear(err);
+              skipped = TRUE;
+            }
+        }
+
+      if (skipped)
+        {
           result_rev = SVN_INVALID_REVNUM;
           if (ctx->notify_func2)
             {
@@ -428,5 +439,5 @@ svn_client_update3(apr_array_header_t **result_revs,
   svn_pool_destroy(subpool);
   svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
 
-  return svn_error_return(err);
+  return SVN_NO_ERROR;
 }
