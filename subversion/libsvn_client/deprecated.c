@@ -1660,11 +1660,10 @@ svn_client_checkout2(svn_revnum_t *result_rev,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
-                                       revision, NULL,
-                                       SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                       ignore_externals, FALSE, FALSE, NULL,
-                                       ctx, pool);
+  return svn_error_return(svn_client_checkout3(result_rev, URL, path,
+                                        peg_revision, revision, 
+                                        SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                        ignore_externals, FALSE, ctx, pool));
 }
 
 svn_error_t *
@@ -1680,10 +1679,9 @@ svn_client_checkout(svn_revnum_t *result_rev,
 
   peg_revision.kind = svn_opt_revision_unspecified;
 
-  return svn_client__checkout_internal(result_rev, URL, path, &peg_revision,
-                                       revision, NULL,
-                                       SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                       FALSE, FALSE, FALSE, NULL, ctx, pool);
+  return svn_error_return(svn_client_checkout2(result_rev, URL, path,
+                                               &peg_revision, revision, recurse,
+                                               FALSE, ctx, pool));
 }
 
 /*** From info.c ***/
