@@ -19123,6 +19123,113 @@ def immediate_depth_merge_creates_minimal_subtree_mergeinfo(sbox):
                                        None, None, None, None, None,
                                        1, 1, '--depth', 'immediates')
 
+
+# Test for issue #3646 'cyclic --record-only merges create self-referential
+# mergeinfo'
+def cyclic_record_only_merge_creates_self_referential_mergeinfo(sbox):
+  "cyclic merge creates self referential mergeinfo"
+
+  # Given a copy of trunk@M to branch, committed in r(M+1), if we
+  # --record-only merge the branch back to trunk with no revisions
+  # specified, then trunk gets self-referential mergeinfo recorded
+  # reflecting its entire natural history.
+
+  # Setup a standard greek tree in r1.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  mu_path       = os.path.join(wc_dir, 'A', 'mu')
+  A_path        = os.path.join(wc_dir, 'A')
+  A_branch_path = os.path.join(wc_dir, 'A-branch')
+
+  # Make a change to A/mu in r2.
+  svntest.main.file_write(mu_path, "Trunk edit\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m', 'trunk edit',
+                                     wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  # Copy A to A-branch in r3
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', A_path, A_branch_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Branch A to A-branch', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Merge A-branch back to A.  This should record the mergeinfo '/A-branch:3'
+  # on A.  Currently however, it records self referential mergeinfo on A of
+  # '/A:2'.  This test is set as XFail until this issue is fixed.
+  #
+  #   >svn merge ^/A-branch A --record-only
+  #   --- Recording mergeinfo for merge of r2 into 'A':
+  #    U   A
+  #   --- Recording mergeinfo for merge of r3 into 'A':
+  #    G   A
+  #
+  #   >svn pg svn:mergeinfo -vR
+  #   Properties on 'A':
+  #     svn:mergeinfo
+  #       /A:2  <-- This is part of A's own history!
+  #       /A-branch:3
+  expected_output = wc.State(A_path, {})
+  expected_mergeinfo_output = wc.State(A_path, {
+    '' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_path, {})
+  expected_A_status = wc.State(A_path, {
+    ''          : Item(status=' M'),
+    'B'         : Item(status='  '),
+    'mu'        : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    })
+  expected_A_status.tweak(wc_rev=3)
+  expected_A_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A-branch:3'}),
+    'B'         : Item(),
+    'mu'        : Item("Trunk edit\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    })
+  expected_A_skip = wc.State(A_path, {})
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + '/A-branch', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_A_disk,
+                                       expected_A_status,
+                                       expected_A_skip,
+                                       None, None, None, None, None, 1, 1,
+                                       '--record-only')
+
 ########################################################################
 # Run the tests
 
@@ -19356,6 +19463,7 @@ test_list = [ None,
               reintegrate_with_subtree_merges,
               foreign_repos_del_and_props,
               immediate_depth_merge_creates_minimal_subtree_mergeinfo,
+              XFail(cyclic_record_only_merge_creates_self_referential_mergeinfo),
              ]
 
 if __name__ == '__main__':
