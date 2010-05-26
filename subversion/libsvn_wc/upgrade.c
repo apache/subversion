@@ -56,6 +56,9 @@
 #define PROP_REVERT_FOR_DIR "dir-prop-revert"
 #define PROP_WORKING_FOR_DIR "dir-props"
 
+/* Old textbase location. */
+#define TEXT_BASE_SUBDIR "text-base"
+
 #define TEMP_DIR "tmp"
 
 /* Old data files that we no longer need/use.  */
@@ -63,6 +66,9 @@
 #define ADM_EMPTY_FILE "empty-file"
 #define ADM_LOG "log"
 #define ADM_LOCK "lock"
+
+/* New pristine location */
+#define PRISTINE_STORAGE_RELPATH "pristine"
 
 
 /* Forward declare until we decide to shift/reorder functions.  */
@@ -1115,8 +1121,86 @@ bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
 
 static svn_error_t *
+migrate_text_bases(const char *wcroot_abspath,
+                   svn_sqlite__db_t *sdb,
+                   apr_pool_t *scratch_pool)
+{
+  apr_hash_t *dirents;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_index_t *hi;
+  const char *text_base_dir = svn_wc__adm_child(wcroot_abspath,
+                                                TEXT_BASE_SUBDIR,
+                                                scratch_pool);
+
+  SVN_ERR(svn_io_get_dir_filenames(&dirents, text_base_dir, scratch_pool));
+  for (hi = apr_hash_first(scratch_pool, dirents); hi;
+            hi = apr_hash_next(hi))
+    {
+      const char *text_base_basename = svn__apr_hash_index_key(hi);
+      const char *pristine_path;
+      const char *text_base_path;
+      svn_checksum_t *md5_checksum;
+      svn_checksum_t *sha1_checksum;
+      svn_sqlite__stmt_t *stmt;
+      apr_finfo_t finfo;
+
+      svn_pool_clear(iterpool);
+      text_base_path = svn_dirent_join(text_base_dir, text_base_basename,
+                                       iterpool);
+
+      /* ### This code could be a bit smarter: we could chain checksum
+             streams instead of reading the file twice; we could check to
+             see if a pristine row exists before attempting to insert one;
+             we could check and see if a pristine file exists before
+             attempting to copy a new one over it.
+             
+             However, I think simplicity is the big win here, especially since
+             this is code that runs exactly once on a user's machine: when
+             doing the upgrade.  If you disagree, feel free to add the
+             complexity. :)  */
+
+      /* Gather the two checksums. */
+      SVN_ERR(svn_io_file_checksum2(&md5_checksum, text_base_path,
+                                    svn_checksum_md5, iterpool));
+      SVN_ERR(svn_io_file_checksum2(&md5_checksum, text_base_path,
+                                    svn_checksum_sha1, iterpool));
+
+      SVN_ERR(svn_io_stat(&finfo, text_base_path, APR_FINFO_SIZE, iterpool));
+
+      /* Insert a row into the pristine table. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_PRISTINE));
+      SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, iterpool));
+      SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, iterpool));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
+      SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+      /* Compute the path of the pristine.
+         Note: in format 18, pristines are not yet sharded, so don't include
+         that in the path computation. */
+      pristine_path = svn_dirent_join_many(iterpool,
+                                           wcroot_abspath,
+                                           svn_wc_get_adm_dir(iterpool),
+                                           PRISTINE_STORAGE_RELPATH,
+                                           NULL);
+
+      /* Finally, copy the file over. */
+      SVN_ERR(svn_io_copy_file(text_base_path, pristine_path, TRUE,
+                               iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 bump_to_18(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
+  const char *wcroot_abspath = baton;
+
+  SVN_ERR(migrate_text_bases(wcroot_abspath, sdb, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -1235,7 +1319,7 @@ svn_wc__upgrade_sdb(int *result_format,
           SVN_ERR(svn_io_dir_make(pristine_dir, APR_OS_DEFAULT, scratch_pool));
 
           /* Move text bases into the pristine directory, and update the db */
-          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_18, &b18,
+          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_18, wcroot_abspath,
                                                scratch_pool));
         }
 
