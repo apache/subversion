@@ -149,7 +149,6 @@ class SvnRepository:
     """Dump the repository into the directory OUTPUT_DIR"""
     ldir = local_path(output_dir)
     os.mkdir(ldir)
-    print "## SvnRepository::dump(rep_dir=" + self.repo_absdir + ")"
 
     """Run a BDB dump on the repository"""
     if self.db_dump_name != 'none':
@@ -322,7 +321,6 @@ class SvnWC:
                                'commit', '-m', log, lpath)
     actions.run_and_verify_update(lpath, None, None, None)
     self.repo.head_rev += 1
-    print "## head-rev == " + str(self.repo.head_rev)
     return self.repo.head_rev
 
   def svn_update(self, rpath='', rev='HEAD'):
