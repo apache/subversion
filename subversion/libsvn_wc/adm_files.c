@@ -188,6 +188,7 @@ make_adm_subdir(const char *path,
 /*** Syncing files in the adm area. ***/
 
 
+#ifndef SVN_EXPERIMENTAL_PRISTINE
 svn_error_t *
 svn_wc__sync_text_base(svn_wc__db_t *db,
                        const char *local_abspath,
@@ -203,7 +204,9 @@ svn_wc__sync_text_base(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+#endif
 
+#ifndef SVN_EXPERIMENTAL_PRISTINE
 svn_error_t *
 svn_wc__text_base_path(const char **result_abspath,
                        svn_wc__db_t *db,
@@ -224,6 +227,7 @@ svn_wc__text_base_path(const char **result_abspath,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 svn_error_t *
 svn_wc__text_base_deterministic_tmp_path(const char **result_abspath,
@@ -242,6 +246,7 @@ svn_wc__text_base_deterministic_tmp_path(const char **result_abspath,
   return SVN_NO_ERROR;
 }
 
+#ifndef SVN_EXPERIMENTAL_PRISTINE
 svn_error_t *
 svn_wc__text_revert_path(const char **result_abspath,
                          svn_wc__db_t *db,
@@ -262,6 +267,7 @@ svn_wc__text_revert_path(const char **result_abspath,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 svn_error_t *
@@ -308,6 +314,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
 }
 
 
+#ifndef SVN_EXPERIMENTAL_PRISTINE
 svn_error_t *
 svn_wc__text_revert_path_to_read(const char **result_abspath,
                                  svn_wc__db_t *db,
@@ -330,6 +337,7 @@ svn_wc__text_revert_path_to_read(const char **result_abspath,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 svn_error_t *
