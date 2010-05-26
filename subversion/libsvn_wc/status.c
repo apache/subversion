@@ -621,6 +621,8 @@ assemble_status(svn_wc_status3_t **status,
   /* 6. Build and return a status structure. */
 
   stat = apr_pcalloc(result_pool, sizeof(**status));
+  stat->kind = entry->kind;
+  stat->depth = entry->depth;
   stat->entry = entry;
   stat->text_status = final_text_status;
   stat->prop_status = final_prop_status;
@@ -679,6 +681,10 @@ assemble_unversioned(svn_wc_status3_t **status,
 
   /* return a fairly blank structure. */
   stat = apr_pcalloc(result_pool, sizeof(**status));
+
+  /*stat->versioned = FALSE;*/
+  stat->kind = svn_node_unknown; /* not versioned */
+  stat->depth = svn_depth_unknown;
   stat->text_status = svn_wc_status_none;
   stat->prop_status = svn_wc_status_none;
   stat->repos_text_status = svn_wc_status_none;
@@ -1632,7 +1638,7 @@ make_dir_baton(void **dir_baton,
       && (status_in_parent->text_status != svn_wc_status_obstructed)
       && (status_in_parent->text_status != svn_wc_status_external)
       && (status_in_parent->text_status != svn_wc_status_ignored)
-      && (status_in_parent->entry->kind == svn_node_dir)
+      && (status_in_parent->kind == svn_node_dir)
       && (! d->excluded)
       && (d->depth == svn_depth_unknown
           || d->depth == svn_depth_infinity
@@ -1654,11 +1660,11 @@ make_dir_baton(void **dir_baton,
       /* If we found a depth here, it should govern. */
       this_dir_status = apr_hash_get(d->statii, d->local_abspath,
                                      APR_HASH_KEY_STRING);
-      if (this_dir_status && this_dir_status->entry
+      if (this_dir_status && this_dir_status->versioned
           && (d->depth == svn_depth_unknown
-              || d->depth > status_in_parent->entry->depth))
+              || d->depth > status_in_parent->depth))
         {
-          d->depth = this_dir_status->entry->depth;
+          d->depth = this_dir_status->depth;
         }
     }
 
@@ -1742,11 +1748,11 @@ svn_wc__is_sendable_status(const svn_wc_status3_t *status,
     return TRUE;
 
   /* If there is a lock token, send it. */
-  if (status->entry && status->entry->lock_token)
+  if (status->versioned && status->lock_token)
     return TRUE;
 
   /* If the entry is associated with a changelist, send it. */
-  if (status->entry && status->entry->changelist)
+  if (status->versioned && status->changelist)
     return TRUE;
 
   /* Otherwise, don't send it. */
@@ -1796,7 +1802,7 @@ handle_statii(struct edit_baton *eb,
 {
   const apr_array_header_t *ignores = eb->ignores;
   apr_hash_index_t *hi;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   svn_wc_status_func4_t status_func = eb->status_func;
   void *status_baton = eb->status_baton;
   struct status_baton sb;
@@ -1812,39 +1818,36 @@ handle_statii(struct edit_baton *eb,
   /* Loop over all the statuses still in our hash, handling each one. */
   for (hi = apr_hash_first(pool, statii); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
+      const char *local_abspath = svn__apr_hash_index_key(hi);
       svn_wc_status3_t *status = svn__apr_hash_index_val(hi);
 
       /* Clear the subpool. */
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
       /* Now, handle the status.  We don't recurse for svn_depth_immediates
          because we already have the subdirectories' statii. */
       if (status->text_status != svn_wc_status_obstructed
           && status->text_status != svn_wc_status_missing
-          && status->entry && status->entry->kind == svn_node_dir
+          && status->versioned && status->kind == svn_node_dir
           && (depth == svn_depth_unknown
               || depth == svn_depth_infinity))
         {
-          const char *local_abspath;
-
-          SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
-
           SVN_ERR(get_dir_status(&eb->wb,
                                  local_abspath, dir_repos_root_url,
                                  dir_repos_relpath, NULL, ignores, depth,
                                  eb->get_all, eb->no_ignore, TRUE,
                                  status_func, status_baton, eb->cancel_func,
-                                 eb->cancel_baton, subpool));
+                                 eb->cancel_baton, iterpool));
         }
       if (dir_was_deleted)
         status->repos_text_status = svn_wc_status_deleted;
       if (svn_wc__is_sendable_status(status, eb->no_ignore, eb->get_all))
-        SVN_ERR((eb->status_func)(eb->status_baton, path, status, subpool));
+        SVN_ERR((eb->status_func)(eb->status_baton, local_abspath, status,
+                                  iterpool));
     }
 
   /* Destroy the subpool. */
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -2042,7 +2045,7 @@ close_directory(void *dir_baton,
           eb->anchor_status->repos_text_status = repos_text_status;
 
           /* If the root dir is out of date set the ood info directly too. */
-          if (db->ood_last_cmt_rev != eb->anchor_status->entry->revision)
+          if (db->ood_last_cmt_rev != eb->anchor_status->revision)
             {
               eb->anchor_status->ood_last_cmt_rev = db->ood_last_cmt_rev;
               eb->anchor_status->ood_last_cmt_date = db->ood_last_cmt_date;
@@ -2090,8 +2093,8 @@ close_directory(void *dir_baton,
                                     APR_HASH_KEY_STRING);
           if (tgt_status)
             {
-              if (tgt_status->entry
-                  && tgt_status->entry->kind == svn_node_dir)
+              if (tgt_status->versioned
+                  && tgt_status->kind == svn_node_dir)
                 {
                   SVN_ERR(get_dir_status(&eb->wb, eb->target_abspath,
                                          NULL, NULL, NULL, eb->ignores, 

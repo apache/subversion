@@ -3525,6 +3525,13 @@ enum svn_wc_status_kind
  */
 typedef struct svn_wc_status3_t
 {
+  /** The kind of node as recorded in the working copy */
+  svn_node_kind_t kind;
+
+  /** The depth of the node as recorded in the working copy
+   * (#svn_depth_unknown for files or when no depth is set) */
+  svn_depth_t depth;
+
   /** Can be @c NULL if not under version control. */
   const svn_wc_entry_t *entry;
 
