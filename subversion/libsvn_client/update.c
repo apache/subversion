@@ -89,7 +89,6 @@ file_fetcher(void *baton,
 
 static svn_error_t *
 update_internal(svn_revnum_t *result_rev,
-                const char *path,
                 const char *local_abspath,
                 const char *anchor_abspath,
                 const svn_opt_revision_t *revision,
@@ -262,7 +261,7 @@ update_internal(svn_revnum_t *result_rev,
     {
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
-      svn_io_sleep_for_timestamps(path, pool);
+      svn_io_sleep_for_timestamps(local_abspath, pool);
       return svn_error_return(err);
     }
   *use_sleep = TRUE;
@@ -281,7 +280,7 @@ update_internal(svn_revnum_t *result_rev,
     }
 
   if (sleep_here)
-    svn_io_sleep_for_timestamps(path, pool);
+    svn_io_sleep_for_timestamps(local_abspath, pool);
 
   SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool));
 
@@ -289,7 +288,8 @@ update_internal(svn_revnum_t *result_rev,
   if (ctx->notify_func2)
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(path, svn_wc_notify_update_completed, pool);
+        = svn_wc_create_notify(local_abspath, svn_wc_notify_update_completed,
+                               pool);
       notify->kind = svn_node_none;
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;
@@ -343,7 +343,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       anchor_abspath = local_abspath;
     }
 
-  err1 = update_internal(result_rev, path, local_abspath, anchor_abspath,
+  err1 = update_internal(result_rev, local_abspath, anchor_abspath,
                          revision, depth, depth_is_sticky,
                          ignore_externals, allow_unver_obstructions,
                          timestamp_sleep, send_copyfrom_args,
