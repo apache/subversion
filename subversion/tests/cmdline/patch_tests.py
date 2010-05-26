@@ -2088,7 +2088,79 @@ def patch_replace_locally_deleted_file(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1) # dry-run
+# Regression test for #3643
+def patch_no_eol_at_eof(sbox):
+  "patch with no eol at eof"
 
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  iota_contents = [
+    "One line\n",
+    "Another line\n",
+    "A third line \n",
+    "This is the file 'iota'.\n",
+    "A line after\n",
+    "Another line after\n",
+    "The last line with missing eol",
+  ]
+
+  svntest.main.file_write(iota_path, ''.join(iota_contents))
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota'  : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  unidiff_patch = [
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "@@ -1,7 +1,7 @@\n",
+    " One line\n",
+    " Another line\n",
+    " A third line \n",
+    "-This is the file 'iota'.\n",
+    "+It is the file 'iota'.\n",
+    " A line after\n",
+    " Another line after\n",
+    " The last line with missing eol\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  iota_contents = [
+    "One line\n",
+    "Another line\n",
+    "A third line \n",
+    "It is the file 'iota'.\n",
+    "A line after\n",
+    "Another line after\n",
+    "The last line with missing eol\n",
+  ]
+  expected_output = [
+    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=''.join(iota_contents))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='M ', wc_rev=2)
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
 
 ########################################################################
 #Run the tests
@@ -2112,6 +2184,7 @@ test_list = [ None,
               patch_with_svn_eol_style_uncommitted,
               patch_with_ignore_whitespace,
               patch_replace_locally_deleted_file,
+              patch_no_eol_at_eof,
             ]
 
 if __name__ == '__main__':

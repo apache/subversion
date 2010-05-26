@@ -947,7 +947,7 @@ apply_hunk(patch_target_t *target, hunk_info_t *hi, apr_pool_t *pool)
        * Don't skip trailing lines which matched with fuzz. */
       line = target->current_line + hi->hunk->original_length - (2 * hi->fuzz);
       SVN_ERR(seek_to_line(target, line, pool));
-      if (target->current_line != line)
+      if (target->current_line != line && ! target->eof)
         {
           /* Seek failed, reject this hunk. */
           hi->rejected = TRUE;
