@@ -1162,7 +1162,7 @@ migrate_text_bases(const char *wcroot_abspath,
       /* Gather the two checksums. */
       SVN_ERR(svn_io_file_checksum2(&md5_checksum, text_base_path,
                                     svn_checksum_md5, iterpool));
-      SVN_ERR(svn_io_file_checksum2(&md5_checksum, text_base_path,
+      SVN_ERR(svn_io_file_checksum2(&sha1_checksum, text_base_path,
                                     svn_checksum_sha1, iterpool));
 
       SVN_ERR(svn_io_stat(&finfo, text_base_path, APR_FINFO_SIZE, iterpool));
