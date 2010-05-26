@@ -47,6 +47,36 @@
 
 /*** Public Interfaces. ***/
 
+static svn_error_t *
+initialize_area(svn_revnum_t *result_rev,
+                const char *local_abspath,
+                const svn_opt_revision_t *revision,
+                const char *session_url,
+                const char *repos_root,
+                const char *uuid,
+                svn_revnum_t revnum,
+                svn_depth_t depth,
+                svn_boolean_t *use_sleep,
+                svn_boolean_t ignore_externals,
+                svn_boolean_t allow_unver_obstructions,
+                svn_boolean_t innercheckout,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
+  /* Make the unversioned directory into a versioned one.  */
+  SVN_ERR(svn_wc_ensure_adm4(ctx->wc_ctx, local_abspath, session_url,
+                             repos_root, uuid, revnum, depth, pool));
+  /* Have update fix the incompleteness. */
+  return svn_error_return(svn_client__update_internal(result_rev, local_abspath,
+                                    revision, depth, TRUE, ignore_externals,
+                                    allow_unver_obstructions,
+                                    use_sleep, FALSE, innercheckout,
+                                    ctx, pool));
+}
+
 
 svn_error_t *
 svn_client__checkout_internal(svn_revnum_t *result_rev,
@@ -158,7 +188,10 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
          entries file should only have an entry for THIS_DIR with a
          URL, revnum, and an 'incomplete' flag.  */
       SVN_ERR(svn_io_make_dir_recursively(path, pool));
-      goto initialize_area;
+      err = initialize_area(result_rev, local_abspath, revision, session_url,
+                            repos_root, uuid, revnum, depth, use_sleep,
+                            ignore_externals, allow_unver_obstructions,
+                            innercheckout, ctx, pool);
     }
   else if (kind == svn_node_dir)
     {
@@ -168,45 +201,36 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       SVN_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, local_abspath, pool));
       if (! wc_format)
         {
-        initialize_area:
-
-          if (depth == svn_depth_unknown)
-            depth = svn_depth_infinity;
-
-          /* Make the unversioned directory into a versioned one.  */
-          SVN_ERR(svn_wc_ensure_adm4(ctx->wc_ctx, local_abspath, session_url,
-                                     repos_root, uuid, revnum, depth,
-                                     pool));
-          /* Have update fix the incompleteness. */
-          err = svn_client__update_internal(result_rev, local_abspath, revision,
-                                            depth, TRUE, ignore_externals,
-                                            allow_unver_obstructions,
-                                            use_sleep, FALSE, innercheckout,
-                                            ctx, pool);
-          goto done;
-        }
-
-      /* Get PATH's entry. */
-      SVN_ERR(svn_wc__node_get_url(&entry_url, ctx->wc_ctx, local_abspath,
-                                   pool, pool));
-
-      /* If PATH's existing URL matches the incoming one, then
-         just update.  This allows 'svn co' to restart an
-         interrupted checkout. */
-      if (strcmp(entry_url, session_url) == 0)
-        {
-          err = svn_client__update_internal(result_rev, local_abspath, revision,
-                                            depth, TRUE, ignore_externals,
-                                            allow_unver_obstructions,
-                                            use_sleep, FALSE, innercheckout,
-                                            ctx, pool);
+          err = initialize_area(result_rev, local_abspath, revision, session_url,
+                                repos_root, uuid, revnum, depth, use_sleep,
+                                ignore_externals, allow_unver_obstructions,
+                                innercheckout, ctx, pool);
         }
       else
-        return svn_error_createf(
-                      SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                      _("'%s' is already a working copy for a different URL;"
-                        " use 'svn update' to update it"),
-                      svn_dirent_local_style(path, pool));
+        {
+          /* Get PATH's URL. */
+          SVN_ERR(svn_wc__node_get_url(&entry_url, ctx->wc_ctx, local_abspath,
+                                       pool, pool));
+
+          /* If PATH's existing URL matches the incoming one, then
+             just update.  This allows 'svn co' to restart an
+             interrupted checkout. */
+          if (strcmp(entry_url, session_url) == 0)
+            {
+              err = svn_client__update_internal(result_rev, local_abspath,
+                                                revision, depth, TRUE,
+                                                ignore_externals,
+                                                allow_unver_obstructions,
+                                                use_sleep, FALSE, innercheckout,
+                                                ctx, pool);
+            }
+          else
+            return svn_error_createf(
+                          SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                          _("'%s' is already a working copy for a different URL;"
+                            " use 'svn update' to update it"),
+                          svn_dirent_local_style(path, pool));
+        }
     }
   else
     {
@@ -215,7 +239,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                                svn_dirent_local_style(path, pool));
     }
 
- done:
   if (err)
     {
       /* Don't rely on the error handling to handle the sleep later, do
