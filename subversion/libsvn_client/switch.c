@@ -57,7 +57,6 @@
 
 static svn_error_t *
 switch_internal(svn_revnum_t *result_rev,
-                const char *path,
                 const char *local_abspath,
                 const char *anchor_abspath,
                 const char *switch_url,
@@ -74,7 +73,7 @@ switch_internal(svn_revnum_t *result_rev,
 {
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
-  const char *url, *anchor, *target, *source_root, *switch_rev_url;
+  const char *url, *target, *source_root, *switch_rev_url;
   svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
@@ -123,18 +122,15 @@ switch_internal(svn_revnum_t *result_rev,
   SVN_ERR_ASSERT(switch_url && (switch_url[0] != '\0'));
 
   if (strcmp(local_abspath, anchor_abspath))
-    svn_dirent_split(path, &anchor, &target, pool);
+    target = svn_dirent_basename(local_abspath, pool);
   else
-    {
-      target = "";
-      anchor = path;
-    }
+    target = "";
 
   SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, anchor_abspath, pool, pool));
   if (! url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Directory '%s' has no URL"),
-                             svn_dirent_local_style(anchor, pool));
+                             svn_dirent_local_style(anchor_abspath, pool));
 
     /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
@@ -229,7 +225,7 @@ switch_internal(svn_revnum_t *result_rev,
     {
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
-      svn_io_sleep_for_timestamps(path, pool);
+      svn_io_sleep_for_timestamps(local_abspath, pool);
       return svn_error_return(err);
     }
   *use_sleep = TRUE;
@@ -246,7 +242,7 @@ switch_internal(svn_revnum_t *result_rev,
   /* Sleep to ensure timestamp integrity (we do this regardless of
      errors in the actual switch operation(s)). */
   if (sleep_here)
-    svn_io_sleep_for_timestamps(path, pool);
+    svn_io_sleep_for_timestamps(local_abspath, pool);
 
   /* Return errors we might have sustained. */
   if (err)
@@ -256,7 +252,8 @@ switch_internal(svn_revnum_t *result_rev,
   if (ctx->notify_func2)
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(anchor, svn_wc_notify_update_completed, pool);
+        = svn_wc_create_notify(anchor_abspath, svn_wc_notify_update_completed,
+                               pool);
       notify->kind = svn_node_none;
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;
@@ -305,7 +302,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   acquired_lock = (err == SVN_NO_ERROR);
   svn_error_clear(err);
 
-  err1 = switch_internal(result_rev, path, local_abspath, anchor_abspath,
+  err1 = switch_internal(result_rev, local_abspath, anchor_abspath,
                          switch_url, peg_revision, revision,
                          depth, depth_is_sticky,
                          timestamp_sleep, ignore_externals,
