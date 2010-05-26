@@ -1053,7 +1053,7 @@ migrate_props(const char *wcroot_abspath,
      no local changes to the properties.
   */
   const apr_array_header_t *children;
-  apr_pool_t *iterpool;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_wc__db_t *db;
   int i;
 
