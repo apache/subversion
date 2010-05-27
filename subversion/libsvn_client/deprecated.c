@@ -637,7 +637,7 @@ svn_client_diff4(const apr_array_header_t *options,
 {
   return svn_client_diff5(options, path1, revision1, path2,
                           revision2, relative_to_dir, depth,
-                          ignore_ancestry, no_diff_deleted, FALSE,
+                          ignore_ancestry, no_diff_deleted, FALSE, FALSE,
                           ignore_content_type, header_encoding,
                           outfile, errfile, changelists, ctx, pool);
 }
@@ -733,6 +733,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
                               depth,
                               ignore_ancestry,
                               no_diff_deleted,
+                              FALSE,
                               FALSE,
                               ignore_content_type,
                               header_encoding,

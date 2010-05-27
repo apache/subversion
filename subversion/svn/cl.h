@@ -227,6 +227,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t ignore_whitespace; /* don't account for whitespace when
                                       patching */
   svn_boolean_t show_diff;        /* produce diff output */
+  svn_boolean_t force_internal_diff;/* override diff_cmd in config file */
 } svn_cl__opt_state_t;
 
 

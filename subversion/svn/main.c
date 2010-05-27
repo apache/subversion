@@ -120,6 +120,7 @@ typedef enum {
   opt_reverse_diff,
   opt_ignore_whitespace,
   opt_show_diff,
+  opt_force_internal_diff,
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -362,6 +363,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("produce diff output\n"
                        "                             "
                        "[alias: --diff]")},
+  {"force-internal-diff", opt_force_internal_diff, 0,
+                       N_("override diff-cmd specified in config file")},
   /* Long-opt Aliases
    *
    * These have NULL desriptions, but an option code that matches some
@@ -563,9 +566,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
      "\n"
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
-    {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd, 'x',
-     opt_no_diff_deleted, opt_show_copies_as_adds, opt_notice_ancestry,
-     opt_summarize, opt_changelist, opt_force, opt_xml} },
+    {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd,
+     opt_force_internal_diff, 'x', opt_no_diff_deleted, opt_show_copies_as_adds,
+     opt_notice_ancestry, opt_summarize, opt_changelist, opt_force, opt_xml} },
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
      "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -1755,6 +1758,9 @@ main(int argc, const char *argv[])
       case opt_show_diff:
           opt_state.show_diff = TRUE;
           break;
+      case opt_force_internal_diff:
+        opt_state.force_internal_diff = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -1921,6 +1927,16 @@ main(int argc, const char *argv[])
       err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("--trust-server-cert requires "
                                "--non-interactive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
+
+  /* Disallow simultaneous use of both --diff-cmd and
+     --force-internal-diff.  */
+  if (opt_state.diff_cmd && opt_state.force_internal_diff)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--diff-cmd and --force-internal-diff "
+                               "are mutually exclusive"));
       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
