@@ -1210,7 +1210,6 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   else
     stderr_stream = recode_stream_create(stderr, pool);
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   return svn_repos_verify_fs(repos, stderr_stream, lower, upper,
                              check_cancel, NULL, pool);
 }
