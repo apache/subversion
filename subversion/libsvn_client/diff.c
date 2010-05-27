@@ -1594,32 +1594,30 @@ do_diff_summarize(const struct diff_parameters *diff_param,
 
 /* Initialize DIFF_CMD_BATON.diff_cmd and DIFF_CMD_BATON.options,
  * according to OPTIONS and CONFIG.  CONFIG may be null.
- * If FORCE_INTERNAL_DIFF is true then make use of subversion's builtin
- * diff functionality.
  * Allocate the fields in POOL, which should be at least as long-lived
  * as the pool DIFF_CMD_BATON itself is allocated in.
  */
 static svn_error_t *
 set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
                             const apr_array_header_t *options,
-                            apr_hash_t *config,
-                            svn_boolean_t force_internal_diff,
-                            apr_pool_t *pool)
+                            apr_hash_t *config, apr_pool_t *pool)
 {
   const char *diff_cmd = NULL;
-  diff_cmd_baton->diff_cmd = NULL;
-
-  /* See if there is a command only if force_internal_diff is false. */
-  if (! force_internal_diff && config)
+ 
+  /* See if there is a command. */
+  if (config)
     {
       svn_config_t *cfg = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
                                        APR_HASH_KEY_STRING);
       svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
                      SVN_CONFIG_OPTION_DIFF_CMD, NULL);
-      if (diff_cmd)
-        SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->diff_cmd, diff_cmd,
-                                         pool));
     }
+ 
+  if (diff_cmd)
+    SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->diff_cmd, diff_cmd,
+                                     pool));
+  else
+    diff_cmd_baton->diff_cmd = NULL;
 
   /* If there was a command, arrange options to pass to it. */
   if (diff_cmd_baton->diff_cmd)
@@ -1694,7 +1692,6 @@ svn_client_diff5(const apr_array_header_t *options,
                  svn_depth_t depth,
                  svn_boolean_t ignore_ancestry,
                  svn_boolean_t no_diff_deleted,
-                 svn_boolean_t force_internal_diff,
                  svn_boolean_t show_copies_as_adds,
                  svn_boolean_t ignore_content_type,
                  const char *header_encoding,
@@ -1739,8 +1736,8 @@ svn_client_diff5(const apr_array_header_t *options,
   diff_cmd_baton.orig_path_1 = path1;
   diff_cmd_baton.orig_path_2 = path2;
 
-  SVN_ERR(set_up_diff_cmd_and_options(&diff_cmd_baton, options, ctx->config,
-                                      force_internal_diff, pool));
+  SVN_ERR(set_up_diff_cmd_and_options(&diff_cmd_baton, options,
+                                      ctx->config, pool));
   diff_cmd_baton.pool = pool;
   diff_cmd_baton.outfile = outfile;
   diff_cmd_baton.errfile = errfile;
@@ -1765,7 +1762,6 @@ svn_client_diff_peg5(const apr_array_header_t *options,
                      svn_depth_t depth,
                      svn_boolean_t ignore_ancestry,
                      svn_boolean_t no_diff_deleted,
-                     svn_boolean_t force_internal_diff,
                      svn_boolean_t show_copies_as_adds,
                      svn_boolean_t ignore_content_type,
                      const char *header_encoding,
@@ -1806,8 +1802,8 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   diff_cmd_baton.orig_path_1 = path;
   diff_cmd_baton.orig_path_2 = path;
 
-  SVN_ERR(set_up_diff_cmd_and_options(&diff_cmd_baton, options, ctx->config,
-                                      force_internal_diff, pool));
+  SVN_ERR(set_up_diff_cmd_and_options(&diff_cmd_baton, options, 
+                                      ctx->config, pool));
   diff_cmd_baton.pool = pool;
   diff_cmd_baton.outfile = outfile;
   diff_cmd_baton.errfile = errfile;
