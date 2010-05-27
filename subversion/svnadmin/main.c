@@ -650,6 +650,38 @@ subcommand_deltify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
+/* Baton for repos_progress_handler */
+struct progress_baton
+{
+  svn_boolean_t dumping;
+  svn_stream_t *progress_stream;
+};
+
+/* Implementation of svn_repos_progress_func_t to wrap the output to a
+   response stream for svn_repos_dump_fs2() and svn_repos_verify_fs() */
+static svn_error_t *
+repos_progress_handler(void * baton,
+                       svn_revnum_t revision,
+                       const char *warning_text,
+                       apr_pool_t *scratch_pool)
+{
+  struct progress_baton *pb = baton;
+
+  if (warning_text != NULL)
+    {
+      apr_size_t len = strlen(warning_text);
+      return svn_error_return(svn_stream_write(pb->progress_stream,
+                                               warning_text, &len));
+    }
+
+  return svn_error_return(svn_stream_printf(pb->progress_stream, scratch_pool,
+                              pb->dumping
+                              ? _("* Dumped revision %ld.\n")
+                              : _("* Verified revision %ld.\n"),
+                              revision));
+}
+
+
 /* Baton for recode_write(). */
 struct recode_write_baton
 {
@@ -697,9 +729,10 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_fs_t *fs;
-  svn_stream_t *stdout_stream, *stderr_stream = NULL;
+  svn_stream_t *stdout_stream;
   svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
   svn_revnum_t youngest;
+  struct progress_baton pb = { 0 };
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs(repos);
@@ -731,12 +764,14 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Progress feedback goes to STDERR, unless they asked to suppress it. */
   if (! opt_state->quiet)
-    stderr_stream = recode_stream_create(stderr, pool);
+    pb.progress_stream = recode_stream_create(stderr, pool);
 
-  SVN_ERR(svn_repos_dump_fs2(repos, stdout_stream, stderr_stream,
-                             lower, upper, opt_state->incremental,
-                             opt_state->use_deltas, check_cancel, NULL,
-                             pool));
+  pb.dumping = TRUE;
+  SVN_ERR(svn_repos_dump_fs3(repos, stdout_stream, lower, upper,
+                             opt_state->incremental, opt_state->use_deltas,
+                             !opt_state->quiet ? repos_progress_handler : NULL,
+                             !opt_state->quiet ? &pb : NULL,
+                             check_cancel, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1185,10 +1220,10 @@ static svn_error_t *
 subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
-  svn_stream_t *stderr_stream;
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_revnum_t youngest, lower, upper;
+  struct progress_baton pb = { 0 };
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs(repos);
@@ -1205,13 +1240,14 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       upper = lower;
     }
 
-  if (opt_state->quiet)
-    stderr_stream = NULL;
-  else
-    stderr_stream = recode_stream_create(stderr, pool);
+  if (! opt_state->quiet)
+    pb.progress_stream = recode_stream_create(stderr, pool);
 
-  return svn_repos_verify_fs(repos, stderr_stream, lower, upper,
-                             check_cancel, NULL, pool);
+  return svn_repos_verify_fs2(repos, lower, upper,
+                              !opt_state->quiet
+                                ? repos_progress_handler : NULL,
+                              !opt_state->quiet ? &pb : NULL,
+                              check_cancel, NULL, pool);
 }
 
 
