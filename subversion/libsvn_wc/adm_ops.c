@@ -385,7 +385,7 @@ process_committed_leaf(svn_wc__db_t *db,
                                 scratch_pool));
     }
 
-#ifndef USE_DB_PROPS
+#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
   /* Queue a removal of any "revert" properties now. These correspond to
      the BASE properties, but hidden by new pristine props in WORKING.
      Regardless, the commit will be installing new BASE props.  */
@@ -1577,7 +1577,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                      &tmp_entry, modify_flags, pool));
     }
 
-#ifndef USE_DB_PROPS
+#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
   /* If this is a replacement without history, we need to reset the
      properties for PATH. */
   /* ### this is totally bogus. we clear these cuz turds might have been
@@ -2421,7 +2421,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                      scratch_pool));
 #endif
 
-#ifndef USE_DB_PROPS
+#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
       /* Remove prop/NAME, prop-base/NAME.svn-base. */
       SVN_ERR(svn_wc__props_delete(db, local_abspath, svn_wc__props_working,
                                    scratch_pool));

@@ -1290,7 +1290,7 @@ svn_wc__upgrade_sdb(int *result_format,
         *result_format = 16;
         /* FALLTHROUGH  */
 
-#if 0
+#if (SVN_WC__VERSION > 16)
       case 16:
         {
           struct bump_to_17_baton b17;

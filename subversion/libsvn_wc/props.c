@@ -73,7 +73,7 @@ message_from_skel(const svn_skel_t *skel,
                   apr_pool_t *scratch_pool);
 
 
-#ifndef USE_DB_PROPS
+#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
 
 /* Get PATH's properies of PROPS_KIND, and put them into *HASH.
    PATH should be of kind NODE_KIND. */
@@ -132,7 +132,7 @@ load_props(apr_hash_t **hash,
   return svn_stream_close(stream);
 }
 
-#endif /* USE_DB_PROPS  */
+#endif /* (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB) */
 
 
 static svn_error_t *
@@ -142,7 +142,7 @@ load_pristine_props(apr_hash_t **props,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
-#ifdef USE_DB_PROPS
+#if (SVN_WC__VERSION >= SVN_WC__PROPS_IN_DB)
 
   SVN_ERR(svn_wc__db_read_pristine_props(props, db, local_abspath,
                                          result_pool, scratch_pool));
@@ -153,7 +153,7 @@ load_pristine_props(apr_hash_t **props,
   }
 #endif
 
-#else /* USE_DB_PROPS  */
+#else /* (SVN_WC__VERSION >= SVN_WC__PROPS_IN_DB) */
 
   /* NOTE: svn_wc__props_base really means "pristine" props, which may
      come from BASE or WORKING.  */
@@ -186,7 +186,7 @@ load_pristine_props(apr_hash_t **props,
       }
   }
 #endif /* TEST_DB_PROPS */
-#endif /* USE_DB_PROPS  */
+#endif /* (SVN_WC__VERSION >= SVN_WC__PROPS_IN_DB) */
 
   return SVN_NO_ERROR;
 }
@@ -199,7 +199,7 @@ load_actual_props(apr_hash_t **props,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-#ifdef USE_DB_PROPS
+#if (SVN_WC__VERSION >= SVN_WC__PROPS_IN_DB)
 
   SVN_ERR(svn_wc__db_read_props(props, db, local_abspath,
                                 result_pool, scratch_pool));
@@ -210,7 +210,7 @@ load_actual_props(apr_hash_t **props,
   }
 #endif
 
-#else /* USE_DB_PROPS  */
+#else /* (SVN_WC__VERSION >= SVN_WC__PROPS_IN_DB) */
   /* NOTE: svn_wc__props_working really means ACTUAL.  */
   SVN_ERR(load_props(props, db, local_abspath, svn_wc__props_working,
                      result_pool));
@@ -250,7 +250,7 @@ load_actual_props(apr_hash_t **props,
       }
   }
 #endif /* TEST_DB_PROPS  */
-#endif /* USE_DB_PROPS  */
+#endif /* (SVN_WC__VERSION >= SVN_WC__PROPS_IN_DB) */
 
   return SVN_NO_ERROR;
 }
@@ -339,7 +339,7 @@ svn_wc__get_revert_props(apr_hash_t **revert_props_p,
                                        scratch_pool));
   if (replaced)
     {
-#ifdef USE_DB_PROPS
+#if (SVN_WC__VERSION >= SVN_WC__PROPS_IN_DB)
       SVN_ERR(svn_wc__db_base_get_props(revert_props_p, db, local_abspath,
                                         result_pool, scratch_pool));
 #else
@@ -355,7 +355,7 @@ svn_wc__get_revert_props(apr_hash_t **revert_props_p,
     apr_hash_t *other_props;
     apr_array_header_t *diffs;
 
-#ifdef USE_DB_PROPS
+#if (SVN_WC__VERSION >= SVN_WC__PROPS_IN_DB)
     SVN_ERR(svn_wc__db_base_get_props(&other_props, db, local_abspath,
                                       scratch_pool, scratch_pool));
 #else
@@ -506,7 +506,7 @@ svn_wc__working_props_committed(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 apr_pool_t *scratch_pool)
 {
-#ifdef USE_DB_PROPS
+#if (SVN_WC__VERSION >= SVN_WC__PROPS_IN_DB)
   return SVN_NO_ERROR;
 #else
   svn_wc__db_kind_t kind;
@@ -538,7 +538,7 @@ svn_wc__props_delete(svn_wc__db_t *db,
                      svn_wc__props_kind_t props_kind,
                      apr_pool_t *pool)
 {
-#ifdef USE_DB_PROPS
+#if (SVN_WC__VERSION >= SVN_WC__PROPS_IN_DB)
   return SVN_NO_ERROR;
 #else
   const char *props_file;
@@ -2718,7 +2718,8 @@ svn_wc__props_modified(svn_boolean_t *modified_p,
                             scratch_pool, scratch_pool));
   SVN_ERR_ASSERT(localprops != NULL);
 
-  /* ### this should not apply nowadays. especially if USE_DB_PROPS.  */
+  /* ### this should not apply nowadays. especially if
+                            (SVN_WC__VERSION >= SVN_WC__PROPS_IN_DB)  */
 #if 0
   {
     svn_boolean_t replaced;

@@ -156,6 +156,9 @@ extern "C" {
    this format or later will only have wcprops in BASE_NODE.dav_cache.  */
 #define SVN_WC__USES_DAV_CACHE 13
 
+/* A version < this does not store properties in wc.db.  */
+#define SVN_WC__PROPS_IN_DB 17
+
 
 
 /*** Context handling ***/

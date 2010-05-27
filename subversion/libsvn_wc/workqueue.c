@@ -236,7 +236,7 @@ run_revert(svn_wc__db_t *db,
             db, local_abspath,
             scratch_pool, scratch_pool));
 
-#ifndef USE_DB_PROPS
+#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
   /* Move the "revert" props over/on the "base" props.  */
   if (replaced)
     {
@@ -263,7 +263,7 @@ run_revert(svn_wc__db_t *db,
 #endif
 
   /* The "working" props contain changes. Nuke 'em from orbit.  */
-#ifndef USE_DB_PROPS
+#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
   SVN_ERR(svn_wc__prop_path(&working_props_path, local_abspath,
                             kind, svn_wc__props_working, scratch_pool));
   SVN_ERR(svn_io_remove_file2(working_props_path, TRUE, scratch_pool));
@@ -701,7 +701,7 @@ run_prepare_revert_files(svn_wc__db_t *db,
 
   /* Set up the revert props.  */
 
-#ifndef USE_DB_PROPS
+#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
   SVN_ERR(svn_wc__prop_path(&revert_prop_abspath, local_abspath, kind,
                             svn_wc__props_revert, scratch_pool));
   SVN_ERR(svn_wc__prop_path(&base_prop_abspath, local_abspath, kind,
@@ -1799,7 +1799,7 @@ run_delete(svn_wc__db_t *db,
 
   if (was_replaced && was_copied)
     {
-#ifndef USE_DB_PROPS
+#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
       const char *props_base, *props_revert;
 
       SVN_ERR(svn_wc__prop_path(&props_base, local_abspath, kind,
@@ -1822,7 +1822,7 @@ run_delete(svn_wc__db_t *db,
         }
 #endif
     }
-#ifndef USE_DB_PROPS
+#if (SVN_WC__VERSION < SVN_WC__PROPS_IN_DB)
   if (was_added)
     {
       const char *props_base, *props_working;
@@ -2247,7 +2247,7 @@ svn_wc__wq_build_write_old_props(svn_skel_t **work_item,
                                  apr_hash_t *props,
                                  apr_pool_t *result_pool)
 {
-#ifdef USE_DB_PROPS
+#if (SVN_WC__VERSION >= SVN_WC__PROPS_IN_DB)
   *work_item = NULL;
 #else
   *work_item = svn_skel__make_empty_list(result_pool);
