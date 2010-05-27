@@ -6912,9 +6912,6 @@ log_find_operative_subtree_revs(void *baton,
 {
   apr_hash_t *immediate_children = baton;
   apr_hash_index_t *hi, *hi2;
-  svn_revnum_t revision;
-
-  revision = log_entry->revision;
 
   for (hi = apr_hash_first(pool, log_entry->changed_paths2);
        hi;
@@ -6977,11 +6974,14 @@ get_inoperative_immediate_children(apr_hash_t **immediate_children,
                                    apr_pool_t *scratch_pool)
 {
   int i;
-  *immediate_children = apr_hash_make(result_pool);
+  apr_pool_t *iterpool;
 
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(oldest_rev));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   SVN_ERR_ASSERT(oldest_rev <= youngest_rev);
+
+  *immediate_children = apr_hash_make(result_pool);
+  iterpool = svn_pool_create(scratch_pool);
 
   /* Find all the children in CHILDREN_WITH_MERGEINFO with the
      immediate_child_dir flag set and store them in *IMMEDIATE_CHILDREN. */
@@ -6990,6 +6990,8 @@ get_inoperative_immediate_children(apr_hash_t **immediate_children,
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
 
+      svn_pool_clear(iterpool);
+
       if (child->immediate_child_dir)
         apr_hash_set(*immediate_children,
                      apr_pstrdup(result_pool, child->abspath),
@@ -6997,9 +6999,11 @@ get_inoperative_immediate_children(apr_hash_t **immediate_children,
                      svn_uri_join(merge_source_repos_abspath,
                                   svn_dirent_is_child(merge_target_abspath,
                                                       child->abspath,
-                                                      result_pool),
+                                                      iterpool),
                                   result_pool));
     }
+
+  svn_pool_destroy(iterpool);
 
   /* Now remove any paths from *IMMEDIATE_CHILDREN that are inoperative when
      merging MERGE_SOURCE_REPOS_PATH -r(OLDEST_REV - 1):YOUNGEST_REV to
