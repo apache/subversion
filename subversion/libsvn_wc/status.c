@@ -476,11 +476,10 @@ assemble_status(svn_wc_status3_t **status,
 #endif /* HAVE_SYMLINK */
           )
         {
-          svn_error_t *err = svn_wc__internal_text_modified_p(&text_modified_p,
-                                                              db,
-                                                              local_abspath,
-                                                              FALSE, TRUE,
-                                                              scratch_pool);
+          err = svn_wc__internal_text_modified_p(&text_modified_p,
+                                                 db, local_abspath,
+                                                 FALSE, TRUE,
+                                                 scratch_pool);
 
           if (err)
             {
@@ -2583,12 +2582,13 @@ internal_status(svn_wc_status3_t **status,
 
   if (!svn_dirent_is_root(local_abspath, strlen(local_abspath)))
     {
-      svn_wc__db_status_t status;
+      svn_wc__db_status_t parent_status;
       const char *parent_abspath = svn_dirent_dirname(local_abspath,
                                                       scratch_pool);
 
-      err = svn_wc__db_read_info(&status, NULL, NULL, &parent_repos_relpath,
-                                 &parent_repos_root_url, NULL, NULL, NULL, NULL,
+      err = svn_wc__db_read_info(&parent_status, NULL, NULL,
+                                 &parent_repos_relpath, &parent_repos_root_url,
+                                 NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, db, parent_abspath, result_pool,
@@ -2606,8 +2606,8 @@ internal_status(svn_wc_status3_t **status,
 
       if (!err 
           && parent_repos_relpath == NULL 
-          && status != svn_wc__db_status_added
-          && status != svn_wc__db_status_deleted)
+          && parent_status != svn_wc__db_status_added
+          && parent_status != svn_wc__db_status_deleted)
         SVN_ERR(svn_wc__db_scan_base_repos(&parent_repos_relpath,
                                            &parent_repos_root_url, NULL,
                                            db, local_abspath,
