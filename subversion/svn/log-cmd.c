@@ -302,7 +302,6 @@ log_entry_receiver(void *baton,
                              svn_depth_infinity,
                              FALSE, /* ignore ancestry */
                              TRUE, /* no diff deleted */
-                             FALSE, /* override diff-cmd */
                              FALSE, /* show copies as adds */
                              FALSE, /* ignore content type */
                              svn_cmdline_output_encoding(pool),
@@ -335,7 +334,6 @@ log_entry_receiver(void *baton,
                                          svn_depth_infinity,
                                          FALSE, /* ignore ancestry */
                                          TRUE, /* no diff deleted */
-                                         FALSE, /* override diff-cmd */
                                          FALSE, /* show copies as adds */
                                          FALSE, /* ignore content type */
                                          svn_cmdline_output_encoding(iterpool),
