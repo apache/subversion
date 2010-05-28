@@ -367,13 +367,14 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.setLog(path,
-                             rev == null ? null : rev.toApache(),
-                             message, bypassHooks);
+            aSVNAdmin.setRevProp(path,
+                                 rev == null ? null : rev.toApache(),
+                                 "svn:log", message,
+                                 !bypassHooks, !bypassHooks);
         }
-        catch (org.apache.subversion.javahl.ClientException ex)
+        catch (org.apache.subversion.javahl.SubversionException ex)
         {
-            throw new ClientException(ex);
+            throw ClientException.fromException(ex);
         }
     }
 

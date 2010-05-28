@@ -255,19 +255,6 @@ public class SVNAdmin implements ISVNAdmin
             throws ClientException;
 
     /**
-     * set the log message of a revision
-     * @param path              the path to the repository
-     * @param rev               the revision to be changed
-     * @param message           the message to be set
-     * @param bypassHooks       if to bypass all repository hooks
-     * @throws ClientException  throw in case of problem
-     * @deprecated Use setRevProp() instead.
-     */
-    public native void setLog(String path, Revision rev, String message,
-                              boolean bypassHooks)
-            throws ClientException;
-
-    /**
      * Change the value of the revision property <code>propName</code>
      * to <code>propValue</code>.  By default, does not run
      * pre-/post-revprop-change hook scripts.
