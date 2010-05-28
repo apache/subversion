@@ -118,24 +118,6 @@ public class SVNAdmin implements ISVNAdmin
      * @param start             the first revision to be dumped
      * @param end               the last revision to be dumped
      * @param incremental       the dump will be incremantal
-     * @throws ClientException  throw in case of problem
-     */
-    public void dump(String path, IOutput dataOut,
-                     IOutput errorOut, Revision start,
-                     Revision end, boolean incremental)
-            throws ClientException
-    {
-        dump(path, dataOut, errorOut, start, end, incremental, false);
-    }
-
-    /**
-     * dump the data in a repository
-     * @param path              the path to the repository
-     * @param dataOut           the data will be outputed here
-     * @param errorOut          the messages will be outputed here
-     * @param start             the first revision to be dumped
-     * @param end               the last revision to be dumped
-     * @param incremental       the dump will be incremantal
      * @param useDeltas         the dump will contain deltas between nodes
      * @throws ClientException  throw in case of problem
      * @since 1.5
