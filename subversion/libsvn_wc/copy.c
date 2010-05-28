@@ -34,6 +34,8 @@
 #include "svn_path.h"
 
 #include "wc.h"
+#include "log.h"
+#include "workqueue.h"
 #include "adm_files.h"
 #include "entries.h"
 #include "props.h"
@@ -258,6 +260,7 @@ copy_added_dir_administratively(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+#ifndef SVN_EXPERIMENTAL_COPY
 /* This function effectively creates and schedules a file for
    addition, but does extra administrative things to allow it to
    function as a 'copy'.
@@ -475,6 +478,7 @@ copy_file_administratively(svn_wc_context_t *wc_ctx,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 /* Recursively crawl over a directory PATH and do a number of things:
@@ -730,6 +734,98 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
   }
 }
 
+#ifdef SVN_EXPERIMENTAL_COPY
+/* A replacement for both copy_file_administratively and
+   copy_added_file_administratively.  Not yet fully working.  Relies
+   on in-db-props.  */
+static svn_error_t *
+copy_file(svn_wc_context_t *wc_ctx,
+          const char *src_abspath,
+          const char *dst_abspath,
+          svn_cancel_func_t cancel_func,
+          void *cancel_baton,
+          svn_wc_notify_func2_t notify_func,
+          void *notify_baton,
+          apr_pool_t *scratch_pool)
+{
+  svn_skel_t *work_items = NULL;
+  const char *dir_abspath = svn_dirent_dirname(dst_abspath, scratch_pool);
+  const char *tmpdir_abspath;
+  svn_stream_t *src, *src_pristine;
+  const char *tmp_dst_abspath;
+  svn_error_t *err;
+
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, wc_ctx->db,
+                                         dst_abspath,
+                                         scratch_pool, scratch_pool));
+
+#ifndef SVN_EXPERIMENTAL_PRISTINE
+  SVN_ERR(svn_wc__get_pristine_contents(&src_pristine, wc_ctx->db,
+                                        src_abspath,
+                                        scratch_pool, scratch_pool));
+  if (src_pristine)
+    {
+      svn_skel_t *work_item;
+      svn_stream_t *tmp_pristine;
+      const char *tmp_pristine_abspath, *dst_pristine_abspath;
+
+      SVN_ERR(svn_stream_open_unique(&tmp_pristine, &tmp_pristine_abspath,
+                                     tmpdir_abspath, svn_io_file_del_none,
+                                     scratch_pool, scratch_pool));
+      SVN_ERR(svn_stream_copy3(src_pristine, tmp_pristine,
+                               cancel_func, cancel_baton, scratch_pool));
+      SVN_ERR(svn_wc__text_base_path(&dst_pristine_abspath, wc_ctx->db,
+                                     dst_abspath, scratch_pool));
+      SVN_ERR(svn_wc__loggy_move(&work_item, wc_ctx->db, dir_abspath,
+                                 tmp_pristine_abspath, dst_pristine_abspath,
+                                 scratch_pool));
+      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+    }
+#endif
+
+  err = svn_stream_open_readonly(&src, src_abspath, scratch_pool, scratch_pool);
+  if (err)
+    {
+      if (!APR_STATUS_IS_ENOENT(err->apr_err))
+        return svn_error_return(err);
+      /* Source may not exist when recursively copying a directory. */
+      svn_error_clear(err);
+    }
+  else
+    {
+      svn_skel_t *work_item;
+      svn_stream_t *tmp_dst;
+
+      SVN_ERR(svn_stream_open_unique(&tmp_dst, &tmp_dst_abspath,
+                                     tmpdir_abspath, svn_io_file_del_none,
+                                     scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_copy_perms(src_abspath,
+                                tmp_dst_abspath, scratch_pool));
+      SVN_ERR(svn_stream_copy3(src, tmp_dst,
+                               cancel_func, cancel_baton, scratch_pool));
+      SVN_ERR(svn_wc__loggy_move(&work_item, wc_ctx->db, dir_abspath,
+                                 tmp_dst_abspath, dst_abspath,
+                                 scratch_pool));
+      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+    }
+
+  SVN_ERR(svn_wc__db_op_copy(wc_ctx->db, src_abspath, dst_abspath,
+                             work_items, scratch_pool));
+  SVN_ERR(svn_wc__wq_run(wc_ctx->db, dir_abspath,
+                         cancel_func, cancel_baton, scratch_pool));
+
+  if (notify_func)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(dst_abspath, svn_wc_notify_add,
+                               scratch_pool);
+      notify->kind = svn_node_file;
+      (*notify_func)(notify_baton, notify, scratch_pool);
+    }
+  return SVN_NO_ERROR;
+}
+#endif
+
 
 
 /* Public Interface */
@@ -814,6 +910,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
   if (src_kind == svn_node_file ||
       (src_entry->kind == svn_node_file && src_kind == svn_node_none))
     {
+#ifndef SVN_EXPERIMENTAL_COPY
       /* Check if we are copying a file scheduled for addition,
          these require special handling. */
       if (src_entry->schedule == svn_wc_schedule_add
@@ -835,6 +932,41 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                                              notify_func, notify_baton,
                                              scratch_pool));
         }
+#else
+      svn_node_kind_t dst_kind, dst_db_kind;
+
+      /* This is the error checking from copy_file_administratively
+         but converted to wc-ng.  It's not in copy_file since this
+         checking only needs to happen at the root of the copy and not
+         when called recursively. */
+      SVN_ERR(svn_io_check_path(dst_abspath, &dst_kind, scratch_pool));
+      if (dst_kind != svn_node_none)
+        return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+                                 _("'%s' already exists and is in the way"),
+                                 svn_dirent_local_style(dst_abspath,
+                                                        scratch_pool));
+      SVN_ERR(svn_wc_read_kind(&dst_db_kind, wc_ctx, dst_abspath, TRUE,
+                               scratch_pool));
+      if (dst_db_kind != svn_node_none)
+        {
+          svn_boolean_t is_deleted, is_present;
+
+          SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, wc_ctx,
+                                                 dst_abspath, scratch_pool));
+          SVN_ERR(svn_wc__node_is_status_present(&is_present, wc_ctx,
+                                                 dst_abspath, scratch_pool));
+          if (is_present && !is_deleted)
+            return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+                               _("There is already a versioned item '%s'"),
+                               svn_dirent_local_style(dst_abspath,
+                                                      scratch_pool));
+
+        }
+
+      SVN_ERR(copy_file(wc_ctx, src_abspath, dst_abspath,
+                        cancel_func, cancel_baton, notify_func, notify_baton,
+                        scratch_pool));
+#endif
     }
   else if (src_kind == svn_node_dir)
     {
