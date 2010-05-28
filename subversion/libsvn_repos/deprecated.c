@@ -429,13 +429,13 @@ svn_repos_dump_fs(svn_repos_t *repos,
 }
 
 /* Baton for repos_progress_handler */
-struct progress_baton
+struct notify_baton
 {
   svn_boolean_t dumping;
   svn_stream_t *feedback_stream;
 };
 
-/* Implementation of svn_repos_progress_func_t to wrap the output to a
+/* Implementation of svn_repos_notify_func_t to wrap the output to a
    response stream for svn_repos_dump_fs2() and svn_repos_verify_fs() */
 static svn_error_t *
 repos_progress_handler(void * baton,
@@ -443,16 +443,16 @@ repos_progress_handler(void * baton,
                        const char *warning_text,
                        apr_pool_t *scratch_pool)
 {
-  struct progress_baton *pb = baton;
+  struct notify_baton *nb = baton;
 
   if (warning_text != NULL)
     {
       apr_size_t len = strlen(warning_text);
-      SVN_ERR(svn_stream_write(pb->feedback_stream, warning_text, &len));
+      SVN_ERR(svn_stream_write(nb->feedback_stream, warning_text, &len));
     }
   else
-    SVN_ERR(svn_stream_printf(pb->feedback_stream, scratch_pool,
-                              pb->dumping
+    SVN_ERR(svn_stream_printf(nb->feedback_stream, scratch_pool,
+                              nb->dumping
                               ? _("* Dumped revision %ld.\n")
                               : _("* Verified revision %ld.\n"),
                               revision));
@@ -473,9 +473,9 @@ svn_repos_dump_fs2(svn_repos_t *repos,
                    void *cancel_baton,
                    apr_pool_t *pool)
 {
-  struct progress_baton pb;
-  pb.dumping = (stream != NULL); /* Show verify messages if stream is NULL */
-  pb.feedback_stream = feedback_stream;
+  struct notify_baton nb;
+  nb.dumping = (stream != NULL); /* Show verify messages if stream is NULL */
+  nb.feedback_stream = feedback_stream;
 
   return svn_error_return(svn_repos_dump_fs3(repos,
                                              stream,
@@ -486,7 +486,7 @@ svn_repos_dump_fs2(svn_repos_t *repos,
                                              feedback_stream
                                                ? repos_progress_handler
                                                : NULL,
-                                             &pb,
+                                             &nb,
                                              cancel_func,
                                              cancel_baton,
                                              pool));
@@ -501,9 +501,9 @@ svn_repos_verify_fs(svn_repos_t *repos,
                     void *cancel_baton,
                     apr_pool_t *pool)
 {
-  struct progress_baton pb;
-  pb.dumping = FALSE;
-  pb.feedback_stream = feedback_stream;
+  struct notify_baton nb;
+  nb.dumping = FALSE;
+  nb.feedback_stream = feedback_stream;
 
   return svn_error_return(svn_repos_verify_fs2(repos,
                                                start_rev,
@@ -511,7 +511,7 @@ svn_repos_verify_fs(svn_repos_t *repos,
                                                feedback_stream
                                                  ? repos_progress_handler
                                                  : NULL,
-                                               &pb,
+                                               &nb,
                                                cancel_func,
                                                cancel_baton,
                                                pool));
