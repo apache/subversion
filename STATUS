@@ -217,20 +217,6 @@ Candidate changes:
    Votes:
      +1: stsp, julianfoad
 
- * r946661
-   Fix issue #2267 "support svn:externals on locally added directories"
-   Justification:
-     Improves workflow in environments where externals are heavily used.
-     While configuring externals on a newly added directory, it's convenient
-     to be able to test the newly created externals definition before
-     committing the new directory. Else you need to make two commits for
-     this (first commit the directory, run an update to test, then commit
-     the property).
-   Branch:
-     ^/subversion/branches/1.6.x-issue2267
-   Votes:
-     +1: stsp, stylesen
-
 Veto-blocked changes:
 =====================
 
