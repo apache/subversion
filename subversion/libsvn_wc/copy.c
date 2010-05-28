@@ -739,14 +739,14 @@ copy_dir_administratively(svn_wc_context_t *wc_ctx,
    copy_added_file_administratively.  Not yet fully working.  Relies
    on in-db-props.  */
 static svn_error_t *
-copy_file(svn_wc_context_t *wc_ctx,
-          const char *src_abspath,
-          const char *dst_abspath,
-          svn_cancel_func_t cancel_func,
-          void *cancel_baton,
-          svn_wc_notify_func2_t notify_func,
-          void *notify_baton,
-          apr_pool_t *scratch_pool)
+copy_versioned_file(svn_wc_context_t *wc_ctx,
+                    const char *src_abspath,
+                    const char *dst_abspath,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    svn_wc_notify_func2_t notify_func,
+                    void *notify_baton,
+                    apr_pool_t *scratch_pool)
 {
   svn_skel_t *work_items = NULL;
   const char *dir_abspath = svn_dirent_dirname(dst_abspath, scratch_pool);
@@ -963,9 +963,10 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
 
         }
 
-      SVN_ERR(copy_file(wc_ctx, src_abspath, dst_abspath,
-                        cancel_func, cancel_baton, notify_func, notify_baton,
-                        scratch_pool));
+      SVN_ERR(copy_versioned_file(wc_ctx, src_abspath, dst_abspath,
+                                  cancel_func, cancel_baton,
+                                  notify_func, notify_baton,
+                                  scratch_pool));
 #endif
     }
   else if (src_kind == svn_node_dir)
