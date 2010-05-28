@@ -19,27 +19,35 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
+ *
+ * @file OutputStream.h
+ * @brief Interface of the class OutputStream
  */
 
-package org.apache.subversion.javahl;
+#ifndef OUTPUT_STREAM_H
+#define OUTPUT_STREAM_H
 
-import java.io.IOException;
+#include <jni.h>
+#include "svn_io.h"
+#include "Pool.h"
 
 /**
- * Interface to send data to subversion used by SVNAdmin.load.
+ * This class contains a Java objects implementing the interface OutputStream
+ * and implements the functions write & close of svn_stream_t
  */
-public interface IOutput
+class OutputStream
 {
-    /**
-     * write the bytes in data to java
-     * @param data          the data to be writtem
-     * @throws IOException  throw in case of problems.
-     */
-    public int write(byte[] data) throws IOException;
+  /**
+   * A local reference to the Java object.
+   */
+  jobject m_jthis;
+  static svn_error_t *write(void *baton,
+                            const char *buffer, apr_size_t *len);
+  static svn_error_t *close(void *baton);
+ public:
+  OutputStream(jobject jthis);
+  ~OutputStream();
+  svn_stream_t *getStream(const SVN::Pool &pool);
+};
 
-    /**
-     * close the output
-     * @throws IOException throw in case of problems.
-     */
-    public void close() throws IOException;
-}
+#endif // OUTPUT_STREAM_H

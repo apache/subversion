@@ -151,7 +151,8 @@ void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
   return;
 }
 
-void SVNAdmin::dump(const char *path, Outputer &dataOut, Outputer &messageOut,
+void SVNAdmin::dump(const char *path, OutputStream &dataOut,
+                    OutputStream &messageOut,
                     Revision &revsionStart, Revision &revisionEnd,
                     bool incremental, bool useDeltas)
 {
@@ -263,7 +264,7 @@ void SVNAdmin::listUnusedDBLogs(const char *path,
 
 void SVNAdmin::load(const char *path,
                     Inputer &dataIn,
-                    Outputer &messageOut,
+                    OutputStream &messageOut,
                     bool ignoreUUID,
                     bool forceUUID,
                     bool usePreCommitHook,
@@ -452,7 +453,7 @@ SVNAdmin::getRevnum(svn_revnum_t *revnum, const svn_opt_revision_t *revision,
   return SVN_NO_ERROR;
 }
 
-void SVNAdmin::verify(const char *path, Outputer &messageOut,
+void SVNAdmin::verify(const char *path, OutputStream &messageOut,
                       Revision &revisionStart, Revision &revisionEnd)
 {
   SVN::Pool requestPool;

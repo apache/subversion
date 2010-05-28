@@ -27,6 +27,7 @@ import org.apache.subversion.javahl.callback.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.io.IOException;
 import java.util.Set;
 import java.util.HashSet;
@@ -238,8 +239,9 @@ class SVNTests extends TestCase
                               NodeKind.none, CommitItemStateFlags.Add);
         client.doImport(greekFiles.getAbsolutePath(), makeReposUrl(greekRepos),
                         null, Depth.infinity, false, false, null);
-        admin.dump(greekRepos.getAbsolutePath(), new FileOutputer(greekDump),
-                   new IgnoreOutputer(), null, null, false, false);
+        admin.dump(greekRepos.getAbsolutePath(),
+                   new FileOutputStream(greekDump), new IgnoreOutputer(),
+                   null, null, false, false);
     }
 
     /**
@@ -427,67 +429,14 @@ class SVNTests extends TestCase
     }
 
     /**
-     * internal class which implements the OutputInterface to write the data
-     * to a file.
+     * internal class extends OutputStream, but ignores the data
      */
-    public class FileOutputer implements IOutput
+    public class IgnoreOutputer extends OutputStream
     {
-        /**
-         * the output file stream
-         */
-        FileOutputStream myStream;
-        /**
-         * create new object
-         * @param outputName    the file to write the data to
-         * @throws IOException
-         */
-        public FileOutputer(File outputName) throws IOException
+        public void write(int b) throws IOException
         {
-            myStream = new FileOutputStream(outputName);
-        }
-
-        /**
-         * write the bytes in data to java
-         * @param data          the data to be writtem
-         * @throws IOException  throw in case of problems.
-         */
-        public int write(byte[] data) throws IOException
-        {
-            myStream.write(data);
-            return data.length;
-        }
-
-        /**
-         * close the output
-         * @throws IOException throw in case of problems.
-         */
-        public void close() throws IOException
-        {
-            myStream.close();
-        }
-    }
-
-    /**
-     * internal class implements the OutputInterface, but ignores the data
-     */
-    public class IgnoreOutputer implements IOutput
-    {
-        /**
-         * write the bytes in data to java
-         * @param data          the data to be writtem
-         * @throws IOException  throw in case of problems.
-         */
-        public int write(byte[] data) throws IOException
-        {
-            return data.length;
-        }
-
-        /**
-         * close the output
-         * @throws IOException throw in case of problems.
-         */
-        public void close() throws IOException
-        {
+            /* Just do nothing. */
+            return;
         }
     }
 

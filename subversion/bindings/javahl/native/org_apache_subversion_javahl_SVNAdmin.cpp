@@ -32,7 +32,7 @@
 #include "SVNAdmin.h"
 #include "Revision.h"
 #include "Inputer.h"
-#include "Outputer.h"
+#include "OutputStream.h"
 #include "MessageReceiver.h"
 #include "svn_props.h"
 #include "svn_private_config.h"
@@ -145,11 +145,11 @@ Java_org_apache_subversion_javahl_SVNAdmin_dump
   if (JNIUtil::isExceptionThrown())
     return;
 
-  Outputer dataOut(jdataout);
+  OutputStream dataOut(jdataout);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  Outputer messageOut(jmessageout);
+  OutputStream messageOut(jmessageout);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -258,7 +258,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_load
     return;
 
 
-  Outputer outputMsg(joutputMsg);
+  OutputStream outputMsg(joutputMsg);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -388,7 +388,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_verify
   if (JNIUtil::isExceptionThrown())
     return;
 
-  Outputer messageOut(jmessageout);
+  OutputStream messageOut(jmessageout);
   if (JNIUtil::isExceptionThrown())
     return;
 
