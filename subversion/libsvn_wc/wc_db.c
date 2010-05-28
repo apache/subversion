@@ -2184,6 +2184,8 @@ svn_wc__db_repos_ensure(apr_int64_t *repos_id,
 static svn_error_t *
 temp_cross_db_copy(svn_wc__db_t *db,
                    const char *src_abspath,
+                   svn_wc__db_pdh_t *src_pdh,
+                   const char *src_relpath,
                    svn_wc__db_pdh_t *dst_pdh,
                    const char *dst_relpath,
                    svn_wc__db_kind_t kind,
@@ -2198,6 +2200,8 @@ temp_cross_db_copy(svn_wc__db_t *db,
   const char *changed_author;
   const svn_checksum_t *checksum;
   apr_hash_t *props;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
 
   SVN_ERR_ASSERT(kind == svn_wc__db_kind_file);
 
@@ -2248,7 +2252,34 @@ temp_cross_db_copy(svn_wc__db_t *db,
 
   SVN_ERR(insert_working_node(&iwb, dst_pdh->wcroot->sdb, scratch_pool));
 
-  /* ### What about actual_node? */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", src_pdh->wcroot->wc_id, src_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      /* const char *prop_reject = svn_sqlite__column_text(stmt, 0,
+                                                           scratch_pool); */
+      const char *changelist = svn_sqlite__column_text(stmt, 1, scratch_pool);
+      const char *conflict_old = svn_sqlite__column_text(stmt, 2, scratch_pool);
+      const char *conflict_new = svn_sqlite__column_text(stmt, 3, scratch_pool);
+      const char *conflict_working = svn_sqlite__column_text(stmt, 4,
+                                                             scratch_pool);
+      const char *tree_conflict_data = svn_sqlite__column_text(stmt, 5,
+                                                               scratch_pool);
+      const char *properties = svn_sqlite__column_text(stmt, 6, scratch_pool);
+      SVN_ERR(svn_sqlite__reset(stmt));
+      SVN_ERR(svn_sqlite__get_statement(&stmt, dst_pdh->wcroot->sdb,
+                                        STMT_INSERT_ACTUAL_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isss",
+                                dst_pdh->wcroot->wc_id, dst_relpath,
+                                svn_relpath_dirname(dst_relpath, scratch_pool),
+                                properties,
+                                conflict_old, conflict_new, conflict_working,
+                                changelist, tree_conflict_data));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   return SVN_NO_ERROR;
 }
@@ -2386,6 +2417,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
         }
       SVN_ERR(svn_sqlite__step_done(stmt));
 
+      /* ### Copying changelist is OK for a move but what about a copy? */
       SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
                                   STMT_INSERT_ACTUAL_NODE_FROM_ACTUAL_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "isss",
@@ -2395,7 +2427,8 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
     }
   else
     {
-      SVN_ERR(temp_cross_db_copy(db, src_abspath, dst_pdh, dst_relpath, kind,
+      SVN_ERR(temp_cross_db_copy(db, src_abspath, src_pdh, src_relpath,
+                                 dst_pdh, dst_relpath, kind,
                                  copyfrom_id, copyfrom_relpath, copyfrom_rev,
                                  scratch_pool));
     }
