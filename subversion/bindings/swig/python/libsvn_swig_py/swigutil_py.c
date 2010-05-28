@@ -347,6 +347,11 @@ void svn_swig_py_svn_exception(svn_error_t *error_chain)
   if (error_chain == NULL)
     return;
 
+  /* ### It'd be really nifty to display the entire stack trace in
+         python-land (similar to what we do in JavaHL), but since that's
+         out of my league, we settle with just purging the traced frames. */
+  error_chain = svn_error_purge_tracing(error_chain);
+
   /* Start with no references. */
   args_list = args = apr_err_ob = message_ob = file_ob = line_ob = NULL;
   svn_module = exc_class = exc_ob = NULL;
