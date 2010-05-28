@@ -595,6 +595,10 @@ svn_cl__log(apr_getopt_t *os,
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("'diff-cmd' option requires 'show-diff' "
                               "option"));
+  if (opt_state->force_internal_diff && (! opt_state->show_diff))
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("'force-internal-diff' option requires "
+                              "'show-diff' option"));
   if (opt_state->extensions && (! opt_state->show_diff))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("'extensions' option requires 'show-diff' "

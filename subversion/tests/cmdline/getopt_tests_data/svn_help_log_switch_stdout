@@ -56,6 +56,7 @@ Valid options:
   --show-diff              : produce diff output
                              [alias: --diff]
   --diff-cmd ARG           : use ARG as diff command
+  --force-internal-diff    : override diff-cmd specified in config file
   -x [--extensions] ARG    : Default: '-u'. When Subversion is invoking an
                              external diff program, ARG is simply passed along
                              to the program. But when Subversion is using its
