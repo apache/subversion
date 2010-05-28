@@ -125,22 +125,6 @@ public interface ISVNAdmin {
 	 * @param ignoreUUID        ignore any UUID found in the input stream
 	 * @param forceUUID         set the repository UUID to any found in the
 	 *                          stream
-	 * @param relativePath      the directory in the repository, where the data
-	 *                          in put optional.
-	 * @throws ClientException  throw in case of problem
-	 */
-	public abstract void load(String path, IInput dataInput,
-			IOutput messageOutput, boolean ignoreUUID, boolean forceUUID,
-			String relativePath) throws ClientException;
-
-	/**
-	 * load the data of a dump into a repository,
-	 * @param path              the path to the repository
-	 * @param dataInput         the data input source
-	 * @param messageOutput     the target for processing messages
-	 * @param ignoreUUID        ignore any UUID found in the input stream
-	 * @param forceUUID         set the repository UUID to any found in the
-	 *                          stream
 	 * @param usePreCommitHook  use the pre-commit hook when processing commits
 	 * @param usePostCommitHook use the post-commit hook when processing commits
 	 * @param relativePath      the directory in the repository, where the data

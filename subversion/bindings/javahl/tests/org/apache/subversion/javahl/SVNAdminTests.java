@@ -100,7 +100,7 @@ public class SVNAdminTests extends SVNTests
         IInput input = new FileInputer(dump);
         IOutput loadLog = new IgnoreOutputer();
         admin.load(thisTest.getRepositoryPath(),
-                   input, loadLog, true, true, null);
+                   input, loadLog, true, true, false, false, null);
         // should have two revs after the load
         infoHolder[0] = null;
         client.info2(repoUrl, Revision.HEAD, Revision.HEAD,

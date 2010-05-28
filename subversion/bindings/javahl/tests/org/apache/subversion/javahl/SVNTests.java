@@ -757,7 +757,8 @@ class SVNTests extends TestCase
             if (loadGreek)
             {
                 admin.load(repos.getAbsolutePath(), new FileInputer(greekDump),
-                           new IgnoreOutputer(), false, false, null);
+                           new IgnoreOutputer(), false, false, false, false,
+                           null);
             }
             return repos;
         }
