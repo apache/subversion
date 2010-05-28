@@ -4112,6 +4112,9 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
   apr_pool_t *iterpool;
   int i;
   svn_revnum_t gap_start, gap_end;
+  svn_boolean_t child_inherits_implicit;
+  svn_client__merge_path_t *parent;
+  int parent_index;
 
   iterpool = svn_pool_create(pool);
 
@@ -4125,6 +4128,46 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
           svn_client__merge_path_t *child =
             APR_ARRAY_IDX(children_with_mergeinfo, i,
                           svn_client__merge_path_t *);
+
+          parent = NULL;
+          svn_pool_clear(iterpool);
+
+          /* Issue #3646 'record-only merges create self-referential
+             mergeinfo'.  Get the merge target's implicit mergeinfo (natural
+             history).  We'll use it later to avoid setting self-referential
+             mergeinfo -- see filter_natural_history_from_mergeinfo(). */
+          if (i == 0) /* First item is always the merge target. */
+            {
+              SVN_ERR(get_full_mergeinfo(NULL, /* child->pre_merge_mergeinfo */
+                                         &(child->implicit_mergeinfo),
+                                         NULL, /* child->indirect_mergeinfo */
+                                         svn_mergeinfo_inherited, ra_session,
+                                         child->abspath,
+                                         MAX(revision1, revision2),
+                                         MIN(revision1, revision2),
+                                         merge_b->ctx, pool, iterpool));
+            }
+          else
+            {
+              /* Issue #3443 - Subtrees of the merge target can inherit
+                 their parent's implicit mergeinfo in most cases. */
+              parent_index = find_nearest_ancestor(children_with_mergeinfo,
+                                                   FALSE, child->abspath);
+              parent = APR_ARRAY_IDX(children_with_mergeinfo, parent_index,
+                                     svn_client__merge_path_t *);
+              /* If CHILD is a subtree then its parent must be in
+                 CHILDREN_WITH_MERGEINFO, see the global comment
+                 'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
+              SVN_ERR_ASSERT(parent);
+ 
+              child_inherits_implicit = (parent && !child->switched);
+              SVN_ERR(ensure_implicit_mergeinfo(parent, child,
+                                                child_inherits_implicit,
+                                                revision1, revision2,
+                                                ra_session, merge_b->ctx,
+                                                pool, iterpool));
+            }
+
           child->remaining_ranges = svn_rangelist__initialize(revision1,
                                                               revision2,
                                                               TRUE, pool);
@@ -4163,8 +4206,8 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       const char *child_url1, *child_url2;
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
-      svn_client__merge_path_t *parent = NULL;
-      svn_boolean_t child_inherits_implicit;
+
+      parent = NULL;
 
       /* If the path is absent don't do subtree merge either. */
       SVN_ERR_ASSERT(child);
@@ -4201,8 +4244,8 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       /* If CHILD isn't the merge target find its parent. */
       if (i > 0)
         {
-          int parent_index = find_nearest_ancestor(children_with_mergeinfo,
-                                                   FALSE, child->abspath);
+          parent_index = find_nearest_ancestor(children_with_mergeinfo,
+                                               FALSE, child->abspath);
           parent = APR_ARRAY_IDX(children_with_mergeinfo, parent_index,
                                  svn_client__merge_path_t *);
           /* If CHILD is a subtree then its parent must be in
