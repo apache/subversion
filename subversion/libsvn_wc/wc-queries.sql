@@ -412,6 +412,39 @@ SELECT 0 FROM BASE_NODE WHERE wc_id = ?1 AND local_relpath = ?2
 UNION
 SELECT 1 FROM WORKING_NODE WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_INSERT_WORKING_NODE_COPY_FROM_BASE
+INSERT INTO WORKING_NODE (
+    wc_id, local_relpath, parent_relpath, presence, kind, checksum,
+    translated_size, changed_rev, changed_date, changed_author, depth,
+    symlink_target, last_mod_time, properties, copyfrom_repos_id,
+    copyfrom_repos_path, copyfrom_revnum )
+SELECT wc_id, ?3 AS local_relpath, ?4 AS parent_relpath, ?5 AS presence, kind,
+    checksum, translated_size, changed_rev, changed_date, changed_author, depth,
+    symlink_target, last_mod_time, properties, ?6 AS copyfrom_repos_id,
+    ?7 AS copyfrom_repos_path, ?8 AS copyfrom_revnum FROM BASE_NODE
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING
+INSERT INTO WORKING_NODE (
+    wc_id, local_relpath, parent_relpath, presence, kind, checksum,
+    translated_size, changed_rev, changed_date, changed_author, depth,
+    symlink_target, last_mod_time, properties, copyfrom_repos_id,
+    copyfrom_repos_path, copyfrom_revnum )
+SELECT wc_id, ?3 AS local_relpath, ?4 AS parent_relpath, ?5 AS presence, kind,
+    checksum, translated_size, changed_rev, changed_date, changed_author, depth,
+    symlink_target, last_mod_time, properties, ?6 AS copyfrom_repos_id,
+    ?7 AS copyfrom_repos_path, ?8 AS copyfrom_revnum FROM WORKING_NODE
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_INSERT_ACTUAL_NODE_FROM_ACTUAL_NODE
+INSERT INTO ACTUAL_NODE (
+     wc_id, local_relpath, parent_relpath, properties,
+     conflict_old, conflict_new, conflict_working,
+     prop_reject, changelist, text_mod, tree_conflict_data )
+SELECT wc_id, ?3 AS local_relpath, ?4 AS parent_relpath, properties,
+     conflict_old, conflict_new, conflict_working,
+     prop_reject, changelist, text_mod, tree_conflict_data FROM ACTUAL_NODE
+WHERE wc_id = ?1 AND local_relpath = ?2;
 
 /* ------------------------------------------------------------------------- */
 

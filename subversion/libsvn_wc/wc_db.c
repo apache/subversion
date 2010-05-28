@@ -2179,17 +2179,231 @@ svn_wc__db_repos_ensure(apr_int64_t *repos_id,
                                           scratch_pool));
 }
 
+/* Temporary helper for svn_wc__db_op_copy to handle copying from one
+   db to another, it becomes redundant when we centralise. */
+static svn_error_t *
+temp_cross_db_copy(svn_wc__db_t *db,
+                   const char *src_abspath,
+                   svn_wc__db_pdh_t *dst_pdh,
+                   const char *dst_relpath,
+                   svn_wc__db_kind_t kind,
+                   apr_int64_t copyfrom_id,
+                   const char *copyfrom_relpath,
+                   svn_revnum_t copyfrom_rev,
+                   apr_pool_t *scratch_pool)
+{
+  insert_working_baton_t iwb;
+  svn_revnum_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
+  const svn_checksum_t *checksum;
+  apr_hash_t *props;
+
+  SVN_ERR_ASSERT(kind == svn_wc__db_kind_file);
+
+  SVN_ERR(svn_wc__db_read_info(NULL, /* status */
+                               NULL, /* kind */
+                               NULL, /* revision */
+                               NULL, /* repos_relpath */
+                               NULL, /* repos_root_url */
+                               NULL, /* repos_uuid */
+                               &changed_rev, &changed_date, &changed_author,
+                               NULL, /* last_mod_time */
+                               NULL, /* depth */
+                               &checksum,
+                               NULL, /* translated_size */
+                               NULL, /* target */
+                               NULL, /* changelist */
+                               NULL, /* original_repos_relpath */
+                               NULL, /* original_root_url */
+                               NULL, /* original_uuid */
+                               NULL, /* original_revision */
+                               NULL, /* text_mod */
+                               NULL, /* props_mod */
+                               NULL, /* base_shadowed */
+                               NULL, /* conflicted */
+                               NULL, /* lock */
+                               db, src_abspath, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__get_pristine_props(&props, db, src_abspath,
+                                     scratch_pool, scratch_pool));
+
+  iwb.presence = svn_wc__db_status_normal;
+  iwb.kind = kind;
+  iwb.wc_id = dst_pdh->wcroot->wc_id;
+  iwb.local_relpath = dst_relpath;
+
+  iwb.props = props;
+  iwb.changed_rev = changed_rev;
+  iwb.changed_date = changed_date;
+  iwb.changed_author = changed_author;
+  iwb.original_repos_id = copyfrom_id;
+  iwb.original_repos_relpath = copyfrom_relpath;
+  iwb.original_revnum = copyfrom_rev;
+  iwb.moved_here = FALSE;
+
+  iwb.checksum = checksum;
+
+  SVN_ERR(insert_working_node(&iwb, dst_pdh->wcroot->sdb, scratch_pool));
+
+  /* ### What about actual_node? */
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_op_copy(svn_wc__db_t *db,
                    const char *src_abspath,
                    const char *dst_abspath,
+                   const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool)
 {
+  svn_wc__db_pdh_t *src_pdh, *dst_pdh;
+  const char *src_relpath, *dst_relpath;
+  const char *repos_relpath, *repos_root_url, *repos_uuid, *copyfrom_relpath;
+  svn_revnum_t revision, copyfrom_rev;
+  svn_wc__db_status_t status;
+  apr_int64_t copyfrom_id;
+  svn_wc__db_kind_t kind;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
 
-  NOT_IMPLEMENTED();
+  /* ### This should all happen in one transaction, but that can't
+     ### happen until we move to a centralised database. */
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&src_pdh, &src_relpath, db,
+                                             src_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(src_pdh);
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&dst_pdh, &dst_relpath, db,
+                                             dst_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(dst_pdh);
+
+
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, &revision,
+                               &repos_relpath, &repos_root_url, &repos_uuid,
+                               NULL, /* changed_rev */
+                               NULL, /* changed_date */
+                               NULL, /* changed_author */
+                               NULL, /* last_mod_time */
+                               NULL, /* depth */
+                               NULL, /* checksum */
+                               NULL, /* translated_size */
+                               NULL, /* target */
+                               NULL, /* changelist */
+                               NULL, /* original_repos_relpath */
+                               NULL, /* original_root_url */
+                               NULL, /* original_uuid */
+                               NULL, /* original_revision */
+                               NULL, /* text_mod */
+                               NULL, /* props_mod */
+                               NULL, /* base_shadowed */
+                               NULL, /* conflicted */
+                               NULL, /* lock */
+                               db, src_abspath, scratch_pool, scratch_pool));
+
+  SVN_ERR_ASSERT(kind == svn_wc__db_kind_file);
+
+  if (status != svn_wc__db_status_added)
+    {
+      copyfrom_relpath = repos_relpath;
+      copyfrom_rev = revision;
+      SVN_ERR(create_repos_id(&copyfrom_id,
+                              repos_root_url, repos_uuid,
+                              src_pdh->wcroot->sdb, scratch_pool));
+    }
+  else
+    {
+      const char *op_root_abspath;
+      const char *original_repos_relpath, *original_root_url, *original_uuid;
+      svn_revnum_t original_revision;
+
+      SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath,
+                                       NULL, /* repos_relpath */
+                                       NULL, /* repos_root_url */
+                                       NULL, /* repos_uuid */
+                                       &original_repos_relpath,
+                                       &original_root_url, &original_uuid,
+                                       &original_revision,
+                                       db, src_abspath,
+                                       scratch_pool, scratch_pool));
+
+      if (status == svn_wc__db_status_copied
+          || status == svn_wc__db_status_moved_here)
+        {
+          copyfrom_relpath
+            = svn_relpath_join(original_repos_relpath,
+                               svn_dirent_skip_ancestor(op_root_abspath,
+                                                        src_abspath),
+                               scratch_pool);
+          copyfrom_rev = original_revision;
+          SVN_ERR(create_repos_id(&copyfrom_id,
+                                  original_root_url, original_uuid,
+                                  src_pdh->wcroot->sdb, scratch_pool));
+        }
+      else
+        {
+          copyfrom_relpath = NULL;
+          copyfrom_rev = SVN_INVALID_REVNUM;
+        }
+    }
+
+
+
+  if (!strcmp(src_pdh->local_abspath, dst_pdh->local_abspath))
+    {
+      svn_sqlite__stmt_t *stmt;
+      const char *dst_parent_relpath = svn_relpath_dirname(dst_relpath,
+                                                           scratch_pool);
+
+      /* ### Need a better way to determine whether a WORKING_NODE exists */
+      if (status == svn_wc__db_status_added
+          || status == svn_wc__db_status_copied
+          || status == svn_wc__db_status_moved_here)
+        SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
+                                  STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING));
+      else
+        SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
+                                  STMT_INSERT_WORKING_NODE_COPY_FROM_BASE));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "issst",
+                                src_pdh->wcroot->wc_id, src_relpath,
+                                dst_relpath, dst_parent_relpath,
+                                presence_map, svn_wc__db_status_normal));
+
+      if (copyfrom_relpath)
+        {
+          SVN_ERR(svn_sqlite__bind_int64(stmt, 6, copyfrom_id));
+          SVN_ERR(svn_sqlite__bind_text(stmt, 7, copyfrom_relpath));
+          SVN_ERR(svn_sqlite__bind_int64(stmt, 8, copyfrom_rev));
+        }
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
+                                  STMT_INSERT_ACTUAL_NODE_FROM_ACTUAL_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isss",
+                                src_pdh->wcroot->wc_id, src_relpath,
+                                dst_relpath, dst_parent_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  else
+    {
+      SVN_ERR(temp_cross_db_copy(db, src_abspath, dst_pdh, dst_relpath, kind,
+                                 copyfrom_id, copyfrom_relpath, copyfrom_rev,
+                                 scratch_pool));
+    }
+
+  /* ### Should do this earlier and insert the node with the right values. */
+  SVN_ERR(svn_wc__db_temp_elide_copyfrom(db, dst_abspath, scratch_pool));
+
+  SVN_ERR(add_work_items(dst_pdh->wcroot->sdb, work_items, scratch_pool));
+ 
+  return SVN_NO_ERROR;
 }
 
 
