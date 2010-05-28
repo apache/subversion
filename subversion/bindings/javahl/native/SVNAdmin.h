@@ -32,7 +32,7 @@
 #include "SVNBase.h"
 #include "Revision.h"
 #include "OutputStream.h"
-#include "Inputer.h"
+#include "InputStream.h"
 #include "MessageReceiver.h"
 #include "StringArray.h"
 
@@ -50,7 +50,7 @@ class SVNAdmin : public SVNBase
   void rmtxns(const char *path, StringArray &transactions);
   jlong recover(const char *path);
   void lstxns(const char *path, MessageReceiver &messageReceiver);
-  void load(const char *path, Inputer &dataIn, OutputStream &messageOut,
+  void load(const char *path, InputStream &dataIn, OutputStream &messageOut,
             bool ignoreUUID, bool forceUUID, bool usePreCommitHook,
             bool usePostCommitHook, const char *relativePath);
   void listUnusedDBLogs(const char *path,

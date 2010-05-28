@@ -263,7 +263,7 @@ void SVNAdmin::listUnusedDBLogs(const char *path,
 }
 
 void SVNAdmin::load(const char *path,
-                    Inputer &dataIn,
+                    InputStream &dataIn,
                     OutputStream &messageOut,
                     bool ignoreUUID,
                     bool forceUUID,

@@ -25,6 +25,7 @@ package org.tigris.subversion.javahl;
 
 import java.util.Set;
 import java.io.OutputStream;
+import java.io.InputStream;
 import java.io.IOException;
 
 /**
@@ -289,7 +290,8 @@ public class SVNAdmin
     {
         try
         {
-            aSVNAdmin.load(path, dataInput, new OutputWrapper(messageOutput),
+            aSVNAdmin.load(path, new InputWrapper(dataInput),
+                           new OutputWrapper(messageOutput),
                            ignoreUUID, forceUUID, usePreCommitHook,
                            usePostCommitHook, relativePath);
         }
@@ -514,6 +516,35 @@ public class SVNAdmin
         public void close() throws IOException
         {
             outputer.close();
+        }
+    }
+
+    private class InputWrapper extends InputStream
+    {
+        private InputInterface inputer;
+
+        InputWrapper(InputInterface inputer)
+        {
+            this.inputer = inputer;
+        }
+
+        public int read() throws IOException
+        {
+            byte[] b = new byte[1];
+            if (inputer.read(b) > 0)
+                return b[0];
+            else
+                return -1;
+        }
+
+        public int read(byte[] b) throws IOException
+        {
+            return inputer.read(b);
+        }
+
+        public void close() throws IOException
+        {
+            inputer.close();
         }
     }
 }
