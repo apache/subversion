@@ -1707,13 +1707,20 @@ def post_revprop_change_hook(sbox):
   svntest.actions.create_failing_hook(repo_dir, 'post-revprop-change',
                                       error_msg)
 
-  expected_error = svntest.verify.ExpectedOutput([
-    "svn: " + svntest.actions.hook_failure_message('post-revprop-change'),
+  # serf/neon/mod_dav_svn splits the "svn: hook failed" line
+  expected_error = svntest.verify.RegexOutput([
+    '(svn: |)post-revprop-change hook failed',
     error_msg + "\n",
   ], match_all = False)
 
   svntest.actions.run_and_verify_svn(None, [], expected_error,
                                      'ps', '--revprop', '-r0', 'p', 'v',
+                                     wc_dir)
+
+  # Verify change has stuck -- at one time mod_dav_svn would rollback
+  # revprop changes on post-revprop-change hook errors
+  svntest.actions.run_and_verify_svn(None, 'v', [],
+                                     'pg', '--revprop', '-r0', 'p',
                                      wc_dir)
 
 def rm_of_replaced_file(sbox):
@@ -1933,7 +1940,7 @@ test_list = [ None,
               same_replacement_props,
               added_moved_file,
               delete_nonexistent_property,
-              XFail(post_revprop_change_hook, svntest.main.is_ra_type_dav),
+              post_revprop_change_hook,
               rm_of_replaced_file,
               prop_reject_grind,
               obstructed_subdirs,
