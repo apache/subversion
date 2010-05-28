@@ -1119,6 +1119,17 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 }
 #endif
 
+#ifdef SWIGPYTHON
+%typemap(in) const unsigned char *digest {
+    if ($input == Py_None) {
+        $1 = NULL;
+    } else {
+        $1 = (unsigned char *) PyString_AsString($input);
+        if ($1 == NULL) SWIG_fail;
+    }
+}
+#endif
+
 #ifdef SWIGRUBY
 %typemap(in) const unsigned char *digest
 {
