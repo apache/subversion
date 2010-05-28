@@ -181,8 +181,8 @@ struct edit_baton
   svn_stream_t *stream;
 
   /* Send feedback here, if non-NULL */
-  svn_repos_progress_func_t progress_func;
-  void *progress_baton;
+  svn_repos_notify_func_t notify_func;
+  void *notify_baton;
 
   /* The fs revision root, so we can read the contents of paths. */
   svn_fs_root_t *fs_root;
@@ -427,7 +427,7 @@ dump_node(struct edit_baton *eb,
       else
         {
           if (!eb->verify && cmp_rev < eb->oldest_dumped_rev
-              && eb->progress_func)
+              && eb->notify_func)
             {
               const char *warning = apr_psprintf(
                      pool,
@@ -438,7 +438,7 @@ dump_node(struct edit_baton *eb,
                        "WARNING: will fail.\n"),
                      cmp_rev, eb->oldest_dumped_rev);
               eb->found_old_reference = TRUE;
-              SVN_ERR(eb->progress_func(eb->progress_baton,
+              SVN_ERR(eb->notify_func(eb->notify_baton,
                                         eb->oldest_dumped_rev, warning, pool));
             }
 
@@ -513,7 +513,7 @@ dump_node(struct edit_baton *eb,
       /* If this is a partial dump, then issue a warning if we dump mergeinfo
          properties that refer to revisions older than the first revision
          dumped. */
-      if (eb->progress_func && eb->oldest_dumped_rev > 1)
+      if (eb->notify_func && eb->oldest_dumped_rev > 1)
         {
           svn_string_t *mergeinfo_str = apr_hash_get(prophash,
                                                      SVN_PROP_MERGEINFO,
@@ -539,7 +539,7 @@ dump_node(struct edit_baton *eb,
                     eb->oldest_dumped_rev);
 
                   eb->found_old_mergeinfo = TRUE;
-                  SVN_ERR(eb->progress_func(eb->progress_baton,
+                  SVN_ERR(eb->notify_func(eb->notify_baton,
                                             SVN_INVALID_REVNUM,
                                             warning, pool));
                 }
@@ -898,8 +898,8 @@ get_dump_editor(const svn_delta_editor_t **editor,
                 svn_revnum_t to_rev,
                 const char *root_path,
                 svn_stream_t *stream,
-                svn_repos_progress_func_t progress_func,
-                void *progress_baton,
+                svn_repos_notify_func_t notify_func,
+                void *notify_baton,
                 svn_revnum_t oldest_dumped_rev,
                 svn_boolean_t use_deltas,
                 svn_boolean_t verify,
@@ -913,8 +913,8 @@ get_dump_editor(const svn_delta_editor_t **editor,
 
   /* Set up the edit baton. */
   eb->stream = stream;
-  eb->progress_func = progress_func;
-  eb->progress_baton = progress_baton;
+  eb->notify_func = notify_func;
+  eb->notify_baton = notify_baton;
   eb->oldest_dumped_rev = oldest_dumped_rev;
   eb->bufsize = sizeof(eb->buffer);
   eb->path = apr_pstrdup(pool, root_path);
@@ -1014,8 +1014,8 @@ svn_repos_dump_fs3(svn_repos_t *repos,
                    svn_revnum_t end_rev,
                    svn_boolean_t incremental,
                    svn_boolean_t use_deltas,
-                   svn_repos_progress_func_t progress_func,
-                   void *progress_baton,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *pool)
@@ -1123,7 +1123,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
          non-incremental dump. */
       use_deltas_for_rev = use_deltas && (incremental || i != start_rev);
       SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton, fs, to_rev,
-                              "/", stream, progress_func, progress_baton,
+                              "/", stream, notify_func, notify_baton,
                               start_rev, use_deltas_for_rev, FALSE, subpool));
 
       /* Drive the editor in one way or another. */
@@ -1155,8 +1155,8 @@ svn_repos_dump_fs3(svn_repos_t *repos,
         }
 
     loop_end:
-      if (progress_func)
-        SVN_ERR(progress_func(progress_baton, to_rev, NULL, subpool));
+      if (notify_func)
+        SVN_ERR(notify_func(notify_baton, to_rev, NULL, subpool));
 
       if (dump_edit_baton) /* We never get an edit baton for r0. */
         {
@@ -1167,14 +1167,14 @@ svn_repos_dump_fs3(svn_repos_t *repos,
         }
     }
 
-  if (progress_func)
+  if (notify_func)
     {
       /* Did we issue any warnings about references to revisions older than
          the oldest dumped revision?  If so, then issue a final generic
          warning, since the inline warnings already issued might easily be
          missed. */
       if (found_old_reference)
-        SVN_ERR(progress_func(progress_baton, SVN_INVALID_REVNUM,
+        SVN_ERR(notify_func(notify_baton, SVN_INVALID_REVNUM,
                               _("WARNING: The range of revisions dumped "
                                 "contained references to\n"
                                 "WARNING: copy sources outside that "
@@ -1184,7 +1184,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
       /* Ditto if we issued any warnings about old revisions referenced
          in dumped mergeinfo. */
       if (found_old_mergeinfo)
-        SVN_ERR(progress_func(progress_baton, SVN_INVALID_REVNUM,
+        SVN_ERR(notify_func(notify_baton, SVN_INVALID_REVNUM,
                               _("WARNING: The range of revisions dumped "
                                 "contained mergeinfo\n"
                                 "WARNING: which reference revisions outside "
@@ -1264,8 +1264,8 @@ svn_error_t *
 svn_repos_verify_fs2(svn_repos_t *repos,
                      svn_revnum_t start_rev,
                      svn_revnum_t end_rev,
-                     svn_repos_progress_func_t progress_func,
-                     void *progress_baton,
+                     svn_repos_notify_func_t notify_func,
+                     void *notify_baton,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *pool)
@@ -1311,7 +1311,7 @@ svn_repos_verify_fs2(svn_repos_t *repos,
       SVN_ERR(get_dump_editor((const svn_delta_editor_t **)&dump_editor,
                               &dump_edit_baton, fs, rev, "",
                               svn_stream_empty(pool), 
-                              progress_func, progress_baton,
+                              notify_func, notify_baton,
                               start_rev,
                               FALSE, TRUE, /* use_deltas, verify */
                               iterpool));
@@ -1328,8 +1328,8 @@ svn_repos_verify_fs2(svn_repos_t *repos,
                                 NULL, NULL, iterpool));
       SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, iterpool));
 
-      if (progress_func)
-        SVN_ERR(progress_func(progress_baton, rev, NULL, iterpool));
+      if (notify_func)
+        SVN_ERR(notify_func(notify_baton, rev, NULL, iterpool));
     }
 
   svn_pool_destroy(iterpool);
