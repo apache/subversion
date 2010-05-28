@@ -127,7 +127,7 @@ svn_error_t *OutputStream::close(void *baton)
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/IOutput");
+      jclass clazz = env->FindClass("java/io/OutputStream");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
