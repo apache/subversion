@@ -336,13 +336,13 @@ Java_org_apache_subversion_javahl_SVNAdmin_rmtxns
   cl->rmtxns(path, transactions);
 }
 
-/* A helper function for setRevProp() and setLog(). */
-static void
-setRevProp(jobject jthis, jstring jpath, jobject jrevision,
-           jstring jpropName, jstring jpropValue,
-           jboolean jusePreRevPropChangeHook,
-           jboolean jusePostRevPropChangeHook)
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNAdmin_setRevProp
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
+ jstring jpropName, jstring jpropValue, jboolean jusePreRevPropChangeHook,
+ jboolean jusePostRevPropChangeHook)
 {
+  JNIEntry(SVNAdmin, setRevProp);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
   if (cl == NULL)
     {
@@ -369,29 +369,6 @@ setRevProp(jobject jthis, jstring jpath, jobject jrevision,
   cl->setRevProp(path, revision, propName, propValue,
                  jusePreRevPropChangeHook ? true : false,
                  jusePostRevPropChangeHook ? true : false);
-}
-
-JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_setLog
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jstring jmessage, jboolean jbypassHooks)
-{
-  JNIEntry(SVNAdmin, setLog);
-  jstring jlogPropName = env->NewStringUTF(SVN_PROP_REVISION_LOG);
-  setRevProp(jthis, jpath, jrevision, jlogPropName, jmessage,
-             !jbypassHooks, !jbypassHooks);
-  env->DeleteLocalRef(jlogPropName);
-}
-
-JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNAdmin_setRevProp
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jstring jpropName, jstring jpropValue, jboolean jusePreRevPropChangeHook,
- jboolean jusePostRevPropChangeHook)
-{
-  JNIEntry(SVNAdmin, setRevProp);
-  setRevProp(jthis, jpath, jrevision, jpropName, jpropValue,
-             jusePreRevPropChangeHook, jusePostRevPropChangeHook);
 }
 
 JNIEXPORT void JNICALL
