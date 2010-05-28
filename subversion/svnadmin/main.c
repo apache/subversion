@@ -1488,7 +1488,7 @@ main(int argc, const char *argv[])
   apr_pool_t *pool;
 
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
-  struct svnadmin_opt_state opt_state;
+  struct svnadmin_opt_state opt_state = { 0 };
   apr_getopt_t *os;
   int opt_id;
   apr_array_header_t *received_opts;
@@ -1529,7 +1529,6 @@ main(int argc, const char *argv[])
     }
 
   /* Initialize opt_state. */
-  memset(&opt_state, 0, sizeof(opt_state));
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
 
