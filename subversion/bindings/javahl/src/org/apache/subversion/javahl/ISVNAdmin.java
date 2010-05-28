@@ -24,6 +24,7 @@
 package org.apache.subversion.javahl;
 
 import java.util.Set;
+import java.io.OutputStream;
 
 import org.apache.subversion.javahl.SVNAdmin.MessageReceiver;
 
@@ -84,8 +85,9 @@ public interface ISVNAdmin {
 	 * @throws ClientException  throw in case of problem
 	 * @since 1.5
 	 */
-	public abstract void dump(String path, IOutput dataOut, IOutput errorOut,
-			Revision start, Revision end, boolean incremental, boolean useDeltas)
+	public abstract void dump(String path, OutputStream dataOut,
+                OutputStream errorOut, Revision start, Revision end,
+                boolean incremental, boolean useDeltas)
 			throws ClientException;
 
 	/**
@@ -133,7 +135,7 @@ public interface ISVNAdmin {
 	 * @since 1.5
 	 */
 	public abstract void load(String path, IInput dataInput,
-			IOutput messageOutput, boolean ignoreUUID, boolean forceUUID,
+			OutputStream messageOutput, boolean ignoreUUID, boolean forceUUID,
 			boolean usePreCommitHook, boolean usePostCommitHook,
 			String relativePath) throws ClientException;
 
@@ -192,7 +194,7 @@ public interface ISVNAdmin {
 	 * @param end               the last revision
 	 * @throws ClientException If an error occurred.
 	 */
-	public abstract void verify(String path, IOutput messageOut,
+	public abstract void verify(String path, OutputStream messageOut,
 			Revision start, Revision end) throws ClientException;
 
 	/**

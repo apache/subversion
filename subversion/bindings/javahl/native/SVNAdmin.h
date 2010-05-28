@@ -31,7 +31,7 @@
 #include "svn_repos.h"
 #include "SVNBase.h"
 #include "Revision.h"
-#include "Outputer.h"
+#include "OutputStream.h"
 #include "Inputer.h"
 #include "MessageReceiver.h"
 #include "StringArray.h"
@@ -41,7 +41,7 @@ class SVNAdmin : public SVNBase
  public:
   void rmlocks(const char *path, StringArray &locks);
   jobject lslocks(const char *path);
-  void verify(const char *path, Outputer &messageOut,
+  void verify(const char *path, OutputStream &messageOut,
               Revision &revisionStart, Revision &revisionEnd);
   void setRevProp(const char *path, Revision &revision,
                   const char *propName, const char *propValue,
@@ -50,14 +50,14 @@ class SVNAdmin : public SVNBase
   void rmtxns(const char *path, StringArray &transactions);
   jlong recover(const char *path);
   void lstxns(const char *path, MessageReceiver &messageReceiver);
-  void load(const char *path, Inputer &dataIn, Outputer &messageOut,
+  void load(const char *path, Inputer &dataIn, OutputStream &messageOut,
             bool ignoreUUID, bool forceUUID, bool usePreCommitHook,
             bool usePostCommitHook, const char *relativePath);
   void listUnusedDBLogs(const char *path,
                         MessageReceiver &messageReceiver);
   void listDBLogs(const char *path, MessageReceiver &messageReceiver);
   void hotcopy(const char *path, const char *targetPath, bool cleanLogs);
-  void dump(const char *path, Outputer &dataOut, Outputer &messageOut,
+  void dump(const char *path, OutputStream &dataOut, OutputStream &messageOut,
             Revision &revsionStart, Revision &RevisionEnd,
             bool incremental, bool useDeltas);
   void deltify(const char *path, Revision &start, Revision &end);
