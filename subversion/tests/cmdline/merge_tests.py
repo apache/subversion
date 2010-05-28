@@ -8999,8 +8999,8 @@ def self_reverse_merge(sbox):
 
   # record dummy self mergeinfo to test the fact that self-reversal should work
   # irrespective of mergeinfo.
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c', '1',
-                                     '--record-only', sbox.repo_url, wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps', SVN_PROP_MERGEINFO,
+                                     '/:1', wc_dir)
 
   # Bad svntest.main.greek_state does not have '', so adding it explicitly.
   expected_disk.add({'' : Item(props={SVN_PROP_MERGEINFO : '/:1'})})
@@ -15514,8 +15514,8 @@ def immediate_depth_merge_creates_minimal_subtree_mergeinfo(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3646 'cyclic --record-only merges create self-referential
 # mergeinfo'
-def cyclic_record_only_merge_creates_self_referential_mergeinfo(sbox):
-  "cyclic merge creates self referential mergeinfo"
+def record_only_merge_creates_self_referential_mergeinfo(sbox):
+  "merge creates self referential mergeinfo"
 
   # Given a copy of trunk@M to branch, committed in r(M+1), if we
   # --record-only merge the branch back to trunk with no revisions
@@ -15544,20 +15544,7 @@ def cyclic_record_only_merge_creates_self_referential_mergeinfo(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Merge A-branch back to A.  This should record the mergeinfo '/A-branch:3'
-  # on A.  Currently however, it records self referential mergeinfo on A of
-  # '/A:2'.  This test is set as XFail until this issue is fixed.
-  #
-  #   >svn merge ^/A-branch A --record-only
-  #   --- Recording mergeinfo for merge of r2 into 'A':
-  #    U   A
-  #   --- Recording mergeinfo for merge of r3 into 'A':
-  #    G   A
-  #
-  #   >svn pg svn:mergeinfo -vR
-  #   Properties on 'A':
-  #     svn:mergeinfo
-  #       /A:2  <-- This is part of A's own history!
-  #       /A-branch:3
+  # on A.
   expected_output = wc.State(A_path, {})
   expected_mergeinfo_output = wc.State(A_path, {
     '' : Item(status=' U'),
@@ -15803,7 +15790,7 @@ test_list = [ None,
               merge_into_wc_for_deleted_branch,
               foreign_repos_del_and_props,
               immediate_depth_merge_creates_minimal_subtree_mergeinfo,
-              XFail(cyclic_record_only_merge_creates_self_referential_mergeinfo),
+              record_only_merge_creates_self_referential_mergeinfo,
              ]
 
 if __name__ == '__main__':
