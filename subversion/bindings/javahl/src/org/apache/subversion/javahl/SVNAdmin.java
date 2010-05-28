@@ -25,6 +25,7 @@ package org.apache.subversion.javahl;
 
 import java.util.Set;
 import java.io.OutputStream;
+import java.io.InputStream;
 
 /**
  * This class offers the same commands as the svnadmin commandline
@@ -185,7 +186,7 @@ public class SVNAdmin implements ISVNAdmin
      * @throws ClientException  throw in case of problem
      * @since 1.5
      */
-    public native void load(String path, IInput dataInput,
+    public native void load(String path, InputStream dataInput,
                             OutputStream messageOutput, boolean ignoreUUID,
                             boolean forceUUID, boolean usePreCommitHook,
                             boolean usePostCommitHook, String relativePath)

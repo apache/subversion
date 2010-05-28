@@ -31,7 +31,7 @@
 #include "JNIByteArray.h"
 #include "SVNAdmin.h"
 #include "Revision.h"
-#include "Inputer.h"
+#include "InputStream.h"
 #include "OutputStream.h"
 #include "MessageReceiver.h"
 #include "svn_props.h"
@@ -253,7 +253,7 @@ Java_org_apache_subversion_javahl_SVNAdmin_load
   if (JNIUtil::isExceptionThrown())
     return;
 
-  Inputer inputData(jinputData);
+  InputStream inputData(jinputData);
   if (JNIUtil::isExceptionThrown())
     return;
 

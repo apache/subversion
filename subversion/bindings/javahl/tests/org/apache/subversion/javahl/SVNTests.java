@@ -441,48 +441,6 @@ class SVNTests extends TestCase
     }
 
     /**
-     * internal class which implements the InputInterface to read the data
-     * from a file.
-     */
-    public class FileInputer implements IInput
-    {
-        /**
-         * input file stream
-         */
-        FileInputStream myStream;
-
-        /**
-         * create a new object
-         * @param inputName     the file from which the data is read
-         * @throws IOException If <code>inputName</code> is not
-         * found.
-         */
-        public FileInputer(File inputName) throws IOException
-        {
-            myStream = new FileInputStream(inputName);
-        }
-
-        /**
-         * read the number of data.length bytes from input.
-         * @param data          array to store the read bytes.
-         * @throws IOException  throw in case of problems.
-         */
-        public int read(byte[] data) throws IOException
-        {
-            return myStream.read(data);
-        }
-
-        /**
-         * close the input
-         * @throws IOException throw in case of problems.
-         */
-        public void close() throws IOException
-        {
-            myStream.close();
-        }
-    }
-
-    /**
      * Represents the repository and (possibly) the working copy for
      * one test.
      */
@@ -705,7 +663,8 @@ class SVNTests extends TestCase
                          conf.getAbsolutePath(), fsType);
             if (loadGreek)
             {
-                admin.load(repos.getAbsolutePath(), new FileInputer(greekDump),
+                admin.load(repos.getAbsolutePath(),
+                           new FileInputStream(greekDump),
                            new IgnoreOutputer(), false, false, false, false,
                            null);
             }

@@ -20,24 +20,24 @@
  * ====================================================================
  * @endcopyright
  *
- * @file Inputer.cpp
- * @brief Implementation of the class Inputer
+ * @file InputStream.cpp
+ * @brief Implementation of the class InputStream
  */
 
-#include "Inputer.h"
+#include "InputStream.h"
 #include "JNIUtil.h"
 #include "JNIByteArray.h"
 
 /**
- * Create an Inputer object.
+ * Create an InputStream object.
  * @param jthis the Java object to be stored
  */
-Inputer::Inputer(jobject jthis)
+InputStream::InputStream(jobject jthis)
 {
   m_jthis = jthis;
 }
 
-Inputer::~Inputer()
+InputStream::~InputStream()
 {
   // The m_jthis does not need to be destroyed, because it is the
   // passed in parameter to the Java method.
@@ -49,35 +49,35 @@ Inputer::~Inputer()
  * @param pool  the pool, from which the structure is allocated
  * @return the input stream
  */
-svn_stream_t *Inputer::getStream(const SVN::Pool &pool)
+svn_stream_t *InputStream::getStream(const SVN::Pool &pool)
 {
   // Create a stream with this as the baton and set the read and
   // close functions.
   svn_stream_t *ret = svn_stream_create(this, pool.pool());
-  svn_stream_set_read(ret, Inputer::read);
-  svn_stream_set_close(ret, Inputer::close);
+  svn_stream_set_read(ret, InputStream::read);
+  svn_stream_set_close(ret, InputStream::close);
   return ret;
 }
 
 /**
  * Implements svn_read_fn_t to read to data into Subversion.
- * @param baton     an Inputer object for the callback
+ * @param baton     an InputStream object for the callback
  * @param buffer    the buffer for the read data
  * @param len       on input the buffer len, on output the number of read bytes
  * @return a subversion error or SVN_NO_ERROR
  */
-svn_error_t *Inputer::read(void *baton, char *buffer, apr_size_t *len)
+svn_error_t *InputStream::read(void *baton, char *buffer, apr_size_t *len)
 {
   JNIEnv *env = JNIUtil::getEnv();
   // An object of our class is passed in as the baton.
-  Inputer *that = (Inputer*)baton;
+  InputStream *that = (InputStream*)baton;
 
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/IInput");
+      jclass clazz = env->FindClass("java/io/InputStream");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
@@ -122,22 +122,22 @@ svn_error_t *Inputer::read(void *baton, char *buffer, apr_size_t *len)
 
 /**
  * Implements svn_close_fn_t to close the input stream.
- * @param baton     an Inputer object for the callback
+ * @param baton     an InputStream object for the callback
  * @return a subversion error or SVN_NO_ERROR
  */
-svn_error_t *Inputer::close(void *baton)
+svn_error_t *InputStream::close(void *baton)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
   // An object of our class is passed in as the baton
-  Inputer *that = (Inputer*)baton;
+  InputStream *that = (InputStream*)baton;
 
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/IInput");
+      jclass clazz = env->FindClass("java/io/InputStream");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
