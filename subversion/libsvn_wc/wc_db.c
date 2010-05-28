@@ -2972,7 +2972,7 @@ set_changelist_txn(void *baton,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", scb->wc_id, scb->local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
-    existing_changelist = svn_sqlite__column_text(stmt, 0, scratch_pool);
+    existing_changelist = svn_sqlite__column_text(stmt, 1, scratch_pool);
   SVN_ERR(svn_sqlite__reset(stmt));
 
   if (!have_row)
