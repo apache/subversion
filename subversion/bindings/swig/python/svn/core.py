@@ -66,6 +66,15 @@ class SubversionException(Exception):
     self.file = file
     self.line = line
 
+  def __str__(self):
+    dump = '%d - %s' % (self.apr_err, self.message)
+    if self.file != None:    
+      dump = dump + '\n at %s:%d' % (self.file, self.line)
+    if self.child != None:
+      dump = dump + '\n' + self.child.__str__()
+
+    return dump
+
   @classmethod
   def _new_from_err_list(cls, errors):
     """Return new Subversion exception object from list of svn_error_t data.
