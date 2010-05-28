@@ -2244,6 +2244,8 @@ temp_cross_db_copy(svn_wc__db_t *db,
 
   iwb.checksum = checksum;
 
+  iwb.work_items = NULL;
+
   SVN_ERR(insert_working_node(&iwb, dst_pdh->wcroot->sdb, scratch_pool));
 
   /* ### What about actual_node? */
