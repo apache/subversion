@@ -163,6 +163,8 @@ detranslate_wc_file(const char **detranslated_abspath,
       SVN_ERR(svn_wc__get_keywords(&keywords, db, target_abspath, NULL,
                                    scratch_pool, scratch_pool));
       SVN_ERR(svn_wc__get_special(&special, db, target_abspath, scratch_pool));
+      SVN_ERR(svn_wc__get_eol_style(&style, &eol, db, target_abspath,
+                                    scratch_pool, scratch_pool));
     }
   else
     {
